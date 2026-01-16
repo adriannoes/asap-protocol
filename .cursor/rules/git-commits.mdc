@@ -1,0 +1,36 @@
+---
+description: Enforces the Conventional Commits specification for all commit messages.
+globs: 
+alwaysApply: true
+---
+# Git Conventional Commits
+
+Use the [Conventional Commits](https://www.conventionalcommits.org/) specification to generate commit messages.
+
+## Format
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+## Commit Types
+- **feat**: A new feature (correlates with MINOR in SemVer).
+- **fix**: A bug fix (correlates with PATCH in SemVer).
+- **docs**: Documentation only changes.
+- **style**: Changes that do not affect the meaning of the code (white-space, formatting, etc.).
+- **refactor**: A code change that neither fixes a bug nor adds a feature.
+- **perf**: A code change that improves performance.
+- **test**: Adding missing tests or correcting existing tests.
+- **build**: Changes that affect the build system or external dependencies.
+- **ci**: Changes to CI configuration files and scripts.
+- **chore**: Other changes that don't modify src or test files.
+
+## Rules
+1. **Breaking Changes**: Must be indicated by a `!` after the type/scope OR by `BREAKING CHANGE:` in the footer.
+2. **Case Sensitivity**: Types must be lowercase (except `BREAKING CHANGE` in footers).
+3. **Description**: Short, imperative summary of the change.
+4. **Body**: Longer description of "what" and "why" (not "how").
+5. **Footers**: Used for tracking issues (e.g., `Refs: #123`) or breaking changes.

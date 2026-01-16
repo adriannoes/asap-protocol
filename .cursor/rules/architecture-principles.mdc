@@ -1,0 +1,31 @@
+---
+description: Ensures the code follows SOLID, DRY, and clean code principles.
+globs: **/*
+alwaysApply: true
+---
+# Architecture & Principles (SOLID/DRY)
+
+## Code Quality Standards
+
+1. **SOLID Principles**:
+   - **Single Responsibility**: Each class/module should have one reason to change.
+   - **Open/Closed**: Software entities should be open for extension, but closed for modification.
+   - **Liskov Substitution**: Objects of a superclass should be replaceable with objects of its subclasses.
+   - **Interface Segregation**: Prefer many client-specific interfaces over one general-purpose interface.
+   - **Dependency Inversion**: Depend on abstractions, not concretions.
+
+2. **DRY (Don't Repeat Yourself)**:
+   - Minimize code duplication through proper abstraction and semantic naming.
+   - If a logic is used more than twice, consider refactoring it into a reusable component or utility.
+
+3. **Clean Code**:
+   - **Semantic Naming**: Use clear, descriptive names for variables, functions, and classes.
+   - **Small Functions**: Functions should do one thing and be relatively short.
+   - **Avoid Deep Nesting**: Use early returns (guard clauses) to reduce indentation.
+
+## Response Format
+
+When providing code modifications:
+- Include a `# file: path/to/file.py` (or appropriate language comment) before the code block.
+- Provide sufficient context (lines before/after) to make the change clear.
+- Stick to the current architecture choices located in `pyproject.toml` unless changes are explicitly discussed.

@@ -1,0 +1,36 @@
+---
+description: Guidelines for professional Python development, including typing, Ruff, and testing.
+globs: **/*.py
+alwaysApply: true
+---
+# Python Best Practices
+
+You are an AI assistant specialized in Python development. Your approach emphasizes:
+
+- **Clear Project Structure**: Separate directories for source code, tests, docs, and config.
+- **Modular Design**: Distinct files for models, services, controllers, and utilities.
+- **Configuration**: Use environment variables for sensitive or environment-specific data.
+- **Error Handling**: Robust error handling and logging, including context capture.
+- **Testing**: Comprehensive testing with `pytest`.
+- **Documentation**: Detailed docstrings (PEP 257) and README files.
+- **Dependency Management**: Use `uv` or `Poetry`/`PDM` as specified in `pyproject.toml`.
+- **Code Style**: Consistency using `Ruff` for linting and formatting.
+
+## Rules to Follow:
+
+1. **Type Annotations**: ALWAYS add typing annotations to each function or class. Include explicit return types (including `None` where appropriate).
+2. **Docstrings**: Add descriptive docstrings to all Python functions and classes following **PEP 257** (Google-style is preferred).
+3. **Preserve Comments**: Keep existing comments in files unless they are explicitly incorrect.
+4. **Testing Standards**:
+   - ONLY use `pytest` or `pytest` plugins.
+   - All tests must have typing annotations.
+   - Place all tests under `./tests`.
+   - Ensure `__init__.py` exists in test packages.
+5. **Imports for Type Checking**: When using `TYPE_CHECKING`, import standard pytest fixtures as needed:
+   ```python
+   from _pytest.capture import CaptureFixture
+   from _pytest.fixtures import FixtureRequest
+   from _pytest.logging import LogCaptureFixture
+   from _pytest.monkeypatch import MonkeyPatch
+   from pytest_mock.plugin import MockerFixture
+   ```

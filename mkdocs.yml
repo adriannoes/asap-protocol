@@ -1,0 +1,53 @@
+site_name: ASAP Protocol
+site_description: A streamlined protocol for agent-to-agent communication
+site_url: https://asap-protocol.org
+repo_url: https://github.com/asap-protocol/asap-protocol
+repo_name: asap-protocol/asap-protocol
+
+theme:
+  name: material
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: deep purple
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: deep purple
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_root_heading: true
+            show_source: true
+
+nav:
+  - Home: index.md
+  - API Reference:
+      - Models:
+          - Entities: api/models/entities.md
+          - Payloads: api/models/payloads.md
+          - Parts: api/models/parts.md
+      - Transport: api/transport.md
+      - State: api/state.md
+  - Contributing: contributing.md
