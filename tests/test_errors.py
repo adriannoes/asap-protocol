@@ -1,7 +1,5 @@
 """Tests for ASAP protocol error handling."""
 
-import pytest
-
 from asap.errors import (
     ASAPError,
     InvalidTransitionError,
@@ -16,10 +14,7 @@ class TestASAPError:
 
     def test_basic_error_creation(self) -> None:
         """Test creating a basic ASAPError."""
-        error = ASAPError(
-            code="asap:test/error",
-            message="Test error message"
-        )
+        error = ASAPError(code="asap:test/error", message="Test error message")
 
         assert error.code == "asap:test/error"
         assert error.message == "Test error message"
@@ -30,9 +25,7 @@ class TestASAPError:
         """Test ASAPError with additional details."""
         details = {"context": "test", "value": 42}
         error = ASAPError(
-            code="asap:test/detailed_error",
-            message="Detailed error",
-            details=details
+            code="asap:test/detailed_error", message="Detailed error", details=details
         )
 
         assert error.code == "asap:test/detailed_error"
@@ -53,10 +46,7 @@ class TestInvalidTransitionError:
 
     def test_basic_transition_error(self) -> None:
         """Test creating an InvalidTransitionError."""
-        error = InvalidTransitionError(
-            from_state="working",
-            to_state="completed"
-        )
+        error = InvalidTransitionError(from_state="working", to_state="completed")
 
         assert error.code == "asap:protocol/invalid_state"
         assert error.from_state == "working"
@@ -66,11 +56,7 @@ class TestInvalidTransitionError:
     def test_transition_error_with_details(self) -> None:
         """Test InvalidTransitionError with additional details."""
         details = {"task_id": "task-123", "reason": "business_logic"}
-        error = InvalidTransitionError(
-            from_state="completed",
-            to_state="working",
-            details=details
-        )
+        error = InvalidTransitionError(from_state="completed", to_state="working", details=details)
 
         assert error.code == "asap:protocol/invalid_state"
         assert error.from_state == "completed"
@@ -103,10 +89,7 @@ class TestMalformedEnvelopeError:
     def test_malformed_envelope_error_with_details(self) -> None:
         """Test MalformedEnvelopeError with additional details."""
         details = {"field": "payload", "expected_type": "dict"}
-        error = MalformedEnvelopeError(
-            reason="invalid payload type",
-            details=details
-        )
+        error = MalformedEnvelopeError(reason="invalid payload type", details=details)
 
         assert error.code == "asap:protocol/malformed_envelope"
         assert error.details == details
@@ -133,10 +116,7 @@ class TestTaskNotFoundError:
     def test_task_not_found_error_with_details(self) -> None:
         """Test TaskNotFoundError with additional details."""
         details = {"searched_in": "database", "timestamp": "2026-01-19T10:00:00Z"}
-        error = TaskNotFoundError(
-            task_id="task-456",
-            details=details
-        )
+        error = TaskNotFoundError(task_id="task-456", details=details)
 
         assert error.code == "asap:task/not_found"
         assert error.task_id == "task-456"
@@ -156,10 +136,7 @@ class TestTaskAlreadyCompletedError:
 
     def test_basic_task_already_completed_error(self) -> None:
         """Test creating a TaskAlreadyCompletedError."""
-        error = TaskAlreadyCompletedError(
-            task_id="task-123",
-            current_status="completed"
-        )
+        error = TaskAlreadyCompletedError(task_id="task-123", current_status="completed")
 
         assert error.code == "asap:task/already_completed"
         assert error.task_id == "task-123"
@@ -170,9 +147,7 @@ class TestTaskAlreadyCompletedError:
         """Test TaskAlreadyCompletedError with additional details."""
         details = {"completed_at": "2026-01-19T09:30:00Z", "output_size": 1024}
         error = TaskAlreadyCompletedError(
-            task_id="task-456",
-            current_status="failed",
-            details=details
+            task_id="task-456", current_status="failed", details=details
         )
 
         assert error.code == "asap:task/already_completed"

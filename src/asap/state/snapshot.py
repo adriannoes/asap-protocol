@@ -93,8 +93,7 @@ class InMemorySnapshotStore(SnapshotStore):
 
         # Update latest version
         self._latest_versions[task_id] = max(
-            self._latest_versions.get(task_id, 0),
-            snapshot.version
+            self._latest_versions.get(task_id, 0), snapshot.version
         )
 
     def get(self, task_id: TaskID, version: Optional[int] = None) -> Optional[StateSnapshot]:

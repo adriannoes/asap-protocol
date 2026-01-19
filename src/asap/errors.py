@@ -5,7 +5,7 @@ providing structured error handling with specific error codes
 and context information.
 """
 
-from typing import Optional
+from typing import Any, Dict, Optional
 
 
 class ASAPError(Exception):
@@ -21,12 +21,7 @@ class ASAPError(Exception):
         details: Optional additional error context
     """
 
-    def __init__(
-        self,
-        code: str,
-        message: str,
-        details: Optional[dict] = None
-    ) -> None:
+    def __init__(self, code: str, message: str, details: Optional[Dict[str, Any]] = None) -> None:
         """Initialize ASAP error.
 
         Args:
@@ -52,10 +47,7 @@ class InvalidTransitionError(ASAPError):
     """
 
     def __init__(
-        self,
-        from_state: str,
-        to_state: str,
-        details: Optional[dict] = None
+        self, from_state: str, to_state: str, details: Optional[Dict[str, Any]] = None
     ) -> None:
         """Initialize invalid transition error.
 
@@ -68,11 +60,7 @@ class InvalidTransitionError(ASAPError):
         super().__init__(
             code="asap:protocol/invalid_state",
             message=message,
-            details={
-                "from_state": from_state,
-                "to_state": to_state,
-                **(details or {})
-            }
+            details={"from_state": from_state, "to_state": to_state, **(details or {})},
         )
         self.from_state = from_state
         self.to_state = to_state
@@ -86,11 +74,7 @@ class MalformedEnvelopeError(ASAPError):
     cannot be processed by the protocol.
     """
 
-    def __init__(
-        self,
-        reason: str,
-        details: Optional[dict] = None
-    ) -> None:
+    def __init__(self, reason: str, details: Optional[Dict[str, Any]] = None) -> None:
         """Initialize malformed envelope error.
 
         Args:
@@ -99,9 +83,7 @@ class MalformedEnvelopeError(ASAPError):
         """
         message = f"Malformed envelope: {reason}"
         super().__init__(
-            code="asap:protocol/malformed_envelope",
-            message=message,
-            details=details or {}
+            code="asap:protocol/malformed_envelope", message=message, details=details or {}
         )
         self.reason = reason
 
@@ -113,11 +95,7 @@ class TaskNotFoundError(ASAPError):
     that doesn't exist in the system.
     """
 
-    def __init__(
-        self,
-        task_id: str,
-        details: Optional[dict] = None
-    ) -> None:
+    def __init__(self, task_id: str, details: Optional[Dict[str, Any]] = None) -> None:
         """Initialize task not found error.
 
         Args:
@@ -128,10 +106,7 @@ class TaskNotFoundError(ASAPError):
         super().__init__(
             code="asap:task/not_found",
             message=message,
-            details={
-                "task_id": task_id,
-                **(details or {})
-            }
+            details={"task_id": task_id, **(details or {})},
         )
         self.task_id = task_id
 
@@ -144,10 +119,7 @@ class TaskAlreadyCompletedError(ASAPError):
     """
 
     def __init__(
-        self,
-        task_id: str,
-        current_status: str,
-        details: Optional[dict] = None
+        self, task_id: str, current_status: str, details: Optional[Dict[str, Any]] = None
     ) -> None:
         """Initialize task already completed error.
 
@@ -160,11 +132,7 @@ class TaskAlreadyCompletedError(ASAPError):
         super().__init__(
             code="asap:task/already_completed",
             message=message,
-            details={
-                "task_id": task_id,
-                "current_status": current_status,
-                **(details or {})
-            }
+            details={"task_id": task_id, "current_status": current_status, **(details or {})},
         )
         self.task_id = task_id
         self.current_status = current_status

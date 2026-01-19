@@ -22,7 +22,7 @@ VALID_TRANSITIONS: Dict[TaskStatus, Set[TaskStatus]] = {
     },
     TaskStatus.INPUT_REQUIRED: {TaskStatus.WORKING, TaskStatus.CANCELLED},
     TaskStatus.COMPLETED: set(),  # Terminal state
-    TaskStatus.FAILED: set(),     # Terminal state
+    TaskStatus.FAILED: set(),  # Terminal state
     TaskStatus.CANCELLED: set(),  # Terminal state
 }
 
@@ -55,11 +55,8 @@ def transition(task: Task, new_status: TaskStatus) -> Task:
     """
     if not can_transition(task.status, new_status):
         raise InvalidTransitionError(
-            from_state=task.status.value,
-            to_state=new_status.value,
-            details={"task_id": task.id}
+            from_state=task.status.value, to_state=new_status.value, details={"task_id": task.id}
         )
 
     # Create new task instance with updated status (immutable approach)
-    updated_task = task.model_copy(update={"status": new_status})
-    return updated_task
+    return task.model_copy(update={"status": new_status})

@@ -38,9 +38,9 @@ class TestSnapshotStoreInterface:
     def test_abstract_methods_defined(self) -> None:
         """Test that abstract methods are properly defined."""
         # Check that the abstract methods exist
-        assert hasattr(SnapshotStore, 'save')
-        assert hasattr(SnapshotStore, 'get')
-        assert hasattr(SnapshotStore, 'list_versions')
+        assert hasattr(SnapshotStore, "save")
+        assert hasattr(SnapshotStore, "get")
+        assert hasattr(SnapshotStore, "list_versions")
 
         # Check that calling abstract methods raises NotImplementedError
         store = InMemorySnapshotStore()  # Use concrete implementation
@@ -53,7 +53,9 @@ class TestSnapshotStoreInterface:
 class TestInMemorySnapshotStore:
     """Test the InMemorySnapshotStore implementation."""
 
-    def test_save_snapshot_stores_correctly(self, snapshot_store: InMemorySnapshotStore, sample_snapshot: StateSnapshot) -> None:
+    def test_save_snapshot_stores_correctly(
+        self, snapshot_store: InMemorySnapshotStore, sample_snapshot: StateSnapshot
+    ) -> None:
         """Test that save() stores snapshots correctly."""
         snapshot_store.save(sample_snapshot)
 
@@ -66,7 +68,9 @@ class TestInMemorySnapshotStore:
         assert retrieved.data == sample_snapshot.data
         assert retrieved.checkpoint == sample_snapshot.checkpoint
 
-    def test_get_latest_snapshot_returns_most_recent(self, snapshot_store: InMemorySnapshotStore) -> None:
+    def test_get_latest_snapshot_returns_most_recent(
+        self, snapshot_store: InMemorySnapshotStore
+    ) -> None:
         """Test that get(task_id) returns the latest snapshot."""
         task_id = "task_01HX5K4N000000000000000000"
         now = datetime.now(timezone.utc)
@@ -107,7 +111,9 @@ class TestInMemorySnapshotStore:
         assert latest.version == 3
         assert latest.data["step"] == 3
 
-    def test_get_specific_version_returns_correct_snapshot(self, snapshot_store: InMemorySnapshotStore) -> None:
+    def test_get_specific_version_returns_correct_snapshot(
+        self, snapshot_store: InMemorySnapshotStore
+    ) -> None:
         """Test that get(task_id, version) returns the specific version."""
         task_id = "task_01HX5K4N000000000000000000"
         now = datetime.now(timezone.utc)
@@ -143,7 +149,9 @@ class TestInMemorySnapshotStore:
         assert retrieved_v2.version == 2
         assert retrieved_v2.data["step"] == 2
 
-    def test_list_versions_returns_all_versions_for_task(self, snapshot_store: InMemorySnapshotStore) -> None:
+    def test_list_versions_returns_all_versions_for_task(
+        self, snapshot_store: InMemorySnapshotStore
+    ) -> None:
         """Test that list_versions(task_id) returns all versions."""
         task_id = "task_01HX5K4N000000000000000000"
         now = datetime.now(timezone.utc)
@@ -167,7 +175,9 @@ class TestInMemorySnapshotStore:
         versions = snapshot_store.list_versions(task_id)
         assert versions == [1, 2, 3]
 
-    def test_version_auto_increment_not_handled_by_store(self, snapshot_store: InMemorySnapshotStore) -> None:
+    def test_version_auto_increment_not_handled_by_store(
+        self, snapshot_store: InMemorySnapshotStore
+    ) -> None:
         """Test that the store doesn't auto-increment versions (that's handled by caller)."""
         task_id = "task_01HX5K4N000000000000000000"
         now = datetime.now(timezone.utc)
@@ -194,7 +204,9 @@ class TestInMemorySnapshotStore:
         result = snapshot_store.get(nonexistent_task_id)
         assert result is None
 
-    def test_get_nonexistent_version_returns_none(self, snapshot_store: InMemorySnapshotStore, sample_snapshot: StateSnapshot) -> None:
+    def test_get_nonexistent_version_returns_none(
+        self, snapshot_store: InMemorySnapshotStore, sample_snapshot: StateSnapshot
+    ) -> None:
         """Test that get() returns None for non-existent version."""
         snapshot_store.save(sample_snapshot)
 
@@ -202,7 +214,9 @@ class TestInMemorySnapshotStore:
         result = snapshot_store.get(sample_snapshot.task_id, 999)
         assert result is None
 
-    def test_list_versions_empty_for_nonexistent_task(self, snapshot_store: InMemorySnapshotStore) -> None:
+    def test_list_versions_empty_for_nonexistent_task(
+        self, snapshot_store: InMemorySnapshotStore
+    ) -> None:
         """Test that list_versions() returns empty list for non-existent task."""
         nonexistent_task_id = "task_nonexistent"
         versions = snapshot_store.list_versions(nonexistent_task_id)
@@ -251,7 +265,9 @@ class TestInMemorySnapshotStore:
         assert versions_1 == [1]
         assert versions_2 == [1]
 
-    def test_get_latest_when_no_snapshots_exist(self, snapshot_store: InMemorySnapshotStore, sample_snapshot: StateSnapshot) -> None:
+    def test_get_latest_when_no_snapshots_exist(
+        self, snapshot_store: InMemorySnapshotStore, sample_snapshot: StateSnapshot
+    ) -> None:
         """Test get() returns None when no snapshots exist for task."""
         # Save snapshot for one task
         snapshot_store.save(sample_snapshot)
@@ -261,7 +277,9 @@ class TestInMemorySnapshotStore:
         result = snapshot_store.get(nonexistent_task_id)
         assert result is None
 
-    def test_get_latest_when_task_has_no_versions(self, snapshot_store: InMemorySnapshotStore) -> None:
+    def test_get_latest_when_task_has_no_versions(
+        self, snapshot_store: InMemorySnapshotStore
+    ) -> None:
         """Test get() returns None when task exists but has no versions."""
         # This edge case shouldn't happen in practice, but let's test it
         task_id = "task_empty"
@@ -273,7 +291,9 @@ class TestInMemorySnapshotStore:
         result = snapshot_store.get(task_id)
         assert result is None
 
-    def test_list_versions_returns_empty_for_empty_task_dict(self, snapshot_store: InMemorySnapshotStore) -> None:
+    def test_list_versions_returns_empty_for_empty_task_dict(
+        self, snapshot_store: InMemorySnapshotStore
+    ) -> None:
         """Test list_versions() returns empty list when task dict exists but is empty."""
         task_id = "task_empty"
         snapshot_store._snapshots[task_id] = {}  # Empty dict

@@ -28,23 +28,23 @@ class TestTaskStatus:
     def test_all_states_exist(self) -> None:
         """Test that all required states are defined in TaskStatus enum."""
         # Test all states exist
-        assert hasattr(TaskStatus, 'SUBMITTED')
-        assert hasattr(TaskStatus, 'WORKING')
-        assert hasattr(TaskStatus, 'INPUT_REQUIRED')
-        assert hasattr(TaskStatus, 'COMPLETED')
-        assert hasattr(TaskStatus, 'FAILED')
-        assert hasattr(TaskStatus, 'CANCELLED')
+        assert hasattr(TaskStatus, "SUBMITTED")
+        assert hasattr(TaskStatus, "WORKING")
+        assert hasattr(TaskStatus, "INPUT_REQUIRED")
+        assert hasattr(TaskStatus, "COMPLETED")
+        assert hasattr(TaskStatus, "FAILED")
+        assert hasattr(TaskStatus, "CANCELLED")
 
         # Test we have exactly 6 states
         assert len(TaskStatus) == 6
 
         # Test string values
-        assert TaskStatus.SUBMITTED.value == 'submitted'
-        assert TaskStatus.WORKING.value == 'working'
-        assert TaskStatus.INPUT_REQUIRED.value == 'input_required'
-        assert TaskStatus.COMPLETED.value == 'completed'
-        assert TaskStatus.FAILED.value == 'failed'
-        assert TaskStatus.CANCELLED.value == 'cancelled'
+        assert TaskStatus.SUBMITTED.value == "submitted"
+        assert TaskStatus.WORKING.value == "working"
+        assert TaskStatus.INPUT_REQUIRED.value == "input_required"
+        assert TaskStatus.COMPLETED.value == "completed"
+        assert TaskStatus.FAILED.value == "failed"
+        assert TaskStatus.CANCELLED.value == "cancelled"
 
     def test_terminal_states_identification(self) -> None:
         """Test identification of terminal states."""
@@ -77,7 +77,7 @@ class TestTaskStatus:
         assert len(values) == len(set(values))
 
         # Test string representation
-        assert str(TaskStatus.SUBMITTED) == 'TaskStatus.SUBMITTED'
+        assert str(TaskStatus.SUBMITTED) == "TaskStatus.SUBMITTED"
         assert repr(TaskStatus.WORKING) == "<TaskStatus.WORKING: 'working'>"
 
 
@@ -152,8 +152,9 @@ class TestValidTransitions:
         for terminal_state in terminal_states:
             for target_state in TaskStatus:
                 if target_state != terminal_state:
-                    assert not can_transition(terminal_state, target_state), \
+                    assert not can_transition(terminal_state, target_state), (
                         f"Terminal state {terminal_state} should not transition to {target_state}"
+                    )
 
 
 class TestTransition:
