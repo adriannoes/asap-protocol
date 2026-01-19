@@ -791,3 +791,75 @@ class TestStateSnapshot:
         assert "version" in required
         assert "data" in required
         assert "created_at" in required
+
+    def test_manifest_agent_id_urn_validation_failure(self) -> None:
+        """Test that invalid agent URNs in manifest raise validation errors."""
+        from asap.models.entities import Capability, Endpoint
+
+        with pytest.raises(ValidationError) as exc_info:
+            Manifest(
+                id="invalid-urn",  # Should be urn:asap:agent:name format
+                name="test-manifest",
+                version="1.0.0",
+                description="Test manifest",
+                capabilities=Capability(asap_version="0.1", skills=[]),
+                endpoints=Endpoint(asap="https://example.com"),
+            )
+
+        error_detail = exc_info.value.errors()[0]
+        assert "must follow URN format" in error_detail["msg"]
+
+    def test_manifest_version_validation_failure(self) -> None:
+        """Test that invalid semantic versions raise validation errors."""
+        from asap.models.entities import Capability, Endpoint
+
+        with pytest.raises(ValidationError) as exc_info:
+            Manifest(
+                id="urn:asap:agent:test",
+                name="test-manifest",
+                version="invalid.version",  # Invalid semver
+                description="Test manifest",
+                capabilities=Capability(asap_version="0.1", skills=[]),
+                endpoints=Endpoint(asap="https://example.com"),
+            )
+
+        error_detail = exc_info.value.errors()[0]
+        assert "Invalid semantic version" in error_detail["msg"]
+
+    def test_task_can_be_cancelled_method(self) -> None:
+        """Test the can_be_cancelled method on Task."""
+        from asap.models.entities import Task
+        from asap.models.enums import TaskStatus
+        from datetime import datetime, timezone
+
+        now = datetime.now(timezone.utc)
+
+        # Test SUBMITTED task can be cancelled
+        submitted_task = Task(
+            id="task_01HX5K4N000000000000000000",
+            conversation_id="conv_01HX5K3MQVN8000000000000000",
+            status=TaskStatus.SUBMITTED,
+            created_at=now,
+            updated_at=now,
+        )
+        assert submitted_task.can_be_cancelled()
+
+        # Test WORKING task can be cancelled
+        working_task = Task(
+            id="task_01HX5K4N000000000000000001",
+            conversation_id="conv_01HX5K3MQVN8000000000000000",
+            status=TaskStatus.WORKING,
+            created_at=now,
+            updated_at=now,
+        )
+        assert working_task.can_be_cancelled()
+
+        # Test COMPLETED task cannot be cancelled
+        completed_task = Task(
+            id="task_01HX5K4N000000000000000002",
+            conversation_id="conv_01HX5K3MQVN8000000000000000",
+            status=TaskStatus.COMPLETED,
+            created_at=now,
+            updated_at=now,
+        )
+        assert not completed_task.can_be_cancelled()

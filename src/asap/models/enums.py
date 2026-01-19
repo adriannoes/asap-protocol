@@ -21,13 +21,18 @@ class TaskStatus(str, Enum):
     CANCELLED = "cancelled"
     INPUT_REQUIRED = "input_required"
 
+    @classmethod
+    def terminal_states(cls) -> frozenset["TaskStatus"]:
+        """Return all terminal states.
+
+        Returns:
+            Frozen set containing all terminal task states
+        """
+        return frozenset({cls.COMPLETED, cls.FAILED, cls.CANCELLED})
+
     def is_terminal(self) -> bool:
         """Check if this status represents a terminal state."""
-        return self in {
-            TaskStatus.COMPLETED,
-            TaskStatus.FAILED,
-            TaskStatus.CANCELLED,
-        }
+        return self in self.terminal_states()
 
 
 class MessageRole(str, Enum):

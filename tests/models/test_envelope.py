@@ -211,3 +211,46 @@ class TestEnvelope:
         assert data["recipient"] == "urn:asap:agent:b"
         assert data["payload_type"] == "TaskRequest"
         assert data["payload"]["test"] == "data"
+
+    def test_response_payload_requires_correlation_id(self) -> None:
+        """Test that response payloads must have correlation_id."""
+        from asap.models.envelope import Envelope
+
+        # TaskResponse without correlation_id should fail validation
+        with pytest.raises(ValidationError) as exc_info:
+            Envelope(
+                asap_version="0.1",
+                sender="urn:asap:agent:a",
+                recipient="urn:asap:agent:b",
+                payload_type="TaskResponse",
+                payload={"result": "success"},
+                # correlation_id is missing - should fail
+            )
+
+        error_detail = exc_info.value.errors()[0]
+        assert "must have correlation_id" in error_detail["msg"]
+
+        # McpToolResult without correlation_id should fail
+        with pytest.raises(ValidationError) as exc_info:
+            Envelope(
+                asap_version="0.1",
+                sender="urn:asap:agent:a",
+                recipient="urn:asap:agent:b",
+                payload_type="McpToolResult",
+                payload={"result": "success"},
+                # correlation_id is missing - should fail
+            )
+
+        error_detail = exc_info.value.errors()[0]
+        assert "must have correlation_id" in error_detail["msg"]
+
+        # Valid response with correlation_id should work
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:a",
+            recipient="urn:asap:agent:b",
+            payload_type="TaskResponse",
+            payload={"result": "success"},
+            correlation_id="req_123",
+        )
+        assert envelope.correlation_id == "req_123"

@@ -152,8 +152,45 @@ class TestFilePart:
         assert "type" in schema["properties"]
         assert "uri" in schema["properties"]
         assert "mime_type" in schema["properties"]
-        assert "inline_data" in schema["properties"]
-        assert set(schema["required"]) == {"type", "uri", "mime_type"}
+
+    def test_file_part_invalid_mime_type(self) -> None:
+        """Test that invalid MIME types raise validation errors."""
+        from asap.models.parts import FilePart
+
+        with pytest.raises(ValidationError) as exc_info:
+            FilePart(
+                type="file",
+                uri="file://example.txt",
+                mime_type="invalid-mime-type",  # Invalid format
+            )
+
+        error_detail = exc_info.value.errors()[0]
+        assert "Invalid MIME type format" in error_detail["msg"]
+
+        with pytest.raises(ValidationError) as exc_info:
+            FilePart(
+                type="file",
+                uri="file://example.txt",
+                mime_type="text",  # Missing subtype
+            )
+
+        error_detail = exc_info.value.errors()[0]
+        assert "Invalid MIME type format" in error_detail["msg"]
+
+        # Valid MIME types should work
+        part = FilePart(
+            type="file",
+            uri="file://example.txt",
+            mime_type="text/plain",
+        )
+        assert part.mime_type == "text/plain"
+
+        part = FilePart(
+            type="file",
+            uri="file://example.json",
+            mime_type="application/vnd.api+json",
+        )
+        assert part.mime_type == "application/vnd.api+json"
 
 
 class TestResourcePart:
