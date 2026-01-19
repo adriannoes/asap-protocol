@@ -1,0 +1,23 @@
+{
+  "additionalProperties": false,
+  "description": "Data from an MCP resource.\n\nMcpResourceData provides the content of a fetched MCP resource.\n\nAttributes:\n    resource_uri: URI of the resource\n    content: Resource content (JSON-serializable)\n\nExample:\n    >>> data = McpResourceData(\n    ...     resource_uri=\"mcp://server/resources/data_123\",\n    ...     content={\"data\": [1, 2, 3], \"metadata\": {\"source\": \"api\"}}\n    ... )",
+  "properties": {
+    "resource_uri": {
+      "description": "MCP resource URI",
+      "title": "Resource Uri",
+      "type": "string"
+    },
+    "content": {
+      "additionalProperties": true,
+      "description": "Resource content (JSON-serializable)",
+      "title": "Content",
+      "type": "object"
+    }
+  },
+  "required": [
+    "resource_uri",
+    "content"
+  ],
+  "title": "McpResourceData",
+  "type": "object"
+}

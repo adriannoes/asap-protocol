@@ -1,0 +1,23 @@
+{
+  "additionalProperties": false,
+  "description": "Plain text content part.\n\nTextPart represents simple text content, such as user messages,\nagent responses, or any textual information.\n\nAttributes:\n    type: Discriminator field, always \"text\"\n    content: The text content\n\nExample:\n    >>> part = TextPart(\n    ...     type=\"text\",\n    ...     content=\"Research Q3 market trends for AI infrastructure\"\n    ... )",
+  "properties": {
+    "type": {
+      "const": "text",
+      "description": "Part type discriminator",
+      "title": "Type",
+      "type": "string"
+    },
+    "content": {
+      "description": "Text content",
+      "title": "Content",
+      "type": "string"
+    }
+  },
+  "required": [
+    "type",
+    "content"
+  ],
+  "title": "TextPart",
+  "type": "object"
+}

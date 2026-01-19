@@ -1,0 +1,29 @@
+{
+  "additionalProperties": false,
+  "description": "Request to cancel a running task.\n\nTaskCancel requests cancellation of a task that is currently executing.\nThe agent should attempt graceful cancellation and cleanup.\n\nAttributes:\n    task_id: ID of the task to cancel\n    reason: Optional reason for cancellation\n\nExample:\n    >>> cancel = TaskCancel(\n    ...     task_id=\"task_123\",\n    ...     reason=\"User requested cancellation\"\n    ... )",
+  "properties": {
+    "task_id": {
+      "description": "Task identifier to cancel",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional cancellation reason",
+      "title": "Reason"
+    }
+  },
+  "required": [
+    "task_id"
+  ],
+  "title": "TaskCancel",
+  "type": "object"
+}

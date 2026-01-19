@@ -1,0 +1,16 @@
+{
+  "additionalProperties": false,
+  "description": "Request to fetch an MCP resource.\n\nMcpResourceFetch requests retrieval of a resource from an MCP server,\nsuch as documentation, data, or other content.\n\nAttributes:\n    resource_uri: URI of the MCP resource to fetch\n\nExample:\n    >>> fetch = McpResourceFetch(\n    ...     resource_uri=\"mcp://server/resources/data_123\"\n    ... )",
+  "properties": {
+    "resource_uri": {
+      "description": "MCP resource URI to fetch",
+      "title": "Resource Uri",
+      "type": "string"
+    }
+  },
+  "required": [
+    "resource_uri"
+  ],
+  "title": "McpResourceFetch",
+  "type": "object"
+}

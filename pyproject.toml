@@ -26,6 +26,7 @@ dependencies = [
     "httpx>=0.28",
     "uvicorn>=0.34",
     "python-ulid>=3.0",
+    "packaging>=25.0",
 ]
 
 [project.optional-dependencies]
@@ -74,6 +75,9 @@ select = [
 ignore = [
     "E501",  # line too long (handled by formatter)
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/**" = ["T201"]
 
 [tool.ruff.format]
 quote-style = "double"

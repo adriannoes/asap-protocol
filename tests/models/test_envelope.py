@@ -1,0 +1,213 @@
+"""Tests for Envelope model (message wrapper)."""
+
+from datetime import datetime, timezone
+
+import pytest
+from pydantic import ValidationError
+
+
+class TestEnvelope:
+    """Test suite for Envelope model."""
+
+    def test_envelope_creation_with_all_fields(self):
+        """Test creating an Envelope with all fields explicitly provided."""
+        from asap.models.envelope import Envelope
+        from asap.models.ids import generate_id
+
+        env_id = generate_id()
+        timestamp = datetime.now(timezone.utc)
+
+        envelope = Envelope(
+            id=env_id,
+            asap_version="0.1",
+            timestamp=timestamp,
+            sender="urn:asap:agent:coordinator",
+            recipient="urn:asap:agent:research-v1",
+            payload_type="TaskRequest",
+            payload={"conversation_id": "conv_123", "skill_id": "research", "input": {}},
+        )
+
+        assert envelope.id == env_id
+        assert envelope.asap_version == "0.1"
+        assert envelope.timestamp == timestamp
+        assert envelope.sender == "urn:asap:agent:coordinator"
+        assert envelope.recipient == "urn:asap:agent:research-v1"
+        assert envelope.payload_type == "TaskRequest"
+        assert envelope.payload["skill_id"] == "research"
+
+    def test_envelope_auto_generates_id(self):
+        """Test that Envelope auto-generates id if not provided."""
+        from asap.models.envelope import Envelope
+        from datetime import datetime, timezone
+
+        envelope = Envelope(
+            asap_version="0.1",
+            timestamp=datetime.now(timezone.utc),
+            sender="urn:asap:agent:a",
+            recipient="urn:asap:agent:b",
+            payload_type="TaskRequest",
+            payload={},
+        )
+
+        assert envelope.id is not None
+        assert isinstance(envelope.id, str)
+        assert len(envelope.id) > 0
+
+    def test_envelope_auto_generates_timestamp(self):
+        """Test that Envelope auto-generates timestamp if not provided."""
+        from asap.models.envelope import Envelope
+        from asap.models.ids import generate_id
+
+        before = datetime.now(timezone.utc)
+        envelope = Envelope(
+            id=generate_id(),
+            asap_version="0.1",
+            sender="urn:asap:agent:a",
+            recipient="urn:asap:agent:b",
+            payload_type="TaskRequest",
+            payload={},
+        )
+        after = datetime.now(timezone.utc)
+
+        assert envelope.timestamp is not None
+        assert isinstance(envelope.timestamp, datetime)
+        assert before <= envelope.timestamp <= after
+
+    def test_envelope_with_correlation_id(self):
+        """Test Envelope with correlation_id for request tracking."""
+        from asap.models.envelope import Envelope
+        from datetime import datetime, timezone
+
+        envelope = Envelope(
+            asap_version="0.1",
+            timestamp=datetime.now(timezone.utc),
+            sender="urn:asap:agent:a",
+            recipient="urn:asap:agent:b",
+            payload_type="TaskResponse",
+            payload={"task_id": "task_123", "status": "completed"},
+            correlation_id="req_external_123",
+        )
+
+        assert envelope.correlation_id == "req_external_123"
+
+    def test_envelope_with_trace_id(self):
+        """Test Envelope with trace_id for distributed tracing."""
+        from asap.models.envelope import Envelope
+        from datetime import datetime, timezone
+
+        envelope = Envelope(
+            asap_version="0.1",
+            timestamp=datetime.now(timezone.utc),
+            sender="urn:asap:agent:a",
+            recipient="urn:asap:agent:b",
+            payload_type="TaskRequest",
+            payload={},
+            trace_id="trace_01HX5K...",
+        )
+
+        assert envelope.trace_id == "trace_01HX5K..."
+
+    def test_envelope_with_extensions(self):
+        """Test Envelope with extensions field."""
+        from asap.models.envelope import Envelope
+        from datetime import datetime, timezone
+
+        extensions = {"priority": "high", "custom_metadata": {"source": "api"}}
+
+        envelope = Envelope(
+            asap_version="0.1",
+            timestamp=datetime.now(timezone.utc),
+            sender="urn:asap:agent:a",
+            recipient="urn:asap:agent:b",
+            payload_type="TaskRequest",
+            payload={},
+            extensions=extensions,
+        )
+
+        assert envelope.extensions is not None
+        assert envelope.extensions["priority"] == "high"
+        assert envelope.extensions["custom_metadata"]["source"] == "api"
+
+    def test_envelope_required_fields(self):
+        """Test that Envelope requires all mandatory fields."""
+        from asap.models.envelope import Envelope
+
+        # Missing sender
+        with pytest.raises(ValidationError):
+            Envelope(
+                asap_version="0.1",
+                recipient="urn:asap:agent:b",
+                payload_type="TaskRequest",
+                payload={},
+            )
+
+        # Missing recipient
+        with pytest.raises(ValidationError):
+            Envelope(
+                asap_version="0.1",
+                sender="urn:asap:agent:a",
+                payload_type="TaskRequest",
+                payload={},
+            )
+
+        # Missing payload_type
+        with pytest.raises(ValidationError):
+            Envelope(
+                asap_version="0.1",
+                sender="urn:asap:agent:a",
+                recipient="urn:asap:agent:b",
+                payload={},
+            )
+
+        # Missing payload
+        with pytest.raises(ValidationError):
+            Envelope(
+                asap_version="0.1",
+                sender="urn:asap:agent:a",
+                recipient="urn:asap:agent:b",
+                payload_type="TaskRequest",
+            )
+
+    def test_envelope_json_schema(self):
+        """Test that Envelope generates valid JSON Schema."""
+        from asap.models.envelope import Envelope
+
+        schema = Envelope.model_json_schema()
+
+        assert schema["type"] == "object"
+        assert "id" in schema["properties"]
+        assert "asap_version" in schema["properties"]
+        assert "timestamp" in schema["properties"]
+        assert "sender" in schema["properties"]
+        assert "recipient" in schema["properties"]
+        assert "payload_type" in schema["properties"]
+        assert "payload" in schema["properties"]
+
+        required = set(schema["required"])
+        assert "asap_version" in required
+        assert "sender" in required
+        assert "recipient" in required
+        assert "payload_type" in required
+        assert "payload" in required
+
+    def test_envelope_serialization(self):
+        """Test Envelope serialization to dict."""
+        from asap.models.envelope import Envelope
+        from datetime import datetime, timezone
+
+        envelope = Envelope(
+            asap_version="0.1",
+            timestamp=datetime.now(timezone.utc),
+            sender="urn:asap:agent:a",
+            recipient="urn:asap:agent:b",
+            payload_type="TaskRequest",
+            payload={"test": "data"},
+        )
+
+        data = envelope.model_dump()
+
+        assert data["asap_version"] == "0.1"
+        assert data["sender"] == "urn:asap:agent:a"
+        assert data["recipient"] == "urn:asap:agent:b"
+        assert data["payload_type"] == "TaskRequest"
+        assert data["payload"]["test"] == "data"

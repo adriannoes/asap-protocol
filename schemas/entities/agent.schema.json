@@ -1,0 +1,31 @@
+{
+  "additionalProperties": false,
+  "description": "An autonomous entity capable of sending and receiving ASAP messages.\n\nAgents are symmetric peers with no inherent client/server distinction.\nEach agent has a unique identifier and publishes a manifest describing\nits capabilities.\n\nAttributes:\n    id: Unique agent identifier (URN format, e.g., \"urn:asap:agent:research-v1\")\n    manifest_uri: URL where the agent's manifest can be retrieved\n    capabilities: List of capability strings (e.g., [\"task.execute\", \"mcp.tools\"])\n\nExample:\n    >>> agent = Agent(\n    ...     id=\"urn:asap:agent:research-v1\",\n    ...     manifest_uri=\"https://agents.example.com/.well-known/asap/research-v1.json\",\n    ...     capabilities=[\"task.execute\", \"state.persist\", \"mcp.tools\"]\n    ... )",
+  "properties": {
+    "id": {
+      "description": "Unique agent identifier (URN format)",
+      "title": "Id",
+      "type": "string"
+    },
+    "manifest_uri": {
+      "description": "URL to agent's manifest",
+      "title": "Manifest Uri",
+      "type": "string"
+    },
+    "capabilities": {
+      "description": "Agent capability strings",
+      "items": {
+        "type": "string"
+      },
+      "title": "Capabilities",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "manifest_uri",
+    "capabilities"
+  ],
+  "title": "Agent",
+  "type": "object"
+}

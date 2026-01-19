@@ -1,0 +1,49 @@
+{
+  "additionalProperties": false,
+  "description": "Result of an MCP tool call.\n\nMcpToolResult provides the outcome of an MCP tool invocation,\nincluding success status, result data, or error information.\n\nAttributes:\n    request_id: ID of the original tool call request\n    success: Whether the tool call succeeded\n    result: Optional result data (if successful)\n    error: Optional error message (if failed)\n\nExample:\n    >>> # Successful result\n    >>> result = McpToolResult(\n    ...     request_id=\"req_123\",\n    ...     success=True,\n    ...     result={\"findings\": [\"finding1\", \"finding2\"]}\n    ... )\n    >>>\n    >>> # Failed result\n    >>> result = McpToolResult(\n    ...     request_id=\"req_123\",\n    ...     success=False,\n    ...     error=\"Tool execution failed: timeout\"\n    ... )",
+  "properties": {
+    "request_id": {
+      "description": "Original request identifier",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "success": {
+      "description": "Whether tool call succeeded",
+      "title": "Success",
+      "type": "boolean"
+    },
+    "result": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Result data (if successful)",
+      "title": "Result"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Error message (if failed)",
+      "title": "Error"
+    }
+  },
+  "required": [
+    "request_id",
+    "success"
+  ],
+  "title": "McpToolResult",
+  "type": "object"
+}

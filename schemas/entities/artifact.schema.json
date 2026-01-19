@@ -1,0 +1,44 @@
+{
+  "additionalProperties": false,
+  "description": "Concrete output produced by task execution.\n\nArtifacts represent the tangible results of task completion,\nsuch as reports, data files, or other generated content.\n\nAttributes:\n    id: Unique artifact identifier (ULID format)\n    task_id: ID of the task that produced this artifact\n    name: Human-readable artifact name\n    parts: List of part IDs that make up this artifact\n    created_at: When the artifact was created (UTC)\n\nExample:\n    >>> from datetime import datetime, timezone\n    >>> artifact = Artifact(\n    ...     id=\"art_01HX5K6Q...\",\n    ...     task_id=\"task_01HX5K4N...\",\n    ...     name=\"Q3 Market Analysis Report\",\n    ...     parts=[\"part_01HX5K...\"],\n    ...     created_at=datetime.now(timezone.utc)\n    ... )",
+  "properties": {
+    "id": {
+      "description": "Unique artifact identifier (ULID)",
+      "title": "Id",
+      "type": "string"
+    },
+    "task_id": {
+      "description": "Parent task ID",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "name": {
+      "description": "Human-readable artifact name",
+      "title": "Name",
+      "type": "string"
+    },
+    "parts": {
+      "description": "Part IDs making up this artifact",
+      "items": {
+        "type": "string"
+      },
+      "title": "Parts",
+      "type": "array"
+    },
+    "created_at": {
+      "description": "Creation timestamp (UTC)",
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "task_id",
+    "name",
+    "parts",
+    "created_at"
+  ],
+  "title": "Artifact",
+  "type": "object"
+}

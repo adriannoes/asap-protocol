@@ -16,7 +16,7 @@ eggs/
 .eggs/
 lib/
 lib64/
-parts/
+/parts/
 sdist/
 var/
 wheels/
@@ -50,7 +50,7 @@ coverage.xml
 .status
 .pytest_cache/
 .hypothesis/
-.pytest_cache/
+.ruff_cache/
 
 # Translations
 *.mo

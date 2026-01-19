@@ -1,0 +1,23 @@
+{
+  "additionalProperties": false,
+  "description": "Reference to an MCP resource.\n\nResourcePart represents a reference to a resource provided by\nan MCP (Model Context Protocol) server, enabling integration\nwith external tools and data sources.\n\nAttributes:\n    type: Discriminator field, always \"resource\"\n    resource_uri: URI of the MCP resource\n\nExample:\n    >>> part = ResourcePart(\n    ...     type=\"resource\",\n    ...     resource_uri=\"mcp://tools.example.com/web/search_results\"\n    ... )",
+  "properties": {
+    "type": {
+      "const": "resource",
+      "description": "Part type discriminator",
+      "title": "Type",
+      "type": "string"
+    },
+    "resource_uri": {
+      "description": "MCP resource URI",
+      "title": "Resource Uri",
+      "type": "string"
+    }
+  },
+  "required": [
+    "type",
+    "resource_uri"
+  ],
+  "title": "ResourcePart",
+  "type": "object"
+}
