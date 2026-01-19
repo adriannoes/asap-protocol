@@ -14,13 +14,13 @@ from ulid import ULID
 
 def generate_id() -> str:
     """Generate a new ULID string.
-    
+
     Returns:
         A 26-character ULID string that is:
         - Globally unique
         - Lexicographically sortable by creation time
         - URL-safe (uses Crockford's Base32 alphabet)
-    
+
     Example:
         >>> id1 = generate_id()
         >>> len(id1)
@@ -34,16 +34,16 @@ def generate_id() -> str:
 
 def extract_timestamp(ulid: str) -> datetime:
     """Extract the timestamp from a ULID string.
-    
+
     Args:
         ulid: A 26-character ULID string
-        
+
     Returns:
         A timezone-aware datetime in UTC representing when the ULID was created
-        
+
     Raises:
         ValueError: If the ULID string is invalid
-        
+
     Example:
         >>> ulid = generate_id()
         >>> timestamp = extract_timestamp(ulid)

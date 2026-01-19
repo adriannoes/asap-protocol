@@ -14,26 +14,40 @@ This module defines the fundamental entities used in agent-to-agent communicatio
 - AuthScheme: Authentication configuration for agent access
 """
 
+import re
 from datetime import datetime
 from typing import Any
 
-from pydantic import Field
+from packaging.version import InvalidVersion, Version
+from pydantic import Field, field_validator
 
 from asap.models.base import ASAPBaseModel
+from asap.models.constants import AGENT_URN_PATTERN, ASAP_PROTOCOL_VERSION
+from asap.models.enums import MessageRole, TaskStatus
+from asap.models.types import (
+    AgentURN,
+    ArtifactID,
+    ConversationID,
+    MessageID,
+    PartID,
+    SemanticVersion,
+    SnapshotID,
+    TaskID,
+)
 
 
 class Skill(ASAPBaseModel):
     """A specific capability that an agent can perform.
-    
+
     Skills define what an agent can do, along with the expected input
     and output schemas for validation.
-    
+
     Attributes:
         id: Unique identifier for the skill (e.g., "web_research")
         description: Human-readable description of what the skill does
         input_schema: Optional JSON Schema for validating skill inputs
         output_schema: Optional JSON Schema for validating skill outputs
-    
+
     Example:
         >>> skill = Skill(
         ...     id="web_research",
@@ -42,32 +56,30 @@ class Skill(ASAPBaseModel):
         ...     output_schema={"type": "object", "properties": {"summary": {"type": "string"}}}
         ... )
     """
-    
+
     id: str = Field(..., description="Unique skill identifier")
     description: str = Field(..., description="Human-readable skill description")
     input_schema: dict[str, Any] | None = Field(
-        default=None,
-        description="JSON Schema for skill input validation"
+        default=None, description="JSON Schema for skill input validation"
     )
     output_schema: dict[str, Any] | None = Field(
-        default=None,
-        description="JSON Schema for skill output validation"
+        default=None, description="JSON Schema for skill output validation"
     )
 
 
 class Capability(ASAPBaseModel):
     """Collection of an agent's features and supported operations.
-    
+
     Capabilities describe what an agent can do, including skills,
     state persistence, streaming support, and MCP tool integration.
-    
+
     Attributes:
         asap_version: ASAP protocol version supported (e.g., "0.1")
         skills: List of skills the agent can perform
         state_persistence: Whether the agent supports state snapshots
         streaming: Whether the agent supports streaming responses
         mcp_tools: List of MCP tool names the agent can execute
-    
+
     Example:
         >>> capability = Capability(
         ...     asap_version="0.1",
@@ -77,57 +89,45 @@ class Capability(ASAPBaseModel):
         ...     mcp_tools=["web_search"]
         ... )
     """
-    
-    asap_version: str = Field(..., description="ASAP protocol version")
+
+    asap_version: str = Field(default=ASAP_PROTOCOL_VERSION, description="ASAP protocol version")
     skills: list[Skill] = Field(default_factory=list, description="Available skills")
-    state_persistence: bool = Field(
-        default=False,
-        description="Supports state snapshots"
-    )
-    streaming: bool = Field(
-        default=False,
-        description="Supports streaming responses"
-    )
-    mcp_tools: list[str] = Field(
-        default_factory=list,
-        description="Available MCP tools"
-    )
+    state_persistence: bool = Field(default=False, description="Supports state snapshots")
+    streaming: bool = Field(default=False, description="Supports streaming responses")
+    mcp_tools: list[str] = Field(default_factory=list, description="Available MCP tools")
 
 
 class Endpoint(ASAPBaseModel):
     """Network endpoints for agent communication.
-    
+
     Defines the URLs where an agent can be reached for different
     types of communication.
-    
+
     Attributes:
         asap: HTTP endpoint for ASAP protocol messages (required)
         events: Optional WebSocket endpoint for streaming events
-    
+
     Example:
         >>> endpoint = Endpoint(
         ...     asap="https://api.example.com/asap",
         ...     events="wss://api.example.com/asap/events"
         ... )
     """
-    
+
     asap: str = Field(..., description="HTTP endpoint for ASAP messages")
-    events: str | None = Field(
-        default=None,
-        description="WebSocket endpoint for streaming events"
-    )
+    events: str | None = Field(default=None, description="WebSocket endpoint for streaming events")
 
 
 class AuthScheme(ASAPBaseModel):
     """Authentication configuration for agent access.
-    
+
     Defines the authentication methods supported by an agent and
     optional OAuth2 configuration.
-    
+
     Attributes:
         schemes: List of supported auth schemes (e.g., ["bearer", "oauth2"])
         oauth2: Optional OAuth2 configuration with URLs and scopes
-    
+
     Example:
         >>> auth = AuthScheme(
         ...     schemes=["bearer", "oauth2"],
@@ -138,26 +138,25 @@ class AuthScheme(ASAPBaseModel):
         ...     }
         ... )
     """
-    
+
     schemes: list[str] = Field(..., description="Supported authentication schemes")
     oauth2: dict[str, Any] | None = Field(
-        default=None,
-        description="OAuth2 configuration if oauth2 is in schemes"
+        default=None, description="OAuth2 configuration if oauth2 is in schemes"
     )
 
 
 class Agent(ASAPBaseModel):
     """An autonomous entity capable of sending and receiving ASAP messages.
-    
+
     Agents are symmetric peers with no inherent client/server distinction.
     Each agent has a unique identifier and publishes a manifest describing
     its capabilities.
-    
+
     Attributes:
         id: Unique agent identifier (URN format, e.g., "urn:asap:agent:research-v1")
         manifest_uri: URL where the agent's manifest can be retrieved
         capabilities: List of capability strings (e.g., ["task.execute", "mcp.tools"])
-    
+
     Example:
         >>> agent = Agent(
         ...     id="urn:asap:agent:research-v1",
@@ -165,19 +164,19 @@ class Agent(ASAPBaseModel):
         ...     capabilities=["task.execute", "state.persist", "mcp.tools"]
         ... )
     """
-    
-    id: str = Field(..., description="Unique agent identifier (URN format)")
+
+    id: AgentURN = Field(..., description="Unique agent identifier (URN format)")
     manifest_uri: str = Field(..., description="URL to agent's manifest")
     capabilities: list[str] = Field(..., description="Agent capability strings")
 
 
 class Manifest(ASAPBaseModel):
     """Self-describing metadata about an agent's capabilities.
-    
+
     The manifest is analogous to A2A's Agent Card but extended with
     additional ASAP-specific features. It provides all information
     needed to interact with an agent.
-    
+
     Attributes:
         id: Unique agent identifier (matches Agent.id)
         name: Human-readable agent name
@@ -187,7 +186,7 @@ class Manifest(ASAPBaseModel):
         endpoints: Network endpoints for communication
         auth: Optional authentication configuration
         signature: Optional cryptographic signature for manifest verification
-    
+
     Example:
         >>> manifest = Manifest(
         ...     id="urn:asap:agent:research-v1",
@@ -202,35 +201,49 @@ class Manifest(ASAPBaseModel):
         ...     endpoints=Endpoint(asap="https://api.example.com/asap")
         ... )
     """
-    
-    id: str = Field(..., description="Unique agent identifier (URN format)")
+
+    id: AgentURN = Field(..., description="Unique agent identifier (URN format)")
     name: str = Field(..., description="Human-readable agent name")
-    version: str = Field(..., description="Semantic version (e.g., '1.0.0')")
+    version: SemanticVersion = Field(..., description="Semantic version (e.g., '1.0.0')")
     description: str = Field(..., description="What the agent does")
     capabilities: Capability = Field(..., description="Agent capabilities")
     endpoints: Endpoint = Field(..., description="Communication endpoints")
-    auth: AuthScheme | None = Field(
-        default=None,
-        description="Authentication configuration"
-    )
+    auth: AuthScheme | None = Field(default=None, description="Authentication configuration")
     signature: str | None = Field(
-        default=None,
-        description="Cryptographic signature for verification"
+        default=None, description="Cryptographic signature for verification"
     )
+
+    @field_validator("id")
+    @classmethod
+    def validate_urn_format(cls, v: str) -> str:
+        """Validate that agent ID follows URN format."""
+        if not re.match(AGENT_URN_PATTERN, v):
+            raise ValueError(f"Agent ID must follow URN format 'urn:asap:agent:{{name}}', got: {v}")
+        return v
+
+    @field_validator("version")
+    @classmethod
+    def validate_semver(cls, v: str) -> str:
+        """Validate semantic versioning format."""
+        try:
+            Version(v)
+        except InvalidVersion as e:
+            raise ValueError(f"Invalid semantic version '{v}': {e}") from e
+        return v
 
 
 class Conversation(ASAPBaseModel):
     """A context for related interactions between agents.
-    
+
     Conversations enable shared context accumulation, task grouping,
     and state isolation between unrelated work.
-    
+
     Attributes:
         id: Unique conversation identifier (ULID format)
         participants: List of agent URNs participating in the conversation
         created_at: Timestamp when the conversation was created (UTC)
         metadata: Optional metadata (e.g., purpose, TTL, tags)
-    
+
     Example:
         >>> from datetime import datetime, timezone
         >>> conversation = Conversation(
@@ -240,22 +253,21 @@ class Conversation(ASAPBaseModel):
         ...     metadata={"purpose": "quarterly_report_research", "ttl_hours": 72}
         ... )
     """
-    
-    id: str = Field(..., description="Unique conversation identifier (ULID)")
-    participants: list[str] = Field(..., description="Agent URNs in conversation")
+
+    id: ConversationID = Field(..., description="Unique conversation identifier (ULID)")
+    participants: list[AgentURN] = Field(..., description="Agent URNs in conversation")
     created_at: datetime = Field(..., description="Creation timestamp (UTC)")
     metadata: dict[str, Any] | None = Field(
-        default=None,
-        description="Optional metadata (purpose, TTL, etc.)"
+        default=None, description="Optional metadata (purpose, TTL, etc.)"
     )
 
 
 class Task(ASAPBaseModel):
     """The fundamental unit of work in ASAP.
-    
+
     Tasks are uniquely identified, stateful with a defined lifecycle,
     cancellable, resumable, and capable of producing artifacts.
-    
+
     Attributes:
         id: Unique task identifier (ULID format)
         conversation_id: ID of the conversation this task belongs to
@@ -264,7 +276,7 @@ class Task(ASAPBaseModel):
         progress: Optional progress information (percent, message, ETA)
         created_at: Timestamp when the task was created (UTC)
         updated_at: Timestamp of last status update (UTC)
-    
+
     Example:
         >>> from datetime import datetime, timezone
         >>> task = Task(
@@ -276,28 +288,32 @@ class Task(ASAPBaseModel):
         ...     updated_at=datetime.now(timezone.utc)
         ... )
     """
-    
-    id: str = Field(..., description="Unique task identifier (ULID)")
-    conversation_id: str = Field(..., description="Parent conversation ID")
-    parent_task_id: str | None = Field(
-        default=None,
-        description="Parent task ID for subtasks"
-    )
-    status: str = Field(..., description="Task status (submitted, working, etc.)")
+
+    id: TaskID = Field(..., description="Unique task identifier (ULID)")
+    conversation_id: ConversationID = Field(..., description="Parent conversation ID")
+    parent_task_id: TaskID | None = Field(default=None, description="Parent task ID for subtasks")
+    status: TaskStatus = Field(..., description="Task status (submitted, working, etc.)")
     progress: dict[str, Any] | None = Field(
-        default=None,
-        description="Progress info (percent, message, ETA)"
+        default=None, description="Progress info (percent, message, ETA)"
     )
     created_at: datetime = Field(..., description="Creation timestamp (UTC)")
     updated_at: datetime = Field(..., description="Last update timestamp (UTC)")
 
+    def is_terminal(self) -> bool:
+        """Check if task is in a terminal state (completed, failed, or cancelled)."""
+        return self.status.is_terminal()
+
+    def can_be_cancelled(self) -> bool:
+        """Check if task can be cancelled (only submitted or working tasks)."""
+        return self.status in {TaskStatus.SUBMITTED, TaskStatus.WORKING}
+
 
 class Message(ASAPBaseModel):
     """A single communication turn containing one or more parts.
-    
+
     Messages are the atomic units of communication within tasks,
     containing content parts and metadata about the sender and role.
-    
+
     Attributes:
         id: Unique message identifier (ULID format)
         task_id: ID of the task this message belongs to
@@ -305,7 +321,7 @@ class Message(ASAPBaseModel):
         role: Message role (user, assistant, system)
         parts: List of part IDs or part references
         timestamp: When the message was sent (UTC)
-    
+
     Example:
         >>> from datetime import datetime, timezone
         >>> message = Message(
@@ -317,28 +333,28 @@ class Message(ASAPBaseModel):
         ...     timestamp=datetime.now(timezone.utc)
         ... )
     """
-    
-    id: str = Field(..., description="Unique message identifier (ULID)")
-    task_id: str = Field(..., description="Parent task ID")
-    sender: str = Field(..., description="Sender agent URN")
-    role: str = Field(..., description="Message role (user, assistant, system)")
-    parts: list[str] = Field(..., description="Part IDs or references")
+
+    id: MessageID = Field(..., description="Unique message identifier (ULID)")
+    task_id: TaskID = Field(..., description="Parent task ID")
+    sender: AgentURN = Field(..., description="Sender agent URN")
+    role: MessageRole = Field(..., description="Message role (user, assistant, system)")
+    parts: list[PartID] = Field(..., description="Part IDs or references")
     timestamp: datetime = Field(..., description="Message timestamp (UTC)")
 
 
 class Artifact(ASAPBaseModel):
     """Concrete output produced by task execution.
-    
+
     Artifacts represent the tangible results of task completion,
     such as reports, data files, or other generated content.
-    
+
     Attributes:
         id: Unique artifact identifier (ULID format)
         task_id: ID of the task that produced this artifact
         name: Human-readable artifact name
         parts: List of part IDs that make up this artifact
         created_at: When the artifact was created (UTC)
-    
+
     Example:
         >>> from datetime import datetime, timezone
         >>> artifact = Artifact(
@@ -349,21 +365,21 @@ class Artifact(ASAPBaseModel):
         ...     created_at=datetime.now(timezone.utc)
         ... )
     """
-    
-    id: str = Field(..., description="Unique artifact identifier (ULID)")
-    task_id: str = Field(..., description="Parent task ID")
+
+    id: ArtifactID = Field(..., description="Unique artifact identifier (ULID)")
+    task_id: TaskID = Field(..., description="Parent task ID")
     name: str = Field(..., description="Human-readable artifact name")
-    parts: list[str] = Field(..., description="Part IDs making up this artifact")
+    parts: list[PartID] = Field(..., description="Part IDs making up this artifact")
     created_at: datetime = Field(..., description="Creation timestamp (UTC)")
 
 
 class StateSnapshot(ASAPBaseModel):
     """First-class state persistence mechanism.
-    
+
     StateSnapshots enable task state to be saved and restored,
     addressing a key limitation in other agent protocols. Supports
     versioning and checkpoint flagging for important states.
-    
+
     Attributes:
         id: Unique snapshot identifier (ULID format)
         task_id: ID of the task this snapshot belongs to
@@ -371,7 +387,7 @@ class StateSnapshot(ASAPBaseModel):
         data: Arbitrary state data (JSON-serializable dict)
         checkpoint: Whether this is a significant checkpoint (default: False)
         created_at: When the snapshot was created (UTC)
-    
+
     Example:
         >>> from datetime import datetime, timezone
         >>> snapshot = StateSnapshot(
@@ -383,15 +399,10 @@ class StateSnapshot(ASAPBaseModel):
         ...     created_at=datetime.now(timezone.utc)
         ... )
     """
-    
-    id: str = Field(..., description="Unique snapshot identifier (ULID)")
-    task_id: str = Field(..., description="Parent task ID")
+
+    id: SnapshotID = Field(..., description="Unique snapshot identifier (ULID)")
+    task_id: TaskID = Field(..., description="Parent task ID")
     version: int = Field(..., description="Snapshot version number", ge=1)
     data: dict[str, Any] = Field(..., description="State data (JSON-serializable)")
-    checkpoint: bool = Field(
-        default=False,
-        description="Whether this is a significant checkpoint"
-    )
+    checkpoint: bool = Field(default=False, description="Whether this is a significant checkpoint")
     created_at: datetime = Field(..., description="Creation timestamp (UTC)")
-
-
