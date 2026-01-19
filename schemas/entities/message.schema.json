@@ -1,4 +1,16 @@
 {
+  "$defs": {
+    "MessageRole": {
+      "description": "Message sender roles.\n\nDefines the role of the entity sending a message in a conversation.",
+      "enum": [
+        "user",
+        "assistant",
+        "system"
+      ],
+      "title": "MessageRole",
+      "type": "string"
+    }
+  },
   "additionalProperties": false,
   "description": "A single communication turn containing one or more parts.\n\nMessages are the atomic units of communication within tasks,\ncontaining content parts and metadata about the sender and role.\n\nAttributes:\n    id: Unique message identifier (ULID format)\n    task_id: ID of the task this message belongs to\n    sender: Agent URN of the message sender\n    role: Message role (user, assistant, system)\n    parts: List of part IDs or part references\n    timestamp: When the message was sent (UTC)\n\nExample:\n    >>> from datetime import datetime, timezone\n    >>> message = Message(\n    ...     id=\"msg_01HX5K5P...\",\n    ...     task_id=\"task_01HX5K4N...\",\n    ...     sender=\"urn:asap:agent:coordinator\",\n    ...     role=\"user\",\n    ...     parts=[\"part_01HX5K...\", \"part_01HX5L...\"],\n    ...     timestamp=datetime.now(timezone.utc)\n    ... )",
   "properties": {
@@ -18,9 +30,8 @@
       "type": "string"
     },
     "role": {
-      "description": "Message role (user, assistant, system)",
-      "title": "Role",
-      "type": "string"
+      "$ref": "#/$defs/MessageRole",
+      "description": "Message role (user, assistant, system)"
     },
     "parts": {
       "description": "Part IDs or references",
