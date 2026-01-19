@@ -17,6 +17,7 @@
 - `src/asap/models/parts.py` - Part types: TextPart, DataPart, etc.
 - `src/asap/models/payloads.py` - Payload types: TaskRequest, TaskResponse, etc.
 - `src/asap/models/envelope.py` - Message envelope wrapper
+- `tests/models/test_base.py` - Tests for base model configuration
 - `tests/models/test_ids.py` - Tests for ULID generation
 - `tests/models/test_entities.py` - Tests for entity models
 - `tests/models/test_parts.py` - Tests for part models
@@ -142,98 +143,98 @@
 
 ---
 
-## Sprint 1: Core Models (TDD)
+## Sprint 1: Core Models (TDD) ✅
 
 > **Focus**: All Pydantic models with JSON Schema export
 
-### 2.1 Base & IDs
+### 2.1 Base & IDs ✅
 
-- [ ] 2.1.1 **TEST FIRST**: Create `tests/models/test_ids.py`
+- [x] 2.1.1 **TEST FIRST**: Create `tests/models/test_ids.py`
   - Test `generate_id()` returns valid ULID string (26 chars)
   - Test uniqueness across multiple calls
   - Test timestamp extraction from ULID
-- [ ] 2.1.2 Implement `src/asap/models/ids.py`
+- [x] 2.1.2 Implement `src/asap/models/ids.py`
   - `generate_id() -> str` using python-ulid
   - `extract_timestamp(ulid: str) -> datetime` helper
-- [ ] 2.1.3 Create `src/asap/models/base.py`
+- [x] 2.1.3 Create `src/asap/models/base.py`
   - `ASAPBaseModel(BaseModel)` with:
     - `model_config = ConfigDict(frozen=True, extra="forbid", populate_by_name=True)`
     - Common JSON Schema settings
 
-### 2.2 Entities
+### 2.2 Entities ✅
 
-- [ ] 2.2.1 **TEST FIRST**: Create `tests/models/test_entities.py` - Agent & Manifest
+- [x] 2.2.1 **TEST FIRST**: Create `tests/models/test_entities.py` - Agent & Manifest
   - Test Agent creation with id, manifest_uri, capabilities
   - Test Manifest with skills, endpoints, auth
   - Test JSON Schema export for both
-- [ ] 2.2.2 Implement Agent, Manifest in `src/asap/models/entities.py`
-- [ ] 2.2.3 **TEST FIRST**: Add tests for Conversation, Task, Message
+- [x] 2.2.2 Implement Agent, Manifest in `src/asap/models/entities.py`
+- [x] 2.2.3 **TEST FIRST**: Add tests for Conversation, Task, Message
   - Test Conversation with participants, metadata
   - Test Task with status, progress, timestamps
   - Test Message with sender, role, parts reference
-- [ ] 2.2.4 Implement Conversation, Task, Message
-- [ ] 2.2.5 **TEST FIRST**: Add tests for Artifact, StateSnapshot
+- [x] 2.2.4 Implement Conversation, Task, Message
+- [x] 2.2.5 **TEST FIRST**: Add tests for Artifact, StateSnapshot
   - Test Artifact with name, parts, task_id
   - Test StateSnapshot with version auto-increment, checkpoint flag
-- [ ] 2.2.6 Implement Artifact, StateSnapshot
+- [x] 2.2.6 Implement Artifact, StateSnapshot
 
-### 2.3 Parts
+### 2.3 Parts ✅
 
-- [ ] 2.3.1 **TEST FIRST**: Create `tests/models/test_parts.py`
+- [x] 2.3.1 **TEST FIRST**: Create `tests/models/test_parts.py`
   - Test TextPart with content validation
   - Test DataPart with data dict and optional schema_uri
   - Test FilePart with uri, mime_type, optional inline_data
   - Test ResourcePart with resource_uri
   - Test TemplatePart with template string and variables dict
   - Test Part discriminated union deserialization
-- [ ] 2.3.2 Implement TextPart, DataPart, FilePart in `src/asap/models/parts.py`
-- [ ] 2.3.3 Implement ResourcePart, TemplatePart
-- [ ] 2.3.4 Implement `Part` discriminated union with `type` field
+- [x] 2.3.2 Implement TextPart, DataPart, FilePart in `src/asap/models/parts.py`
+- [x] 2.3.3 Implement ResourcePart, TemplatePart
+- [x] 2.3.4 Implement `Part` discriminated union with `type` field
 
-### 2.4 Payloads - Core
+### 2.4 Payloads - Core ✅
 
-- [ ] 2.4.1 **TEST FIRST**: Create `tests/models/test_payloads.py` - Task payloads
+- [x] 2.4.1 **TEST FIRST**: Create `tests/models/test_payloads.py` - Task payloads
   - Test TaskRequest with conversation_id, skill_id, input, config
   - Test TaskResponse with task_id, status, result, metrics
   - Test TaskUpdate with update_type (progress | input_required)
   - Test TaskCancel with task_id, reason
-- [ ] 2.4.2 Implement TaskRequest, TaskResponse, TaskUpdate, TaskCancel
+- [x] 2.4.2 Implement TaskRequest, TaskResponse, TaskUpdate, TaskCancel
 
-### 2.5 Payloads - State & Message
+### 2.5 Payloads - State & Message ✅
 
-- [ ] 2.5.1 **TEST FIRST**: Add tests for state/message payloads
+- [x] 2.5.1 **TEST FIRST**: Add tests for state/message payloads
   - Test MessageSend with message content
   - Test StateQuery with task_id, version (optional)
   - Test StateRestore with snapshot_id
   - Test ArtifactNotify with artifact_id, task_id
-- [ ] 2.5.2 Implement MessageSend, StateQuery, StateRestore, ArtifactNotify
+- [x] 2.5.2 Implement MessageSend, StateQuery, StateRestore, ArtifactNotify
 
-### 2.6 Payloads - MCP Integration
+### 2.6 Payloads - MCP Integration ✅
 
-- [ ] 2.6.1 **TEST FIRST**: Add tests for MCP payloads
+- [x] 2.6.1 **TEST FIRST**: Add tests for MCP payloads
   - Test McpToolCall with request_id, tool_name, arguments, mcp_context
   - Test McpToolResult with request_id, success, result
   - Test McpResourceFetch with resource_uri
   - Test McpResourceData with resource_uri, content
-- [ ] 2.6.2 Implement McpToolCall, McpToolResult, McpResourceFetch, McpResourceData
-- [ ] 2.6.3 Implement `Payload` discriminated union with `payload_type` field
+- [x] 2.6.2 Implement McpToolCall, McpToolResult, McpResourceFetch, McpResourceData
+- [x] 2.6.3 Implement `Payload` discriminated union with `payload_type` field
 
-### 2.7 Envelope & Exports
+### 2.7 Envelope & Exports ✅
 
-- [ ] 2.7.1 **TEST FIRST**: Create `tests/models/test_envelope.py`
+- [x] 2.7.1 **TEST FIRST**: Create `tests/models/test_envelope.py`
   - Test Envelope auto-generates `id` if not provided
   - Test Envelope auto-generates `timestamp` if not provided
   - Test all required fields: asap_version, sender, recipient, payload_type, payload
   - Test extensions field (optional dict)
   - Test correlation_id and trace_id propagation
-- [ ] 2.7.2 Implement `src/asap/models/envelope.py`
+- [x] 2.7.2 Implement `src/asap/models/envelope.py`
   - `Envelope` model with validators for auto-gen fields
-- [ ] 2.7.3 Create `src/asap/models/__init__.py` with all public exports
+- [x] 2.7.3 Create `src/asap/models/__init__.py` with all public exports
   - Export all entities, parts, payloads, envelope
-- [ ] 2.7.4 Create `scripts/export_schemas.py`
+- [x] 2.7.4 Create `scripts/export_schemas.py`
   - Script that generates JSON Schema files to `schemas/` directory
   - Organize by category: `schemas/entities/`, `schemas/payloads/`, `schemas/envelope.schema.json`
-- [ ] 2.7.5 Verify import: `from asap.models import Envelope, TaskRequest`
+- [x] 2.7.5 Verify import: `from asap.models import Envelope, TaskRequest`
 - [ ] 2.7.6 Commit: `feat(models): add all core entities, parts, payloads and envelope`
 
 **Definition of Done**:

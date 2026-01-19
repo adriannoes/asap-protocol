@@ -1,19 +1,26 @@
-# ASAP: Async Simple Agent Protocol (Python SDK)
+# ASAP: Async Simple Agent Protocol
 
 > A streamlined, scalable, asynchronous protocol for agent-to-agent communication and task coordination.
 
-## Overview
+## Why ASAP?
 
-**ASAP Protocol** is a Python library that implements the ASAP specification for building interoperable AI agents. It provides a robust, type-safe foundation for agent-to-agent communication using standard HTTP and JSON-RPC.
+Building multi-agent systems today suffers from three core technical challenges:
+1. **$N^2$ Connection Complexity**: Most protocols assume static point-to-point HTTP connections that don't scale.
+2. **State Drift**: Lack of native persistence makes it impossible to reliably resume long-running agentic workflows.
+3. **Fragmentation**: No unified way to handle task delegation, artifact exchange, and tool execution (MCP) in a single envelope.
+
+**ASAP** provides a production-ready communication layer that simplifies these complexities. It introduces a standardized, stateful orchestration framework that ensures your agents can coordinate reliably across distributed environments.
 
 ### Key Features
 
-- 🐍 **Modern Python**: Built with Python 3.13+ and strict type hinting
-- 🚀 **High Performance**: Built on `uv`, `httpx`, and `fastapi` for maximum speed
-- 🛡️ **Type Safety**: Full Pydantic v2 integration with exported JSON Schemas
-- 🔄 **Async-First**: Native `asyncio` support for high-concurrency workloads
-- 📦 **State Management**: Built-in task state machine and persistence utilities
-- 🔌 **MCP Compatible**: Native support for Model Context Protocol envelopes
+- **Stateful Orchestration**: Native task state machine with built-in snapshotting for durable, resumable agent workflows.
+- **Schema-First Design**: Strict Pydantic v2 models providing automatic JSON Schema generation for guaranteed cross-agent interoperability.
+- **High-Performance Core**: Built on Python 3.13+, leveraging `uvloop` (C) and `pydantic-core` (Rust) for ultra-low latency validation and I/O.
+- **Observable Chains**: First-class support for `trace_id` and `correlation_id` to debug complex multi-agent delegation.
+- **MCP Integration**: Uses the Model Context Protocol (MCP) as a tool-execution substrate, wrapped in a high-level coordination envelope.
+- **Async-Native**: Engineered from the ground up for high-concurrency environments using `asyncio` and `httpx`.
+
+> 💡 **Performance Note**: Pure Python codebase leveraging Rust-accelerated dependencies (`pydantic-core`, `orjson`, `python-ulid`) for native-level performance without build complexity.
 
 ## Installation
 
