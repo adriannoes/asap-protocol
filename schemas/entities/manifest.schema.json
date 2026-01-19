@@ -38,6 +38,7 @@
       "description": "Collection of an agent's features and supported operations.\n\nCapabilities describe what an agent can do, including skills,\nstate persistence, streaming support, and MCP tool integration.\n\nAttributes:\n    asap_version: ASAP protocol version supported (e.g., \"0.1\")\n    skills: List of skills the agent can perform\n    state_persistence: Whether the agent supports state snapshots\n    streaming: Whether the agent supports streaming responses\n    mcp_tools: List of MCP tool names the agent can execute\n\nExample:\n    >>> capability = Capability(\n    ...     asap_version=\"0.1\",\n    ...     skills=[Skill(id=\"research\", description=\"Research skill\")],\n    ...     state_persistence=True,\n    ...     streaming=True,\n    ...     mcp_tools=[\"web_search\"]\n    ... )",
       "properties": {
         "asap_version": {
+          "default": "0.1",
           "description": "ASAP protocol version",
           "title": "Asap Version",
           "type": "string"
@@ -71,9 +72,6 @@
           "type": "array"
         }
       },
-      "required": [
-        "asap_version"
-      ],
       "title": "Capability",
       "type": "object"
     },

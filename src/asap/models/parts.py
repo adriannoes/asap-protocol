@@ -5,11 +5,13 @@ They support different content types including text, structured data,
 files, MCP resources, and parameterized templates.
 """
 
+import re
 from typing import Annotated, Any, Literal, Union
 
-from pydantic import Discriminator, Field, TypeAdapter
+from pydantic import Discriminator, Field, TypeAdapter, field_validator
 
 from asap.models.base import ASAPBaseModel
+from asap.models.types import MIMEType
 
 
 class TextPart(ASAPBaseModel):
@@ -89,10 +91,19 @@ class FilePart(ASAPBaseModel):
 
     type: Literal["file"] = Field(..., description="Part type discriminator")
     uri: str = Field(..., description="File URI (asap://, file://, https://, data:)")
-    mime_type: str = Field(..., description="MIME type (e.g., application/pdf)")
+    mime_type: MIMEType = Field(..., description="MIME type (e.g., application/pdf)")
     inline_data: str | None = Field(
         default=None, description="Optional base64-encoded inline file data"
     )
+
+    @field_validator("mime_type")
+    @classmethod
+    def validate_mime_type(cls, v: str) -> str:
+        """Validate MIME type format (type/subtype)."""
+        # Pattern: type/subtype where both parts can contain alphanumeric, dots, plus, and hyphens
+        if not re.match(r"^[a-z0-9-]+/[a-z0-9.+\-]+$", v.lower()):
+            raise ValueError(f"Invalid MIME type format: {v}")
+        return v
 
 
 class ResourcePart(ASAPBaseModel):

@@ -14,12 +14,26 @@ This module defines the fundamental entities used in agent-to-agent communicatio
 - AuthScheme: Authentication configuration for agent access
 """
 
+import re
 from datetime import datetime
 from typing import Any
 
-from pydantic import Field
+from packaging.version import InvalidVersion, Version
+from pydantic import Field, field_validator
 
 from asap.models.base import ASAPBaseModel
+from asap.models.constants import AGENT_URN_PATTERN, ASAP_PROTOCOL_VERSION
+from asap.models.enums import MessageRole, TaskStatus
+from asap.models.types import (
+    AgentURN,
+    ArtifactID,
+    ConversationID,
+    MessageID,
+    PartID,
+    SemanticVersion,
+    SnapshotID,
+    TaskID,
+)
 
 
 class Skill(ASAPBaseModel):
@@ -76,7 +90,7 @@ class Capability(ASAPBaseModel):
         ... )
     """
 
-    asap_version: str = Field(..., description="ASAP protocol version")
+    asap_version: str = Field(default=ASAP_PROTOCOL_VERSION, description="ASAP protocol version")
     skills: list[Skill] = Field(default_factory=list, description="Available skills")
     state_persistence: bool = Field(default=False, description="Supports state snapshots")
     streaming: bool = Field(default=False, description="Supports streaming responses")
@@ -151,7 +165,7 @@ class Agent(ASAPBaseModel):
         ... )
     """
 
-    id: str = Field(..., description="Unique agent identifier (URN format)")
+    id: AgentURN = Field(..., description="Unique agent identifier (URN format)")
     manifest_uri: str = Field(..., description="URL to agent's manifest")
     capabilities: list[str] = Field(..., description="Agent capability strings")
 
@@ -188,9 +202,9 @@ class Manifest(ASAPBaseModel):
         ... )
     """
 
-    id: str = Field(..., description="Unique agent identifier (URN format)")
+    id: AgentURN = Field(..., description="Unique agent identifier (URN format)")
     name: str = Field(..., description="Human-readable agent name")
-    version: str = Field(..., description="Semantic version (e.g., '1.0.0')")
+    version: SemanticVersion = Field(..., description="Semantic version (e.g., '1.0.0')")
     description: str = Field(..., description="What the agent does")
     capabilities: Capability = Field(..., description="Agent capabilities")
     endpoints: Endpoint = Field(..., description="Communication endpoints")
@@ -198,6 +212,24 @@ class Manifest(ASAPBaseModel):
     signature: str | None = Field(
         default=None, description="Cryptographic signature for verification"
     )
+
+    @field_validator("id")
+    @classmethod
+    def validate_urn_format(cls, v: str) -> str:
+        """Validate that agent ID follows URN format."""
+        if not re.match(AGENT_URN_PATTERN, v):
+            raise ValueError(f"Agent ID must follow URN format 'urn:asap:agent:{{name}}', got: {v}")
+        return v
+
+    @field_validator("version")
+    @classmethod
+    def validate_semver(cls, v: str) -> str:
+        """Validate semantic versioning format."""
+        try:
+            Version(v)
+        except InvalidVersion as e:
+            raise ValueError(f"Invalid semantic version '{v}': {e}") from e
+        return v
 
 
 class Conversation(ASAPBaseModel):
@@ -222,8 +254,8 @@ class Conversation(ASAPBaseModel):
         ... )
     """
 
-    id: str = Field(..., description="Unique conversation identifier (ULID)")
-    participants: list[str] = Field(..., description="Agent URNs in conversation")
+    id: ConversationID = Field(..., description="Unique conversation identifier (ULID)")
+    participants: list[AgentURN] = Field(..., description="Agent URNs in conversation")
     created_at: datetime = Field(..., description="Creation timestamp (UTC)")
     metadata: dict[str, Any] | None = Field(
         default=None, description="Optional metadata (purpose, TTL, etc.)"
@@ -257,15 +289,23 @@ class Task(ASAPBaseModel):
         ... )
     """
 
-    id: str = Field(..., description="Unique task identifier (ULID)")
-    conversation_id: str = Field(..., description="Parent conversation ID")
-    parent_task_id: str | None = Field(default=None, description="Parent task ID for subtasks")
-    status: str = Field(..., description="Task status (submitted, working, etc.)")
+    id: TaskID = Field(..., description="Unique task identifier (ULID)")
+    conversation_id: ConversationID = Field(..., description="Parent conversation ID")
+    parent_task_id: TaskID | None = Field(default=None, description="Parent task ID for subtasks")
+    status: TaskStatus = Field(..., description="Task status (submitted, working, etc.)")
     progress: dict[str, Any] | None = Field(
         default=None, description="Progress info (percent, message, ETA)"
     )
     created_at: datetime = Field(..., description="Creation timestamp (UTC)")
     updated_at: datetime = Field(..., description="Last update timestamp (UTC)")
+
+    def is_terminal(self) -> bool:
+        """Check if task is in a terminal state (completed, failed, or cancelled)."""
+        return self.status.is_terminal()
+
+    def can_be_cancelled(self) -> bool:
+        """Check if task can be cancelled (only submitted or working tasks)."""
+        return self.status in {TaskStatus.SUBMITTED, TaskStatus.WORKING}
 
 
 class Message(ASAPBaseModel):
@@ -294,11 +334,11 @@ class Message(ASAPBaseModel):
         ... )
     """
 
-    id: str = Field(..., description="Unique message identifier (ULID)")
-    task_id: str = Field(..., description="Parent task ID")
-    sender: str = Field(..., description="Sender agent URN")
-    role: str = Field(..., description="Message role (user, assistant, system)")
-    parts: list[str] = Field(..., description="Part IDs or references")
+    id: MessageID = Field(..., description="Unique message identifier (ULID)")
+    task_id: TaskID = Field(..., description="Parent task ID")
+    sender: AgentURN = Field(..., description="Sender agent URN")
+    role: MessageRole = Field(..., description="Message role (user, assistant, system)")
+    parts: list[PartID] = Field(..., description="Part IDs or references")
     timestamp: datetime = Field(..., description="Message timestamp (UTC)")
 
 
@@ -326,10 +366,10 @@ class Artifact(ASAPBaseModel):
         ... )
     """
 
-    id: str = Field(..., description="Unique artifact identifier (ULID)")
-    task_id: str = Field(..., description="Parent task ID")
+    id: ArtifactID = Field(..., description="Unique artifact identifier (ULID)")
+    task_id: TaskID = Field(..., description="Parent task ID")
     name: str = Field(..., description="Human-readable artifact name")
-    parts: list[str] = Field(..., description="Part IDs making up this artifact")
+    parts: list[PartID] = Field(..., description="Part IDs making up this artifact")
     created_at: datetime = Field(..., description="Creation timestamp (UTC)")
 
 
@@ -360,8 +400,8 @@ class StateSnapshot(ASAPBaseModel):
         ... )
     """
 
-    id: str = Field(..., description="Unique snapshot identifier (ULID)")
-    task_id: str = Field(..., description="Parent task ID")
+    id: SnapshotID = Field(..., description="Unique snapshot identifier (ULID)")
+    task_id: TaskID = Field(..., description="Parent task ID")
     version: int = Field(..., description="Snapshot version number", ge=1)
     data: dict[str, Any] = Field(..., description="State data (JSON-serializable)")
     checkpoint: bool = Field(default=False, description="Whether this is a significant checkpoint")

@@ -9,6 +9,16 @@ from typing import Any, Union
 from pydantic import Field
 
 from asap.models.base import ASAPBaseModel
+from asap.models.enums import TaskStatus, UpdateType
+from asap.models.types import (
+    AgentURN,
+    ArtifactID,
+    ConversationID,
+    MessageID,
+    PartID,
+    SnapshotID,
+    TaskID,
+)
 
 
 class TaskRequest(ASAPBaseModel):
@@ -33,8 +43,8 @@ class TaskRequest(ASAPBaseModel):
         ... )
     """
 
-    conversation_id: str = Field(..., description="Parent conversation ID")
-    parent_task_id: str | None = Field(default=None, description="Parent task ID for subtasks")
+    conversation_id: ConversationID = Field(..., description="Parent conversation ID")
+    parent_task_id: TaskID | None = Field(default=None, description="Parent task ID for subtasks")
     skill_id: str = Field(..., description="Skill identifier to execute")
     input: dict[str, Any] = Field(..., description="Input data for the skill")
     config: dict[str, Any] | None = Field(
@@ -64,8 +74,8 @@ class TaskResponse(ASAPBaseModel):
         ... )
     """
 
-    task_id: str = Field(..., description="Task identifier")
-    status: str = Field(..., description="Final task status")
+    task_id: TaskID = Field(..., description="Task identifier")
+    status: TaskStatus = Field(..., description="Final task status")
     result: dict[str, Any] | None = Field(
         default=None, description="Result data (summary, artifacts, etc.)"
     )
@@ -106,9 +116,9 @@ class TaskUpdate(ASAPBaseModel):
         ... )
     """
 
-    task_id: str = Field(..., description="Task identifier")
-    update_type: str = Field(..., description="Update type (progress, input_required)")
-    status: str = Field(..., description="Current task status")
+    task_id: TaskID = Field(..., description="Task identifier")
+    update_type: UpdateType = Field(..., description="Update type (progress, input_required)")
+    status: TaskStatus = Field(..., description="Current task status")
     progress: dict[str, Any] | None = Field(
         default=None, description="Progress info (percent, message, ETA)"
     )
@@ -134,7 +144,7 @@ class TaskCancel(ASAPBaseModel):
         ... )
     """
 
-    task_id: str = Field(..., description="Task identifier to cancel")
+    task_id: TaskID = Field(..., description="Task identifier to cancel")
     reason: str | None = Field(default=None, description="Optional cancellation reason")
 
 
@@ -161,11 +171,11 @@ class MessageSend(ASAPBaseModel):
         ... )
     """
 
-    task_id: str = Field(..., description="Parent task ID")
-    message_id: str = Field(..., description="Unique message identifier")
-    sender: str = Field(..., description="Sender agent URN")
+    task_id: TaskID = Field(..., description="Parent task ID")
+    message_id: MessageID = Field(..., description="Unique message identifier")
+    sender: AgentURN = Field(..., description="Sender agent URN")
     role: str = Field(..., description="Message role (user, assistant, system)")
-    parts: list[str] = Field(..., description="Part IDs making up this message")
+    parts: list[PartID] = Field(..., description="Part IDs making up this message")
 
 
 class StateQuery(ASAPBaseModel):
@@ -186,7 +196,7 @@ class StateQuery(ASAPBaseModel):
         >>> query = StateQuery(task_id="task_123", version=5)
     """
 
-    task_id: str = Field(..., description="Task identifier")
+    task_id: TaskID = Field(..., description="Task identifier")
     version: int | None = Field(default=None, description="Optional specific version to retrieve")
 
 
@@ -207,8 +217,8 @@ class StateRestore(ASAPBaseModel):
         ... )
     """
 
-    task_id: str = Field(..., description="Task identifier")
-    snapshot_id: str = Field(..., description="Snapshot ID to restore from")
+    task_id: TaskID = Field(..., description="Task identifier")
+    snapshot_id: SnapshotID = Field(..., description="Snapshot ID to restore from")
 
 
 class ArtifactNotify(ASAPBaseModel):
@@ -230,8 +240,8 @@ class ArtifactNotify(ASAPBaseModel):
         ... )
     """
 
-    artifact_id: str = Field(..., description="Artifact identifier")
-    task_id: str = Field(..., description="Parent task ID")
+    artifact_id: ArtifactID = Field(..., description="Artifact identifier")
+    task_id: TaskID = Field(..., description="Parent task ID")
     name: str | None = Field(default=None, description="Optional human-readable artifact name")
 
 

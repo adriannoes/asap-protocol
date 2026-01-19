@@ -7,10 +7,11 @@ routing, correlation, tracing, and versioning.
 from datetime import datetime, timezone
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from asap.models.base import ASAPBaseModel
 from asap.models.ids import generate_id
+from asap.models.types import AgentURN
 
 
 class Envelope(ASAPBaseModel):
@@ -53,8 +54,8 @@ class Envelope(ASAPBaseModel):
     timestamp: datetime | None = Field(
         default=None, description="Message timestamp (UTC, auto-generated)"
     )
-    sender: str = Field(..., description="Sender agent URN")
-    recipient: str = Field(..., description="Recipient agent URN")
+    sender: AgentURN = Field(..., description="Sender agent URN")
+    recipient: AgentURN = Field(..., description="Recipient agent URN")
     payload_type: str = Field(..., description="Payload type discriminator")
     payload: dict[str, Any] = Field(..., description="Message payload")
     correlation_id: str | None = Field(
@@ -82,3 +83,12 @@ class Envelope(ASAPBaseModel):
         if v is None:
             return datetime.now(timezone.utc)
         return v
+
+    @model_validator(mode="after")
+    def validate_response_correlation(self) -> "Envelope":
+        """Validate that response payloads have correlation_id for request tracking."""
+        response_types = {"TaskResponse", "McpToolResult", "McpResourceData"}
+
+        if self.payload_type in response_types and not self.correlation_id:
+            raise ValueError(f"{self.payload_type} must have correlation_id for request tracking")
+        return self

@@ -7,6 +7,31 @@ including entities, parts, payloads, and the envelope wrapper.
 # Base models
 from asap.models.base import ASAPBaseModel
 
+# Constants
+from asap.models.constants import (
+    AGENT_URN_PATTERN,
+    ASAP_PROTOCOL_VERSION,
+    DEFAULT_TIMEOUT_SECONDS,
+    MAX_TASK_DEPTH,
+)
+
+# Enums
+from asap.models.enums import MessageRole, TaskStatus, UpdateType
+
+# Type aliases
+from asap.models.types import (
+    AgentURN,
+    ArtifactID,
+    ConversationID,
+    MessageID,
+    MIMEType,
+    PartID,
+    SemanticVersion,
+    SnapshotID,
+    TaskID,
+    URI,
+)
+
 # ID utilities
 from asap.models.ids import extract_timestamp, generate_id
 
@@ -59,6 +84,26 @@ from asap.models.envelope import Envelope
 __all__ = [
     # Base
     "ASAPBaseModel",
+    # Constants
+    "AGENT_URN_PATTERN",
+    "ASAP_PROTOCOL_VERSION",
+    "DEFAULT_TIMEOUT_SECONDS",
+    "MAX_TASK_DEPTH",
+    # Enums
+    "MessageRole",
+    "TaskStatus",
+    "UpdateType",
+    # Type aliases
+    "AgentURN",
+    "ArtifactID",
+    "ConversationID",
+    "MessageID",
+    "MIMEType",
+    "PartID",
+    "SemanticVersion",
+    "SnapshotID",
+    "TaskID",
+    "URI",
     # IDs
     "generate_id",
     "extract_timestamp",
