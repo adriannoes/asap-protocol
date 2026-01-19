@@ -1,0 +1,43 @@
+{
+  "additionalProperties": false,
+  "description": "Call an MCP tool.\n\nMcpToolCall invokes a tool provided by an MCP server, enabling\nagents to leverage external capabilities and integrations.\n\nAttributes:\n    request_id: Unique identifier for this tool call request\n    tool_name: Name of the MCP tool to invoke\n    arguments: Arguments to pass to the tool (JSON-serializable)\n    mcp_context: Optional MCP-specific context (server, session, etc.)\n\nExample:\n    >>> tool_call = McpToolCall(\n    ...     request_id=\"req_123\",\n    ...     tool_name=\"web_search\",\n    ...     arguments={\"query\": \"AI trends\", \"max_results\": 10},\n    ...     mcp_context={\"server\": \"mcp://tools.example.com\"}\n    ... )",
+  "properties": {
+    "request_id": {
+      "description": "Unique request identifier",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "tool_name": {
+      "description": "MCP tool name to invoke",
+      "title": "Tool Name",
+      "type": "string"
+    },
+    "arguments": {
+      "additionalProperties": true,
+      "description": "Tool arguments (JSON-serializable)",
+      "title": "Arguments",
+      "type": "object"
+    },
+    "mcp_context": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional MCP context (server, session, etc.)",
+      "title": "Mcp Context"
+    }
+  },
+  "required": [
+    "request_id",
+    "tool_name",
+    "arguments"
+  ],
+  "title": "McpToolCall",
+  "type": "object"
+}

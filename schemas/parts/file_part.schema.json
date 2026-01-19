@@ -1,0 +1,42 @@
+{
+  "additionalProperties": false,
+  "description": "Binary or text file part.\n\nFilePart represents file content, either by reference (URI) or\ninline (base64-encoded data). Includes MIME type for proper handling.\n\nAttributes:\n    type: Discriminator field, always \"file\"\n    uri: File URI (can be asap://, file://, https://, or data: URI)\n    mime_type: MIME type of the file (e.g., \"application/pdf\")\n    inline_data: Optional base64-encoded inline file data\n\nExample:\n    >>> part = FilePart(\n    ...     type=\"file\",\n    ...     uri=\"asap://artifacts/task_123/report.pdf\",\n    ...     mime_type=\"application/pdf\"\n    ... )\n    >>> \n    >>> # With inline data\n    >>> part_inline = FilePart(\n    ...     type=\"file\",\n    ...     uri=\"data:text/plain;base64,SGVsbG8gV29ybGQ=\",\n    ...     mime_type=\"text/plain\",\n    ...     inline_data=\"SGVsbG8gV29ybGQ=\"\n    ... )",
+  "properties": {
+    "type": {
+      "const": "file",
+      "description": "Part type discriminator",
+      "title": "Type",
+      "type": "string"
+    },
+    "uri": {
+      "description": "File URI (asap://, file://, https://, data:)",
+      "title": "Uri",
+      "type": "string"
+    },
+    "mime_type": {
+      "description": "MIME type (e.g., application/pdf)",
+      "title": "Mime Type",
+      "type": "string"
+    },
+    "inline_data": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional base64-encoded inline file data",
+      "title": "Inline Data"
+    }
+  },
+  "required": [
+    "type",
+    "uri",
+    "mime_type"
+  ],
+  "title": "FilePart",
+  "type": "object"
+}

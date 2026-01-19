@@ -1,0 +1,94 @@
+{
+  "additionalProperties": false,
+  "description": "ASAP protocol message envelope.\n\nEnvelope wraps all protocol messages with metadata for routing,\ncorrelation, tracing, and versioning. Auto-generates id and timestamp\nif not provided.\n\nAttributes:\n    id: Unique envelope identifier (auto-generated if not provided)\n    asap_version: ASAP protocol version (e.g., \"0.1\")\n    timestamp: Message timestamp in UTC (auto-generated if not provided)\n    sender: Sender agent URN\n    recipient: Recipient agent URN\n    payload_type: Type of payload (TaskRequest, TaskResponse, etc.)\n    payload: Actual message payload\n    correlation_id: Optional ID for correlating request/response pairs\n    trace_id: Optional ID for distributed tracing\n    extensions: Optional custom extensions\n\nExample:\n    >>> from datetime import datetime, timezone\n    >>> envelope = Envelope(\n    ...     asap_version=\"0.1\",\n    ...     sender=\"urn:asap:agent:coordinator\",\n    ...     recipient=\"urn:asap:agent:research-v1\",\n    ...     payload_type=\"TaskRequest\",\n    ...     payload={\"conversation_id\": \"conv_123\", \"skill_id\": \"research\", \"input\": {}}\n    ... )\n    >>> # id and timestamp are auto-generated\n    >>> assert envelope.id is not None\n    >>> assert envelope.timestamp is not None",
+  "properties": {
+    "id": {
+      "default": null,
+      "description": "Unique envelope identifier (ULID, auto-generated)",
+      "title": "Id",
+      "type": "string"
+    },
+    "asap_version": {
+      "description": "ASAP protocol version",
+      "title": "Asap Version",
+      "type": "string"
+    },
+    "timestamp": {
+      "default": null,
+      "description": "Message timestamp (UTC, auto-generated)",
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "sender": {
+      "description": "Sender agent URN",
+      "title": "Sender",
+      "type": "string"
+    },
+    "recipient": {
+      "description": "Recipient agent URN",
+      "title": "Recipient",
+      "type": "string"
+    },
+    "payload_type": {
+      "description": "Payload type discriminator",
+      "title": "Payload Type",
+      "type": "string"
+    },
+    "payload": {
+      "additionalProperties": true,
+      "description": "Message payload",
+      "title": "Payload",
+      "type": "object"
+    },
+    "correlation_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional correlation ID for request/response pairing",
+      "title": "Correlation Id"
+    },
+    "trace_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional trace ID for distributed tracing",
+      "title": "Trace Id"
+    },
+    "extensions": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional custom extensions",
+      "title": "Extensions"
+    }
+  },
+  "required": [
+    "asap_version",
+    "sender",
+    "recipient",
+    "payload_type",
+    "payload"
+  ],
+  "title": "Envelope",
+  "type": "object"
+}

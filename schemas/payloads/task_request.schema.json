@@ -1,0 +1,56 @@
+{
+  "additionalProperties": false,
+  "description": "Request to execute a task on an agent.\n\nTaskRequest initiates task execution, specifying the skill to invoke,\ninput data, and optional configuration parameters.\n\nAttributes:\n    conversation_id: ID of the conversation this task belongs to\n    parent_task_id: Optional ID of parent task (for subtasks)\n    skill_id: Identifier of the skill to execute\n    input: Input data for the skill (JSON-serializable)\n    config: Optional configuration (timeout, priority, streaming, etc.)\n\nExample:\n    >>> request = TaskRequest(\n    ...     conversation_id=\"conv_01HX5K3MQVN8\",\n    ...     skill_id=\"web_research\",\n    ...     input={\"query\": \"AI infrastructure market trends Q3 2025\"},\n    ...     config={\"timeout_seconds\": 600, \"streaming\": True}\n    ... )",
+  "properties": {
+    "conversation_id": {
+      "description": "Parent conversation ID",
+      "title": "Conversation Id",
+      "type": "string"
+    },
+    "parent_task_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Parent task ID for subtasks",
+      "title": "Parent Task Id"
+    },
+    "skill_id": {
+      "description": "Skill identifier to execute",
+      "title": "Skill Id",
+      "type": "string"
+    },
+    "input": {
+      "additionalProperties": true,
+      "description": "Input data for the skill",
+      "title": "Input",
+      "type": "object"
+    },
+    "config": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional configuration (timeout, priority, streaming, etc.)",
+      "title": "Config"
+    }
+  },
+  "required": [
+    "conversation_id",
+    "skill_id",
+    "input"
+  ],
+  "title": "TaskRequest",
+  "type": "object"
+}

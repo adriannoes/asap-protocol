@@ -1,0 +1,227 @@
+{
+  "$defs": {
+    "AuthScheme": {
+      "additionalProperties": false,
+      "description": "Authentication configuration for agent access.\n\nDefines the authentication methods supported by an agent and\noptional OAuth2 configuration.\n\nAttributes:\n    schemes: List of supported auth schemes (e.g., [\"bearer\", \"oauth2\"])\n    oauth2: Optional OAuth2 configuration with URLs and scopes\n\nExample:\n    >>> auth = AuthScheme(\n    ...     schemes=[\"bearer\", \"oauth2\"],\n    ...     oauth2={\n    ...         \"authorization_url\": \"https://auth.example.com/authorize\",\n    ...         \"token_url\": \"https://auth.example.com/token\",\n    ...         \"scopes\": [\"asap:execute\", \"asap:read\"]\n    ...     }\n    ... )",
+      "properties": {
+        "schemes": {
+          "description": "Supported authentication schemes",
+          "items": {
+            "type": "string"
+          },
+          "title": "Schemes",
+          "type": "array"
+        },
+        "oauth2": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "OAuth2 configuration if oauth2 is in schemes",
+          "title": "Oauth2"
+        }
+      },
+      "required": [
+        "schemes"
+      ],
+      "title": "AuthScheme",
+      "type": "object"
+    },
+    "Capability": {
+      "additionalProperties": false,
+      "description": "Collection of an agent's features and supported operations.\n\nCapabilities describe what an agent can do, including skills,\nstate persistence, streaming support, and MCP tool integration.\n\nAttributes:\n    asap_version: ASAP protocol version supported (e.g., \"0.1\")\n    skills: List of skills the agent can perform\n    state_persistence: Whether the agent supports state snapshots\n    streaming: Whether the agent supports streaming responses\n    mcp_tools: List of MCP tool names the agent can execute\n\nExample:\n    >>> capability = Capability(\n    ...     asap_version=\"0.1\",\n    ...     skills=[Skill(id=\"research\", description=\"Research skill\")],\n    ...     state_persistence=True,\n    ...     streaming=True,\n    ...     mcp_tools=[\"web_search\"]\n    ... )",
+      "properties": {
+        "asap_version": {
+          "description": "ASAP protocol version",
+          "title": "Asap Version",
+          "type": "string"
+        },
+        "skills": {
+          "description": "Available skills",
+          "items": {
+            "$ref": "#/$defs/Skill"
+          },
+          "title": "Skills",
+          "type": "array"
+        },
+        "state_persistence": {
+          "default": false,
+          "description": "Supports state snapshots",
+          "title": "State Persistence",
+          "type": "boolean"
+        },
+        "streaming": {
+          "default": false,
+          "description": "Supports streaming responses",
+          "title": "Streaming",
+          "type": "boolean"
+        },
+        "mcp_tools": {
+          "description": "Available MCP tools",
+          "items": {
+            "type": "string"
+          },
+          "title": "Mcp Tools",
+          "type": "array"
+        }
+      },
+      "required": [
+        "asap_version"
+      ],
+      "title": "Capability",
+      "type": "object"
+    },
+    "Endpoint": {
+      "additionalProperties": false,
+      "description": "Network endpoints for agent communication.\n\nDefines the URLs where an agent can be reached for different\ntypes of communication.\n\nAttributes:\n    asap: HTTP endpoint for ASAP protocol messages (required)\n    events: Optional WebSocket endpoint for streaming events\n\nExample:\n    >>> endpoint = Endpoint(\n    ...     asap=\"https://api.example.com/asap\",\n    ...     events=\"wss://api.example.com/asap/events\"\n    ... )",
+      "properties": {
+        "asap": {
+          "description": "HTTP endpoint for ASAP messages",
+          "title": "Asap",
+          "type": "string"
+        },
+        "events": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "WebSocket endpoint for streaming events",
+          "title": "Events"
+        }
+      },
+      "required": [
+        "asap"
+      ],
+      "title": "Endpoint",
+      "type": "object"
+    },
+    "Skill": {
+      "additionalProperties": false,
+      "description": "A specific capability that an agent can perform.\n\nSkills define what an agent can do, along with the expected input\nand output schemas for validation.\n\nAttributes:\n    id: Unique identifier for the skill (e.g., \"web_research\")\n    description: Human-readable description of what the skill does\n    input_schema: Optional JSON Schema for validating skill inputs\n    output_schema: Optional JSON Schema for validating skill outputs\n\nExample:\n    >>> skill = Skill(\n    ...     id=\"web_research\",\n    ...     description=\"Search and synthesize information from the web\",\n    ...     input_schema={\"type\": \"object\", \"properties\": {\"query\": {\"type\": \"string\"}}},\n    ...     output_schema={\"type\": \"object\", \"properties\": {\"summary\": {\"type\": \"string\"}}}\n    ... )",
+      "properties": {
+        "id": {
+          "description": "Unique skill identifier",
+          "title": "Id",
+          "type": "string"
+        },
+        "description": {
+          "description": "Human-readable skill description",
+          "title": "Description",
+          "type": "string"
+        },
+        "input_schema": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "JSON Schema for skill input validation",
+          "title": "Input Schema"
+        },
+        "output_schema": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "JSON Schema for skill output validation",
+          "title": "Output Schema"
+        }
+      },
+      "required": [
+        "id",
+        "description"
+      ],
+      "title": "Skill",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Self-describing metadata about an agent's capabilities.\n\nThe manifest is analogous to A2A's Agent Card but extended with\nadditional ASAP-specific features. It provides all information\nneeded to interact with an agent.\n\nAttributes:\n    id: Unique agent identifier (matches Agent.id)\n    name: Human-readable agent name\n    version: Semantic version of the agent\n    description: Description of what the agent does\n    capabilities: Detailed capability information\n    endpoints: Network endpoints for communication\n    auth: Optional authentication configuration\n    signature: Optional cryptographic signature for manifest verification\n\nExample:\n    >>> manifest = Manifest(\n    ...     id=\"urn:asap:agent:research-v1\",\n    ...     name=\"Research Agent\",\n    ...     version=\"1.0.0\",\n    ...     description=\"Performs web research and summarization\",\n    ...     capabilities=Capability(\n    ...         asap_version=\"0.1\",\n    ...         skills=[Skill(id=\"web_research\", description=\"Research skill\")],\n    ...         state_persistence=True\n    ...     ),\n    ...     endpoints=Endpoint(asap=\"https://api.example.com/asap\")\n    ... )",
+  "properties": {
+    "id": {
+      "description": "Unique agent identifier (URN format)",
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "description": "Human-readable agent name",
+      "title": "Name",
+      "type": "string"
+    },
+    "version": {
+      "description": "Semantic version (e.g., '1.0.0')",
+      "title": "Version",
+      "type": "string"
+    },
+    "description": {
+      "description": "What the agent does",
+      "title": "Description",
+      "type": "string"
+    },
+    "capabilities": {
+      "$ref": "#/$defs/Capability",
+      "description": "Agent capabilities"
+    },
+    "endpoints": {
+      "$ref": "#/$defs/Endpoint",
+      "description": "Communication endpoints"
+    },
+    "auth": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AuthScheme"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Authentication configuration"
+    },
+    "signature": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Cryptographic signature for verification",
+      "title": "Signature"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "version",
+    "description",
+    "capabilities",
+    "endpoints"
+  ],
+  "title": "Manifest",
+  "type": "object"
+}

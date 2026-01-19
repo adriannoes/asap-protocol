@@ -1,0 +1,64 @@
+{
+  "additionalProperties": false,
+  "description": "Response to a task execution request.\n\nTaskResponse provides the final result of task execution, including\nstatus, result data, final state snapshot, and execution metrics.\n\nAttributes:\n    task_id: ID of the completed task\n    status: Final task status (completed, failed, cancelled, etc.)\n    result: Optional result data (summary, artifacts, etc.)\n    final_state: Optional final state snapshot\n    metrics: Optional execution metrics (duration, tokens used, etc.)\n\nExample:\n    >>> response = TaskResponse(\n    ...     task_id=\"task_01HX5K4N\",\n    ...     status=\"completed\",\n    ...     result={\"summary\": \"Analysis complete\", \"artifacts\": [\"art_123\"]},\n    ...     metrics={\"duration_ms\": 45000, \"tokens_used\": 12500}\n    ... )",
+  "properties": {
+    "task_id": {
+      "description": "Task identifier",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "status": {
+      "description": "Final task status",
+      "title": "Status",
+      "type": "string"
+    },
+    "result": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Result data (summary, artifacts, etc.)",
+      "title": "Result"
+    },
+    "final_state": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Final state snapshot",
+      "title": "Final State"
+    },
+    "metrics": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Execution metrics (duration, tokens, etc.)",
+      "title": "Metrics"
+    }
+  },
+  "required": [
+    "task_id",
+    "status"
+  ],
+  "title": "TaskResponse",
+  "type": "object"
+}

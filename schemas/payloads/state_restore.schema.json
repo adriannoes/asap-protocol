@@ -1,0 +1,22 @@
+{
+  "additionalProperties": false,
+  "description": "Restore a task to a previous state snapshot.\n\nStateRestore requests restoration of a task to a previously saved\nstate snapshot, enabling rollback and recovery scenarios.\n\nAttributes:\n    task_id: ID of the task to restore\n    snapshot_id: ID of the snapshot to restore from\n\nExample:\n    >>> restore = StateRestore(\n    ...     task_id=\"task_123\",\n    ...     snapshot_id=\"snap_456\"\n    ... )",
+  "properties": {
+    "task_id": {
+      "description": "Task identifier",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "snapshot_id": {
+      "description": "Snapshot ID to restore from",
+      "title": "Snapshot Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "task_id",
+    "snapshot_id"
+  ],
+  "title": "StateRestore",
+  "type": "object"
+}

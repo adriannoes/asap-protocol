@@ -1,0 +1,46 @@
+{
+  "additionalProperties": false,
+  "description": "A context for related interactions between agents.\n\nConversations enable shared context accumulation, task grouping,\nand state isolation between unrelated work.\n\nAttributes:\n    id: Unique conversation identifier (ULID format)\n    participants: List of agent URNs participating in the conversation\n    created_at: Timestamp when the conversation was created (UTC)\n    metadata: Optional metadata (e.g., purpose, TTL, tags)\n\nExample:\n    >>> from datetime import datetime, timezone\n    >>> conversation = Conversation(\n    ...     id=\"conv_01HX5K3MQVN8...\",\n    ...     participants=[\"urn:asap:agent:coordinator\", \"urn:asap:agent:research-v1\"],\n    ...     created_at=datetime.now(timezone.utc),\n    ...     metadata={\"purpose\": \"quarterly_report_research\", \"ttl_hours\": 72}\n    ... )",
+  "properties": {
+    "id": {
+      "description": "Unique conversation identifier (ULID)",
+      "title": "Id",
+      "type": "string"
+    },
+    "participants": {
+      "description": "Agent URNs in conversation",
+      "items": {
+        "type": "string"
+      },
+      "title": "Participants",
+      "type": "array"
+    },
+    "created_at": {
+      "description": "Creation timestamp (UTC)",
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "metadata": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional metadata (purpose, TTL, etc.)",
+      "title": "Metadata"
+    }
+  },
+  "required": [
+    "id",
+    "participants",
+    "created_at"
+  ],
+  "title": "Conversation",
+  "type": "object"
+}

@@ -1,0 +1,43 @@
+{
+  "additionalProperties": false,
+  "description": "Send a message within a task conversation.\n\nMessageSend exchanges conversation turns between agents during\ntask execution, containing message content as parts.\n\nAttributes:\n    task_id: ID of the task this message belongs to\n    message_id: Unique identifier for this message\n    sender: Agent URN of the message sender\n    role: Message role (user, assistant, system)\n    parts: List of part IDs that make up this message\n\nExample:\n    >>> message = MessageSend(\n    ...     task_id=\"task_123\",\n    ...     message_id=\"msg_456\",\n    ...     sender=\"urn:asap:agent:coordinator\",\n    ...     role=\"user\",\n    ...     parts=[\"part_789\"]\n    ... )",
+  "properties": {
+    "task_id": {
+      "description": "Parent task ID",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "message_id": {
+      "description": "Unique message identifier",
+      "title": "Message Id",
+      "type": "string"
+    },
+    "sender": {
+      "description": "Sender agent URN",
+      "title": "Sender",
+      "type": "string"
+    },
+    "role": {
+      "description": "Message role (user, assistant, system)",
+      "title": "Role",
+      "type": "string"
+    },
+    "parts": {
+      "description": "Part IDs making up this message",
+      "items": {
+        "type": "string"
+      },
+      "title": "Parts",
+      "type": "array"
+    }
+  },
+  "required": [
+    "task_id",
+    "message_id",
+    "sender",
+    "role",
+    "parts"
+  ],
+  "title": "MessageSend",
+  "type": "object"
+}

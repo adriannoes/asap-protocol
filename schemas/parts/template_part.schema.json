@@ -1,0 +1,30 @@
+{
+  "additionalProperties": false,
+  "description": "Parameterized prompt template.\n\nTemplatePart represents a template string with variable placeholders\n(using {{variable}} syntax) and their corresponding values.\n\nAttributes:\n    type: Discriminator field, always \"template\"\n    template: Template string with {{variable}} placeholders\n    variables: Dictionary mapping variable names to their values\n\nExample:\n    >>> part = TemplatePart(\n    ...     type=\"template\",\n    ...     template=\"Research {{topic}} for {{timeframe}}\",\n    ...     variables={\"topic\": \"AI trends\", \"timeframe\": \"Q3 2025\"}\n    ... )",
+  "properties": {
+    "type": {
+      "const": "template",
+      "description": "Part type discriminator",
+      "title": "Type",
+      "type": "string"
+    },
+    "template": {
+      "description": "Template string with {{variable}} syntax",
+      "title": "Template",
+      "type": "string"
+    },
+    "variables": {
+      "additionalProperties": true,
+      "description": "Variable name to value mapping",
+      "title": "Variables",
+      "type": "object"
+    }
+  },
+  "required": [
+    "type",
+    "template",
+    "variables"
+  ],
+  "title": "TemplatePart",
+  "type": "object"
+}

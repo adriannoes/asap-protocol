@@ -1,0 +1,37 @@
+{
+  "additionalProperties": false,
+  "description": "Structured JSON data part.\n\nDataPart represents structured data in JSON format, optionally\nwith a schema URI for validation.\n\nAttributes:\n    type: Discriminator field, always \"data\"\n    data: Arbitrary JSON-serializable data\n    schema_uri: Optional URI to JSON Schema for validation\n\nExample:\n    >>> part = DataPart(\n    ...     type=\"data\",\n    ...     data={\"query\": \"AI trends\", \"max_results\": 10},\n    ...     schema_uri=\"https://example.com/schemas/search.json\"\n    ... )",
+  "properties": {
+    "type": {
+      "const": "data",
+      "description": "Part type discriminator",
+      "title": "Type",
+      "type": "string"
+    },
+    "data": {
+      "additionalProperties": true,
+      "description": "Structured data (JSON-serializable)",
+      "title": "Data",
+      "type": "object"
+    },
+    "schema_uri": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional JSON Schema URI for validation",
+      "title": "Schema Uri"
+    }
+  },
+  "required": [
+    "type",
+    "data"
+  ],
+  "title": "DataPart",
+  "type": "object"
+}
