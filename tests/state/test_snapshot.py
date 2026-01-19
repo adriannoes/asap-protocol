@@ -30,24 +30,34 @@ def sample_snapshot() -> StateSnapshot:
 class TestSnapshotStoreInterface:
     """Test the SnapshotStore interface contract."""
 
-    def test_snapshot_store_is_abstract(self) -> None:
-        """Test that SnapshotStore cannot be instantiated directly."""
-        with pytest.raises(TypeError):
-            SnapshotStore()  # type: ignore
+    def test_snapshot_store_is_protocol(self) -> None:
+        """Test that SnapshotStore is a Protocol."""
+        from typing import runtime_checkable
 
-    def test_abstract_methods_defined(self) -> None:
-        """Test that abstract methods are properly defined."""
-        # Check that the abstract methods exist
+        # Protocol should be runtime checkable
+        assert hasattr(SnapshotStore, "__protocol_attrs__") or runtime_checkable(SnapshotStore)
+
+    def test_protocol_methods_defined(self) -> None:
+        """Test that protocol methods are properly defined."""
+        # Check that the protocol methods exist
         assert hasattr(SnapshotStore, "save")
         assert hasattr(SnapshotStore, "get")
         assert hasattr(SnapshotStore, "list_versions")
+        assert hasattr(SnapshotStore, "delete")
 
-        # Check that calling abstract methods raises NotImplementedError
+        # Check that concrete implementation implements protocol
         store = InMemorySnapshotStore()  # Use concrete implementation
         # These should work on concrete implementation
         assert callable(store.save)
         assert callable(store.get)
         assert callable(store.list_versions)
+        assert callable(store.delete)
+
+    def test_in_memory_store_implements_protocol(self) -> None:
+        """Test that InMemorySnapshotStore implements SnapshotStore protocol."""
+        store = InMemorySnapshotStore()
+        # Runtime check should pass
+        assert isinstance(store, SnapshotStore)
 
 
 class TestInMemorySnapshotStore:
@@ -300,3 +310,129 @@ class TestInMemorySnapshotStore:
 
         versions = snapshot_store.list_versions(task_id)
         assert versions == []
+
+    def test_delete_specific_version(
+        self, snapshot_store: InMemorySnapshotStore, sample_snapshot: StateSnapshot
+    ) -> None:
+        """Test delete() removes specific version."""
+        task_id = sample_snapshot.task_id
+        now = datetime.now(timezone.utc)
+
+        # Create multiple versions
+        snapshot_v1 = StateSnapshot(
+            id="snap_01HX5K7R000000000000000001",
+            task_id=task_id,
+            version=1,
+            data={"step": 1},
+            created_at=now,
+        )
+        snapshot_v2 = StateSnapshot(
+            id="snap_01HX5K7R000000000000000002",
+            task_id=task_id,
+            version=2,
+            data={"step": 2},
+            created_at=now,
+        )
+
+        snapshot_store.save(snapshot_v1)
+        snapshot_store.save(snapshot_v2)
+
+        # Delete version 1
+        result = snapshot_store.delete(task_id, version=1)
+        assert result is True
+
+        # Version 1 should be gone
+        assert snapshot_store.get(task_id, version=1) is None
+        # Version 2 should still exist
+        assert snapshot_store.get(task_id, version=2) is not None
+        # Latest should now be version 2
+        assert snapshot_store.get(task_id).version == 2
+
+    def test_delete_all_versions(
+        self, snapshot_store: InMemorySnapshotStore, sample_snapshot: StateSnapshot
+    ) -> None:
+        """Test delete() removes all versions when version is None."""
+        task_id = sample_snapshot.task_id
+        now = datetime.now(timezone.utc)
+
+        # Create multiple versions
+        snapshot_v1 = StateSnapshot(
+            id="snap_01HX5K7R000000000000000001",
+            task_id=task_id,
+            version=1,
+            data={"step": 1},
+            created_at=now,
+        )
+        snapshot_v2 = StateSnapshot(
+            id="snap_01HX5K7R000000000000000002",
+            task_id=task_id,
+            version=2,
+            data={"step": 2},
+            created_at=now,
+        )
+
+        snapshot_store.save(snapshot_v1)
+        snapshot_store.save(snapshot_v2)
+
+        # Delete all versions
+        result = snapshot_store.delete(task_id)
+        assert result is True
+
+        # All versions should be gone
+        assert snapshot_store.get(task_id) is None
+        assert snapshot_store.get(task_id, version=1) is None
+        assert snapshot_store.get(task_id, version=2) is None
+        assert snapshot_store.list_versions(task_id) == []
+
+    def test_delete_nonexistent_task_returns_false(
+        self, snapshot_store: InMemorySnapshotStore
+    ) -> None:
+        """Test delete() returns False for non-existent task."""
+        result = snapshot_store.delete("task_nonexistent")
+        assert result is False
+
+    def test_delete_nonexistent_version_returns_false(
+        self, snapshot_store: InMemorySnapshotStore, sample_snapshot: StateSnapshot
+    ) -> None:
+        """Test delete() returns False for non-existent version."""
+        snapshot_store.save(sample_snapshot)
+
+        result = snapshot_store.delete(sample_snapshot.task_id, version=999)
+        assert result is False
+
+        # Original snapshot should still exist
+        assert snapshot_store.get(sample_snapshot.task_id) is not None
+
+    def test_delete_preserves_other_tasks(self, snapshot_store: InMemorySnapshotStore) -> None:
+        """Test delete() only affects the specified task."""
+        now = datetime.now(timezone.utc)
+
+        task_id_1 = "task_01HX5K4N000000000000000001"
+        task_id_2 = "task_01HX5K4N000000000000000002"
+
+        snapshot_1 = StateSnapshot(
+            id="snap_01HX5K7R000000000000000001",
+            task_id=task_id_1,
+            version=1,
+            data={"task": 1},
+            created_at=now,
+        )
+        snapshot_2 = StateSnapshot(
+            id="snap_01HX5K7R000000000000000002",
+            task_id=task_id_2,
+            version=1,
+            data={"task": 2},
+            created_at=now,
+        )
+
+        snapshot_store.save(snapshot_1)
+        snapshot_store.save(snapshot_2)
+
+        # Delete task 1
+        snapshot_store.delete(task_id_1)
+
+        # Task 1 should be gone
+        assert snapshot_store.get(task_id_1) is None
+        # Task 2 should still exist
+        assert snapshot_store.get(task_id_2) is not None
+        assert snapshot_store.get(task_id_2).data["task"] == 2

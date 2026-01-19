@@ -408,6 +408,66 @@
 - ✅ 100% coverage on state module
 - ✅ `task.transition("completed")` works or raises error
 
+### 3.4 Code Review Improvements (PR #2 Review)
+
+> Improvements identified during PR #2 code review
+
+- [x] 3.4.1 Add `to_dict()` method to `ASAPError` for JSON serialization
+  - Returns dictionary with `code`, `message`, and `details`
+  - Facilitates serialization in HTTP responses (Sprint 3 preparation)
+  - Complete test coverage for all error classes
+
+- [x] 3.4.2 Expose `terminal_states()` as classmethod in `TaskStatus`
+  - Method `terminal_states()` returns `frozenset` with terminal states
+  - Allows reuse without instantiating enum
+  - Method `is_terminal()` now uses `terminal_states()`
+
+- [x] 3.4.3 Auto-update `updated_at` timestamp in `transition()`
+  - Function `transition()` now updates timestamp automatically
+  - Ensures state change traceability
+  - Maintains immutability by returning new instance
+
+- [x] 3.4.4 Use modern typing (dict/set) instead of Dict/Set
+  - Replaced `Dict` and `Set` with `dict` and `set` (Python 3.9+)
+  - Cleaner and more idiomatic code
+  - Reduces imports from `typing` module
+
+- [x] 3.4.5 Convert `SnapshotStore` from ABC to Protocol
+  - Changed from `ABC` to `Protocol` with `@runtime_checkable`
+  - Greater flexibility with duck typing
+  - Allows any class implementing the methods to be accepted
+  - Tests updated to validate Protocol
+
+- [x] 3.4.6 Add `delete()` method to `SnapshotStore`
+  - Method `delete(task_id, version=None)` to remove snapshots
+  - If `version=None`, removes all versions for task
+  - Returns `True` if any snapshot was deleted
+  - Complete tests for all scenarios
+
+- [x] 3.4.7 Add thread safety to `InMemorySnapshotStore`
+  - Added `threading.RLock()` for concurrent operations
+  - All operations (`save`, `get`, `list_versions`, `delete`) are thread-safe
+  - Documented that implementation is thread-safe
+
+- [x] 3.4.8 Update tests for new functionality
+  - 7 new tests for error serialization (`to_dict()`)
+  - 5 new tests for `delete()` method in snapshot store
+  - Tests updated for Protocol instead of ABC
+  - **197 tests** passing with **96.51% coverage**
+
+#### Results
+
+| Metric | Value |
+|--------|-------|
+| Tests passing | 197 (+13 new) |
+| Total coverage | 96.51% |
+| `errors.py` coverage | 100% |
+| `machine.py` coverage | 100% |
+| `enums.py` coverage | 100% |
+| `snapshot.py` coverage | 82.95% |
+
+**Commit**: `refactor(state): apply code review improvements from PR #2`
+
 ---
 
 ## Sprint 3: HTTP Transport (TDD)

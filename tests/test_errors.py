@@ -163,3 +163,89 @@ class TestTaskAlreadyCompletedError:
 
         assert isinstance(error, ASAPError)
         assert isinstance(error, Exception)
+
+
+class TestErrorSerialization:
+    """Test error serialization to dictionary."""
+
+    def test_asap_error_to_dict_basic(self) -> None:
+        """Test basic ASAPError serialization to dictionary."""
+        error = ASAPError(code="asap:test/error", message="Test error message")
+        result = error.to_dict()
+
+        assert result == {
+            "code": "asap:test/error",
+            "message": "Test error message",
+            "details": {},
+        }
+
+    def test_asap_error_to_dict_with_details(self) -> None:
+        """Test ASAPError serialization with details."""
+        details = {"context": "test", "value": 42, "nested": {"key": "value"}}
+        error = ASAPError(
+            code="asap:test/detailed_error", message="Detailed error", details=details
+        )
+        result = error.to_dict()
+
+        assert result == {
+            "code": "asap:test/detailed_error",
+            "message": "Detailed error",
+            "details": details,
+        }
+
+    def test_invalid_transition_error_to_dict(self) -> None:
+        """Test InvalidTransitionError serialization."""
+        error = InvalidTransitionError(from_state="working", to_state="completed")
+        result = error.to_dict()
+
+        assert result["code"] == "asap:protocol/invalid_state"
+        assert "Invalid transition from 'working' to 'completed'" in result["message"]
+        assert result["details"]["from_state"] == "working"
+        assert result["details"]["to_state"] == "completed"
+
+    def test_malformed_envelope_error_to_dict(self) -> None:
+        """Test MalformedEnvelopeError serialization."""
+        error = MalformedEnvelopeError(reason="missing required field 'id'")
+        result = error.to_dict()
+
+        assert result["code"] == "asap:protocol/malformed_envelope"
+        assert "Malformed envelope: missing required field 'id'" in result["message"]
+        assert result["details"] == {}
+
+    def test_task_not_found_error_to_dict(self) -> None:
+        """Test TaskNotFoundError serialization."""
+        error = TaskNotFoundError(task_id="task-123")
+        result = error.to_dict()
+
+        assert result["code"] == "asap:task/not_found"
+        assert "Task not found: task-123" in result["message"]
+        assert result["details"]["task_id"] == "task-123"
+
+    def test_task_already_completed_error_to_dict(self) -> None:
+        """Test TaskAlreadyCompletedError serialization."""
+        error = TaskAlreadyCompletedError(task_id="task-123", current_status="completed")
+        result = error.to_dict()
+
+        assert result["code"] == "asap:task/already_completed"
+        assert "Task already completed: task-123 (status: completed)" in result["message"]
+        assert result["details"]["task_id"] == "task-123"
+        assert result["details"]["current_status"] == "completed"
+
+    def test_error_to_dict_is_json_serializable(self) -> None:
+        """Test that to_dict() returns JSON-serializable data."""
+        import json
+
+        error = ASAPError(
+            code="asap:test/error",
+            message="Test error",
+            details={"number": 42, "string": "value", "list": [1, 2, 3]},
+        )
+        result = error.to_dict()
+
+        # Should not raise exception
+        json_str = json.dumps(result)
+        assert isinstance(json_str, str)
+
+        # Should be able to parse back
+        parsed = json.loads(json_str)
+        assert parsed == result

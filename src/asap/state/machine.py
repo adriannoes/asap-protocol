@@ -4,7 +4,7 @@ This module implements the task state machine for the ASAP protocol,
 managing valid state transitions and providing transition validation.
 """
 
-from typing import Dict, Set
+from datetime import datetime, timezone
 
 from asap.errors import InvalidTransitionError
 from asap.models.entities import Task
@@ -12,7 +12,7 @@ from asap.models.enums import TaskStatus
 
 
 # Valid state transitions mapping
-VALID_TRANSITIONS: Dict[TaskStatus, Set[TaskStatus]] = {
+VALID_TRANSITIONS: dict[TaskStatus, set[TaskStatus]] = {
     TaskStatus.SUBMITTED: {TaskStatus.WORKING, TaskStatus.CANCELLED},
     TaskStatus.WORKING: {
         TaskStatus.COMPLETED,
@@ -48,7 +48,7 @@ def transition(task: Task, new_status: TaskStatus) -> Task:
         new_status: The target status
 
     Returns:
-        New task instance with updated status
+        New task instance with updated status and updated_at timestamp
 
     Raises:
         InvalidTransitionError: If the transition is not valid
@@ -58,5 +58,5 @@ def transition(task: Task, new_status: TaskStatus) -> Task:
             from_state=task.status.value, to_state=new_status.value, details={"task_id": task.id}
         )
 
-    # Create new task instance with updated status (immutable approach)
-    return task.model_copy(update={"status": new_status})
+    # Create new task instance with updated status and timestamp (immutable approach)
+    return task.model_copy(update={"status": new_status, "updated_at": datetime.now(timezone.utc)})

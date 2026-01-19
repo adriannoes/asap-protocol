@@ -34,6 +34,18 @@ class ASAPError(Exception):
         self.message = message
         self.details = details or {}
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert error to dictionary for JSON serialization.
+
+        Returns:
+            Dictionary containing code, message, and details
+        """
+        return {
+            "code": self.code,
+            "message": self.message,
+            "details": self.details,
+        }
+
 
 class InvalidTransitionError(ASAPError):
     """Raised when attempting an invalid task state transition.
