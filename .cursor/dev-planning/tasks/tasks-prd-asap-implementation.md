@@ -562,7 +562,11 @@
   - mypy --strict: ✅ No issues found in 20 source files
   - pip-audit: ✅ No known vulnerabilities found
   - pytest: ✅ 301 tests passed with 95.48% coverage
-- [ ] 4.5.5 Commit: `feat(transport): add FastAPI server and async client` e aproveite e refaça os commits desta branch, para serem atômicos e bem documentados, em inglês, mantendo tom direto ao ponto.
+- [x] 4.5.5 Commits atômicos:
+  - `feat(transport): add handler registry for payload dispatch`
+  - `feat(transport): add async HTTP client for agent communication`
+  - `feat(transport): add integration tests and complete Sprint 3`
+  - `docs: update task list with Sprint 3 completion status` e aproveite e refaça os commits desta branch, para serem atômicos e bem documentados, em inglês, mantendo tom direto ao ponto.
 
 **Definition of Done**:
 - ✅ Server runs with `uvicorn`
