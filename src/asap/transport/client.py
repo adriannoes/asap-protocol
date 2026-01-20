@@ -9,6 +9,7 @@ The ASAPClient provides:
 - Automatic JSON-RPC wrapping
 - Retry logic with idempotency keys
 - Proper error handling and timeouts
+- Structured logging for observability
 
 Example:
     >>> from asap.transport.client import ASAPClient
@@ -19,12 +20,17 @@ Example:
     ...     print(response.payload_type)
 """
 
+import time
 from typing import Any
 
 import httpx
 
 from asap.models.envelope import Envelope
 from asap.models.ids import generate_id
+from asap.observability import get_logger
+
+# Module logger
+logger = get_logger(__name__)
 
 # Default timeout in seconds
 DEFAULT_TIMEOUT = 60.0
@@ -199,12 +205,24 @@ class ASAPClient:
         if not self._client:
             raise ASAPConnectionError("Client not connected. Use 'async with' context.")
 
+        start_time = time.perf_counter()
+
         # Generate idempotency key for retries
         idempotency_key = generate_id()
 
         # Increment request counter for JSON-RPC id
         self._request_counter += 1
         request_id = f"req-{self._request_counter}"
+
+        # Log send attempt
+        logger.info(
+            "asap.client.send",
+            target_url=self.base_url,
+            envelope_id=envelope.id,
+            trace_id=envelope.trace_id,
+            payload_type=envelope.payload_type,
+            idempotency_key=idempotency_key,
+        )
 
         # Build JSON-RPC request
         json_rpc_request = {
@@ -255,20 +273,63 @@ class ASAPClient:
                 if not envelope_data:
                     raise ASAPRemoteError(-32603, "Missing envelope in response")
 
-                return Envelope(**envelope_data)
+                response_envelope = Envelope(**envelope_data)
+
+                # Calculate duration and log success
+                duration_ms = (time.perf_counter() - start_time) * 1000
+                logger.info(
+                    "asap.client.response",
+                    target_url=self.base_url,
+                    envelope_id=envelope.id,
+                    response_id=response_envelope.id,
+                    trace_id=envelope.trace_id,
+                    duration_ms=round(duration_ms, 2),
+                    attempts=attempt + 1,
+                )
+
+                return response_envelope
 
             except httpx.ConnectError as e:
                 last_exception = ASAPConnectionError(f"Connection error: {e}", cause=e)
-                # Retry on connection errors
+                # Log retry attempt
                 if attempt < self.max_retries - 1:
+                    logger.warning(
+                        "asap.client.retry",
+                        target_url=self.base_url,
+                        envelope_id=envelope.id,
+                        attempt=attempt + 1,
+                        max_retries=self.max_retries,
+                        error=str(e),
+                    )
                     continue
+                # Log final failure
+                duration_ms = (time.perf_counter() - start_time) * 1000
+                logger.error(
+                    "asap.client.error",
+                    target_url=self.base_url,
+                    envelope_id=envelope.id,
+                    error="Connection failed after retries",
+                    error_type="ASAPConnectionError",
+                    duration_ms=round(duration_ms, 2),
+                    attempts=attempt + 1,
+                )
                 raise last_exception from e
 
             except httpx.TimeoutException as e:
+                duration_ms = (time.perf_counter() - start_time) * 1000
                 last_exception = ASAPTimeoutError(
                     f"Request timeout after {self.timeout}s", timeout=self.timeout
                 )
-                # Don't retry on timeout
+                # Log timeout (don't retry)
+                logger.error(
+                    "asap.client.error",
+                    target_url=self.base_url,
+                    envelope_id=envelope.id,
+                    error="Request timeout",
+                    error_type="ASAPTimeoutError",
+                    timeout=self.timeout,
+                    duration_ms=round(duration_ms, 2),
+                )
                 raise last_exception from e
 
             except (ASAPConnectionError, ASAPRemoteError, ASAPTimeoutError):
@@ -276,10 +337,22 @@ class ASAPClient:
                 raise
 
             except Exception as e:
+                # Log unexpected error
+                duration_ms = (time.perf_counter() - start_time) * 1000
+                logger.exception(
+                    "asap.client.error",
+                    target_url=self.base_url,
+                    envelope_id=envelope.id,
+                    error=str(e),
+                    error_type=type(e).__name__,
+                    duration_ms=round(duration_ms, 2),
+                )
                 # Wrap unexpected errors
                 raise ASAPConnectionError(f"Unexpected error: {e}", cause=e) from e
 
-        # Should not reach here, but just in case
-        if last_exception:
+        # Defensive code: This should never be reached because the loop above
+        # always either returns successfully or raises an exception.
+        # Kept as a safety net for future code changes.
+        if last_exception:  # pragma: no cover
             raise last_exception
-        raise ASAPConnectionError("Max retries exceeded")
+        raise ASAPConnectionError("Max retries exceeded")  # pragma: no cover

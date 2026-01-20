@@ -5,10 +5,13 @@ This module provides a production-ready FastAPI server that:
 - Exposes GET /.well-known/asap/manifest.json for agent discovery
 - Handles errors with proper JSON-RPC error responses
 - Validates all incoming requests against ASAP schemas
+- Uses HandlerRegistry for extensible payload processing
+- Provides structured logging for observability
 
 Example:
     >>> from asap.models.entities import Manifest, Capability, Endpoint, Skill
     >>> from asap.transport.server import create_app
+    >>> from asap.transport.handlers import HandlerRegistry
     >>>
     >>> manifest = Manifest(
     ...     id="urn:asap:agent:my-agent",
@@ -23,10 +26,18 @@ Example:
     ...     endpoints=Endpoint(asap="http://localhost:8000/asap")
     ... )
     >>>
+    >>> # Create app with default registry
     >>> app = create_app(manifest)
+    >>>
+    >>> # Or with custom registry
+    >>> registry = HandlerRegistry()
+    >>> registry.register("task.request", my_custom_handler)
+    >>> app = create_app(manifest, registry)
+    >>>
     >>> # Run with: uvicorn asap.transport.server:app --host 0.0.0.0 --port 8000
 """
 
+import time
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -34,9 +45,13 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
-from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
-from asap.models.payloads import TaskRequest, TaskResponse
+from asap.observability import get_logger
+from asap.transport.handlers import (
+    HandlerNotFoundError,
+    HandlerRegistry,
+    create_default_registry,
+)
 from asap.transport.jsonrpc import (
     INTERNAL_ERROR,
     INVALID_PARAMS,
@@ -48,8 +63,14 @@ from asap.transport.jsonrpc import (
     JsonRpcResponse,
 )
 
+# Module logger
+logger = get_logger(__name__)
 
-def create_app(manifest: Manifest) -> FastAPI:
+
+def create_app(
+    manifest: Manifest,
+    registry: HandlerRegistry | None = None,
+) -> FastAPI:
     """Create and configure a FastAPI application for ASAP protocol.
 
     This factory function creates a FastAPI app with:
@@ -57,15 +78,19 @@ def create_app(manifest: Manifest) -> FastAPI:
     - GET /.well-known/asap/manifest.json for agent discovery
     - Error handling middleware
     - Request validation
+    - Extensible handler registry for payload processing
 
     Args:
         manifest: The agent's manifest describing capabilities and endpoints
+        registry: Optional handler registry for processing payloads.
+            If None, a default registry with echo handler is created.
 
     Returns:
         Configured FastAPI application ready to run
 
     Example:
         >>> from asap.models.entities import Manifest, Capability, Endpoint, Skill
+        >>> from asap.transport.handlers import HandlerRegistry
         >>> manifest = Manifest(
         ...     id="urn:asap:agent:test",
         ...     name="Test Agent",
@@ -79,8 +104,16 @@ def create_app(manifest: Manifest) -> FastAPI:
         ...     endpoints=Endpoint(asap="http://localhost:8000/asap")
         ... )
         >>> app = create_app(manifest)
+        >>>
+        >>> # With custom registry:
+        >>> registry = HandlerRegistry()
+        >>> registry.register("task.request", my_handler)
+        >>> app = create_app(manifest, registry)
         >>> # Run with uvicorn: uvicorn module:app
     """
+    # Use default registry if none provided
+    if registry is None:
+        registry = create_default_registry()
     app = FastAPI(
         title="ASAP Protocol Server",
         description=f"ASAP server for {manifest.name}",
@@ -115,6 +148,8 @@ def create_app(manifest: Manifest) -> FastAPI:
         Returns:
             JSON-RPC response or error response
         """
+        start_time = time.perf_counter()
+
         try:
             # Parse JSON body
             body = await request.json()
@@ -124,6 +159,11 @@ def create_app(manifest: Manifest) -> FastAPI:
                 rpc_request = JsonRpcRequest(**body)
             except ValidationError as e:
                 # Invalid JSON-RPC structure
+                logger.warning(
+                    "asap.request.invalid_structure",
+                    error="Invalid JSON-RPC structure",
+                    validation_errors=str(e.errors()),
+                )
                 error_response = JsonRpcErrorResponse(
                     error=JsonRpcError.from_code(
                         INVALID_REQUEST,
@@ -138,6 +178,10 @@ def create_app(manifest: Manifest) -> FastAPI:
 
             # Check method
             if rpc_request.method != "asap.send":
+                logger.warning(
+                    "asap.request.unknown_method",
+                    method=rpc_request.method,
+                )
                 error_response = JsonRpcErrorResponse(
                     error=JsonRpcError.from_code(
                         METHOD_NOT_FOUND,
@@ -153,6 +197,7 @@ def create_app(manifest: Manifest) -> FastAPI:
             # Extract envelope from params
             envelope_data = rpc_request.params.get("envelope")
             if envelope_data is None:
+                logger.warning("asap.request.missing_envelope")
                 error_response = JsonRpcErrorResponse(
                     error=JsonRpcError.from_code(
                         INVALID_PARAMS,
@@ -169,6 +214,11 @@ def create_app(manifest: Manifest) -> FastAPI:
             try:
                 envelope = Envelope(**envelope_data)
             except ValidationError as e:
+                logger.warning(
+                    "asap.request.invalid_envelope",
+                    error="Invalid envelope structure",
+                    validation_errors=str(e.errors()),
+                )
                 error_response = JsonRpcErrorResponse(
                     error=JsonRpcError.from_code(
                         INVALID_PARAMS,
@@ -184,10 +234,53 @@ def create_app(manifest: Manifest) -> FastAPI:
                     content=error_response.model_dump(),
                 )
 
-            # Process the envelope
-            # For now, we'll create a simple echo response
-            # This will be replaced by proper handler dispatch in task 4.3
-            response_envelope = _process_envelope(envelope, manifest)
+            # Log request received
+            logger.info(
+                "asap.request.received",
+                envelope_id=envelope.id,
+                trace_id=envelope.trace_id,
+                payload_type=envelope.payload_type,
+                sender=envelope.sender,
+                recipient=envelope.recipient,
+            )
+
+            # Process the envelope using the handler registry
+            try:
+                response_envelope = registry.dispatch(envelope, manifest)
+            except HandlerNotFoundError as e:
+                # No handler registered for this payload type
+                logger.warning(
+                    "asap.request.handler_not_found",
+                    payload_type=e.payload_type,
+                    envelope_id=envelope.id,
+                )
+                error_response = JsonRpcErrorResponse(
+                    error=JsonRpcError.from_code(
+                        METHOD_NOT_FOUND,
+                        data={
+                            "payload_type": e.payload_type,
+                            "error": str(e),
+                        },
+                    ),
+                    id=rpc_request.id,
+                )
+                return JSONResponse(
+                    status_code=200,
+                    content=error_response.model_dump(),
+                )
+
+            # Calculate duration
+            duration_ms = (time.perf_counter() - start_time) * 1000
+
+            # Log successful processing
+            logger.info(
+                "asap.request.processed",
+                envelope_id=envelope.id,
+                response_id=response_envelope.id,
+                trace_id=envelope.trace_id,
+                payload_type=envelope.payload_type,
+                duration_ms=round(duration_ms, 2),
+            )
 
             # Wrap response in JSON-RPC
             rpc_response = JsonRpcResponse(
@@ -201,6 +294,17 @@ def create_app(manifest: Manifest) -> FastAPI:
             )
 
         except Exception as e:
+            # Calculate duration for error case
+            duration_ms = (time.perf_counter() - start_time) * 1000
+
+            # Log error
+            logger.exception(
+                "asap.request.error",
+                error=str(e),
+                error_type=type(e).__name__,
+                duration_ms=round(duration_ms, 2),
+            )
+
             # Internal server error
             error_response = JsonRpcErrorResponse(
                 error=JsonRpcError.from_code(
@@ -215,64 +319,6 @@ def create_app(manifest: Manifest) -> FastAPI:
             )
 
     return app
-
-
-def _process_envelope(envelope: Envelope, manifest: Manifest) -> Envelope:
-    """Process an ASAP envelope and generate response.
-
-    This is a temporary implementation that echoes TaskRequest as TaskResponse.
-    Will be replaced by proper HandlerRegistry in task 4.3.
-
-    Args:
-        envelope: Incoming ASAP envelope
-        manifest: Server manifest for context
-
-    Returns:
-        Response envelope
-    """
-    # Simple echo implementation for testing
-    # Check if it's a TaskRequest
-    if envelope.payload_type == "task.request":
-        task_request = TaskRequest(**envelope.payload)
-
-        # Create a simple response
-        response_payload = TaskResponse(
-            task_id=f"task-{envelope.id}",
-            status=TaskStatus.COMPLETED,
-            result={"echoed": task_request.input},
-        )
-
-        # Create response envelope
-        return Envelope(
-            asap_version="0.1",
-            sender=manifest.id,
-            recipient=envelope.sender,
-            payload_type="task.response",
-            payload=response_payload.model_dump(),
-            correlation_id=envelope.id,
-            trace_id=envelope.trace_id,
-        )
-
-    # For other payload types, return a generic response
-    # This will be improved with handler registry
-    return Envelope(
-        asap_version="0.1",
-        sender=manifest.id,
-        recipient=envelope.sender,
-        payload_type="task.response",
-        payload=TaskResponse(
-            task_id=f"task-{envelope.id}",
-            status=TaskStatus.FAILED,
-            result={
-                "error": {
-                    "code": "unsupported_payload",
-                    "message": "Payload type not supported",
-                }
-            },
-        ).model_dump(),
-        correlation_id=envelope.id,
-        trace_id=envelope.trace_id,
-    )
 
 
 def _create_default_manifest() -> Manifest:
@@ -300,4 +346,4 @@ def _create_default_manifest() -> Manifest:
 
 # Default app instance for direct uvicorn execution:
 #   uvicorn asap.transport.server:app --host 0.0.0.0 --port 8000
-app = create_app(_create_default_manifest())
+app = create_app(_create_default_manifest(), create_default_registry())

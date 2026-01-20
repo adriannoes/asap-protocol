@@ -371,6 +371,167 @@ class TestASAPClientRetry:
         assert len(captured_keys) >= 1
 
 
+class TestASAPClientRetryEdgeCases:
+    """Tests for ASAPClient retry edge cases and error scenarios."""
+
+    async def test_send_raises_when_not_connected(self, sample_request_envelope: Envelope) -> None:
+        """Test send() raises ASAPConnectionError when called outside context manager."""
+        from asap.transport.client import ASAPClient, ASAPConnectionError
+
+        client = ASAPClient("http://localhost:8000")
+        # Calling send() without entering context manager
+        with pytest.raises(ASAPConnectionError) as exc_info:
+            await client.send(sample_request_envelope)
+
+        assert "not connected" in str(exc_info.value).lower()
+        assert "async with" in str(exc_info.value)
+
+    async def test_send_raises_on_max_retries_exceeded(
+        self, sample_request_envelope: Envelope
+    ) -> None:
+        """Test send() raises ASAPConnectionError when all retry attempts fail."""
+        from asap.transport.client import ASAPClient, ASAPConnectionError
+
+        call_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            # Always fail with connection error
+            raise httpx.ConnectError("Server unavailable")
+
+        async with ASAPClient(
+            "http://localhost:8000",
+            transport=httpx.MockTransport(mock_transport),
+            max_retries=3,
+        ) as client:
+            with pytest.raises(ASAPConnectionError) as exc_info:
+                await client.send(sample_request_envelope)
+
+            # Should have attempted max_retries times
+            assert call_count == 3
+            assert "connection" in str(exc_info.value).lower()
+
+    async def test_send_recovers_from_intermittent_network_errors(
+        self, sample_request_envelope: Envelope, sample_response_envelope: Envelope
+    ) -> None:
+        """Test send() recovers when network errors are intermittent."""
+        from asap.transport.client import ASAPClient
+
+        call_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            # Fail first 2 attempts, succeed on 3rd
+            if call_count < 3:
+                raise httpx.ConnectError("Temporary network issue")
+            return create_mock_response(sample_response_envelope)
+
+        async with ASAPClient(
+            "http://localhost:8000",
+            transport=httpx.MockTransport(mock_transport),
+            max_retries=5,
+        ) as client:
+            response = await client.send(sample_request_envelope)
+
+        # Should have retried and eventually succeeded
+        assert call_count == 3
+        assert response.payload_type == "task.response"
+
+    async def test_send_raises_on_missing_envelope_in_response(
+        self, sample_request_envelope: Envelope
+    ) -> None:
+        """Test send() raises ASAPRemoteError when response is missing envelope."""
+        from asap.transport.client import ASAPClient, ASAPRemoteError
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            # Return valid JSON-RPC response but without envelope
+            json_rpc_response = {
+                "jsonrpc": "2.0",
+                "result": {"status": "ok"},  # Missing 'envelope' key
+                "id": "req-1",
+            }
+            return httpx.Response(status_code=200, json=json_rpc_response)
+
+        async with ASAPClient(
+            "http://localhost:8000", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            with pytest.raises(ASAPRemoteError) as exc_info:
+                await client.send(sample_request_envelope)
+
+            assert exc_info.value.code == -32603
+            assert "missing envelope" in str(exc_info.value).lower()
+
+    async def test_send_wraps_unexpected_exceptions(
+        self, sample_request_envelope: Envelope
+    ) -> None:
+        """Test send() wraps unexpected exceptions in ASAPConnectionError."""
+        from asap.transport.client import ASAPClient, ASAPConnectionError
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            # Raise an unexpected exception type
+            raise ValueError("Unexpected internal error")
+
+        async with ASAPClient(
+            "http://localhost:8000", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            with pytest.raises(ASAPConnectionError) as exc_info:
+                await client.send(sample_request_envelope)
+
+            assert "unexpected" in str(exc_info.value).lower()
+            assert exc_info.value.cause is not None
+            assert isinstance(exc_info.value.cause, ValueError)
+
+    async def test_idempotency_key_consistent_across_all_retries(
+        self, sample_request_envelope: Envelope, sample_response_envelope: Envelope
+    ) -> None:
+        """Test idempotency_key remains consistent across all retry attempts."""
+        from asap.transport.client import ASAPClient
+
+        captured_keys: list[str] = []
+        captured_header_keys: list[str] = []
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            body = json.loads(request.content)
+            param_key = body.get("params", {}).get("idempotency_key")
+            header_key = request.headers.get("x-idempotency-key")
+
+            if param_key:
+                captured_keys.append(param_key)
+            if header_key:
+                captured_header_keys.append(header_key)
+
+            # Fail first 2 attempts
+            if len(captured_keys) < 3:
+                raise httpx.ConnectError("Retry needed")
+            return create_mock_response(sample_response_envelope)
+
+        async with ASAPClient(
+            "http://localhost:8000",
+            transport=httpx.MockTransport(mock_transport),
+            max_retries=5,
+        ) as client:
+            await client.send(sample_request_envelope)
+
+        # All captured keys should be identical
+        assert len(captured_keys) == 3
+        assert all(k == captured_keys[0] for k in captured_keys)
+        # Header keys should also be identical
+        assert len(captured_header_keys) == 3
+        assert all(k == captured_header_keys[0] for k in captured_header_keys)
+
+    async def test_aexit_handles_none_client(self) -> None:
+        """Test __aexit__ handles case when client was never connected."""
+        from asap.transport.client import ASAPClient
+
+        client = ASAPClient("http://localhost:8000")
+        # Manually call __aexit__ without entering context
+        await client.__aexit__(None, None, None)
+        # Should not raise any exception
+        assert not client.is_connected
+
+
 class TestASAPClientCustomErrors:
     """Tests for ASAP client custom error classes."""
 

@@ -6,6 +6,8 @@ Tests cover:
 - POST /asap endpoint
 - GET /.well-known/asap/manifest.json endpoint
 - Error handling
+- HandlerRegistry integration
+- Custom handler registration
 """
 
 import pytest
@@ -13,11 +15,14 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
+from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
-from asap.models.payloads import TaskRequest
+from asap.models.payloads import TaskRequest, TaskResponse
+from asap.transport.handlers import HandlerRegistry
 from asap.transport.jsonrpc import (
     INTERNAL_ERROR,
     INVALID_PARAMS,
+    METHOD_NOT_FOUND,
     JsonRpcErrorResponse,
     JsonRpcRequest,
     JsonRpcResponse,
@@ -326,3 +331,142 @@ class TestErrorHandling:
         assert response.status_code == 404
         # FastAPI returns JSON by default
         assert response.headers["content-type"].startswith("application/json")
+
+
+class TestHandlerRegistryIntegration:
+    """Tests for HandlerRegistry integration with server."""
+
+    def test_create_app_with_custom_registry(self, sample_manifest: Manifest) -> None:
+        """Test create_app accepts custom HandlerRegistry."""
+        registry = HandlerRegistry()
+        app = create_app(sample_manifest, registry)
+
+        assert isinstance(app, FastAPI)
+
+    def test_create_app_uses_default_registry_when_none(self, sample_manifest: Manifest) -> None:
+        """Test create_app uses default registry when not provided."""
+        app = create_app(sample_manifest)
+
+        # Should work without explicit registry
+        assert isinstance(app, FastAPI)
+
+    def test_custom_handler_is_called(self, sample_manifest: Manifest) -> None:
+        """Test that custom registered handler is called for requests."""
+        registry = HandlerRegistry()
+        handler_called = {"count": 0}
+
+        def custom_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+            handler_called["count"] += 1
+            return Envelope(
+                asap_version="0.1",
+                sender=manifest.id,
+                recipient=envelope.sender,
+                payload_type="task.response",
+                payload=TaskResponse(
+                    task_id="custom-task-123",
+                    status=TaskStatus.COMPLETED,
+                    result={"custom": True, "original_input": envelope.payload},
+                ).model_dump(),
+                correlation_id=envelope.id,
+            )
+
+        registry.register("task.request", custom_handler)
+        app = create_app(sample_manifest, registry)
+        client = TestClient(app)
+
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-custom",
+                skill_id="test",
+                input={"test": "data"},
+            ).model_dump(),
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="custom-handler-test",
+        )
+
+        response = client.post("/asap", json=rpc_request.model_dump())
+
+        assert response.status_code == 200
+        assert handler_called["count"] == 1
+
+        # Verify custom response
+        rpc_response = JsonRpcResponse(**response.json())
+        response_envelope = Envelope(**rpc_response.result["envelope"])
+        response_payload = TaskResponse(**response_envelope.payload)
+        assert response_payload.task_id == "custom-task-123"
+        assert response_payload.result is not None
+        assert response_payload.result.get("custom") is True
+
+    def test_unknown_payload_type_returns_method_not_found(self, sample_manifest: Manifest) -> None:
+        """Test that unknown payload type returns METHOD_NOT_FOUND error."""
+        # Create registry without handler for "unknown.type"
+        registry = HandlerRegistry()
+        # Only register task.request handler
+        registry.register("task.request", lambda e, m: e)
+
+        app = create_app(sample_manifest, registry)
+        client = TestClient(app)
+
+        # Send envelope with unregistered payload type
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-server",
+            payload_type="unknown.payload.type",
+            payload={"some": "data"},
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="unknown-type-test",
+        )
+
+        response = client.post("/asap", json=rpc_request.model_dump())
+
+        assert response.status_code == 200
+
+        # Should return JSON-RPC error
+        error_response = JsonRpcErrorResponse(**response.json())
+        assert error_response.error.code == METHOD_NOT_FOUND
+        assert error_response.id == "unknown-type-test"
+        assert error_response.error.data is not None
+        assert error_response.error.data.get("payload_type") == "unknown.payload.type"
+
+    def test_empty_registry_returns_error_for_all_types(self, sample_manifest: Manifest) -> None:
+        """Test that empty registry returns error for any payload type."""
+        registry = HandlerRegistry()  # No handlers registered
+        app = create_app(sample_manifest, registry)
+        client = TestClient(app)
+
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-123",
+                skill_id="echo",
+                input={"message": "test"},
+            ).model_dump(),
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="empty-registry-test",
+        )
+
+        response = client.post("/asap", json=rpc_request.model_dump())
+
+        assert response.status_code == 200
+        error_response = JsonRpcErrorResponse(**response.json())
+        assert error_response.error.code == METHOD_NOT_FOUND

@@ -7,6 +7,12 @@ The HandlerRegistry allows:
 - Registration of handlers for specific payload types
 - Dispatch of envelopes to registered handlers
 - Discovery of registered payload types
+- Structured logging for observability
+
+Thread Safety:
+    All operations on HandlerRegistry are thread-safe. The registry uses
+    an internal RLock to protect concurrent access to the handler mapping.
+    This allows safe usage in multi-threaded environments.
 
 Example:
     >>> from asap.transport.handlers import HandlerRegistry, create_echo_handler
@@ -20,7 +26,9 @@ Example:
     >>> response = registry.dispatch(envelope, manifest)
 """
 
+import time
 from collections.abc import Callable
+from threading import RLock
 
 from asap.errors import ASAPError
 from asap.models.entities import Manifest
@@ -28,6 +36,10 @@ from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
 from asap.models.ids import generate_id
 from asap.models.payloads import TaskRequest, TaskResponse
+from asap.observability import get_logger
+
+# Module logger
+logger = get_logger(__name__)
 
 # Type alias for handler functions
 Handler = Callable[[Envelope, Manifest], Envelope]
@@ -77,8 +89,15 @@ class HandlerRegistry:
     corresponding handlers. It provides methods for registration, dispatch,
     and discovery of handlers.
 
+    Thread Safety:
+        All public methods are thread-safe. The registry uses an internal
+        RLock to protect concurrent access to the handler mapping. This
+        allows safe concurrent registration and dispatch operations from
+        multiple threads.
+
     Attributes:
         _handlers: Internal mapping of payload_type to handler function
+        _lock: Reentrant lock for thread-safe operations
 
     Example:
         >>> registry = HandlerRegistry()
@@ -89,8 +108,9 @@ class HandlerRegistry:
     """
 
     def __init__(self) -> None:
-        """Initialize empty handler registry."""
+        """Initialize empty handler registry with thread-safe lock."""
         self._handlers: dict[str, Handler] = {}
+        self._lock = RLock()
 
     def register(self, payload_type: str, handler: Handler) -> None:
         """Register a handler for a payload type.
@@ -98,14 +118,26 @@ class HandlerRegistry:
         If a handler is already registered for the payload type,
         it will be replaced with the new handler.
 
+        This method is thread-safe.
+
         Args:
             payload_type: The payload type to handle (e.g., "task.request")
             handler: Callable that processes envelopes of this type
         """
-        self._handlers[payload_type] = handler
+        with self._lock:
+            is_override = payload_type in self._handlers
+            self._handlers[payload_type] = handler
+            logger.debug(
+                "asap.handler.registered",
+                payload_type=payload_type,
+                handler_name=handler.__name__ if hasattr(handler, "__name__") else str(handler),
+                is_override=is_override,
+            )
 
     def has_handler(self, payload_type: str) -> bool:
         """Check if a handler is registered for a payload type.
+
+        This method is thread-safe.
 
         Args:
             payload_type: The payload type to check
@@ -113,13 +145,17 @@ class HandlerRegistry:
         Returns:
             True if a handler is registered, False otherwise
         """
-        return payload_type in self._handlers
+        with self._lock:
+            return payload_type in self._handlers
 
     def dispatch(self, envelope: Envelope, manifest: Manifest) -> Envelope:
         """Dispatch an envelope to its registered handler.
 
         Looks up the handler for the envelope's payload_type and
         invokes it with the envelope and manifest.
+
+        This method is thread-safe for handler lookup. The handler
+        execution itself is not protected by the lock.
 
         Args:
             envelope: The incoming ASAP envelope
@@ -132,20 +168,60 @@ class HandlerRegistry:
             HandlerNotFoundError: If no handler is registered for the payload type
         """
         payload_type = envelope.payload_type
+        start_time = time.perf_counter()
 
-        if payload_type not in self._handlers:
-            raise HandlerNotFoundError(payload_type)
+        with self._lock:
+            if payload_type not in self._handlers:
+                logger.warning(
+                    "asap.handler.not_found",
+                    payload_type=payload_type,
+                    envelope_id=envelope.id,
+                )
+                raise HandlerNotFoundError(payload_type)
+            handler = self._handlers[payload_type]
 
-        handler = self._handlers[payload_type]
-        return handler(envelope, manifest)
+        # Log dispatch start
+        logger.debug(
+            "asap.handler.dispatch",
+            payload_type=payload_type,
+            envelope_id=envelope.id,
+            handler_name=handler.__name__ if hasattr(handler, "__name__") else str(handler),
+        )
+
+        # Execute handler outside the lock to allow concurrent dispatches
+        try:
+            response = handler(envelope, manifest)
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            logger.debug(
+                "asap.handler.completed",
+                payload_type=payload_type,
+                envelope_id=envelope.id,
+                response_id=response.id,
+                duration_ms=round(duration_ms, 2),
+            )
+            return response
+        except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            logger.exception(
+                "asap.handler.error",
+                payload_type=payload_type,
+                envelope_id=envelope.id,
+                error=str(e),
+                error_type=type(e).__name__,
+                duration_ms=round(duration_ms, 2),
+            )
+            raise
 
     def list_handlers(self) -> list[str]:
         """List all registered payload types.
 
+        This method is thread-safe. Returns a copy of the keys list.
+
         Returns:
             List of payload type strings that have registered handlers
         """
-        return list(self._handlers.keys())
+        with self._lock:
+            return list(self._handlers.keys())
 
 
 def create_echo_handler() -> Handler:

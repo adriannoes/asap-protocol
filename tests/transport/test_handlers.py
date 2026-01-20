@@ -4,6 +4,8 @@ This module tests the HandlerRegistry class that manages payload-type-specific
 handlers for processing ASAP envelopes.
 """
 
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import TYPE_CHECKING
 
 import pytest
@@ -418,3 +420,205 @@ class TestDefaultRegistry:
         result = registry.dispatch(sample_task_request_envelope, sample_manifest)
 
         assert result.payload_type == "task.response"
+
+
+class TestHandlerRegistryThreadSafety:
+    """Tests for HandlerRegistry thread safety."""
+
+    def test_registry_has_lock(self) -> None:
+        """Test registry has internal lock for thread safety."""
+        from asap.transport.handlers import HandlerRegistry
+
+        registry = HandlerRegistry()
+        assert hasattr(registry, "_lock")
+        assert isinstance(registry._lock, type(threading.RLock()))
+
+    def test_concurrent_registrations(self) -> None:
+        """Test concurrent handler registrations from multiple threads."""
+        from asap.transport.handlers import HandlerRegistry
+
+        registry = HandlerRegistry()
+        num_threads = 10
+        registrations_per_thread = 100
+        errors: list[Exception] = []
+
+        def register_handlers(thread_id: int) -> None:
+            try:
+                for i in range(registrations_per_thread):
+                    payload_type = f"thread{thread_id}.type{i}"
+
+                    def handler(
+                        envelope: Envelope, manifest: Manifest, tid: int = thread_id, idx: int = i
+                    ) -> Envelope:
+                        return envelope
+
+                    registry.register(payload_type, handler)
+            except Exception as e:
+                errors.append(e)
+
+        # Run registrations concurrently
+        with ThreadPoolExecutor(max_workers=num_threads) as executor:
+            futures = [executor.submit(register_handlers, i) for i in range(num_threads)]
+            for future in as_completed(futures):
+                future.result()  # Raise any exceptions
+
+        # Verify no errors occurred
+        assert len(errors) == 0
+
+        # Verify all handlers were registered
+        registered = registry.list_handlers()
+        expected_count = num_threads * registrations_per_thread
+        assert len(registered) == expected_count
+
+    def test_concurrent_dispatch(
+        self, sample_task_request_envelope: Envelope, sample_manifest: Manifest
+    ) -> None:
+        """Test concurrent dispatch calls from multiple threads."""
+        from asap.transport.handlers import HandlerRegistry
+
+        registry = HandlerRegistry()
+        dispatch_count = threading.atomic = {"count": 0}
+        lock = threading.Lock()
+
+        def counting_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+            with lock:
+                dispatch_count["count"] += 1
+            return Envelope(
+                asap_version="0.1",
+                sender=manifest.id,
+                recipient=envelope.sender,
+                payload_type="task.response",
+                payload=TaskResponse(
+                    task_id="task_123",
+                    status=TaskStatus.COMPLETED,
+                    result={},
+                ).model_dump(),
+                correlation_id=envelope.id,
+            )
+
+        registry.register("task.request", counting_handler)
+
+        num_threads = 10
+        dispatches_per_thread = 50
+        errors: list[Exception] = []
+
+        def dispatch_requests() -> None:
+            try:
+                for _ in range(dispatches_per_thread):
+                    registry.dispatch(sample_task_request_envelope, sample_manifest)
+            except Exception as e:
+                errors.append(e)
+
+        # Run dispatches concurrently
+        with ThreadPoolExecutor(max_workers=num_threads) as executor:
+            futures = [executor.submit(dispatch_requests) for _ in range(num_threads)]
+            for future in as_completed(futures):
+                future.result()
+
+        # Verify no errors occurred
+        assert len(errors) == 0
+
+        # Verify all dispatches completed
+        expected_count = num_threads * dispatches_per_thread
+        assert dispatch_count["count"] == expected_count
+
+    def test_concurrent_register_and_dispatch(self, sample_manifest: Manifest) -> None:
+        """Test mixed concurrent register and dispatch operations."""
+        from asap.transport.handlers import HandlerRegistry
+
+        registry = HandlerRegistry()
+        results: dict[str, list[bool]] = {"register": [], "dispatch": [], "has_handler": []}
+        lock = threading.Lock()
+
+        def simple_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+            return Envelope(
+                asap_version="0.1",
+                sender=manifest.id,
+                recipient=envelope.sender,
+                payload_type="task.response",
+                payload=TaskResponse(
+                    task_id="task_123",
+                    status=TaskStatus.COMPLETED,
+                    result={},
+                ).model_dump(),
+                correlation_id=envelope.id,
+            )
+
+        # Pre-register some handlers
+        for i in range(5):
+            registry.register(f"type.{i}", simple_handler)
+
+        def register_thread() -> None:
+            for i in range(100):
+                registry.register(f"new.type.{i}", simple_handler)
+                with lock:
+                    results["register"].append(True)
+
+        def dispatch_thread() -> None:
+            envelope = Envelope(
+                asap_version="0.1",
+                sender="urn:asap:agent:client",
+                recipient="urn:asap:agent:server",
+                payload_type="type.0",
+                payload=TaskRequest(
+                    conversation_id="conv_1",
+                    skill_id="test",
+                    input={},
+                ).model_dump(),
+            )
+            for _ in range(100):
+                try:
+                    registry.dispatch(envelope, sample_manifest)
+                    with lock:
+                        results["dispatch"].append(True)
+                except Exception:
+                    with lock:
+                        results["dispatch"].append(False)
+
+        def has_handler_thread() -> None:
+            for i in range(100):
+                result = registry.has_handler(f"type.{i % 5}")
+                with lock:
+                    results["has_handler"].append(result)
+
+        # Run all operations concurrently
+        with ThreadPoolExecutor(max_workers=6) as executor:
+            futures = [
+                executor.submit(register_thread),
+                executor.submit(register_thread),
+                executor.submit(dispatch_thread),
+                executor.submit(dispatch_thread),
+                executor.submit(has_handler_thread),
+                executor.submit(has_handler_thread),
+            ]
+            for future in as_completed(futures):
+                future.result()
+
+        # Verify operations completed without data corruption
+        assert len(results["register"]) == 200
+        assert all(results["register"])
+        assert len(results["dispatch"]) == 200
+        assert all(results["dispatch"])
+        assert len(results["has_handler"]) == 200
+        assert all(results["has_handler"])
+
+    def test_list_handlers_returns_copy(self) -> None:
+        """Test list_handlers returns a copy, not a view."""
+        from asap.transport.handlers import HandlerRegistry
+
+        registry = HandlerRegistry()
+
+        def handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+            return envelope
+
+        registry.register("type.a", handler)
+        registry.register("type.b", handler)
+
+        handlers_list = registry.list_handlers()
+        original_len = len(handlers_list)
+
+        # Modify the returned list
+        handlers_list.append("type.c")
+
+        # Registry should be unchanged
+        assert len(registry.list_handlers()) == original_len
