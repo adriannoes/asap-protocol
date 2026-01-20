@@ -39,13 +39,14 @@
 - `src/asap/transport/__init__.py` - Transport module exports ✅
 - `src/asap/transport/jsonrpc.py` - JSON-RPC 2.0 wrapper models ✅
 - `src/asap/transport/server.py` - FastAPI server implementation ✅
-- `src/asap/transport/client.py` - Async HTTP client
-- `src/asap/transport/handlers.py` - Payload handlers
+- `src/asap/transport/handlers.py` - Payload handlers and HandlerRegistry ✅
+- `src/asap/transport/client.py` - Async HTTP client ✅
 - `tests/transport/__init__.py` - Transport tests package ✅
 - `tests/transport/test_jsonrpc.py` - JSON-RPC tests ✅
 - `tests/transport/test_server.py` - Server integration tests ✅
-- `tests/transport/test_client.py` - Client unit tests
-- `tests/transport/test_integration.py` - Full integration tests
+- `tests/transport/test_handlers.py` - Handler registry tests ✅
+- `tests/transport/test_client.py` - Client unit tests ✅
+- `tests/transport/test_integration.py` - Full integration tests ✅
 
 ### Examples & CLI (Sprint 4-5)
 - `examples/echo_agent.py` - Simple echo agent example
@@ -512,39 +513,56 @@
 - [x] 4.2.6 Implement manifest endpoint ✅
 - [x] 4.2.7 Add exception handler middleware for ASAP errors ✅
 
-### 4.3 Handler Registry
+### 4.3 Handler Registry ✅
 
-- [ ] 4.3.1 **TEST FIRST**: Create `tests/transport/test_handlers.py`
-  - Test handler registration by payload_type
-  - Test handler dispatch
-  - Test unknown payload_type returns error
-- [ ] 4.3.2 Implement `HandlerRegistry` in `src/asap/transport/handlers.py`
-  - `register(payload_type: str, handler: Callable)`
-  - `dispatch(envelope: Envelope) -> Envelope`
-- [ ] 4.3.3 Implement base `TaskRequestHandler` (echo response)
+- [x] 4.3.1 **TEST FIRST**: Create `tests/transport/test_handlers.py`
+  - Test handler registration by payload_type ✅
+  - Test handler dispatch ✅
+  - Test unknown payload_type returns error ✅
+  - 20 tests passing with 100% coverage on handlers.py
+- [x] 4.3.2 Implement `HandlerRegistry` in `src/asap/transport/handlers.py`
+  - `register(payload_type: str, handler: Callable)` ✅
+  - `dispatch(envelope: Envelope, manifest: Manifest) -> Envelope` ✅
+  - `has_handler(payload_type: str) -> bool` ✅
+  - `list_handlers() -> list[str]` ✅
+- [x] 4.3.3 Implement base `TaskRequestHandler` (echo response)
+  - `create_echo_handler()` factory function ✅
+  - `create_default_registry()` for pre-configured registry ✅
+  - `HandlerNotFoundError` exception for unknown payload types ✅
 
-### 4.4 Async Client
+### 4.4 Async Client ✅
 
-- [ ] 4.4.1 **TEST FIRST**: Create `tests/transport/test_client.py`
-  - Test `ASAPClient` as async context manager
-  - Test `send(envelope)` returns response envelope
-  - Test connection error handling
-  - Test timeout handling
-- [ ] 4.4.2 Implement `ASAPClient` in `src/asap/transport/client.py`
-  - `__aenter__` / `__aexit__` for context manager
-  - Uses httpx.AsyncClient internally
-- [ ] 4.4.3 Implement `send(envelope: Envelope) -> Envelope` method
-- [ ] 4.4.4 Add retry logic with `idempotency_key` support
+- [x] 4.4.1 **TEST FIRST**: Create `tests/transport/test_client.py`
+  - Test `ASAPClient` as async context manager ✅
+  - Test `send(envelope)` returns response envelope ✅
+  - Test connection error handling ✅
+  - Test timeout handling ✅
+  - 21 tests passing with 87% coverage on client.py
+- [x] 4.4.2 Implement `ASAPClient` in `src/asap/transport/client.py`
+  - `__aenter__` / `__aexit__` for context manager ✅
+  - Uses httpx.AsyncClient internally ✅
+  - Custom errors: ASAPConnectionError, ASAPTimeoutError, ASAPRemoteError ✅
+- [x] 4.4.3 Implement `send(envelope: Envelope) -> Envelope` method ✅
+- [x] 4.4.4 Add retry logic with `idempotency_key` support ✅
 
-### 4.5 Integration Tests
+### 4.5 Integration Tests ✅
 
-- [ ] 4.5.1 **TEST FIRST**: Create `tests/transport/test_integration.py`
-  - Test full round-trip: create app, start server, send request, receive response
-  - Use pytest-asyncio for async tests
-- [ ] 4.5.2 Verify: `uvicorn asap.transport.server:app` starts
-- [ ] 4.5.3 Create `src/asap/transport/__init__.py` with exports
-- [ ] 4.5.4 Test for all CI (Lint, Security, etc) before commit
-- [ ] 4.5.5 Commit: `feat(transport): add FastAPI server and async client`
+- [x] 4.5.1 **TEST FIRST**: Create `tests/transport/test_integration.py`
+  - Test full round-trip: create app, start server, send request, receive response ✅
+  - Use pytest-asyncio for async tests ✅
+  - 16 integration tests covering: round-trip, manifest discovery, correlation/tracing, error scenarios
+- [x] 4.5.2 Verify: `uvicorn asap.transport.server:app` starts ✅
+  - Added default `app` instance for standalone execution
+  - Added `_create_default_manifest()` helper function
+- [x] 4.5.3 Create `src/asap/transport/__init__.py` with exports ✅
+  - Exports all handlers, client, and server components
+- [x] 4.5.4 Test for all CI (Lint, Security, etc) before commit ✅
+  - ruff check: ✅ All checks passed
+  - ruff format: ✅ All files formatted
+  - mypy --strict: ✅ No issues found in 20 source files
+  - pip-audit: ✅ No known vulnerabilities found
+  - pytest: ✅ 301 tests passed with 95.48% coverage
+- [ ] 4.5.5 Commit: `feat(transport): add FastAPI server and async client` e aproveite e refaça os commits desta branch, para serem atômicos e bem documentados, em inglês, mantendo tom direto ao ponto.
 
 **Definition of Done**:
 - ✅ Server runs with `uvicorn`
