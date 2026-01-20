@@ -36,12 +36,13 @@
 - `tests/state/test_snapshot.py` - Snapshot store tests
 
 ### HTTP Transport (Sprint 3)
-- `src/asap/transport/__init__.py` - Transport module exports
-- `src/asap/transport/jsonrpc.py` - JSON-RPC 2.0 wrapper models
+- `src/asap/transport/__init__.py` - Transport module exports ✅
+- `src/asap/transport/jsonrpc.py` - JSON-RPC 2.0 wrapper models ✅
 - `src/asap/transport/server.py` - FastAPI server implementation
 - `src/asap/transport/client.py` - Async HTTP client
 - `src/asap/transport/handlers.py` - Payload handlers
-- `tests/transport/test_jsonrpc.py` - JSON-RPC tests
+- `tests/transport/__init__.py` - Transport tests package ✅
+- `tests/transport/test_jsonrpc.py` - JSON-RPC tests ✅
 - `tests/transport/test_server.py` - Server integration tests
 - `tests/transport/test_client.py` - Client unit tests
 - `tests/transport/test_integration.py` - Full integration tests
@@ -474,23 +475,25 @@
 
 > **Focus**: FastAPI server and async client
 
-### 4.1 JSON-RPC Layer
+### 4.1 JSON-RPC Layer ✅
 
 > ⚠️ **Dependency**: JSON-RPC models needed by server
 
-- [ ] 4.1.1 Create `src/asap/transport/jsonrpc.py`
-  - `JsonRpcRequest` model with jsonrpc, method, params, id
-  - `JsonRpcResponse` model with jsonrpc, result, id
-  - `JsonRpcError` model with code, message, data
-- [ ] 4.1.2 Implement standard JSON-RPC error codes mapping:
-  - `-32700` Parse error
-  - `-32600` Invalid request
-  - `-32601` Method not found
-  - `-32602` Invalid params
-  - `-32603` Internal error
-- [ ] 4.1.3 **TEST FIRST**: Create `tests/transport/test_jsonrpc.py`
-  - Test request/response serialization
-  - Test error code mapping
+- [x] 4.1.1 Create `src/asap/transport/jsonrpc.py`
+  - `JsonRpcRequest` model with jsonrpc, method, params, id ✅
+  - `JsonRpcResponse` model with jsonrpc, result, id ✅
+  - `JsonRpcError` model with code, message, data ✅
+  - `JsonRpcErrorResponse` model for error responses ✅
+- [x] 4.1.2 Implement standard JSON-RPC error codes mapping:
+  - `-32700` Parse error ✅
+  - `-32600` Invalid request ✅
+  - `-32601` Method not found ✅
+  - `-32602` Invalid params ✅
+  - `-32603` Internal error ✅
+- [x] 4.1.3 **TEST FIRST**: Create `tests/transport/test_jsonrpc.py`
+  - Test request/response serialization ✅
+  - Test error code mapping ✅
+  - 31 tests passing with 100% coverage ✅
 
 ### 4.2 Server Core
 
