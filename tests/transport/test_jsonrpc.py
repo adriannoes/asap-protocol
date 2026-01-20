@@ -7,7 +7,6 @@ Tests cover:
 - Field validation
 """
 
-
 import pytest
 from pydantic import ValidationError
 

@@ -177,7 +177,7 @@ class TestAsapEndpoint:
         assert response.status_code == 200
 
         response_data = response.json()
-        
+
         # If there's an error, it should be a valid error response
         if "error" in response_data:
             error_response = JsonRpcErrorResponse(**response_data)
@@ -192,9 +192,7 @@ class TestAsapEndpoint:
         assert rpc_response.id == "test-req-2"
         assert "envelope" in rpc_response.result
 
-    def test_asap_endpoint_correlates_request_and_response_ids(
-        self, client: TestClient
-    ) -> None:
+    def test_asap_endpoint_correlates_request_and_response_ids(self, client: TestClient) -> None:
         """Test that response id matches request id."""
         envelope = Envelope(
             asap_version="0.1",

@@ -33,7 +33,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
-from asap.models.entities import Manifest
+from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest, TaskResponse
@@ -253,7 +253,6 @@ def _process_envelope(envelope: Envelope, manifest: Manifest) -> Envelope:
             trace_id=envelope.trace_id,
         )
 
-
     # For other payload types, return a generic response
     # This will be improved with handler registry
     return Envelope(
@@ -275,3 +274,30 @@ def _process_envelope(envelope: Envelope, manifest: Manifest) -> Envelope:
         trace_id=envelope.trace_id,
     )
 
+
+def _create_default_manifest() -> Manifest:
+    """Create a default manifest for standalone server execution.
+
+    This manifest is used when running the server directly via uvicorn
+    without providing a custom manifest.
+
+    Returns:
+        Default manifest with basic echo capabilities
+    """
+    return Manifest(
+        id="urn:asap:agent:default-server",
+        name="ASAP Default Server",
+        version="0.1.0",
+        description="Default ASAP protocol server with echo capabilities",
+        capabilities=Capability(
+            asap_version="0.1",
+            skills=[Skill(id="echo", description="Echo back the input")],
+            state_persistence=False,
+        ),
+        endpoints=Endpoint(asap="http://localhost:8000/asap"),
+    )
+
+
+# Default app instance for direct uvicorn execution:
+#   uvicorn asap.transport.server:app --host 0.0.0.0 --port 8000
+app = create_app(_create_default_manifest())
