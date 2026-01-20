@@ -10,6 +10,7 @@ Public exports:
     JsonRpcResponse: JSON-RPC 2.0 response wrapper
     JsonRpcError: JSON-RPC 2.0 error object
     JsonRpcErrorResponse: JSON-RPC 2.0 error response wrapper
+    create_app: FastAPI application factory
 """
 
 from asap.transport.jsonrpc import (
@@ -18,10 +19,12 @@ from asap.transport.jsonrpc import (
     JsonRpcRequest,
     JsonRpcResponse,
 )
+from asap.transport.server import create_app
 
 __all__ = [
     "JsonRpcRequest",
     "JsonRpcResponse",
     "JsonRpcError",
     "JsonRpcErrorResponse",
+    "create_app",
 ]

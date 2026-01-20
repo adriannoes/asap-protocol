@@ -7,7 +7,6 @@ Tests cover:
 - Field validation
 """
 
-from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -184,7 +183,7 @@ class TestJsonRpcRequest:
             "id": 42,
         }
 
-        request = JsonRpcRequest(**data)
+        request = JsonRpcRequest(**data)  # type: ignore[arg-type]
 
         assert request.method == "asap.send"
         assert request.id == 42
@@ -249,7 +248,7 @@ class TestJsonRpcResponse:
             "id": "test-123",
         }
 
-        response = JsonRpcResponse(**data)
+        response = JsonRpcResponse(**data)  # type: ignore[arg-type]
 
         assert response.result == {"success": True}
         assert response.id == "test-123"
@@ -325,7 +324,7 @@ class TestJsonRpcErrorResponse:
             "id": "test",
         }
 
-        response = JsonRpcErrorResponse(**data)
+        response = JsonRpcErrorResponse(**data)  # type: ignore[arg-type]
 
         assert response.error.code == -32601
         assert response.error.message == "Method not found"

@@ -38,12 +38,12 @@
 ### HTTP Transport (Sprint 3)
 - `src/asap/transport/__init__.py` - Transport module exports ✅
 - `src/asap/transport/jsonrpc.py` - JSON-RPC 2.0 wrapper models ✅
-- `src/asap/transport/server.py` - FastAPI server implementation
+- `src/asap/transport/server.py` - FastAPI server implementation ✅
 - `src/asap/transport/client.py` - Async HTTP client
 - `src/asap/transport/handlers.py` - Payload handlers
 - `tests/transport/__init__.py` - Transport tests package ✅
 - `tests/transport/test_jsonrpc.py` - JSON-RPC tests ✅
-- `tests/transport/test_server.py` - Server integration tests
+- `tests/transport/test_server.py` - Server integration tests ✅
 - `tests/transport/test_client.py` - Client unit tests
 - `tests/transport/test_integration.py` - Full integration tests
 
@@ -495,22 +495,22 @@
   - Test error code mapping ✅
   - 31 tests passing with 100% coverage ✅
 
-### 4.2 Server Core
+### 4.2 Server Core ✅
 
-- [ ] 4.2.1 **TEST FIRST**: Create `tests/transport/test_server.py` - app factory
-  - Test `create_app()` returns FastAPI instance
-  - Test app has required routes
-- [ ] 4.2.2 Implement `create_app(manifest: Manifest) -> FastAPI` in `src/asap/transport/server.py`
-- [ ] 4.2.3 **TEST FIRST**: Add tests for POST `/asap` endpoint
-  - Test receives JSON-RPC request
-  - Test returns JSON-RPC response
-  - Test handles malformed requests with error
-- [ ] 4.2.4 Implement `/asap` endpoint with JSON-RPC handling
-- [ ] 4.2.5 **TEST FIRST**: Add tests for GET `/.well-known/asap/manifest.json`
-  - Test returns manifest JSON
-  - Test correct content-type
-- [ ] 4.2.6 Implement manifest endpoint
-- [ ] 4.2.7 Add exception handler middleware for ASAP errors
+- [x] 4.2.1 **TEST FIRST**: Create `tests/transport/test_server.py` - app factory
+  - Test `create_app()` returns FastAPI instance ✅
+  - Test app has required routes ✅
+- [x] 4.2.2 Implement `create_app(manifest: Manifest) -> FastAPI` in `src/asap/transport/server.py` ✅
+- [x] 4.2.3 **TEST FIRST**: Add tests for POST `/asap` endpoint
+  - Test receives JSON-RPC request ✅
+  - Test returns JSON-RPC response ✅
+  - Test handles malformed requests with error ✅
+- [x] 4.2.4 Implement `/asap` endpoint with JSON-RPC handling ✅
+- [x] 4.2.5 **TEST FIRST**: Add tests for GET `/.well-known/asap/manifest.json`
+  - Test returns manifest JSON ✅
+  - Test correct content-type ✅
+- [x] 4.2.6 Implement manifest endpoint ✅
+- [x] 4.2.7 Add exception handler middleware for ASAP errors ✅
 
 ### 4.3 Handler Registry
 
@@ -543,7 +543,8 @@
   - Use pytest-asyncio for async tests
 - [ ] 4.5.2 Verify: `uvicorn asap.transport.server:app` starts
 - [ ] 4.5.3 Create `src/asap/transport/__init__.py` with exports
-- [ ] 4.5.4 Commit: `feat(transport): add FastAPI server and async client`
+- [ ] 4.5.4 Test for all CI (Lint, Security, etc) before commit
+- [ ] 4.5.5 Commit: `feat(transport): add FastAPI server and async client`
 
 **Definition of Done**:
 - ✅ Server runs with `uvicorn`
