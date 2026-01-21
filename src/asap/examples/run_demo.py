@@ -8,19 +8,17 @@ import signal
 import subprocess
 import sys
 import time
-from pathlib import Path
 from typing import Sequence
 
 import httpx
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-EXAMPLES_DIR = PROJECT_ROOT / "examples"
-ECHO_AGENT_PATH = EXAMPLES_DIR / "echo_agent.py"
-COORDINATOR_PATH = EXAMPLES_DIR / "coordinator.py"
 ECHO_MANIFEST_URL = "http://127.0.0.1:8001/.well-known/asap/manifest.json"
 COORDINATOR_MANIFEST_URL = "http://127.0.0.1:8000/.well-known/asap/manifest.json"
 READY_TIMEOUT_SECONDS = 10.0
 READY_POLL_INTERVAL_SECONDS = 0.5
+
+ECHO_AGENT_MODULE = "asap.examples.echo_agent"
+COORDINATOR_MODULE = "asap.examples.coordinator"
 
 
 def start_process(command: Sequence[str]) -> subprocess.Popen[str]:
@@ -32,7 +30,7 @@ def start_process(command: Sequence[str]) -> subprocess.Popen[str]:
     Returns:
         Started subprocess handle.
     """
-    return subprocess.Popen(command, cwd=str(PROJECT_ROOT), text=True)
+    return subprocess.Popen(command, text=True)
 
 
 def wait_for_ready(url: str, timeout_seconds: float) -> None:
@@ -71,8 +69,8 @@ def _terminate_process(process: subprocess.Popen[str] | None) -> None:
 
 def main() -> None:
     """Start demo agent processes (echo + coordinator)."""
-    echo_command = [sys.executable, str(ECHO_AGENT_PATH)]
-    coordinator_command = [sys.executable, str(COORDINATOR_PATH)]
+    echo_command = [sys.executable, "-m", ECHO_AGENT_MODULE]
+    coordinator_command = [sys.executable, "-m", COORDINATOR_MODULE]
 
     echo_process = None
     coordinator_process = None

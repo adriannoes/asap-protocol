@@ -4,7 +4,9 @@ This module defines a coordinator agent with a manifest and FastAPI app.
 The coordinator will dispatch tasks to other agents in later steps.
 """
 
-from typing import Any
+import argparse
+import asyncio
+from typing import Any, Sequence
 
 from fastapi import FastAPI
 
@@ -145,3 +147,38 @@ async def dispatch_task(
     finally:
         clear_context()
     return response
+
+
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    """Parse command-line arguments for the coordinator agent.
+
+    Args:
+        argv: Optional list of CLI arguments for testing.
+
+    Returns:
+        Parsed argparse namespace.
+    """
+    parser = argparse.ArgumentParser(description="Run the ASAP coordinator agent.")
+    parser.add_argument(
+        "--echo-url",
+        default=DEFAULT_ECHO_BASE_URL,
+        help="Base URL for the echo agent (no trailing /asap).",
+    )
+    parser.add_argument(
+        "--message",
+        default="hello from coordinator",
+        help="Message to send to the echo agent.",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: Sequence[str] | None = None) -> None:
+    """Run a sample dispatch to the echo agent."""
+    args = parse_args(argv)
+    payload: dict[str, Any] = {"message": args.message}
+    response = asyncio.run(dispatch_task(payload, echo_base_url=args.echo_url))
+    logger.info("asap.coordinator.demo_complete", response=response.payload)
+
+
+if __name__ == "__main__":
+    main()
