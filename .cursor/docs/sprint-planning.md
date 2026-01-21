@@ -163,18 +163,18 @@ asap-protocol/
 
 ### Tarefas
 
-- [ ] `examples/echo_agent.py`:
+- [ ] `src/asap/examples/echo_agent.py`:
   - [ ] Agente que retorna input como output
   - [ ] Usa ASAPClient para responder
-- [ ] `examples/coordinator.py`:
+- [ ] `src/asap/examples/coordinator.py`:
   - [ ] Envia TaskRequest para echo_agent
   - [ ] Recebe e imprime TaskResponse
-- [ ] `examples/run_demo.py`:
+- [ ] `src/asap/examples/run_demo.py`:
   - [ ] Script que sobe ambos e executa fluxo
 - [ ] Teste E2E automatizado
 
 ### Definição de Pronto
-✅ Demo roda: `python examples/run_demo.py`
+✅ Demo roda: `python -m asap.examples.run_demo`
 ✅ Output mostra TaskRequest → TaskResponse completo
 ✅ Trace IDs correlacionados nos logs
 

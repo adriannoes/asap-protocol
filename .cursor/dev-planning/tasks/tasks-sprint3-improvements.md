@@ -18,10 +18,10 @@
 
 ### Sprint 4 Integration
 - `src/asap/transport/server.py` - Integrate HandlerRegistry
-- `examples/echo_agent.py` - Echo agent implementation
-- `examples/coordinator.py` - Coordinator agent implementation
-- `examples/run_demo.py` - Demo runner script
-- `examples/README.md` - Examples documentation
+- `src/asap/examples/echo_agent.py` - Echo agent implementation
+- `src/asap/examples/coordinator.py` - Coordinator agent implementation
+- `src/asap/examples/run_demo.py` - Demo runner script
+- `src/asap/examples/README.md` - Examples documentation
 
 ### Observability
 - `src/asap/observability/__init__.py` - Observability module (✅ implemented)
@@ -294,7 +294,7 @@
   - Test histograms record durations
   
 - [ ] 5.7 Add Grafana dashboard example
-  - Create `examples/grafana-dashboard.json`
+  - Create `src/asap/examples/grafana-dashboard.json`
   - Include panels for latency, throughput, errors
   - Document dashboard setup in README
   - Test for all CI (Lint, Security, etc) before commit.
@@ -338,7 +338,7 @@
   - Explain backoff algorithm
   
 - [ ] 6.6 Add configuration example
-  - Create `examples/client_with_custom_retry.py`
+  - Create `src/asap/examples/client_with_custom_retry.py`
   - Show different retry configurations for different scenarios
 
 **Definition of Done**:

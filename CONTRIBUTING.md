@@ -162,7 +162,7 @@ asap-protocol/
 │   └── transport/    # HTTP transport
 ├── tests/            # Test files
 ├── schemas/          # JSON Schemas
-├── examples/         # Usage examples
+├── src/asap/examples/ # Usage examples
 └── docs/             # Documentation
 ```
 
