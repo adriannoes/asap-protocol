@@ -62,6 +62,16 @@
 ### Planning & Tasks
 - `.cursor/dev-planning/tasks/tasks-prd-asap-implementation.md` - Sprint task list and progress tracking
 
+### Documentation (Sprint 6)
+- `docs/security.md` - Security guidance (auth, signing, TLS)
+- `docs/state-management.md` - State lifecycle and snapshot usage
+- `docs/transport.md` - HTTP/JSON-RPC binding details
+- `docs/migration.md` - Migration guide for A2A/MCP users
+- `docs/metrics.md` - Metrics endpoint and usage
+
+### Benchmarks (Sprint 6)
+- `benchmarks/` - Performance benchmark scripts and configs
+
 ### Configuration
 - `pyproject.toml` - Project configuration and dependencies
 - `.github/workflows/ci.yml` - CI/CD pipeline
@@ -658,6 +668,9 @@
 - [ ] 6.1.3 Add docstrings to transport module
 - [ ] 6.1.4 Create `docs/api-reference.md` using mkdocstrings
 - [ ] 6.1.5 Update `docs/index.md` with quick start guide
+- [ ] 6.1.6 Create `docs/observability.md` (logging + metrics overview)
+- [ ] 6.1.7 Create `docs/error-handling.md` (taxonomy + examples)
+- [ ] 6.1.8 Create `docs/testing.md` (unit + integration + E2E patterns)
 
 ### 6.2 README Enhancement
 
@@ -665,6 +678,7 @@
 - [ ] 6.2.2 Quick start example with code
 - [ ] 6.2.3 API overview with main classes
 - [ ] 6.2.4 Links to spec and full docs
+- [ ] 6.2.5 Advanced examples (state snapshots, error recovery, multi-agent flow)
 
 ### 6.3 CLI Implementation
 
@@ -698,9 +712,57 @@
 
 **Definition of Done**:
 - ✅ Package installable from TestPyPI
-- ✅ README allows getting started in <5 min
+- ✅ README allows getting started in <10 min
 - ✅ `asap --version` shows correct version
 - ✅ API docs generated and deployed
+
+---
+
+## Sprint 6: Production Readiness
+
+> **Focus**: Hardening, guides, and operational readiness
+
+### 7.1 Documentation Extensions
+
+- [ ] 7.1.1 Create `docs/security.md` (auth, signing, TLS guidance)
+  - [ ] 7.1.1.1 Document supported auth schemes and required headers
+  - [ ] 7.1.1.2 Describe request signing workflow and verification steps
+  - [ ] 7.1.1.3 Add threat model summary aligned with spec
+- [ ] 7.1.2 Create `docs/state-management.md` (state machine + snapshots)
+  - [ ] 7.1.2.1 Explain task lifecycle and valid transitions
+  - [ ] 7.1.2.2 Provide snapshot usage examples and restore flow
+  - [ ] 7.1.2.3 Describe versioning and consistency expectations
+- [ ] 7.1.3 Create `docs/transport.md` (HTTP/JSON-RPC binding details)
+  - [ ] 7.1.3.1 Document `/asap` JSON-RPC request/response format
+  - [ ] 7.1.3.2 Document manifest discovery endpoint and schema
+  - [ ] 7.1.3.3 Provide error mapping table for JSON-RPC codes
+- [ ] 7.1.4 Create `docs/migration.md` (ASAP vs A2A/MCP guidance)
+  - [ ] 7.1.4.1 Compare envelope/payload mapping with A2A/MCP
+  - [ ] 7.1.4.2 Migration checklist for existing agents
+
+### 7.2 Observability & Metrics
+
+- [ ] 7.2.1 Implement `/asap/metrics` endpoint (Prometheus format)
+  - [ ] 7.2.1.1 Define metrics schema (counters, histograms)
+  - [ ] 7.2.1.2 Add metric collection in request handling path
+  - [ ] 7.2.1.3 Add endpoint test coverage
+- [ ] 7.2.2 Add `docs/metrics.md` with usage and examples
+  - [ ] 7.2.2.1 Document metric names and labels
+  - [ ] 7.2.2.2 Provide curl example and dashboard hints
+
+### 7.3 Tooling
+
+- [ ] 7.3.1 Implement `asap validate-schema [file]` command
+  - [ ] 7.3.1.1 Add CLI command and help text
+  - [ ] 7.3.1.2 Validate JSON against schema registry
+  - [ ] 7.3.1.3 Add unit tests for CLI behavior
+
+### 7.4 Performance Benchmarks
+
+- [ ] 7.4.1 Add `benchmarks/` with latency and throughput tests
+  - [ ] 7.4.1.1 Define benchmark scenarios and targets
+  - [ ] 7.4.1.2 Add benchmark runner and sample config
+  - [ ] 7.4.1.3 Document how to execute benchmarks locally
 
 ---
 
@@ -713,9 +775,10 @@
 | 2 | 17 tasks | State | ✅ 3.1.1, 3.1.2, 3.1.3, 3.1.4, 3.2.1, 3.2.2, 3.2.3, 3.2.4, 3.2.5, 3.2.6, 3.2.7, 3.2.8, 3.3.1, 3.3.2, 3.3.3, 3.3.4, 3.3.5 | 1 dia |
 | 3 | 18 tasks | Transport | ✅ 4.1.3, 4.2.1, 4.2.3, 4.2.5, 4.3.1, 4.4.1, 4.5.1 | 1.5 dias |
 | 4 | 14 tasks | E2E | ✅ 5.5.1 | 1 dia |
-| 5 | 15 tasks | Polish | N/A | 1 dia |
+| 5 | 19 tasks | Polish | N/A | 1 dia |
+| 6 | 8 tasks | Production | N/A | 1–1.5 dias |
 
-**Total**: ~111 sub-tasks across 6 sprints (~6.5 dias)
+**Total**: ~125 sub-tasks across 7 sprints (~7.5 dias)
 
 ---
 
@@ -761,10 +824,16 @@ graph TD
         S5D[6.3 CLI] --> S5B
     end
     
+    subgraph Sprint 6
+        S6A[7.1 Docs Extensions] --> S6B[7.2 Metrics]
+        S6C[7.3 Tooling] --> S6D[7.4 Benchmarks]
+    end
+    
     S0 --> S1A
     S1E --> S2A
     S1E --> S3A
     S2C --> S4A
     S3E --> S4A
 S4E --> S5A
+    S5B --> S6A
 ```
