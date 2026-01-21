@@ -122,6 +122,11 @@ ENV/
 env.bak/
 venv.bak/
 
+# Local credentials and keys
+*.pem
+*.key
+credentials.json
+
 # Spyder project settings
 .spyderproject
 .spyproject
