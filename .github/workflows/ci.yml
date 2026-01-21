@@ -60,7 +60,7 @@ jobs:
       - name: Run tests with pytest
         run: uv run pytest --cov=src --cov-report=xml
         env:
-          PYTHONPATH: src:.
+          PYTHONPATH: src
         
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
