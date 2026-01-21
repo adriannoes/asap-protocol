@@ -54,6 +54,12 @@
 - `examples/run_demo.py` - Demo runner script
 - `examples/README.md` - Examples documentation
 - `src/asap/cli.py` - CLI entry point
+### E2E Tests (Sprint 4)
+- `tests/e2e/__init__.py` - E2E test package initialization
+- `tests/e2e/test_two_agents.py` - E2E test for two-agent demo flow
+
+### Planning & Tasks
+- `.cursor/dev-planning/tasks/tasks-prd-asap-implementation.md` - Sprint task list and progress tracking
 
 ### Configuration
 - `pyproject.toml` - Project configuration and dependencies
@@ -582,52 +588,53 @@
 
 ### 5.1 Echo Agent
 
-- [ ] 5.1.1 Create `examples/echo_agent.py` - basic structure
+- [x] 5.1.1 Create `examples/echo_agent.py` - basic structure
   - Define agent Manifest with echo skill
   - Create FastAPI app using `create_app()`
-- [ ] 5.1.2 Implement TaskRequest handler that echoes input
+- [x] 5.1.2 Implement TaskRequest handler that echoes input
   - Return TaskResponse with input as output
-- [ ] 5.1.3 Add configurable port (default: 8001)
+- [x] 5.1.3 Add configurable port (default: 8001)
 
-### 5.2 Coordinator Agent
+### 5.2 Coordinator Agent ✅
 
-- [ ] 5.2.1 Create `examples/coordinator.py`
+- [x] 5.2.1 Create `examples/coordinator.py`
   - Define coordinator Manifest
   - Create FastAPI app
-- [ ] 5.2.2 Implement task dispatch to echo_agent
+- [x] 5.2.2 Implement task dispatch to echo_agent
   - Create TaskRequest envelope
   - Send via ASAPClient
-- [ ] 5.2.3 Handle TaskResponse and log result
+- [x] 5.2.3 Handle TaskResponse and log result
 
-### 5.3 Demo Runner
+### 5.3 Demo Runner ✅
 
-- [ ] 5.3.1 Create `examples/run_demo.py` with process management
+- [x] 5.3.1 Create `examples/run_demo.py` with process management
   - Use `subprocess` or `multiprocessing` for agent processes
-- [ ] 5.3.2 Implement startup sequence
+- [x] 5.3.2 Implement startup sequence
   - Start echo_agent first (wait for ready)
   - Start coordinator
   - Execute demo flow
-- [ ] 5.3.3 Add graceful shutdown handling (SIGINT/SIGTERM)
-- [ ] 5.3.4 Create `examples/README.md` with usage instructions
+- [x] 5.3.3 Add graceful shutdown handling (SIGINT/SIGTERM)
+- [x] 5.3.4 Create `examples/README.md` with usage instructions
 
 ### 5.4 Observability
 
-- [ ] 5.4.1 Add structured logging configuration
+- [x] 5.4.1 Add structured logging configuration
   - Use standard logging with JSON format
   - Include trace_id, correlation_id in log context
-- [ ] 5.4.2 Verify ID propagation in logs
+- [x] 5.4.2 Verify ID propagation in logs
   - trace_id consistent across request/response
   - correlation_id matches original request
 
 ### 5.5 E2E Test
 
-- [ ] 5.5.1 **TEST**: Create `tests/e2e/test_two_agents.py`
+- [x] 5.5.1 **TEST**: Create `tests/e2e/test_two_agents.py`
   - Spin up both agents in test fixtures
   - Send TaskRequest from coordinator to echo
   - Verify TaskResponse content
   - Verify trace_id propagation
-- [ ] 5.5.2 Add E2E test to CI pipeline
-- [ ] 5.5.3 Commit: `feat(examples): add echo agent demo with E2E test`
+- [x] 5.5.2 Add E2E test to CI pipeline
+- [x] 5.5.3 Test for all CI (Lint, Security, etc) before commit ✅
+- [x] 5.5.4 Commit atômicos e bem documentados, em inglês em tom direto para detalhar o que foi feito nesta task. Isso é uma preparação para o PR.
 
 **Definition of Done**:
 - ✅ `uv run python examples/run_demo.py` shows complete flow
@@ -758,9 +765,5 @@ graph TD
     S1E --> S3A
     S2C --> S4A
     S3E --> S4A
-    S4E --> S5A
+S4E --> S5A
 ```
-
----
-
-*Generated: 2026-01-16 | Based on PRD v1.1 | Refined with improved granularity and dependency ordering*
