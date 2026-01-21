@@ -137,7 +137,7 @@ asap-protocol/
     └── errors.py            # Error taxonomy
 ├── schemas/                      # Exported JSON Schemas
 ├── tests/
-├── examples/
+├── src/asap/examples/
 ├── pyproject.toml
 └── README.md
 ```
@@ -149,7 +149,7 @@ asap-protocol/
 | pydantic | ^2.0 | Models, validation, JSON Schema |
 | fastapi | ^0.100 | HTTP server |
 | httpx | ^0.25 | HTTP client |
-├── examples/
+├── src/asap/examples/
 ├── pyproject.toml
 └── README.md
 ```

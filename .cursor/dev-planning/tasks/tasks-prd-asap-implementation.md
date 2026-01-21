@@ -49,10 +49,11 @@
 - `tests/transport/test_integration.py` - Full integration tests ✅
 
 ### Examples & CLI (Sprint 4-5)
-- `examples/echo_agent.py` - Simple echo agent example
-- `examples/coordinator.py` - Coordinator agent example
-- `examples/run_demo.py` - Demo runner script
-- `examples/README.md` - Examples documentation
+- `src/asap/examples/echo_agent.py` - Simple echo agent example
+- `src/asap/examples/coordinator.py` - Coordinator agent example
+- `src/asap/examples/run_demo.py` - Demo runner script
+- `src/asap/examples/README.md` - Examples documentation
+- `src/asap/examples/__init__.py` - Examples package initialization
 - `src/asap/cli.py` - CLI entry point
 ### E2E Tests (Sprint 4)
 - `tests/e2e/__init__.py` - E2E test package initialization
@@ -111,7 +112,7 @@
 
 - [x] 1.0 Project Foundation
   - [x] 1.1 Create `pyproject.toml` with dependencies
-  - [x] 1.2 Create directory structure: `src/asap/`, `tests/`, `schemas/`, `examples/`, `docs/`
+- [x] 1.2 Create directory structure: `src/asap/`, `src/asap/examples/`, `tests/`, `schemas/`, `docs/`
   - [x] 1.3 Create `src/asap/__init__.py` with `__version__ = "0.1.0"`
 
 - [x] 1.1 Open Source Files
@@ -588,7 +589,7 @@
 
 ### 5.1 Echo Agent
 
-- [x] 5.1.1 Create `examples/echo_agent.py` - basic structure
+- [x] 5.1.1 Create `src/asap/examples/echo_agent.py` - basic structure
   - Define agent Manifest with echo skill
   - Create FastAPI app using `create_app()`
 - [x] 5.1.2 Implement TaskRequest handler that echoes input
@@ -597,7 +598,7 @@
 
 ### 5.2 Coordinator Agent ✅
 
-- [x] 5.2.1 Create `examples/coordinator.py`
+- [x] 5.2.1 Create `src/asap/examples/coordinator.py`
   - Define coordinator Manifest
   - Create FastAPI app
 - [x] 5.2.2 Implement task dispatch to echo_agent
@@ -607,14 +608,14 @@
 
 ### 5.3 Demo Runner ✅
 
-- [x] 5.3.1 Create `examples/run_demo.py` with process management
+- [x] 5.3.1 Create `src/asap/examples/run_demo.py` with process management
   - Use `subprocess` or `multiprocessing` for agent processes
 - [x] 5.3.2 Implement startup sequence
   - Start echo_agent first (wait for ready)
   - Start coordinator
   - Execute demo flow
 - [x] 5.3.3 Add graceful shutdown handling (SIGINT/SIGTERM)
-- [x] 5.3.4 Create `examples/README.md` with usage instructions
+- [x] 5.3.4 Create `src/asap/examples/README.md` with usage instructions
 
 ### 5.4 Observability
 
@@ -637,7 +638,7 @@
 - [x] 5.5.4 Commit atômicos e bem documentados, em inglês em tom direto para detalhar o que foi feito nesta task. Isso é uma preparação para o PR.
 
 **Definition of Done**:
-- ✅ `uv run python examples/run_demo.py` shows complete flow
+- ✅ `uv run python -m asap.examples.run_demo` shows complete flow
 - ✅ Output shows TaskRequest → TaskResponse with correlated logs
 - ✅ Trace IDs consistent across boundaries
 - ✅ E2E test passes in CI
