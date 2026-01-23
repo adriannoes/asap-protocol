@@ -727,27 +727,27 @@
 
 ### 7.2 Observability & Metrics
 
-- [ ] 7.2.1 Implement `/asap/metrics` endpoint (Prometheus format)
-  - [ ] 7.2.1.1 Define metrics schema (counters, histograms)
-  - [ ] 7.2.1.2 Add metric collection in request handling path
-  - [ ] 7.2.1.3 Add endpoint test coverage
-- [ ] 7.2.2 Add `docs/metrics.md` with usage and examples
-  - [ ] 7.2.2.1 Document metric names and labels
-  - [ ] 7.2.2.2 Provide curl example and dashboard hints
+- [x] 7.2.1 Implement `/asap/metrics` endpoint (Prometheus format)
+  - [x] 7.2.1.1 Define metrics schema (counters, histograms)
+  - [x] 7.2.1.2 Add metric collection in request handling path
+  - [x] 7.2.1.3 Add endpoint test coverage
+- [x] 7.2.2 Add `docs/metrics.md` with usage and examples
+  - [x] 7.2.2.1 Document metric names and labels
+  - [x] 7.2.2.2 Provide curl example and dashboard hints
 
 ### 7.3 Tooling
 
-- [ ] 7.3.1 Implement `asap validate-schema [file]` command
-  - [ ] 7.3.1.1 Add CLI command and help text
-  - [ ] 7.3.1.2 Validate JSON against schema registry
-  - [ ] 7.3.1.3 Add unit tests for CLI behavior
+- [x] 7.3.1 Implement `asap validate-schema [file]` command
+  - [x] 7.3.1.1 Add CLI command and help text
+  - [x] 7.3.1.2 Validate JSON against schema registry
+  - [x] 7.3.1.3 Add unit tests for CLI behavior
 
 ### 7.4 Performance Benchmarks
 
-- [ ] 7.4.1 Add `benchmarks/` with latency and throughput tests
-  - [ ] 7.4.1.1 Define benchmark scenarios and targets
-  - [ ] 7.4.1.2 Add benchmark runner and sample config
-  - [ ] 7.4.1.3 Document how to execute benchmarks locally
+- [x] 7.4.1 Add `benchmarks/` with latency and throughput tests
+  - [x] 7.4.1.1 Define benchmark scenarios and targets
+  - [x] 7.4.1.2 Add benchmark runner and sample config
+  - [x] 7.4.1.3 Document how to execute benchmarks locally
 
 ### 8.1 Release Preparation
 
