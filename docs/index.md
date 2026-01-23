@@ -24,21 +24,27 @@ pip install asap-protocol
 
 ```python
 import asyncio
-from asap.models import TaskRequest, Agent
+from asap.models import Envelope, TaskRequest
 from asap.transport import ASAPClient
 
 async def main():
-    # Create a client
     async with ASAPClient("http://localhost:8000") as client:
-        # Create a task
-        task = TaskRequest(
-            task="Optimize this Python code",
-            input={"code": "def foo(): pass"}
+        task_request = TaskRequest(
+            conversation_id="conv_01HX5K3MQVN8",
+            skill_id="echo",
+            input={"text": "Hello, ASAP"},
         )
-        
-        # Send it
-        response = await client.send(task)
-        print(f"Result: {response.output}")
+
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:server",
+            payload_type="task.request",
+            payload=task_request.model_dump(),
+        )
+
+        response = await client.send(envelope)
+        print(response.payload_type)
 
 if __name__ == "__main__":
     asyncio.run(main())
@@ -46,5 +52,5 @@ if __name__ == "__main__":
 
 ## Documentation
 
-- [API Reference](api/models/entities.md)
+- [API Reference](api-reference.md)
 - [Contributing](contributing.md)

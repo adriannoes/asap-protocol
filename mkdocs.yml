@@ -50,4 +50,7 @@ nav:
           - Parts: api/models/parts.md
       - Transport: api/transport.md
       - State: api/state.md
+  - Observability: observability.md
+  - Error Handling: error-handling.md
+  - Testing: testing.md
   - Contributing: contributing.md
