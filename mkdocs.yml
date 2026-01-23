@@ -43,6 +43,11 @@ plugins:
 
 nav:
   - Home: index.md
+  - Guides:
+      - Security: security.md
+      - State Management: state-management.md
+      - Transport: transport.md
+      - Migration: migration.md
   - API Reference:
       - Models:
           - Entities: api/models/entities.md
