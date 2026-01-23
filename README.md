@@ -36,42 +36,125 @@ Or with pip:
 pip install asap-protocol
 ```
 
+For reproducible environments, prefer `uv` when possible.
+
 ## Quick Start
 
 ### 1. Create an Agent (Server)
 
 ```python
-from fastapi import FastAPI
-from asap.transport import ASAPServer
-from asap.models import Agent
+from asap.models.entities import Capability, Endpoint, Manifest, Skill
+from asap.transport.handlers import HandlerRegistry, create_echo_handler
+from asap.transport.server import create_app
 
-app = FastAPI()
-agent = Agent(name="my-agent", capabilities=["processing"])
-server = ASAPServer(app, agent)
+manifest = Manifest(
+    id="urn:asap:agent:echo-agent",
+    name="Echo Agent",
+    version="0.1.0",
+    description="Echoes task input as output",
+    capabilities=Capability(
+        asap_version="0.1",
+        skills=[Skill(id="echo", description="Echo back the input")],
+        state_persistence=False,
+    ),
+    endpoints=Endpoint(asap="http://127.0.0.1:8001/asap"),
+)
 
-@server.on_task("process")
-async def handle_process(task):
-    return {"status": "success", "result": "processed"}
+registry = HandlerRegistry()
+registry.register("task.request", create_echo_handler())
+
+app = create_app(manifest, registry)
 ```
 
 ### 2. Send a Task (Client)
 
 ```python
 import asyncio
-from asap.transport import ASAPClient
-from asap.models import TaskRequest
+from asap.models.envelope import Envelope
+from asap.models.payloads import TaskRequest
+from asap.transport.client import ASAPClient
 
 async def main():
-    async with ASAPClient("http://localhost:8000") as client:
-        response = await client.send(TaskRequest(
-            task="process",
-            input={"data": "..."}
-        ))
-        print(response)
+    request = TaskRequest(
+        conversation_id="conv_01HX5K3MQVN8",
+        skill_id="echo",
+        input={"message": "hello from client"},
+    )
+    envelope = Envelope(
+        asap_version="0.1",
+        sender="urn:asap:agent:client",
+        recipient="urn:asap:agent:echo-agent",
+        payload_type="task.request",
+        payload=request.model_dump(),
+    )
+    async with ASAPClient("http://127.0.0.1:8001") as client:
+        response = await client.send(envelope)
+        print(response.payload)
 
 if __name__ == "__main__":
     asyncio.run(main())
 ```
+
+## API Overview
+
+Core models:
+
+- `Envelope`: protocol wrapper with routing and tracing metadata
+- `TaskRequest`, `TaskResponse`, `TaskUpdate`, `TaskCancel`: task lifecycle payloads
+- `MessageSend`, `ArtifactNotify`: messaging and artifacts
+- `StateQuery`, `StateRestore`: snapshot state operations
+- `McpToolCall`, `McpToolResult`, `McpResourceFetch`, `McpResourceData`: MCP integration
+
+Transport:
+
+- `create_app`: FastAPI application factory
+- `HandlerRegistry`: payload dispatch registry
+- `ASAPClient`: async HTTP client for agent communication
+
+## Documentation
+
+- [Spec](.cursor/docs/general-specs.md)
+- [Docs](docs/index.md)
+- [API Reference](docs/api-reference.md)
+
+## Advanced Examples
+
+### State Snapshots
+
+```python
+from datetime import datetime, timezone
+from asap.models.entities import StateSnapshot
+from asap.state import InMemorySnapshotStore
+
+store = InMemorySnapshotStore()
+snapshot = StateSnapshot(
+    id="snap_01HX5K7R...",
+    task_id="task_01HX5K4N...",
+    version=1,
+    data={"status": "submitted", "progress": 0},
+    created_at=datetime.now(timezone.utc),
+)
+store.save(snapshot)
+latest = store.get("task_01HX5K4N...")
+```
+
+### Error Recovery
+
+```python
+from asap.errors import InvalidTransitionError
+
+try:
+    raise InvalidTransitionError(from_state="submitted", to_state="completed")
+except InvalidTransitionError as exc:
+    payload = exc.to_dict()
+    print(payload["code"])
+```
+
+### Multi-Agent Flow
+
+Run the built-in demo to see two agents exchanging messages:
+
+- `uv run python -m asap.examples.run_demo`
 
 ## Contributing
 
