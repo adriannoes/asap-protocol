@@ -751,21 +751,21 @@
 
 ### 8.1 Release Preparation
 
-- [ ] 8.1.1 Update `CHANGELOG.md` with all Sprint 1-5 changes
-- [ ] 8.1.2 Verify `pyproject.toml` metadata:
+- [x] 8.1.1 Update `CHANGELOG.md` with all Sprint 1-6 changes
+- [x] 8.1.2 Verify `pyproject.toml` metadata:
   - description, authors, license, classifiers, urls
-- [ ] 8.1.3 Run full CI locally: lint, type-check, test, security
-- [ ] 8.1.4 Test publish to TestPyPI:
+- [x] 8.1.3 Run full CI locally: lint, type-check, test, security
+- [x] 8.1.4 Test publish to TestPyPI:
   ```bash
   uv build
-  uv publish --repository testpypi
+  uv publish --publish-url https://test.pypi.org/legacy/
   ```
-- [ ] 8.1.5 Verify installation from TestPyPI:
+- [x] 8.1.5 Verify installation from TestPyPI:
   ```bash
-  pip install --index-url https://test.pypi.org/simple/ asap-protocol
+  uv pip install --index-url https://test.pypi.org/simple/ asap-protocol
   ```
-- [ ] 8.1.6 Tag release: `git tag v0.1.0 && git push origin v0.1.0`
-- [ ] 8.1.7 Commit atômicos e bem documentados, em inglês em tom direto para detalhar o que foi feito nesta task. Isso é uma preparação para o PR.
+- [x] 8.1.6 Tag release: `git tag v0.1.0 && git push origin v0.1.0`
+- [x] 8.1.7 Commit atômicos e bem documentados, em inglês em tom direto para detalhar o que foi feito nesta task. Isso é uma preparação para o PR.
 
 **Definition of Done**:
 - ✅ Package installable from TestPyPI
