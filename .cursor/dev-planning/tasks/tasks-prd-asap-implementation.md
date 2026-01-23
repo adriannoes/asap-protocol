@@ -12,11 +12,13 @@
 - `src/asap/__init__.py` - Package initialization with version
 - `src/asap/models/__init__.py` - Public model exports
 - `src/asap/models/base.py` - Base model configuration
+- `src/asap/models/enums.py` - Enum definitions for protocol states and roles
 - `src/asap/models/ids.py` - ULID generation utilities
 - `src/asap/models/entities.py` - Core entities: Agent, Task, Conversation, etc.
 - `src/asap/models/parts.py` - Part types: TextPart, DataPart, etc.
 - `src/asap/models/payloads.py` - Payload types: TaskRequest, TaskResponse, etc.
 - `src/asap/models/envelope.py` - Message envelope wrapper
+- `src/asap/schemas.py` - Schema export helpers
 - `tests/models/test_base.py` - Tests for base model configuration
 - `tests/models/test_ids.py` - Tests for ULID generation
 - `tests/models/test_entities.py` - Tests for entity models
@@ -68,6 +70,11 @@
 - `docs/transport.md` - HTTP/JSON-RPC binding details
 - `docs/migration.md` - Migration guide for A2A/MCP users
 - `docs/metrics.md` - Metrics endpoint and usage
+- `docs/api-reference.md` - API reference generated with mkdocstrings
+- `docs/index.md` - Documentation landing page with quick start
+- `docs/observability.md` - Structured logging and trace context guide
+- `docs/error-handling.md` - Error taxonomy and JSON-RPC mapping guide
+- `docs/testing.md` - Testing strategy and execution guide
 
 ### Benchmarks (Sprint 6)
 - `benchmarks/` - Performance benchmark scripts and configs
@@ -661,60 +668,38 @@
 
 ### 6.1 Code Documentation
 
-- [ ] 6.1.1 Add docstrings to all public models
+- [x] 6.1.1 Add docstrings to all public models
   - Follow Google docstring style
   - Include examples in docstrings
-- [ ] 6.1.2 Add docstrings to state module
-- [ ] 6.1.3 Add docstrings to transport module
-- [ ] 6.1.4 Create `docs/api-reference.md` using mkdocstrings
-- [ ] 6.1.5 Update `docs/index.md` with quick start guide
-- [ ] 6.1.6 Create `docs/observability.md` (logging + metrics overview)
-- [ ] 6.1.7 Create `docs/error-handling.md` (taxonomy + examples)
-- [ ] 6.1.8 Create `docs/testing.md` (unit + integration + E2E patterns)
+- [x] 6.1.2 Add docstrings to state module
+- [x] 6.1.3 Add docstrings to transport module
+- [x] 6.1.4 Create `docs/api-reference.md` using mkdocstrings
+- [x] 6.1.5 Update `docs/index.md` with quick start guide
+- [x] 6.1.6 Create `docs/observability.md` (logging + metrics overview)
+- [x] 6.1.7 Create `docs/error-handling.md` (taxonomy + examples)
+- [x] 6.1.8 Create `docs/testing.md` (unit + integration + E2E patterns)
 
 ### 6.2 README Enhancement
 
-- [ ] 6.2.1 Installation section (pip install, uv add)
-- [ ] 6.2.2 Quick start example with code
-- [ ] 6.2.3 API overview with main classes
-- [ ] 6.2.4 Links to spec and full docs
-- [ ] 6.2.5 Advanced examples (state snapshots, error recovery, multi-agent flow)
+- [x] 6.2.1 Installation section (pip install, uv add)
+- [x] 6.2.2 Quick start example with code
+- [x] 6.2.3 API overview with main classes
+- [x] 6.2.4 Links to spec and full docs
+- [x] 6.2.5 Advanced examples (state snapshots, error recovery, multi-agent flow)
 
 ### 6.3 CLI Implementation
 
-- [ ] 6.3.1 Create `src/asap/cli.py`
+- [x] 6.3.1 Create `src/asap/cli.py`
   - Use `click` or `typer` for CLI framework
-- [ ] 6.3.2 Implement `asap --version` command
-- [ ] 6.3.3 Implement `asap export-schemas [--output-dir]` command
-- [ ] 6.3.4 Add entry point to `pyproject.toml`:
+- [x] 6.3.2 Implement `asap --version` command
+- [x] 6.3.3 Implement `asap export-schemas [--output-dir]` command
+- [x] 6.3.5 Implement `asap list-schemas` command (list available schema files)
+- [x] 6.3.6 Implement `asap show-schema [schema-name]` command (print schema JSON)
+- [x] 6.3.4 Add entry point to `pyproject.toml`:
   ```toml
   [project.scripts]
   asap = "asap.cli:main"
   ```
-
-### 6.4 Release Preparation
-
-- [ ] 6.4.1 Update `CHANGELOG.md` with all Sprint 1-5 changes
-- [ ] 6.4.2 Verify `pyproject.toml` metadata:
-  - description, authors, license, classifiers, urls
-- [ ] 6.4.3 Run full CI locally: lint, type-check, test, security
-- [ ] 6.4.4 Test publish to TestPyPI:
-  ```bash
-  uv build
-  uv publish --repository testpypi
-  ```
-- [ ] 6.4.5 Verify installation from TestPyPI:
-  ```bash
-  pip install --index-url https://test.pypi.org/simple/ asap-protocol
-  ```
-- [ ] 6.4.6 Tag release: `git tag v0.1.0 && git push origin v0.1.0`
-- [ ] 6.4.7 Commit: `chore: prepare v0.1.0 release`
-
-**Definition of Done**:
-- ✅ Package installable from TestPyPI
-- ✅ README allows getting started in <10 min
-- ✅ `asap --version` shows correct version
-- ✅ API docs generated and deployed
 
 ---
 
@@ -764,7 +749,29 @@
   - [ ] 7.4.1.2 Add benchmark runner and sample config
   - [ ] 7.4.1.3 Document how to execute benchmarks locally
 
----
+### 8.1 Release Preparation
+
+- [ ] 8.1.1 Update `CHANGELOG.md` with all Sprint 1-5 changes
+- [ ] 8.1.2 Verify `pyproject.toml` metadata:
+  - description, authors, license, classifiers, urls
+- [ ] 8.1.3 Run full CI locally: lint, type-check, test, security
+- [ ] 8.1.4 Test publish to TestPyPI:
+  ```bash
+  uv build
+  uv publish --repository testpypi
+  ```
+- [ ] 8.1.5 Verify installation from TestPyPI:
+  ```bash
+  pip install --index-url https://test.pypi.org/simple/ asap-protocol
+  ```
+- [ ] 8.1.6 Tag release: `git tag v0.1.0 && git push origin v0.1.0`
+- [ ] 8.1.7 Commit atômicos e bem documentados, em inglês em tom direto para detalhar o que foi feito nesta task. Isso é uma preparação para o PR.
+
+**Definition of Done**:
+- ✅ Package installable from TestPyPI
+- ✅ README allows getting started in <10 min
+- ✅ `asap --version` shows correct version
+- ✅ API docs generated and deployed
 
 ## Summary
 
@@ -819,14 +826,16 @@ graph TD
     end
     
     subgraph Sprint 5
-        S5A[6.1 Docstrings] --> S5B[6.4 Release]
-        S5C[6.2 README] --> S5B
-        S5D[6.3 CLI] --> S5B
+        S5A[6.1 Docstrings]
+        S5C[6.2 README]
+        S5D[6.3 CLI]
+        S5B[8.1 Release]
     end
     
     subgraph Sprint 6
         S6A[7.1 Docs Extensions] --> S6B[7.2 Metrics]
-        S6C[7.3 Tooling] --> S6D[7.4 Benchmarks]
+        S6B --> S6C[7.3 Tooling]
+        S6D[7.4 Benchmarks]
     end
     
     S0 --> S1A
@@ -835,5 +844,7 @@ graph TD
     S2C --> S4A
     S3E --> S4A
 S4E --> S5A
-    S5B --> S6A
+    S5D --> S6A
+    S6C --> S5B
+    S5B --> S6D
 ```
