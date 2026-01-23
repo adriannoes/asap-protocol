@@ -709,21 +709,21 @@
 
 ### 7.1 Documentation Extensions
 
-- [ ] 7.1.1 Create `docs/security.md` (auth, signing, TLS guidance)
-  - [ ] 7.1.1.1 Document supported auth schemes and required headers
-  - [ ] 7.1.1.2 Describe request signing workflow and verification steps
-  - [ ] 7.1.1.3 Add threat model summary aligned with spec
-- [ ] 7.1.2 Create `docs/state-management.md` (state machine + snapshots)
-  - [ ] 7.1.2.1 Explain task lifecycle and valid transitions
-  - [ ] 7.1.2.2 Provide snapshot usage examples and restore flow
-  - [ ] 7.1.2.3 Describe versioning and consistency expectations
-- [ ] 7.1.3 Create `docs/transport.md` (HTTP/JSON-RPC binding details)
-  - [ ] 7.1.3.1 Document `/asap` JSON-RPC request/response format
-  - [ ] 7.1.3.2 Document manifest discovery endpoint and schema
-  - [ ] 7.1.3.3 Provide error mapping table for JSON-RPC codes
-- [ ] 7.1.4 Create `docs/migration.md` (ASAP vs A2A/MCP guidance)
-  - [ ] 7.1.4.1 Compare envelope/payload mapping with A2A/MCP
-  - [ ] 7.1.4.2 Migration checklist for existing agents
+- [x] 7.1.1 Create `docs/security.md` (auth, signing, TLS guidance)
+  - [x] 7.1.1.1 Document supported auth schemes and required headers
+  - [x] 7.1.1.2 Describe request signing workflow and verification steps
+  - [x] 7.1.1.3 Add threat model summary aligned with spec
+- [x] 7.1.2 Create `docs/state-management.md` (state machine + snapshots)
+  - [x] 7.1.2.1 Explain task lifecycle and valid transitions
+  - [x] 7.1.2.2 Provide snapshot usage examples and restore flow
+  - [x] 7.1.2.3 Describe versioning and consistency expectations
+- [x] 7.1.3 Create `docs/transport.md` (HTTP/JSON-RPC binding details)
+  - [x] 7.1.3.1 Document `/asap` JSON-RPC request/response format
+  - [x] 7.1.3.2 Document manifest discovery endpoint and schema
+  - [x] 7.1.3.3 Provide error mapping table for JSON-RPC codes
+- [x] 7.1.4 Create `docs/migration.md` (ASAP vs A2A/MCP guidance)
+  - [x] 7.1.4.1 Compare envelope/payload mapping with A2A/MCP
+  - [x] 7.1.4.2 Migration checklist for existing agents
 
 ### 7.2 Observability & Metrics
 
