@@ -63,6 +63,7 @@ def get_schema_json(schema_name: str) -> dict[str, object]:
             return model_class.model_json_schema()
     raise ValueError(f"Unknown schema name: {schema_name}")
 
+
 def export_schema(model_class: type[ASAPBaseModel], output_path: Path) -> None:
     """Export JSON Schema for a model to a file.
 
