@@ -171,3 +171,170 @@ class TestCliDefaults:
     def test_default_schemas_dir_exists(self) -> None:
         """Ensure DEFAULT_SCHEMAS_DIR is defined."""
         assert Path("schemas") == DEFAULT_SCHEMAS_DIR
+
+
+class TestCliValidateSchema:
+    """Tests for validate-schema command."""
+
+    def test_help_shows_validate_schema(self) -> None:
+        """Ensure --help shows validate-schema command."""
+        runner = CliRunner()
+        result = runner.invoke(app, ["--help"])
+
+        assert result.exit_code == 0
+        output = strip_ansi(result.stdout)
+        assert "validate-schema" in output
+
+    def test_validate_schema_help(self) -> None:
+        """Ensure validate-schema --help shows options."""
+        runner = CliRunner()
+        result = runner.invoke(app, ["validate-schema", "--help"])
+
+        assert result.exit_code == 0
+        output = strip_ansi(result.stdout)
+        assert "--schema-type" in output
+        assert "FILE" in output
+
+    def test_validates_valid_agent_json(self, tmp_path: Path) -> None:
+        """Ensure validate-schema accepts valid agent JSON."""
+        agent_json = {
+            "id": "urn:asap:agent:test-agent",
+            "manifest_uri": "https://example.com/.well-known/asap/manifest.json",
+            "capabilities": ["task.execute"],
+        }
+        json_file = tmp_path / "agent.json"
+        json_file.write_text(json.dumps(agent_json), encoding="utf-8")
+
+        runner = CliRunner()
+        result = runner.invoke(
+            app, ["validate-schema", str(json_file), "--schema-type", "agent"]
+        )
+
+        assert result.exit_code == 0
+        assert "Valid" in result.stdout
+
+    def test_validates_valid_envelope_json(self, tmp_path: Path) -> None:
+        """Ensure validate-schema accepts valid envelope JSON."""
+        envelope_json = {
+            "asap_version": "0.1",
+            "sender": "urn:asap:agent:test-agent",
+            "recipient": "urn:asap:agent:target-agent",
+            "payload_type": "TaskRequest",
+            "payload": {"task_id": "01JGQXYZ1234567890123456"},
+        }
+        json_file = tmp_path / "envelope.json"
+        json_file.write_text(json.dumps(envelope_json), encoding="utf-8")
+
+        runner = CliRunner()
+        result = runner.invoke(
+            app, ["validate-schema", str(json_file), "--schema-type", "envelope"]
+        )
+
+        assert result.exit_code == 0
+        assert "Valid" in result.stdout
+
+    def test_rejects_invalid_json(self, tmp_path: Path) -> None:
+        """Ensure validate-schema rejects invalid JSON syntax."""
+        json_file = tmp_path / "invalid.json"
+        json_file.write_text("{invalid json}", encoding="utf-8")
+
+        runner = CliRunner()
+        result = runner.invoke(
+            app, ["validate-schema", str(json_file), "--schema-type", "agent"]
+        )
+
+        assert result.exit_code != 0
+        assert "Invalid JSON" in result.output
+
+    def test_rejects_invalid_agent_data(self, tmp_path: Path) -> None:
+        """Ensure validate-schema rejects data not matching agent schema."""
+        invalid_agent = {
+            "name": "Missing required id field",
+        }
+        json_file = tmp_path / "invalid_agent.json"
+        json_file.write_text(json.dumps(invalid_agent), encoding="utf-8")
+
+        runner = CliRunner()
+        result = runner.invoke(
+            app, ["validate-schema", str(json_file), "--schema-type", "agent"]
+        )
+
+        assert result.exit_code != 0
+        assert "Validation error" in result.output
+
+    def test_rejects_unknown_schema_type(self, tmp_path: Path) -> None:
+        """Ensure validate-schema rejects unknown schema types."""
+        json_file = tmp_path / "test.json"
+        json_file.write_text("{}", encoding="utf-8")
+
+        runner = CliRunner()
+        result = runner.invoke(
+            app, ["validate-schema", str(json_file), "--schema-type", "unknown_type"]
+        )
+
+        assert result.exit_code != 0
+        assert "Unknown schema type" in result.output
+
+    def test_handles_missing_file(self) -> None:
+        """Ensure validate-schema handles missing files gracefully."""
+        runner = CliRunner()
+        result = runner.invoke(
+            app, ["validate-schema", "/nonexistent/file.json", "--schema-type", "agent"]
+        )
+
+        assert result.exit_code != 0
+        assert "File not found" in result.output
+
+    def test_auto_detects_envelope_schema(self, tmp_path: Path) -> None:
+        """Ensure validate-schema can auto-detect envelope schema from payload_type."""
+        envelope_json = {
+            "asap_version": "0.1",
+            "sender": "urn:asap:agent:test-agent",
+            "recipient": "urn:asap:agent:target-agent",
+            "payload_type": "TaskRequest",
+            "payload": {"task_id": "01JGQXYZ1234567890123456"},
+        }
+        json_file = tmp_path / "envelope.json"
+        json_file.write_text(json.dumps(envelope_json), encoding="utf-8")
+
+        runner = CliRunner()
+        # No --schema-type provided, should auto-detect as envelope
+        result = runner.invoke(app, ["validate-schema", str(json_file)])
+
+        assert result.exit_code == 0
+        assert "Valid" in result.stdout
+
+    def test_requires_schema_type_for_non_envelope(self, tmp_path: Path) -> None:
+        """Ensure validate-schema requires schema-type for non-envelope JSON."""
+        agent_json = {
+            "id": "urn:asap:agent:test-agent",
+            "manifest_uri": "https://example.com/manifest.json",
+            "capabilities": [],
+        }
+        json_file = tmp_path / "agent.json"
+        json_file.write_text(json.dumps(agent_json), encoding="utf-8")
+
+        runner = CliRunner()
+        # No --schema-type provided, not auto-detectable
+        result = runner.invoke(app, ["validate-schema", str(json_file)])
+
+        assert result.exit_code != 0
+        assert "schema-type" in result.output.lower()
+
+    def test_displays_validation_error_details(self, tmp_path: Path) -> None:
+        """Ensure validate-schema shows detailed validation errors."""
+        invalid_agent = {
+            "id": "invalid-ulid-format",  # Invalid ULID format
+            "name": "Test Agent",
+        }
+        json_file = tmp_path / "invalid_agent.json"
+        json_file.write_text(json.dumps(invalid_agent), encoding="utf-8")
+
+        runner = CliRunner()
+        result = runner.invoke(
+            app, ["validate-schema", str(json_file), "--schema-type", "agent"]
+        )
+
+        assert result.exit_code != 0
+        # Should contain some field information in the error
+        assert "id" in result.output.lower() or "validation" in result.output.lower()
