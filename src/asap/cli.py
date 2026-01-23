@@ -1,4 +1,14 @@
-"""Command-line interface for ASAP Protocol utilities."""
+"""Command-line interface for ASAP Protocol utilities.
+
+This module provides CLI commands for schema export and inspection.
+
+Example:
+    >>> # From terminal:
+    >>> # asap --version
+    >>> # asap export-schemas --output-dir ./schemas
+    >>> # asap list-schemas
+    >>> # asap show-schema agent
+"""
 
 import json
 from pathlib import Path
@@ -9,6 +19,9 @@ from asap import __version__
 from asap.schemas import export_all_schemas, get_schema_json, list_schema_entries
 
 app = typer.Typer(help="ASAP Protocol CLI.")
+
+# Default directory for schema operations
+DEFAULT_SCHEMAS_DIR = Path("schemas")
 
 
 def _version_callback(value: bool) -> None:
@@ -25,13 +38,15 @@ VERSION_OPTION = typer.Option(
     callback=_version_callback,
     is_eager=True,
 )
-OUTPUT_DIR_OPTION = typer.Option(
-    Path("schemas"),
+
+# Module-level singleton options to avoid B008 linting errors
+OUTPUT_DIR_EXPORT_OPTION = typer.Option(
+    DEFAULT_SCHEMAS_DIR,
     "--output-dir",
     help="Directory where JSON schemas will be written.",
 )
 OUTPUT_DIR_LIST_OPTION = typer.Option(
-    Path("schemas"),
+    DEFAULT_SCHEMAS_DIR,
     "--output-dir",
     help="Directory where JSON schemas are written.",
 )
@@ -44,11 +59,16 @@ def cli(version: bool = VERSION_OPTION) -> None:
 
 @app.command("export-schemas")
 def export_schemas(
-    output_dir: Path = OUTPUT_DIR_OPTION,
+    output_dir: Path = OUTPUT_DIR_EXPORT_OPTION,
 ) -> None:
     """Export all ASAP JSON schemas to the output directory."""
-    written_paths = export_all_schemas(output_dir)
-    typer.echo(f"Exported {len(written_paths)} schemas to {output_dir}")
+    try:
+        written_paths = export_all_schemas(output_dir)
+        typer.echo(f"Exported {len(written_paths)} schemas to {output_dir}")
+    except PermissionError as exc:
+        raise typer.BadParameter(f"Cannot write to directory: {output_dir}") from exc
+    except OSError as exc:
+        raise typer.BadParameter(f"Failed to export schemas: {exc}") from exc
 
 
 @app.command("list-schemas")
