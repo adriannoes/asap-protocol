@@ -24,27 +24,52 @@ pip install asap-protocol
 
 ```python
 import asyncio
-from asap.models import TaskRequest, Agent
-from asap.transport import ASAPClient
+from asap.models.envelope import Envelope
+from asap.models.payloads import TaskRequest
+from asap.transport.client import ASAPClient
 
 async def main():
-    # Create a client
-    async with ASAPClient("http://localhost:8000") as client:
-        # Create a task
-        task = TaskRequest(
-            task="Optimize this Python code",
-            input={"code": "def foo(): pass"}
-        )
-        
-        # Send it
-        response = await client.send(task)
-        print(f"Result: {response.output}")
+    request = TaskRequest(
+        conversation_id="conv_01HX5K3MQVN8",
+        skill_id="echo",
+        input={"message": "hello from client"},
+    )
+    envelope = Envelope(
+        asap_version="0.1",
+        sender="urn:asap:agent:client",
+        recipient="urn:asap:agent:echo-agent",
+        payload_type="task.request",
+        payload=request.model_dump(),
+    )
+    async with ASAPClient("http://127.0.0.1:8001") as client:
+        response = await client.send(envelope)
+        print(response.payload)
 
 if __name__ == "__main__":
     asyncio.run(main())
 ```
 
+## CLI
+
+ASAP provides a CLI for schema management:
+
+```bash
+# Show version
+asap --version
+
+# Export all JSON schemas
+asap export-schemas --output-dir ./schemas
+
+# List available schemas
+asap list-schemas
+
+# Show a specific schema
+asap show-schema agent
+```
+
 ## Documentation
 
-- [API Reference](api/models/entities.md)
-- [Contributing](contributing.md)
+- [API Reference](api-reference.md)
+- [Observability](observability.md)
+- [Error Handling](error-handling.md)
+- [Testing](testing.md)

@@ -2,6 +2,11 @@
 
 This module provides interfaces and implementations for storing and retrieving
 task state snapshots, enabling state persistence across agent restarts.
+
+Example:
+    >>> store = InMemorySnapshotStore()
+    >>> store.list_versions("task_01HX5K4N...")
+    []
 """
 
 import threading
@@ -19,6 +24,19 @@ class SnapshotStore(Protocol):
     Implementations can use various backends (memory, database, file system, etc.).
     This uses Protocol for duck typing, allowing any class that implements
     these methods to be used as a SnapshotStore.
+
+    Example:
+        >>> class CustomStore:
+        ...     def save(self, snapshot: StateSnapshot) -> None:
+        ...         pass
+        ...     def get(self, task_id: TaskID, version: int | None = None) -> StateSnapshot | None:
+        ...         return None
+        ...     def list_versions(self, task_id: TaskID) -> list[int]:
+        ...         return []
+        ...     def delete(self, task_id: TaskID, version: int | None = None) -> bool:
+        ...         return False
+        >>> isinstance(CustomStore(), SnapshotStore)
+        True
     """
 
     def save(self, snapshot: StateSnapshot) -> None:
@@ -26,6 +44,18 @@ class SnapshotStore(Protocol):
 
         Args:
             snapshot: The snapshot to save
+
+        Example:
+            >>> from datetime import datetime, timezone
+            >>> store = InMemorySnapshotStore()
+            >>> snapshot = StateSnapshot(
+            ...     id="snap_01HX5K7R...",
+            ...     task_id="task_01HX5K4N...",
+            ...     version=1,
+            ...     data={"status": "submitted"},
+            ...     created_at=datetime.now(timezone.utc),
+            ... )
+            >>> store.save(snapshot)
         """
         ...
 
@@ -38,6 +68,11 @@ class SnapshotStore(Protocol):
 
         Returns:
             The snapshot if found, None otherwise
+
+        Example:
+            >>> store = InMemorySnapshotStore()
+            >>> store.get("task_01HX5K4N...")
+            None
         """
         ...
 
@@ -49,6 +84,11 @@ class SnapshotStore(Protocol):
 
         Returns:
             List of version numbers in ascending order
+
+        Example:
+            >>> store = InMemorySnapshotStore()
+            >>> store.list_versions("task_01HX5K4N...")
+            []
         """
         ...
 
@@ -61,6 +101,11 @@ class SnapshotStore(Protocol):
 
         Returns:
             True if any snapshots were deleted, False otherwise
+
+        Example:
+            >>> store = InMemorySnapshotStore()
+            >>> store.delete("task_01HX5K4N...")
+            False
         """
         ...
 
@@ -75,7 +120,13 @@ class InMemorySnapshotStore:
     """
 
     def __init__(self) -> None:
-        """Initialize the in-memory snapshot store."""
+        """Initialize the in-memory snapshot store.
+
+        Example:
+            >>> store = InMemorySnapshotStore()
+            >>> isinstance(store, InMemorySnapshotStore)
+            True
+        """
         self._lock = threading.RLock()
         # task_id -> version -> snapshot
         self._snapshots: dict[TaskID, dict[int, StateSnapshot]] = {}
@@ -87,6 +138,18 @@ class InMemorySnapshotStore:
 
         Args:
             snapshot: The snapshot to save
+
+        Example:
+            >>> from datetime import datetime, timezone
+            >>> store = InMemorySnapshotStore()
+            >>> snapshot = StateSnapshot(
+            ...     id="snap_01HX5K7R...",
+            ...     task_id="task_01HX5K4N...",
+            ...     version=1,
+            ...     data={"status": "submitted"},
+            ...     created_at=datetime.now(timezone.utc),
+            ... )
+            >>> store.save(snapshot)
         """
         with self._lock:
             task_id = snapshot.task_id
@@ -112,6 +175,11 @@ class InMemorySnapshotStore:
 
         Returns:
             The snapshot if found, None otherwise
+
+        Example:
+            >>> store = InMemorySnapshotStore()
+            >>> store.get("task_01HX5K4N...")
+            None
         """
         with self._lock:
             if task_id not in self._snapshots:
@@ -135,6 +203,11 @@ class InMemorySnapshotStore:
 
         Returns:
             List of version numbers in ascending order
+
+        Example:
+            >>> store = InMemorySnapshotStore()
+            >>> store.list_versions("task_01HX5K4N...")
+            []
         """
         with self._lock:
             if task_id not in self._snapshots:
@@ -151,6 +224,11 @@ class InMemorySnapshotStore:
 
         Returns:
             True if any snapshots were deleted, False otherwise
+
+        Example:
+            >>> store = InMemorySnapshotStore()
+            >>> store.delete("task_01HX5K4N...")
+            False
         """
         with self._lock:
             if task_id not in self._snapshots:

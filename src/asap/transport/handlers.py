@@ -65,6 +65,13 @@ class HandlerNotFoundError(ASAPError):
 
     Attributes:
         payload_type: The payload type that has no handler
+
+    Example:
+        >>> try:
+        ...     raise HandlerNotFoundError("task.request")
+        ... except HandlerNotFoundError as exc:
+        ...     exc.payload_type
+        'task.request'
     """
 
     def __init__(self, payload_type: str) -> None:
@@ -123,6 +130,10 @@ class HandlerRegistry:
         Args:
             payload_type: The payload type to handle (e.g., "task.request")
             handler: Callable that processes envelopes of this type
+
+        Example:
+            >>> registry = HandlerRegistry()
+            >>> registry.register("task.request", create_echo_handler())
         """
         with self._lock:
             is_override = payload_type in self._handlers
@@ -144,6 +155,11 @@ class HandlerRegistry:
 
         Returns:
             True if a handler is registered, False otherwise
+
+        Example:
+            >>> registry = HandlerRegistry()
+            >>> registry.has_handler("task.request")
+            False
         """
         with self._lock:
             return payload_type in self._handlers
@@ -166,6 +182,10 @@ class HandlerRegistry:
 
         Raises:
             HandlerNotFoundError: If no handler is registered for the payload type
+
+        Example:
+            >>> registry = create_default_registry()
+            >>> response = registry.dispatch(envelope, manifest)
         """
         payload_type = envelope.payload_type
         start_time = time.perf_counter()
@@ -219,6 +239,11 @@ class HandlerRegistry:
 
         Returns:
             List of payload type strings that have registered handlers
+
+        Example:
+            >>> registry = create_default_registry()
+            >>> registry.list_handlers()
+            ['task.request']
         """
         with self._lock:
             return list(self._handlers.keys())

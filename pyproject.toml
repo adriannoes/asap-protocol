@@ -28,6 +28,7 @@ dependencies = [
     "python-ulid>=3.0",
     "packaging>=25.0",
     "structlog>=24.1",
+    "typer>=0.21.1",
 ]
 
 [project.optional-dependencies]
@@ -49,6 +50,9 @@ Homepage = "https://github.com/adriannoes/asap-protocol"
 Documentation = "https://adriannoes.github.io/asap-protocol"
 Repository = "https://github.com/adriannoes/asap-protocol"
 Issues = "https://github.com/adriannoes/asap-protocol/issues"
+
+[project.scripts]
+asap = "asap.cli:main"
 
 [build-system]
 requires = ["hatchling"]
