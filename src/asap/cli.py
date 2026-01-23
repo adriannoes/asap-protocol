@@ -1,12 +1,11 @@
 """Command-line interface for ASAP Protocol utilities."""
 
+import json
 from pathlib import Path
 
 import typer
 
 from asap import __version__
-import json
-
 from asap.schemas import export_all_schemas, get_schema_json, list_schema_entries
 
 app = typer.Typer(help="ASAP Protocol CLI.")
@@ -19,27 +18,33 @@ def _version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
+VERSION_OPTION = typer.Option(
+    False,
+    "--version",
+    help="Show ASAP Protocol version and exit.",
+    callback=_version_callback,
+    is_eager=True,
+)
+OUTPUT_DIR_OPTION = typer.Option(
+    Path("schemas"),
+    "--output-dir",
+    help="Directory where JSON schemas will be written.",
+)
+OUTPUT_DIR_LIST_OPTION = typer.Option(
+    Path("schemas"),
+    "--output-dir",
+    help="Directory where JSON schemas are written.",
+)
+
+
 @app.callback()
-def cli(
-    version: bool = typer.Option(
-        False,
-        "--version",
-        help="Show ASAP Protocol version and exit.",
-        callback=_version_callback,
-        is_eager=True,
-    )
-) -> None:
+def cli(version: bool = VERSION_OPTION) -> None:
     """ASAP Protocol CLI entrypoint."""
-    return None
 
 
 @app.command("export-schemas")
 def export_schemas(
-    output_dir: Path = typer.Option(
-        Path("schemas"),
-        "--output-dir",
-        help="Directory where JSON schemas will be written.",
-    )
+    output_dir: Path = OUTPUT_DIR_OPTION,
 ) -> None:
     """Export all ASAP JSON schemas to the output directory."""
     written_paths = export_all_schemas(output_dir)
@@ -48,11 +53,7 @@ def export_schemas(
 
 @app.command("list-schemas")
 def list_schemas(
-    output_dir: Path = typer.Option(
-        Path("schemas"),
-        "--output-dir",
-        help="Directory where JSON schemas are written.",
-    )
+    output_dir: Path = OUTPUT_DIR_LIST_OPTION,
 ) -> None:
     """List available schema names and output paths."""
     entries = list_schema_entries(output_dir)
