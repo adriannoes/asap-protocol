@@ -1,6 +1,7 @@
 """Tests for ASAP CLI."""
 
 import json
+import re
 from pathlib import Path
 from unittest.mock import patch
 
@@ -9,6 +10,14 @@ from typer.testing import CliRunner
 from asap import __version__
 from asap.cli import DEFAULT_SCHEMAS_DIR, app
 from asap.schemas import TOTAL_SCHEMA_COUNT
+
+# ANSI escape sequence pattern for stripping colors from output
+ANSI_ESCAPE_PATTERN = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def strip_ansi(text: str) -> str:
+    """Remove ANSI escape sequences from text."""
+    return ANSI_ESCAPE_PATTERN.sub("", text)
 
 
 class TestCliVersion:
@@ -32,9 +41,10 @@ class TestCliHelp:
         result = runner.invoke(app, ["--help"])
 
         assert result.exit_code == 0
-        assert "export-schemas" in result.stdout
-        assert "list-schemas" in result.stdout
-        assert "show-schema" in result.stdout
+        output = strip_ansi(result.stdout)
+        assert "export-schemas" in output
+        assert "list-schemas" in output
+        assert "show-schema" in output
 
     def test_export_schemas_help(self) -> None:
         """Ensure export-schemas --help shows options."""
@@ -42,7 +52,8 @@ class TestCliHelp:
         result = runner.invoke(app, ["export-schemas", "--help"])
 
         assert result.exit_code == 0
-        assert "--output-dir" in result.stdout
+        output = strip_ansi(result.stdout)
+        assert "--output-dir" in output
 
 
 class TestCliExportSchemas:
