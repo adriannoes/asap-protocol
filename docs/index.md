@@ -24,33 +24,52 @@ pip install asap-protocol
 
 ```python
 import asyncio
-from asap.models import Envelope, TaskRequest
-from asap.transport import ASAPClient
+from asap.models.envelope import Envelope
+from asap.models.payloads import TaskRequest
+from asap.transport.client import ASAPClient
 
 async def main():
-    async with ASAPClient("http://localhost:8000") as client:
-        task_request = TaskRequest(
-            conversation_id="conv_01HX5K3MQVN8",
-            skill_id="echo",
-            input={"text": "Hello, ASAP"},
-        )
-
-        envelope = Envelope(
-            asap_version="0.1",
-            sender="urn:asap:agent:client",
-            recipient="urn:asap:agent:server",
-            payload_type="task.request",
-            payload=task_request.model_dump(),
-        )
-
+    request = TaskRequest(
+        conversation_id="conv_01HX5K3MQVN8",
+        skill_id="echo",
+        input={"message": "hello from client"},
+    )
+    envelope = Envelope(
+        asap_version="0.1",
+        sender="urn:asap:agent:client",
+        recipient="urn:asap:agent:echo-agent",
+        payload_type="task.request",
+        payload=request.model_dump(),
+    )
+    async with ASAPClient("http://127.0.0.1:8001") as client:
         response = await client.send(envelope)
-        print(response.payload_type)
+        print(response.payload)
 
 if __name__ == "__main__":
     asyncio.run(main())
 ```
 
+## CLI
+
+ASAP provides a CLI for schema management:
+
+```bash
+# Show version
+asap --version
+
+# Export all JSON schemas
+asap export-schemas --output-dir ./schemas
+
+# List available schemas
+asap list-schemas
+
+# Show a specific schema
+asap show-schema agent
+```
+
 ## Documentation
 
 - [API Reference](api-reference.md)
-- [Contributing](contributing.md)
+- [Observability](observability.md)
+- [Error Handling](error-handling.md)
+- [Testing](testing.md)
