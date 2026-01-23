@@ -3,6 +3,7 @@
 This module provides a production-ready FastAPI server that:
 - Exposes POST /asap endpoint for JSON-RPC 2.0 wrapped ASAP messages
 - Exposes GET /.well-known/asap/manifest.json for agent discovery
+- Exposes GET /asap/metrics for Prometheus-compatible metrics
 - Handles errors with proper JSON-RPC error responses
 - Validates all incoming requests against ASAP schemas
 - Uses HandlerRegistry for extensible payload processing
@@ -41,12 +42,12 @@ import time
 from typing import Any
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import ValidationError
 
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.envelope import Envelope
-from asap.observability import get_logger
+from asap.observability import get_logger, get_metrics
 from asap.transport.handlers import (
     HandlerNotFoundError,
     HandlerRegistry,
@@ -137,6 +138,25 @@ def create_app(
         """
         return manifest.model_dump()
 
+    @app.get("/asap/metrics")
+    async def get_metrics_endpoint() -> PlainTextResponse:
+        """Return Prometheus-compatible metrics.
+
+        This endpoint exposes server metrics in Prometheus text format,
+        including request counts, error rates, and latency histograms.
+
+        Returns:
+            PlainTextResponse with metrics in Prometheus format
+
+        Example:
+            curl http://localhost:8000/asap/metrics
+        """
+        metrics = get_metrics()
+        return PlainTextResponse(
+            content=metrics.export_prometheus(),
+            media_type="text/plain; version=0.0.4; charset=utf-8",
+        )
+
     @app.post("/asap")
     async def handle_asap_message(request: Request) -> JSONResponse:
         """Handle ASAP messages wrapped in JSON-RPC 2.0.
@@ -146,6 +166,7 @@ def create_app(
         2. Validates the request structure
         3. Extracts and processes the ASAP envelope
         4. Returns response wrapped in JSON-RPC
+        5. Records metrics for observability
 
         Args:
             request: FastAPI request object with JSON body
@@ -158,6 +179,8 @@ def create_app(
             >>> # See tests/transport/test_server.py for full request examples.
         """
         start_time = time.perf_counter()
+        metrics = get_metrics()
+        payload_type = "unknown"
 
         try:
             # Parse JSON body
@@ -222,11 +245,27 @@ def create_app(
             # Validate envelope structure
             try:
                 envelope = Envelope(**envelope_data)
+                payload_type = envelope.payload_type
             except ValidationError as e:
                 logger.warning(
                     "asap.request.invalid_envelope",
                     error="Invalid envelope structure",
                     validation_errors=str(e.errors()),
+                )
+                # Record error metric
+                duration_seconds = time.perf_counter() - start_time
+                metrics.increment_counter(
+                    "asap_requests_total",
+                    {"payload_type": payload_type, "status": "error"},
+                )
+                metrics.increment_counter(
+                    "asap_requests_error_total",
+                    {"payload_type": payload_type, "error_type": "invalid_envelope"},
+                )
+                metrics.observe_histogram(
+                    "asap_request_duration_seconds",
+                    duration_seconds,
+                    {"payload_type": payload_type, "status": "error"},
                 )
                 error_response = JsonRpcErrorResponse(
                     error=JsonRpcError.from_code(
@@ -263,6 +302,21 @@ def create_app(
                     payload_type=e.payload_type,
                     envelope_id=envelope.id,
                 )
+                # Record error metric
+                duration_seconds = time.perf_counter() - start_time
+                metrics.increment_counter(
+                    "asap_requests_total",
+                    {"payload_type": payload_type, "status": "error"},
+                )
+                metrics.increment_counter(
+                    "asap_requests_error_total",
+                    {"payload_type": payload_type, "error_type": "handler_not_found"},
+                )
+                metrics.observe_histogram(
+                    "asap_request_duration_seconds",
+                    duration_seconds,
+                    {"payload_type": payload_type, "status": "error"},
+                )
                 error_response = JsonRpcErrorResponse(
                     error=JsonRpcError.from_code(
                         METHOD_NOT_FOUND,
@@ -279,7 +333,23 @@ def create_app(
                 )
 
             # Calculate duration
-            duration_ms = (time.perf_counter() - start_time) * 1000
+            duration_seconds = time.perf_counter() - start_time
+            duration_ms = duration_seconds * 1000
+
+            # Record success metrics
+            metrics.increment_counter(
+                "asap_requests_total",
+                {"payload_type": payload_type, "status": "success"},
+            )
+            metrics.increment_counter(
+                "asap_requests_success_total",
+                {"payload_type": payload_type},
+            )
+            metrics.observe_histogram(
+                "asap_request_duration_seconds",
+                duration_seconds,
+                {"payload_type": payload_type, "status": "success"},
+            )
 
             # Log successful processing
             logger.info(
@@ -304,7 +374,23 @@ def create_app(
 
         except Exception as e:
             # Calculate duration for error case
-            duration_ms = (time.perf_counter() - start_time) * 1000
+            duration_seconds = time.perf_counter() - start_time
+            duration_ms = duration_seconds * 1000
+
+            # Record error metrics
+            metrics.increment_counter(
+                "asap_requests_total",
+                {"payload_type": payload_type, "status": "error"},
+            )
+            metrics.increment_counter(
+                "asap_requests_error_total",
+                {"payload_type": payload_type, "error_type": "internal_error"},
+            )
+            metrics.observe_histogram(
+                "asap_request_duration_seconds",
+                duration_seconds,
+                {"payload_type": payload_type, "status": "error"},
+            )
 
             # Log error
             logger.exception(

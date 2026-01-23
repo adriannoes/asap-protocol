@@ -47,6 +47,7 @@ nav:
       - Security: security.md
       - State Management: state-management.md
       - Transport: transport.md
+      - Metrics: metrics.md
       - Migration: migration.md
   - API Reference:
       - Models:
