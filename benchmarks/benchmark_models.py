@@ -18,17 +18,13 @@ Run with: uv run pytest benchmarks/benchmark_models.py --benchmark-only -v
 from datetime import datetime, timezone
 from typing import Any
 
-import pytest
 
 from asap.models.entities import (
     Agent,
     Artifact,
-    Capability,
     Conversation,
-    Endpoint,
     Manifest,
     Message,
-    Skill,
     Task,
 )
 from asap.models.envelope import Envelope

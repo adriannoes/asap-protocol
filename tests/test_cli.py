@@ -206,9 +206,7 @@ class TestCliValidateSchema:
         json_file.write_text(json.dumps(agent_json), encoding="utf-8")
 
         runner = CliRunner()
-        result = runner.invoke(
-            app, ["validate-schema", str(json_file), "--schema-type", "agent"]
-        )
+        result = runner.invoke(app, ["validate-schema", str(json_file), "--schema-type", "agent"])
 
         assert result.exit_code == 0
         assert "Valid" in result.stdout
@@ -239,9 +237,7 @@ class TestCliValidateSchema:
         json_file.write_text("{invalid json}", encoding="utf-8")
 
         runner = CliRunner()
-        result = runner.invoke(
-            app, ["validate-schema", str(json_file), "--schema-type", "agent"]
-        )
+        result = runner.invoke(app, ["validate-schema", str(json_file), "--schema-type", "agent"])
 
         assert result.exit_code != 0
         assert "Invalid JSON" in result.output
@@ -255,9 +251,7 @@ class TestCliValidateSchema:
         json_file.write_text(json.dumps(invalid_agent), encoding="utf-8")
 
         runner = CliRunner()
-        result = runner.invoke(
-            app, ["validate-schema", str(json_file), "--schema-type", "agent"]
-        )
+        result = runner.invoke(app, ["validate-schema", str(json_file), "--schema-type", "agent"])
 
         assert result.exit_code != 0
         assert "Validation error" in result.output
@@ -331,9 +325,7 @@ class TestCliValidateSchema:
         json_file.write_text(json.dumps(invalid_agent), encoding="utf-8")
 
         runner = CliRunner()
-        result = runner.invoke(
-            app, ["validate-schema", str(json_file), "--schema-type", "agent"]
-        )
+        result = runner.invoke(app, ["validate-schema", str(json_file), "--schema-type", "agent"])
 
         assert result.exit_code != 0
         # Should contain some field information in the error

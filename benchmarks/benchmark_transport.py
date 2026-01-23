@@ -17,10 +17,8 @@ Run with: uv run pytest benchmarks/benchmark_transport.py --benchmark-only -v
 
 from typing import Any
 
-import pytest
 from fastapi.testclient import TestClient
 
-from asap.models.entities import Manifest
 from asap.models.envelope import Envelope
 from asap.transport.jsonrpc import JsonRpcRequest, JsonRpcResponse
 
@@ -53,9 +51,7 @@ class TestJsonRpcProcessing:
         result = benchmark(create_response)
         assert result.id == "request-001"
 
-    def test_jsonrpc_request_serialization(
-        self, benchmark: Any, sample_envelope: Envelope
-    ) -> None:
+    def test_jsonrpc_request_serialization(self, benchmark: Any, sample_envelope: Envelope) -> None:
         """Benchmark JSON-RPC request serialization."""
         request = JsonRpcRequest(
             method="asap.message",
@@ -103,9 +99,7 @@ class TestHttpEndpoints:
         result = benchmark(send_message)
         assert "result" in result or "error" in result
 
-    def test_asap_endpoint_invalid_request(
-        self, benchmark: Any, benchmark_app: TestClient
-    ) -> None:
+    def test_asap_endpoint_invalid_request(self, benchmark: Any, benchmark_app: TestClient) -> None:
         """Benchmark error handling for invalid requests."""
         invalid_request = {
             "jsonrpc": "2.0",
