@@ -12,6 +12,12 @@ class TaskStatus(str, Enum):
 
     Tasks progress through these states during their lifecycle.
     Terminal states are: COMPLETED, FAILED, CANCELLED.
+
+    Example:
+        >>> TaskStatus.COMPLETED.is_terminal()
+        True
+        >>> TaskStatus.WORKING.is_terminal()
+        False
     """
 
     SUBMITTED = "submitted"
@@ -39,6 +45,10 @@ class MessageRole(str, Enum):
     """Message sender roles.
 
     Defines the role of the entity sending a message in a conversation.
+
+    Example:
+        >>> MessageRole.USER.value
+        'user'
     """
 
     USER = "user"
@@ -50,6 +60,10 @@ class UpdateType(str, Enum):
     """Task update types.
 
     Defines the type of update being sent for a task.
+
+    Example:
+        >>> UpdateType.PROGRESS.value
+        'progress'
     """
 
     PROGRESS = "progress"

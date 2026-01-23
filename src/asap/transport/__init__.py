@@ -21,6 +21,23 @@ Public exports:
     ASAPConnectionError: Connection error exception
     ASAPTimeoutError: Timeout error exception
     ASAPRemoteError: Remote error exception
+
+Example:
+    >>> from asap.transport import ASAPClient, create_app
+    >>> from asap.models.entities import Manifest, Capability, Endpoint, Skill
+    >>> manifest = Manifest(
+    ...     id="urn:asap:agent:demo",
+    ...     name="Demo Agent",
+    ...     version="1.0.0",
+    ...     description="Demo manifest",
+    ...     capabilities=Capability(
+    ...         asap_version="0.1",
+    ...         skills=[Skill(id="echo", description="Echo")],
+    ...         state_persistence=False,
+    ...     ),
+    ...     endpoints=Endpoint(asap="http://localhost:8000/asap"),
+    ... )
+    >>> app = create_app(manifest)
 """
 
 from asap.transport.client import (

@@ -129,6 +129,11 @@ def create_app(
 
         Returns:
             Agent manifest as JSON dictionary
+
+        Example:
+            >>> manifest = get_manifest()
+            >>> "id" in manifest
+            True
         """
         return manifest.model_dump()
 
@@ -147,6 +152,10 @@ def create_app(
 
         Returns:
             JSON-RPC response or error response
+
+        Example:
+            >>> # Send JSON-RPC to POST /asap and receive JSON-RPC response.
+            >>> # See tests/transport/test_server.py for full request examples.
         """
         start_time = time.perf_counter()
 

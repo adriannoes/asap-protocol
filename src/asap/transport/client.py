@@ -201,6 +201,11 @@ class ASAPClient:
             ASAPConnectionError: If connection fails or HTTP error occurs
             ASAPTimeoutError: If request times out
             ASAPRemoteError: If remote agent returns JSON-RPC error
+
+        Example:
+            >>> async with ASAPClient("http://localhost:8000") as client:
+            ...     response = await client.send(envelope)
+            ...     response.payload_type
         """
         if not self._client:
             raise ASAPConnectionError("Client not connected. Use 'async with' context.")

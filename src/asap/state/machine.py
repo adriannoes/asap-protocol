@@ -2,6 +2,11 @@
 
 This module implements the task state machine for the ASAP protocol,
 managing valid state transitions and providing transition validation.
+
+Example:
+    >>> from asap.models.enums import TaskStatus
+    >>> can_transition(TaskStatus.SUBMITTED, TaskStatus.WORKING)
+    True
 """
 
 from datetime import datetime, timezone
@@ -36,6 +41,12 @@ def can_transition(from_status: TaskStatus, to_status: TaskStatus) -> bool:
 
     Returns:
         True if the transition is valid, False otherwise
+
+    Example:
+        >>> can_transition(TaskStatus.SUBMITTED, TaskStatus.WORKING)
+        True
+        >>> can_transition(TaskStatus.COMPLETED, TaskStatus.WORKING)
+        False
     """
     return to_status in VALID_TRANSITIONS[from_status]
 
@@ -52,6 +63,18 @@ def transition(task: Task, new_status: TaskStatus) -> Task:
 
     Raises:
         InvalidTransitionError: If the transition is not valid
+
+    Example:
+        >>> task = Task(
+        ...     id="task_01HX5K4N...",
+        ...     conversation_id="conv_01HX5K3M...",
+        ...     status=TaskStatus.SUBMITTED,
+        ...     created_at=datetime.now(timezone.utc),
+        ...     updated_at=datetime.now(timezone.utc),
+        ... )
+        >>> updated = transition(task, TaskStatus.WORKING)
+        >>> updated.status
+        <TaskStatus.WORKING: 'working'>
     """
     if not can_transition(task.status, new_status):
         raise InvalidTransitionError(

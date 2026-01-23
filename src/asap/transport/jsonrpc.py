@@ -95,6 +95,11 @@ class JsonRpcError(ASAPBaseModel):
 
         Returns:
             JsonRpcError instance with standard message
+
+        Example:
+            >>> error = JsonRpcError.from_code(INVALID_PARAMS, data={"field": "task_id"})
+            >>> error.message
+            'Invalid params'
         """
         message = ERROR_MESSAGES.get(code, "Unknown error")
         return JsonRpcError(code=code, message=message, data=data)
