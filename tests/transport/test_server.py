@@ -10,13 +10,14 @@ Tests cover:
 - HandlerRegistry integration
 - Custom handler registration
 - Metrics collection
+- Authentication integration
 """
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from asap.models.entities import Capability, Endpoint, Manifest, Skill
+from asap.models.entities import AuthScheme, Capability, Endpoint, Manifest, Skill
 from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest, TaskResponse
@@ -24,6 +25,7 @@ from asap.observability import get_metrics, reset_metrics
 from asap.transport.handlers import HandlerRegistry
 from asap.transport.jsonrpc import (
     INVALID_PARAMS,
+    INVALID_REQUEST,
     METHOD_NOT_FOUND,
     JsonRpcErrorResponse,
     JsonRpcRequest,
@@ -719,3 +721,239 @@ class TestServerExceptionHandling:
             {"payload_type": "task.request", "error_type": "internal_error"},
         )
         assert error_count >= 1.0
+
+
+class TestAuthenticationIntegration:
+    """Test authentication integration in server."""
+
+    def test_create_app_with_auth_requires_validator(self) -> None:
+        """Test that create_app raises ValueError when auth configured without validator."""
+        manifest_with_auth = Manifest(
+            id="urn:asap:agent:auth-test",
+            name="Auth Test Agent",
+            version="1.0.0",
+            description="Agent with auth",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="test", description="Test skill")],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="http://localhost:8000/asap"),
+            auth=AuthScheme(schemes=["bearer"]),
+        )
+
+        with pytest.raises(ValueError, match="token_validator is required"):
+            create_app(manifest_with_auth, token_validator=None)
+
+    def test_authentication_failure_returns_jsonrpc_error(self) -> None:
+        """Test that authentication failure returns proper JSON-RPC error."""
+        manifest_with_auth = Manifest(
+            id="urn:asap:agent:auth-test",
+            name="Auth Test Agent",
+            version="1.0.0",
+            description="Agent with auth",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="test", description="Test skill")],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="http://localhost:8000/asap"),
+            auth=AuthScheme(schemes=["bearer"]),
+        )
+
+        def always_reject_validator(token: str) -> str | None:
+            return None  # Always reject
+
+        app = create_app(manifest_with_auth, token_validator=always_reject_validator)
+        client = TestClient(app, raise_server_exceptions=False)
+
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:auth-test",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-1",
+                skill_id="test",
+                input={},
+            ).model_dump(),
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="auth-fail-test",
+        )
+
+        # Send request with invalid token
+        response = client.post(
+            "/asap",
+            json=rpc_request.model_dump(),
+            headers={"Authorization": "Bearer invalid-token"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == INVALID_REQUEST
+        assert "Invalid authentication token" in data["error"]["data"]["error"]
+
+    def test_sender_mismatch_returns_jsonrpc_error(self) -> None:
+        """Test that sender mismatch returns proper JSON-RPC error."""
+        manifest_with_auth = Manifest(
+            id="urn:asap:agent:auth-test",
+            name="Auth Test Agent",
+            version="1.0.0",
+            description="Agent with auth",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="test", description="Test skill")],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="http://localhost:8000/asap"),
+            auth=AuthScheme(schemes=["bearer"]),
+        )
+
+        def validator(token: str) -> str | None:
+            if token == "valid-token":
+                return "urn:asap:agent:authenticated-client"
+            return None
+
+        app = create_app(manifest_with_auth, token_validator=validator)
+        client = TestClient(app, raise_server_exceptions=False)
+
+        # Create envelope with sender that doesn't match authenticated identity
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:spoofed-sender",  # Different from authenticated agent
+            recipient="urn:asap:agent:auth-test",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-1",
+                skill_id="test",
+                input={},
+            ).model_dump(),
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="sender-mismatch-test",
+        )
+
+        # Send with valid token but mismatched sender
+        response = client.post(
+            "/asap",
+            json=rpc_request.model_dump(),
+            headers={"Authorization": "Bearer valid-token"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == INVALID_PARAMS
+        assert "Sender does not match" in data["error"]["data"]["error"]
+
+    def test_authentication_success_processes_request(self) -> None:
+        """Test that successful authentication allows request processing."""
+        manifest_with_auth = Manifest(
+            id="urn:asap:agent:auth-test",
+            name="Auth Test Agent",
+            version="1.0.0",
+            description="Agent with auth",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="test", description="Test skill")],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="http://localhost:8000/asap"),
+            auth=AuthScheme(schemes=["bearer"]),
+        )
+
+        def validator(token: str) -> str | None:
+            if token == "valid-token":
+                return "urn:asap:agent:client"
+            return None
+
+        app = create_app(manifest_with_auth, token_validator=validator)
+        client = TestClient(app, raise_server_exceptions=False)
+
+        # Create envelope with correct sender
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",  # Matches authenticated agent
+            recipient="urn:asap:agent:auth-test",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-1",
+                skill_id="test",
+                input={"message": "authenticated request"},
+            ).model_dump(),
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="auth-success-test",
+        )
+
+        # Send with valid token and matching sender
+        response = client.post(
+            "/asap",
+            json=rpc_request.model_dump(),
+            headers={"Authorization": "Bearer valid-token"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "result" in data
+        assert data["id"] == "auth-success-test"
+
+    def test_authentication_missing_header_returns_error(self) -> None:
+        """Test that missing auth header returns proper error."""
+        manifest_with_auth = Manifest(
+            id="urn:asap:agent:auth-test",
+            name="Auth Test Agent",
+            version="1.0.0",
+            description="Agent with auth",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="test", description="Test skill")],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="http://localhost:8000/asap"),
+            auth=AuthScheme(schemes=["bearer"]),
+        )
+
+        def validator(token: str) -> str | None:
+            return "urn:asap:agent:client"
+
+        app = create_app(manifest_with_auth, token_validator=validator)
+        client = TestClient(app, raise_server_exceptions=False)
+
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:auth-test",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-1",
+                skill_id="test",
+                input={},
+            ).model_dump(),
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="no-auth-test",
+        )
+
+        # Send without Authorization header
+        response = client.post("/asap", json=rpc_request.model_dump())
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == INVALID_REQUEST
+        assert "Authentication required" in data["error"]["data"]["error"]

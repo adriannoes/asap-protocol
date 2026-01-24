@@ -119,6 +119,7 @@ def test_middleware_without_auth(manifest_without_auth: Manifest) -> None:
     assert middleware.manifest == manifest_without_auth
     assert middleware.validator is None
     assert not middleware._is_auth_required()
+    assert not middleware._supports_bearer_auth()  # Coverage for line 201
 
 
 def test_middleware_with_auth_requires_validator(manifest_with_bearer_auth: Manifest) -> None:
@@ -333,3 +334,62 @@ async def test_authentication_flow_with_invalid_sender(
         middleware.verify_sender_matches_auth(agent_id, "urn:asap:agent:spoofed")
 
     assert exc_info.value.status_code == HTTP_FORBIDDEN
+
+
+def test_supports_bearer_auth_with_oauth2_only() -> None:
+    """Test that supports_bearer_auth returns False for OAuth2-only manifest."""
+    manifest_oauth2 = Manifest(
+        id="urn:asap:agent:oauth2-only",
+        name="OAuth2 Only Agent",
+        version="1.0.0",
+        description="Agent with OAuth2 only",
+        capabilities=Capability(
+            asap_version="0.1",
+            skills=[Skill(id="test", description="Test skill")],
+            state_persistence=False,
+        ),
+        endpoints=Endpoint(asap="http://localhost:8000/asap"),
+        auth=AuthScheme(schemes=["oauth2"]),  # No "bearer"
+    )
+
+    def dummy_validator(token: str) -> str | None:
+        return "urn:asap:agent:client"
+
+    validator = BearerTokenValidator(dummy_validator)
+    middleware = AuthenticationMiddleware(manifest_oauth2, validator)
+
+    assert not middleware._supports_bearer_auth()
+
+
+@pytest.mark.asyncio
+async def test_verify_authentication_with_oauth2_scheme_fails() -> None:
+    """Test that OAuth2 scheme (non-Bearer) is rejected."""
+    manifest_oauth2 = Manifest(
+        id="urn:asap:agent:oauth2-only",
+        name="OAuth2 Only Agent",
+        version="1.0.0",
+        description="Agent with OAuth2 only",
+        capabilities=Capability(
+            asap_version="0.1",
+            skills=[Skill(id="test", description="Test skill")],
+            state_persistence=False,
+        ),
+        endpoints=Endpoint(asap="http://localhost:8000/asap"),
+        auth=AuthScheme(schemes=["oauth2"]),  # No "bearer" support
+    )
+
+    def dummy_validator(token: str) -> str | None:
+        return "urn:asap:agent:client"
+
+    validator = BearerTokenValidator(dummy_validator)
+    middleware = AuthenticationMiddleware(manifest_oauth2, validator)
+
+    request = Request(scope={"type": "http", "method": "POST", "path": "/asap", "headers": []})
+    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="some-token")
+
+    # Should fail because manifest doesn't support bearer scheme
+    with pytest.raises(HTTPException) as exc_info:
+        await middleware.verify_authentication(request, credentials)
+
+    assert exc_info.value.status_code == HTTP_UNAUTHORIZED
+    assert ERROR_INVALID_TOKEN in str(exc_info.value.detail)
