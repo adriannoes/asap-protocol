@@ -51,6 +51,7 @@ Homepage = "https://github.com/adriannoes/asap-protocol"
 Documentation = "https://adriannoes.github.io/asap-protocol"
 Repository = "https://github.com/adriannoes/asap-protocol"
 Issues = "https://github.com/adriannoes/asap-protocol/issues"
+"PyPI" = "https://pypi.org/project/asap-protocol/"
 
 [project.scripts]
 asap = "asap.cli:main"

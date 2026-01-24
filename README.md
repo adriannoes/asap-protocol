@@ -36,6 +36,8 @@ Or with pip:
 pip install asap-protocol
 ```
 
+📦 **Available on [PyPI](https://pypi.org/project/asap-protocol/)**
+
 For reproducible environments, prefer `uv` when possible.
 
 ## Quick Start
@@ -116,6 +118,7 @@ Transport:
 - [Spec](.cursor/docs/general-specs.md)
 - [Docs](docs/index.md)
 - [API Reference](docs/api-reference.md)
+- [PyPI Package](https://pypi.org/project/asap-protocol/)
 
 ## Advanced Examples
 

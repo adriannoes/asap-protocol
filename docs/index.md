@@ -20,6 +20,8 @@ uv add asap-protocol
 pip install asap-protocol
 ```
 
+📦 **Available on [PyPI](https://pypi.org/project/asap-protocol/)**
+
 ## Quick Start
 
 ```python
