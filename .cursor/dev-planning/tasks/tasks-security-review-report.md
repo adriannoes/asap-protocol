@@ -236,11 +236,13 @@
     - Add best practices for retry configuration
 
 - [ ] 7.0 Medium Priority - Sensitive Data Protection (MED-01, MED-02)
+  - **Related Issue**: [#12](https://github.com/adriannoes/asap-protocol/issues/12) - Security hardening - token logging
   - [ ] 7.1 Implement log sanitization
     - Create `sanitize_for_logging()` function in `logging.py`
     - Define sensitive key patterns (password, token, secret, key, authorization)
     - Recursively sanitize nested dictionaries
     - Replace sensitive values with "***REDACTED***"
+    - **Note**: This addresses token prefix logging issue identified in PR #8
   - [ ] 7.2 Update logging calls
     - Apply sanitization to envelope payloads before logging
     - Sanitize request/response data in transport layer
