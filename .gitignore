@@ -164,4 +164,5 @@ cython_debug/
 # Project specific
 !/.cursor/
 .cursor/docs/design-decisions.md
+.cursor/docs/wiki
 node_modules/
