@@ -18,7 +18,7 @@ Building multi-agent systems today suffers from three core technical challenges:
 - **High-Performance Core**: Built on Python 3.13+, leveraging `uvloop` (C) and `pydantic-core` (Rust) for ultra-low latency validation and I/O.
 - **Observable Chains**: First-class support for `trace_id` and `correlation_id` to debug complex multi-agent delegation.
 - **MCP Integration**: Uses the Model Context Protocol (MCP) as a tool-execution substrate, wrapped in a high-level coordination envelope.
-- **Async-Native**: Engineered from the ground up for high-concurrency environments using `asyncio` and `httpx`.
+- **Async-Native**: Engineered from the ground up for high-concurrency environments using `asyncio` and `httpx`. Supports both sync and async handlers with automatic event loop management.
 
 > 💡 **Performance Note**: Pure Python codebase leveraging Rust-accelerated dependencies (`pydantic-core`, `orjson`, `python-ulid`) for native-level performance without build complexity.
 
@@ -108,8 +108,8 @@ Core models:
 Transport:
 
 - `create_app`: FastAPI application factory
-- `HandlerRegistry`: payload dispatch registry
-- `ASAPClient`: async HTTP client for agent communication
+- `HandlerRegistry`: payload dispatch registry (supports both sync and async handlers)
+- `ASAPClient`: async HTTP client with automatic retry for server errors (5xx)
 
 ## Documentation
 
@@ -150,15 +150,59 @@ except InvalidTransitionError as exc:
     print(payload["code"])
 ```
 
+### Async Handlers
+
+Handlers can be either synchronous or asynchronous:
+
+```python
+# Sync handler
+def my_sync_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+    # Process synchronously
+    return response_envelope
+
+# Async handler
+async def my_async_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+    # Process asynchronously (e.g., database calls, API requests)
+    result = await some_async_operation()
+    return response_envelope
+
+registry.register("task.request", my_async_handler)  # Works with both!
+```
+
 ### Multi-Agent Flow
 
 Run the built-in demo to see two agents exchanging messages:
 
-- `uv run python -m asap.examples.run_demo`
+```bash
+uv run python -m asap.examples.run_demo
+```
+
+### CLI Tools
+
+The ASAP CLI provides utilities for schema management:
+
+```bash
+# Export all JSON schemas
+asap export-schemas --output-dir ./schemas
+
+# List available schemas
+asap list-schemas
+
+# Show a specific schema
+asap show-schema envelope
+
+# Validate JSON against a schema
+asap validate-schema message.json --schema-type envelope
+
+# Verbose output
+asap export-schemas --verbose
+```
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+We love contributions! Whether it's fixing a bug, improving documentation, or proposing a new feature, your help is welcome.
+
+Check out our [Contributing Guidelines](CONTRIBUTING.md) to get started. It's easier than you think! 🚀
 
 ## License
 
