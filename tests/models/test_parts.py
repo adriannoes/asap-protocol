@@ -192,6 +192,70 @@ class TestFilePart:
         )
         assert part.mime_type == "application/vnd.api+json"
 
+    def test_file_part_invalid_base64_inline_data_raises_error(self) -> None:
+        """Test that invalid base64 inline_data raises validation error."""
+        from asap.models.parts import FilePart
+
+        with pytest.raises(ValidationError) as exc_info:
+            FilePart(
+                type="file",
+                uri="file://example.txt",
+                mime_type="text/plain",
+                inline_data="!!!not-valid-base64!!!",
+            )
+
+        error_detail = exc_info.value.errors()[0]
+        assert "inline_data must be valid base64" in error_detail["msg"]
+
+    def test_file_part_invalid_base64_with_spaces_raises_error(self) -> None:
+        """Test that base64 with invalid characters raises validation error."""
+        from asap.models.parts import FilePart
+
+        with pytest.raises(ValidationError) as exc_info:
+            FilePart(
+                type="file",
+                uri="file://example.txt",
+                mime_type="text/plain",
+                inline_data="SGVsbG8g V29ybGQ=",  # Space in middle
+            )
+
+        error_detail = exc_info.value.errors()[0]
+        assert "inline_data must be valid base64" in error_detail["msg"]
+
+    def test_file_part_valid_base64_inline_data(self) -> None:
+        """Test that valid base64 inline_data is accepted."""
+        import base64
+
+        from asap.models.parts import FilePart
+
+        # "Hello World" encoded in base64
+        valid_base64 = base64.b64encode(b"Hello World").decode("utf-8")
+
+        part = FilePart(
+            type="file",
+            uri="file://example.txt",
+            mime_type="text/plain",
+            inline_data=valid_base64,
+        )
+
+        assert part.inline_data == valid_base64
+        # Verify it decodes correctly
+        decoded = base64.b64decode(part.inline_data)
+        assert decoded == b"Hello World"
+
+    def test_file_part_none_inline_data_is_valid(self) -> None:
+        """Test that None inline_data is valid."""
+        from asap.models.parts import FilePart
+
+        part = FilePart(
+            type="file",
+            uri="file://example.txt",
+            mime_type="text/plain",
+            inline_data=None,
+        )
+
+        assert part.inline_data is None
+
 
 class TestResourcePart:
     """Test suite for ResourcePart model."""
