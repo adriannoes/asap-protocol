@@ -31,7 +31,7 @@ Example:
     >>> middleware = AuthenticationMiddleware(manifest, validator)
 """
 
-from typing import Any, Callable, Protocol
+from typing import Callable, Protocol
 
 from fastapi import HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -56,10 +56,10 @@ ERROR_SENDER_MISMATCH = "Sender does not match authenticated identity"
 
 class TokenValidator(Protocol):
     """Protocol for token validation implementations.
-    
+
     Custom validators must implement this interface to integrate
     with the authentication middleware.
-    
+
     Example:
         >>> class MyTokenValidator:
         ...     def __call__(self, token: str) -> str | None:
@@ -71,13 +71,13 @@ class TokenValidator(Protocol):
 
     def __call__(self, token: str) -> str | None:
         """Validate a token and return the authenticated agent ID.
-        
+
         Args:
             token: The authentication token to validate
-            
+
         Returns:
             The agent ID (URN) if token is valid, None otherwise
-            
+
         Example:
             >>> validator = BearerTokenValidator(my_validate_func)
             >>> agent_id = validator("token-123")
@@ -88,14 +88,14 @@ class TokenValidator(Protocol):
 
 class BearerTokenValidator:
     """Default Bearer token validator implementation.
-    
+
     Wraps a validation function to conform to the TokenValidator protocol.
     The validation function should take a token string and return an agent ID
     if valid, or None if invalid.
-    
+
     Attributes:
         validate_func: Function that validates tokens and returns agent IDs
-        
+
     Example:
         >>> def my_validator(token: str) -> str | None:
         ...     # Check token in database
@@ -109,7 +109,7 @@ class BearerTokenValidator:
 
     def __init__(self, validate_func: Callable[[str], str | None]) -> None:
         """Initialize the Bearer token validator.
-        
+
         Args:
             validate_func: Function that validates tokens and returns agent IDs
         """
@@ -117,10 +117,10 @@ class BearerTokenValidator:
 
     def __call__(self, token: str) -> str | None:
         """Validate a token and return the authenticated agent ID.
-        
+
         Args:
             token: The authentication token to validate
-            
+
         Returns:
             The agent ID (URN) if token is valid, None otherwise
         """
@@ -129,18 +129,18 @@ class BearerTokenValidator:
 
 class AuthenticationMiddleware:
     """FastAPI middleware for ASAP protocol authentication.
-    
+
     This middleware handles authentication based on the manifest configuration:
     - If manifest has no auth config, authentication is skipped
     - If auth is configured, validates Bearer tokens
     - Verifies sender in envelope matches authenticated identity
     - Returns proper JSON-RPC error responses for failures
-    
+
     Attributes:
         manifest: The agent manifest with auth configuration
         validator: Token validator implementation
         security: HTTPBearer security scheme from FastAPI
-        
+
     Example:
         >>> from asap.transport.middleware import AuthenticationMiddleware
         >>> from asap.models.entities import Manifest, AuthScheme
@@ -165,11 +165,11 @@ class AuthenticationMiddleware:
         validator: TokenValidator | None = None,
     ) -> None:
         """Initialize authentication middleware.
-        
+
         Args:
             manifest: Agent manifest with auth configuration
             validator: Token validator implementation (optional if auth not required)
-            
+
         Raises:
             ValueError: If manifest requires auth but no validator provided
         """
@@ -185,7 +185,7 @@ class AuthenticationMiddleware:
 
     def _is_auth_required(self) -> bool:
         """Check if authentication is required by manifest.
-        
+
         Returns:
             True if manifest has auth configuration, False otherwise
         """
@@ -193,7 +193,7 @@ class AuthenticationMiddleware:
 
     def _supports_bearer_auth(self) -> bool:
         """Check if manifest supports Bearer token authentication.
-        
+
         Returns:
             True if "bearer" is in auth schemes, False otherwise
         """
@@ -207,24 +207,24 @@ class AuthenticationMiddleware:
         credentials: HTTPAuthorizationCredentials | None = None,
     ) -> str | None:
         """Verify authentication for an incoming request.
-        
+
         This method:
         1. Checks if authentication is required
         2. Extracts credentials from Authorization header
         3. Validates token using the configured validator
         4. Returns authenticated agent ID or raises HTTPException
-        
+
         Args:
             request: The incoming FastAPI request
             credentials: Optional pre-extracted credentials
-            
+
         Returns:
             The authenticated agent ID (URN) if auth is required and valid,
             None if auth is not required
-            
+
         Raises:
             HTTPException: If authentication is required but fails (401 or 403)
-            
+
         Example:
             >>> middleware = AuthenticationMiddleware(manifest, validator)
             >>> agent_id = await middleware.verify_authentication(request)
@@ -265,6 +265,8 @@ class AuthenticationMiddleware:
 
         # Validate token and get agent ID
         token = credentials.credentials
+        # Type narrowing: validator is not None when auth is required (validated in __init__)
+        assert self.validator is not None
         agent_id = self.validator(token)
 
         if agent_id is None:
@@ -292,17 +294,17 @@ class AuthenticationMiddleware:
         envelope_sender: str,
     ) -> None:
         """Verify that envelope sender matches authenticated identity.
-        
+
         This prevents agents from spoofing the sender field in the envelope.
         Only enforced when authentication is enabled.
-        
+
         Args:
             authenticated_agent_id: The agent ID from authentication, or None
             envelope_sender: The sender field from the envelope
-            
+
         Raises:
             HTTPException: If sender doesn't match authenticated identity (403)
-            
+
         Example:
             >>> middleware.verify_sender_matches_auth(
             ...     authenticated_agent_id="urn:asap:agent:client-1",

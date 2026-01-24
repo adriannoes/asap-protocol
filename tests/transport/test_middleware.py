@@ -14,7 +14,6 @@ from fastapi.security import HTTPAuthorizationCredentials
 
 from asap.models.entities import AuthScheme, Capability, Endpoint, Manifest, Skill
 from asap.transport.middleware import (
-    AUTH_SCHEME_BEARER,
     ERROR_AUTH_REQUIRED,
     ERROR_INVALID_TOKEN,
     ERROR_SENDER_MISMATCH,
@@ -76,8 +75,6 @@ def valid_token_validator() -> BearerTokenValidator:
         return valid_tokens.get(token)
 
     return BearerTokenValidator(validate)
-
-
 
 
 # Tests for BearerTokenValidator
