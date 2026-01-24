@@ -48,7 +48,8 @@ def can_transition(from_status: TaskStatus, to_status: TaskStatus) -> bool:
         >>> can_transition(TaskStatus.COMPLETED, TaskStatus.WORKING)
         False
     """
-    return to_status in VALID_TRANSITIONS[from_status]
+    valid_targets = VALID_TRANSITIONS.get(from_status, set())
+    return to_status in valid_targets
 
 
 def transition(task: Task, new_status: TaskStatus) -> Task:
