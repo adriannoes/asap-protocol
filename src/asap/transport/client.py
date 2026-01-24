@@ -147,13 +147,20 @@ class ASAPClient:
             max_retries: Maximum retry attempts for transient failures (default: 3)
             transport: Optional custom transport (for testing). Can be sync or async.
         """
-        # Validate URL format
+        # Validate URL format and scheme
         from urllib.parse import urlparse
 
         parsed = urlparse(base_url)
         if not parsed.scheme or not parsed.netloc:
             raise ValueError(
                 f"Invalid base_url format: {base_url}. Must be a valid URL (e.g., http://localhost:8000)"
+            )
+
+        # Restrict to HTTP/HTTPS schemes only
+        if parsed.scheme.lower() not in ("http", "https"):
+            raise ValueError(
+                f"Invalid URL scheme: {parsed.scheme}. Only 'http' and 'https' are allowed. "
+                f"Received: {base_url}"
             )
 
         self.base_url = base_url.rstrip("/")
