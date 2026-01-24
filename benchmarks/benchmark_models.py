@@ -43,7 +43,7 @@ class TestEnvelopeCreation:
                 asap_version="0.1",
                 sender="urn:asap:agent:sender",
                 recipient="urn:asap:agent:recipient",
-                payload_type="TaskRequest",
+                payload_type="task.request",
                 payload={"task_id": "test"},
             )
 
@@ -59,7 +59,7 @@ class TestEnvelopeCreation:
                 asap_version="0.1",
                 sender="urn:asap:agent:sender",
                 recipient="urn:asap:agent:recipient",
-                payload_type="TaskResponse",
+                payload_type="task.response",
                 payload={
                     "task_id": "01JGQXYZ1234567890123456",
                     "status": "completed",
@@ -123,7 +123,7 @@ class TestJsonDeserialization:
             "timestamp": "2024-01-15T10:30:00Z",
             "sender": "urn:asap:agent:sender",
             "recipient": "urn:asap:agent:recipient",
-            "payload_type": "TaskRequest",
+            "payload_type": "task.request",
             "payload": {"task_id": "01JGQXYZ1234567890123456"},
         }
 
@@ -259,7 +259,7 @@ class TestBatchOperations:
                     asap_version="0.1",
                     sender="urn:asap:agent:sender",
                     recipient="urn:asap:agent:recipient",
-                    payload_type="TaskRequest",
+                    payload_type="task.request",
                     payload={"task_id": f"task_{i}"},
                 )
                 for i in range(100)
@@ -275,7 +275,7 @@ class TestBatchOperations:
                 asap_version="0.1",
                 sender="urn:asap:agent:sender",
                 recipient="urn:asap:agent:recipient",
-                payload_type="TaskRequest",
+                payload_type="task.request",
                 payload={"task_id": f"task_{i}"},
             )
             for i in range(100)
