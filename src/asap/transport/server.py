@@ -199,16 +199,36 @@ class ASAPRequestHandler:
         # Validate JSON-RPC structure
         try:
             rpc_request = JsonRpcRequest(**body)
-        except ValidationError as e:
+        except (ValidationError, TypeError) as e:
+            # Check if error is specifically about params type
+            error_code = INVALID_REQUEST
+            error_message = "Invalid JSON-RPC structure"
+            if isinstance(e, ValidationError):
+                errors = e.errors()
+                # If params validation failed with dict_type error, use INVALID_PARAMS
+                for error in errors:
+                    if error.get("loc") == ("params",) and error.get("type") == "dict_type":
+                        error_code = INVALID_PARAMS
+                        error_message = "JSON-RPC 'params' must be an object"
+                        break
+
             logger.warning(
                 "asap.request.invalid_structure",
-                error="Invalid JSON-RPC structure",
-                validation_errors=str(e.errors()),
+                error=error_message,
+                error_type=type(e).__name__,
+                validation_errors=str(e.errors()) if isinstance(e, ValidationError) else str(e),
             )
             error_response = self.build_error_response(
-                INVALID_REQUEST,
-                data={"validation_errors": e.errors()},
-                request_id=body.get("id"),
+                error_code,
+                data={
+                    "error": error_message,
+                    "validation_errors": (
+                        e.errors()
+                        if isinstance(e, ValidationError)
+                        else [{"type": "type_error", "loc": (), "msg": str(e), "input": None}]
+                    ),
+                },
+                request_id=body.get("id") if isinstance(body, dict) else None,
             )
             return None, error_response
 
@@ -261,6 +281,19 @@ class ASAPRequestHandler:
                 self.record_error_metrics(metrics, "unknown", "parse_error", 0.0)
                 return error_response
 
+            # Validate body is a dict (JSON-RPC requires object at root)
+            if not isinstance(body, dict):
+                error_response = self.build_error_response(
+                    INVALID_REQUEST,
+                    data={
+                        "error": "JSON-RPC request must be an object",
+                        "received_type": type(body).__name__,
+                    },
+                    request_id=None,
+                )
+                self.record_error_metrics(metrics, "unknown", "invalid_request", 0.0)
+                return error_response
+
             # Validate JSON-RPC request structure and method
             rpc_request, validation_error = self.validate_jsonrpc_request(body)
             if validation_error is not None:
@@ -268,7 +301,18 @@ class ASAPRequestHandler:
                 return validation_error
 
             # Type narrowing: rpc_request is not None here
-            assert rpc_request is not None
+            if rpc_request is None:
+                # This should not happen if validate_jsonrpc_request is correct
+                # but guard against it for robustness
+                error_response = self.build_error_response(
+                    INTERNAL_ERROR,
+                    data={"error": "Internal validation error"},
+                    request_id=None,
+                )
+                self.record_error_metrics(
+                    metrics, "unknown", "internal_error", time.perf_counter() - start_time
+                )
+                return error_response
 
             # Verify authentication if enabled
             authenticated_agent_id: str | None = None
@@ -295,6 +339,25 @@ class ASAPRequestHandler:
                         metrics, "unknown", "auth_failed", time.perf_counter() - start_time
                     )
                     return error_response
+
+            # Validate params is a dict before accessing
+            if not isinstance(rpc_request.params, dict):
+                logger.warning(
+                    "asap.request.invalid_params_type",
+                    params_type=type(rpc_request.params).__name__,
+                )
+                error_response = self.build_error_response(
+                    INVALID_PARAMS,
+                    data={
+                        "error": "JSON-RPC 'params' must be an object",
+                        "received_type": type(rpc_request.params).__name__,
+                    },
+                    request_id=rpc_request.id,
+                )
+                self.record_error_metrics(
+                    metrics, "unknown", "invalid_params", time.perf_counter() - start_time
+                )
+                return error_response
 
             # Extract envelope from params
             envelope_data = rpc_request.params.get("envelope")
