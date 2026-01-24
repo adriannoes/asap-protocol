@@ -42,7 +42,7 @@ def sample_envelope() -> Envelope:
         asap_version="0.1",
         sender="urn:asap:agent:client",
         recipient="urn:asap:agent:benchmark-agent",
-        payload_type="TaskRequest",
+        payload_type="task.request",
         payload={
             "conversation_id": "conv_benchmark_001",
             "skill_id": "echo",
@@ -56,8 +56,8 @@ def sample_jsonrpc_request(sample_envelope: Envelope) -> dict[str, Any]:
     """Create a sample JSON-RPC request for benchmarks."""
     return {
         "jsonrpc": "2.0",
-        "method": "asap.message",
-        "params": sample_envelope.model_dump(mode="json"),
+        "method": "asap.send",
+        "params": {"envelope": sample_envelope.model_dump(mode="json")},
         "id": "benchmark-request-001",
     }
 

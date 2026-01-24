@@ -31,13 +31,13 @@ class TestJsonRpcProcessing:
 
         def create_request() -> JsonRpcRequest:
             return JsonRpcRequest(
-                method="asap.message",
-                params=sample_envelope.model_dump(mode="json"),
+                method="asap.send",
+                params={"envelope": sample_envelope.model_dump(mode="json")},
                 id="request-001",
             )
 
         result = benchmark(create_request)
-        assert result.method == "asap.message"
+        assert result.method == "asap.send"
 
     def test_jsonrpc_response_creation(self, benchmark: Any, sample_envelope: Envelope) -> None:
         """Benchmark JSON-RPC response creation."""
@@ -54,13 +54,13 @@ class TestJsonRpcProcessing:
     def test_jsonrpc_request_serialization(self, benchmark: Any, sample_envelope: Envelope) -> None:
         """Benchmark JSON-RPC request serialization."""
         request = JsonRpcRequest(
-            method="asap.message",
-            params=sample_envelope.model_dump(mode="json"),
+            method="asap.send",
+            params={"envelope": sample_envelope.model_dump(mode="json")},
             id="request-001",
         )
 
         result = benchmark(request.model_dump_json)
-        assert "asap.message" in result
+        assert "asap.send" in result
 
 
 class TestHttpEndpoints:
@@ -161,13 +161,13 @@ class TestPayloadSizes:
             asap_version="0.1",
             sender="urn:asap:agent:client",
             recipient="urn:asap:agent:server",
-            payload_type="TaskRequest",
+            payload_type="task.request",
             payload={"id": "small"},
         )
         request = {
             "jsonrpc": "2.0",
-            "method": "asap.message",
-            "params": envelope.model_dump(mode="json"),
+            "method": "asap.send",
+            "params": {"envelope": envelope.model_dump(mode="json")},
             "id": "small-payload",
         }
 
@@ -183,7 +183,7 @@ class TestPayloadSizes:
             asap_version="0.1",
             sender="urn:asap:agent:client",
             recipient="urn:asap:agent:server",
-            payload_type="TaskRequest",
+            payload_type="task.request",
             payload={
                 "conversation_id": "conv_001",
                 "skill_id": "research",
@@ -196,8 +196,8 @@ class TestPayloadSizes:
         )
         request = {
             "jsonrpc": "2.0",
-            "method": "asap.message",
-            "params": envelope.model_dump(mode="json"),
+            "method": "asap.send",
+            "params": {"envelope": envelope.model_dump(mode="json")},
             "id": "medium-payload",
         }
 
@@ -213,7 +213,7 @@ class TestPayloadSizes:
             asap_version="0.1",
             sender="urn:asap:agent:client",
             recipient="urn:asap:agent:server",
-            payload_type="TaskRequest",
+            payload_type="task.request",
             payload={
                 "conversation_id": "conv_001",
                 "skill_id": "research",
@@ -227,8 +227,8 @@ class TestPayloadSizes:
         )
         request = {
             "jsonrpc": "2.0",
-            "method": "asap.message",
-            "params": envelope.model_dump(mode="json"),
+            "method": "asap.send",
+            "params": {"envelope": envelope.model_dump(mode="json")},
             "id": "large-payload",
         }
 
