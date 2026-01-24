@@ -206,6 +206,75 @@ class TestTaskUpdate:
         assert "update_type" in required
         assert "status" in required
 
+    def test_task_update_progress_percent_not_numeric_raises_error(self):
+        """Test that non-numeric progress.percent raises ValueError."""
+        import pytest
+
+        from asap.models.payloads import TaskUpdate
+
+        with pytest.raises(ValueError, match="progress.percent must be a number"):
+            TaskUpdate(
+                task_id="task_123",
+                update_type="progress",
+                status="working",
+                progress={"percent": "fifty"},  # String instead of number
+            )
+
+    def test_task_update_progress_percent_out_of_range_raises_error(self):
+        """Test that progress.percent outside 0-100 raises ValueError."""
+        import pytest
+
+        from asap.models.payloads import TaskUpdate
+
+        with pytest.raises(ValueError, match="progress.percent must be between 0 and 100"):
+            TaskUpdate(
+                task_id="task_123",
+                update_type="progress",
+                status="working",
+                progress={"percent": 150},  # Over 100
+            )
+
+        with pytest.raises(ValueError, match="progress.percent must be between 0 and 100"):
+            TaskUpdate(
+                task_id="task_123",
+                update_type="progress",
+                status="working",
+                progress={"percent": -10},  # Negative
+            )
+
+    def test_task_update_progress_without_percent_is_valid(self):
+        """Test that progress without percent field is valid."""
+        from asap.models.payloads import TaskUpdate
+
+        update = TaskUpdate(
+            task_id="task_123",
+            update_type="progress",
+            status="working",
+            progress={"message": "Working..."},  # No percent field
+        )
+
+        assert update.progress["message"] == "Working..."
+
+    def test_task_update_progress_percent_at_boundaries(self):
+        """Test that progress.percent at 0 and 100 are valid."""
+        from asap.models.payloads import TaskUpdate
+
+        update_zero = TaskUpdate(
+            task_id="task_123",
+            update_type="progress",
+            status="working",
+            progress={"percent": 0},
+        )
+        assert update_zero.progress["percent"] == 0
+
+        update_hundred = TaskUpdate(
+            task_id="task_456",
+            update_type="progress",
+            status="working",
+            progress={"percent": 100},
+        )
+        assert update_hundred.progress["percent"] == 100
+
 
 class TestTaskCancel:
     """Test suite for TaskCancel payload model."""

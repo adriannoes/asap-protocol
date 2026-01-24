@@ -709,63 +709,63 @@
 
 ### 7.1 Documentation Extensions
 
-- [ ] 7.1.1 Create `docs/security.md` (auth, signing, TLS guidance)
-  - [ ] 7.1.1.1 Document supported auth schemes and required headers
-  - [ ] 7.1.1.2 Describe request signing workflow and verification steps
-  - [ ] 7.1.1.3 Add threat model summary aligned with spec
-- [ ] 7.1.2 Create `docs/state-management.md` (state machine + snapshots)
-  - [ ] 7.1.2.1 Explain task lifecycle and valid transitions
-  - [ ] 7.1.2.2 Provide snapshot usage examples and restore flow
-  - [ ] 7.1.2.3 Describe versioning and consistency expectations
-- [ ] 7.1.3 Create `docs/transport.md` (HTTP/JSON-RPC binding details)
-  - [ ] 7.1.3.1 Document `/asap` JSON-RPC request/response format
-  - [ ] 7.1.3.2 Document manifest discovery endpoint and schema
-  - [ ] 7.1.3.3 Provide error mapping table for JSON-RPC codes
-- [ ] 7.1.4 Create `docs/migration.md` (ASAP vs A2A/MCP guidance)
-  - [ ] 7.1.4.1 Compare envelope/payload mapping with A2A/MCP
-  - [ ] 7.1.4.2 Migration checklist for existing agents
+- [x] 7.1.1 Create `docs/security.md` (auth, signing, TLS guidance)
+  - [x] 7.1.1.1 Document supported auth schemes and required headers
+  - [x] 7.1.1.2 Describe request signing workflow and verification steps
+  - [x] 7.1.1.3 Add threat model summary aligned with spec
+- [x] 7.1.2 Create `docs/state-management.md` (state machine + snapshots)
+  - [x] 7.1.2.1 Explain task lifecycle and valid transitions
+  - [x] 7.1.2.2 Provide snapshot usage examples and restore flow
+  - [x] 7.1.2.3 Describe versioning and consistency expectations
+- [x] 7.1.3 Create `docs/transport.md` (HTTP/JSON-RPC binding details)
+  - [x] 7.1.3.1 Document `/asap` JSON-RPC request/response format
+  - [x] 7.1.3.2 Document manifest discovery endpoint and schema
+  - [x] 7.1.3.3 Provide error mapping table for JSON-RPC codes
+- [x] 7.1.4 Create `docs/migration.md` (ASAP vs A2A/MCP guidance)
+  - [x] 7.1.4.1 Compare envelope/payload mapping with A2A/MCP
+  - [x] 7.1.4.2 Migration checklist for existing agents
 
 ### 7.2 Observability & Metrics
 
-- [ ] 7.2.1 Implement `/asap/metrics` endpoint (Prometheus format)
-  - [ ] 7.2.1.1 Define metrics schema (counters, histograms)
-  - [ ] 7.2.1.2 Add metric collection in request handling path
-  - [ ] 7.2.1.3 Add endpoint test coverage
-- [ ] 7.2.2 Add `docs/metrics.md` with usage and examples
-  - [ ] 7.2.2.1 Document metric names and labels
-  - [ ] 7.2.2.2 Provide curl example and dashboard hints
+- [x] 7.2.1 Implement `/asap/metrics` endpoint (Prometheus format)
+  - [x] 7.2.1.1 Define metrics schema (counters, histograms)
+  - [x] 7.2.1.2 Add metric collection in request handling path
+  - [x] 7.2.1.3 Add endpoint test coverage
+- [x] 7.2.2 Add `docs/metrics.md` with usage and examples
+  - [x] 7.2.2.1 Document metric names and labels
+  - [x] 7.2.2.2 Provide curl example and dashboard hints
 
 ### 7.3 Tooling
 
-- [ ] 7.3.1 Implement `asap validate-schema [file]` command
-  - [ ] 7.3.1.1 Add CLI command and help text
-  - [ ] 7.3.1.2 Validate JSON against schema registry
-  - [ ] 7.3.1.3 Add unit tests for CLI behavior
+- [x] 7.3.1 Implement `asap validate-schema [file]` command
+  - [x] 7.3.1.1 Add CLI command and help text
+  - [x] 7.3.1.2 Validate JSON against schema registry
+  - [x] 7.3.1.3 Add unit tests for CLI behavior
 
 ### 7.4 Performance Benchmarks
 
-- [ ] 7.4.1 Add `benchmarks/` with latency and throughput tests
-  - [ ] 7.4.1.1 Define benchmark scenarios and targets
-  - [ ] 7.4.1.2 Add benchmark runner and sample config
-  - [ ] 7.4.1.3 Document how to execute benchmarks locally
+- [x] 7.4.1 Add `benchmarks/` with latency and throughput tests
+  - [x] 7.4.1.1 Define benchmark scenarios and targets
+  - [x] 7.4.1.2 Add benchmark runner and sample config
+  - [x] 7.4.1.3 Document how to execute benchmarks locally
 
 ### 8.1 Release Preparation
 
-- [ ] 8.1.1 Update `CHANGELOG.md` with all Sprint 1-5 changes
-- [ ] 8.1.2 Verify `pyproject.toml` metadata:
+- [x] 8.1.1 Update `CHANGELOG.md` with all Sprint 1-6 changes
+- [x] 8.1.2 Verify `pyproject.toml` metadata:
   - description, authors, license, classifiers, urls
-- [ ] 8.1.3 Run full CI locally: lint, type-check, test, security
-- [ ] 8.1.4 Test publish to TestPyPI:
+- [x] 8.1.3 Run full CI locally: lint, type-check, test, security
+- [x] 8.1.4 Test publish to TestPyPI:
   ```bash
   uv build
-  uv publish --repository testpypi
+  uv publish --publish-url https://test.pypi.org/legacy/
   ```
-- [ ] 8.1.5 Verify installation from TestPyPI:
+- [x] 8.1.5 Verify installation from TestPyPI:
   ```bash
-  pip install --index-url https://test.pypi.org/simple/ asap-protocol
+  uv pip install --index-url https://test.pypi.org/simple/ asap-protocol
   ```
-- [ ] 8.1.6 Tag release: `git tag v0.1.0 && git push origin v0.1.0`
-- [ ] 8.1.7 Commit atômicos e bem documentados, em inglês em tom direto para detalhar o que foi feito nesta task. Isso é uma preparação para o PR.
+- [x] 8.1.6 Tag release: `git tag v0.1.0 && git push origin v0.1.0`
+- [x] 8.1.7 Commit atômicos e bem documentados, em inglês em tom direto para detalhar o que foi feito nesta task. Isso é uma preparação para o PR.
 
 **Definition of Done**:
 - ✅ Package installable from TestPyPI

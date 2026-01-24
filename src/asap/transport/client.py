@@ -28,6 +28,7 @@ import httpx
 from asap.models.envelope import Envelope
 from asap.models.ids import generate_id
 from asap.observability import get_logger
+from asap.transport.jsonrpc import ASAP_METHOD
 
 # Module logger
 logger = get_logger(__name__)
@@ -146,6 +147,22 @@ class ASAPClient:
             max_retries: Maximum retry attempts for transient failures (default: 3)
             transport: Optional custom transport (for testing). Can be sync or async.
         """
+        # Validate URL format and scheme
+        from urllib.parse import urlparse
+
+        parsed = urlparse(base_url)
+        if not parsed.scheme or not parsed.netloc:
+            raise ValueError(
+                f"Invalid base_url format: {base_url}. Must be a valid URL (e.g., http://localhost:8000)"
+            )
+
+        # Restrict to HTTP/HTTPS schemes only
+        if parsed.scheme.lower() not in ("http", "https"):
+            raise ValueError(
+                f"Invalid URL scheme: {parsed.scheme}. Only 'http' and 'https' are allowed. "
+                f"Received: {base_url}"
+            )
+
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.max_retries = max_retries
@@ -232,7 +249,7 @@ class ASAPClient:
         # Build JSON-RPC request
         json_rpc_request = {
             "jsonrpc": "2.0",
-            "method": "asap.send",
+            "method": ASAP_METHOD,
             "params": {
                 "envelope": envelope.model_dump(mode="json"),
                 "idempotency_key": idempotency_key,
@@ -254,8 +271,27 @@ class ASAPClient:
                 )
 
                 # Check HTTP status
+                if response.status_code >= 500:
+                    # Server errors (5xx) are retriable
+                    if attempt < self.max_retries - 1:
+                        logger.warning(
+                            "asap.client.server_error",
+                            status_code=response.status_code,
+                            attempt=attempt + 1,
+                            max_retries=self.max_retries,
+                        )
+                        last_exception = ASAPConnectionError(
+                            f"HTTP server error {response.status_code}: {response.text}"
+                        )
+                        continue
+                    raise ASAPConnectionError(
+                        f"HTTP server error {response.status_code}: {response.text}"
+                    )
                 if response.status_code >= 400:
-                    raise ASAPConnectionError(f"HTTP error {response.status_code}: {response.text}")
+                    # Client errors (4xx) are not retriable
+                    raise ASAPConnectionError(
+                        f"HTTP client error {response.status_code}: {response.text}"
+                    )
 
                 # Parse JSON response
                 try:

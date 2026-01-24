@@ -167,7 +167,7 @@ class Agent(ASAPBaseModel):
 
     id: AgentURN = Field(..., description="Unique agent identifier (URN format)")
     manifest_uri: str = Field(..., description="URL to agent's manifest")
-    capabilities: list[str] = Field(..., description="Agent capability strings")
+    capabilities: list[str] = Field(..., min_length=1, description="Agent capability strings")
 
 
 class Manifest(ASAPBaseModel):
@@ -255,7 +255,9 @@ class Conversation(ASAPBaseModel):
     """
 
     id: ConversationID = Field(..., description="Unique conversation identifier (ULID)")
-    participants: list[AgentURN] = Field(..., description="Agent URNs in conversation")
+    participants: list[AgentURN] = Field(
+        ..., min_length=1, description="Agent URNs in conversation"
+    )
     created_at: datetime = Field(..., description="Creation timestamp (UTC)")
     metadata: dict[str, Any] | None = Field(
         default=None, description="Optional metadata (purpose, TTL, etc.)"

@@ -6,10 +6,10 @@ like task requests, responses, updates, state management, and MCP integration.
 
 from typing import Any, Union
 
-from pydantic import Field
+from pydantic import Field, field_validator, model_validator
 
 from asap.models.base import ASAPBaseModel
-from asap.models.enums import TaskStatus, UpdateType
+from asap.models.enums import MessageRole, TaskStatus, UpdateType
 from asap.models.types import (
     AgentURN,
     ArtifactID,
@@ -126,6 +126,28 @@ class TaskUpdate(ASAPBaseModel):
         default=None, description="Request for additional input"
     )
 
+    @field_validator("progress")
+    @classmethod
+    def validate_progress_percent(cls, v: dict[str, Any] | None) -> dict[str, Any] | None:
+        """Validate that progress percent is between 0 and 100 if provided.
+
+        Args:
+            v: Progress dictionary or None
+
+        Returns:
+            Progress dictionary after validation
+
+        Raises:
+            ValueError: If percent is not between 0 and 100
+        """
+        if v and "percent" in v:
+            percent = v["percent"]
+            if not isinstance(percent, (int, float)):
+                raise ValueError("progress.percent must be a number")
+            if not (0 <= percent <= 100):
+                raise ValueError("progress.percent must be between 0 and 100")
+        return v
+
 
 class TaskCancel(ASAPBaseModel):
     """Request to cancel a running task.
@@ -174,7 +196,7 @@ class MessageSend(ASAPBaseModel):
     task_id: TaskID = Field(..., description="Parent task ID")
     message_id: MessageID = Field(..., description="Unique message identifier")
     sender: AgentURN = Field(..., description="Sender agent URN")
-    role: str = Field(..., description="Message role (user, assistant, system)")
+    role: MessageRole = Field(..., description="Message role (user, assistant, system)")
     parts: list[PartID] = Field(..., description="Part IDs making up this message")
 
 
@@ -306,6 +328,31 @@ class McpToolResult(ASAPBaseModel):
     success: bool = Field(..., description="Whether tool call succeeded")
     result: dict[str, Any] | None = Field(default=None, description="Result data (if successful)")
     error: str | None = Field(default=None, description="Error message (if failed)")
+
+    @model_validator(mode="after")
+    def validate_result_error_exclusivity(self) -> "McpToolResult":
+        """Validate that result and error are mutually exclusive based on success.
+
+        When success=True, result must be provided and error must be None.
+        When success=False, error must be provided and result must be None.
+
+        Returns:
+            Self after validation
+
+        Raises:
+            ValueError: If result/error are not mutually exclusive based on success
+        """
+        if self.success:
+            if self.result is None:
+                raise ValueError("result must be provided when success=True")
+            if self.error is not None:
+                raise ValueError("error must be None when success=True")
+        else:
+            if self.error is None:
+                raise ValueError("error must be provided when success=False")
+            if self.result is not None:
+                raise ValueError("result must be None when success=False")
+        return self
 
 
 class McpResourceFetch(ASAPBaseModel):

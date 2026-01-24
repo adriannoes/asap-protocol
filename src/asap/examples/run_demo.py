@@ -1,9 +1,10 @@
 """Run the ASAP two-agent demo.
 
-This script starts the echo agent and coordinator agent as subprocesses.
-It is the foundation for the full demo flow implemented in later tasks.
+This script starts the echo agent as a subprocess, then demonstrates
+communication by sending a task request from the coordinator logic.
 """
 
+import asyncio
 import signal
 import subprocess
 import sys
@@ -12,13 +13,17 @@ from typing import Sequence
 
 import httpx
 
+from asap.examples.coordinator import dispatch_task
+from asap.observability import get_logger
+
 ECHO_MANIFEST_URL = "http://127.0.0.1:8001/.well-known/asap/manifest.json"
-COORDINATOR_MANIFEST_URL = "http://127.0.0.1:8000/.well-known/asap/manifest.json"
+ECHO_BASE_URL = "http://127.0.0.1:8001"
 READY_TIMEOUT_SECONDS = 10.0
 READY_POLL_INTERVAL_SECONDS = 0.5
 
 ECHO_AGENT_MODULE = "asap.examples.echo_agent"
-COORDINATOR_MODULE = "asap.examples.coordinator"
+
+logger = get_logger(__name__)
 
 
 def start_process(command: Sequence[str]) -> subprocess.Popen[str]:
@@ -68,12 +73,9 @@ def _terminate_process(process: subprocess.Popen[str] | None) -> None:
 
 
 def main() -> None:
-    """Start demo agent processes (echo + coordinator)."""
+    """Start echo agent and demonstrate communication via coordinator logic."""
     echo_command = [sys.executable, "-m", ECHO_AGENT_MODULE]
-    coordinator_command = [sys.executable, "-m", COORDINATOR_MODULE]
-
     echo_process = None
-    coordinator_process = None
 
     def handle_signal(signum: int, _frame: object) -> None:
         """Handle shutdown signals by terminating child processes."""
@@ -84,14 +86,33 @@ def main() -> None:
     signal.signal(signal.SIGTERM, handle_signal)
 
     try:
+        # Start echo agent server
         echo_process = start_process(echo_command)
         wait_for_ready(ECHO_MANIFEST_URL, READY_TIMEOUT_SECONDS)
-        coordinator_process = start_process(coordinator_command)
-        wait_for_ready(COORDINATOR_MANIFEST_URL, READY_TIMEOUT_SECONDS)
-        echo_process.wait()
-        coordinator_process.wait()
+        logger.info("asap.demo.echo_ready", url=ECHO_MANIFEST_URL)
+
+        # Demonstrate communication using coordinator dispatch logic
+        logger.info("asap.demo.starting_communication")
+        try:
+            response = asyncio.run(
+                dispatch_task(
+                    payload={"message": "Hello from demo runner!"},
+                    echo_base_url=ECHO_BASE_URL,
+                )
+            )
+            logger.info(
+                "asap.demo.communication_success",
+                request_id=response.correlation_id,
+                response_id=response.id,
+                payload_type=response.payload_type,
+            )
+            print(f"\n✅ Demo successful! Response: {response.payload}\n")
+        except Exception as e:
+            logger.exception("asap.demo.communication_failed", error=str(e))
+            print(f"\n❌ Demo failed: {e}\n")
+            raise
+
     finally:
-        _terminate_process(coordinator_process)
         _terminate_process(echo_process)
 
 

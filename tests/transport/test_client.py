@@ -137,6 +137,54 @@ class TestASAPClientContextManager:
         client = ASAPClient("http://localhost:8000")
         assert client.timeout > 0  # Should have a positive default
 
+    def test_client_rejects_invalid_url_scheme(self) -> None:
+        """Test client rejects URLs with invalid schemes."""
+        from asap.transport.client import ASAPClient
+
+        # Test various invalid schemes
+        # Note: file:// URLs may fail format validation first, so test with valid format
+        invalid_urls = [
+            ("ftp://example.com", "Invalid URL scheme"),
+            ("javascript://example.com", "Invalid URL scheme"),
+            ("data://example.com", "Invalid URL scheme"),
+        ]
+
+        for url, expected_match in invalid_urls:
+            with pytest.raises(ValueError, match=expected_match):
+                ASAPClient(url)
+
+        # file:// URLs may fail format validation, so test separately
+        with pytest.raises(ValueError):
+            ASAPClient("file:///path/to/file")
+
+    def test_client_accepts_http_scheme(self) -> None:
+        """Test client accepts http:// URLs."""
+        from asap.transport.client import ASAPClient
+
+        client = ASAPClient("http://localhost:8000")
+        assert client.base_url == "http://localhost:8000"
+
+    def test_client_accepts_https_scheme(self) -> None:
+        """Test client accepts https:// URLs."""
+        from asap.transport.client import ASAPClient
+
+        client = ASAPClient("https://example.com")
+        assert client.base_url == "https://example.com"
+
+    def test_client_rejects_malformed_url(self) -> None:
+        """Test client rejects malformed URLs."""
+        from asap.transport.client import ASAPClient
+
+        invalid_urls = [
+            "not-a-url",
+            "://missing-scheme",
+            "http://",  # Missing netloc
+        ]
+
+        for url in invalid_urls:
+            with pytest.raises(ValueError, match="Invalid base_url format"):
+                ASAPClient(url)
+
 
 class TestASAPClientSend:
     """Tests for ASAPClient.send() method."""
@@ -369,6 +417,59 @@ class TestASAPClientRetry:
         # Should have retried and used same key
         assert call_count == 2
         assert len(captured_keys) >= 1
+
+    async def test_send_retries_on_5xx_server_errors(
+        self, sample_request_envelope: Envelope, sample_response_envelope: Envelope
+    ) -> None:
+        """Test send() retries on 5xx server errors."""
+        from asap.transport.client import ASAPClient
+
+        call_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            # Return 5xx errors for first 2 attempts, succeed on 3rd
+            if call_count < 3:
+                return httpx.Response(status_code=503, content=b"Service Unavailable")
+            return create_mock_response(sample_response_envelope)
+
+        async with ASAPClient(
+            "http://localhost:8000",
+            transport=httpx.MockTransport(mock_transport),
+            max_retries=3,
+        ) as client:
+            response = await client.send(sample_request_envelope)
+
+        # Should have retried and eventually succeeded
+        assert call_count == 3
+        assert response.payload_type == "task.response"
+
+    async def test_send_raises_after_max_retries_on_5xx(
+        self, sample_request_envelope: Envelope
+    ) -> None:
+        """Test send() raises ASAPConnectionError after max retries on 5xx errors."""
+        from asap.transport.client import ASAPClient, ASAPConnectionError
+
+        call_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            # Always return 5xx error
+            return httpx.Response(status_code=502, content=b"Bad Gateway")
+
+        async with ASAPClient(
+            "http://localhost:8000",
+            transport=httpx.MockTransport(mock_transport),
+            max_retries=3,
+        ) as client:
+            with pytest.raises(ASAPConnectionError) as exc_info:
+                await client.send(sample_request_envelope)
+
+            # Should have attempted max_retries times
+            assert call_count == 3
+            assert "502" in str(exc_info.value)
 
 
 class TestASAPClientRetryEdgeCases:

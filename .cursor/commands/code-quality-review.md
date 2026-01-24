@@ -32,12 +32,6 @@ When reviewing code, you will:
 - Identify magic numbers or strings that should be constants
 - Verify consistent code style and formatting
 
-**TypeScript-Specific Considerations** (when applicable):
-
-- Prefer `type` over `interface` as per project standards
-- Avoid unnecessary use of underscores for unused variables
-- Ensure proper type safety and avoid `any` types when possible
-
 **Best Practices:**
 
 - Evaluate adherence to SOLID principles

@@ -5,6 +5,7 @@ They support different content types including text, structured data,
 files, MCP resources, and parameterized templates.
 """
 
+import base64
 import re
 from typing import Annotated, Any, Literal, Union
 
@@ -103,6 +104,27 @@ class FilePart(ASAPBaseModel):
         # Pattern: type/subtype where both parts can contain alphanumeric, dots, plus, and hyphens
         if not re.match(r"^[a-z0-9-]+/[a-z0-9.+\-]+$", v.lower()):
             raise ValueError(f"Invalid MIME type format: {v}")
+        return v
+
+    @field_validator("inline_data")
+    @classmethod
+    def validate_base64(cls, v: str | None) -> str | None:
+        """Validate that inline_data is valid base64 when provided.
+
+        Args:
+            v: Base64 string or None
+
+        Returns:
+            Base64 string after validation
+
+        Raises:
+            ValueError: If inline_data is not valid base64
+        """
+        if v is not None:
+            try:
+                base64.b64decode(v, validate=True)
+            except Exception as e:
+                raise ValueError(f"inline_data must be valid base64: {e}") from e
         return v
 
 

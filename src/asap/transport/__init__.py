@@ -59,7 +59,7 @@ from asap.transport.jsonrpc import (
     JsonRpcRequest,
     JsonRpcResponse,
 )
-from asap.transport.server import create_app
+from asap.transport.server import ASAPRequestHandler, create_app
 
 __all__ = [
     # JSON-RPC
@@ -69,6 +69,7 @@ __all__ = [
     "JsonRpcErrorResponse",
     # Server
     "create_app",
+    "ASAPRequestHandler",
     # Handlers
     "HandlerRegistry",
     "HandlerNotFoundError",

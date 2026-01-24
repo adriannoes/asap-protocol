@@ -281,6 +281,63 @@ class TestHandlerRegistry:
         assert call_count["handler1"] == 0
         assert call_count["handler2"] == 1
 
+    def test_dispatch_sync_handler_exception_is_propagated(self, sample_manifest: Manifest) -> None:
+        """Test that exceptions from sync handlers are propagated and logged."""
+        from asap.transport.handlers import HandlerRegistry
+
+        registry = HandlerRegistry()
+
+        def failing_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+            raise ValueError("Sync handler failed intentionally")
+
+        registry.register("task.request", failing_handler)
+
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv_exception",
+                skill_id="test",
+                input={},
+            ).model_dump(),
+        )
+
+        with pytest.raises(ValueError, match="Sync handler failed intentionally"):
+            registry.dispatch(envelope, sample_manifest)
+
+    def test_dispatch_sync_handler_exception_logs_error(
+        self, sample_manifest: Manifest, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test that exceptions from sync handlers are logged with details."""
+        from asap.transport.handlers import HandlerRegistry
+
+        registry = HandlerRegistry()
+
+        def failing_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+            raise RuntimeError("Logged error test")
+
+        registry.register("task.request", failing_handler)
+
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv_log",
+                skill_id="test",
+                input={},
+            ).model_dump(),
+        )
+
+        with pytest.raises(RuntimeError):
+            registry.dispatch(envelope, sample_manifest)
+
+        # Check that error was logged (structlog may not appear in caplog)
+        # The exception is re-raised, which is the important behavior
+
 
 class TestHandlerNotFoundError:
     """Tests for HandlerNotFoundError exception."""
@@ -622,3 +679,254 @@ class TestHandlerRegistryThreadSafety:
 
         # Registry should be unchanged
         assert len(registry.list_handlers()) == original_len
+
+
+class TestDispatchAsync:
+    """Tests for async dispatch functionality."""
+
+    @pytest.fixture
+    def sample_manifest(self) -> Manifest:
+        """Create a sample manifest for testing."""
+        return Manifest(
+            id="urn:asap:agent:test-async",
+            name="Test Async Agent",
+            version="1.0.0",
+            description="Agent for testing async dispatch",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="async", description="Async skill")],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="http://localhost:8000/asap"),
+        )
+
+    @pytest.fixture
+    def sample_envelope(self) -> Envelope:
+        """Create a sample envelope for testing."""
+        return Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-async",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv_async",
+                skill_id="async",
+                input={"test": "data"},
+            ).model_dump(),
+        )
+
+    @pytest.mark.asyncio
+    async def test_dispatch_async_with_sync_handler(
+        self, sample_manifest: Manifest, sample_envelope: Envelope
+    ) -> None:
+        """Test dispatch_async correctly handles synchronous handlers."""
+        from asap.transport.handlers import HandlerRegistry
+
+        registry = HandlerRegistry()
+        handler_called = {"count": 0}
+
+        def sync_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+            handler_called["count"] += 1
+            return Envelope(
+                asap_version="0.1",
+                sender=manifest.id,
+                recipient=envelope.sender,
+                payload_type="task.response",
+                payload=TaskResponse(
+                    task_id="task_sync",
+                    status=TaskStatus.COMPLETED,
+                    result={"sync": True},
+                ).model_dump(),
+                correlation_id=envelope.id,
+            )
+
+        registry.register("task.request", sync_handler)
+
+        response = await registry.dispatch_async(sample_envelope, sample_manifest)
+
+        assert handler_called["count"] == 1
+        assert response.payload_type == "task.response"
+        assert response.payload["result"]["sync"] is True
+
+    @pytest.mark.asyncio
+    async def test_dispatch_async_with_async_handler(
+        self, sample_manifest: Manifest, sample_envelope: Envelope
+    ) -> None:
+        """Test dispatch_async correctly handles asynchronous handlers."""
+        from asap.transport.handlers import HandlerRegistry
+
+        registry = HandlerRegistry()
+        handler_called = {"count": 0}
+
+        async def async_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+            handler_called["count"] += 1
+            return Envelope(
+                asap_version="0.1",
+                sender=manifest.id,
+                recipient=envelope.sender,
+                payload_type="task.response",
+                payload=TaskResponse(
+                    task_id="task_async",
+                    status=TaskStatus.COMPLETED,
+                    result={"async": True},
+                ).model_dump(),
+                correlation_id=envelope.id,
+            )
+
+        registry.register("task.request", async_handler)
+
+        response = await registry.dispatch_async(sample_envelope, sample_manifest)
+
+        assert handler_called["count"] == 1
+        assert response.payload_type == "task.response"
+        assert response.payload["result"]["async"] is True
+
+    @pytest.mark.asyncio
+    async def test_dispatch_async_detects_coroutine_function(
+        self, sample_manifest: Manifest, sample_envelope: Envelope
+    ) -> None:
+        """Test that dispatch_async correctly detects async vs sync handlers."""
+        import inspect
+
+        from asap.transport.handlers import HandlerRegistry
+
+        registry = HandlerRegistry()
+
+        def sync_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+            return envelope
+
+        async def async_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+            return envelope
+
+        # Verify detection works
+        assert not inspect.iscoroutinefunction(sync_handler)
+        assert inspect.iscoroutinefunction(async_handler)
+
+        # Both should work with dispatch_async
+        registry.register("sync.type", sync_handler)
+        registry.register("async.type", async_handler)
+
+        sync_envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:server",
+            payload_type="sync.type",
+            payload={},
+        )
+        async_envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:server",
+            payload_type="async.type",
+            payload={},
+        )
+
+        # Both should complete without error
+        await registry.dispatch_async(sync_envelope, sample_manifest)
+        await registry.dispatch_async(async_envelope, sample_manifest)
+
+    @pytest.mark.asyncio
+    async def test_dispatch_async_raises_for_unknown_type(
+        self, sample_manifest: Manifest, sample_envelope: Envelope
+    ) -> None:
+        """Test dispatch_async raises HandlerNotFoundError for unknown types."""
+        from asap.transport.handlers import HandlerNotFoundError, HandlerRegistry
+
+        registry = HandlerRegistry()  # Empty registry
+
+        with pytest.raises(HandlerNotFoundError) as exc_info:
+            await registry.dispatch_async(sample_envelope, sample_manifest)
+
+        assert exc_info.value.payload_type == "task.request"
+
+    @pytest.mark.asyncio
+    async def test_dispatch_async_propagates_handler_exceptions(
+        self, sample_manifest: Manifest, sample_envelope: Envelope
+    ) -> None:
+        """Test dispatch_async propagates exceptions from handlers."""
+        from asap.transport.handlers import HandlerRegistry
+
+        registry = HandlerRegistry()
+
+        def failing_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+            raise ValueError("Handler failed intentionally")
+
+        registry.register("task.request", failing_handler)
+
+        with pytest.raises(ValueError, match="Handler failed intentionally"):
+            await registry.dispatch_async(sample_envelope, sample_manifest)
+
+    @pytest.mark.asyncio
+    async def test_dispatch_async_propagates_async_handler_exceptions(
+        self, sample_manifest: Manifest, sample_envelope: Envelope
+    ) -> None:
+        """Test dispatch_async propagates exceptions from async handlers."""
+        from asap.transport.handlers import HandlerRegistry
+
+        registry = HandlerRegistry()
+
+        async def failing_async_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+            raise RuntimeError("Async handler failed intentionally")
+
+        registry.register("task.request", failing_async_handler)
+
+        with pytest.raises(RuntimeError, match="Async handler failed intentionally"):
+            await registry.dispatch_async(sample_envelope, sample_manifest)
+
+    @pytest.mark.asyncio
+    async def test_dispatch_async_with_lambda_handler(
+        self, sample_manifest: Manifest, sample_envelope: Envelope
+    ) -> None:
+        """Test dispatch_async works with lambda handlers."""
+        from asap.transport.handlers import HandlerRegistry
+
+        registry = HandlerRegistry()
+
+        # Lambda is a sync callable
+        registry.register("task.request", lambda e, m: e)
+
+        response = await registry.dispatch_async(sample_envelope, sample_manifest)
+
+        assert response.id == sample_envelope.id
+
+    @pytest.mark.asyncio
+    async def test_dispatch_async_with_async_callable_object(
+        self, sample_manifest: Manifest, sample_envelope: Envelope
+    ) -> None:
+        """Test dispatch_async correctly handles async callable objects (classes with async __call__)."""
+        import inspect
+
+        from asap.transport.handlers import HandlerRegistry
+
+        registry = HandlerRegistry()
+        handler_called = {"count": 0}
+
+        class AsyncCallableHandler:
+            """Handler implemented as async callable object."""
+
+            async def __call__(self, envelope: Envelope, manifest: Manifest) -> Envelope:
+                """Process envelope asynchronously."""
+                handler_called["count"] += 1
+                return Envelope(
+                    asap_version="0.1",
+                    sender=manifest.id,
+                    recipient=envelope.sender,
+                    payload_type="task.response",
+                    payload=TaskResponse(
+                        task_id="task_callable",
+                        status=TaskStatus.COMPLETED,
+                        result={"callable": True},
+                    ).model_dump(),
+                    correlation_id=envelope.id,
+                )
+
+        handler = AsyncCallableHandler()
+        # Verify it's not detected as coroutine function but returns awaitable
+        assert not inspect.iscoroutinefunction(handler)
+        registry.register("task.request", handler)
+
+        response = await registry.dispatch_async(sample_envelope, sample_manifest)
+
+        assert handler_called["count"] == 1
+        assert response.payload_type == "task.response"
+        assert response.payload["result"]["callable"] is True

@@ -436,3 +436,240 @@ class TestInMemorySnapshotStore:
         # Task 2 should still exist
         assert snapshot_store.get(task_id_2) is not None
         assert snapshot_store.get(task_id_2).data["task"] == 2
+
+
+class TestSnapshotStoreThreadSafety:
+    """Tests for thread safety of InMemorySnapshotStore."""
+
+    def test_store_has_lock(self) -> None:
+        """Test that InMemorySnapshotStore has internal lock for thread safety."""
+        store = InMemorySnapshotStore()
+        assert hasattr(store, "_lock")
+
+    def test_concurrent_saves_to_same_task(self) -> None:
+        """Test concurrent saves to the same task don't cause data corruption."""
+        import concurrent.futures
+
+        store = InMemorySnapshotStore()
+        task_id = "task_concurrent_save"
+        num_threads = 10
+        versions_per_thread = 10
+        errors: list[Exception] = []
+
+        def save_snapshots(thread_id: int) -> None:
+            try:
+                for i in range(versions_per_thread):
+                    version = thread_id * versions_per_thread + i + 1
+                    snapshot = StateSnapshot(
+                        id=f"snap_{thread_id}_{i}",
+                        task_id=task_id,
+                        version=version,
+                        data={"thread": thread_id, "iteration": i},
+                        created_at=datetime.now(timezone.utc),
+                    )
+                    store.save(snapshot)
+            except Exception as e:
+                errors.append(e)
+
+        # Run concurrent saves
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+            futures = [executor.submit(save_snapshots, i) for i in range(num_threads)]
+            concurrent.futures.wait(futures)
+
+        # No errors should have occurred
+        assert len(errors) == 0, f"Errors occurred: {errors}"
+
+        # All versions should be saved
+        versions = store.list_versions(task_id)
+        assert len(versions) == num_threads * versions_per_thread
+
+    def test_concurrent_saves_to_different_tasks(self) -> None:
+        """Test concurrent saves to different tasks work correctly."""
+        import concurrent.futures
+
+        store = InMemorySnapshotStore()
+        num_tasks = 20
+        versions_per_task = 5
+        errors: list[Exception] = []
+
+        def save_task_snapshots(task_num: int) -> None:
+            try:
+                task_id = f"task_{task_num}"
+                for version in range(1, versions_per_task + 1):
+                    snapshot = StateSnapshot(
+                        id=f"snap_{task_num}_{version}",
+                        task_id=task_id,
+                        version=version,
+                        data={"task_num": task_num, "version": version},
+                        created_at=datetime.now(timezone.utc),
+                    )
+                    store.save(snapshot)
+            except Exception as e:
+                errors.append(e)
+
+        # Run concurrent saves
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_tasks) as executor:
+            futures = [executor.submit(save_task_snapshots, i) for i in range(num_tasks)]
+            concurrent.futures.wait(futures)
+
+        # No errors should have occurred
+        assert len(errors) == 0, f"Errors occurred: {errors}"
+
+        # Each task should have all its versions
+        for task_num in range(num_tasks):
+            task_id = f"task_{task_num}"
+            versions = store.list_versions(task_id)
+            assert len(versions) == versions_per_task
+            assert versions == list(range(1, versions_per_task + 1))
+
+    def test_concurrent_read_write(self) -> None:
+        """Test concurrent reads and writes don't cause issues."""
+        import concurrent.futures
+
+        store = InMemorySnapshotStore()
+        task_id = "task_read_write"
+        num_writers = 5
+        num_readers = 10
+        writes_per_writer = 20
+        reads_per_reader = 50
+        errors: list[Exception] = []
+
+        # Pre-populate some data
+        for version in range(1, 6):
+            snapshot = StateSnapshot(
+                id=f"snap_init_{version}",
+                task_id=task_id,
+                version=version,
+                data={"initial": True, "version": version},
+                created_at=datetime.now(timezone.utc),
+            )
+            store.save(snapshot)
+
+        def writer(writer_id: int) -> None:
+            try:
+                for i in range(writes_per_writer):
+                    version = 100 + writer_id * writes_per_writer + i
+                    snapshot = StateSnapshot(
+                        id=f"snap_writer_{writer_id}_{i}",
+                        task_id=task_id,
+                        version=version,
+                        data={"writer": writer_id, "iteration": i},
+                        created_at=datetime.now(timezone.utc),
+                    )
+                    store.save(snapshot)
+            except Exception as e:
+                errors.append(e)
+
+        def reader(reader_id: int) -> None:
+            try:
+                for _ in range(reads_per_reader):
+                    # Mix of operations
+                    _ = store.get(task_id)
+                    _ = store.list_versions(task_id)
+                    _ = store.get(task_id, version=1)
+            except Exception as e:
+                errors.append(e)
+
+        # Run concurrent reads and writes
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=num_writers + num_readers
+        ) as executor:
+            futures = []
+            for i in range(num_writers):
+                futures.append(executor.submit(writer, i))
+            for i in range(num_readers):
+                futures.append(executor.submit(reader, i))
+            concurrent.futures.wait(futures)
+
+        # No errors should have occurred
+        assert len(errors) == 0, f"Errors occurred: {errors}"
+
+    def test_concurrent_delete_operations(self) -> None:
+        """Test concurrent delete operations are safe."""
+        import concurrent.futures
+
+        store = InMemorySnapshotStore()
+        num_tasks = 10
+        versions_per_task = 5
+
+        # Pre-populate data
+        for task_num in range(num_tasks):
+            task_id = f"task_{task_num}"
+            for version in range(1, versions_per_task + 1):
+                snapshot = StateSnapshot(
+                    id=f"snap_{task_num}_{version}",
+                    task_id=task_id,
+                    version=version,
+                    data={"task_num": task_num, "version": version},
+                    created_at=datetime.now(timezone.utc),
+                )
+                store.save(snapshot)
+
+        errors: list[Exception] = []
+
+        def delete_task(task_num: int) -> None:
+            try:
+                task_id = f"task_{task_num}"
+                # Delete each version individually
+                for version in range(1, versions_per_task + 1):
+                    store.delete(task_id, version=version)
+            except Exception as e:
+                errors.append(e)
+
+        # Run concurrent deletes
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_tasks) as executor:
+            futures = [executor.submit(delete_task, i) for i in range(num_tasks)]
+            concurrent.futures.wait(futures)
+
+        # No errors should have occurred
+        assert len(errors) == 0, f"Errors occurred: {errors}"
+
+        # All tasks should be empty
+        for task_num in range(num_tasks):
+            task_id = f"task_{task_num}"
+            assert store.list_versions(task_id) == []
+
+    def test_concurrent_mixed_operations(self) -> None:
+        """Test all operations running concurrently are thread-safe."""
+        import concurrent.futures
+        import random
+
+        store = InMemorySnapshotStore()
+        num_threads = 20
+        operations_per_thread = 50
+        errors: list[Exception] = []
+
+        def mixed_operations(thread_id: int) -> None:
+            try:
+                task_id = f"task_{thread_id % 5}"  # Use 5 shared tasks
+                for i in range(operations_per_thread):
+                    op = random.choice(["save", "get", "get_version", "list", "delete"])
+
+                    if op == "save":
+                        version = thread_id * operations_per_thread + i + 1
+                        snapshot = StateSnapshot(
+                            id=f"snap_{thread_id}_{i}",
+                            task_id=task_id,
+                            version=version,
+                            data={"thread": thread_id, "iteration": i},
+                            created_at=datetime.now(timezone.utc),
+                        )
+                        store.save(snapshot)
+                    elif op == "get":
+                        _ = store.get(task_id)
+                    elif op == "get_version":
+                        _ = store.get(task_id, version=random.randint(1, 100))
+                    elif op == "list":
+                        _ = store.list_versions(task_id)
+                    elif op == "delete":
+                        store.delete(task_id, version=random.randint(1, 100))
+            except Exception as e:
+                errors.append(e)
+
+        # Run concurrent mixed operations
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+            futures = [executor.submit(mixed_operations, i) for i in range(num_threads)]
+            concurrent.futures.wait(futures)
+
+        # No errors should have occurred
+        assert len(errors) == 0, f"Errors occurred: {errors}"

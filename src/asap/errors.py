@@ -5,7 +5,7 @@ providing structured error handling with specific error codes
 and context information.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class ASAPError(Exception):
@@ -21,7 +21,7 @@ class ASAPError(Exception):
         details: Optional additional error context
     """
 
-    def __init__(self, code: str, message: str, details: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, code: str, message: str, details: dict[str, Any] | None = None) -> None:
         """Initialize ASAP error.
 
         Args:
@@ -34,7 +34,7 @@ class ASAPError(Exception):
         self.message = message
         self.details = details or {}
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert error to dictionary for JSON serialization.
 
         Returns:
@@ -59,7 +59,7 @@ class InvalidTransitionError(ASAPError):
     """
 
     def __init__(
-        self, from_state: str, to_state: str, details: Optional[Dict[str, Any]] = None
+        self, from_state: str, to_state: str, details: dict[str, Any] | None = None
     ) -> None:
         """Initialize invalid transition error.
 
@@ -86,7 +86,7 @@ class MalformedEnvelopeError(ASAPError):
     cannot be processed by the protocol.
     """
 
-    def __init__(self, reason: str, details: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, reason: str, details: dict[str, Any] | None = None) -> None:
         """Initialize malformed envelope error.
 
         Args:
@@ -107,7 +107,7 @@ class TaskNotFoundError(ASAPError):
     that doesn't exist in the system.
     """
 
-    def __init__(self, task_id: str, details: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, task_id: str, details: dict[str, Any] | None = None) -> None:
         """Initialize task not found error.
 
         Args:
@@ -131,7 +131,7 @@ class TaskAlreadyCompletedError(ASAPError):
     """
 
     def __init__(
-        self, task_id: str, current_status: str, details: Optional[Dict[str, Any]] = None
+        self, task_id: str, current_status: str, details: dict[str, Any] | None = None
     ) -> None:
         """Initialize task already completed error.
 

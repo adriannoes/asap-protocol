@@ -5,23 +5,27 @@ Tests cover:
 - Route registration
 - POST /asap endpoint
 - GET /.well-known/asap/manifest.json endpoint
+- GET /asap/metrics endpoint
 - Error handling
 - HandlerRegistry integration
 - Custom handler registration
+- Metrics collection
+- Authentication integration
 """
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from asap.models.entities import Capability, Endpoint, Manifest, Skill
+from asap.models.entities import AuthScheme, Capability, Endpoint, Manifest, Skill
 from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest, TaskResponse
+from asap.observability import get_metrics, reset_metrics
 from asap.transport.handlers import HandlerRegistry
 from asap.transport.jsonrpc import (
-    INTERNAL_ERROR,
     INVALID_PARAMS,
+    INVALID_REQUEST,
     METHOD_NOT_FOUND,
     JsonRpcErrorResponse,
     JsonRpcRequest,
@@ -231,11 +235,12 @@ class TestAsapEndpoint:
             headers={"content-type": "application/json"},
         )
 
-        # Server catches the exception and returns JSON-RPC error
+        # Server catches the exception and returns JSON-RPC parse error
         assert response.status_code == 200
         data = response.json()
         assert "error" in data
-        assert data["error"]["code"] == INTERNAL_ERROR
+        # PARSE_ERROR (-32700) is the correct JSON-RPC 2.0 code for invalid JSON
+        assert data["error"]["code"] == -32700
 
     def test_asap_endpoint_handles_invalid_json_rpc(self, client: TestClient) -> None:
         """Test that invalid JSON-RPC structure returns error."""
@@ -255,6 +260,62 @@ class TestAsapEndpoint:
             # Check if it's a JSON-RPC error response
             data = response.json()
             assert "error" in data or "result" in data
+
+    def test_asap_endpoint_handles_non_dict_body(self, client: TestClient) -> None:
+        """Test that non-dict JSON body returns INVALID_REQUEST."""
+        # Send array instead of object
+        response = client.post("/asap", json=["not", "an", "object"])
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == INVALID_REQUEST
+        assert "object" in data["error"]["data"]["error"].lower()
+
+    def test_asap_endpoint_handles_string_body(self, client: TestClient) -> None:
+        """Test that string JSON body returns INVALID_REQUEST."""
+        # Send string instead of object
+        response = client.post("/asap", json="not an object")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == INVALID_REQUEST
+
+    def test_asap_endpoint_handles_non_dict_params(self, client: TestClient) -> None:
+        """Test that non-dict params returns INVALID_PARAMS."""
+        # Params as array
+        invalid_rpc = {
+            "jsonrpc": "2.0",
+            "method": "asap.send",
+            "params": ["not", "an", "object"],
+            "id": "test-1",
+        }
+
+        response = client.post("/asap", json=invalid_rpc)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == INVALID_PARAMS
+        assert data["error"]["data"]["error"] == "JSON-RPC 'params' must be an object"
+
+    def test_asap_endpoint_handles_none_params(self, client: TestClient) -> None:
+        """Test that None params returns INVALID_PARAMS."""
+        # Params as None (if JSON allows it)
+        invalid_rpc = {
+            "jsonrpc": "2.0",
+            "method": "asap.send",
+            "params": None,
+            "id": "test-2",
+        }
+
+        response = client.post("/asap", json=invalid_rpc)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == INVALID_PARAMS
 
     def test_asap_endpoint_handles_missing_envelope(self, client: TestClient) -> None:
         """Test that request without envelope returns error."""
@@ -470,3 +531,485 @@ class TestHandlerRegistryIntegration:
         assert response.status_code == 200
         error_response = JsonRpcErrorResponse(**response.json())
         assert error_response.error.code == METHOD_NOT_FOUND
+
+
+class TestMetricsEndpoint:
+    """Tests for GET /asap/metrics endpoint."""
+
+    @pytest.fixture(autouse=True)
+    def reset_metrics_before_test(self) -> None:
+        """Reset metrics before each test."""
+        reset_metrics()
+
+    def test_metrics_endpoint_exists(self, app: FastAPI) -> None:
+        """Test that metrics endpoint is registered."""
+        routes = [route.path for route in app.routes]  # type: ignore[attr-defined]
+        assert "/asap/metrics" in routes
+
+    def test_metrics_endpoint_returns_prometheus_format(self, client: TestClient) -> None:
+        """Test that metrics endpoint returns Prometheus text format."""
+        response = client.get("/asap/metrics")
+
+        assert response.status_code == 200
+        assert "text/plain" in response.headers["content-type"]
+
+        # Check Prometheus format markers
+        content = response.text
+        assert "# HELP" in content
+        assert "# TYPE" in content
+
+    def test_metrics_endpoint_contains_request_metrics(self, client: TestClient) -> None:
+        """Test that metrics endpoint contains request-related metrics."""
+        response = client.get("/asap/metrics")
+
+        assert response.status_code == 200
+        content = response.text
+
+        # Check for expected metric names
+        assert "asap_requests_total" in content
+        assert "asap_requests_success_total" in content
+        assert "asap_requests_error_total" in content
+        assert "asap_request_duration_seconds" in content
+        assert "asap_process_uptime_seconds" in content
+
+    def test_metrics_updated_on_successful_request(self, client: TestClient) -> None:
+        """Test that metrics are updated after successful request."""
+        # Make a successful request
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-metrics-test",
+                skill_id="echo",
+                input={"message": "metrics test"},
+            ).model_dump(),
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="metrics-test-1",
+        )
+
+        client.post("/asap", json=rpc_request.model_dump())
+
+        # Check metrics
+        metrics = get_metrics()
+        success_count = metrics.get_counter(
+            "asap_requests_success_total",
+            {"payload_type": "task.request"},
+        )
+        assert success_count >= 1.0
+
+    def test_metrics_updated_on_error_request(self, sample_manifest: Manifest) -> None:
+        """Test that error metrics are updated on failed request."""
+        # Create app with empty registry to trigger handler not found
+        registry = HandlerRegistry()
+        app = create_app(sample_manifest, registry)
+        client = TestClient(app)
+
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-error-test",
+                skill_id="echo",
+                input={"message": "error test"},
+            ).model_dump(),
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="error-metrics-test",
+        )
+
+        client.post("/asap", json=rpc_request.model_dump())
+
+        # Check error metrics
+        metrics = get_metrics()
+        error_count = metrics.get_counter(
+            "asap_requests_error_total",
+            {"payload_type": "task.request", "error_type": "handler_not_found"},
+        )
+        assert error_count >= 1.0
+
+    def test_metrics_histogram_records_duration(self, client: TestClient) -> None:
+        """Test that request duration is recorded in histogram."""
+        # Make a request
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-duration-test",
+                skill_id="echo",
+                input={"message": "duration test"},
+            ).model_dump(),
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="duration-test",
+        )
+
+        client.post("/asap", json=rpc_request.model_dump())
+
+        # Check histogram count
+        metrics = get_metrics()
+        hist_count = metrics.get_histogram_count(
+            "asap_request_duration_seconds",
+            {"payload_type": "task.request", "status": "success"},
+        )
+        assert hist_count >= 1.0
+
+    def test_metrics_endpoint_idempotent(self, client: TestClient) -> None:
+        """Test that metrics endpoint is idempotent."""
+        response1 = client.get("/asap/metrics")
+        response2 = client.get("/asap/metrics")
+
+        assert response1.status_code == 200
+        assert response2.status_code == 200
+        # Both should return valid Prometheus format
+        assert "# HELP" in response1.text
+        assert "# HELP" in response2.text
+
+
+class TestServerExceptionHandling:
+    """Tests for server exception handling (lines 387-423)."""
+
+    @pytest.fixture
+    def manifest(self) -> Manifest:
+        """Create a sample manifest for testing."""
+        return Manifest(
+            id="urn:asap:agent:test-exception",
+            name="Test Exception Server",
+            version="1.0.0",
+            description="Test server for exception handling",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="error", description="Error skill")],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="http://localhost:8000/asap"),
+        )
+
+    def test_handler_exception_returns_internal_error(self, manifest: Manifest) -> None:
+        """Test that exceptions in handlers return JSON-RPC internal error."""
+        registry = HandlerRegistry()
+
+        def failing_handler(envelope: Envelope, _manifest: Manifest) -> Envelope:
+            raise RuntimeError("Intentional test error")
+
+        registry.register("task.request", failing_handler)
+        app = create_app(manifest, registry)
+        client = TestClient(app, raise_server_exceptions=False)
+
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-exception",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-error",
+                skill_id="error",
+                input={"cause": "exception"},
+            ).model_dump(),
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="error-test",
+        )
+
+        response = client.post("/asap", json=rpc_request.model_dump())
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data
+        # Internal error code is -32603
+        assert data["error"]["code"] == -32603
+        assert "Intentional test error" in data["error"]["data"]["error"]
+        assert data["error"]["data"]["type"] == "RuntimeError"
+
+    def test_handler_exception_records_error_metrics(self, manifest: Manifest) -> None:
+        """Test that handler exceptions record error metrics."""
+        reset_metrics()
+        registry = HandlerRegistry()
+
+        def failing_handler(envelope: Envelope, _manifest: Manifest) -> Envelope:
+            raise ValueError("Metrics test error")
+
+        registry.register("task.request", failing_handler)
+        app = create_app(manifest, registry)
+        client = TestClient(app, raise_server_exceptions=False)
+
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-exception",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-metrics",
+                skill_id="error",
+                input={},
+            ).model_dump(),
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="metrics-error-test",
+        )
+
+        client.post("/asap", json=rpc_request.model_dump())
+
+        metrics = get_metrics()
+        error_count = metrics.get_counter(
+            "asap_requests_error_total",
+            {"payload_type": "task.request", "error_type": "internal_error"},
+        )
+        assert error_count >= 1.0
+
+
+class TestAuthenticationIntegration:
+    """Test authentication integration in server."""
+
+    def test_create_app_with_auth_requires_validator(self) -> None:
+        """Test that create_app raises ValueError when auth configured without validator."""
+        manifest_with_auth = Manifest(
+            id="urn:asap:agent:auth-test",
+            name="Auth Test Agent",
+            version="1.0.0",
+            description="Agent with auth",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="test", description="Test skill")],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="http://localhost:8000/asap"),
+            auth=AuthScheme(schemes=["bearer"]),
+        )
+
+        with pytest.raises(ValueError, match="token_validator is required"):
+            create_app(manifest_with_auth, token_validator=None)
+
+    def test_authentication_failure_returns_jsonrpc_error(self) -> None:
+        """Test that authentication failure returns proper JSON-RPC error."""
+        manifest_with_auth = Manifest(
+            id="urn:asap:agent:auth-test",
+            name="Auth Test Agent",
+            version="1.0.0",
+            description="Agent with auth",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="test", description="Test skill")],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="http://localhost:8000/asap"),
+            auth=AuthScheme(schemes=["bearer"]),
+        )
+
+        def always_reject_validator(token: str) -> str | None:
+            return None  # Always reject
+
+        app = create_app(manifest_with_auth, token_validator=always_reject_validator)
+        client = TestClient(app, raise_server_exceptions=False)
+
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:auth-test",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-1",
+                skill_id="test",
+                input={},
+            ).model_dump(),
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="auth-fail-test",
+        )
+
+        # Send request with invalid token
+        response = client.post(
+            "/asap",
+            json=rpc_request.model_dump(),
+            headers={"Authorization": "Bearer invalid-token"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == INVALID_REQUEST
+        assert "Invalid authentication token" in data["error"]["data"]["error"]
+
+    def test_sender_mismatch_returns_jsonrpc_error(self) -> None:
+        """Test that sender mismatch returns proper JSON-RPC error."""
+        manifest_with_auth = Manifest(
+            id="urn:asap:agent:auth-test",
+            name="Auth Test Agent",
+            version="1.0.0",
+            description="Agent with auth",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="test", description="Test skill")],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="http://localhost:8000/asap"),
+            auth=AuthScheme(schemes=["bearer"]),
+        )
+
+        def validator(token: str) -> str | None:
+            if token == "valid-token":
+                return "urn:asap:agent:authenticated-client"
+            return None
+
+        app = create_app(manifest_with_auth, token_validator=validator)
+        client = TestClient(app, raise_server_exceptions=False)
+
+        # Create envelope with sender that doesn't match authenticated identity
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:spoofed-sender",  # Different from authenticated agent
+            recipient="urn:asap:agent:auth-test",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-1",
+                skill_id="test",
+                input={},
+            ).model_dump(),
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="sender-mismatch-test",
+        )
+
+        # Send with valid token but mismatched sender
+        response = client.post(
+            "/asap",
+            json=rpc_request.model_dump(),
+            headers={"Authorization": "Bearer valid-token"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == INVALID_PARAMS
+        assert "Sender does not match" in data["error"]["data"]["error"]
+
+    def test_authentication_success_processes_request(self) -> None:
+        """Test that successful authentication allows request processing."""
+        manifest_with_auth = Manifest(
+            id="urn:asap:agent:auth-test",
+            name="Auth Test Agent",
+            version="1.0.0",
+            description="Agent with auth",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="test", description="Test skill")],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="http://localhost:8000/asap"),
+            auth=AuthScheme(schemes=["bearer"]),
+        )
+
+        def validator(token: str) -> str | None:
+            if token == "valid-token":
+                return "urn:asap:agent:client"
+            return None
+
+        app = create_app(manifest_with_auth, token_validator=validator)
+        client = TestClient(app, raise_server_exceptions=False)
+
+        # Create envelope with correct sender
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",  # Matches authenticated agent
+            recipient="urn:asap:agent:auth-test",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-1",
+                skill_id="test",
+                input={"message": "authenticated request"},
+            ).model_dump(),
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="auth-success-test",
+        )
+
+        # Send with valid token and matching sender
+        response = client.post(
+            "/asap",
+            json=rpc_request.model_dump(),
+            headers={"Authorization": "Bearer valid-token"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "result" in data
+        assert data["id"] == "auth-success-test"
+
+    def test_authentication_missing_header_returns_error(self) -> None:
+        """Test that missing auth header returns proper error."""
+        manifest_with_auth = Manifest(
+            id="urn:asap:agent:auth-test",
+            name="Auth Test Agent",
+            version="1.0.0",
+            description="Agent with auth",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="test", description="Test skill")],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="http://localhost:8000/asap"),
+            auth=AuthScheme(schemes=["bearer"]),
+        )
+
+        def validator(token: str) -> str | None:
+            return "urn:asap:agent:client"
+
+        app = create_app(manifest_with_auth, token_validator=validator)
+        client = TestClient(app, raise_server_exceptions=False)
+
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:auth-test",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-1",
+                skill_id="test",
+                input={},
+            ).model_dump(),
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="no-auth-test",
+        )
+
+        # Send without Authorization header
+        response = client.post("/asap", json=rpc_request.model_dump())
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == INVALID_REQUEST
+        assert "Authentication required" in data["error"]["data"]["error"]

@@ -21,9 +21,9 @@ classifiers = [
 ]
 
 dependencies = [
-    "pydantic>=2.12",
+    "pydantic>=2.12.5",
     "fastapi>=0.124",
-    "httpx>=0.28",
+    "httpx>=0.28.1",
     "uvicorn>=0.34",
     "python-ulid>=3.0",
     "packaging>=25.0",
@@ -36,8 +36,9 @@ dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
     "pytest-cov>=6.0",
-    "mypy>=1.14",
-    "ruff>=0.14",
+    "pytest-benchmark>=5.1",
+    "mypy>=1.19.1",
+    "ruff>=0.14.14",
     "pip-audit>=2.7",
 ]
 docs = [
@@ -83,6 +84,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/**" = ["T201"]
+"src/asap/examples/**" = ["T201"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -116,7 +118,7 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-report=html",
 ]
-testpaths = ["tests"]
+testpaths = ["tests", "benchmarks"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
