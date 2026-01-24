@@ -1,0 +1,158 @@
+# Tasks: ASAP v1.0.0 Performance (P3-P4) - Detailed
+
+> **Sprints**: P3-P4 - Performance optimizations
+> **Duration**: Flexible (9-13 days)
+> **Goal**: Connection pooling, caching, batch operations, compression
+
+---
+
+## Relevant Files
+
+### Sprint P3: Connection & Caching
+- `src/asap/transport/client.py` - Connection pooling
+- `src/asap/transport/cache.py` - NEW: Manifest caching
+- `benchmarks/benchmark_transport.py` - NEW: Connection benchmarks
+
+### Sprint P4: Batch & Compression
+- `src/asap/transport/client.py` - Batch operations (extend)
+- `benchmarks/benchmark_transport.py` - Batch benchmarks (extend)
+
+---
+
+## Sprint P3: Connection & Caching
+
+### Task 3.1: Implement Connection Pooling
+
+- [ ] 3.1.1 Research httpx connection limits
+  - Read: https://www.python-httpx.org/advanced/#pool-limit-configuration
+  - Document: Default pool size
+  - Plan: Configurable parameters
+
+- [ ] 3.1.2 Add pool configuration to ASAPClient
+  - Parameters: pool_connections, pool_maxsize, pool_timeout
+  - Defaults: 100, 100, 5.0
+  - Pass to httpx.Limits()
+
+- [ ] 3.1.3 Create benchmark for connection pooling
+  - File: `benchmarks/benchmark_transport.py`
+  - Test: 1000 concurrent connections
+  - Measure: Connection reuse rate
+
+- [ ] 3.1.4 Run benchmark
+  - Command: `uv run pytest benchmarks/benchmark_transport.py::test_connection_pooling -v`
+  - Target: >90% connection reuse
+
+- [ ] 3.1.5 Document optimal pool sizes
+  - Single-agent: 100 connections
+  - Small cluster: 200-500
+  - Large cluster: 500-1000
+
+- [ ] 3.1.6 Commit
+  - Command: `git commit -m "feat(transport): add configurable connection pooling"`
+
+**Acceptance**: 1000+ concurrent supported, documented
+
+---
+
+### Task 3.2: Implement Manifest Caching
+
+- [ ] 3.2.1 Create cache.py module
+  - File: `src/asap/transport/cache.py`
+  - Class: ManifestCache
+  - Storage: dict with TTL (5 minutes default)
+
+- [ ] 3.2.2 Add cache methods
+  - Method: get(url) -> Manifest | None
+  - Method: set(url, manifest, ttl)
+  - Method: invalidate(url)
+  - Method: clear_all()
+
+- [ ] 3.2.3 Integrate in ASAPClient
+  - Add: _manifest_cache instance variable
+  - Method: get_manifest(url) checks cache first
+  - On error: Invalidate cached entry
+
+- [ ] 3.2.4 Benchmark cache hit rate
+  - Test: 100 manifest requests to same URL
+  - Measure: Cache hits / total requests
+  - Target: 90% hit rate
+
+- [ ] 3.2.5 Commit
+  - Command: `git commit -m "feat(transport): add manifest caching with TTL"`
+
+**Acceptance**: 90% cache hit rate, 5min TTL
+
+---
+
+### Task 3.3: PRD Review Checkpoint
+
+- [ ] 3.3.1 Review Q1 (connection pool size)
+  - Analyze benchmark results from Task 3.1
+  - Document optimal defaults
+  - Add DD-008 to PRD Section 10
+
+- [ ] 3.3.2 Update PRD
+  - Document pool size recommendations
+  - Mark Q1 as resolved
+
+**Acceptance**: Q1 answered, DD-008 added
+
+---
+
+## Sprint P4: Batch & Compression
+
+### Task 4.1: Implement Batch Operations
+
+- [ ] 4.1.1 Add send_batch method to ASAPClient
+  - Method: `async def send_batch(envelopes: list[Envelope]) -> list[Envelope]`
+  - Use: asyncio.gather for parallel sends
+  - Return: List of responses in same order
+
+- [ ] 4.1.2 Add HTTP/2 multiplexing
+  - Config: httpx client with http2=True
+  - Leverage: HTTP/2 request pipelining
+
+- [ ] 4.1.3 Benchmark batch operations
+  - Test: Send 100 envelopes sequentially vs batch
+  - Measure: Total time and throughput
+  - Target: 10x improvement
+
+- [ ] 4.1.4 Commit
+  - Command: `git commit -m "feat(transport): add batch operations with HTTP/2 multiplexing"`
+
+**Acceptance**: 10x throughput improvement for batches
+
+---
+
+### Task 4.2: Implement Compression
+
+- [ ] 4.2.1 Add compression to client
+  - Support: gzip (standard), brotli (optional)
+  - Threshold: Compress if body >1KB
+  - Headers: Accept-Encoding, Content-Encoding
+
+- [ ] 4.2.2 Add decompression to server
+  - Auto-detect: Content-Encoding header
+  - Decompress: Before envelope parsing
+
+- [ ] 4.2.3 Benchmark compression
+  - Test: Large JSON payload (1MB)
+  - Measure: Compressed size vs original
+  - Target: 70% reduction
+
+- [ ] 4.2.4 Commit
+  - Command: `git commit -m "feat(transport): add gzip/brotli compression support"`
+
+**Acceptance**: 70% size reduction for JSON payloads
+
+---
+
+**P3-P4 Definition of Done**:
+- [ ] Connection pooling: 1000+ concurrent
+- [ ] Manifest caching: 90% hit rate
+- [ ] Batch operations: 10x throughput
+- [ ] Compression: 70% reduction
+- [ ] Benchmarks documented
+- [ ] PRD Q1 answered (DD-008)
+
+**Total Sub-tasks**: ~55

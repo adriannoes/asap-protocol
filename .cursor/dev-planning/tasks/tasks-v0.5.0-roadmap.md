@@ -605,7 +605,7 @@
 | S4 | 13 | Retry + Authorization | 3-5 |
 | S5 | 16 | Release prep | 2-3 |
 
-**Total**: 66 tasks across 5 sprints (17-26 days)
+**Total**: 66 tasks across 5 sprints
 
 **PRD Review Checkpoints**: 1 (Sprint S3)
 

@@ -963,7 +963,7 @@
 | P12 | 8 | Observability (dashboards & MCP) | 4-5 |
 | P13 | 17 | Release prep + **Final PRD Review** | 5-7 |
 
-**Total**: 135 tasks across 13 sprints (60-80 days)
+**Total**: 135 tasks across 13 sprints
 
 **PRD Review Checkpoints**: 7 (P1, P3, P5, P6, P7, P9, P13)
 
