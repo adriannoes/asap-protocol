@@ -1,3 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+
 You are a senior security engineer conducting a focused security review of the changes on this branch.
 
 GIT STATUS:
