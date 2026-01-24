@@ -48,6 +48,9 @@ METHOD_NOT_FOUND = -32601
 INVALID_PARAMS = -32602
 INTERNAL_ERROR = -32603
 
+# ASAP Protocol JSON-RPC Method Name
+ASAP_METHOD = "asap.send"
+
 # Error code descriptions
 ERROR_MESSAGES: dict[int, str] = {
     PARSE_ERROR: "Parse error",

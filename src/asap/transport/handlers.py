@@ -26,8 +26,10 @@ Example:
     >>> response = registry.dispatch(envelope, manifest)
 """
 
+import asyncio
+import inspect
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from threading import RLock
 
 from asap.errors import ASAPError
@@ -41,19 +43,22 @@ from asap.observability import get_logger
 # Module logger
 logger = get_logger(__name__)
 
-# Type alias for handler functions
-Handler = Callable[[Envelope, Manifest], Envelope]
+# Type alias for handler functions (supports both sync and async)
+Handler = (
+    Callable[[Envelope, Manifest], Envelope] | Callable[[Envelope, Manifest], Awaitable[Envelope]]
+)
 """Type alias for ASAP message handlers.
 
 A handler is a callable that receives an Envelope and a Manifest,
-and returns a response Envelope.
+and returns a response Envelope (sync) or an awaitable that resolves
+to a response Envelope (async).
 
 Args:
     envelope: The incoming ASAP envelope to process
     manifest: The server's manifest for context
 
 Returns:
-    Response envelope to send back
+    Response envelope to send back (sync) or awaitable (async)
 """
 
 
@@ -210,7 +215,87 @@ class HandlerRegistry:
 
         # Execute handler outside the lock to allow concurrent dispatches
         try:
-            response = handler(envelope, manifest)
+            # Note: dispatch() only works with sync handlers that return Envelope directly
+            # For async handlers, use dispatch_async() instead
+            result = handler(envelope, manifest)
+            # Cast since we expect sync handlers here (async handlers should use dispatch_async)
+            response: Envelope = result  # type: ignore[assignment]
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            logger.debug(
+                "asap.handler.completed",
+                payload_type=payload_type,
+                envelope_id=envelope.id,
+                response_id=response.id,
+                duration_ms=round(duration_ms, 2),
+            )
+            return response
+        except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            logger.exception(
+                "asap.handler.error",
+                payload_type=payload_type,
+                envelope_id=envelope.id,
+                error=str(e),
+                error_type=type(e).__name__,
+                duration_ms=round(duration_ms, 2),
+            )
+            raise
+
+    async def dispatch_async(self, envelope: Envelope, manifest: Manifest) -> Envelope:
+        """Dispatch an envelope to its registered handler (async version).
+
+        This method supports both synchronous and asynchronous handlers.
+        When called from an async context (e.g., FastAPI endpoint), this
+        method will properly await async handlers and run sync handlers
+        in a thread pool to avoid blocking the event loop.
+
+        Args:
+            envelope: The ASAP envelope to dispatch
+            manifest: The server's manifest for context
+
+        Returns:
+            Response envelope from the handler
+
+        Raises:
+            HandlerNotFoundError: If no handler is registered for the payload type
+
+        Example:
+            >>> registry = create_default_registry()
+            >>> response = await registry.dispatch_async(envelope, manifest)
+        """
+        payload_type = envelope.payload_type
+        start_time = time.perf_counter()
+
+        with self._lock:
+            if payload_type not in self._handlers:
+                logger.warning(
+                    "asap.handler.not_found",
+                    payload_type=payload_type,
+                    envelope_id=envelope.id,
+                )
+                raise HandlerNotFoundError(payload_type)
+            handler = self._handlers[payload_type]
+
+        # Log dispatch start
+        logger.debug(
+            "asap.handler.dispatch",
+            payload_type=payload_type,
+            envelope_id=envelope.id,
+            handler_name=handler.__name__ if hasattr(handler, "__name__") else str(handler),
+        )
+
+        # Execute handler outside the lock to allow concurrent dispatches
+        try:
+            # Support both sync and async handlers
+            response: Envelope
+            if inspect.iscoroutinefunction(handler):
+                # Async handler - await it directly
+                response = await handler(envelope, manifest)
+            else:
+                # Sync handler - run in thread pool to avoid blocking event loop
+                loop = asyncio.get_event_loop()
+                response = await loop.run_in_executor(None, handler, envelope, manifest)  # type: ignore[arg-type]
+
             duration_ms = (time.perf_counter() - start_time) * 1000
             logger.debug(
                 "asap.handler.completed",
