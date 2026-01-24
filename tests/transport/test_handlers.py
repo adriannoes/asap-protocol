@@ -888,3 +888,45 @@ class TestDispatchAsync:
         response = await registry.dispatch_async(sample_envelope, sample_manifest)
 
         assert response.id == sample_envelope.id
+
+    @pytest.mark.asyncio
+    async def test_dispatch_async_with_async_callable_object(
+        self, sample_manifest: Manifest, sample_envelope: Envelope
+    ) -> None:
+        """Test dispatch_async correctly handles async callable objects (classes with async __call__)."""
+        import inspect
+
+        from asap.transport.handlers import HandlerRegistry
+
+        registry = HandlerRegistry()
+        handler_called = {"count": 0}
+
+        class AsyncCallableHandler:
+            """Handler implemented as async callable object."""
+
+            async def __call__(self, envelope: Envelope, manifest: Manifest) -> Envelope:
+                """Process envelope asynchronously."""
+                handler_called["count"] += 1
+                return Envelope(
+                    asap_version="0.1",
+                    sender=manifest.id,
+                    recipient=envelope.sender,
+                    payload_type="task.response",
+                    payload=TaskResponse(
+                        task_id="task_callable",
+                        status=TaskStatus.COMPLETED,
+                        result={"callable": True},
+                    ).model_dump(),
+                    correlation_id=envelope.id,
+                )
+
+        handler = AsyncCallableHandler()
+        # Verify it's not detected as coroutine function but returns awaitable
+        assert not inspect.iscoroutinefunction(handler)
+        registry.register("task.request", handler)
+
+        response = await registry.dispatch_async(sample_envelope, sample_manifest)
+
+        assert handler_called["count"] == 1
+        assert response.payload_type == "task.response"
+        assert response.payload["result"]["callable"] is True

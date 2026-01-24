@@ -211,6 +211,24 @@ async def test_verify_authentication_invalid_token(
 
 
 @pytest.mark.asyncio
+async def test_verify_authentication_empty_token(
+    manifest_with_bearer_auth: Manifest,
+    valid_token_validator: BearerTokenValidator,
+) -> None:
+    """Test that empty token string is treated as invalid."""
+    middleware = AuthenticationMiddleware(manifest_with_bearer_auth, valid_token_validator)
+
+    request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
+    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="")
+
+    with pytest.raises(HTTPException) as exc_info:
+        await middleware.verify_authentication(request, credentials)
+
+    assert exc_info.value.status_code == HTTP_UNAUTHORIZED
+    assert ERROR_INVALID_TOKEN in str(exc_info.value.detail)
+
+
+@pytest.mark.asyncio
 async def test_verify_authentication_unsupported_scheme(
     manifest_with_bearer_auth: Manifest,
     valid_token_validator: BearerTokenValidator,
@@ -226,6 +244,33 @@ async def test_verify_authentication_unsupported_scheme(
 
     assert exc_info.value.status_code == HTTP_UNAUTHORIZED
     assert ERROR_INVALID_TOKEN in str(exc_info.value.detail)
+
+
+@pytest.mark.asyncio
+async def test_verify_authentication_non_bearer_scheme_when_credentials_provided(
+    manifest_with_bearer_auth: Manifest,
+    valid_token_validator: BearerTokenValidator,
+) -> None:
+    """Test that non-Bearer scheme is rejected when credentials are explicitly provided."""
+    middleware = AuthenticationMiddleware(manifest_with_bearer_auth, valid_token_validator)
+
+    request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
+    # Test various non-Bearer schemes (case-insensitive Bearer should work)
+    non_bearer_schemes = ["Basic", "Digest", "OAuth", "Token"]
+
+    for scheme in non_bearer_schemes:
+        credentials = HTTPAuthorizationCredentials(scheme=scheme, credentials="some-token")
+        with pytest.raises(HTTPException) as exc_info:
+            await middleware.verify_authentication(request, credentials)
+        assert exc_info.value.status_code == HTTP_UNAUTHORIZED
+
+    # Bearer (case-insensitive) should work
+    for bearer_variant in ["Bearer", "bearer", "BEARER", "BeArEr"]:
+        credentials = HTTPAuthorizationCredentials(
+            scheme=bearer_variant, credentials="valid-token-123"
+        )
+        agent_id = await middleware.verify_authentication(request, credentials)
+        assert agent_id == "urn:asap:agent:client-1"
 
 
 # Tests for verify_sender_matches_auth

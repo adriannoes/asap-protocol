@@ -261,6 +261,62 @@ class TestAsapEndpoint:
             data = response.json()
             assert "error" in data or "result" in data
 
+    def test_asap_endpoint_handles_non_dict_body(self, client: TestClient) -> None:
+        """Test that non-dict JSON body returns INVALID_REQUEST."""
+        # Send array instead of object
+        response = client.post("/asap", json=["not", "an", "object"])
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == INVALID_REQUEST
+        assert "object" in data["error"]["data"]["error"].lower()
+
+    def test_asap_endpoint_handles_string_body(self, client: TestClient) -> None:
+        """Test that string JSON body returns INVALID_REQUEST."""
+        # Send string instead of object
+        response = client.post("/asap", json="not an object")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == INVALID_REQUEST
+
+    def test_asap_endpoint_handles_non_dict_params(self, client: TestClient) -> None:
+        """Test that non-dict params returns INVALID_PARAMS."""
+        # Params as array
+        invalid_rpc = {
+            "jsonrpc": "2.0",
+            "method": "asap.send",
+            "params": ["not", "an", "object"],
+            "id": "test-1",
+        }
+
+        response = client.post("/asap", json=invalid_rpc)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == INVALID_PARAMS
+        assert data["error"]["data"]["error"] == "JSON-RPC 'params' must be an object"
+
+    def test_asap_endpoint_handles_none_params(self, client: TestClient) -> None:
+        """Test that None params returns INVALID_PARAMS."""
+        # Params as None (if JSON allows it)
+        invalid_rpc = {
+            "jsonrpc": "2.0",
+            "method": "asap.send",
+            "params": None,
+            "id": "test-2",
+        }
+
+        response = client.post("/asap", json=invalid_rpc)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == INVALID_PARAMS
+
     def test_asap_endpoint_handles_missing_envelope(self, client: TestClient) -> None:
         """Test that request without envelope returns error."""
         rpc_request = JsonRpcRequest(

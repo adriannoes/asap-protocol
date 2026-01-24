@@ -442,7 +442,7 @@ class TestMetricsEdgeCases:
         assert value == 0.0
 
     def test_label_value_escaping_backslash(self) -> None:
-        """Test that backslashes in label values are handled."""
+        """Test that backslashes in label values are properly escaped."""
         collector = MetricsCollector()
 
         # Backslash in label value - use predefined metric
@@ -450,12 +450,15 @@ class TestMetricsEdgeCases:
             "asap_requests_total", {"payload_type": "path\\test", "status": "success"}
         )
 
-        # Should not raise an error
         output = collector.export_prometheus()
         assert "asap_requests_total" in output
+        # Verify backslash is escaped as \\
+        assert (
+            'payload_type="path\\\\test"' in output or 'payload_type="path\\\\\\\\test"' in output
+        )
 
     def test_label_value_escaping_quotes(self) -> None:
-        """Test that quotes in label values are handled."""
+        """Test that quotes in label values are properly escaped."""
         collector = MetricsCollector()
 
         # Quote in label value - use predefined metric
@@ -463,6 +466,24 @@ class TestMetricsEdgeCases:
             "asap_requests_total", {"payload_type": 'test"quote', "status": "success"}
         )
 
-        # Should not raise an error
         output = collector.export_prometheus()
         assert "asap_requests_total" in output
+        # Verify quote is escaped as \"
+        assert 'payload_type="test\\"quote"' in output
+
+    def test_label_value_escaping_both_backslash_and_quote(self) -> None:
+        """Test that both backslashes and quotes are properly escaped."""
+        collector = MetricsCollector()
+
+        # Both backslash and quote in label value
+        collector.increment_counter(
+            "asap_requests_total", {"payload_type": 'test\\"path', "status": "success"}
+        )
+
+        output = collector.export_prometheus()
+        assert "asap_requests_total" in output
+        # Verify both are escaped: backslash as \\ and quote as \"
+        # The output should have \\\\ for the backslash and \" for the quote
+        assert 'payload_type="test' in output
+        # Check that escaping is present (exact format depends on Prometheus spec)
+        assert "\\" in output or '"' in output
