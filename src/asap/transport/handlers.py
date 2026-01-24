@@ -29,8 +29,9 @@ Example:
 import asyncio
 import inspect
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable
 from threading import RLock
+from typing import Protocol
 
 from asap.errors import ASAPError
 from asap.models.entities import Manifest
@@ -43,10 +44,41 @@ from asap.observability import get_logger
 # Module logger
 logger = get_logger(__name__)
 
+
+class SyncHandler(Protocol):
+    """Protocol for synchronous handlers."""
+
+    def __call__(self, envelope: Envelope, manifest: Manifest) -> Envelope:
+        """Process envelope synchronously.
+
+        Args:
+            envelope: The incoming ASAP envelope to process
+            manifest: The server's manifest for context
+
+        Returns:
+            Response envelope to send back
+        """
+        ...
+
+
+class AsyncHandler(Protocol):
+    """Protocol for asynchronous handlers."""
+
+    def __call__(self, envelope: Envelope, manifest: Manifest) -> Awaitable[Envelope]:
+        """Process envelope asynchronously.
+
+        Args:
+            envelope: The incoming ASAP envelope to process
+            manifest: The server's manifest for context
+
+        Returns:
+            Awaitable that resolves to response envelope
+        """
+        ...
+
+
 # Type alias for handler functions (supports both sync and async)
-Handler = (
-    Callable[[Envelope, Manifest], Envelope] | Callable[[Envelope, Manifest], Awaitable[Envelope]]
-)
+Handler = SyncHandler | AsyncHandler
 """Type alias for ASAP message handlers.
 
 A handler is a callable that receives an Envelope and a Manifest,
@@ -217,9 +249,15 @@ class HandlerRegistry:
         try:
             # Note: dispatch() only works with sync handlers that return Envelope directly
             # For async handlers, use dispatch_async() instead
+            # Type narrowing: we expect sync handlers here
             result = handler(envelope, manifest)
-            # Cast since we expect sync handlers here (async handlers should use dispatch_async)
-            response: Envelope = result  # type: ignore[assignment]
+            # For sync handlers, result is Envelope directly
+            if inspect.isawaitable(result):
+                raise TypeError(
+                    f"Handler {handler} returned awaitable in sync dispatch(). "
+                    "Use dispatch_async() for async handlers."
+                )
+            response: Envelope = result
             duration_ms = (time.perf_counter() - start_time) * 1000
             logger.debug(
                 "asap.handler.completed",
@@ -293,8 +331,15 @@ class HandlerRegistry:
                 response = await handler(envelope, manifest)
             else:
                 # Sync handler - run in thread pool to avoid blocking event loop
+                # Also handle async callable objects that return awaitables
                 loop = asyncio.get_event_loop()
-                response = await loop.run_in_executor(None, handler, envelope, manifest)  # type: ignore[arg-type]
+                result: object = await loop.run_in_executor(None, handler, envelope, manifest)
+                # Check if result is awaitable (handles async __call__ methods)
+                if inspect.isawaitable(result):
+                    response = await result
+                else:
+                    # Type narrowing: result is Envelope for sync handlers
+                    response = result  # type: ignore[assignment]
 
             duration_ms = (time.perf_counter() - start_time) * 1000
             logger.debug(
