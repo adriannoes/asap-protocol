@@ -313,7 +313,9 @@ class TestCliValidateSchema:
         result = runner.invoke(app, ["validate-schema", str(json_file)])
 
         assert result.exit_code != 0
-        assert "schema-type" in result.output.lower()
+        # Strip ANSI codes before checking output
+        clean_output = strip_ansi(result.output).lower()
+        assert "schema-type" in clean_output
 
     def test_displays_validation_error_details(self, tmp_path: Path) -> None:
         """Ensure validate-schema shows detailed validation errors."""
