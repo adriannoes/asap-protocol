@@ -2,6 +2,8 @@
 
 > A streamlined, scalable, asynchronous protocol for agent-to-agent communication and task coordination.
 
+⚠️ **Alpha Release**: ASAP Protocol is currently in **alpha** (v0.1.0). We're actively developing and improving the protocol based on real-world usage. Your feedback, contributions, and suggestions are essential to help us evolve and make ASAP better for the entire community. See our [Contributing](#contributing) section to get involved!
+
 ## Why ASAP?
 
 Building multi-agent systems today suffers from three core technical challenges:
@@ -20,7 +22,7 @@ Building multi-agent systems today suffers from three core technical challenges:
 - **MCP Integration**: Uses the Model Context Protocol (MCP) as a tool-execution substrate, wrapped in a high-level coordination envelope.
 - **Async-Native**: Engineered from the ground up for high-concurrency environments using `asyncio` and `httpx`. Supports both sync and async handlers with automatic event loop management.
 
-> 💡 **Performance Note**: Pure Python codebase leveraging Rust-accelerated dependencies (`pydantic-core`, `orjson`, `python-ulid`) for native-level performance without build complexity.
+💡 **Performance Note**: Pure Python codebase leveraging Rust-accelerated dependencies (`pydantic-core`, `orjson`, `python-ulid`) for native-level performance without build complexity.
 
 ## Installation
 
@@ -203,7 +205,9 @@ asap export-schemas --verbose
 
 ## Contributing
 
-We love contributions! Whether it's fixing a bug, improving documentation, or proposing a new feature, your help is welcome.
+We love contributions! Whether it's fixing a bug, improving documentation or proposing a new feature.. your help is welcome.
+
+**As an alpha release, community feedback and contributions are essential** for ASAP Protocol's evolution. We're actively working on improvements and your input helps shape the future of the protocol. Every contribution, from bug reports to feature suggestions, documentation improvements and code contributions, makes a real difference.
 
 Check out our [Contributing Guidelines](CONTRIBUTING.md) to get started. It's easier than you think! 🚀
 
