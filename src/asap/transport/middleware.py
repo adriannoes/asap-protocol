@@ -31,6 +31,7 @@ Example:
     >>> middleware = AuthenticationMiddleware(manifest, validator)
 """
 
+import hashlib
 from typing import Callable, Protocol
 
 from fastapi import HTTPException, Request
@@ -250,7 +251,21 @@ class AuthenticationMiddleware:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Validate Bearer token
+        # Validate Authorization scheme (case-insensitive)
+        if credentials.scheme.lower() != AUTH_SCHEME_BEARER:
+            logger.warning(
+                "asap.auth.invalid_scheme",
+                manifest_id=self.manifest.id,
+                provided_scheme=credentials.scheme,
+                expected_scheme=AUTH_SCHEME_BEARER,
+            )
+            raise HTTPException(
+                status_code=HTTP_UNAUTHORIZED,
+                detail=ERROR_INVALID_TOKEN,
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Validate Bearer token support in manifest
         if not self._supports_bearer_auth():
             logger.warning(
                 "asap.auth.scheme_not_supported",
@@ -266,14 +281,20 @@ class AuthenticationMiddleware:
         # Validate token and get agent ID
         token = credentials.credentials
         # Type narrowing: validator is not None when auth is required (validated in __init__)
-        assert self.validator is not None
+        if self.validator is None:
+            raise RuntimeError(
+                "Token validator is None but authentication is required. "
+                "This should not happen if middleware was initialized correctly."
+            )
         agent_id = self.validator(token)
 
         if agent_id is None:
+            # Log token hash instead of prefix to avoid exposing token data
+            token_hash = hashlib.sha256(token.encode()).hexdigest()[:16]
             logger.warning(
                 "asap.auth.invalid_token",
                 manifest_id=self.manifest.id,
-                token_prefix=token[:8] if len(token) >= 8 else "***",
+                token_hash=token_hash,
             )
             raise HTTPException(
                 status_code=HTTP_UNAUTHORIZED,
