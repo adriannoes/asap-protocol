@@ -261,6 +261,9 @@ class MetricsCollector:
     def _format_labels(self, labels: tuple[tuple[str, str], ...]) -> str:
         """Format labels for Prometheus output.
 
+        Prometheus label values must escape backslashes and double quotes.
+        Backslashes are escaped as \\, and double quotes are escaped as \\".
+
         Args:
             labels: Sorted tuple of label key-value pairs
 
@@ -269,7 +272,15 @@ class MetricsCollector:
         """
         if not labels:
             return ""
-        parts = [f'{k}="{v}"' for k, v in labels]
+
+        def escape_label_value(value: str) -> str:
+            """Escape label value per Prometheus specification."""
+            # Escape backslashes first (to avoid double-escaping)
+            value = value.replace("\\", "\\\\")
+            # Escape double quotes
+            return value.replace('"', '\\"')
+
+        parts = [f'{k}="{escape_label_value(v)}"' for k, v in labels]
         return "{" + ",".join(parts) + "}"
 
     def export_prometheus(self) -> str:
