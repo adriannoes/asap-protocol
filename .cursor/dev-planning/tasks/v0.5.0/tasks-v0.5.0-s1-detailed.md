@@ -144,30 +144,36 @@
 
 **Issue**: [#7](https://github.com/adriannoes/asap-protocol/issues/7)
 
-- [ ] 1.3.1 Review FastAPI changelog
+- [x] 1.3.1 Review FastAPI changelog
   - Visit: https://fastapi.tiangolo.com/release-notes/
   - Check 0.124 → 0.128 breaking changes
   - Document anything affecting our code
+  - **Result**: Main breaking change is removal of `pydantic.v1` support. Project already uses Pydantic v2 (`pydantic>=2.12.5`), so no impact.
 
-- [ ] 1.3.2 Update pyproject.toml
+- [x] 1.3.2 Update pyproject.toml
   - Change `"fastapi>=0.124"` to `"fastapi>=0.128.0"`
+  - **Done**: Updated dependency in pyproject.toml
 
-- [ ] 1.3.3 Update dependencies
+- [x] 1.3.3 Update dependencies
   - Command: `uv lock --upgrade-package fastapi`
   - Verify: `uv tree | grep fastapi`
+  - **Result**: FastAPI v0.128.0 installed successfully
 
-- [ ] 1.3.4 Run full test suite
+- [x] 1.3.4 Run full test suite
   - Command: `uv run pytest -v`
   - Expected: All 543+ tests pass
+  - **Result**: ✅ All 554 tests passed
 
-- [ ] 1.3.5 Test examples
+- [x] 1.3.5 Test examples
   - Run: `uv run python -m asap.examples.run_demo`
   - Verify no errors
+  - **Result**: ✅ Demo ran successfully with no errors
 
-- [ ] 1.3.6 Run benchmarks
+- [x] 1.3.6 Run benchmarks
   - Run: `uv run pytest benchmarks/ -v`
   - Compare to v0.1.0 baseline
   - Ensure <5% regression
+  - **Result**: ✅ All 28 benchmarks passed (16 model benchmarks + 12 transport benchmarks)
 
 - [ ] 1.3.7 Commit
   - Command: `git commit -m "build(deps): upgrade FastAPI from 0.124 to 0.128.0"`
