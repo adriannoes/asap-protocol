@@ -23,26 +23,32 @@
 
 **Issue**: [#10](https://github.com/adriannoes/asap-protocol/issues/10)
 
-- [ ] 1.1.1 Identify type: ignore locations
+- [x] 1.1.1 Identify type: ignore locations
   - Command: `grep -n "type: ignore" src/asap/transport/handlers.py`
   - Document why each suppression exists
+  - **Found**: 1 location at line 342
+  - **Reason**: `result` is typed as `object` from `run_in_executor`, but after checking it's not awaitable, we know it's `Envelope` for sync handlers. Mypy can't narrow the type automatically.
 
-- [ ] 1.1.2 Analyze type errors
+- [x] 1.1.2 Analyze type errors
   - Run: `mypy --strict src/asap/transport/handlers.py`
   - Understand what types are mismatched
+  - **Error**: `result` (type `object`) cannot be assigned to `response` (type `Envelope`)
 
-- [ ] 1.1.3 Fix type annotations
+- [x] 1.1.3 Fix type annotations
   - Refactor handler signatures with proper generics/protocols
   - Update return types as needed
   - Remove type: ignore comments
+  - **Solution**: Used `cast(Envelope, result)` for explicit type narrowing
 
-- [ ] 1.1.4 Verify mypy compliance
+- [x] 1.1.4 Verify mypy compliance
   - Run: `mypy --strict src/asap/transport/handlers.py`
   - Expected: Success, no issues
+  - **Result**: ✅ Success, no issues found
 
-- [ ] 1.1.5 Run existing tests
+- [x] 1.1.5 Run existing tests
   - Run: `uv run pytest tests/transport/test_handlers.py -v`
   - Expected: All 20 tests pass
+  - **Result**: ✅ All 35 tests passed
 
 - [ ] 1.1.6 Commit
   - Command: `git commit -m "fix(transport): remove type: ignore in handlers.py"`

@@ -31,7 +31,7 @@ import inspect
 import time
 from collections.abc import Awaitable
 from threading import RLock
-from typing import Protocol
+from typing import Protocol, cast
 
 from asap.errors import ASAPError
 from asap.models.entities import Manifest
@@ -339,7 +339,8 @@ class HandlerRegistry:
                     response = await result
                 else:
                     # Type narrowing: result is Envelope for sync handlers
-                    response = result  # type: ignore[assignment]
+                    # After checking it's not awaitable, we know it's Envelope
+                    response = cast(Envelope, result)
 
             duration_ms = (time.perf_counter() - start_time) * 1000
             logger.debug(
