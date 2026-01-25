@@ -34,3 +34,19 @@ Use the [Conventional Commits](https://www.conventionalcommits.org/) specificati
 3. **Description**: Short, imperative summary of the change.
 4. **Body**: Longer description of "what" and "why" (not "how").
 5. **Footers**: Used for tracking issues (e.g., `Refs: #123`) or breaking changes.
+
+## Pre-Push CI Verification
+
+Before pushing to the repository, always run the full CI check suite locally to ensure code quality:
+
+1. **Linting**: `uv run ruff check .` - Verify code style and catch common errors
+2. **Formatting**: `uv run ruff format --check .` - Ensure consistent code formatting (or `uv run ruff format .` to auto-fix)
+3. **Type Checking**: `uv run mypy src/` - Validate type annotations with strict mode
+4. **Tests**: `PYTHONPATH=src uv run pytest --cov=src --cov-report=xml` - Run full test suite with coverage
+5. **Security**: `uv run pip-audit` - Scan for known vulnerabilities in dependencies
+
+**Quick Fix Commands**:
+- Auto-fix linting issues: `uv run ruff check --fix .`
+- Auto-format code: `uv run ruff format .`
+
+All checks must pass before pushing to maintain code quality and prevent CI failures.
