@@ -13,25 +13,33 @@ Tests cover:
 - Authentication integration
 """
 
+import json
+import time
+
 import pytest
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
+
 
 from asap.models.entities import AuthScheme, Capability, Endpoint, Manifest, Skill
 from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest, TaskResponse
 from asap.observability import get_metrics, reset_metrics
+from asap.observability.metrics import MetricsCollector
 from asap.transport.handlers import HandlerRegistry
 from asap.transport.jsonrpc import (
+    INTERNAL_ERROR,
     INVALID_PARAMS,
     INVALID_REQUEST,
     METHOD_NOT_FOUND,
+    PARSE_ERROR,
     JsonRpcErrorResponse,
     JsonRpcRequest,
     JsonRpcResponse,
 )
-from asap.transport.server import create_app
+from asap.transport.server import ASAPRequestHandler, RequestContext, create_app
 
 
 @pytest.fixture
@@ -1013,3 +1021,482 @@ class TestAuthenticationIntegration:
         assert "error" in data
         assert data["error"]["code"] == INVALID_REQUEST
         assert "Authentication required" in data["error"]["data"]["error"]
+
+
+class TestASAPRequestHandlerHelpers:
+    """Unit tests for ASAPRequestHandler helper methods."""
+
+    @pytest.fixture
+    def handler(self, sample_manifest: Manifest) -> ASAPRequestHandler:
+        """Create ASAPRequestHandler instance for testing."""
+        registry = HandlerRegistry()
+        return ASAPRequestHandler(registry, sample_manifest, None)
+
+    @pytest.fixture
+    def metrics(self) -> MetricsCollector:
+        """Get metrics collector."""
+        reset_metrics()
+        return get_metrics()
+
+    def test_validate_envelope_with_valid_envelope(
+        self, handler: ASAPRequestHandler, metrics: MetricsCollector
+    ) -> None:
+        """Test _validate_envelope with valid envelope."""
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-1",
+                skill_id="echo",
+                input={"message": "test"},
+            ).model_dump(),
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="test-1",
+        )
+
+        start_time = time.perf_counter()
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
+        )
+        result = handler._validate_envelope(ctx)
+
+        envelope_result, payload_type = result
+        assert envelope_result is not None
+        assert isinstance(envelope_result, Envelope)
+        assert envelope_result.payload_type == "task.request"
+        assert payload_type == "task.request"
+
+    def test_validate_envelope_with_invalid_params_type(
+        self, handler: ASAPRequestHandler, metrics: MetricsCollector
+    ) -> None:
+        """Test _validate_envelope with non-dict params."""
+        # Create JsonRpcRequest with invalid params using model_construct to bypass validation
+        rpc_request = JsonRpcRequest.model_construct(
+            method="asap.send",
+            params="invalid",  # type: ignore[arg-type]
+            id="test-2",
+        )
+
+        start_time = time.perf_counter()
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
+        )
+        result = handler._validate_envelope(ctx)
+
+        envelope_result, error_response = result
+        assert envelope_result is None
+        assert isinstance(error_response, JSONResponse)
+        assert error_response.status_code == 200
+
+        # Check error content
+        content = error_response.body.decode()
+        error_data = json.loads(content)
+        assert error_data["error"]["code"] == INVALID_PARAMS
+
+    def test_validate_envelope_with_missing_envelope(
+        self, handler: ASAPRequestHandler, metrics: MetricsCollector
+    ) -> None:
+        """Test _validate_envelope with missing envelope in params."""
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={},  # Missing envelope
+            id="test-3",
+        )
+
+        start_time = time.perf_counter()
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
+        )
+        result = handler._validate_envelope(ctx)
+
+        envelope_result, error_response = result
+        assert envelope_result is None
+        assert isinstance(error_response, JSONResponse)
+
+        content = error_response.body.decode()
+        error_data = json.loads(content)
+        assert error_data["error"]["code"] == INVALID_PARAMS
+        assert "Missing 'envelope'" in error_data["error"]["data"]["error"]
+
+    def test_validate_envelope_with_invalid_envelope_structure(
+        self, handler: ASAPRequestHandler, metrics: MetricsCollector
+    ) -> None:
+        """Test _validate_envelope with invalid envelope structure."""
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={
+                "envelope": {
+                    "sender": "urn:asap:agent:client",
+                    # Missing required fields
+                }
+            },
+            id="test-4",
+        )
+
+        start_time = time.perf_counter()
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
+        )
+        result = handler._validate_envelope(ctx)
+
+        envelope_result, error_response = result
+        assert envelope_result is None
+        assert isinstance(error_response, JSONResponse)
+
+        content = error_response.body.decode()
+        error_data = json.loads(content)
+        assert error_data["error"]["code"] == INVALID_PARAMS
+        assert "Invalid envelope structure" in error_data["error"]["data"]["error"]
+
+    @pytest.mark.asyncio
+    async def test_dispatch_to_handler_success(
+        self, handler: ASAPRequestHandler, metrics: MetricsCollector
+    ) -> None:
+        """Test _dispatch_to_handler with successful dispatch."""
+
+        # Register a handler
+        def sync_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+            return Envelope(
+                asap_version=envelope.asap_version,
+                sender=manifest.id,
+                recipient=envelope.sender,
+                payload_type="task.response",
+                payload={"status": "completed"},
+                correlation_id=envelope.id,
+                trace_id=envelope.trace_id,
+            )
+
+        handler.registry.register("task.request", sync_handler)
+
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-1",
+                skill_id="echo",
+                input={"message": "test"},
+            ).model_dump(),
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="test-5",
+        )
+
+        start_time = time.perf_counter()
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
+        )
+        result = await handler._dispatch_to_handler(envelope, ctx)
+
+        response_envelope, payload_type = result
+        assert response_envelope is not None
+        assert isinstance(response_envelope, Envelope)
+        assert response_envelope.payload_type == "task.response"
+        assert payload_type == "task.request"
+
+    @pytest.mark.asyncio
+    async def test_dispatch_to_handler_not_found(
+        self, handler: ASAPRequestHandler, metrics: MetricsCollector
+    ) -> None:
+        """Test _dispatch_to_handler with handler not found."""
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-server",
+            payload_type="unknown.type",
+            payload={},
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="test-6",
+        )
+
+        start_time = time.perf_counter()
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
+        )
+        result = await handler._dispatch_to_handler(envelope, ctx)
+
+        response_envelope, error_response = result
+        assert response_envelope is None
+        assert isinstance(error_response, JSONResponse)
+
+        content = error_response.body.decode()
+        error_data = json.loads(content)
+        assert error_data["error"]["code"] == METHOD_NOT_FOUND
+        assert "unknown.type" in error_data["error"]["data"]["payload_type"]
+
+    def test_build_success_response(
+        self, handler: ASAPRequestHandler, metrics: MetricsCollector
+    ) -> None:
+        """Test _build_success_response creates correct response."""
+        response_envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:test-server",
+            recipient="urn:asap:agent:client",
+            payload_type="task.response",
+            payload={"status": "completed"},
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={},
+            id="test-7",
+        )
+
+        start_time = time.perf_counter()
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
+        )
+        response = handler._build_success_response(response_envelope, ctx, "task.request")
+
+        assert isinstance(response, JSONResponse)
+        assert response.status_code == 200
+
+        content = response.body.decode()
+        data = json.loads(content)
+        assert "result" in data
+        assert data["id"] == "test-7"
+        assert "envelope" in data["result"]
+
+    def test_handle_internal_error(
+        self, handler: ASAPRequestHandler, metrics: MetricsCollector
+    ) -> None:
+        """Test _handle_internal_error creates correct error response."""
+        error = ValueError("Test error")
+        start_time = time.perf_counter()
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={},
+            id="test-error",
+        )
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
+        )
+        response = handler._handle_internal_error(error, ctx, "task.request")
+
+        assert isinstance(response, JSONResponse)
+        assert response.status_code == 200
+
+        content = response.body.decode()
+        error_data = json.loads(content)
+        assert "error" in error_data
+        assert error_data["error"]["code"] == INTERNAL_ERROR
+        assert "Test error" in error_data["error"]["data"]["error"]
+
+    @pytest.mark.asyncio
+    async def test_authenticate_request_without_middleware(
+        self, handler: ASAPRequestHandler, metrics: MetricsCollector
+    ) -> None:
+        """Test _authenticate_request when auth middleware is None."""
+        from fastapi import Request
+
+        request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={},
+            id="test-8",
+        )
+
+        start_time = time.perf_counter()
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
+        )
+        result = await handler._authenticate_request(request, ctx)
+
+        agent_id, error = result
+        assert agent_id is None
+        assert error is None
+
+    @pytest.mark.asyncio
+    async def test_verify_sender_matches_auth_without_middleware(
+        self, handler: ASAPRequestHandler, metrics: MetricsCollector
+    ) -> None:
+        """Test _verify_sender_matches_auth when auth middleware is None."""
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-server",
+            payload_type="task.request",
+            payload={},
+        )
+
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={},
+            id="test-9",
+        )
+
+        start_time = time.perf_counter()
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
+        )
+        result = handler._verify_sender_matches_auth(None, envelope, ctx, "task.request")
+
+        assert result is None
+
+    # Note: test_parse_and_validate_request_success is covered by integration tests
+    # Testing this helper directly requires complex Request mocking that's not worth it
+    # The functionality is well-covered by the endpoint tests in TestAsapEndpoint
+
+    @pytest.mark.asyncio
+    async def test_parse_and_validate_request_invalid_json(
+        self, handler: ASAPRequestHandler, metrics: MetricsCollector
+    ) -> None:
+        """Test _parse_and_validate_request with invalid JSON."""
+        from fastapi import Request
+        from unittest.mock import AsyncMock
+
+        # Create a mock request
+        request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
+        # Mock the json() method to raise ValueError
+        request.json = AsyncMock(side_effect=ValueError("Invalid JSON"))  # type: ignore[method-assign]
+
+        result = await handler._parse_and_validate_request(request)
+
+        rpc_request, error = result
+        assert rpc_request is None
+        assert error is not None
+        assert isinstance(error, JSONResponse)
+
+        content = error.body.decode()
+        error_data = json.loads(content)
+        assert error_data["error"]["code"] == PARSE_ERROR
+
+    @pytest.mark.asyncio
+    async def test_parse_and_validate_request_non_dict_body(
+        self, handler: ASAPRequestHandler
+    ) -> None:
+        """Test _parse_and_validate_request with non-dict body."""
+        from fastapi import Request
+        from unittest.mock import AsyncMock
+
+        request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
+        request.json = AsyncMock(return_value=["not", "a", "dict"])  # type: ignore[method-assign]
+
+        result = await handler._parse_and_validate_request(request)
+
+        rpc_request, error = result
+        assert rpc_request is None
+        assert error is not None
+        assert isinstance(error, JSONResponse)
+
+        content = error.body.decode()
+        error_data = json.loads(content)
+        assert error_data["error"]["code"] == INVALID_REQUEST
+        assert "must be an object" in error_data["error"]["data"]["error"]
+
+    def test_validate_jsonrpc_request_params_dict_type_error(
+        self, handler: ASAPRequestHandler
+    ) -> None:
+        """Test validate_jsonrpc_request with params dict_type validation error."""
+        # Create body with params as array (should trigger dict_type error)
+        body = {
+            "jsonrpc": "2.0",
+            "method": "asap.send",
+            "params": ["not", "an", "object"],  # type: ignore[dict-item]
+            "id": "test-params-error",
+        }
+
+        rpc_request, error_response = handler.validate_jsonrpc_request(body)
+
+        assert rpc_request is None
+        assert error_response is not None
+        assert isinstance(error_response, JSONResponse)
+
+        content = error_response.body.decode()
+        error_data = json.loads(content)
+        # Should use INVALID_PARAMS (not INVALID_REQUEST) for dict_type error on params
+        assert error_data["error"]["code"] == INVALID_PARAMS
+        assert "params' must be an object" in error_data["error"]["data"]["error"]
+
+    @pytest.mark.asyncio
+    async def test_handle_message_exception_before_rpc_request(
+        self, handler: ASAPRequestHandler
+    ) -> None:
+        """Test handle_message exception handling before rpc_request is created."""
+        from fastapi import Request
+        from unittest.mock import AsyncMock
+
+        request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
+        # Make request.json() raise an exception that's not ValueError
+        request.json = AsyncMock(side_effect=RuntimeError("Unexpected error"))  # type: ignore[method-assign]
+
+        response = await handler.handle_message(request)
+
+        assert isinstance(response, JSONResponse)
+        assert response.status_code == 200
+
+        content = response.body.decode()
+        error_data = json.loads(content)
+        assert "error" in error_data
+        assert error_data["error"]["code"] == INTERNAL_ERROR
+
+    @pytest.mark.asyncio
+    async def test_parse_and_validate_request_rpc_request_none_after_validation(
+        self, handler: ASAPRequestHandler
+    ) -> None:
+        """Test _parse_and_validate_request when validate_jsonrpc_request returns None, None."""
+        from fastapi import Request
+        from unittest.mock import AsyncMock, patch
+
+        request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
+        request.json = AsyncMock(
+            return_value={"jsonrpc": "2.0", "method": "asap.send", "params": {}}
+        )  # type: ignore[method-assign]
+
+        # Mock validate_jsonrpc_request to return (None, None) - edge case
+        with patch.object(handler, "validate_jsonrpc_request", return_value=(None, None)):
+            result = await handler._parse_and_validate_request(request)
+
+        rpc_request, error = result
+        assert rpc_request is None
+        assert error is not None
+        assert isinstance(error, JSONResponse)
+
+        content = error.body.decode()
+        error_data = json.loads(content)
+        assert error_data["error"]["code"] == INTERNAL_ERROR
+        assert "Internal validation error" in error_data["error"]["data"]["error"]

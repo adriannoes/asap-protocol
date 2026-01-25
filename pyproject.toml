@@ -22,7 +22,7 @@ classifiers = [
 
 dependencies = [
     "pydantic>=2.12.5",
-    "fastapi>=0.124",
+    "fastapi>=0.128.0",
     "httpx>=0.28.1",
     "uvicorn>=0.34",
     "python-ulid>=3.0",
@@ -66,6 +66,13 @@ packages = ["src/asap"]
 [tool.ruff]
 target-version = "py313"
 line-length = 100
+exclude = [
+    ".cursor/**",
+    ".venv/**",
+    "venv/**",
+    "__pycache__/**",
+    "*.egg-info/**",
+]
 
 [tool.ruff.lint]
 select = [

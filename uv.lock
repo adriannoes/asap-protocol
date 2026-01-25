@@ -64,7 +64,7 @@ docs = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastapi", specifier = ">=0.124" },
+    { name = "fastapi", specifier = ">=0.128.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=0.27" },

@@ -42,3 +42,42 @@ Please include as much information as possible to help us reproduce and validate
 4.  **Release**: Once the fix is ready and verified, we will merge it, release a new version of the package, and publish a Security Advisory (CVE) crediting you for the discovery (unless you prefer to remain anonymous).
 
 Thank you for helping keep the ASAP Protocol secure!
+
+## Security Update Policy
+
+We use [Dependabot](https://docs.github.com/en/code-security/dependabot) to automatically monitor dependencies for security vulnerabilities and create pull requests with fixes.
+
+### Automatic Security Updates
+
+Dependabot automatically creates pull requests for security updates when vulnerabilities are detected in our dependencies. These updates are independent of our monthly version update schedule and are created immediately upon detection.
+
+### Response Times by Severity
+
+We aim to review and merge security updates according to the following target times. These are goals, not strict commitments, as we are a solo-maintained project:
+
+| Severity | Target Review Time | Action |
+|----------|-------------------|--------|
+| **Critical** | 3-5 business days | Priority review and merge if CI passes |
+| **High** | 1-2 weeks | Priority review, merge after validation |
+| **Medium** | 2-3 weeks | Review during next maintenance window |
+| **Low** | 1 month | Review with regular version updates |
+
+### Security Advisories
+
+- **GitHub Security Advisories**: [View all advisories](https://github.com/adriannoes/asap-protocol/security/advisories)
+- **Dependabot Alerts**: [View dependency alerts](https://github.com/adriannoes/asap-protocol/security/dependabot)
+- **Dependency Graph**: [View dependency insights](https://github.com/adriannoes/asap-protocol/network/dependencies)
+
+### Monitoring
+
+We continuously monitor dependencies using:
+- **Dependabot**: Automated security updates and alerts
+- **pip-audit**: Integrated into CI pipeline for vulnerability scanning
+- **GitHub Security Advisories**: Public database of known vulnerabilities
+
+### Version Update Schedule
+
+- **Security Updates**: Automatic and immediate (no schedule)
+- **Version Updates**: Monthly checks for non-security updates (see [Dependabot configuration](../.github/dependabot.yml))
+
+For more information on reviewing Dependabot PRs, see [CONTRIBUTING.md](../CONTRIBUTING.md#reviewing-dependabot-prs).

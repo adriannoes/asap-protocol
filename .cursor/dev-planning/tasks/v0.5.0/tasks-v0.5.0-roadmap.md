@@ -27,30 +27,30 @@
   - Status: Completed in [PR #8](https://github.com/adriannoes/asap-protocol/pull/8)
   - Includes: Bearer token auth, middleware, sender verification, tests
 
-- [ ] 1.2 Remove `type: ignore` in handlers.py
+- [x] 1.2 Remove `type: ignore` in handlers.py ✅
   - Issue: [#10](https://github.com/adriannoes/asap-protocol/issues/10)
   - Goal: Eliminate type suppressions, achieve full mypy strict compliance
   - Details: [Sprint S1 Detailed - Task 1.1](./tasks-v0.5.0-s1-detailed.md#task-11-remove-type-ignore-in-handlerspy)
 
-- [ ] 1.3 Refactor `handle_message` into smaller helpers
+- [x] 1.3 Refactor `handle_message` into smaller helpers ✅
   - Issue: [#9](https://github.com/adriannoes/asap-protocol/issues/9)
   - Goal: Break down monolithic function into testable helpers (<20 lines)
   - Details: [Sprint S1 Detailed - Task 1.2](./tasks-v0.5.0-s1-detailed.md#task-12-refactor-handle_message-into-smaller-helpers)
 
-- [ ] 1.4 Upgrade FastAPI to 0.128.0+
+- [x] 1.4 Upgrade FastAPI to 0.128.0+ ✅
   - Issue: [#7](https://github.com/adriannoes/asap-protocol/issues/7)
   - Goal: Update from 0.124 to ≥0.128.0, verify compatibility
   - Details: [Sprint S1 Detailed - Task 1.3](./tasks-v0.5.0-s1-detailed.md#task-13-upgrade-fastapi-to-01280)
 
-- [ ] 1.5 Configure Dependabot for security monitoring
-  - Goal: Daily security update checks, automated PRs
+- [x] 1.5 Configure Dependabot for security monitoring ✅
+  - Goal: Monthly security update checks, automated PRs
   - Details: [Sprint S1 Detailed - Task 1.4](./tasks-v0.5.0-s1-detailed.md#task-14-configure-dependabot)
 
-- [ ] 1.6 Document dependency update process
+- [x] 1.6 Document dependency update process ✅
   - Goal: Update CONTRIBUTING.md and SECURITY.md with review workflow
   - Details: [Sprint S1 Detailed - Task 1.5](./tasks-v0.5.0-s1-detailed.md#task-15-document-dependency-process)
 
-- [ ] 1.7 Verify CI integration
+- [x] 1.7 Verify CI integration ✅
   - Goal: Ensure pip-audit runs on all PRs
   - Details: [Sprint S1 Detailed - Task 1.6](./tasks-v0.5.0-s1-detailed.md#task-16-verify-ci-integration)
 
@@ -99,6 +99,14 @@
 - [ ] 2.7 Update security documentation
   - Goal: Document rate limiting and size limits in docs/security.md
   - Details: [Sprint S2 Detailed - Task 2.7](./tasks-v0.5.0-s2-detailed.md#task-27-update-security-documentation)
+
+- [ ] 2.8 Harden thread pool execution
+  - Goal: Use bounded CustomExecutor to prevent thread starvation
+  - Details: [Sprint S2 Detailed - Task 2.8](./tasks-v0.5.0-s2-detailed.md#task-28-harden-thread-pool-execution)
+
+- [ ] 2.9 Protect metrics cardinality
+  - Goal: Whitelist payload_types to prevent memory exhaustion DoS
+  - Details: [Sprint S2 Detailed - Task 2.9](./tasks-v0.5.0-s2-detailed.md#task-29-protect-metrics-cardinality)
 
 ### Definition of Done
 - [ ] Rate limiting: HTTP 429 after limit exceeded
@@ -246,12 +254,12 @@
 | Sprint | Tasks | Focus | Estimated Days |
 |--------|-------|-------|----------------|
 | S1 | 6 | Quick wins + Dependabot | 3-5 |
-| S2 | 7 | DoS prevention | 5-7 |
+| S2 | 9 | DoS prevention | 5-7 |
 | S3 | 8 | Replay attack + HTTPS + PRD Review | 4-6 |
 | S4 | 5 | Retry + Authorization | 3-5 |
 | S5 | 7 | Release prep | 2-3 |
 
-**Total**: 33 high-level tasks across 5 sprints
+**Total**: 35 high-level tasks across 5 sprints
 
 **PRD Review Checkpoints**: 1 (Sprint S3)
 
@@ -259,10 +267,10 @@
 
 ## Progress Tracking
 
-**Overall Progress**: 1/33 tasks completed (3.03%)
+**Overall Progress**: 7/35 tasks completed (20.00%)
 
 **Sprint Status**:
-- ✅ S1: 1/6 tasks (16.67%) - Authentication completed in PR #8
+- ✅ S1: 7/7 tasks (100%) - All tasks completed
 - ⏳ S2: 0/7 tasks (0%)
 - ⏳ S3: 0/8 tasks (0%) - **Includes PRD review checkpoint**
 - ⏳ S4: 0/5 tasks (0%)
@@ -272,7 +280,7 @@
 - Next review: End of Sprint S3
 - Questions to address: Q3 (HMAC signing decision)
 
-**Last Updated**: 2026-01-24
+**Last Updated**: 2026-01-25
 
 ---
 

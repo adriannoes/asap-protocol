@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Python dependencies (pip ecosystem)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security"
+    # Note: Security updates are automatic and independent of schedule.
+    # Version updates will be checked monthly to balance freshness with review overhead.
