@@ -103,11 +103,12 @@ class BoundedExecutor(Executor):
         # Try to acquire semaphore (non-blocking check)
         if not self._semaphore.acquire(blocking=False):
             # Pool is exhausted - record metric and raise error
-            active_threads = self.max_threads - self._semaphore._value
+            # We know the pool is full since acquire failed, so active_threads = max_threads
+            active_threads = self.max_threads
             metrics = get_metrics()
             metrics.increment_counter(
                 "asap_thread_pool_exhausted_total",
-                labels=None,
+                labels={},
                 value=1.0,
             )
 
