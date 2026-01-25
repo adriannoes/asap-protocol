@@ -58,6 +58,7 @@ from asap.observability import get_logger, get_metrics
 from asap.transport.middleware import (
     AuthenticationMiddleware,
     BearerTokenValidator,
+    SizeLimitMiddleware,
     limiter,
     rate_limit_handler,
 )
@@ -687,23 +688,24 @@ class ASAPRequestHandler:
             HTTPException: If request size exceeds maximum (413)
             ValueError: If JSON is invalid
         """
-        # Validate request size using Content-Length header if available
-        self._validate_request_size(request, self.max_request_size)
-
-        # Read body and validate actual size
+        # Read body in chunks and validate size incrementally to prevent OOM attacks
+        # Note: Content-Length header validation is handled by SizeLimitMiddleware
+        # This validates actual body size during streaming to prevent OOM attacks
         try:
-            body_bytes = await request.body()
-            # Validate actual body size
-            if len(body_bytes) > self.max_request_size:
-                logger.warning(
-                    "asap.request.size_exceeded",
-                    actual_size=len(body_bytes),
-                    max_size=self.max_request_size,
-                )
-                raise HTTPException(
-                    status_code=413,
-                    detail=f"Request size ({len(body_bytes)} bytes) exceeds maximum ({self.max_request_size} bytes)",
-                )
+            body_bytes = bytearray()
+            async for chunk in request.stream():
+                body_bytes.extend(chunk)
+                # Validate size after each chunk to abort early if limit exceeded
+                if len(body_bytes) > self.max_request_size:
+                    logger.warning(
+                        "asap.request.size_exceeded",
+                        actual_size=len(body_bytes),
+                        max_size=self.max_request_size,
+                    )
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"Request size ({len(body_bytes)} bytes) exceeds maximum ({self.max_request_size} bytes)",
+                    )
 
             # Parse JSON from bytes
             import json
@@ -911,6 +913,7 @@ def create_app(
             Required if manifest.auth is configured. Should return agent ID
             if token is valid, None otherwise.
         rate_limit: Optional rate limit string (e.g., "100/minute").
+            Rate limiting is IP-based (per client IP address) to prevent DoS attacks.
             Defaults to ASAP_RATE_LIMIT environment variable or "100/minute".
         max_request_size: Optional maximum request size in bytes.
             Defaults to ASAP_MAX_REQUEST_SIZE environment variable or 10MB.
@@ -1009,6 +1012,9 @@ def create_app(
         version=manifest.version,
     )
 
+    # Add size limit middleware (runs before routing)
+    app.add_middleware(SizeLimitMiddleware, max_size=max_request_size)
+
     # Configure rate limiting
     if rate_limit is None:
         rate_limit_str = os.getenv("ASAP_RATE_LIMIT", "100/minute")
@@ -1016,8 +1022,7 @@ def create_app(
         rate_limit_str = rate_limit
     app.state.limiter = limiter
     app.state.max_request_size = max_request_size
-    # Type ignore: rate_limit_handler signature matches what FastAPI expects
-    app.add_exception_handler(RateLimitExceeded, rate_limit_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
     logger.info(
         "asap.server.rate_limit_enabled",
         manifest_id=manifest.id,
