@@ -11,6 +11,8 @@ The ASAP protocol is designed with security as a foundational concern. This guid
 - **Authentication**: How agents verify identity
 - **Request Signing**: Cryptographic integrity for messages
 - **TLS/HTTPS**: Transport layer security requirements
+- **Rate Limiting**: Per-sender request rate controls
+- **Request Size Limits**: Protection against oversized payloads
 - **Threat Model**: Common attack vectors and mitigations
 
 ---
@@ -418,6 +420,316 @@ client = httpx.AsyncClient(
 
 ---
 
+## Rate Limiting
+
+Rate limiting protects ASAP agents from denial-of-service (DoS) attacks by limiting the number of requests per sender within a time window. The ASAP protocol server includes built-in rate limiting using per-sender tracking.
+
+### Default Configuration
+
+The default rate limit is **100 requests per minute** per sender. This can be configured via:
+
+- **Environment variable**: `ASAP_RATE_LIMIT` (e.g., `"200/minute"`, `"10/second"`)
+- **Application parameter**: `rate_limit` parameter in `create_app()`
+
+### Configuration
+
+```python
+from asap.transport.server import create_app
+from asap.models.entities import Manifest
+
+# Configure via environment variable
+# export ASAP_RATE_LIMIT="200/minute"
+
+# Or configure programmatically
+app = create_app(
+    manifest,
+    rate_limit="200/minute"  # 200 requests per minute per sender
+)
+```
+
+### Rate Limit Format
+
+The rate limit string follows the format: `<number>/<unit>` where unit can be:
+- `second` or `sec`
+- `minute` or `min`
+- `hour` or `hr`
+- `day`
+
+Examples:
+- `"100/minute"` - 100 requests per minute
+- `"10/second"` - 10 requests per second
+- `"1000/hour"` - 1000 requests per hour
+
+### How It Works
+
+1. **Sender Identification**: The rate limiter extracts the sender from the ASAP envelope (`envelope.sender`). If the envelope is not yet parsed, it falls back to the client IP address.
+
+2. **Per-Sender Tracking**: Each sender (agent URN or IP) has an independent rate limit counter.
+
+3. **Window-Based Limiting**: Uses a sliding window to track requests within the time period.
+
+4. **Automatic Rejection**: When the limit is exceeded, the server returns HTTP 429 (Too Many Requests) with a JSON-RPC error response.
+
+### Response Format
+
+When rate limit is exceeded, the server returns:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "request-id",
+  "error": {
+    "code": -32000,
+    "message": "Rate limit exceeded",
+    "data": {
+      "error": "Rate limit exceeded: 100 per 1 minute",
+      "retry_after": 45
+    }
+  }
+}
+```
+
+The response includes:
+- **HTTP Status**: 429 (Too Many Requests)
+- **Retry-After Header**: Number of seconds until the rate limit resets
+- **JSON-RPC Error**: Standard error format with rate limit details
+
+### Production Recommendations
+
+1. **Adjust Limits Based on Workload**: 
+   - High-throughput agents: `200-500/minute`
+   - Interactive agents: `50-100/minute`
+   - Resource-intensive agents: `10-50/minute`
+
+2. **Use Distributed Storage**: For multi-instance deployments, configure slowapi to use Redis:
+   ```python
+   from slowapi import Limiter
+   from slowapi.util import get_remote_address
+   import redis
+   
+   redis_client = redis.Redis(host='localhost', port=6379, db=0)
+   limiter = Limiter(
+       key_func=_get_sender_from_envelope,
+       storage_uri="redis://localhost:6379"
+   )
+   ```
+
+3. **Monitor Rate Limit Hits**: Track `asap_rate_limit_exceeded_total` metric to identify potential attacks or legitimate traffic spikes.
+
+4. **Implement Graduated Responses**: Consider implementing different limits for different sender types (trusted vs. untrusted).
+
+### Example: Custom Rate Limit Configuration
+
+```python
+import os
+from asap.transport.server import create_app
+
+# Read from environment or use default
+rate_limit = os.getenv("ASAP_RATE_LIMIT", "100/minute")
+
+app = create_app(
+    manifest,
+    rate_limit=rate_limit
+)
+```
+
+### Testing Rate Limits
+
+To test rate limiting behavior:
+
+```python
+import asyncio
+import httpx
+
+async def test_rate_limit():
+    """Test that rate limiting rejects excessive requests."""
+    async with httpx.AsyncClient() as client:
+        # Send 101 requests rapidly
+        for i in range(101):
+            response = await client.post(
+                "http://localhost:8000/asap",
+                json={
+                    "jsonrpc": "2.0",
+                    "method": "asap.send",
+                    "params": {
+                        "envelope": {
+                            "asap_version": "0.1",
+                            "sender": "urn:asap:agent:test-client",
+                            "recipient": "urn:asap:agent:server",
+                            "payload_type": "task.request",
+                            "payload": {"test": "data"}
+                        }
+                    },
+                    "id": f"test-{i}"
+                }
+            )
+            
+            if i < 100:
+                assert response.status_code == 200
+            else:
+                assert response.status_code == 429
+                assert "Rate limit exceeded" in response.json()["error"]["message"]
+
+asyncio.run(test_rate_limit())
+```
+
+---
+
+## Request Size Limits
+
+Request size limits protect agents from memory exhaustion attacks by rejecting oversized payloads before they are fully processed. The ASAP protocol server enforces a maximum request size to prevent DoS attacks.
+
+### Default Configuration
+
+The default maximum request size is **10MB (10,485,760 bytes)**. This can be configured via:
+
+- **Environment variable**: `ASAP_MAX_REQUEST_SIZE` (in bytes, e.g., `"5242880"` for 5MB)
+- **Application parameter**: `max_request_size` parameter in `create_app()`
+
+### Configuration
+
+```python
+from asap.transport.server import create_app
+from asap.models.constants import MAX_REQUEST_SIZE
+
+# Use default (10MB)
+app = create_app(manifest)
+
+# Configure via environment variable
+# export ASAP_MAX_REQUEST_SIZE="5242880"  # 5MB
+
+# Or configure programmatically
+app = create_app(
+    manifest,
+    max_request_size=5 * 1024 * 1024  # 5MB in bytes
+)
+```
+
+### How It Works
+
+The server validates request size in two stages:
+
+1. **Content-Length Header Check**: If the `Content-Length` header is present, the server checks it before reading the request body. This allows early rejection without consuming bandwidth.
+
+2. **Actual Body Size Check**: After reading the request body, the server validates the actual size. This catches cases where the `Content-Length` header is missing or incorrect.
+
+### Error Response
+
+When a request exceeds the size limit, the server returns:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "request-id",
+  "error": {
+    "code": -32000,
+    "message": "Request too large",
+    "data": {
+      "error": "Request size (15728640 bytes) exceeds maximum (10485760 bytes)"
+    }
+  }
+}
+```
+
+The response includes:
+- **HTTP Status**: 413 (Payload Too Large)
+- **JSON-RPC Error**: Standard error format with size details
+
+### Rationale
+
+The 10MB default limit balances:
+- **Functionality**: Allows large payloads for legitimate use cases (file uploads, batch operations)
+- **Security**: Prevents memory exhaustion from malicious oversized requests
+- **Performance**: Enables early rejection before full request processing
+
+### Production Recommendations
+
+1. **Adjust Based on Use Case**:
+   - File processing agents: `50-100MB`
+   - API gateway agents: `1-5MB`
+   - Real-time agents: `1MB or less`
+
+2. **Configure at Multiple Layers**:
+   - **ASGI Server**: Set `--limit-max-requests` in uvicorn/gunicorn
+   - **Reverse Proxy**: Configure nginx/traefik with `client_max_body_size`
+   - **Application**: Use `max_request_size` parameter
+
+3. **Monitor Size Violations**: Track rejected requests to identify potential attacks or legitimate needs for larger limits.
+
+### Example: Multi-Layer Size Protection
+
+```python
+# Application level (ASAP server)
+app = create_app(
+    manifest,
+    max_request_size=10 * 1024 * 1024  # 10MB
+)
+
+# Run with uvicorn size limit
+# uvicorn app:app --limit-max-requests 10485760  # 10MB
+```
+
+```nginx
+# nginx configuration
+http {
+    client_max_body_size 10M;
+    
+    server {
+        location /asap {
+            proxy_pass http://localhost:8000;
+        }
+    }
+}
+```
+
+### Testing Size Limits
+
+To test size limit enforcement:
+
+```python
+import httpx
+
+def test_size_limit():
+    """Test that oversized requests are rejected."""
+    # Create a payload that exceeds 10MB
+    large_payload = {"data": "x" * (11 * 1024 * 1024)}  # 11MB
+    
+    envelope = {
+        "asap_version": "0.1",
+        "sender": "urn:asap:agent:client",
+        "recipient": "urn:asap:agent:server",
+        "payload_type": "task.request",
+        "payload": large_payload
+    }
+    
+    rpc_request = {
+        "jsonrpc": "2.0",
+        "method": "asap.send",
+        "params": {"envelope": envelope},
+        "id": "test-1"
+    }
+    
+    # Serialize to JSON
+    import json
+    request_json = json.dumps(rpc_request)
+    request_bytes = request_json.encode("utf-8")
+    
+    # Send with Content-Length header
+    response = httpx.post(
+        "http://localhost:8000/asap",
+        content=request_bytes,
+        headers={
+            "Content-Type": "application/json",
+            "Content-Length": str(len(request_bytes))
+        }
+    )
+    
+    assert response.status_code == 413
+    assert "exceeds maximum" in response.json()["error"]["data"]["error"]
+```
+
+---
+
 ## Threat Model
 
 ### Attack Vectors and Mitigations
@@ -457,34 +769,30 @@ def is_request_valid(envelope: Envelope, max_age_seconds: int = 300) -> bool:
 
 ### Rate Limiting
 
-Implement rate limiting to prevent DoS attacks:
+The ASAP protocol server includes built-in rate limiting (see [Rate Limiting](#rate-limiting) section above). For custom implementations, you can integrate with external rate limiting services:
 
 ```python
+# Example: Custom rate limiting middleware
 from fastapi import Request, HTTPException
-from collections import defaultdict
-import time
+import redis
 
-# Simple in-memory rate limiter (use Redis for production)
-request_counts: dict[str, list[float]] = defaultdict(list)
-RATE_LIMIT = 100  # requests per minute
-WINDOW = 60  # seconds
+redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
-async def rate_limit(request: Request):
-    """Rate limit requests by sender."""
-    sender = request.headers.get("X-ASAP-Sender", request.client.host)
-    now = time.time()
+async def custom_rate_limit(request: Request):
+    """Custom rate limiting using Redis."""
+    sender = _get_sender_from_envelope(request)
+    key = f"rate_limit:{sender}"
     
-    # Clean old requests
-    request_counts[sender] = [
-        t for t in request_counts[sender] 
-        if now - t < WINDOW
-    ]
+    # Use Redis INCR with expiration
+    count = redis_client.incr(key)
+    if count == 1:
+        redis_client.expire(key, 60)  # 60 second window
     
-    if len(request_counts[sender]) >= RATE_LIMIT:
+    if count > 100:  # 100 requests per minute
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
-    
-    request_counts[sender].append(now)
 ```
+
+For most use cases, the built-in rate limiting is recommended (see [Rate Limiting](#rate-limiting) section).
 
 ### Input Validation
 
@@ -515,7 +823,8 @@ def validate_payload(envelope: Envelope) -> TaskRequest:
 - [ ] Valid SSL certificates (not self-signed)
 - [ ] HSTS headers configured
 - [ ] Authentication required for all endpoints
-- [ ] Rate limiting enabled
+- [ ] Rate limiting enabled and configured appropriately
+- [ ] Request size limits configured (default: 10MB)
 - [ ] Request signing implemented
 - [ ] Audit logging enabled
 - [ ] Secrets stored in environment variables
