@@ -33,6 +33,7 @@ Example:
 """
 
 import hashlib
+import uuid
 from typing import Callable, Protocol
 from collections.abc import Sequence
 
@@ -133,10 +134,12 @@ def create_test_limiter(limits: Sequence[str] | None = None) -> Limiter:
     if limits is None:
         limits = ["100000/minute"]  # Very high limit for testing
 
+    # Use unique storage URI to ensure complete isolation between test instances
+    unique_storage_id = str(uuid.uuid4())
     return Limiter(
         key_func=_get_sender_from_envelope,
         default_limits=list(limits),
-        storage_uri="memory://",  # Each instance gets its own memory storage
+        storage_uri=f"memory://{unique_storage_id}",  # Each instance gets its own memory storage
     )
 
 

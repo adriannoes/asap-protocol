@@ -1070,7 +1070,7 @@ def create_app(
         )
 
     @app.post("/asap")
-    @limiter.limit(rate_limit_str)
+    @limiter.limit(rate_limit_str)  # slowapi uses app.state.limiter at runtime
     async def handle_asap_message(request: Request) -> JSONResponse:
         """Handle ASAP messages wrapped in JSON-RPC 2.0.
 

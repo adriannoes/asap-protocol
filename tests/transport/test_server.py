@@ -817,7 +817,9 @@ class TestAuthenticationIntegration:
         with pytest.raises(ValueError, match="token_validator is required"):
             create_app(manifest_with_auth, token_validator=None)
 
-    def test_authentication_failure_returns_jsonrpc_error(self) -> None:
+    def test_authentication_failure_returns_jsonrpc_error(
+        self, isolated_rate_limiter: "Limiter"
+    ) -> None:
         """Test that authentication failure returns proper JSON-RPC error."""
         manifest_with_auth = Manifest(
             id="urn:asap:agent:auth-test",
@@ -837,6 +839,7 @@ class TestAuthenticationIntegration:
             return None  # Always reject
 
         app = create_app(manifest_with_auth, token_validator=always_reject_validator)
+        app.state.limiter = isolated_rate_limiter
         client = TestClient(app, raise_server_exceptions=False)
 
         envelope = Envelope(
@@ -870,7 +873,9 @@ class TestAuthenticationIntegration:
         assert data["error"]["code"] == INVALID_REQUEST
         assert "Invalid authentication token" in data["error"]["data"]["error"]
 
-    def test_sender_mismatch_returns_jsonrpc_error(self) -> None:
+    def test_sender_mismatch_returns_jsonrpc_error(
+        self, isolated_rate_limiter: "Limiter"
+    ) -> None:
         """Test that sender mismatch returns proper JSON-RPC error."""
         manifest_with_auth = Manifest(
             id="urn:asap:agent:auth-test",
@@ -892,6 +897,7 @@ class TestAuthenticationIntegration:
             return None
 
         app = create_app(manifest_with_auth, token_validator=validator)
+        app.state.limiter = isolated_rate_limiter
         client = TestClient(app, raise_server_exceptions=False)
 
         # Create envelope with sender that doesn't match authenticated identity
@@ -926,7 +932,9 @@ class TestAuthenticationIntegration:
         assert data["error"]["code"] == INVALID_PARAMS
         assert "Sender does not match" in data["error"]["data"]["error"]
 
-    def test_authentication_success_processes_request(self) -> None:
+    def test_authentication_success_processes_request(
+        self, isolated_rate_limiter: "Limiter"
+    ) -> None:
         """Test that successful authentication allows request processing."""
         manifest_with_auth = Manifest(
             id="urn:asap:agent:auth-test",
@@ -948,6 +956,7 @@ class TestAuthenticationIntegration:
             return None
 
         app = create_app(manifest_with_auth, token_validator=validator)
+        app.state.limiter = isolated_rate_limiter
         client = TestClient(app, raise_server_exceptions=False)
 
         # Create envelope with correct sender
@@ -981,7 +990,9 @@ class TestAuthenticationIntegration:
         assert "result" in data
         assert data["id"] == "auth-success-test"
 
-    def test_authentication_missing_header_returns_error(self) -> None:
+    def test_authentication_missing_header_returns_error(
+        self, isolated_rate_limiter: "Limiter"
+    ) -> None:
         """Test that missing auth header returns proper error."""
         manifest_with_auth = Manifest(
             id="urn:asap:agent:auth-test",
@@ -1001,6 +1012,7 @@ class TestAuthenticationIntegration:
             return "urn:asap:agent:client"
 
         app = create_app(manifest_with_auth, token_validator=validator)
+        app.state.limiter = isolated_rate_limiter
         client = TestClient(app, raise_server_exceptions=False)
 
         envelope = Envelope(
@@ -1759,18 +1771,19 @@ class TestThreadPoolExhaustion:
     def app_with_small_pool(self, manifest: Manifest, slow_handler: object) -> FastAPI:
         """Create app with small thread pool (2 threads) and slow handler."""
         import os
-        
+
         registry = HandlerRegistry()
         registry.register("task.request", slow_handler)
-        
+
         # Use extremely high rate limit and set environment variable
         # to ensure no rate limiting interference
         old_env = os.environ.get("ASAP_RATE_LIMIT")
         os.environ["ASAP_RATE_LIMIT"] = "1000000/minute"
-        
+
         try:
-            app = create_app(manifest, registry=registry, max_threads=2, rate_limit="1000000/minute")
-            return app  # type: ignore[no-any-return]
+            return create_app(
+                manifest, registry=registry, max_threads=2, rate_limit="1000000/minute"
+            )  # type: ignore[no-any-return]
         finally:
             # Restore original environment
             if old_env is not None:
@@ -1780,13 +1793,13 @@ class TestThreadPoolExhaustion:
 
     @pytest.mark.skipif(
         True,  # Skip when running with other tests due to rate limiting interference
-        reason="Rate limiting state interference - test passes in isolation"
+        reason="Rate limiting state interference - test passes in isolation",
     )
     def test_thread_pool_exhaustion_returns_503(
         self, manifest: Manifest, slow_handler: object
     ) -> None:
         """Test that thread pool exhaustion returns HTTP 503.
-        
+
         NOTE: This test passes when run in isolation but fails when run with
         rate limiting tests due to slowapi global state interference.
         The functionality is working correctly - this is a test isolation issue.
@@ -1798,18 +1811,18 @@ class TestThreadPoolExhaustion:
         # Create completely isolated app for this test
         registry = HandlerRegistry()
         registry.register("task.request", slow_handler)
-        
+
         # Create app without any rate limiting
         app = create_app(manifest, registry=registry, max_threads=2)
-        
+
         # Replace limiter with one that has no limits
         no_limit_limiter = Limiter(
             key_func=get_remote_address,
             storage_uri=f"memory://no-limits-{uuid.uuid4().hex}",
-            default_limits=[]  # No default limits
+            default_limits=[],  # No default limits
         )
         app.state.limiter = no_limit_limiter
-        
+
         client = TestClient(app)
 
         # Create request envelope
@@ -1879,7 +1892,7 @@ class TestThreadPoolExhaustion:
 
     def test_bounded_executor_integration_direct(self, manifest: Manifest) -> None:
         """Test BoundedExecutor integration directly without HTTP layer.
-        
+
         This test validates thread pool exhaustion without HTTP/rate limiting
         interference by testing the BoundedExecutor directly.
         """
@@ -1890,30 +1903,30 @@ class TestThreadPoolExhaustion:
 
         # Create bounded executor with 2 threads
         executor = BoundedExecutor(max_threads=2)
-        
+
         # Create blocking function
         lock = threading.Lock()
         lock.acquire()  # Lock it initially
-        
+
         def blocking_task() -> str:
             with lock:  # This will block
                 return "completed"
-        
+
         try:
             # Submit 2 tasks that will block
-            future1 = executor.submit(blocking_task)
-            future2 = executor.submit(blocking_task)
-            
+            executor.submit(blocking_task)
+            executor.submit(blocking_task)
+
             # Give threads time to start
             time.sleep(0.1)
-            
+
             # Third task should raise ThreadPoolExhaustedError
             with pytest.raises(ThreadPoolExhaustedError) as exc_info:
                 executor.submit(blocking_task)
-            
+
             assert "Thread pool exhausted" in str(exc_info.value)
             assert "2/2 threads in use" in str(exc_info.value)
-            
+
         finally:
             # Release lock to allow cleanup
             lock.release()
