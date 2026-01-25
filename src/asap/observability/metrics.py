@@ -155,6 +155,7 @@ class MetricsCollector:
         "asap_requests_total": "Total number of ASAP requests received",
         "asap_requests_success_total": "Total number of successful ASAP requests",
         "asap_requests_error_total": "Total number of failed ASAP requests",
+        "asap_thread_pool_exhausted_total": "Total number of thread pool exhaustion events",
     }
 
     DEFAULT_HISTOGRAMS: ClassVar[dict[str, str]] = {

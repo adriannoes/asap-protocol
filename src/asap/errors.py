@@ -148,3 +148,45 @@ class TaskAlreadyCompletedError(ASAPError):
         )
         self.task_id = task_id
         self.current_status = current_status
+
+
+class ThreadPoolExhaustedError(ASAPError):
+    """Raised when the thread pool is exhausted and cannot accept new tasks.
+
+    This error occurs when attempting to submit a synchronous handler
+    to a bounded thread pool that has reached its maximum capacity.
+    This prevents DoS attacks by limiting resource consumption.
+
+    Attributes:
+        max_threads: Maximum number of threads in the pool
+        active_threads: Current number of active threads
+    """
+
+    def __init__(
+        self,
+        max_threads: int,
+        active_threads: int,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        """Initialize thread pool exhausted error.
+
+        Args:
+            max_threads: Maximum number of threads in the pool
+            active_threads: Current number of active threads
+            details: Optional additional context
+        """
+        message = (
+            f"Thread pool exhausted: {active_threads}/{max_threads} threads in use. "
+            "Service temporarily unavailable."
+        )
+        super().__init__(
+            code="asap:transport/thread_pool_exhausted",
+            message=message,
+            details={
+                "max_threads": max_threads,
+                "active_threads": active_threads,
+                **(details or {}),
+            },
+        )
+        self.max_threads = max_threads
+        self.active_threads = active_threads
