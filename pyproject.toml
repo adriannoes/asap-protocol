@@ -66,6 +66,13 @@ packages = ["src/asap"]
 [tool.ruff]
 target-version = "py313"
 line-length = 100
+exclude = [
+    ".cursor/**",
+    ".venv/**",
+    "venv/**",
+    "__pycache__/**",
+    "*.egg-info/**",
+]
 
 [tool.ruff.lint]
 select = [

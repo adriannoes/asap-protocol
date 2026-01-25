@@ -1483,12 +1483,12 @@ class TestASAPRequestHandlerHelpers:
         from unittest.mock import AsyncMock, patch
 
         request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
-        request.json = AsyncMock(return_value={"jsonrpc": "2.0", "method": "asap.send", "params": {}})  # type: ignore[method-assign]
+        request.json = AsyncMock(
+            return_value={"jsonrpc": "2.0", "method": "asap.send", "params": {}}
+        )  # type: ignore[method-assign]
 
         # Mock validate_jsonrpc_request to return (None, None) - edge case
-        with patch.object(
-            handler, "validate_jsonrpc_request", return_value=(None, None)
-        ):
+        with patch.object(handler, "validate_jsonrpc_request", return_value=(None, None)):
             result = await handler._parse_and_validate_request(request)
 
         rpc_request, error = result
