@@ -10,6 +10,9 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+if TYPE_CHECKING:
+    from slowapi import Limiter
+
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
@@ -44,9 +47,12 @@ def test_manifest() -> Manifest:
 
 
 @pytest.fixture
-def test_app(test_manifest: Manifest) -> TestClient:
+def test_app(test_manifest: Manifest, isolated_rate_limiter: "Limiter") -> TestClient:
     """Create a test client with the ASAP app."""
-    app = create_app(test_manifest)
+    # Use very high rate limit to avoid rate limiting in tests
+    app = create_app(test_manifest, rate_limit="100000/minute")
+    # Replace with isolated limiter to avoid test interference
+    app.state.limiter = isolated_rate_limiter
     return TestClient(app)
 
 
