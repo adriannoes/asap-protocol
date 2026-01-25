@@ -573,7 +573,9 @@ class SizeLimitMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.max_size = max_size
 
-    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Any]]) -> Any:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Any]]
+    ) -> Any:
         """Process request and validate size before routing.
 
         Args:
@@ -597,7 +599,9 @@ class SizeLimitMiddleware(BaseHTTPMiddleware):
                     # Return JSON response directly (middleware runs before route handlers)
                     return JSONResponse(
                         status_code=413,
-                        content={"detail": f"Request size ({size} bytes) exceeds maximum ({self.max_size} bytes)"},
+                        content={
+                            "detail": f"Request size ({size} bytes) exceeds maximum ({self.max_size} bytes)"
+                        },
                     )
             except ValueError:
                 # Invalid Content-Length header, let route handler validate actual body size
