@@ -27,30 +27,30 @@
   - Status: Completed in [PR #8](https://github.com/adriannoes/asap-protocol/pull/8)
   - Includes: Bearer token auth, middleware, sender verification, tests
 
-- [ ] 1.2 Remove `type: ignore` in handlers.py
+- [x] 1.2 Remove `type: ignore` in handlers.py ✅
   - Issue: [#10](https://github.com/adriannoes/asap-protocol/issues/10)
   - Goal: Eliminate type suppressions, achieve full mypy strict compliance
   - Details: [Sprint S1 Detailed - Task 1.1](./tasks-v0.5.0-s1-detailed.md#task-11-remove-type-ignore-in-handlerspy)
 
-- [ ] 1.3 Refactor `handle_message` into smaller helpers
+- [x] 1.3 Refactor `handle_message` into smaller helpers ✅
   - Issue: [#9](https://github.com/adriannoes/asap-protocol/issues/9)
   - Goal: Break down monolithic function into testable helpers (<20 lines)
   - Details: [Sprint S1 Detailed - Task 1.2](./tasks-v0.5.0-s1-detailed.md#task-12-refactor-handle_message-into-smaller-helpers)
 
-- [ ] 1.4 Upgrade FastAPI to 0.128.0+
+- [x] 1.4 Upgrade FastAPI to 0.128.0+ ✅
   - Issue: [#7](https://github.com/adriannoes/asap-protocol/issues/7)
   - Goal: Update from 0.124 to ≥0.128.0, verify compatibility
   - Details: [Sprint S1 Detailed - Task 1.3](./tasks-v0.5.0-s1-detailed.md#task-13-upgrade-fastapi-to-01280)
 
-- [ ] 1.5 Configure Dependabot for security monitoring
-  - Goal: Daily security update checks, automated PRs
+- [x] 1.5 Configure Dependabot for security monitoring ✅
+  - Goal: Monthly security update checks, automated PRs
   - Details: [Sprint S1 Detailed - Task 1.4](./tasks-v0.5.0-s1-detailed.md#task-14-configure-dependabot)
 
-- [ ] 1.6 Document dependency update process
+- [x] 1.6 Document dependency update process ✅
   - Goal: Update CONTRIBUTING.md and SECURITY.md with review workflow
   - Details: [Sprint S1 Detailed - Task 1.5](./tasks-v0.5.0-s1-detailed.md#task-15-document-dependency-process)
 
-- [ ] 1.7 Verify CI integration
+- [x] 1.7 Verify CI integration ✅
   - Goal: Ensure pip-audit runs on all PRs
   - Details: [Sprint S1 Detailed - Task 1.6](./tasks-v0.5.0-s1-detailed.md#task-16-verify-ci-integration)
 
@@ -259,10 +259,10 @@
 
 ## Progress Tracking
 
-**Overall Progress**: 1/33 tasks completed (3.03%)
+**Overall Progress**: 7/33 tasks completed (21.21%)
 
 **Sprint Status**:
-- ✅ S1: 1/6 tasks (16.67%) - Authentication completed in PR #8
+- ✅ S1: 7/7 tasks (100%) - All tasks completed
 - ⏳ S2: 0/7 tasks (0%)
 - ⏳ S3: 0/8 tasks (0%) - **Includes PRD review checkpoint**
 - ⏳ S4: 0/5 tasks (0%)
@@ -272,7 +272,7 @@
 - Next review: End of Sprint S3
 - Questions to address: Q3 (HMAC signing decision)
 
-**Last Updated**: 2026-01-24
+**Last Updated**: 2026-01-25
 
 ---
 
