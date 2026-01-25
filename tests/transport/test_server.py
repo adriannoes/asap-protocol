@@ -873,9 +873,7 @@ class TestAuthenticationIntegration:
         assert data["error"]["code"] == INVALID_REQUEST
         assert "Invalid authentication token" in data["error"]["data"]["error"]
 
-    def test_sender_mismatch_returns_jsonrpc_error(
-        self, isolated_rate_limiter: "Limiter"
-    ) -> None:
+    def test_sender_mismatch_returns_jsonrpc_error(self, isolated_rate_limiter: "Limiter") -> None:
         """Test that sender mismatch returns proper JSON-RPC error."""
         manifest_with_auth = Manifest(
             id="urn:asap:agent:auth-test",
