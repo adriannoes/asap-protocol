@@ -604,8 +604,7 @@ class SizeLimitMiddleware(BaseHTTPMiddleware):
                 pass
 
         # Continue to next middleware or route handler
-        response = await call_next(request)
-        return response
+        return await call_next(request)
 
 
 # Export rate limiting components
