@@ -190,18 +190,70 @@
 
 ---
 
-## Task 2.8: Mark Sprint S2 Complete
 
-- [ ] 2.8.1 Update roadmap progress
+---
+
+## Task 2.8: Harden Thread Pool Execution
+
+- [ ] 2.8.1 Create bounded executor class
+  - File: `src/asap/transport/executors.py`
+  - Class: `BoundedExecutor`
+  - Implementation: Semaphore-bounded pool or Queue-bounded wrapper
+  - Limit: Configurable, default `min(32, os.cpu_count() + 4)`
+
+- [ ] 2.8.2 Implement queue depth rejection
+  - Rejection: Raise `ThreadPoolExhaustedError` (503 Service Unavailable)
+  - Metrics: `asap_thread_pool_exhausted_total`
+
+- [ ] 2.8.3 Integrate with HandlerRegistry
+  - Update: `dispatch_async` using `loop.run_in_executor(bounded_pool, ...)`
+  - Parameter: `max_threads` in `create_app`
+
+- [ ] 2.8.4 Add starvation test
+  - Test: Submit N+1 slow sync tasks
+  - Result: N tasks run, 1 rejected/queued (depending on strategy)
+
+- [ ] 2.8.5 Commit
+  - Command: `git commit -m "feat(transport): limit thread pool size"`
+
+**Acceptance**: Sync handlers cannot consume infinite threads
+
+---
+
+## Task 2.9: Protect Metrics Cardinality
+
+- [ ] 2.9.1 Implement payload type whitelist logic
+  - Logic: Only record specific metric labels for registered handlers
+  - Fallback: Use `payload_type="other"` for unknowns
+
+- [ ] 2.9.2 Update server metrics recording
+  - File: `src/asap/transport/server.py`
+  - Method: `record_error_metrics`, `_build_success_response`
+  - Check: `registry.has_handler(payload_type)`
+
+- [ ] 2.9.3 Add DoS test case
+  - Test: Send 1000 requests with random `payload_type` (UUIDs)
+  - Assert: Prometheus labels count << 1000 (should be constant)
+
+- [ ] 2.9.4 Commit
+  - Command: `git commit -m "security(observability): protect metrics cardinality"`
+
+**Acceptance**: Infinite unique payload types do not explode memory
+
+---
+
+## Task 2.10: Mark Sprint S2 Complete
+
+- [ ] 2.10.1 Update roadmap progress
   - Open: `tasks-v0.5.0-roadmap.md`
-  - Mark: Tasks 2.1-2.7 as complete `[x]`
-  - Update: S2 progress to 7/7 (100%)
+  - Mark: Tasks 2.1-2.9 as complete `[x]`
+  - Update: S2 progress to 9/9 (100%)
 
-- [ ] 2.8.2 Update this detailed file
+- [ ] 2.10.2 Update this detailed file
   - Mark: All sub-tasks as complete `[x]`
   - Add: Completion date
 
-- [ ] 2.8.3 Verify DoD checklist
+- [ ] 2.10.3 Verify DoD checklist
   - Confirm: All acceptance criteria met
 
 **Acceptance**: Both files complete, DoD verified
@@ -209,7 +261,8 @@
 ---
 
 **Sprint S2 Definition of Done**:
-- [ ] All tasks 2.1-2.8 completed
+- [ ] All tasks 2.1-2.10 completed
+
 - [ ] Rate limiting: HTTP 429 works
 - [ ] Size validation: 10MB enforced
 - [ ] Test coverage >95%

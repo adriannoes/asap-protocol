@@ -100,6 +100,14 @@
   - Goal: Document rate limiting and size limits in docs/security.md
   - Details: [Sprint S2 Detailed - Task 2.7](./tasks-v0.5.0-s2-detailed.md#task-27-update-security-documentation)
 
+- [ ] 2.8 Harden thread pool execution
+  - Goal: Use bounded CustomExecutor to prevent thread starvation
+  - Details: [Sprint S2 Detailed - Task 2.8](./tasks-v0.5.0-s2-detailed.md#task-28-harden-thread-pool-execution)
+
+- [ ] 2.9 Protect metrics cardinality
+  - Goal: Whitelist payload_types to prevent memory exhaustion DoS
+  - Details: [Sprint S2 Detailed - Task 2.9](./tasks-v0.5.0-s2-detailed.md#task-29-protect-metrics-cardinality)
+
 ### Definition of Done
 - [ ] Rate limiting: HTTP 429 after limit exceeded
 - [ ] Request size validation: 10MB limit enforced
@@ -246,12 +254,12 @@
 | Sprint | Tasks | Focus | Estimated Days |
 |--------|-------|-------|----------------|
 | S1 | 6 | Quick wins + Dependabot | 3-5 |
-| S2 | 7 | DoS prevention | 5-7 |
+| S2 | 9 | DoS prevention | 5-7 |
 | S3 | 8 | Replay attack + HTTPS + PRD Review | 4-6 |
 | S4 | 5 | Retry + Authorization | 3-5 |
 | S5 | 7 | Release prep | 2-3 |
 
-**Total**: 33 high-level tasks across 5 sprints
+**Total**: 35 high-level tasks across 5 sprints
 
 **PRD Review Checkpoints**: 1 (Sprint S3)
 
@@ -259,7 +267,7 @@
 
 ## Progress Tracking
 
-**Overall Progress**: 7/33 tasks completed (21.21%)
+**Overall Progress**: 7/35 tasks completed (20.00%)
 
 **Sprint Status**:
 - ✅ S1: 7/7 tasks (100%) - All tasks completed
