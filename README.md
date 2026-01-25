@@ -32,6 +32,7 @@ Building multi-agent systems today suffers from three core technical challenges 
 - **Observable Chains**: First-class support for `trace_id` and `correlation_id` to debug complex multi-agent delegation.
 - **MCP Integration**: Uses the Model Context Protocol (MCP) as a tool-execution substrate, wrapped in a high-level coordination envelope.
 - **Async-Native**: Engineered from the ground up for high-concurrency environments using `asyncio` and `httpx`. Supports both sync and async handlers with automatic event loop management.
+- **DoS Protection**: Built-in rate limiting (100 req/min), request size limits (10MB), and thread pool bounds to prevent resource exhaustion attacks.
 
 💡 **Performance Note**: Pure Python codebase leveraging Rust-accelerated dependencies (`pydantic-core`, `orjson`, `python-ulid`) for native-level performance without build complexity.
 
@@ -201,6 +202,28 @@ async def my_async_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
 
 registry.register("task.request", my_async_handler)  # Works with both!
 ```
+
+### Security & DoS Protection
+
+ASAP includes built-in protection against common attack vectors:
+
+```python
+from asap.transport.server import create_app
+
+app = create_app(
+    manifest,
+    rate_limit="50/minute",        # Per-sender rate limiting
+    max_request_size=5_000_000,    # 5MB request size limit  
+    max_threads=16,                # Thread pool bounds
+)
+```
+
+**Environment Variables**:
+- `ASAP_RATE_LIMIT`: Rate limit (default: "100/minute")
+- `ASAP_MAX_REQUEST_SIZE`: Max request size (default: 10MB)
+- `ASAP_MAX_THREADS`: Thread pool size (default: min(32, cpu_count + 4))
+
+See [Security Guide](docs/security.md) for production recommendations.
 
 ### Multi-Agent Flow
 

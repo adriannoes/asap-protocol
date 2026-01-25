@@ -1758,14 +1758,25 @@ class TestThreadPoolExhaustion:
     @pytest.fixture
     def app_with_small_pool(self, manifest: Manifest, slow_handler: object) -> FastAPI:
         """Create app with small thread pool (2 threads) and slow handler."""
-        from asap.transport.middleware import create_test_limiter
+        from slowapi import Limiter
+        from slowapi.util import get_remote_address
+        import uuid
 
         registry = HandlerRegistry()
         registry.register("task.request", slow_handler)
+        
         # Create app with very high rate limit
         app = create_app(manifest, registry=registry, max_threads=2, rate_limit="100000/minute")
-        # Use a completely isolated limiter with extremely high limits for this specific test
-        app.state.limiter = create_test_limiter(["1000000/minute"])
+        
+        # Create a completely unique limiter instance for this test
+        # Use a unique storage URI to ensure complete isolation
+        unique_storage = f"memory://test-{uuid.uuid4().hex}"
+        unique_limiter = Limiter(
+            key_func=get_remote_address,
+            storage_uri=unique_storage,
+            default_limits=["1000000/minute"]  # Extremely high limit
+        )
+        app.state.limiter = unique_limiter
         return app  # type: ignore[no-any-return]
 
     def test_thread_pool_exhaustion_returns_503(
