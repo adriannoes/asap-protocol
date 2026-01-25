@@ -43,7 +43,7 @@ Dependabot automatically creates pull requests for dependency updates. Here's ho
 
 1. **Security Updates**: Automatically created when vulnerabilities are detected
    - These are **high priority** and should be reviewed promptly
-   - See [Security Update Policy](../SECURITY.md#security-update-policy) for response time SLAs
+   - See [Security Update Policy](../SECURITY.md#security-update-policy) for target review times
 
 2. **Version Updates**: Created monthly for non-security dependency updates
    - These can be reviewed during regular maintenance windows
@@ -62,12 +62,15 @@ Dependabot automatically creates pull requests for dependency updates. Here's ho
 4. **Verify Compatibility**: Ensure the update doesn't break existing functionality
 5. **Merge**: If everything looks good, merge the PR
 
-### SLA Timelines
+### Target Review Times
 
-- **Critical Security**: Review within 24 hours
-- **High Security**: Review within 3 days
-- **Medium/Low Security**: Review within 7 days
-- **Version Updates**: Review within 14 days (monthly batch)
+These are target times for review, not strict commitments. As a solo maintainer, we aim to review updates within these windows:
+
+- **Critical Security**: Aim for 3-5 business days
+- **High Security**: Aim for 1-2 weeks
+- **Medium Security**: Aim for 2-3 weeks
+- **Low Security**: Aim for 1 month
+- **Version Updates**: Review within the next monthly batch (or within 1 month)
 
 ### When to Defer
 

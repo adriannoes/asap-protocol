@@ -53,14 +53,14 @@ Dependabot automatically creates pull requests for security updates when vulnera
 
 ### Response Times by Severity
 
-We commit to reviewing and merging security updates according to the following SLAs:
+We aim to review and merge security updates according to the following target times. These are goals, not strict commitments, as we are a solo-maintained project:
 
-| Severity | Response Time | Action |
-|----------|--------------|--------|
-| **Critical** | Within 24 hours | Immediate review and merge if CI passes |
-| **High** | Within 3 days | Priority review, merge after validation |
-| **Medium** | Within 7 days | Review during next maintenance window |
-| **Low** | Within 14 days | Review with regular version updates |
+| Severity | Target Review Time | Action |
+|----------|-------------------|--------|
+| **Critical** | 3-5 business days | Priority review and merge if CI passes |
+| **High** | 1-2 weeks | Priority review, merge after validation |
+| **Medium** | 2-3 weeks | Review during next maintenance window |
+| **Low** | 1 month | Review with regular version updates |
 
 ### Security Advisories
 
