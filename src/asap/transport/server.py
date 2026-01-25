@@ -166,6 +166,419 @@ class ASAPRequestHandler:
             {"payload_type": payload_type, "status": "error"},
         )
 
+    def _validate_envelope(
+        self,
+        rpc_request: JsonRpcRequest,
+        start_time: float,
+        metrics: MetricsCollector,
+    ) -> tuple[Envelope | None, JSONResponse | str]:
+        """Validate and extract envelope from JSON-RPC params.
+
+        Validates that params is a dict, extracts the envelope field,
+        and validates the envelope structure.
+
+        Args:
+            rpc_request: Validated JSON-RPC request
+            start_time: Request start time for duration calculation
+            metrics: Metrics collector for error tracking
+
+        Returns:
+            Tuple of (Envelope, payload_type) if valid, or (None, error_response) if invalid
+        """
+        # Validate params is a dict before accessing
+        if not isinstance(rpc_request.params, dict):
+            logger.warning(
+                "asap.request.invalid_params_type",
+                params_type=type(rpc_request.params).__name__,
+            )
+            error_response = self.build_error_response(
+                INVALID_PARAMS,
+                data={
+                    "error": "JSON-RPC 'params' must be an object",
+                    "received_type": type(rpc_request.params).__name__,
+                },
+                request_id=rpc_request.id,
+            )
+            self.record_error_metrics(
+                metrics, "unknown", "invalid_params", time.perf_counter() - start_time
+            )
+            return None, error_response
+
+        # Extract envelope from params
+        envelope_data = rpc_request.params.get("envelope")
+        if envelope_data is None:
+            logger.warning("asap.request.missing_envelope")
+            error_response = self.build_error_response(
+                INVALID_PARAMS,
+                data={"error": "Missing 'envelope' in params"},
+                request_id=rpc_request.id,
+            )
+            self.record_error_metrics(
+                metrics, "unknown", "missing_envelope", time.perf_counter() - start_time
+            )
+            return None, error_response
+
+        # Validate envelope structure
+        try:
+            envelope = Envelope(**envelope_data)
+            payload_type = envelope.payload_type
+            return envelope, payload_type
+        except ValidationError as e:
+            logger.warning(
+                "asap.request.invalid_envelope",
+                error="Invalid envelope structure",
+                validation_errors=str(e.errors()),
+            )
+            duration_seconds = time.perf_counter() - start_time
+            self.record_error_metrics(
+                metrics, "unknown", "invalid_envelope", duration_seconds
+            )
+            error_response = self.build_error_response(
+                INVALID_PARAMS,
+                data={
+                    "error": "Invalid envelope structure",
+                    "validation_errors": e.errors(),
+                },
+                request_id=rpc_request.id,
+            )
+            return None, error_response
+
+    async def _dispatch_to_handler(
+        self,
+        envelope: Envelope,
+        rpc_request: JsonRpcRequest,
+        start_time: float,
+        metrics: MetricsCollector,
+    ) -> tuple[Envelope | None, JSONResponse | str]:
+        """Dispatch envelope to registered handler.
+
+        Looks up and executes the handler for the envelope's payload type.
+        Handles HandlerNotFoundError and converts it to JSON-RPC error response.
+
+        Args:
+            envelope: Validated ASAP envelope
+            rpc_request: Original JSON-RPC request for ID
+            start_time: Request start time for duration calculation
+            metrics: Metrics collector for error tracking
+
+        Returns:
+            Tuple of (response_envelope, payload_type) if successful,
+            or (None, error_response) if handler not found
+        """
+        payload_type = envelope.payload_type
+        try:
+            response_envelope = await self.registry.dispatch_async(envelope, self.manifest)
+            return response_envelope, payload_type
+        except HandlerNotFoundError as e:
+            # No handler registered for this payload type
+            logger.warning(
+                "asap.request.handler_not_found",
+                payload_type=e.payload_type,
+                envelope_id=envelope.id,
+            )
+            # Record error metric
+            duration_seconds = time.perf_counter() - start_time
+            metrics.increment_counter(
+                "asap_requests_total",
+                {"payload_type": payload_type, "status": "error"},
+            )
+            metrics.increment_counter(
+                "asap_requests_error_total",
+                {"payload_type": payload_type, "error_type": "handler_not_found"},
+            )
+            metrics.observe_histogram(
+                "asap_request_duration_seconds",
+                duration_seconds,
+                {"payload_type": payload_type, "status": "error"},
+            )
+            handler_error = JsonRpcErrorResponse(
+                error=JsonRpcError.from_code(
+                    METHOD_NOT_FOUND,
+                    data={
+                        "payload_type": e.payload_type,
+                        "error": str(e),
+                    },
+                ),
+                id=rpc_request.id,
+            )
+            error_response = JSONResponse(
+                status_code=200,
+                content=handler_error.model_dump(),
+            )
+            return None, error_response
+
+    async def _authenticate_request(
+        self,
+        request: Request,
+        rpc_request: JsonRpcRequest,
+        start_time: float,
+        metrics: MetricsCollector,
+    ) -> tuple[str | None, JSONResponse | None]:
+        """Authenticate the request if authentication is enabled.
+
+        Args:
+            request: FastAPI request object
+            rpc_request: Validated JSON-RPC request
+            start_time: Request start time for duration calculation
+            metrics: Metrics collector for error tracking
+
+        Returns:
+            Tuple of (authenticated_agent_id, None) if successful or auth disabled,
+            or (None, error_response) if authentication failed
+        """
+        if self.auth_middleware is None:
+            return None, None
+
+        try:
+            authenticated_agent_id = await self.auth_middleware.verify_authentication(request)
+            return authenticated_agent_id, None
+        except HTTPException as e:
+            # Authentication failed - return JSON-RPC error
+            logger.warning(
+                "asap.request.auth_failed",
+                status_code=e.status_code,
+                detail=e.detail,
+            )
+            # Map HTTP status to JSON-RPC error code
+            error_code = INVALID_REQUEST if e.status_code == 401 else INVALID_PARAMS
+            error_response = self.build_error_response(
+                error_code,
+                data={"error": str(e.detail), "status_code": e.status_code},
+                request_id=rpc_request.id,
+            )
+            self.record_error_metrics(
+                metrics, "unknown", "auth_failed", time.perf_counter() - start_time
+            )
+            return None, error_response
+
+    def _verify_sender_matches_auth(
+        self,
+        authenticated_agent_id: str | None,
+        envelope: Envelope,
+        rpc_request: JsonRpcRequest,
+        start_time: float,
+        metrics: MetricsCollector,
+        payload_type: str,
+    ) -> JSONResponse | None:
+        """Verify that envelope sender matches authenticated identity.
+
+        Args:
+            authenticated_agent_id: Authenticated agent ID from auth middleware
+            envelope: Validated ASAP envelope
+            rpc_request: Original JSON-RPC request for ID
+            start_time: Request start time for duration calculation
+            metrics: Metrics collector for error tracking
+            payload_type: Payload type for metrics
+
+        Returns:
+            None if verification passes, or error_response if sender mismatch
+        """
+        if self.auth_middleware is None:
+            return None
+
+        try:
+            self.auth_middleware.verify_sender_matches_auth(
+                authenticated_agent_id, envelope.sender
+            )
+            return None
+        except HTTPException as e:
+            # Sender mismatch - return JSON-RPC error
+            logger.warning(
+                "asap.request.sender_mismatch",
+                authenticated_agent=authenticated_agent_id,
+                envelope_sender=envelope.sender,
+            )
+            error_response = self.build_error_response(
+                INVALID_PARAMS,
+                data={"error": str(e.detail), "status_code": e.status_code},
+                request_id=rpc_request.id,
+            )
+            duration_seconds = time.perf_counter() - start_time
+            self.record_error_metrics(
+                metrics, payload_type, "sender_mismatch", duration_seconds
+            )
+            return error_response
+
+    def _build_success_response(
+        self,
+        response_envelope: Envelope,
+        rpc_request: JsonRpcRequest,
+        payload_type: str,
+        start_time: float,
+        metrics: MetricsCollector,
+    ) -> JSONResponse:
+        """Build success response with metrics and logging.
+
+        Args:
+            response_envelope: Response envelope from handler
+            rpc_request: Original JSON-RPC request
+            payload_type: Payload type for metrics
+            start_time: Request start time for duration calculation
+            metrics: Metrics collector
+
+        Returns:
+            JSON-RPC success response
+        """
+        duration_seconds = time.perf_counter() - start_time
+        duration_ms = duration_seconds * 1000
+
+        # Record success metrics
+        metrics.increment_counter(
+            "asap_requests_total",
+            {"payload_type": payload_type, "status": "success"},
+        )
+        metrics.increment_counter(
+            "asap_requests_success_total",
+            {"payload_type": payload_type},
+        )
+        metrics.observe_histogram(
+            "asap_request_duration_seconds",
+            duration_seconds,
+            {"payload_type": payload_type, "status": "success"},
+        )
+
+        # Log successful processing
+        logger.info(
+            "asap.request.processed",
+            envelope_id=response_envelope.id,
+            response_id=response_envelope.id,
+            trace_id=response_envelope.trace_id,
+            payload_type=payload_type,
+            duration_ms=round(duration_ms, 2),
+        )
+
+        # Wrap response in JSON-RPC
+        rpc_response = JsonRpcResponse(
+            result={"envelope": response_envelope.model_dump(mode="json")},
+            id=rpc_request.id,
+        )
+
+        return JSONResponse(
+            status_code=200,
+            content=rpc_response.model_dump(),
+        )
+
+    def _handle_internal_error(
+        self,
+        error: Exception,
+        payload_type: str,
+        start_time: float,
+        metrics: MetricsCollector,
+    ) -> JSONResponse:
+        """Handle internal server errors with metrics and logging.
+
+        Args:
+            error: The exception that occurred
+            payload_type: Payload type for metrics
+            start_time: Request start time for duration calculation
+            metrics: Metrics collector
+
+        Returns:
+            JSON-RPC internal error response
+        """
+        duration_seconds = time.perf_counter() - start_time
+        duration_ms = duration_seconds * 1000
+
+        # Record error metrics
+        metrics.increment_counter(
+            "asap_requests_total",
+            {"payload_type": payload_type, "status": "error"},
+        )
+        metrics.increment_counter(
+            "asap_requests_error_total",
+            {"payload_type": payload_type, "error_type": "internal_error"},
+        )
+        metrics.observe_histogram(
+            "asap_request_duration_seconds",
+            duration_seconds,
+            {"payload_type": payload_type, "status": "error"},
+        )
+
+        # Log error
+        logger.exception(
+            "asap.request.error",
+            error=str(error),
+            error_type=type(error).__name__,
+            duration_ms=round(duration_ms, 2),
+        )
+
+        # Internal server error
+        internal_error = JsonRpcErrorResponse(
+            error=JsonRpcError.from_code(
+                INTERNAL_ERROR,
+                data={"error": str(error), "type": type(error).__name__},
+            ),
+            id=None,
+        )
+        return JSONResponse(
+            status_code=200,
+            content=internal_error.model_dump(),
+        )
+
+    async def _parse_and_validate_request(
+        self,
+        request: Request,
+        start_time: float,
+        metrics: MetricsCollector,
+    ) -> tuple[JsonRpcRequest | None, JSONResponse | None]:
+        """Parse JSON body and validate JSON-RPC request structure.
+
+        Args:
+            request: FastAPI request object
+            start_time: Request start time for duration calculation
+            metrics: Metrics collector for error tracking
+
+        Returns:
+            Tuple of (JsonRpcRequest, None) if valid, or (None, error_response) if invalid
+        """
+        # Parse JSON body
+        try:
+            body = await self.parse_json_body(request)
+        except ValueError as e:
+            # Invalid JSON - return parse error
+            error_response = self.build_error_response(
+                PARSE_ERROR,
+                data={"error": str(e)},
+                request_id=None,
+            )
+            self.record_error_metrics(metrics, "unknown", "parse_error", 0.0)
+            return None, error_response
+
+        # Validate body is a dict (JSON-RPC requires object at root)
+        if not isinstance(body, dict):
+            error_response = self.build_error_response(
+                INVALID_REQUEST,
+                data={
+                    "error": "JSON-RPC request must be an object",
+                    "received_type": type(body).__name__,
+                },
+                request_id=None,
+            )
+            self.record_error_metrics(metrics, "unknown", "invalid_request", 0.0)
+            return None, error_response
+
+        # Validate JSON-RPC request structure and method
+        rpc_request, validation_error = self.validate_jsonrpc_request(body)
+        if validation_error is not None:
+            self.record_error_metrics(metrics, "unknown", "invalid_request", 0.0)
+            return None, validation_error
+
+        # Type narrowing: rpc_request is not None here
+        if rpc_request is None:
+            # This should not happen if validate_jsonrpc_request is correct
+            # but guard against it for robustness
+            error_response = self.build_error_response(
+                INTERNAL_ERROR,
+                data={"error": "Internal validation error"},
+                request_id=None,
+            )
+            self.record_error_metrics(
+                metrics, "unknown", "internal_error", time.perf_counter() - start_time
+            )
+            return None, error_response
+
+        return rpc_request, None
+
     async def parse_json_body(self, request: Request) -> dict[str, Any]:
         """Parse JSON body from request.
 
@@ -268,157 +681,43 @@ class ASAPRequestHandler:
         payload_type = "unknown"
 
         try:
-            # Parse JSON body
-            try:
-                body = await self.parse_json_body(request)
-            except ValueError as e:
-                # Invalid JSON - return parse error
-                error_response = self.build_error_response(
-                    PARSE_ERROR,
-                    data={"error": str(e)},
-                    request_id=None,
-                )
-                self.record_error_metrics(metrics, "unknown", "parse_error", 0.0)
-                return error_response
-
-            # Validate body is a dict (JSON-RPC requires object at root)
-            if not isinstance(body, dict):
-                error_response = self.build_error_response(
-                    INVALID_REQUEST,
-                    data={
-                        "error": "JSON-RPC request must be an object",
-                        "received_type": type(body).__name__,
-                    },
-                    request_id=None,
-                )
-                self.record_error_metrics(metrics, "unknown", "invalid_request", 0.0)
-                return error_response
-
-            # Validate JSON-RPC request structure and method
-            rpc_request, validation_error = self.validate_jsonrpc_request(body)
-            if validation_error is not None:
-                self.record_error_metrics(metrics, "unknown", "invalid_request", 0.0)
-                return validation_error
-
+            # Parse and validate JSON-RPC request
+            parse_result = await self._parse_and_validate_request(request, start_time, metrics)
+            rpc_request, parse_error = parse_result
+            if parse_error is not None:
+                return parse_error
             # Type narrowing: rpc_request is not None here
-            if rpc_request is None:
-                # This should not happen if validate_jsonrpc_request is correct
-                # but guard against it for robustness
-                error_response = self.build_error_response(
-                    INTERNAL_ERROR,
-                    data={"error": "Internal validation error"},
-                    request_id=None,
-                )
-                self.record_error_metrics(
-                    metrics, "unknown", "internal_error", time.perf_counter() - start_time
-                )
-                return error_response
+            assert rpc_request is not None
 
-            # Verify authentication if enabled
-            authenticated_agent_id: str | None = None
-            if self.auth_middleware is not None:
-                try:
-                    authenticated_agent_id = await self.auth_middleware.verify_authentication(
-                        request
-                    )
-                except HTTPException as e:
-                    # Authentication failed - return JSON-RPC error
-                    logger.warning(
-                        "asap.request.auth_failed",
-                        status_code=e.status_code,
-                        detail=e.detail,
-                    )
-                    # Map HTTP status to JSON-RPC error code
-                    error_code = INVALID_REQUEST if e.status_code == 401 else INVALID_PARAMS
-                    error_response = self.build_error_response(
-                        error_code,
-                        data={"error": str(e.detail), "status_code": e.status_code},
-                        request_id=rpc_request.id,
-                    )
-                    self.record_error_metrics(
-                        metrics, "unknown", "auth_failed", time.perf_counter() - start_time
-                    )
-                    return error_response
+            # Authenticate request if enabled
+            auth_result = await self._authenticate_request(
+                request, rpc_request, start_time, metrics
+            )
+            authenticated_agent_id, auth_error = auth_result
+            if auth_error is not None:
+                return auth_error
 
-            # Validate params is a dict before accessing
-            if not isinstance(rpc_request.params, dict):
-                logger.warning(
-                    "asap.request.invalid_params_type",
-                    params_type=type(rpc_request.params).__name__,
-                )
-                error_response = self.build_error_response(
-                    INVALID_PARAMS,
-                    data={
-                        "error": "JSON-RPC 'params' must be an object",
-                        "received_type": type(rpc_request.params).__name__,
-                    },
-                    request_id=rpc_request.id,
-                )
-                self.record_error_metrics(
-                    metrics, "unknown", "invalid_params", time.perf_counter() - start_time
-                )
-                return error_response
-
-            # Extract envelope from params
-            envelope_data = rpc_request.params.get("envelope")
-            if envelope_data is None:
-                logger.warning("asap.request.missing_envelope")
-                error_response = self.build_error_response(
-                    INVALID_PARAMS,
-                    data={"error": "Missing 'envelope' in params"},
-                    request_id=rpc_request.id,
-                )
-                self.record_error_metrics(
-                    metrics, "unknown", "missing_envelope", time.perf_counter() - start_time
-                )
-                return error_response
-
-            # Validate envelope structure
-            try:
-                envelope = Envelope(**envelope_data)
-                payload_type = envelope.payload_type
-            except ValidationError as e:
-                logger.warning(
-                    "asap.request.invalid_envelope",
-                    error="Invalid envelope structure",
-                    validation_errors=str(e.errors()),
-                )
-                duration_seconds = time.perf_counter() - start_time
-                self.record_error_metrics(
-                    metrics, payload_type, "invalid_envelope", duration_seconds
-                )
-                return self.build_error_response(
-                    INVALID_PARAMS,
-                    data={
-                        "error": "Invalid envelope structure",
-                        "validation_errors": e.errors(),
-                    },
-                    request_id=rpc_request.id,
-                )
+            # Validate and extract envelope
+            envelope_result = self._validate_envelope(rpc_request, start_time, metrics)
+            envelope_or_none, result = envelope_result
+            if envelope_or_none is None:
+                # result is JSONResponse when envelope is None
+                return result  # type: ignore[return-value]
+            envelope = envelope_or_none
+            # result is payload_type (str) when envelope is not None
+            payload_type = result  # type: ignore[assignment]
 
             # Verify sender matches authenticated identity
-            if self.auth_middleware is not None:
-                try:
-                    self.auth_middleware.verify_sender_matches_auth(
-                        authenticated_agent_id, envelope.sender
-                    )
-                except HTTPException as e:
-                    # Sender mismatch - return JSON-RPC error
-                    logger.warning(
-                        "asap.request.sender_mismatch",
-                        authenticated_agent=authenticated_agent_id,
-                        envelope_sender=envelope.sender,
-                    )
-                    error_response = self.build_error_response(
-                        INVALID_PARAMS,
-                        data={"error": str(e.detail), "status_code": e.status_code},
-                        request_id=rpc_request.id,
-                    )
-                    duration_seconds = time.perf_counter() - start_time
-                    self.record_error_metrics(
-                        metrics, payload_type, "sender_mismatch", duration_seconds
-                    )
-                    return error_response
+            sender_error = self._verify_sender_matches_auth(
+                authenticated_agent_id,
+                envelope,
+                rpc_request,
+                start_time,
+                metrics,
+                payload_type,
+            )
+            if sender_error is not None:
+                return sender_error
 
             # Log request received
             logger.info(
@@ -431,126 +730,25 @@ class ASAPRequestHandler:
                 authenticated=authenticated_agent_id is not None,
             )
 
-            # Process the envelope using the handler registry
-            try:
-                response_envelope = await self.registry.dispatch_async(envelope, self.manifest)
-            except HandlerNotFoundError as e:
-                # No handler registered for this payload type
-                logger.warning(
-                    "asap.request.handler_not_found",
-                    payload_type=e.payload_type,
-                    envelope_id=envelope.id,
-                )
-                # Record error metric
-                duration_seconds = time.perf_counter() - start_time
-                metrics.increment_counter(
-                    "asap_requests_total",
-                    {"payload_type": payload_type, "status": "error"},
-                )
-                metrics.increment_counter(
-                    "asap_requests_error_total",
-                    {"payload_type": payload_type, "error_type": "handler_not_found"},
-                )
-                metrics.observe_histogram(
-                    "asap_request_duration_seconds",
-                    duration_seconds,
-                    {"payload_type": payload_type, "status": "error"},
-                )
-                handler_error = JsonRpcErrorResponse(
-                    error=JsonRpcError.from_code(
-                        METHOD_NOT_FOUND,
-                        data={
-                            "payload_type": e.payload_type,
-                            "error": str(e),
-                        },
-                    ),
-                    id=rpc_request.id,
-                )
-                return JSONResponse(
-                    status_code=200,
-                    content=handler_error.model_dump(),
-                )
-
-            # Calculate duration
-            duration_seconds = time.perf_counter() - start_time
-            duration_ms = duration_seconds * 1000
-
-            # Record success metrics
-            metrics.increment_counter(
-                "asap_requests_total",
-                {"payload_type": payload_type, "status": "success"},
+            # Dispatch to handler
+            dispatch_result = await self._dispatch_to_handler(
+                envelope, rpc_request, start_time, metrics
             )
-            metrics.increment_counter(
-                "asap_requests_success_total",
-                {"payload_type": payload_type},
-            )
-            metrics.observe_histogram(
-                "asap_request_duration_seconds",
-                duration_seconds,
-                {"payload_type": payload_type, "status": "success"},
-            )
+            response_or_none, result = dispatch_result
+            if response_or_none is None:
+                # result is JSONResponse when response is None
+                return result  # type: ignore[return-value]
+            response_envelope = response_or_none
+            # result is payload_type (str) when response is not None
+            payload_type = result  # type: ignore[assignment]
 
-            # Log successful processing
-            logger.info(
-                "asap.request.processed",
-                envelope_id=envelope.id,
-                response_id=response_envelope.id,
-                trace_id=envelope.trace_id,
-                payload_type=envelope.payload_type,
-                duration_ms=round(duration_ms, 2),
-            )
-
-            # Wrap response in JSON-RPC
-            rpc_response = JsonRpcResponse(
-                result={"envelope": response_envelope.model_dump(mode="json")},
-                id=rpc_request.id,
-            )
-
-            return JSONResponse(
-                status_code=200,
-                content=rpc_response.model_dump(),
+            # Build and return success response
+            return self._build_success_response(
+                response_envelope, rpc_request, payload_type, start_time, metrics
             )
 
         except Exception as e:
-            # Calculate duration for error case
-            duration_seconds = time.perf_counter() - start_time
-            duration_ms = duration_seconds * 1000
-
-            # Record error metrics
-            metrics.increment_counter(
-                "asap_requests_total",
-                {"payload_type": payload_type, "status": "error"},
-            )
-            metrics.increment_counter(
-                "asap_requests_error_total",
-                {"payload_type": payload_type, "error_type": "internal_error"},
-            )
-            metrics.observe_histogram(
-                "asap_request_duration_seconds",
-                duration_seconds,
-                {"payload_type": payload_type, "status": "error"},
-            )
-
-            # Log error
-            logger.exception(
-                "asap.request.error",
-                error=str(e),
-                error_type=type(e).__name__,
-                duration_ms=round(duration_ms, 2),
-            )
-
-            # Internal server error
-            internal_error = JsonRpcErrorResponse(
-                error=JsonRpcError.from_code(
-                    INTERNAL_ERROR,
-                    data={"error": str(e), "type": type(e).__name__},
-                ),
-                id=None,
-            )
-            return JSONResponse(
-                status_code=200,
-                content=internal_error.model_dump(),
-            )
+            return self._handle_internal_error(e, payload_type, start_time, metrics)
 
 
 def create_app(
