@@ -230,9 +230,7 @@ class ASAPRequestHandler:
                 validation_errors=str(e.errors()),
             )
             duration_seconds = time.perf_counter() - start_time
-            self.record_error_metrics(
-                metrics, "unknown", "invalid_envelope", duration_seconds
-            )
+            self.record_error_metrics(metrics, "unknown", "invalid_envelope", duration_seconds)
             error_response = self.build_error_response(
                 INVALID_PARAMS,
                 data={
@@ -377,9 +375,7 @@ class ASAPRequestHandler:
             return None
 
         try:
-            self.auth_middleware.verify_sender_matches_auth(
-                authenticated_agent_id, envelope.sender
-            )
+            self.auth_middleware.verify_sender_matches_auth(authenticated_agent_id, envelope.sender)
             return None
         except HTTPException as e:
             # Sender mismatch - return JSON-RPC error
@@ -394,9 +390,7 @@ class ASAPRequestHandler:
                 request_id=rpc_request.id,
             )
             duration_seconds = time.perf_counter() - start_time
-            self.record_error_metrics(
-                metrics, payload_type, "sender_mismatch", duration_seconds
-            )
+            self.record_error_metrics(metrics, payload_type, "sender_mismatch", duration_seconds)
             return error_response
 
     def _build_success_response(

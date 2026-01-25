@@ -21,7 +21,6 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
-from typing import Any
 
 from asap.models.entities import AuthScheme, Capability, Endpoint, Manifest, Skill
 from asap.models.enums import TaskStatus
@@ -1148,6 +1147,7 @@ class TestASAPRequestHandlerHelpers:
         self, handler: ASAPRequestHandler, metrics: MetricsCollector
     ) -> None:
         """Test _dispatch_to_handler with successful dispatch."""
+
         # Register a handler
         def sync_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
             return Envelope(
@@ -1181,9 +1181,7 @@ class TestASAPRequestHandlerHelpers:
         )
 
         start_time = time.perf_counter()
-        result = await handler._dispatch_to_handler(
-            envelope, rpc_request, start_time, metrics
-        )
+        result = await handler._dispatch_to_handler(envelope, rpc_request, start_time, metrics)
 
         response_envelope, payload_type = result
         assert response_envelope is not None
@@ -1211,9 +1209,7 @@ class TestASAPRequestHandlerHelpers:
         )
 
         start_time = time.perf_counter()
-        result = await handler._dispatch_to_handler(
-            envelope, rpc_request, start_time, metrics
-        )
+        result = await handler._dispatch_to_handler(envelope, rpc_request, start_time, metrics)
 
         response_envelope, error_response = result
         assert response_envelope is None
