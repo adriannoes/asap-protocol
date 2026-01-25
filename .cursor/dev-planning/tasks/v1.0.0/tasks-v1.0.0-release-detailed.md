@@ -169,7 +169,32 @@
 
 ---
 
+## Task 13.7: Mark Sprint P13 and v1.0.0 Complete
+
+- [ ] 13.7.1 Update roadmap progress
+  - Open: `tasks-v1.0.0-roadmap.md`
+  - Mark: P13 tasks (13.1-13.6) as complete `[x]`
+  - Mark: Overall v1.0.0 as 38/38 (100%)
+
+- [ ] 13.7.2 Update this detailed file
+  - Mark: All sub-tasks as complete `[x]`
+  - Add: Completion date
+
+- [ ] 13.7.3 Update main tracking
+  - File: `../../README.md`
+  - Update: v1.0.0 status to "Released"
+  - Add: Release date and PyPI link
+
+- [ ] 13.7.4 Archive v1.0.0 milestone
+  - Document: v1.0.0 completion
+  - Update: Parent README
+
+**Acceptance**: All tracking complete, v1.0.0 milestone closed
+
+---
+
 **P13 Definition of Done**:
+- [ ] All tasks 13.1-13.7 completed
 - [ ] All success metrics met
 - [ ] 800+ tests passing
 - [ ] v1.0.0 on PyPI
@@ -178,5 +203,7 @@
 - [ ] PRD fully reviewed
 - [ ] Retrospective created
 - [ ] Post-release review scheduled
+- [ ] Progress tracked everywhere
+- [ ] v1.0.0 marked as complete milestone
 
-**Total Sub-tasks**: ~50
+**Total Sub-tasks**: ~55

@@ -194,11 +194,31 @@
 
 ---
 
+## Task 1.7: Mark Sprint S1 Complete
+
+- [ ] 1.7.1 Update roadmap progress
+  - Open: `tasks-v0.5.0-roadmap.md`
+  - Mark: Tasks 1.2-1.6 as complete `[x]`
+  - Update: S1 progress to 6/6 (100%)
+
+- [ ] 1.7.2 Update this detailed file
+  - Mark: All sub-tasks 1.1.1-1.6.X as complete `[x]`
+  - Add: Completion date at top
+
+- [ ] 1.7.3 Document sprint learnings
+  - Note: Challenges, adjustments needed for S2-S5
+
+**Acceptance**: Both files marked complete, learnings noted
+
+---
+
 **Sprint S1 Definition of Done**:
+- [ ] All tasks 1.1-1.7 completed
 - [ ] Issues #7, #9, #10 closed
 - [ ] Dependabot configured
 - [ ] All 543+ tests passing
 - [ ] mypy --strict passes
 - [ ] Documentation updated
+- [ ] Progress tracked in roadmap and detailed
 
-**Total Sub-tasks**: ~40
+**Total Sub-tasks**: ~45

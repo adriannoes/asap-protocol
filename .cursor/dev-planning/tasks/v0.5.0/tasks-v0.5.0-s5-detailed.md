@@ -215,7 +215,32 @@
 
 ---
 
+## Task 5.8: Mark Sprint S5 and v0.5.0 Complete
+
+- [ ] 5.8.1 Update roadmap progress
+  - Open: `tasks-v0.5.0-roadmap.md`
+  - Mark: Tasks 5.1-5.7 as complete `[x]`
+  - Mark: Overall v0.5.0 as 33/33 (100%)
+
+- [ ] 5.8.2 Update detailed file progress
+  - Mark: All sub-tasks as complete `[x]`
+  - Add: Completion date
+
+- [ ] 5.8.3 Update main README
+  - File: `../../README.md` (tasks main README)
+  - Update: v0.5.0 status from "In Planning" to "Released"
+  - Add: Release date
+
+- [ ] 5.8.4 Archive sprint documents
+  - Consider: Move to `completed/v0.5.0/` or keep in place
+  - Document: v0.5.0 completion in parent README
+
+**Acceptance**: All tracking complete, v0.5.0 marked as released
+
+---
+
 **Sprint S5 Definition of Done**:
+- [ ] All tasks 5.1-5.8 completed
 - [ ] All CRIT+HIGH tasks completed
 - [ ] Zero breaking changes
 - [ ] CI passes
@@ -223,5 +248,7 @@
 - [ ] GitHub release published
 - [ ] Coverage ≥95%
 - [ ] Performance regression <5%
+- [ ] Progress tracked everywhere
+- [ ] v0.5.0 marked as complete milestone
 
-**Total Sub-tasks**: ~30
+**Total Sub-tasks**: ~35

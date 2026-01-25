@@ -190,11 +190,31 @@
 
 ---
 
+## Task 2.8: Mark Sprint S2 Complete
+
+- [ ] 2.8.1 Update roadmap progress
+  - Open: `tasks-v0.5.0-roadmap.md`
+  - Mark: Tasks 2.1-2.7 as complete `[x]`
+  - Update: S2 progress to 7/7 (100%)
+
+- [ ] 2.8.2 Update this detailed file
+  - Mark: All sub-tasks as complete `[x]`
+  - Add: Completion date
+
+- [ ] 2.8.3 Verify DoD checklist
+  - Confirm: All acceptance criteria met
+
+**Acceptance**: Both files complete, DoD verified
+
+---
+
 **Sprint S2 Definition of Done**:
+- [ ] All tasks 2.1-2.8 completed
 - [ ] Rate limiting: HTTP 429 works
-- [ ] Size validation: 10MB limit enforced
+- [ ] Size validation: 10MB enforced
 - [ ] Test coverage >95%
 - [ ] Documentation updated
 - [ ] All tests passing
+- [ ] Progress tracked in both files
 
-**Total Sub-tasks**: ~30
+**Total Sub-tasks**: ~35

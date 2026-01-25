@@ -178,7 +178,28 @@
 
 ---
 
+## Task 2.4: Mark Sprints P1-P2 Complete
+
+- [ ] 2.4.1 Update roadmap progress
+  - Open: `tasks-v1.0.0-roadmap.md`
+  - Mark: P1 tasks (1.1-1.3) as complete `[x]`
+  - Mark: P2 tasks (2.1-2.3) as complete `[x]`
+  - Update: P1 and P2 progress to 100%
+
+- [ ] 2.4.2 Update this detailed file
+  - Mark: All sub-tasks as complete `[x]`
+  - Add: Completion dates
+
+- [ ] 2.4.3 Verify all security issues resolved
+  - Confirm: Issue #12 closed
+  - Confirm: All CRIT+HIGH+MED+LOW tasks done
+
+**Acceptance**: Both files complete, all security resolved
+
+---
+
 **P1-P2 Definition of Done**:
+- [ ] All tasks 1.1-2.4 completed
 - [ ] All security issues resolved (CRIT+HIGH+MED+LOW)
 - [ ] Sensitive data sanitized from logs
 - [ ] Handler security documented
@@ -186,5 +207,6 @@
 - [ ] URN validation enhanced
 - [ ] Test coverage >95%
 - [ ] Issue #12 closed
+- [ ] Progress tracked in both files
 
-**Total Sub-tasks**: ~50
+**Total Sub-tasks**: ~55

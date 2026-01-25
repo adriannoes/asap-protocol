@@ -176,12 +176,34 @@
 
 ---
 
+## Task 4.6: Mark Sprint S4 Complete
+
+- [ ] 4.6.1 Update roadmap progress
+  - Open: `tasks-v0.5.0-roadmap.md`
+  - Mark: Tasks 4.1-4.5 as complete `[x]`
+  - Update: S4 progress to 5/5 (100%)
+
+- [ ] 4.6.2 Update this detailed file
+  - Mark: All sub-tasks as complete `[x]`
+  - Add: Completion date
+
+- [ ] 4.6.3 Verify issue #13 closed
+  - Confirm: Closed on GitHub
+  - Confirm: Commit references issue
+
+**Acceptance**: Both files complete, issue #13 resolved
+
+---
+
 **Sprint S4 Definition of Done**:
+- [ ] All tasks 4.1-4.6 completed
 - [ ] Exponential backoff working
 - [ ] Max delay 60s
 - [ ] Auth schemes validated
 - [ ] 12+ new tests pass
 - [ ] Coverage >95%
 - [ ] Docs updated
+- [ ] Issue #13 closed
+- [ ] Progress tracked in both files
 
-**Total Sub-tasks**: ~25
+**Total Sub-tasks**: ~30

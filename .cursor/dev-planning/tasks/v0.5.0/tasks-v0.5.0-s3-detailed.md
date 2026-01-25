@@ -250,12 +250,33 @@
 
 ---
 
+## Task 3.9: Mark Sprint S3 Complete
+
+- [ ] 3.9.1 Update roadmap progress
+  - Open: `tasks-v0.5.0-roadmap.md`
+  - Mark: Tasks 3.1-3.8 as complete `[x]`
+  - Update: S3 progress to 8/8 (100%)
+
+- [ ] 3.9.2 Update this detailed file
+  - Mark: All sub-tasks as complete `[x]`
+  - Add: Completion date
+
+- [ ] 3.9.3 Confirm PRD checkpoint
+  - Verify: Q3 answered in PRD Section 10 or 11
+  - Verify: Learnings documented
+
+**Acceptance**: Both files complete, PRD checkpoint done
+
+---
+
 **Sprint S3 Definition of Done**:
+- [ ] All tasks 3.1-3.9 completed
 - [ ] Old/future envelopes rejected
 - [ ] HTTPS enforced in production
 - [ ] 12+ new tests pass
 - [ ] Coverage >95%
 - [ ] Examples use HTTPS
-- [ ] PRD reviewed
+- [ ] PRD reviewed and updated
+- [ ] Progress tracked in both files
 
-**Total Sub-tasks**: ~35
+**Total Sub-tasks**: ~40

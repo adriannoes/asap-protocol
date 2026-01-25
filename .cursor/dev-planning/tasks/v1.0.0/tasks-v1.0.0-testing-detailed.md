@@ -174,7 +174,29 @@
 
 ---
 
+## Task 8.3: Mark Sprints P7-P8 Complete
+
+- [ ] 8.3.1 Update roadmap progress
+  - Open: `tasks-v1.0.0-roadmap.md`
+  - Mark: P7 tasks (7.1-7.3) as complete `[x]`
+  - Mark: P8 tasks (8.1-8.2) as complete `[x]`
+  - Update: P7 and P8 progress to 100%
+
+- [ ] 8.3.2 Update this detailed file
+  - Mark: All sub-tasks as complete `[x]`
+  - Add: Completion dates
+
+- [ ] 8.3.3 Verify testing goals
+  - Confirm: 800+ total tests
+  - Confirm: Issue #11 closed
+  - Confirm: PRD Q2 answered
+
+**Acceptance**: Both files complete, testing complete
+
+---
+
 **P7-P8 Definition of Done**:
+- [ ] All tasks 7.1-8.3 completed
 - [ ] 100+ property tests
 - [ ] <5ms p95 latency
 - [ ] Breaking point identified
@@ -184,5 +206,6 @@
 - [ ] 800+ total tests
 - [ ] Issue #11 closed
 - [ ] PRD Q2 answered
+- [ ] Progress tracked in both files
 
-**Total Sub-tasks**: ~65
+**Total Sub-tasks**: ~70
