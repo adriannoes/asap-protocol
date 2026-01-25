@@ -19,9 +19,9 @@
 
 ---
 
-## Task 1.1: Remove `type: ignore` in handlers.py
+## Task 1.1: Remove `type: ignore` in handlers.py ✅
 
-**Issue**: [#10](https://github.com/adriannoes/asap-protocol/issues/10)
+**Issue**: [#10](https://github.com/adriannoes/asap-protocol/issues/10) - *Will be closed when PR is merged*
 
 - [x] 1.1.1 Identify type: ignore locations
   - Command: `grep -n "type: ignore" src/asap/transport/handlers.py`
@@ -50,9 +50,11 @@
   - Expected: All 20 tests pass
   - **Result**: ✅ All 35 tests passed
 
-- [ ] 1.1.6 Commit
+- [x] 1.1.6 Commit
   - Command: `git commit -m "fix(transport): remove type: ignore in handlers.py"`
   - Close issue #10
+  - **Done**: Commit ff77347 created
+  - **Note**: Issue #10 will be closed when PR is merged
 
 **Acceptance**: Zero type: ignore, mypy passes, tests pass
 
@@ -60,7 +62,7 @@
 
 ## Task 1.2: Refactor handle_message into smaller helpers ✅
 
-**Issue**: [#9](https://github.com/adriannoes/asap-protocol/issues/9)
+**Issue**: [#9](https://github.com/adriannoes/asap-protocol/issues/9) - *Will be closed when PR is merged*
 
 - [x] 1.2.1 Analyze current function
   - Open: `src/asap/transport/server.py`
@@ -128,10 +130,11 @@
   - Expected: All 16 tests pass
   - **Result**: ✅ All 16 tests passed
 
-- [ ] 1.2.8 Commit
+- [x] 1.2.8 Commit
   - Command: `git commit -m "refactor(transport): extract handle_message into smaller helpers"`
   - Close issue #9
-  - **Note**: Commit será feito ao final da sprint conforme solicitado
+  - **Done**: Commit atômico criado com todas as mudanças
+  - **Note**: Issue #9 will be closed when PR is merged
 
 **Acceptance**: handle_message <20 lines, 10+ new tests, all tests pass
 
