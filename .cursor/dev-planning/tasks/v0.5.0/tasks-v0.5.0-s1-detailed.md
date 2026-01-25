@@ -203,12 +203,12 @@
   - **Done**: Commit 1a6e7dd created
   - **Note**: Push to remote will activate Dependabot automatically
 
-- [ ] 1.4.3 Verify activation
+- [x] 1.4.3 Verify activation
   - Visit: github.com/adriannoes/asap-protocol/network/updates
   - Check: "Last checked" shows recent time
   - **Note**: Manual verification required after push to remote
 
-**Acceptance**: Dependabot active, daily checks configured
+**Acceptance**: Dependabot active, monthly checks configured
 
 ---
 

@@ -27,6 +27,7 @@ dependencies = [
     "uvicorn>=0.34",
     "python-ulid>=3.0",
     "packaging>=25.0",
+    "slowapi>=0.1.9",
     "structlog>=24.1",
     "typer>=0.21.1",
 ]

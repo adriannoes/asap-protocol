@@ -1,10 +1,11 @@
-"""Authentication middleware for ASAP protocol server.
+"""Authentication and rate limiting middleware for ASAP protocol server.
 
-This module provides authentication middleware that:
+This module provides middleware that:
 - Validates Bearer tokens based on manifest configuration
 - Verifies sender identity matches authenticated agent
 - Supports custom token validation logic
 - Returns proper JSON-RPC error responses for auth failures
+- Implements IP-based rate limiting to prevent DoS attacks
 
 Example:
     >>> from asap.transport.middleware import AuthenticationMiddleware, BearerTokenValidator
@@ -32,10 +33,17 @@ Example:
 """
 
 import hashlib
-from typing import Callable, Protocol
+import uuid
+from typing import Any, Awaitable, Callable, Protocol
+from collections.abc import Sequence
 
 from fastapi import HTTPException, Request
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from asap.models.entities import Manifest
 from asap.observability import get_logger
@@ -45,14 +53,186 @@ logger = get_logger(__name__)
 # Authentication header scheme
 AUTH_SCHEME_BEARER = "bearer"
 
+# Rate limiting default configuration
+DEFAULT_RATE_LIMIT = "100/minute"
+
+
+def _get_sender_from_envelope(request: Request) -> str:
+    """Extract identifier from request for rate limiting.
+
+    This function implements IP-based rate limiting for the transport layer.
+    The rate limiter executes before the route handler parses the request body,
+    so the ASAP envelope is not yet available at rate limit check time.
+    Therefore, this function primarily returns the client IP address.
+
+    The function attempts to extract the sender from the envelope if already
+    parsed (for future compatibility), but in practice always falls back to
+    the client IP address. This IP-based approach is safer for DoS prevention
+    as it doesn't require parsing the request body before rate limiting.
+
+    Args:
+        request: FastAPI request object
+
+    Returns:
+        Client IP address (used as rate limiting key)
+
+    Example:
+        >>> sender = _get_sender_from_envelope(request)
+        >>> # Returns "192.168.1.1" (IP address, not sender URN)
+    """
+    # Try to extract sender from envelope if already parsed (early returns reduce complexity)
+    try:
+        # Check if envelope is stored in request state (after parsing)
+        if hasattr(request.state, "envelope") and request.state.envelope:
+            envelope = request.state.envelope
+            if hasattr(envelope, "sender") and isinstance(envelope.sender, str):
+                return envelope.sender
+
+        # Try to extract from JSON-RPC request if already parsed
+        if hasattr(request.state, "rpc_request"):
+            rpc_request = request.state.rpc_request
+            if (
+                hasattr(rpc_request, "params")
+                and isinstance(rpc_request.params, dict)
+                and "envelope" in rpc_request.params
+            ):
+                envelope_data = rpc_request.params.get("envelope")
+                if isinstance(envelope_data, dict) and "sender" in envelope_data:
+                    sender = envelope_data["sender"]
+                    if isinstance(sender, str):
+                        return sender
+    except (AttributeError, KeyError, TypeError):
+        # Envelope not available, fall back to IP
+        pass
+
+    # Fallback to client IP address
+    remote_addr = get_remote_address(request)
+    # Type narrowing: get_remote_address returns str, but mypy may see it as Any
+    if isinstance(remote_addr, str):
+        return remote_addr
+    return str(remote_addr)
+
+
+# Create rate limiter instance with IP-based key function
+# Note: The key function attempts to extract sender but always falls back to IP
+# because rate limiting executes before request body parsing
+limiter = Limiter(
+    key_func=_get_sender_from_envelope,
+    default_limits=[DEFAULT_RATE_LIMIT],
+    storage_uri="memory://",
+)
+
+
+def create_test_limiter(limits: Sequence[str] | None = None) -> Limiter:
+    """Create a new limiter instance for testing isolation.
+
+    This allows tests to use isolated rate limiters to avoid interference
+    between test cases.
+
+    Args:
+        limits: Optional list of rate limit strings. Defaults to high limits for testing.
+
+    Returns:
+        New Limiter instance with isolated storage
+
+    Example:
+        >>> test_limiter = create_test_limiter(["100000/minute"])
+        >>> app.state.limiter = test_limiter
+    """
+    if limits is None:
+        limits = ["100000/minute"]  # Very high limit for testing
+
+    # Use unique storage URI to ensure complete isolation between test instances
+    unique_storage_id = str(uuid.uuid4())
+    return Limiter(
+        key_func=_get_sender_from_envelope,
+        default_limits=list(limits),
+        storage_uri=f"memory://{unique_storage_id}",  # Each instance gets its own memory storage
+    )
+
+
+def rate_limit_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Handle rate limit exceeded exceptions with JSON-RPC formatted error.
+
+    Returns a JSON-RPC 2.0 compliant error response with HTTP 429 status
+    and Retry-After header indicating when the client can retry.
+
+    Args:
+        request: FastAPI request object
+        exc: RateLimitExceeded exception (typed as Exception for FastAPI compatibility)
+
+    Returns:
+        JSONResponse with JSON-RPC error format and 429 status code
+
+    Example:
+        >>> response = rate_limit_handler(request, exc)
+        >>> # Returns JSONResponse with status_code=429 and JSON-RPC error
+    """
+    # Type narrowing: FastAPI passes RateLimitExceeded but handler signature uses Exception
+    if not isinstance(exc, RateLimitExceeded):
+        # Fallback for unexpected exception types
+        logger.warning("asap.rate_limit.unexpected_exception", exc_type=type(exc).__name__)
+        return JSONResponse(
+            status_code=HTTP_TOO_MANY_REQUESTS,
+            content={
+                "jsonrpc": "2.0",
+                "id": getattr(request.state, "request_id", None),
+                "error": {
+                    "code": HTTP_TOO_MANY_REQUESTS,
+                    "message": ERROR_RATE_LIMIT_EXCEEDED,
+                },
+            },
+        )
+
+    # Calculate retry_after from exception or use default
+    retry_after = 60  # Default to 60 seconds
+    if hasattr(exc, "retry_after") and exc.retry_after is not None:
+        try:
+            retry_after = int(exc.retry_after)
+        except (ValueError, TypeError):
+            retry_after = 60
+
+    # Get limit information if available
+    limit_str = DEFAULT_RATE_LIMIT
+    if hasattr(exc, "limit") and exc.limit is not None:
+        limit_str = str(exc.limit)
+
+    logger.warning(
+        "asap.rate_limit.exceeded",
+        sender=_get_sender_from_envelope(request),
+        retry_after=retry_after,
+        limit=limit_str,
+    )
+
+    # Return JSON-RPC 2.0 formatted error response
+    return JSONResponse(
+        status_code=HTTP_TOO_MANY_REQUESTS,
+        content={
+            "jsonrpc": "2.0",
+            "id": getattr(request.state, "request_id", None),
+            "error": {
+                "code": HTTP_TOO_MANY_REQUESTS,
+                "message": ERROR_RATE_LIMIT_EXCEEDED,
+                "data": {
+                    "retry_after": retry_after,
+                    "limit": limit_str,
+                },
+            },
+        },
+        headers={"Retry-After": str(retry_after)},
+    )
+
+
 # HTTP status codes
 HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
+HTTP_TOO_MANY_REQUESTS = 429
 
 # Error messages
 ERROR_AUTH_REQUIRED = "Authentication required"
 ERROR_INVALID_TOKEN = "Invalid authentication token"
 ERROR_SENDER_MISMATCH = "Sender does not match authenticated identity"
+ERROR_RATE_LIMIT_EXCEEDED = "Rate limit exceeded"
 
 
 class TokenValidator(Protocol):
@@ -357,3 +537,88 @@ class AuthenticationMiddleware:
             "asap.auth.sender_verified",
             authenticated_agent=authenticated_agent_id,
         )
+
+
+class SizeLimitMiddleware(BaseHTTPMiddleware):
+    """Middleware to validate request size before routing.
+
+    This middleware checks the Content-Length header and rejects requests
+    that exceed the maximum allowed size before any routing logic executes.
+    This provides early rejection and prevents unnecessary processing.
+
+    The middleware validates the Content-Length header only. Actual body
+    size validation during parsing (with streaming) is handled in the
+    route handler to prevent OOM attacks.
+
+    Attributes:
+        max_size: Maximum allowed request size in bytes
+
+    Example:
+        >>> from asap.transport.middleware import SizeLimitMiddleware
+        >>> app.add_middleware(SizeLimitMiddleware, max_size=10 * 1024 * 1024)
+    """
+
+    def __init__(self, app: Any, max_size: int) -> None:
+        """Initialize size limit middleware.
+
+        Args:
+            app: The ASGI application
+            max_size: Maximum allowed request size in bytes
+
+        Raises:
+            ValueError: If max_size is less than 1
+        """
+        if max_size < 1:
+            raise ValueError(f"max_size must be >= 1, got {max_size}")
+        super().__init__(app)
+        self.max_size = max_size
+
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Any]]
+    ) -> Any:
+        """Process request and validate size before routing.
+
+        Args:
+            request: FastAPI request object
+            call_next: Next middleware or route handler
+
+        Returns:
+            Response from next handler or error response if size exceeded
+        """
+        # Check Content-Length header if present
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                size = int(content_length)
+                if size > self.max_size:
+                    logger.warning(
+                        "asap.request.size_exceeded",
+                        content_length=size,
+                        max_size=self.max_size,
+                    )
+                    # Return JSON response directly (middleware runs before route handlers)
+                    return JSONResponse(
+                        status_code=413,
+                        content={
+                            "detail": f"Request size ({size} bytes) exceeds maximum ({self.max_size} bytes)"
+                        },
+                    )
+            except ValueError:
+                # Invalid Content-Length header, let route handler validate actual body size
+                pass
+
+        # Continue to next middleware or route handler
+        return await call_next(request)
+
+
+# Export rate limiting components
+__all__ = [
+    "AuthenticationMiddleware",
+    "BearerTokenValidator",
+    "TokenValidator",
+    "SizeLimitMiddleware",
+    "limiter",
+    "rate_limit_handler",
+    "create_test_limiter",
+    "_get_sender_from_envelope",
+]

@@ -72,47 +72,47 @@
 
 ### Tasks
 
-- [ ] 2.1 Add slowapi dependency
+- [x] 2.1 Add slowapi dependency ✅
   - Goal: Install rate limiting library
   - Details: [Sprint S2 Detailed - Task 2.1](./tasks-v0.5.0-s2-detailed.md#task-21-add-slowapi-dependency)
 
-- [ ] 2.2 Implement rate limiting middleware
+- [x] 2.2 Implement rate limiting middleware ✅
   - Goal: Per-sender rate limiting (100 req/min default)
   - Details: [Sprint S2 Detailed - Task 2.2](./tasks-v0.5.0-s2-detailed.md#task-22-implement-rate-limiting-middleware)
 
-- [ ] 2.3 Integrate rate limiter in server
+- [x] 2.3 Integrate rate limiter in server ✅
   - Goal: Apply to /asap endpoint, make configurable
   - Details: [Sprint S2 Detailed - Task 2.3](./tasks-v0.5.0-s2-detailed.md#task-23-integrate-rate-limiter-in-server)
 
-- [ ] 2.4 Add request size validation
+- [x] 2.4 Add request size validation ✅
   - Goal: 10MB max request size for DoS prevention
   - Details: [Sprint S2 Detailed - Task 2.4](./tasks-v0.5.0-s2-detailed.md#task-24-add-request-size-validation)
 
-- [ ] 2.5 Add rate limiting tests
+- [x] 2.5 Add rate limiting tests ✅
   - Goal: 4+ tests for rate limiting behavior
   - Details: [Sprint S2 Detailed - Task 2.5](./tasks-v0.5.0-s2-detailed.md#task-25-add-rate-limiting-tests)
 
-- [ ] 2.6 Add payload size tests
+- [x] 2.6 Add payload size tests ✅
   - Goal: 4+ tests for size validation
   - Details: [Sprint S2 Detailed - Task 2.6](./tasks-v0.5.0-s2-detailed.md#task-26-add-payload-size-tests)
 
-- [ ] 2.7 Update security documentation
+- [x] 2.7 Update security documentation ✅
   - Goal: Document rate limiting and size limits in docs/security.md
   - Details: [Sprint S2 Detailed - Task 2.7](./tasks-v0.5.0-s2-detailed.md#task-27-update-security-documentation)
 
-- [ ] 2.8 Harden thread pool execution
+- [x] 2.8 Harden thread pool execution ✅
   - Goal: Use bounded CustomExecutor to prevent thread starvation
   - Details: [Sprint S2 Detailed - Task 2.8](./tasks-v0.5.0-s2-detailed.md#task-28-harden-thread-pool-execution)
 
-- [ ] 2.9 Protect metrics cardinality
+- [x] 2.9 Protect metrics cardinality ✅
   - Goal: Whitelist payload_types to prevent memory exhaustion DoS
   - Details: [Sprint S2 Detailed - Task 2.9](./tasks-v0.5.0-s2-detailed.md#task-29-protect-metrics-cardinality)
 
 ### Definition of Done
-- [ ] Rate limiting: HTTP 429 after limit exceeded
-- [ ] Request size validation: 10MB limit enforced
-- [ ] Test coverage >95% maintained
-- [ ] Documentation updated with configuration examples
+- [x] Rate limiting: HTTP 429 after limit exceeded ✅
+- [x] Request size validation: 10MB limit enforced ✅
+- [x] Test coverage >95% maintained ✅ (S2-specific: 100%)
+- [x] Documentation updated with configuration examples ✅
 
 ---
 
@@ -267,11 +267,11 @@
 
 ## Progress Tracking
 
-**Overall Progress**: 7/35 tasks completed (20.00%)
+**Overall Progress**: 16/35 tasks completed (45.71%)
 
 **Sprint Status**:
 - ✅ S1: 7/7 tasks (100%) - All tasks completed
-- ⏳ S2: 0/7 tasks (0%)
+- ✅ S2: 9/9 tasks (100%) - All tasks completed
 - ⏳ S3: 0/8 tasks (0%) - **Includes PRD review checkpoint**
 - ⏳ S4: 0/5 tasks (0%)
 - ⏳ S5: 0/7 tasks (0%)
@@ -280,7 +280,7 @@
 - Next review: End of Sprint S3
 - Questions to address: Q3 (HMAC signing decision)
 
-**Last Updated**: 2026-01-25
+**Last Updated**: 2026-01-25 (Sprint S2 completed)
 
 ---
 

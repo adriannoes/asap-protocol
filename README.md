@@ -1,12 +1,23 @@
 # ASAP: Async Simple Agent Protocol
 
-> A streamlined, scalable, asynchronous protocol for agent-to-agent communication and task coordination.
+![Version](https://img.shields.io/pypi/v/asap-protocol?label=version)
+![License](https://img.shields.io/github/license/adriannoes/asap-protocol)
+![Python](https://img.shields.io/pypi/pyversions/asap-protocol)
+![CI Status](https://img.shields.io/github/actions/workflow/status/adriannoes/asap-protocol/ci.yml?branch=main&label=CI)
+![Coverage](https://img.shields.io/codecov/c/github/adriannoes/asap-protocol)
+![PyPI Downloads](https://img.shields.io/pypi/dm/asap-protocol)
+
+![ASAP Protocol Banner](.cursor/docs/asap-protocol-banner.png)
+
+> A streamlined, scalable, asynchronous protocol for agent-to-agent communication and task coordination. Built as a simpler, more powerful alternative to A2A with native MCP integration and stateful orchestration.
+
+**Quick Info**: `v0.1.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](CHANGELOG.md)
 
 ⚠️ **Alpha Release**: ASAP Protocol is currently in **alpha** (v0.1.0). We're actively developing and improving the protocol based on real-world usage. Your feedback, contributions, and suggestions are essential to help us evolve and make ASAP better for the entire community. See our [Contributing](#contributing) section to get involved!
 
 ## Why ASAP?
 
-Building multi-agent systems today suffers from three core technical challenges:
+Building multi-agent systems today suffers from three core technical challenges that existing protocols like A2A don't fully address:
 1. **$N^2$ Connection Complexity**: Most protocols assume static point-to-point HTTP connections that don't scale.
 2. **State Drift**: Lack of native persistence makes it impossible to reliably resume long-running agentic workflows.
 3. **Fragmentation**: No unified way to handle task delegation, artifact exchange, and tool execution (MCP) in a single envelope.
@@ -21,6 +32,7 @@ Building multi-agent systems today suffers from three core technical challenges:
 - **Observable Chains**: First-class support for `trace_id` and `correlation_id` to debug complex multi-agent delegation.
 - **MCP Integration**: Uses the Model Context Protocol (MCP) as a tool-execution substrate, wrapped in a high-level coordination envelope.
 - **Async-Native**: Engineered from the ground up for high-concurrency environments using `asyncio` and `httpx`. Supports both sync and async handlers with automatic event loop management.
+- **DoS Protection**: Built-in rate limiting (100 req/min), request size limits (10MB), and thread pool bounds to prevent resource exhaustion attacks.
 
 💡 **Performance Note**: Pure Python codebase leveraging Rust-accelerated dependencies (`pydantic-core`, `orjson`, `python-ulid`) for native-level performance without build complexity.
 
@@ -41,6 +53,12 @@ pip install asap-protocol
 📦 **Available on [PyPI](https://pypi.org/project/asap-protocol/)**
 
 For reproducible environments, prefer `uv` when possible.
+
+## Requirements
+
+- **Python**: 3.13 or higher
+- **Dependencies**: Automatically installed via `uv` or `pip`
+- **Optional**: For development, see [Contributing](CONTRIBUTING.md)
 
 ## Quick Start
 
@@ -120,7 +138,18 @@ Transport:
 - [Spec](.cursor/docs/general-specs.md)
 - [Docs](docs/index.md)
 - [API Reference](docs/api-reference.md)
+- [Changelog](CHANGELOG.md)
 - [PyPI Package](https://pypi.org/project/asap-protocol/)
+
+## When to Use ASAP?
+
+ASAP is ideal for:
+- **Multi-agent orchestration**: Coordinate tasks across multiple AI agents
+- **Stateful workflows**: Long-running tasks that need persistence and resumability
+- **MCP integration**: Agents that need to execute tools via Model Context Protocol
+- **Production systems**: High-performance, type-safe agent communication
+
+If you're building simple point-to-point agent communication, a basic HTTP API might suffice. ASAP shines when you need orchestration, state management, and multi-agent coordination.
 
 ## Advanced Examples
 
@@ -173,6 +202,28 @@ async def my_async_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
 
 registry.register("task.request", my_async_handler)  # Works with both!
 ```
+
+### Security & DoS Protection
+
+ASAP includes built-in protection against common attack vectors:
+
+```python
+from asap.transport.server import create_app
+
+app = create_app(
+    manifest,
+    rate_limit="50/minute",        # Per-sender rate limiting
+    max_request_size=5_000_000,    # 5MB request size limit  
+    max_threads=16,                # Thread pool bounds
+)
+```
+
+**Environment Variables**:
+- `ASAP_RATE_LIMIT`: Rate limit (default: "100/minute")
+- `ASAP_MAX_REQUEST_SIZE`: Max request size (default: 10MB)
+- `ASAP_MAX_THREADS`: Thread pool size (default: min(32, cpu_count + 4))
+
+See [Security Guide](docs/security.md) for production recommendations.
 
 ### Multi-Agent Flow
 

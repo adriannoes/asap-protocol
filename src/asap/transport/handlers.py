@@ -30,6 +30,7 @@ import asyncio
 import inspect
 import time
 from collections.abc import Awaitable
+from concurrent.futures import Executor
 from threading import RLock
 from typing import Protocol, cast
 
@@ -142,6 +143,7 @@ class HandlerRegistry:
     Attributes:
         _handlers: Internal mapping of payload_type to handler function
         _lock: Reentrant lock for thread-safe operations
+        _executor: Optional executor for running sync handlers (for DoS prevention)
 
     Example:
         >>> registry = HandlerRegistry()
@@ -151,10 +153,17 @@ class HandlerRegistry:
         >>> response = registry.dispatch(envelope, manifest)
     """
 
-    def __init__(self) -> None:
-        """Initialize empty handler registry with thread-safe lock."""
+    def __init__(self, executor: Executor | None = None) -> None:
+        """Initialize empty handler registry with thread-safe lock.
+
+        Args:
+            executor: Optional executor for running sync handlers.
+                If None, uses default asyncio executor (unbounded).
+                Should be a BoundedExecutor instance for DoS prevention.
+        """
         self._handlers: dict[str, Handler] = {}
         self._lock = RLock()
+        self._executor: Executor | None = executor
 
     def register(self, payload_type: str, handler: Handler) -> None:
         """Register a handler for a payload type.
@@ -333,7 +342,9 @@ class HandlerRegistry:
                 # Sync handler - run in thread pool to avoid blocking event loop
                 # Also handle async callable objects that return awaitables
                 loop = asyncio.get_event_loop()
-                result: object = await loop.run_in_executor(None, handler, envelope, manifest)
+                # Use bounded executor if provided, otherwise use default (unbounded)
+                executor = self._executor if self._executor is not None else None
+                result: object = await loop.run_in_executor(executor, handler, envelope, manifest)
                 # Check if result is awaitable (handles async __call__ methods)
                 if inspect.isawaitable(result):
                     response = await result

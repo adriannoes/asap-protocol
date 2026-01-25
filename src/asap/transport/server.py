@@ -40,6 +40,7 @@ Example:
     >>> # Run with: uvicorn asap.transport.server:app --host 0.0.0.0 --port 8000
 """
 
+import os
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, TypeVar
@@ -47,12 +48,22 @@ from typing import Any, Callable, TypeVar
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import ValidationError
+from slowapi.errors import RateLimitExceeded
 
+from asap.errors import ThreadPoolExhaustedError
+from asap.models.constants import MAX_REQUEST_SIZE
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.envelope import Envelope
 from asap.observability import get_logger, get_metrics
-from asap.transport.middleware import AuthenticationMiddleware, BearerTokenValidator
+from asap.transport.middleware import (
+    AuthenticationMiddleware,
+    BearerTokenValidator,
+    SizeLimitMiddleware,
+    limiter,
+    rate_limit_handler,
+)
 from asap.observability.metrics import MetricsCollector
+from asap.transport.executors import BoundedExecutor
 from asap.transport.handlers import (
     HandlerNotFoundError,
     HandlerRegistry,
@@ -128,6 +139,7 @@ class ASAPRequestHandler:
         registry: HandlerRegistry,
         manifest: Manifest,
         auth_middleware: AuthenticationMiddleware | None = None,
+        max_request_size: int = MAX_REQUEST_SIZE,
     ) -> None:
         """Initialize the request handler.
 
@@ -135,10 +147,29 @@ class ASAPRequestHandler:
             registry: Handler registry for dispatching payloads
             manifest: Agent manifest describing capabilities
             auth_middleware: Optional authentication middleware for request validation
+            max_request_size: Maximum allowed request size in bytes
         """
         self.registry = registry
         self.manifest = manifest
         self.auth_middleware = auth_middleware
+        self.max_request_size = max_request_size
+
+    def _normalize_payload_type_for_metrics(self, payload_type: str) -> str:
+        """Normalize payload type for metrics to prevent cardinality explosion.
+
+        Only registered payload types are used as metric labels. Unknown
+        payload types are normalized to "other" to prevent DoS attacks
+        through metric cardinality explosion.
+
+        Args:
+            payload_type: The payload type to normalize
+
+        Returns:
+            The payload type if registered, or "other" if unknown
+        """
+        if self.registry.has_handler(payload_type):
+            return payload_type
+        return "other"
 
     def build_error_response(
         self,
@@ -177,18 +208,20 @@ class ASAPRequestHandler:
             error_type: Type of error that occurred
             duration_seconds: Request duration in seconds
         """
+        # Normalize payload_type to prevent cardinality explosion
+        normalized_payload_type = self._normalize_payload_type_for_metrics(payload_type)
         metrics.increment_counter(
             "asap_requests_total",
-            {"payload_type": payload_type, "status": "error"},
+            {"payload_type": normalized_payload_type, "status": "error"},
         )
         metrics.increment_counter(
             "asap_requests_error_total",
-            {"payload_type": payload_type, "error_type": error_type},
+            {"payload_type": normalized_payload_type, "error_type": error_type},
         )
         metrics.observe_histogram(
             "asap_request_duration_seconds",
             duration_seconds,
-            {"payload_type": payload_type, "status": "error"},
+            {"payload_type": normalized_payload_type, "status": "error"},
         )
 
     def _validate_envelope(
@@ -291,6 +324,31 @@ class ASAPRequestHandler:
         try:
             response_envelope = await self.registry.dispatch_async(envelope, self.manifest)
             return response_envelope, payload_type
+        except ThreadPoolExhaustedError as e:
+            # Thread pool exhausted - service temporarily unavailable
+            logger.warning(
+                "asap.request.thread_pool_exhausted",
+                payload_type=payload_type,
+                envelope_id=envelope.id,
+                max_threads=e.max_threads,
+                active_threads=e.active_threads,
+            )
+            # Record error metric
+            duration_seconds = time.perf_counter() - ctx.start_time
+            self.record_error_metrics(
+                ctx.metrics, payload_type, "thread_pool_exhausted", duration_seconds
+            )
+            # Return HTTP 503 Service Unavailable (not JSON-RPC error)
+            error_response = JSONResponse(
+                status_code=503,
+                content={
+                    "error": "Service Temporarily Unavailable",
+                    "code": e.code,
+                    "message": e.message,
+                    "details": e.details,
+                },
+            )
+            return None, error_response
         except HandlerNotFoundError as e:
             # No handler registered for this payload type
             logger.warning(
@@ -300,18 +358,8 @@ class ASAPRequestHandler:
             )
             # Record error metric
             duration_seconds = time.perf_counter() - ctx.start_time
-            ctx.metrics.increment_counter(
-                "asap_requests_total",
-                {"payload_type": payload_type, "status": "error"},
-            )
-            ctx.metrics.increment_counter(
-                "asap_requests_error_total",
-                {"payload_type": payload_type, "error_type": "handler_not_found"},
-            )
-            ctx.metrics.observe_histogram(
-                "asap_request_duration_seconds",
-                duration_seconds,
-                {"payload_type": payload_type, "status": "error"},
+            self.record_error_metrics(
+                ctx.metrics, payload_type, "handler_not_found", duration_seconds
             )
             handler_error = JsonRpcErrorResponse(
                 error=JsonRpcError.from_code(
@@ -433,19 +481,22 @@ class ASAPRequestHandler:
         duration_seconds = time.perf_counter() - ctx.start_time
         duration_ms = duration_seconds * 1000
 
+        # Normalize payload_type to prevent cardinality explosion
+        normalized_payload_type = self._normalize_payload_type_for_metrics(payload_type)
+
         # Record success metrics
         ctx.metrics.increment_counter(
             "asap_requests_total",
-            {"payload_type": payload_type, "status": "success"},
+            {"payload_type": normalized_payload_type, "status": "success"},
         )
         ctx.metrics.increment_counter(
             "asap_requests_success_total",
-            {"payload_type": payload_type},
+            {"payload_type": normalized_payload_type},
         )
         ctx.metrics.observe_histogram(
             "asap_request_duration_seconds",
             duration_seconds,
-            {"payload_type": payload_type, "status": "success"},
+            {"payload_type": normalized_payload_type, "status": "success"},
         )
 
         # Log successful processing
@@ -490,20 +541,8 @@ class ASAPRequestHandler:
         duration_seconds = time.perf_counter() - ctx.start_time
         duration_ms = duration_seconds * 1000
 
-        # Record error metrics
-        ctx.metrics.increment_counter(
-            "asap_requests_total",
-            {"payload_type": payload_type, "status": "error"},
-        )
-        ctx.metrics.increment_counter(
-            "asap_requests_error_total",
-            {"payload_type": payload_type, "error_type": "internal_error"},
-        )
-        ctx.metrics.observe_histogram(
-            "asap_request_duration_seconds",
-            duration_seconds,
-            {"payload_type": payload_type, "status": "error"},
-        )
+        # Record error metrics (normalized to prevent cardinality explosion)
+        self.record_error_metrics(ctx.metrics, payload_type, "internal_error", duration_seconds)
 
         # Log error
         logger.exception(
@@ -541,6 +580,16 @@ class ASAPRequestHandler:
         # Parse JSON body
         try:
             body = await self.parse_json_body(request)
+        except HTTPException as e:
+            # HTTPException (e.g., 413 Payload Too Large) should be returned directly
+            # Don't convert to JSON-RPC error response
+            from fastapi.responses import JSONResponse
+
+            return None, JSONResponse(
+                status_code=e.status_code,
+                content={"detail": e.detail},
+                headers=e.headers if hasattr(e, "headers") else None,
+            )
         except ValueError as e:
             # Invalid JSON - return parse error
             error_response = self.build_error_response(
@@ -591,8 +640,43 @@ class ASAPRequestHandler:
 
         return rpc_request, None
 
+    def _validate_request_size(self, request: Request, max_size: int) -> None:
+        """Validate that request size does not exceed maximum.
+
+        Checks Content-Length header first, then validates actual body size
+        if available. Raises HTTPException(413) if request is too large.
+
+        Args:
+            request: FastAPI request object
+            max_size: Maximum allowed request size in bytes
+
+        Raises:
+            HTTPException: If request size exceeds maximum (413 Payload Too Large)
+        """
+        # Check Content-Length header first
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                size = int(content_length)
+                if size > max_size:
+                    logger.warning(
+                        "asap.request.size_exceeded",
+                        content_length=size,
+                        max_size=max_size,
+                    )
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"Request size ({size} bytes) exceeds maximum ({max_size} bytes)",
+                    )
+            except ValueError:
+                # Invalid Content-Length header, will check body size instead
+                pass
+
     async def parse_json_body(self, request: Request) -> dict[str, Any]:
-        """Parse JSON body from request.
+        """Parse JSON body from request with size validation.
+
+        Validates request size before parsing to prevent DoS attacks.
+        Checks both Content-Length header and actual body size.
 
         Args:
             request: FastAPI request object
@@ -601,14 +685,39 @@ class ASAPRequestHandler:
             Parsed JSON body
 
         Raises:
+            HTTPException: If request size exceeds maximum (413)
             ValueError: If JSON is invalid
         """
+        # Read body in chunks and validate size incrementally to prevent OOM attacks
+        # Note: Content-Length header validation is handled by SizeLimitMiddleware
+        # This validates actual body size during streaming to prevent OOM attacks
         try:
-            body: dict[str, Any] = await request.json()
+            body_bytes = bytearray()
+            async for chunk in request.stream():
+                body_bytes.extend(chunk)
+                # Validate size after each chunk to abort early if limit exceeded
+                if len(body_bytes) > self.max_request_size:
+                    logger.warning(
+                        "asap.request.size_exceeded",
+                        actual_size=len(body_bytes),
+                        max_size=self.max_request_size,
+                    )
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"Request size ({len(body_bytes)} bytes) exceeds maximum ({self.max_request_size} bytes)",
+                    )
+
+            # Parse JSON from bytes
+            import json
+
+            body: dict[str, Any] = json.loads(body_bytes.decode("utf-8"))
             return body
-        except ValueError as e:
+        except UnicodeDecodeError as e:
+            logger.warning("asap.request.invalid_encoding", error=str(e))
+            raise ValueError(f"Invalid UTF-8 encoding: {e}") from e
+        except json.JSONDecodeError as e:
             logger.warning("asap.request.invalid_json", error=str(e))
-            raise
+            raise ValueError(f"Invalid JSON: {e}") from e
 
     def validate_jsonrpc_request(
         self, body: dict[str, Any]
@@ -781,6 +890,9 @@ def create_app(
     manifest: Manifest,
     registry: HandlerRegistry | None = None,
     token_validator: Callable[[str], str | None] | None = None,
+    rate_limit: str | None = None,
+    max_request_size: int | None = None,
+    max_threads: int | None = None,
 ) -> FastAPI:
     """Create and configure a FastAPI application for ASAP protocol.
 
@@ -800,6 +912,14 @@ def create_app(
         token_validator: Optional function to validate Bearer tokens.
             Required if manifest.auth is configured. Should return agent ID
             if token is valid, None otherwise.
+        rate_limit: Optional rate limit string (e.g., "100/minute").
+            Rate limiting is IP-based (per client IP address) to prevent DoS attacks.
+            Defaults to ASAP_RATE_LIMIT environment variable or "100/minute".
+        max_request_size: Optional maximum request size in bytes.
+            Defaults to ASAP_MAX_REQUEST_SIZE environment variable or 10MB.
+        max_threads: Optional maximum number of threads for sync handlers.
+            Defaults to ASAP_MAX_THREADS environment variable or min(32, cpu_count + 4).
+            Set to None to use unbounded executor (not recommended for production).
 
     Returns:
         Configured FastAPI application ready to run
@@ -841,9 +961,27 @@ def create_app(
         >>> app = create_app(manifest, registry)
         >>> # Run with uvicorn: uvicorn module:app
     """
+    # Configure thread pool executor for DoS prevention
+    executor: BoundedExecutor | None = None
+    if max_threads is None:
+        max_threads_env = os.getenv("ASAP_MAX_THREADS")
+        if max_threads_env:
+            max_threads = int(max_threads_env)
+    if max_threads is not None:
+        executor = BoundedExecutor(max_threads=max_threads)
+        logger.info(
+            "asap.server.bounded_executor_enabled",
+            manifest_id=manifest.id,
+            max_threads=max_threads,
+        )
+
     # Use default registry if none provided
     if registry is None:
         registry = create_default_registry()
+
+    # Attach executor to registry if provided
+    if executor is not None:
+        registry._executor = executor
 
     # Create authentication middleware if auth is configured
     auth_middleware: AuthenticationMiddleware | None = None
@@ -861,14 +999,41 @@ def create_app(
             schemes=manifest.auth.schemes,
         )
 
+    # Configure max request size
+    if max_request_size is None:
+        max_request_size = int(os.getenv("ASAP_MAX_REQUEST_SIZE", str(MAX_REQUEST_SIZE)))
+
     # Create request handler
-    handler = ASAPRequestHandler(registry, manifest, auth_middleware)
+    handler = ASAPRequestHandler(registry, manifest, auth_middleware, max_request_size)
 
     app = FastAPI(
         title="ASAP Protocol Server",
         description=f"ASAP server for {manifest.name}",
         version=manifest.version,
     )
+
+    # Add size limit middleware (runs before routing)
+    app.add_middleware(SizeLimitMiddleware, max_size=max_request_size)
+
+    # Configure rate limiting
+    if rate_limit is None:
+        rate_limit_str = os.getenv("ASAP_RATE_LIMIT", "100/minute")
+    else:
+        rate_limit_str = rate_limit
+    app.state.limiter = limiter
+    app.state.max_request_size = max_request_size
+    app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+    logger.info(
+        "asap.server.rate_limit_enabled",
+        manifest_id=manifest.id,
+        rate_limit=rate_limit_str,
+    )
+    logger.info(
+        "asap.server.max_request_size",
+        manifest_id=manifest.id,
+        max_request_size=max_request_size,
+    )
+
     # Note: Request size limits should be configured at the ASGI server level (e.g., uvicorn).
     # For production, consider setting --limit-max-requests or using a reverse proxy
     # (nginx, traefik) to enforce request size limits (e.g., 10MB max).
@@ -910,6 +1075,7 @@ def create_app(
         )
 
     @app.post("/asap")
+    @limiter.limit(rate_limit_str)  # slowapi uses app.state.limiter at runtime
     async def handle_asap_message(request: Request) -> JSONResponse:
         """Handle ASAP messages wrapped in JSON-RPC 2.0.
 
