@@ -35,6 +35,50 @@ Thanks for helping out! Here's how to get started quickly.
 -   **Tests**: New features need tests. Bug fixes need regression tests.
 -   **Docs**: Update docstrings and README if you change behavior.
 
+## Reviewing Dependabot PRs
+
+Dependabot automatically creates pull requests for dependency updates. Here's how to review and handle them:
+
+### Types of Updates
+
+1. **Security Updates**: Automatically created when vulnerabilities are detected
+   - These are **high priority** and should be reviewed promptly
+   - See [Security Update Policy](../SECURITY.md#security-update-policy) for response time SLAs
+
+2. **Version Updates**: Created monthly for non-security dependency updates
+   - These can be reviewed during regular maintenance windows
+   - Focus on patch and minor updates first
+
+### Review Workflow
+
+1. **Check CI Status**: Ensure all CI checks pass (tests, linting, type checking)
+2. **Review Changelog**: Check the dependency's changelog for breaking changes
+3. **Test Locally** (if needed):
+   ```bash
+   git checkout <dependabot-branch>
+   uv sync --all-extras
+   uv run pytest
+   ```
+4. **Verify Compatibility**: Ensure the update doesn't break existing functionality
+5. **Merge**: If everything looks good, merge the PR
+
+### SLA Timelines
+
+- **Critical Security**: Review within 24 hours
+- **High Security**: Review within 3 days
+- **Medium/Low Security**: Review within 7 days
+- **Version Updates**: Review within 14 days (monthly batch)
+
+### When to Defer
+
+- If the update introduces breaking changes that require code modifications
+- If CI tests fail and the failure is not related to the dependency update
+- If the update conflicts with other ongoing work (coordinate with maintainers)
+
+### Auto-merge
+
+Currently, auto-merge is disabled. All Dependabot PRs require manual review to ensure compatibility and maintain code quality.
+
 ## Project Structure
 
 -   `src/asap/models`: Core Pydantic models.
