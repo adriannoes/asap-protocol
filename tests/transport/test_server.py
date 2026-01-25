@@ -39,7 +39,7 @@ from asap.transport.jsonrpc import (
     JsonRpcRequest,
     JsonRpcResponse,
 )
-from asap.transport.server import ASAPRequestHandler, create_app
+from asap.transport.server import ASAPRequestHandler, RequestContext, create_app
 
 
 @pytest.fixture
@@ -1061,7 +1061,13 @@ class TestASAPRequestHandlerHelpers:
         )
 
         start_time = time.perf_counter()
-        result = handler._validate_envelope(rpc_request, start_time, metrics)
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
+        )
+        result = handler._validate_envelope(ctx)
 
         envelope_result, payload_type = result
         assert envelope_result is not None
@@ -1081,7 +1087,13 @@ class TestASAPRequestHandlerHelpers:
         )
 
         start_time = time.perf_counter()
-        result = handler._validate_envelope(rpc_request, start_time, metrics)
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
+        )
+        result = handler._validate_envelope(ctx)
 
         envelope_result, error_response = result
         assert envelope_result is None
@@ -1104,7 +1116,13 @@ class TestASAPRequestHandlerHelpers:
         )
 
         start_time = time.perf_counter()
-        result = handler._validate_envelope(rpc_request, start_time, metrics)
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
+        )
+        result = handler._validate_envelope(ctx)
 
         envelope_result, error_response = result
         assert envelope_result is None
@@ -1131,7 +1149,13 @@ class TestASAPRequestHandlerHelpers:
         )
 
         start_time = time.perf_counter()
-        result = handler._validate_envelope(rpc_request, start_time, metrics)
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
+        )
+        result = handler._validate_envelope(ctx)
 
         envelope_result, error_response = result
         assert envelope_result is None
@@ -1181,7 +1205,13 @@ class TestASAPRequestHandlerHelpers:
         )
 
         start_time = time.perf_counter()
-        result = await handler._dispatch_to_handler(envelope, rpc_request, start_time, metrics)
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
+        )
+        result = await handler._dispatch_to_handler(envelope, ctx)
 
         response_envelope, payload_type = result
         assert response_envelope is not None
@@ -1209,7 +1239,13 @@ class TestASAPRequestHandlerHelpers:
         )
 
         start_time = time.perf_counter()
-        result = await handler._dispatch_to_handler(envelope, rpc_request, start_time, metrics)
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
+        )
+        result = await handler._dispatch_to_handler(envelope, ctx)
 
         response_envelope, error_response = result
         assert response_envelope is None
@@ -1239,9 +1275,13 @@ class TestASAPRequestHandlerHelpers:
         )
 
         start_time = time.perf_counter()
-        response = handler._build_success_response(
-            response_envelope, rpc_request, "task.request", start_time, metrics
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
         )
+        response = handler._build_success_response(response_envelope, ctx, "task.request")
 
         assert isinstance(response, JSONResponse)
         assert response.status_code == 200
@@ -1258,8 +1298,18 @@ class TestASAPRequestHandlerHelpers:
         """Test _handle_internal_error creates correct error response."""
         error = ValueError("Test error")
         start_time = time.perf_counter()
-
-        response = handler._handle_internal_error(error, "task.request", start_time, metrics)
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={},
+            id="test-error",
+        )
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
+        )
+        response = handler._handle_internal_error(error, ctx, "task.request")
 
         assert isinstance(response, JSONResponse)
         assert response.status_code == 200
@@ -1285,7 +1335,13 @@ class TestASAPRequestHandlerHelpers:
         )
 
         start_time = time.perf_counter()
-        result = await handler._authenticate_request(request, rpc_request, start_time, metrics)
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
+        )
+        result = await handler._authenticate_request(request, ctx)
 
         agent_id, error = result
         assert agent_id is None
@@ -1311,9 +1367,13 @@ class TestASAPRequestHandlerHelpers:
         )
 
         start_time = time.perf_counter()
-        result = handler._verify_sender_matches_auth(
-            None, envelope, rpc_request, start_time, metrics, "task.request"
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
         )
+        result = handler._verify_sender_matches_auth(None, envelope, ctx, "task.request")
 
         assert result is None
 
@@ -1334,8 +1394,7 @@ class TestASAPRequestHandlerHelpers:
         # Mock the json() method to raise ValueError
         request.json = AsyncMock(side_effect=ValueError("Invalid JSON"))  # type: ignore[method-assign]
 
-        start_time = time.perf_counter()
-        result = await handler._parse_and_validate_request(request, start_time, metrics)
+        result = await handler._parse_and_validate_request(request)
 
         rpc_request, error = result
         assert rpc_request is None
@@ -1345,3 +1404,99 @@ class TestASAPRequestHandlerHelpers:
         content = error.body.decode()
         error_data = json.loads(content)
         assert error_data["error"]["code"] == PARSE_ERROR
+
+    @pytest.mark.asyncio
+    async def test_parse_and_validate_request_non_dict_body(
+        self, handler: ASAPRequestHandler
+    ) -> None:
+        """Test _parse_and_validate_request with non-dict body."""
+        from fastapi import Request
+        from unittest.mock import AsyncMock
+
+        request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
+        request.json = AsyncMock(return_value=["not", "a", "dict"])  # type: ignore[method-assign]
+
+        result = await handler._parse_and_validate_request(request)
+
+        rpc_request, error = result
+        assert rpc_request is None
+        assert error is not None
+        assert isinstance(error, JSONResponse)
+
+        content = error.body.decode()
+        error_data = json.loads(content)
+        assert error_data["error"]["code"] == INVALID_REQUEST
+        assert "must be an object" in error_data["error"]["data"]["error"]
+
+    def test_validate_jsonrpc_request_params_dict_type_error(
+        self, handler: ASAPRequestHandler
+    ) -> None:
+        """Test validate_jsonrpc_request with params dict_type validation error."""
+        # Create body with params as array (should trigger dict_type error)
+        body = {
+            "jsonrpc": "2.0",
+            "method": "asap.send",
+            "params": ["not", "an", "object"],  # type: ignore[dict-item]
+            "id": "test-params-error",
+        }
+
+        rpc_request, error_response = handler.validate_jsonrpc_request(body)
+
+        assert rpc_request is None
+        assert error_response is not None
+        assert isinstance(error_response, JSONResponse)
+
+        content = error_response.body.decode()
+        error_data = json.loads(content)
+        # Should use INVALID_PARAMS (not INVALID_REQUEST) for dict_type error on params
+        assert error_data["error"]["code"] == INVALID_PARAMS
+        assert "params' must be an object" in error_data["error"]["data"]["error"]
+
+    @pytest.mark.asyncio
+    async def test_handle_message_exception_before_rpc_request(
+        self, handler: ASAPRequestHandler
+    ) -> None:
+        """Test handle_message exception handling before rpc_request is created."""
+        from fastapi import Request
+        from unittest.mock import AsyncMock
+
+        request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
+        # Make request.json() raise an exception that's not ValueError
+        request.json = AsyncMock(side_effect=RuntimeError("Unexpected error"))  # type: ignore[method-assign]
+
+        response = await handler.handle_message(request)
+
+        assert isinstance(response, JSONResponse)
+        assert response.status_code == 200
+
+        content = response.body.decode()
+        error_data = json.loads(content)
+        assert "error" in error_data
+        assert error_data["error"]["code"] == INTERNAL_ERROR
+
+    @pytest.mark.asyncio
+    async def test_parse_and_validate_request_rpc_request_none_after_validation(
+        self, handler: ASAPRequestHandler
+    ) -> None:
+        """Test _parse_and_validate_request when validate_jsonrpc_request returns None, None."""
+        from fastapi import Request
+        from unittest.mock import AsyncMock, patch
+
+        request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
+        request.json = AsyncMock(return_value={"jsonrpc": "2.0", "method": "asap.send", "params": {}})  # type: ignore[method-assign]
+
+        # Mock validate_jsonrpc_request to return (None, None) - edge case
+        with patch.object(
+            handler, "validate_jsonrpc_request", return_value=(None, None)
+        ):
+            result = await handler._parse_and_validate_request(request)
+
+        rpc_request, error = result
+        assert rpc_request is None
+        assert error is not None
+        assert isinstance(error, JSONResponse)
+
+        content = error.body.decode()
+        error_data = json.loads(content)
+        assert error_data["error"]["code"] == INTERNAL_ERROR
+        assert "Internal validation error" in error_data["error"]["data"]["error"]
