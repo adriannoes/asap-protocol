@@ -534,7 +534,7 @@ class TestHandlerRegistryThreadSafety:
         from asap.transport.handlers import HandlerRegistry
 
         registry = HandlerRegistry()
-        dispatch_count = threading.atomic = {"count": 0}
+        dispatch_count: dict[str, int] = {"count": 0}
         lock = threading.Lock()
 
         def counting_handler(envelope: Envelope, manifest: Manifest) -> Envelope:

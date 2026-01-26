@@ -14,7 +14,7 @@ from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest
 
 if TYPE_CHECKING:
-    from slowapi import Limiter
+    pass
 
 
 @pytest.fixture
@@ -75,19 +75,3 @@ def sample_envelope(sample_task_request: TaskRequest) -> Envelope:
         payload_type="TaskRequest",
         payload=sample_task_request,
     )
-
-
-@pytest.fixture(autouse=True)
-def isolated_rate_limiter() -> "Limiter":
-    """Create an isolated rate limiter for each test.
-
-    This fixture automatically runs for every test and ensures that
-    each test gets a fresh rate limiter instance to avoid interference
-    between tests.
-
-    Returns:
-        A new Limiter instance with high limits for testing
-    """
-    from asap.transport.middleware import create_test_limiter
-
-    return create_test_limiter()
