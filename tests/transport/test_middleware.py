@@ -10,19 +10,31 @@ This module tests the authentication middleware functionality:
 Note: Rate limiting tests have been migrated to tests/transport/integration/test_rate_limiting.py
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from fastapi import HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials
+from fastapi.testclient import TestClient
+from slowapi.errors import RateLimitExceeded
 
 from asap.models.entities import AuthScheme, Capability, Endpoint, Manifest, Skill
 from asap.transport.middleware import (
     ERROR_AUTH_REQUIRED,
     ERROR_INVALID_TOKEN,
+    ERROR_RATE_LIMIT_EXCEEDED,
     ERROR_SENDER_MISMATCH,
     HTTP_FORBIDDEN,
+    HTTP_TOO_MANY_REQUESTS,
     HTTP_UNAUTHORIZED,
     AuthenticationMiddleware,
     BearerTokenValidator,
+    SizeLimitMiddleware,
+    _get_sender_from_envelope,
+    create_limiter,
+    create_test_limiter,
+    rate_limit_handler,
 )
 
 
@@ -444,3 +456,244 @@ async def test_verify_authentication_with_oauth2_scheme_fails() -> None:
 
 # Note: Rate limiting tests have been migrated to
 # tests/transport/integration/test_rate_limiting.py
+
+
+# Tests for rate_limit_handler, _get_sender_from_envelope, SizeLimitMiddleware, and limiter factories
+
+
+class TestGetSenderFromEnvelope:
+    """Tests for _get_sender_from_envelope helper function."""
+
+    def test_returns_ip_when_no_envelope_in_state(self) -> None:
+        """Test that IP is returned when no envelope is available."""
+        request = MagicMock(spec=Request)
+        request.state = MagicMock()
+        del request.state.envelope
+        del request.state.rpc_request
+
+        with patch("asap.transport.middleware.get_remote_address") as mock_get_ip:
+            mock_get_ip.return_value = "192.168.1.100"
+            result = _get_sender_from_envelope(request)
+
+        assert result == "192.168.1.100"
+
+    def test_returns_sender_from_envelope_in_state(self) -> None:
+        """Test that sender is extracted from request.state.envelope."""
+        request = MagicMock(spec=Request)
+        request.state = MagicMock()
+        request.state.envelope = MagicMock()
+        request.state.envelope.sender = "urn:asap:agent:test-sender"
+
+        result = _get_sender_from_envelope(request)
+
+        assert result == "urn:asap:agent:test-sender"
+
+    def test_returns_sender_from_rpc_request_params(self) -> None:
+        """Test that sender is extracted from request.state.rpc_request."""
+        request = MagicMock(spec=Request)
+        request.state = MagicMock()
+        if hasattr(request.state, "envelope"):
+            del request.state.envelope
+        request.state.rpc_request = MagicMock()
+        request.state.rpc_request.params = {
+            "envelope": {"sender": "urn:asap:agent:rpc-sender"}
+        }
+
+        result = _get_sender_from_envelope(request)
+
+        assert result == "urn:asap:agent:rpc-sender"
+
+    def test_returns_ip_when_envelope_sender_not_string(self) -> None:
+        """Test fallback to IP when sender is not a string."""
+        request = MagicMock(spec=Request)
+        request.state = MagicMock()
+        request.state.envelope = MagicMock()
+        request.state.envelope.sender = 12345  # Not a string
+
+        with patch("asap.transport.middleware.get_remote_address") as mock_get_ip:
+            mock_get_ip.return_value = "10.0.0.1"
+            result = _get_sender_from_envelope(request)
+
+        assert result == "10.0.0.1"
+
+    def test_handles_attribute_error_gracefully(self) -> None:
+        """Test that AttributeError is caught and IP is returned."""
+        request = MagicMock(spec=Request)
+        type(request).state = property(
+            lambda self: (_ for _ in ()).throw(AttributeError)
+        )
+
+        with patch("asap.transport.middleware.get_remote_address") as mock_get_ip:
+            mock_get_ip.return_value = "172.16.0.1"
+            result = _get_sender_from_envelope(request)
+
+        assert result == "172.16.0.1"
+
+    def test_returns_str_when_get_remote_address_returns_non_string(self) -> None:
+        """Test that non-string IP is converted to string."""
+        request = MagicMock(spec=Request)
+        request.state = MagicMock()
+        del request.state.envelope
+        del request.state.rpc_request
+
+        with patch("asap.transport.middleware.get_remote_address") as mock_get_ip:
+            mock_get_ip.return_value = None
+            result = _get_sender_from_envelope(request)
+
+        assert result == "None"
+
+
+class TestRateLimitHandler:
+    """Tests for rate_limit_handler function."""
+
+    def test_handles_rate_limit_exceeded(self) -> None:
+        """Test handling of RateLimitExceeded exception."""
+        request = MagicMock(spec=Request)
+        request.state = MagicMock()
+        request.state.request_id = "test-request-123"
+
+        exc = MagicMock(spec=RateLimitExceeded)
+        exc.__class__ = RateLimitExceeded
+        exc.retry_after = 30
+        exc.limit = "50/minute"
+
+        with (
+            patch("asap.transport.middleware.get_remote_address", return_value="127.0.0.1"),
+            patch(
+                "asap.transport.middleware.isinstance",
+                side_effect=lambda obj, cls: (
+                    cls == RateLimitExceeded if obj is exc else isinstance(obj, cls)
+                ),
+            ),
+        ):
+            response = rate_limit_handler(request, exc)
+
+        assert response.status_code == HTTP_TOO_MANY_REQUESTS
+
+    def test_handles_unexpected_exception_type(self) -> None:
+        """Test handling of non-RateLimitExceeded exception (fallback path)."""
+        request = MagicMock(spec=Request)
+        request.state = MagicMock()
+        request.state.request_id = "test-request-456"
+
+        exc = ValueError("Unexpected error")
+
+        response = rate_limit_handler(request, exc)
+
+        assert response.status_code == HTTP_TOO_MANY_REQUESTS
+        content = response.body.decode()
+        assert ERROR_RATE_LIMIT_EXCEEDED in content
+
+    def test_handles_invalid_retry_after(self) -> None:
+        """Test handling when retry_after is not a valid integer."""
+        request = MagicMock(spec=Request)
+        request.state = MagicMock()
+        request.state.request_id = None
+
+        exc = MagicMock(spec=RateLimitExceeded)
+        exc.__class__ = RateLimitExceeded
+        exc.retry_after = "invalid"
+        exc.limit = None
+
+        with patch("asap.transport.middleware.get_remote_address", return_value="127.0.0.1"):
+            response = rate_limit_handler(request, exc)
+
+        assert response.status_code == HTTP_TOO_MANY_REQUESTS
+        assert response.headers.get("Retry-After") == "60"
+
+
+class TestSizeLimitMiddleware:
+    """Tests for SizeLimitMiddleware."""
+
+    def test_rejects_invalid_max_size(self) -> None:
+        """Test that invalid max_size raises ValueError."""
+        app = FastAPI()
+
+        with pytest.raises(ValueError, match="max_size must be >= 1"):
+            SizeLimitMiddleware(app, max_size=0)
+
+        with pytest.raises(ValueError, match="max_size must be >= 1"):
+            SizeLimitMiddleware(app, max_size=-1)
+
+    def test_allows_request_within_size_limit(self) -> None:
+        """Test that requests within size limit pass through."""
+        app = FastAPI()
+
+        @app.post("/test")
+        async def test_endpoint() -> dict:
+            return {"status": "ok"}
+
+        app.add_middleware(SizeLimitMiddleware, max_size=1024)
+        client = TestClient(app)
+
+        response = client.post("/test", content="small body")
+        assert response.status_code == 200
+
+    def test_rejects_request_exceeding_size_limit(self) -> None:
+        """Test that requests exceeding size limit are rejected."""
+        app = FastAPI()
+
+        @app.post("/test")
+        async def test_endpoint() -> dict:
+            return {"status": "ok"}
+
+        app.add_middleware(SizeLimitMiddleware, max_size=10)
+        client = TestClient(app)
+
+        large_body = "x" * 100
+        response = client.post("/test", content=large_body)
+
+        assert response.status_code == 413
+        assert "exceeds maximum" in response.json()["detail"]
+
+    def test_handles_invalid_content_length_header(self) -> None:
+        """Test that invalid Content-Length header is handled gracefully."""
+        app = FastAPI()
+
+        @app.post("/test")
+        async def test_endpoint() -> dict:
+            return {"status": "ok"}
+
+        app.add_middleware(SizeLimitMiddleware, max_size=1024)
+
+        with patch.object(SizeLimitMiddleware, "dispatch") as mock_dispatch:
+            mock_dispatch.return_value = JSONResponse(content={"status": "ok"})
+            client = TestClient(app)
+            response = client.post("/test", content="body")
+            assert response.status_code == 200
+
+
+class TestLimiterCreation:
+    """Tests for limiter factory functions."""
+
+    def test_create_test_limiter_with_defaults(self) -> None:
+        """Test create_test_limiter with default parameters."""
+        limiter = create_test_limiter()
+
+        assert limiter is not None
+        assert limiter._default_limits is not None
+
+    def test_create_test_limiter_with_custom_limits(self) -> None:
+        """Test create_test_limiter with custom limits."""
+        limiter = create_test_limiter(limits=["50/second"])
+
+        assert limiter is not None
+
+    def test_create_limiter_with_defaults(self) -> None:
+        """Test create_limiter with default parameters."""
+        limiter = create_limiter()
+
+        assert limiter is not None
+
+    def test_create_limiter_with_custom_limits(self) -> None:
+        """Test create_limiter with custom limits."""
+        limiter = create_limiter(limits=["10/minute"])
+
+        assert limiter is not None
+
+    def test_limiters_have_isolated_storage(self) -> None:
+        """Test that each limiter has isolated storage."""
+        limiter1 = create_test_limiter()
+        limiter2 = create_test_limiter()
+
+        assert limiter1._storage_uri != limiter2._storage_uri
