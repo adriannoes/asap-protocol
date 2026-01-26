@@ -151,6 +151,35 @@ def create_test_limiter(limits: Sequence[str] | None = None) -> Limiter:
     )
 
 
+def create_limiter(limits: Sequence[str] | None = None) -> Limiter:
+    """Create a new limiter instance for production use.
+
+    Creates an isolated limiter instance with its own storage, allowing
+    multiple FastAPI app instances to have independent rate limiters.
+
+    Args:
+        limits: Optional list of rate limit strings (e.g., ["100/minute"]).
+            Defaults to DEFAULT_RATE_LIMIT if not provided.
+
+    Returns:
+        New Limiter instance with isolated storage
+
+    Example:
+        >>> limiter = create_limiter(["100/minute"])
+        >>> app.state.limiter = limiter
+    """
+    if limits is None:
+        limits = [DEFAULT_RATE_LIMIT]
+
+    # Use unique storage URI to ensure isolation between app instances
+    unique_storage_id = str(uuid.uuid4())
+    return Limiter(
+        key_func=_get_sender_from_envelope,
+        default_limits=list(limits),
+        storage_uri=f"memory://{unique_storage_id}",
+    )
+
+
 def rate_limit_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle rate limit exceeded exceptions with JSON-RPC formatted error.
 
@@ -619,6 +648,7 @@ __all__ = [
     "SizeLimitMiddleware",
     "limiter",
     "rate_limit_handler",
+    "create_limiter",
     "create_test_limiter",
     "_get_sender_from_envelope",
 ]

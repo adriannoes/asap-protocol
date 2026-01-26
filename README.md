@@ -1,12 +1,5 @@
 # ASAP: Async Simple Agent Protocol
 
-![Version](https://img.shields.io/pypi/v/asap-protocol?label=version)
-![License](https://img.shields.io/github/license/adriannoes/asap-protocol)
-![Python](https://img.shields.io/pypi/pyversions/asap-protocol)
-![CI Status](https://img.shields.io/github/actions/workflow/status/adriannoes/asap-protocol/ci.yml?branch=main&label=CI)
-![Coverage](https://img.shields.io/codecov/c/github/adriannoes/asap-protocol)
-![PyPI Downloads](https://img.shields.io/pypi/dm/asap-protocol)
-
 ![ASAP Protocol Banner](.cursor/docs/asap-protocol-banner.png)
 
 > A streamlined, scalable, asynchronous protocol for agent-to-agent communication and task coordination. Built as a simpler, more powerful alternative to A2A with native MCP integration and stateful orchestration.
@@ -151,108 +144,30 @@ ASAP is ideal for:
 
 If you're building simple point-to-point agent communication, a basic HTTP API might suffice. ASAP shines when you need orchestration, state management, and multi-agent coordination.
 
-## Advanced Examples
+## Advanced Topics
 
-### State Snapshots
+Explore these guides for detailed information on specific features:
 
-```python
-from datetime import datetime, timezone
-from asap.models.entities import StateSnapshot
-from asap.state import InMemorySnapshotStore
+- **[State Management](docs/state-management.md)**: Task lifecycle, state machine, and snapshot persistence for resumable workflows.
+- **[Error Handling](docs/error-handling.md)**: Structured error taxonomy and recovery patterns for robust agent communication.
+- **[Transport Layer](docs/transport.md)**: HTTP/JSON-RPC binding details, async handlers, and server configuration.
+- **[Security](docs/security.md)**: Production security practices, rate limiting, DoS protection, and authentication.
+- **[Observability](docs/observability.md)**: Tracing, metrics, and logging for debugging multi-agent systems.
+- **[Testing](docs/testing.md)**: Testing strategies and utilities for ASAP-based agents.
 
-store = InMemorySnapshotStore()
-snapshot = StateSnapshot(
-    id="snap_01HX5K7R...",
-    task_id="task_01HX5K4N...",
-    version=1,
-    data={"status": "submitted", "progress": 0},
-    created_at=datetime.now(timezone.utc),
-)
-store.save(snapshot)
-latest = store.get("task_01HX5K4N...")
-```
+### Examples & Demos
 
-### Error Recovery
-
-```python
-from asap.errors import InvalidTransitionError
-
-try:
-    raise InvalidTransitionError(from_state="submitted", to_state="completed")
-except InvalidTransitionError as exc:
-    payload = exc.to_dict()
-    print(payload["code"])
-```
-
-### Async Handlers
-
-Handlers can be either synchronous or asynchronous:
-
-```python
-# Sync handler
-def my_sync_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
-    # Process synchronously
-    return response_envelope
-
-# Async handler
-async def my_async_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
-    # Process asynchronously (e.g., database calls, API requests)
-    result = await some_async_operation()
-    return response_envelope
-
-registry.register("task.request", my_async_handler)  # Works with both!
-```
-
-### Security & DoS Protection
-
-ASAP includes built-in protection against common attack vectors:
-
-```python
-from asap.transport.server import create_app
-
-app = create_app(
-    manifest,
-    rate_limit="50/minute",        # Per-sender rate limiting
-    max_request_size=5_000_000,    # 5MB request size limit  
-    max_threads=16,                # Thread pool bounds
-)
-```
-
-**Environment Variables**:
-- `ASAP_RATE_LIMIT`: Rate limit (default: "100/minute")
-- `ASAP_MAX_REQUEST_SIZE`: Max request size (default: 10MB)
-- `ASAP_MAX_THREADS`: Thread pool size (default: min(32, cpu_count + 4))
-
-See [Security Guide](docs/security.md) for production recommendations.
-
-### Multi-Agent Flow
-
-Run the built-in demo to see two agents exchanging messages:
+Run the built-in multi-agent demo to see ASAP in action:
 
 ```bash
 uv run python -m asap.examples.run_demo
 ```
 
+See [`src/asap/examples/`](src/asap/examples/) for complete example implementations.
+
 ### CLI Tools
 
-The ASAP CLI provides utilities for schema management:
-
-```bash
-# Export all JSON schemas
-asap export-schemas --output-dir ./schemas
-
-# List available schemas
-asap list-schemas
-
-# Show a specific schema
-asap show-schema envelope
-
-# Validate JSON against a schema
-asap validate-schema message.json --schema-type envelope
-
-# Verbose output
-asap export-schemas --verbose
-```
+The ASAP CLI provides utilities for schema management. See [CLI documentation](docs/index.md#cli) or run `asap --help` for available commands.
 
 ## Contributing
 

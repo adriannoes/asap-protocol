@@ -1,7 +1,7 @@
-"""Tests for bounded thread pool executor.
+"""Unit tests for BoundedExecutor.
 
-This module tests the BoundedExecutor class that limits concurrent thread usage
-to prevent DoS attacks through resource exhaustion.
+This module contains unit tests for the BoundedExecutor class that limits
+concurrent thread usage to prevent DoS attacks through resource exhaustion.
 """
 
 import asyncio
@@ -170,49 +170,5 @@ class TestBoundedExecutor:
         # Semaphore should be released, so we can submit another task
         future2 = executor.submit(lambda: 42)
         assert future2.result() == 42
-
-        executor.shutdown()
-
-
-class TestBoundedExecutorStarvation:
-    """Test suite for thread pool starvation scenarios."""
-
-    @pytest.mark.asyncio
-    async def test_starvation_n_plus_one_slow_tasks(self) -> None:
-        """Test that N+1 slow tasks result in rejection of the extra task."""
-        executor = BoundedExecutor(max_threads=3)
-
-        import threading
-
-        # Create N+1 slow tasks (4 tasks, 3 threads)
-        lock = threading.Lock()
-        lock.acquire()  # Lock is held
-
-        def slow_task(task_id: int) -> int:
-            lock.acquire()  # Block until lock is released
-            return task_id
-
-        loop = asyncio.get_event_loop()
-
-        # Submit N tasks (should succeed)
-        futures = [loop.run_in_executor(executor, slow_task, i) for i in range(3)]
-
-        # Give threads time to start
-        await asyncio.sleep(0.1)
-
-        # N+1th task should be rejected
-        with pytest.raises(ThreadPoolExhaustedError) as exc_info:
-            await loop.run_in_executor(executor, slow_task, 3)
-
-        assert exc_info.value.max_threads == 3
-        assert exc_info.value.active_threads == 3
-
-        # Release locks to allow tasks to complete
-        for _ in range(3):
-            lock.release()
-
-        # Wait for all tasks to complete
-        results = await asyncio.gather(*futures)
-        assert results == [0, 1, 2]
 
         executor.shutdown()

@@ -40,6 +40,7 @@ Example:
     >>> # Run with: uvicorn asap.transport.server:app --host 0.0.0.0 --port 8000
 """
 
+import json
 import os
 import time
 from dataclasses import dataclass
@@ -59,6 +60,7 @@ from asap.transport.middleware import (
     AuthenticationMiddleware,
     BearerTokenValidator,
     SizeLimitMiddleware,
+    create_limiter,
     limiter,
     rate_limit_handler,
 )
@@ -708,8 +710,6 @@ class ASAPRequestHandler:
                     )
 
             # Parse JSON from bytes
-            import json
-
             body: dict[str, Any] = json.loads(body_bytes.decode("utf-8"))
             return body
         except UnicodeDecodeError as e:
@@ -1020,7 +1020,11 @@ def create_app(
         rate_limit_str = os.getenv("ASAP_RATE_LIMIT", "100/minute")
     else:
         rate_limit_str = rate_limit
-    app.state.limiter = limiter
+
+    # Create isolated limiter instance for this app
+    # This ensures each app instance has its own rate limiter storage
+    # Tests can override this via monkeypatch or direct assignment to app.state.limiter
+    app.state.limiter = create_limiter([rate_limit_str])
     app.state.max_request_size = max_request_size
     app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
     logger.info(

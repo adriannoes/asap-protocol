@@ -49,6 +49,7 @@ nav:
       - Transport: transport.md
       - Metrics: metrics.md
       - Migration: migration.md
+      - Testing: testing.md
   - API Reference:
       - Models:
           - Entities: api/models/entities.md
@@ -58,5 +59,4 @@ nav:
       - State: api/state.md
   - Observability: observability.md
   - Error Handling: error-handling.md
-  - Testing: testing.md
   - Contributing: contributing.md

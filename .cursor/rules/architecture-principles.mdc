@@ -1,8 +1,8 @@
 ---
-description: Ensures the code follows SOLID, DRY, and clean code principles.
-globs: **/*
-alwaysApply: true
+description: "Architecture principles and code quality standards including SOLID principles, DRY, and clean code practices for designing and refactoring code"
+alwaysApply: false
 ---
+
 # Architecture & Principles (SOLID/DRY)
 
 ## Code Quality Standards

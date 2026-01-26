@@ -1,8 +1,8 @@
 ---
-description: Enforces the Conventional Commits specification for all commit messages.
-globs: 
+description: "Conventional Commits specification and pre-push CI verification guidelines for generating commit messages and ensuring code quality before pushing to the repository"
 alwaysApply: true
 ---
+
 # Git Conventional Commits
 
 Use the [Conventional Commits](https://www.conventionalcommits.org/) specification to generate commit messages.

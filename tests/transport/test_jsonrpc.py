@@ -104,7 +104,7 @@ class TestJsonRpcError:
         error = JsonRpcError(code=-32603, message="Internal error")
 
         with pytest.raises(ValidationError):
-            error.code = -32700  # type: ignore[misc]
+            error.code = -32700
 
 
 class TestJsonRpcRequest:
@@ -148,7 +148,7 @@ class TestJsonRpcRequest:
         """Test that invalid jsonrpc version is rejected."""
         with pytest.raises(ValidationError) as exc_info:
             JsonRpcRequest(
-                jsonrpc="1.0",  # type: ignore[arg-type]
+                jsonrpc="1.0",
                 method="test",
                 params={},
                 id=1,
@@ -182,7 +182,7 @@ class TestJsonRpcRequest:
             "id": 42,
         }
 
-        request = JsonRpcRequest(**data)  # type: ignore[arg-type]
+        request = JsonRpcRequest(**data)
 
         assert request.method == "asap.send"
         assert request.id == 42
@@ -190,14 +190,14 @@ class TestJsonRpcRequest:
     def test_request_requires_all_fields(self) -> None:
         """Test request requires all mandatory fields."""
         with pytest.raises(ValidationError):
-            JsonRpcRequest(method="test", params={})  # type: ignore[call-arg]
+            JsonRpcRequest(method="test", params={})
 
     def test_request_immutability(self) -> None:
         """Test request objects are immutable."""
         request = JsonRpcRequest(method="test", params={}, id=1)
 
         with pytest.raises(ValidationError):
-            request.method = "new_method"  # type: ignore[misc]
+            request.method = "new_method"
 
 
 class TestJsonRpcResponse:
@@ -247,7 +247,7 @@ class TestJsonRpcResponse:
             "id": "test-123",
         }
 
-        response = JsonRpcResponse(**data)  # type: ignore[arg-type]
+        response = JsonRpcResponse(**data)
 
         assert response.result == {"success": True}
         assert response.id == "test-123"
@@ -255,14 +255,14 @@ class TestJsonRpcResponse:
     def test_response_requires_all_fields(self) -> None:
         """Test response requires all mandatory fields."""
         with pytest.raises(ValidationError):
-            JsonRpcResponse(result={})  # type: ignore[call-arg]
+            JsonRpcResponse(result={})
 
     def test_response_immutability(self) -> None:
         """Test response objects are immutable."""
         response = JsonRpcResponse(result={}, id=1)
 
         with pytest.raises(ValidationError):
-            response.id = 2  # type: ignore[misc]
+            response.id = 2
 
 
 class TestJsonRpcErrorResponse:
@@ -323,7 +323,7 @@ class TestJsonRpcErrorResponse:
             "id": "test",
         }
 
-        response = JsonRpcErrorResponse(**data)  # type: ignore[arg-type]
+        response = JsonRpcErrorResponse(**data)
 
         assert response.error.code == -32601
         assert response.error.message == "Method not found"
@@ -335,7 +335,7 @@ class TestJsonRpcErrorResponse:
         response = JsonRpcErrorResponse(error=error, id=1)
 
         with pytest.raises(ValidationError):
-            response.id = 2  # type: ignore[misc]
+            response.id = 2
 
 
 class TestJsonRpcIntegration:

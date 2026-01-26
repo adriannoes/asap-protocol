@@ -6,6 +6,7 @@ from asap.errors import (
     MalformedEnvelopeError,
     TaskNotFoundError,
     TaskAlreadyCompletedError,
+    ThreadPoolExhaustedError,
 )
 
 
@@ -249,3 +250,48 @@ class TestErrorSerialization:
         # Should be able to parse back
         parsed = json.loads(json_str)
         assert parsed == result
+
+
+class TestThreadPoolExhaustedError:
+    """Test ThreadPoolExhaustedError class."""
+
+    def test_basic_thread_pool_exhausted_error(self) -> None:
+        """Test creating a ThreadPoolExhaustedError."""
+        error = ThreadPoolExhaustedError(max_threads=10, active_threads=10)
+
+        assert error.code == "asap:transport/thread_pool_exhausted"
+        assert error.max_threads == 10
+        assert error.active_threads == 10
+        assert "Thread pool exhausted: 10/10 threads in use" in str(error)
+        assert "Service temporarily unavailable" in str(error)
+
+    def test_thread_pool_exhausted_error_with_details(self) -> None:
+        """Test ThreadPoolExhaustedError with additional details."""
+        details = {"queue_size": 100, "rejected_requests": 5}
+        error = ThreadPoolExhaustedError(max_threads=20, active_threads=18, details=details)
+
+        assert error.code == "asap:transport/thread_pool_exhausted"
+        assert error.max_threads == 20
+        assert error.active_threads == 18
+        assert error.details["queue_size"] == 100
+        assert error.details["rejected_requests"] == 5
+        # Check that max_threads and active_threads are included in details
+        assert error.details["max_threads"] == 20
+        assert error.details["active_threads"] == 18
+
+    def test_thread_pool_exhausted_error_inheritance(self) -> None:
+        """Test that ThreadPoolExhaustedError inherits from ASAPError."""
+        error = ThreadPoolExhaustedError(max_threads=5, active_threads=5)
+
+        assert isinstance(error, ASAPError)
+        assert isinstance(error, Exception)
+
+    def test_thread_pool_exhausted_error_to_dict(self) -> None:
+        """Test ThreadPoolExhaustedError serialization."""
+        error = ThreadPoolExhaustedError(max_threads=15, active_threads=15)
+        result = error.to_dict()
+
+        assert result["code"] == "asap:transport/thread_pool_exhausted"
+        assert "Thread pool exhausted" in result["message"]
+        assert result["details"]["max_threads"] == 15
+        assert result["details"]["active_threads"] == 15

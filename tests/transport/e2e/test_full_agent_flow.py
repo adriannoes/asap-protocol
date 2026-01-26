@@ -1,4 +1,4 @@
-"""Integration tests for ASAP protocol transport layer.
+"""End-to-end tests for ASAP protocol transport layer.
 
 This module tests the full round-trip communication between
 ASAP client and server, verifying end-to-end functionality.
@@ -11,7 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 if TYPE_CHECKING:
-    from slowapi import Limiter
+    pass
 
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.enums import TaskStatus
@@ -21,8 +21,7 @@ from asap.transport.client import ASAPClient
 from asap.transport.handlers import HandlerRegistry, create_echo_handler
 from asap.transport.server import create_app
 
-if TYPE_CHECKING:
-    pass
+from ..conftest import NoRateLimitTestBase
 
 
 # Test fixtures
@@ -47,12 +46,12 @@ def test_manifest() -> Manifest:
 
 
 @pytest.fixture
-def test_app(test_manifest: Manifest, isolated_rate_limiter: "Limiter") -> TestClient:
-    """Create a test client with the ASAP app."""
-    # Use very high rate limit to avoid rate limiting in tests
+def test_app(test_manifest: Manifest) -> TestClient:
+    """Create a test client with the ASAP app.
+
+    Rate limiting is automatically disabled via NoRateLimitTestBase.
+    """
     app = create_app(test_manifest, rate_limit="100000/minute")
-    # Replace with isolated limiter to avoid test interference
-    app.state.limiter = isolated_rate_limiter
     return TestClient(app)
 
 
@@ -73,7 +72,7 @@ def sample_task_request_envelope() -> Envelope:
     )
 
 
-class TestFullRoundTrip:
+class TestFullRoundTrip(NoRateLimitTestBase):
     """Tests for complete request-response round-trip."""
 
     def test_client_to_server_round_trip(
@@ -159,7 +158,7 @@ class TestFullRoundTrip:
         assert task_response.result["echoed"] == {"message": "Hello from integration test!"}
 
 
-class TestManifestDiscovery:
+class TestManifestDiscovery(NoRateLimitTestBase):
     """Tests for manifest discovery endpoint."""
 
     def test_manifest_accessible_via_well_known(self, test_app: TestClient) -> None:
@@ -193,7 +192,7 @@ class TestManifestDiscovery:
         assert manifest_data["endpoints"]["asap"] == "http://localhost:8000/asap"
 
 
-class TestCorrelationAndTracing:
+class TestCorrelationAndTracing(NoRateLimitTestBase):
     """Tests for correlation ID and trace ID propagation."""
 
     def test_correlation_id_matches_request_id(
@@ -276,7 +275,7 @@ class TestCorrelationAndTracing:
         assert len(response_ids) == len(set(response_ids))
 
 
-class TestErrorScenarios:
+class TestErrorScenarios(NoRateLimitTestBase):
     """Tests for error handling in integration scenarios."""
 
     def test_invalid_json_returns_parse_error(self, test_app: TestClient) -> None:
@@ -320,7 +319,7 @@ class TestErrorScenarios:
         assert json_rpc_response["error"]["code"] == -32601  # Method not found
 
 
-class TestAsyncClientIntegration:
+class TestAsyncClientIntegration(NoRateLimitTestBase):
     """Tests for ASAPClient with real server (using httpx MockTransport)."""
 
     async def test_async_client_with_mock_server(
@@ -387,7 +386,7 @@ class TestAsyncClientIntegration:
             assert exc_info.value.code == -32603
 
 
-class TestHandlerRegistryIntegration:
+class TestHandlerRegistryIntegration(NoRateLimitTestBase):
     """Tests for HandlerRegistry with server integration."""
 
     def test_custom_handler_with_registry(self, test_manifest: Manifest) -> None:
