@@ -120,6 +120,7 @@ init_typed = true
 warn_required_dynamic_aliases = true
 
 [tool.pytest.ini_options]
+pythonpath = ["src"]  # Ensure src is in PYTHONPATH for pytest
 minversion = "8.0"
 addopts = [
     "--strict-markers",

@@ -1,6 +1,46 @@
-# Testing
+# Testing Guide
 
-This guide describes the testing strategy, test organization, and how to run and write tests for the ASAP Protocol project.
+This guide covers the testing infrastructure for the ASAP Protocol implementation.
+
+## Running Tests
+
+**Always use `uv run pytest` to run tests:**
+
+```bash
+# Run all tests
+uv run pytest
+
+# Run specific test file
+uv run pytest tests/transport/integration/test_rate_limiting.py -v
+
+# Run specific test
+uv run pytest tests/transport/integration/test_rate_limiting.py::TestRateLimiting::test_requests_within_limit_succeed -v
+
+# Run with coverage
+uv run pytest --cov=src --cov-report=html
+
+# Run in parallel (using pytest-xdist)
+uv run pytest -n auto
+```
+
+**Why `uv run pytest` instead of `pytest`?**
+
+The project requires Python 3.13+, but your system may have a global `pytest` installed under an older Python version (e.g., Python 3.9). Using `uv run pytest` ensures:
+
+1. ✅ Correct Python version (from `.venv`, not system Python)
+2. ✅ Correct pytest version (from project dependencies)
+3. ✅ All project dependencies are available
+4. ✅ Consistent with CI environment
+
+**Alternative:** Activate the virtual environment first:
+
+```bash
+source .venv/bin/activate
+pytest tests/transport/integration/test_rate_limiting.py -v
+deactivate
+```
+
+---
 
 ## Test Organization
 
@@ -161,6 +201,103 @@ def test_rate_limit_exceeded(
     # ...
 ```
 
+## Choosing the Right Test Isolation Strategy
+
+When writing transport layer tests, use this decision tree to choose the appropriate fixtures and test organization:
+
+```mermaid
+graph TD
+    A[Writing Transport Test] --> B{Testing rate<br/>limiting behavior?}
+    B -->|Yes| C[Create class-level fixture<br/>with aggressive monkeypatch]
+    B -->|No| D[Inherit from<br/>NoRateLimitTestBase]
+    
+    C --> E[See test_rate_limiting.py<br/>for examples]
+    C --> F{Need custom<br/>rate limit?}
+    F -->|Yes| G[Create fixture like<br/>isolated_app_5_per_minute]
+    F -->|No| H[Use replace_global_limiter<br/>fixture]
+    
+    D --> I[Rate limiting automatically<br/>disabled for all tests]
+    D --> J[Can make unlimited<br/>requests without 429 errors]
+    
+    style C fill:#fff3cd,stroke:#856404
+    style D fill:#d4edda,stroke:#155724
+    style E fill:#e7f3ff,stroke:#004085
+    style G fill:#e7f3ff,stroke:#004085
+    style H fill:#e7f3ff,stroke:#004085
+    style I fill:#d1ecf1,stroke:#0c5460
+    style J fill:#d1ecf1,stroke:#0c5460
+```
+
+### Quick Reference Table
+
+| Your Test Needs | Recommended Approach | Example |
+|----------------|---------------------|---------|
+| **Testing rate limiting** | Class-level fixture with aggressive monkeypatch | `test_rate_limiting.py` |
+| **NOT testing rate limiting** | Inherit from `NoRateLimitTestBase` | Most integration tests |
+| **Unit test (no HTTP)** | No special fixtures needed | `test_bounded_executor.py` |
+| **Custom rate limit (e.g., 5/min)** | Create class-level fixture | See `isolated_app_5_per_minute` |
+| **Testing other features** | `NoRateLimitTestBase` + specific fixtures | `test_request_size_limits.py` |
+
+### When to Use Each Fixture
+
+#### Use `NoRateLimitTestBase` when:
+- ✅ Testing features OTHER than rate limiting
+- ✅ Need to make many requests without hitting limits
+- ✅ Testing thread pools, request size limits, metrics, etc.
+- ✅ Running integration tests that involve HTTP but not rate limiting
+
+#### Use Aggressive Monkeypatch Fixtures when:
+- ✅ **Explicitly testing rate limiting behavior**
+- ✅ Need precise control over rate limit values
+- ✅ Testing limit thresholds, resets, or error responses
+- ✅ Creating rate limiting tests in `test_rate_limiting.py`
+
+#### Use Neither (plain pytest) when:
+- ✅ Unit tests with no HTTP dependencies
+- ✅ Testing pure functions or classes
+- ✅ No rate limiting or app creation involved
+
+### Example: Creating a Class-Level Fixture for Rate Limiting Tests
+
+```python
+class TestMyRateLimitFeature:
+    """Tests for rate limiting with custom limits."""
+    
+    @pytest.fixture
+    def isolated_app_custom_limit(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        isolated_limiter_factory: Callable,
+        manifest: Manifest,
+    ) -> FastAPI:
+        """Create app with custom rate limit."""
+        # Create isolated limiter
+        limiter = isolated_limiter_factory(["10/minute"])
+        
+        # Aggressive monkeypatch - replace in BOTH modules
+        import asap.transport.middleware as middleware_module
+        import asap.transport.server as server_module
+        
+        monkeypatch.setattr(middleware_module, "limiter", limiter)
+        monkeypatch.setattr(server_module, "limiter", limiter)
+        
+        # Create app
+        app = create_app(manifest, rate_limit="10/minute")
+        app.state.limiter = limiter
+        
+        return app
+    
+    def test_my_rate_limit_feature(
+        self,
+        isolated_app_custom_limit: FastAPI,
+    ) -> None:
+        """Test uses the custom rate-limited app."""
+        client = TestClient(isolated_app_custom_limit)
+        # Test implementation...
+```
+
+---
+
 ## Pytest Fixtures Explained
 
 ### What are Fixtures?
@@ -253,27 +390,27 @@ Fixtures ensure test isolation by:
 
 Run all tests:
 ```bash
-PYTHONPATH=src uv run pytest
+uv run pytest
 ```
 
 Run with coverage:
 ```bash
-PYTHONPATH=src uv run pytest --cov=src --cov-report=term-missing
+uv run pytest --cov=src --cov-report=term-missing
 ```
 
 Run specific test file:
 ```bash
-PYTHONPATH=src uv run pytest tests/transport/unit/test_bounded_executor.py
+uv run pytest tests/transport/unit/test_bounded_executor.py
 ```
 
 Run specific test class:
 ```bash
-PYTHONPATH=src uv run pytest tests/transport/integration/test_rate_limiting.py::TestRateLimiting
+uv run pytest tests/transport/integration/test_rate_limiting.py::TestRateLimiting
 ```
 
 Run specific test method:
 ```bash
-PYTHONPATH=src uv run pytest tests/transport/unit/test_bounded_executor.py::TestBoundedExecutor::test_submit_task
+uv run pytest tests/transport/unit/test_bounded_executor.py::TestBoundedExecutor::test_submit_task
 ```
 
 ### Parallel Execution
@@ -281,13 +418,13 @@ PYTHONPATH=src uv run pytest tests/transport/unit/test_bounded_executor.py::Test
 Run tests in parallel with pytest-xdist:
 ```bash
 # Automatic worker count (recommended)
-PYTHONPATH=src uv run pytest -n auto
+uv run pytest -n auto
 
 # Specific number of workers
-PYTHONPATH=src uv run pytest -n 4
+uv run pytest -n 4
 
 # With coverage (coverage is aggregated automatically)
-PYTHONPATH=src uv run pytest -n auto --cov=src --cov-report=term-missing
+uv run pytest -n auto --cov=src --cov-report=term-missing
 ```
 
 **Benefits**:
@@ -299,17 +436,17 @@ PYTHONPATH=src uv run pytest -n auto --cov=src --cov-report=term-missing
 
 Run only unit tests:
 ```bash
-PYTHONPATH=src uv run pytest tests/transport/unit/
+uv run pytest tests/transport/unit/
 ```
 
 Run only integration tests:
 ```bash
-PYTHONPATH=src uv run pytest tests/transport/integration/
+uv run pytest tests/transport/integration/
 ```
 
 Run only E2E tests:
 ```bash
-PYTHONPATH=src uv run pytest tests/transport/e2e/
+uv run pytest tests/transport/e2e/
 ```
 
 ### Verbose Output
@@ -317,13 +454,13 @@ PYTHONPATH=src uv run pytest tests/transport/e2e/
 For more detailed output:
 ```bash
 # Verbose mode
-PYTHONPATH=src uv run pytest -v
+uv run pytest -v
 
 # Very verbose (shows each test name)
-PYTHONPATH=src uv run pytest -vv
+uv run pytest -vv
 
 # Show print statements
-PYTHONPATH=src uv run pytest -s
+uv run pytest -s
 ```
 
 ## Writing New Tests
