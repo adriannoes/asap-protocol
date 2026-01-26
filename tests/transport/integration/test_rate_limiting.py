@@ -16,6 +16,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 if TYPE_CHECKING:
+    from fastapi import FastAPI
     from slowapi import Limiter
 
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
@@ -90,13 +91,17 @@ class TestRateLimiting:
     All tests use aggressive monkeypatch to ensure complete limiter isolation.
     """
 
-    def test_requests_within_limit_succeed(
+    @pytest.fixture
+    def isolated_app_5_per_minute(
         self,
         monkeypatch: pytest.MonkeyPatch,
         isolated_limiter_factory: "collections.abc.Callable[[collections.abc.Sequence[str] | None], Limiter]",
         rate_limit_manifest: Manifest,
-    ) -> None:
-        """Test that requests within the rate limit succeed."""
+    ) -> "FastAPI":
+        """Create an app with 5/minute rate limit and aggressive monkeypatch.
+
+        This fixture is reused across all rate limiting tests to avoid code duplication.
+        """
         # Create completely isolated limiter
         limiter = isolated_limiter_factory(["5/minute"])
 
@@ -112,7 +117,42 @@ class TestRateLimiting:
         # Also set app.state.limiter for runtime
         app.state.limiter = limiter
 
-        client = TestClient(app)
+        return app  # type: ignore[return-value]
+
+    @pytest.fixture
+    def isolated_app_1_per_second(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        isolated_limiter_factory: "collections.abc.Callable[[collections.abc.Sequence[str] | None], Limiter]",
+        rate_limit_manifest: Manifest,
+    ) -> "FastAPI":
+        """Create an app with 1/second rate limit and aggressive monkeypatch.
+
+        Used for test_limit_resets_after_window which needs a short time window.
+        """
+        # Create completely isolated limiter
+        limiter = isolated_limiter_factory(["1/second"])
+
+        # Replace global limiter in BOTH modules
+        import asap.transport.middleware as middleware_module
+        import asap.transport.server as server_module
+
+        monkeypatch.setattr(middleware_module, "limiter", limiter)
+        monkeypatch.setattr(server_module, "limiter", limiter)
+
+        # Create app - it will use the monkeypatched limiter
+        app = create_app(rate_limit_manifest, rate_limit="1/second")
+        # Also set app.state.limiter for runtime
+        app.state.limiter = limiter
+
+        return app  # type: ignore[return-value]
+
+    def test_requests_within_limit_succeed(
+        self,
+        isolated_app_5_per_minute: "FastAPI",
+    ) -> None:
+        """Test that requests within the rate limit succeed."""
+        client = TestClient(isolated_app_5_per_minute)
 
         # Make 5 requests (the limit is 5/minute)
         for i in range(5):
@@ -126,27 +166,10 @@ class TestRateLimiting:
 
     def test_exceeding_limit_returns_429(
         self,
-        monkeypatch: pytest.MonkeyPatch,
-        isolated_limiter_factory: "collections.abc.Callable[[collections.abc.Sequence[str] | None], Limiter]",
-        rate_limit_manifest: Manifest,
+        isolated_app_5_per_minute: "FastAPI",
     ) -> None:
         """Test that exceeding the rate limit returns HTTP 429."""
-        # Create completely isolated limiter
-        limiter = isolated_limiter_factory(["5/minute"])
-
-        # Replace global limiter in BOTH modules
-        import asap.transport.middleware as middleware_module
-        import asap.transport.server as server_module
-
-        monkeypatch.setattr(middleware_module, "limiter", limiter)
-        monkeypatch.setattr(server_module, "limiter", limiter)
-
-        # Create app - it will use the monkeypatched limiter
-        app = create_app(rate_limit_manifest, rate_limit="5/minute")
-        # Also set app.state.limiter for runtime
-        app.state.limiter = limiter
-
-        client = TestClient(app)
+        client = TestClient(isolated_app_5_per_minute)
 
         # Make 5 requests (within limit)
         for _i in range(5):
@@ -168,30 +191,13 @@ class TestRateLimiting:
 
     def test_different_senders_independent(
         self,
-        monkeypatch: pytest.MonkeyPatch,
-        isolated_limiter_factory: "collections.abc.Callable[[collections.abc.Sequence[str] | None], Limiter]",
-        rate_limit_manifest: Manifest,
+        isolated_app_5_per_minute: "FastAPI",
     ) -> None:
         """Test that rate limiting is applied per client IP.
 
         Note: The rate limiter uses IP address when envelope is not yet parsed.
         """
-        # Create completely isolated limiter
-        limiter = isolated_limiter_factory(["5/minute"])
-
-        # Replace global limiter in BOTH modules
-        import asap.transport.middleware as middleware_module
-        import asap.transport.server as server_module
-
-        monkeypatch.setattr(middleware_module, "limiter", limiter)
-        monkeypatch.setattr(server_module, "limiter", limiter)
-
-        # Create app - it will use the monkeypatched limiter
-        app = create_app(rate_limit_manifest, rate_limit="5/minute")
-        # Also set app.state.limiter for runtime
-        app.state.limiter = limiter
-
-        client = TestClient(app)
+        client = TestClient(isolated_app_5_per_minute)
 
         # Make 5 requests (within limit)
         for _i in range(5):
@@ -213,30 +219,13 @@ class TestRateLimiting:
 
     def test_limit_resets_after_window(
         self,
-        monkeypatch: pytest.MonkeyPatch,
-        isolated_limiter_factory: "collections.abc.Callable[[collections.abc.Sequence[str] | None], Limiter]",
-        rate_limit_manifest: Manifest,
+        isolated_app_1_per_second: "FastAPI",
     ) -> None:
         """Test that rate limit resets after the time window.
 
         Uses a 1 second window to make the test fast.
         """
-        # Create completely isolated limiter
-        limiter = isolated_limiter_factory(["1/second"])
-
-        # Replace global limiter in BOTH modules
-        import asap.transport.middleware as middleware_module
-        import asap.transport.server as server_module
-
-        monkeypatch.setattr(middleware_module, "limiter", limiter)
-        monkeypatch.setattr(server_module, "limiter", limiter)
-
-        # Create app - it will use the monkeypatched limiter
-        app = create_app(rate_limit_manifest, rate_limit="1/second")
-        # Also set app.state.limiter for runtime
-        app.state.limiter = limiter
-
-        client = TestClient(app)
+        client = TestClient(isolated_app_1_per_second)
 
         sender = "urn:asap:agent:reset-test"
 
