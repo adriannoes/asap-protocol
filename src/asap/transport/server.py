@@ -40,6 +40,7 @@ Example:
     >>> # Run with: uvicorn asap.transport.server:app --host 0.0.0.0 --port 8000
 """
 
+import json
 import os
 import time
 from dataclasses import dataclass
@@ -708,8 +709,6 @@ class ASAPRequestHandler:
                     )
 
             # Parse JSON from bytes
-            import json
-
             body: dict[str, Any] = json.loads(body_bytes.decode("utf-8"))
             return body
         except UnicodeDecodeError as e:
