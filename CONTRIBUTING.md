@@ -29,10 +29,53 @@ Thanks for helping out! Here's how to get started quickly.
 3.  **Test**: Ensure `uv run pytest` passes.
 4.  **Push**: Open a PR on GitHub.
 
+## Testing
+
+### Test Structure
+
+Tests are organized into three categories:
+
+- **Unit tests** (`tests/transport/unit/`): Test isolated components without HTTP or rate limiting dependencies
+- **Integration tests** (`tests/transport/integration/`): Test component interactions within the transport layer
+- **E2E tests** (`tests/transport/e2e/`): Test complete agent workflows
+
+### Rate Limiting in Tests
+
+**IMPORTANT**: To prevent rate limiting interference between tests:
+
+1. **For non-rate-limiting tests**: Inherit from `NoRateLimitTestBase`:
+   ```python
+   from tests.transport.conftest import NoRateLimitTestBase
+
+   class TestMyFeature(NoRateLimitTestBase):
+       """Rate limiting is automatically disabled."""
+       pass
+   ```
+
+2. **For rate limiting tests**: Use aggressive monkeypatch fixtures (see [Testing Guide](docs/testing.md))
+
+3. **Run with parallel execution**: Use `pytest -n auto` for process-level isolation
+
+### Test Isolation Strategy
+
+We use a three-pronged approach to ensure test isolation:
+
+1. **Process isolation** (pytest-xdist): Tests run in separate processes
+2. **Aggressive monkeypatch**: Module-level limiters are replaced for complete isolation
+3. **Strategic organization**: Rate limiting tests are isolated in separate files
+
+See the [Testing Guide](docs/testing.md) for complete details on:
+- Test organization and structure
+- Writing new tests
+- Using fixtures
+- Troubleshooting test interference
+
 ## Guidelines
 
 -   **Code Style**: Follow PEP 8 (handled by Ruff).
 -   **Tests**: New features need tests. Bug fixes need regression tests.
+    - Use `NoRateLimitTestBase` for tests that don't test rate limiting
+    - See [Testing Guide](docs/testing.md) for detailed guidelines
 -   **Docs**: Update docstrings and README if you change behavior.
 
 ## Reviewing Dependabot PRs
