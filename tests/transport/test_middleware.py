@@ -495,9 +495,7 @@ class TestGetSenderFromEnvelope:
         if hasattr(request.state, "envelope"):
             del request.state.envelope
         request.state.rpc_request = MagicMock()
-        request.state.rpc_request.params = {
-            "envelope": {"sender": "urn:asap:agent:rpc-sender"}
-        }
+        request.state.rpc_request.params = {"envelope": {"sender": "urn:asap:agent:rpc-sender"}}
 
         result = _get_sender_from_envelope(request)
 
@@ -519,9 +517,7 @@ class TestGetSenderFromEnvelope:
     def test_handles_attribute_error_gracefully(self) -> None:
         """Test that AttributeError is caught and IP is returned."""
         request = MagicMock(spec=Request)
-        type(request).state = property(
-            lambda self: (_ for _ in ()).throw(AttributeError)
-        )
+        type(request).state = property(lambda self: (_ for _ in ()).throw(AttributeError))
 
         with patch("asap.transport.middleware.get_remote_address") as mock_get_ip:
             mock_get_ip.return_value = "172.16.0.1"

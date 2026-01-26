@@ -154,9 +154,7 @@ class TestParseArgs:
 
     def test_parse_args_all_options(self) -> None:
         """Test parse_args with all options."""
-        args = parse_args(
-            ["--echo-url", "http://test:8080", "--message", "test message"]
-        )
+        args = parse_args(["--echo-url", "http://test:8080", "--message", "test message"])
 
         assert args.echo_url == "http://test:8080"
         assert args.message == "test message"
