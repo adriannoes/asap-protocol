@@ -6,35 +6,24 @@ This module tests the authentication middleware functionality:
 - Authentication bypass when not configured
 - Error responses for invalid auth
 - Custom token validators
-- Rate limiting functionality
+
+Note: Rate limiting tests have been migrated to tests/transport/integration/test_rate_limiting.py
 """
 
-import time
-import uuid
-from datetime import datetime, timezone
-
 import pytest
-from _pytest.monkeypatch import MonkeyPatch
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials
-from fastapi.testclient import TestClient
 
 from asap.models.entities import AuthScheme, Capability, Endpoint, Manifest, Skill
-from asap.models.envelope import Envelope
-from asap.models.payloads import TaskRequest
-from asap.transport.jsonrpc import JsonRpcRequest
 from asap.transport.middleware import (
     ERROR_AUTH_REQUIRED,
     ERROR_INVALID_TOKEN,
-    ERROR_RATE_LIMIT_EXCEEDED,
     ERROR_SENDER_MISMATCH,
     HTTP_FORBIDDEN,
-    HTTP_TOO_MANY_REQUESTS,
     HTTP_UNAUTHORIZED,
     AuthenticationMiddleware,
     BearerTokenValidator,
 )
-from asap.transport.server import create_app
 
 
 # Test fixtures
@@ -453,187 +442,5 @@ async def test_verify_authentication_with_oauth2_scheme_fails() -> None:
     assert ERROR_INVALID_TOKEN in str(exc_info.value.detail)
 
 
-# Tests for Rate Limiting
-
-
-@pytest.fixture(scope="function")
-def rate_limited_app(monkeypatch: MonkeyPatch, request: pytest.FixtureRequest) -> FastAPI:
-    """Create FastAPI app with rate limiting enabled for testing.
-
-    Args:
-        monkeypatch: Pytest monkeypatch fixture
-        request: Pytest request fixture for parametrization
-
-    Returns:
-        FastAPI application with isolated rate limiter
-    """
-    from slowapi import Limiter
-
-    from asap.transport.middleware import _get_sender_from_envelope
-
-    # Get rate limit from parametrization or use default
-    rate_limit = getattr(request, "param", "5/minute")
-
-    # Create a new isolated limiter instance for this test
-    # Use a unique storage URI to ensure complete isolation
-    unique_storage_id = str(uuid.uuid4())
-    new_limiter = Limiter(
-        key_func=_get_sender_from_envelope,
-        default_limits=["100/minute"],
-        storage_uri=f"memory://{unique_storage_id}",
-    )
-
-    # Replace the global limiter with the new isolated one
-    import asap.transport.middleware as middleware_module
-
-    monkeypatch.setattr(middleware_module, "limiter", new_limiter)
-
-    import asap.transport.server as server_module
-
-    monkeypatch.setattr(server_module, "limiter", new_limiter)
-
-    manifest = Manifest(
-        id="urn:asap:agent:rate-limit-test",
-        name="Rate Limit Test Agent",
-        version="1.0.0",
-        description="Test agent for rate limiting",
-        capabilities=Capability(
-            asap_version="0.1",
-            skills=[Skill(id="echo", description="Echo skill")],
-            state_persistence=False,
-        ),
-        endpoints=Endpoint(asap="http://localhost:8000/asap"),
-    )
-
-    # Create app with configured rate limit
-    return create_app(manifest, registry=None, rate_limit=rate_limit)
-
-
-@pytest.fixture(scope="function")
-def rate_limited_client(rate_limited_app: FastAPI) -> TestClient:
-    """Create test client for rate-limited app."""
-    return TestClient(rate_limited_app)
-
-
-def _create_test_rpc_request(sender: str = "urn:asap:agent:client-1") -> JsonRpcRequest:
-    """Create a test JSON-RPC request with envelope.
-
-    Args:
-        sender: Sender agent ID for the envelope
-
-    Returns:
-        JsonRpcRequest with valid ASAP envelope
-    """
-    envelope = Envelope(
-        asap_version="0.1",
-        timestamp=datetime.now(timezone.utc),
-        sender=sender,
-        recipient="urn:asap:agent:rate-limit-test",
-        payload_type="task.request",
-        payload=TaskRequest(
-            conversation_id="test-conv-123",
-            skill_id="echo",
-            input={"message": "test"},
-        ).model_dump(),
-    )
-
-    return JsonRpcRequest(
-        method="asap.send",
-        params={"envelope": envelope.model_dump(mode="json")},
-        id="test-request-1",
-    )
-
-
-class TestRateLimiting:
-    """Tests for rate limiting functionality.
-
-    Tests cover:
-    - Requests within limit succeed
-    - Exceeding limit returns 429
-    - Limit resets after window
-    - Different senders have independent limits
-    """
-
-    @pytest.mark.parametrize("rate_limited_app", ["5/minute"], indirect=True)
-    def test_requests_within_limit_succeed(self, rate_limited_client: TestClient) -> None:
-        """Test that requests within the rate limit succeed."""
-        # Make 5 requests (the limit is 5/minute)
-        for i in range(5):
-            rpc_request = _create_test_rpc_request()
-            response = rate_limited_client.post("/asap", json=rpc_request.model_dump(mode="json"))
-
-            assert response.status_code == 200, f"Request {i + 1} should succeed"
-            data = response.json()
-            assert "jsonrpc" in data
-            assert data["jsonrpc"] == "2.0"
-
-    @pytest.mark.parametrize("rate_limited_app", ["5/minute"], indirect=True)
-    def test_exceeding_limit_returns_429(self, rate_limited_client: TestClient) -> None:
-        """Test that exceeding the rate limit returns HTTP 429."""
-        # Make 5 requests (within limit)
-        for _i in range(5):
-            rpc_request = _create_test_rpc_request()
-            response = rate_limited_client.post("/asap", json=rpc_request.model_dump(mode="json"))
-            assert response.status_code == 200
-
-        # 6th request should be rate limited
-        rpc_request = _create_test_rpc_request()
-        response = rate_limited_client.post("/asap", json=rpc_request.model_dump(mode="json"))
-
-        assert response.status_code == HTTP_TOO_MANY_REQUESTS
-        data = response.json()
-        assert "error" in data
-        assert data["error"]["code"] == HTTP_TOO_MANY_REQUESTS
-        assert ERROR_RATE_LIMIT_EXCEEDED in data["error"]["message"]
-        assert "retry_after" in data["error"].get("data", {})
-        assert "Retry-After" in response.headers
-
-    @pytest.mark.parametrize("rate_limited_app", ["5/minute"], indirect=True)
-    def test_different_senders_independent(self, rate_limited_client: TestClient) -> None:
-        """Test that rate limiting is applied per client IP.
-
-        Note: The rate limiter uses IP address when envelope is not yet parsed.
-        """
-        # Make 5 requests (within limit)
-        for _i in range(5):
-            rpc_request = _create_test_rpc_request(sender="urn:asap:agent:sender-1")
-            response = rate_limited_client.post("/asap", json=rpc_request.model_dump(mode="json"))
-            assert response.status_code == 200
-
-        # 6th request should be rate limited (same IP)
-        rpc_request = _create_test_rpc_request(sender="urn:asap:agent:sender-1")
-        response = rate_limited_client.post("/asap", json=rpc_request.model_dump(mode="json"))
-        assert response.status_code == HTTP_TOO_MANY_REQUESTS
-
-        # Verify error response format
-        data = response.json()
-        assert "error" in data
-        assert data["error"]["code"] == HTTP_TOO_MANY_REQUESTS
-        assert ERROR_RATE_LIMIT_EXCEEDED in data["error"]["message"]
-        assert "Retry-After" in response.headers
-
-    @pytest.mark.parametrize("rate_limited_app", ["1/second"], indirect=True)
-    def test_limit_resets_after_window(self, rate_limited_client: TestClient) -> None:
-        """Test that rate limit resets after the time window.
-
-        Uses a 1 second window to make the test fast.
-        """
-        sender = "urn:asap:agent:reset-test"
-
-        # Make 1 request (exhaust limit)
-        rpc_request = _create_test_rpc_request(sender=sender)
-        response = rate_limited_client.post("/asap", json=rpc_request.model_dump(mode="json"))
-        assert response.status_code == 200
-
-        # 2nd request should be rate limited
-        rpc_request = _create_test_rpc_request(sender=sender)
-        response = rate_limited_client.post("/asap", json=rpc_request.model_dump(mode="json"))
-        assert response.status_code == HTTP_TOO_MANY_REQUESTS
-
-        # Wait for rate limit window to reset (1.1 seconds)
-        time.sleep(1.1)
-
-        # After reset, should be able to make requests again
-        rpc_request = _create_test_rpc_request(sender=sender)
-        response = rate_limited_client.post("/asap", json=rpc_request.model_dump(mode="json"))
-        assert response.status_code == 200
+# Note: Rate limiting tests have been migrated to
+# tests/transport/integration/test_rate_limiting.py
