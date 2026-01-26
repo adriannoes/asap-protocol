@@ -1020,7 +1020,7 @@ def create_app(
         rate_limit_str = os.getenv("ASAP_RATE_LIMIT", "100/minute")
     else:
         rate_limit_str = rate_limit
-    
+
     # Create isolated limiter instance for this app
     # This ensures each app instance has its own rate limiter storage
     # Tests can override this via monkeypatch or direct assignment to app.state.limiter

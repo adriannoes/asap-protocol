@@ -268,9 +268,7 @@ class TestThreadPoolExhaustedError:
     def test_thread_pool_exhausted_error_with_details(self) -> None:
         """Test ThreadPoolExhaustedError with additional details."""
         details = {"queue_size": 100, "rejected_requests": 5}
-        error = ThreadPoolExhaustedError(
-            max_threads=20, active_threads=18, details=details
-        )
+        error = ThreadPoolExhaustedError(max_threads=20, active_threads=18, details=details)
 
         assert error.code == "asap:transport/thread_pool_exhausted"
         assert error.max_threads == 20
