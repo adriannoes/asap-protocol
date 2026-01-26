@@ -5,16 +5,12 @@ reducing duplication and ensuring consistency in test data.
 """
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
 
 import pytest
 
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest
-
-if TYPE_CHECKING:
-    pass
 
 
 @pytest.fixture

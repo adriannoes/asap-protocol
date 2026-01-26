@@ -30,7 +30,7 @@ from asap.transport.jsonrpc import (
 )
 from asap.transport.server import create_app
 
-from ..conftest import NoRateLimitTestBase
+from ..conftest import NoRateLimitTestBase, TEST_RATE_LIMIT_DEFAULT
 
 
 @pytest.fixture
@@ -61,7 +61,7 @@ def app(sample_manifest: Manifest) -> FastAPI:
 
     Rate limiting is automatically disabled via NoRateLimitTestBase.
     """
-    return create_app(sample_manifest, rate_limit="100000/minute")  # type: ignore[no-any-return]
+    return create_app(sample_manifest, rate_limit=TEST_RATE_LIMIT_DEFAULT)  # type: ignore[no-any-return]
 
 
 @pytest.fixture
@@ -528,7 +528,7 @@ class TestMetricsEndpoint(NoRateLimitTestBase):
         """Test that error metrics are updated on failed request."""
         # Create app with empty registry to trigger handler not found
         registry = HandlerRegistry()
-        app = create_app(sample_manifest, registry, rate_limit="100000/minute")
+        app = create_app(sample_manifest, registry, rate_limit=TEST_RATE_LIMIT_DEFAULT)
         client = TestClient(app)
 
         envelope = Envelope(
