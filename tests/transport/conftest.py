@@ -1,69 +1,83 @@
-"""Transport-specific pytest fixtures.
+"""Transport layer test fixtures for ASAP protocol.
 
-This module provides fixtures specifically for transport layer tests,
-including isolated rate limiters, test manifests, and app factories
-that ensure complete test isolation.
+This module provides reusable pytest fixtures for transport layer tests, including:
+- Isolated rate limiter creation (isolated_limiter_factory)
+- Aggressive monkeypatch fixtures (replace_global_limiter)
+- App creation helpers (create_isolated_app)
+- Base test classes (NoRateLimitTestBase)
 
-The fixtures in this module implement an "aggressive monkeypatch" strategy
-to completely replace module-level rate limiters, ensuring no interference
-between tests even when slowapi.Limiter maintains global state.
+See docs/testing.md for detailed usage guide and testing strategies.
 """
 
+import collections.abc
 import uuid
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Callable
+from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING
 
 import pytest
 
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
+from asap.observability import get_logger
 from asap.transport.server import create_app
+
+# Get logger for test fixtures
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
     from slowapi import Limiter
 
+# Test configuration constants
+TEST_RATE_LIMIT_DEFAULT = "100000/minute"  # Very high default for testing
 
-@pytest.fixture
-def isolated_limiter_factory() -> Callable[[Sequence[str] | None], "Limiter"]:
-    """Factory fixture that returns a function to create isolated rate limiters.
 
-    Each call to the returned function creates a new Limiter instance with
-    a unique storage URI, ensuring complete isolation between test instances.
+def create_test_limiter(limits: collections.abc.Sequence[str] | None = None) -> "Limiter":
+    """Helper function to create a new isolated limiter instance for testing.
 
     Args:
-        limits: Optional list of rate limit strings (e.g., ["100/minute"]).
-            If None, defaults to very high limits for testing.
+        limits: Optional list of rate limit strings. Defaults to very high limits.
 
     Returns:
-        A function that creates a new isolated Limiter instance
-
-    Example:
-        >>> def test_something(isolated_limiter_factory):
-        ...     limiter = isolated_limiter_factory(["5/minute"])
-        ...     app.state.limiter = limiter
+        New Limiter instance with isolated storage
     """
     from slowapi import Limiter
     from slowapi.util import get_remote_address
 
-    def _create(limits: Sequence[str] | None = None) -> "Limiter":
-        """Create a new isolated limiter instance.
+    if limits is None:
+        limits = [TEST_RATE_LIMIT_DEFAULT]
 
-        Args:
-            limits: Optional list of rate limit strings. Defaults to very high limits.
+    # Use unique storage URI to ensure complete isolation
+    unique_storage_id = str(uuid.uuid4())
+    return Limiter(
+        key_func=get_remote_address,
+        default_limits=list(limits),
+        storage_uri=f"memory://{unique_storage_id}",
+    )
 
-        Returns:
-            New Limiter instance with isolated storage
-        """
-        if limits is None:
-            limits = ["100000/minute"]  # Very high default
 
-        # Use unique storage URI to ensure complete isolation
-        unique_storage_id = str(uuid.uuid4())
-        return Limiter(
-            key_func=get_remote_address,
-            default_limits=list(limits),
-            storage_uri=f"memory://{unique_storage_id}",
+@pytest.fixture
+def isolated_limiter_factory() -> Callable[[Sequence[str] | None], "Limiter"]:
+    """Factory fixture that creates isolated rate limiters.
+
+    Returns a function that creates new Limiter instances with unique storage.
+    Each limiter gets its own UUID-based storage to ensure complete test isolation.
+
+    Args:
+        limits: Optional rate limit strings (e.g., ["10/minute"]). Defaults to very high limit.
+
+    Returns:
+        New Limiter instance with isolated memory storage
+    """
+
+    def _create(limits: collections.abc.Sequence[str] | None = None) -> "Limiter":
+        """Create a new isolated limiter."""
+        # Log fixture execution for debugging
+        logger.debug(
+            "test.fixture.isolated_limiter_factory",
+            limits=limits,
+            action="creating_limiter",
         )
+        return create_test_limiter(limits)
 
     return _create
 
@@ -75,22 +89,22 @@ def replace_global_limiter(
 ) -> "Limiter":
     """Replace global limiter with isolated instance using aggressive monkeypatch.
 
-    This fixture replaces the module-level limiter in both middleware and server
-    modules, ensuring complete isolation even when code uses the global limiter
-    directly. This is more aggressive than just replacing app.state.limiter.
+    This fixture performs "aggressive monkeypatch" by replacing the module-level
+    limiter in BOTH asap.transport.middleware and asap.transport.server.
 
-    Args:
-        monkeypatch: Pytest monkeypatch fixture
-        isolated_limiter_factory: Factory function to create isolated limiters
+    Why "aggressive"? The slowapi.Limiter maintains global state that persists
+    across tests. Simply replacing app.state.limiter is not sufficient because
+    code may reference the module-level limiter directly.
 
     Returns:
         The new isolated limiter instance
-
-    Example:
-        >>> def test_something(replace_global_limiter):
-        ...     # Global limiter is now replaced, app will use it automatically
-        ...     app = create_app(manifest)
     """
+    # Log fixture execution
+    logger.debug(
+        "test.fixture.replace_global_limiter",
+        action="creating_isolated_limiter",
+    )
+
     # Create completely isolated limiter
     new_limiter = isolated_limiter_factory(None)
 
@@ -98,8 +112,20 @@ def replace_global_limiter(
     import asap.transport.middleware as middleware_module
     import asap.transport.server as server_module
 
+    logger.debug(
+        "test.fixture.replace_global_limiter",
+        action="monkeypatching_modules",
+        limiter_id=id(new_limiter),
+    )
+
     monkeypatch.setattr(middleware_module, "limiter", new_limiter)
     monkeypatch.setattr(server_module, "limiter", new_limiter)
+
+    logger.debug(
+        "test.fixture.replace_global_limiter",
+        action="complete",
+        limiter_id=id(new_limiter),
+    )
 
     return new_limiter
 
@@ -133,19 +159,25 @@ def no_auth_manifest() -> Manifest:
 @pytest.fixture
 def create_isolated_app(
     monkeypatch: pytest.MonkeyPatch,
-    isolated_limiter_factory: Callable[[Sequence[str] | None], "Limiter"],
-) -> Callable[..., "FastAPI"]:
-    """Factory fixture that returns a function to create isolated FastAPI apps.
+    isolated_limiter_factory: "collections.abc.Callable[[collections.abc.Sequence[str] | None], Limiter]",
+) -> "collections.abc.Callable[[Manifest, str | None, int | None, int | None, bool], FastAPI]":
+    """Factory fixture for creating isolated FastAPI apps.
+
+    NOTE: This is a utility/building-block fixture. For most tests, prefer creating
+    specialized class-level fixtures instead (see test_rate_limiting.py for examples
+    like isolated_app_5_per_minute). This pattern provides better readability and
+    co-locates fixture configuration with the tests that use them.
 
     The returned function creates apps with isolated rate limiters to prevent
-    test interference. Each app gets its own limiter instance.
+    interference between tests. Supports both direct limiter assignment and
+    aggressive monkeypatch strategies.
 
     Args:
-        monkeypatch: Pytest monkeypatch fixture for aggressive limiter replacement
+        monkeypatch: Pytest monkeypatch fixture
         isolated_limiter_factory: Factory function to create isolated limiters
 
     Returns:
-        A function that creates a new FastAPI app with isolated limiter
+        Function that creates FastAPI apps with isolated limiters
 
     Example:
         >>> def test_something(create_isolated_app, no_auth_manifest):

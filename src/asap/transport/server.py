@@ -60,6 +60,7 @@ from asap.transport.middleware import (
     AuthenticationMiddleware,
     BearerTokenValidator,
     SizeLimitMiddleware,
+    create_limiter,
     limiter,
     rate_limit_handler,
 )
@@ -1019,7 +1020,11 @@ def create_app(
         rate_limit_str = os.getenv("ASAP_RATE_LIMIT", "100/minute")
     else:
         rate_limit_str = rate_limit
-    app.state.limiter = limiter
+    
+    # Create isolated limiter instance for this app
+    # This ensures each app instance has its own rate limiter storage
+    # Tests can override this via monkeypatch or direct assignment to app.state.limiter
+    app.state.limiter = create_limiter([rate_limit_str])
     app.state.max_request_size = max_request_size
     app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
     logger.info(
