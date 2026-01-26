@@ -1,5 +1,8 @@
 """Tests for coordinator agent example."""
 
+from unittest.mock import AsyncMock, patch
+
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -9,10 +12,14 @@ from asap.examples.coordinator import (
     DEFAULT_AGENT_VERSION,
     DEFAULT_ASAP_ENDPOINT,
     DEFAULT_ECHO_AGENT_ID,
+    DEFAULT_ECHO_BASE_URL,
     build_manifest,
     build_task_envelope,
     build_task_request,
     create_coordinator_app,
+    dispatch_task,
+    main,
+    parse_args,
 )
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest
@@ -118,3 +125,180 @@ class TestBuildTaskEnvelope:
         envelope = build_task_envelope(input_data)
 
         assert envelope.payload["input"] == input_data
+
+
+# Tests for dispatch_task, parse_args, and main functions
+
+
+class TestParseArgs:
+    """Tests for parse_args function."""
+
+    def test_parse_args_defaults(self) -> None:
+        """Test parse_args with no arguments uses defaults."""
+        args = parse_args([])
+
+        assert args.echo_url == DEFAULT_ECHO_BASE_URL
+        assert args.message == "hello from coordinator"
+
+    def test_parse_args_custom_echo_url(self) -> None:
+        """Test parse_args with custom echo URL."""
+        args = parse_args(["--echo-url", "http://custom:9000"])
+
+        assert args.echo_url == "http://custom:9000"
+
+    def test_parse_args_custom_message(self) -> None:
+        """Test parse_args with custom message."""
+        args = parse_args(["--message", "custom message"])
+
+        assert args.message == "custom message"
+
+    def test_parse_args_all_options(self) -> None:
+        """Test parse_args with all options."""
+        args = parse_args(
+            ["--echo-url", "http://test:8080", "--message", "test message"]
+        )
+
+        assert args.echo_url == "http://test:8080"
+        assert args.message == "test message"
+
+
+class TestDispatchTask:
+    """Tests for dispatch_task async function."""
+
+    @pytest.mark.asyncio
+    async def test_dispatch_task_sends_envelope(self) -> None:
+        """Test that dispatch_task sends an envelope and returns response."""
+        mock_response = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:echo-agent",
+            recipient=DEFAULT_AGENT_ID,
+            payload_type="task.result",
+            payload={"result": "echoed"},
+            trace_id="test-trace-id",
+            correlation_id="test-correlation-id",
+        )
+
+        mock_client = AsyncMock()
+        mock_client.send = AsyncMock(return_value=mock_response)
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+
+        with patch("asap.examples.coordinator.ASAPClient", return_value=mock_client):
+            response = await dispatch_task(
+                payload={"message": "test"}, echo_base_url="http://mock:8001"
+            )
+
+        assert response.payload_type == "task.result"
+        assert response.payload["result"] == "echoed"
+        mock_client.send.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_dispatch_task_logs_request_and_response(self) -> None:
+        """Test that dispatch_task logs request and response."""
+        mock_response = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:echo-agent",
+            recipient=DEFAULT_AGENT_ID,
+            payload_type="task.result",
+            payload={"echoed": True},
+            trace_id="trace-123",
+            correlation_id="corr-456",
+        )
+
+        mock_client = AsyncMock()
+        mock_client.send = AsyncMock(return_value=mock_response)
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+
+        with (
+            patch("asap.examples.coordinator.ASAPClient", return_value=mock_client),
+            patch("asap.examples.coordinator.logger") as mock_logger,
+        ):
+            await dispatch_task({"data": "value"})
+
+        assert mock_logger.info.call_count >= 2
+
+    @pytest.mark.asyncio
+    async def test_dispatch_task_with_default_echo_url(self) -> None:
+        """Test that dispatch_task uses default echo URL."""
+        mock_response = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:echo-agent",
+            recipient=DEFAULT_AGENT_ID,
+            payload_type="task.result",
+            payload={},
+            trace_id="trace-id",
+        )
+
+        mock_client = AsyncMock()
+        mock_client.send = AsyncMock(return_value=mock_response)
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+
+        with patch(
+            "asap.examples.coordinator.ASAPClient", return_value=mock_client
+        ) as mock_asap_client:
+            await dispatch_task({"test": True})
+
+        mock_asap_client.assert_called_once_with(DEFAULT_ECHO_BASE_URL)
+
+
+class TestMain:
+    """Tests for main function."""
+
+    def test_main_runs_dispatch_task(self) -> None:
+        """Test that main function dispatches a task."""
+        mock_response = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:echo-agent",
+            recipient=DEFAULT_AGENT_ID,
+            payload_type="task.result",
+            payload={"result": "done"},
+            trace_id="trace-id",
+        )
+
+        with patch("asap.examples.coordinator.asyncio.run") as mock_run:
+            mock_run.return_value = mock_response
+            with patch("asap.examples.coordinator.logger"):
+                main(["--message", "test from main"])
+
+        mock_run.assert_called_once()
+
+    def test_main_with_custom_args(self) -> None:
+        """Test main with custom command line arguments."""
+        mock_response = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:echo-agent",
+            recipient=DEFAULT_AGENT_ID,
+            payload_type="task.result",
+            payload={"data": "custom"},
+            trace_id="trace-id",
+        )
+
+        with patch("asap.examples.coordinator.asyncio.run") as mock_run:
+            mock_run.return_value = mock_response
+            with patch("asap.examples.coordinator.logger"):
+                main(["--echo-url", "http://custom:9999", "--message", "custom msg"])
+
+        mock_run.assert_called_once()
+
+    def test_main_logs_completion(self) -> None:
+        """Test that main logs completion message."""
+        mock_response = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:echo-agent",
+            recipient=DEFAULT_AGENT_ID,
+            payload_type="task.result",
+            payload={"done": True},
+            trace_id="trace-id",
+        )
+
+        with (
+            patch("asap.examples.coordinator.asyncio.run", return_value=mock_response),
+            patch("asap.examples.coordinator.logger") as mock_logger,
+        ):
+            main([])
+
+        mock_logger.info.assert_called()
+        call_args = mock_logger.info.call_args_list[-1]
+        assert "asap.coordinator.demo_complete" in str(call_args)
