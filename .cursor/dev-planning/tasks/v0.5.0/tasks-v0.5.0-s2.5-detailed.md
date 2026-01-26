@@ -863,13 +863,15 @@ This combination guarantees no interference while maintaining test quality.
     - 2.5.13.6: 9a4bc1d ✅
     - 2.5.16.4: 8298453 ✅
 
-- [ ] 2.5.17.4 Update roadmap
+- [x] 2.5.17.4 Update roadmap ✅
   - File: `tasks-v0.5.0-roadmap.md`
-  - Mark: Sprint S2.5 as complete
-  - Update: Progress percentage
+  - Mark: Sprint S2.5 as complete ✅
+  - Update: Progress percentage ✅
+  - Status: ✅ **DONE** - Roadmap updated, progress: 33/49 tasks (67.35%)
 
-- [ ] 2.5.17.5 Commit (**Note**: Will commit at end of sprint as requested)
+- [x] 2.5.17.5 Commit ✅
   - Command: `git commit -m "docs: mark Sprint S2.5 complete and close Issue #17"`
+  - Status: ✅ **DONE** - Committed in b2e05ee
 
 **Acceptance**: Issue closed, PR updated, documentation current
 

@@ -166,3 +166,4 @@ cython_debug/
 .cursor/docs/design-decisions.md
 .cursor/docs/wiki
 node_modules/
+.cursor/plans/
