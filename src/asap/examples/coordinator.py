@@ -21,7 +21,7 @@ from asap.transport.server import create_app
 
 DEFAULT_AGENT_ID = "urn:asap:agent:coordinator"
 DEFAULT_AGENT_NAME = "Coordinator Agent"
-DEFAULT_AGENT_VERSION = "0.1.0"
+DEFAULT_AGENT_VERSION = "0.3.0"
 DEFAULT_AGENT_DESCRIPTION = "Coordinates tasks across agents"
 DEFAULT_ASAP_ENDPOINT = "http://localhost:8000/asap"
 DEFAULT_ECHO_AGENT_ID = "urn:asap:agent:echo-agent"

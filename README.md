@@ -4,9 +4,9 @@
 
 > A streamlined, scalable, asynchronous protocol for agent-to-agent communication and task coordination. Built as a simpler, more powerful alternative to A2A with native MCP integration and stateful orchestration.
 
-**Quick Info**: `v0.1.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](CHANGELOG.md)
+**Quick Info**: `v0.3.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](CHANGELOG.md)
 
-⚠️ **Alpha Release**: ASAP Protocol is currently in **alpha** (v0.1.0). We're actively developing and improving the protocol based on real-world usage. Your feedback, contributions, and suggestions are essential to help us evolve and make ASAP better for the entire community. See our [Contributing](#contributing) section to get involved!
+⚠️ **Alpha Release**: ASAP Protocol is currently in **alpha** (v0.3.0). We're actively developing and improving the protocol based on real-world usage. Your feedback, contributions, and suggestions are essential to help us evolve and make ASAP better for the entire community. See our [Contributing](#contributing) section to get involved!
 
 ## Why ASAP?
 
@@ -65,7 +65,7 @@ from asap.transport.server import create_app
 manifest = Manifest(
     id="urn:asap:agent:echo-agent",
     name="Echo Agent",
-    version="0.1.0",
+    version="0.3.0",
     description="Echoes task input as output",
     capabilities=Capability(
         asap_version="0.1",

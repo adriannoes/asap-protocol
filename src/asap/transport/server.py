@@ -1117,7 +1117,7 @@ def _create_default_manifest() -> Manifest:
     return Manifest(
         id="urn:asap:agent:default-server",
         name="ASAP Default Server",
-        version="0.1.0",
+        version="0.3.0",
         description="Default ASAP protocol server with echo capabilities",
         capabilities=Capability(
             asap_version="0.1",

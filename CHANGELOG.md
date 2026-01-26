@@ -86,27 +86,40 @@ First alpha release of the ASAP Protocol Python implementation.
 - **Test Coverage**: 415+ tests with comprehensive coverage
 - **Linting**: Ruff for linting and formatting
 
+## [0.3.0] - 2026-01-26
+
+### Changed
+
+#### Test Infrastructure Refactoring (PR #18)
+- **Test Organization**:
+  - Reorganized test structure with clear separation between unit, integration, and E2E tests
+  - Created `tests/transport/unit/` for isolated unit tests
+  - Created `tests/transport/integration/` for integration tests with proper isolation
+  - Created `tests/transport/e2e/` for end-to-end tests
+- **Test Stability**:
+  - Fixed 33 failing tests caused by `slowapi.Limiter` global state interference
+  - Implemented process isolation using `pytest-xdist` to prevent test interference
+  - Added aggressive monkeypatch strategy for complete rate limiter isolation
+  - Separated rate-limiting tests from core server tests to prevent cross-contamination
+- **Documentation**:
+  - Added comprehensive testing guide in `docs/testing.md`
+  - Documented test organization strategy and isolation techniques
+  - Added examples for writing unit, integration, and E2E tests
+
+### Fixed
+- Resolved `UnboundLocalError` in `server.py` related to rate limiter initialization
+- Fixed test flakiness caused by global state persistence across test runs
+- Improved test reliability with proper fixture isolation
+
+### Technical Details
+- **Test Count**: 578 tests (all passing)
+- **Test Execution**: Process isolation via `pytest-xdist` for complete state separation
+- **Test Coverage**: Maintained comprehensive coverage across all modules
+
 ## [Unreleased]
 
-### Specification
-- Initial protocol specification (DRAFT v1.2025.01)
-- Core concepts: Agent, Manifest, Conversation, Task, Message, Part, Artifact, StateSnapshot
-- Message types: TaskRequest, TaskResponse, TaskUpdate, TaskCancel, StateQuery, StateRestore
-- MCP integration payloads: McpToolCall, McpToolResult, McpResourceFetch, McpResourceData
-- Task state machine with 8 states
-- Deployment patterns: direct, orchestrated, mesh
-- Error taxonomy with 6 categories and 18 error codes
-- Security considerations with optional request signing
-- Observability with correlation IDs and metrics exposure
-
-### Decided (via Critical Analysis)
-- State persistence: Mode-selectable (snapshot default, event-sourced opt-in)
-- Transport binding: JSON-RPC prioritized for A2A/MCP alignment
-- Topology: Replaced fixed P2P default with context-based deployment patterns
-- Consistency model: Causal consistency for task state
-- Versioning: Hybrid Major.YYYY.MM format for spec, SemVer for implementation
-- MCP integration: Envelope approach with streaming for large results
-- MVP security: Added optional HMAC request signing
+### Added
+- Future changes will be documented here
 
 ## [1.2025.01-draft] - 2025-01-15
 

@@ -16,7 +16,7 @@ from asap.transport.server import create_app
 
 DEFAULT_AGENT_ID = "urn:asap:agent:echo-agent"
 DEFAULT_AGENT_NAME = "Echo Agent"
-DEFAULT_AGENT_VERSION = "0.1.0"
+DEFAULT_AGENT_VERSION = "0.3.0"
 DEFAULT_AGENT_DESCRIPTION = "Echoes task input as output"
 DEFAULT_ASAP_HOST = "127.0.0.1"
 DEFAULT_ASAP_PORT = 8001
