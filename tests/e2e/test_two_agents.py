@@ -31,7 +31,11 @@ async def test_two_agents_echo_flow() -> None:
 
     transport = httpx.ASGITransport(app=echo_app)
 
-    async with ASAPClient("http://echo-agent", transport=transport) as client:
+    # Note: require_https=False is allowed here because we're using a mock transport
+    # (ASGITransport) for in-memory testing. Production code must use HTTPS.
+    async with ASAPClient(
+        "http://echo-agent", transport=transport, require_https=False
+    ) as client:
         response = await client.send(envelope)
 
     assert response.payload_type == "task.response"

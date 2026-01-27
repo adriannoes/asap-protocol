@@ -633,6 +633,62 @@ class TestASAPClientRetryEdgeCases:
         assert not client.is_connected
 
 
+class TestASAPClientHTTPSValidation:
+    """Tests for HTTPS enforcement in ASAPClient initialization."""
+
+    def test_https_urls_accepted(self) -> None:
+        """Test that HTTPS URLs are accepted."""
+        from asap.transport.client import ASAPClient
+
+        client = ASAPClient("https://example.com")
+        assert client.base_url == "https://example.com"
+        assert client.require_https is True
+
+    def test_http_localhost_accepted_with_warning(self) -> None:
+        """Test that HTTP localhost URLs are accepted with warning."""
+        from asap.transport.client import ASAPClient
+
+        # Should not raise, but will log warning
+        client = ASAPClient("http://localhost:8000")
+        assert client.base_url == "http://localhost:8000"
+        assert client.require_https is True
+
+    def test_http_127_0_0_1_accepted_with_warning(self) -> None:
+        """Test that HTTP 127.0.0.1 URLs are accepted with warning."""
+        from asap.transport.client import ASAPClient
+
+        # Should not raise, but will log warning
+        client = ASAPClient("http://127.0.0.1:8000")
+        assert client.base_url == "http://127.0.0.1:8000"
+        assert client.require_https is True
+
+    def test_http_production_rejected(self) -> None:
+        """Test that HTTP URLs for non-localhost are rejected."""
+        from asap.transport.client import ASAPClient
+
+        with pytest.raises(ValueError) as exc_info:
+            ASAPClient("http://example.com")
+
+        assert "HTTPS is required" in str(exc_info.value)
+        assert "require_https=False" in str(exc_info.value)
+
+    def test_http_with_override_works(self) -> None:
+        """Test that HTTP URLs work when require_https=False."""
+        from asap.transport.client import ASAPClient
+
+        client = ASAPClient("http://example.com", require_https=False)
+        assert client.base_url == "http://example.com"
+        assert client.require_https is False
+
+    def test_https_with_require_https_false_works(self) -> None:
+        """Test that HTTPS URLs work even when require_https=False."""
+        from asap.transport.client import ASAPClient
+
+        client = ASAPClient("https://example.com", require_https=False)
+        assert client.base_url == "https://example.com"
+        assert client.require_https is False
+
+
 class TestASAPClientCustomErrors:
     """Tests for ASAP client custom error classes."""
 
