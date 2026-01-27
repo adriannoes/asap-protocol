@@ -190,3 +190,85 @@ class ThreadPoolExhaustedError(ASAPError):
         )
         self.max_threads = max_threads
         self.active_threads = active_threads
+
+
+class InvalidTimestampError(ASAPError):
+    """Raised when an envelope timestamp is invalid (too old or too far in the future).
+
+    This error occurs when validating envelope timestamps for replay attack prevention.
+    Envelopes with timestamps outside the acceptable window are rejected.
+
+    Attributes:
+        timestamp: The invalid timestamp value
+        age_seconds: Age of the envelope in seconds (if too old)
+        future_offset_seconds: Offset in seconds from current time (if too far in future)
+    """
+
+    def __init__(
+        self,
+        timestamp: str,
+        message: str,
+        age_seconds: float | None = None,
+        future_offset_seconds: float | None = None,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        """Initialize invalid timestamp error.
+
+        Args:
+            timestamp: The invalid timestamp value
+            message: Human-readable error description
+            age_seconds: Age of the envelope in seconds (if too old)
+            future_offset_seconds: Offset in seconds from current time (if too far in future)
+            details: Optional additional context
+        """
+        super().__init__(
+            code="asap:protocol/invalid_timestamp",
+            message=message,
+            details={
+                "timestamp": timestamp,
+                **(age_seconds is not None and {"age_seconds": age_seconds} or {}),
+                **(
+                    future_offset_seconds is not None
+                    and {"future_offset_seconds": future_offset_seconds}
+                    or {}
+                ),
+                **(details or {}),
+            },
+        )
+        self.timestamp = timestamp
+        self.age_seconds = age_seconds
+        self.future_offset_seconds = future_offset_seconds
+
+
+class InvalidNonceError(ASAPError):
+    """Raised when an envelope nonce is invalid (duplicate or malformed).
+
+    This error occurs when validating envelope nonces for replay attack prevention.
+    Nonces that have been used before within the TTL window are rejected.
+
+    Attributes:
+        nonce: The invalid nonce value
+    """
+
+    def __init__(
+        self,
+        nonce: str,
+        message: str,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        """Initialize invalid nonce error.
+
+        Args:
+            nonce: The invalid nonce value
+            message: Human-readable error description
+            details: Optional additional context
+        """
+        super().__init__(
+            code="asap:protocol/invalid_nonce",
+            message=message,
+            details={
+                "nonce": nonce,
+                **(details or {}),
+            },
+        )
+        self.nonce = nonce
