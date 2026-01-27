@@ -125,6 +125,7 @@ class ASAPClient:
         base_url: Base URL of the remote agent
         timeout: Request timeout in seconds
         max_retries: Maximum retry attempts for transient failures
+        require_https: Whether HTTPS is required for non-localhost connections
         is_connected: Whether the client has an active connection
 
     Example:
@@ -138,6 +139,7 @@ class ASAPClient:
         timeout: float = DEFAULT_TIMEOUT,
         max_retries: int = DEFAULT_MAX_RETRIES,
         transport: httpx.AsyncBaseTransport | httpx.BaseTransport | None = None,
+        require_https: bool = True,
     ) -> None:
         """Initialize ASAP client.
 
@@ -146,6 +148,12 @@ class ASAPClient:
             timeout: Request timeout in seconds (default: 60)
             max_retries: Maximum retry attempts for transient failures (default: 3)
             transport: Optional custom transport (for testing). Can be sync or async.
+            require_https: If True, enforces HTTPS for non-localhost connections (default: True).
+                HTTP connections to localhost are allowed with a warning for development.
+
+        Raises:
+            ValueError: If URL format is invalid, scheme is not HTTP/HTTPS, or HTTPS is
+                required but URL uses HTTP for non-localhost connections.
         """
         # Validate URL format and scheme
         from urllib.parse import urlparse
@@ -163,12 +171,57 @@ class ASAPClient:
                 f"Received: {base_url}"
             )
 
+        # Validate HTTPS requirement
+        is_https = parsed.scheme.lower() == "https"
+        is_local = self._is_localhost(parsed)
+
+        if require_https and not is_https:
+            if is_local:
+                # Allow HTTP for localhost with warning
+                logger.warning(
+                    "asap.client.http_localhost",
+                    url=base_url,
+                    message=(
+                        "Using HTTP for localhost connection. "
+                        "For production, use HTTPS. "
+                        "To disable this warning, set require_https=False."
+                    ),
+                )
+            else:
+                # Reject HTTP for non-localhost
+                raise ValueError(
+                    f"HTTPS is required for non-localhost connections. "
+                    f"Received HTTP URL: {base_url}. "
+                    f"Please use HTTPS or set require_https=False to override "
+                    f"(not recommended for production)."
+                )
+
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.max_retries = max_retries
+        self.require_https = require_https
         self._transport = transport
         self._client: httpx.AsyncClient | None = None
         self._request_counter = 0
+
+    @staticmethod
+    def _is_localhost(parsed_url: Any) -> bool:
+        """Check if URL points to localhost.
+
+        Detects localhost, 127.0.0.1, and ::1 (IPv6 localhost).
+
+        Args:
+            parsed_url: Parsed URL from urlparse
+
+        Returns:
+            True if URL points to localhost, False otherwise
+        """
+        hostname = parsed_url.hostname
+        if not hostname:
+            return False
+
+        hostname_lower = hostname.lower()
+        return hostname_lower in ("localhost", "127.0.0.1", "::1")
 
     @property
     def is_connected(self) -> bool:
