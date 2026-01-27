@@ -195,9 +195,7 @@ class InMemoryNonceStore:
             self._store[nonce] = expiry
 
 
-def validate_envelope_nonce(
-    envelope: Envelope, nonce_store: NonceStore | None
-) -> None:
+def validate_envelope_nonce(envelope: Envelope, nonce_store: NonceStore | None) -> None:
     """Validate envelope nonce to prevent duplicate message replay.
 
     If the envelope has a nonce in its extensions, checks that it hasn't

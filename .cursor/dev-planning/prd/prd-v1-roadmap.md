@@ -993,6 +993,66 @@ warnings.warn(
 
 ---
 
+#### DD-008: HMAC Request Signing
+**Decision**: ✅ Defer to v1.1.0+
+
+**Rationale** (Sprint S3 Review - 2026-01-27):
+- Current security stack (TLS + Bearer token auth + timestamp validation + nonce) provides adequate protection
+- HMAC adds implementation complexity for both client and server
+- Key management overhead negates benefits for most use cases
+- Real-world threat model addressed by existing mitigations:
+  - **Replay attacks**: Timestamp validation (5min window) + optional nonce
+  - **Man-in-the-middle**: TLS 1.2+ requirement
+  - **Unauthorized access**: Bearer token authentication with sender verification
+  - **Message tampering**: TLS provides integrity, HMAC would be redundant
+
+**Impact**:
+- v1.0.0 ships without HMAC support
+- Documentation will note HMAC as optional spec feature not yet implemented
+- Users requiring HMAC can implement via envelope extensions
+
+**Future Consideration** (v1.1.0+):
+- Add `asap.security.signing` module with Ed25519/HMAC-SHA256
+- Automatic signature injection in ASAPClient
+- Signature verification middleware for server
+- Key rotation utilities
+
+---
+
+### Sprint S1-S3 Learnings
+
+> **Review Date**: 2026-01-27 (End of Sprint S3)
+
+#### What Went Well
+
+1. **Test-Driven Approach**: Writing tests before implementation for validators and HTTPS enforcement led to cleaner APIs and caught edge cases early.
+
+2. **Incremental Complexity**: Starting with simpler tasks (constants, validators) before integration (server, client) reduced debugging time.
+
+3. **Isolated Test Infrastructure** (Sprint S2.5): Refactoring test structure to use isolated fixtures eliminated global state interference. The `NoRateLimitTestBase` pattern enabled true unit tests.
+
+4. **Documentation-First for Security**: Writing security.md sections alongside implementation ensured comprehensive coverage and identified API inconsistencies.
+
+5. **Metrics Protection**: Implementing payload_type whitelisting in Sprint S2 prevented a potential metrics cardinality DoS vector before it became an issue.
+
+#### Challenges Encountered
+
+1. **Rate Limiter State Leakage**: Global rate limiter state caused 33 test failures (Issue #17). Resolved by creating isolated fixtures and `NoRateLimitTestBase`.
+
+2. **Timestamp Validation Edge Cases**: Clock skew handling required careful consideration of tolerances. The 30-second future tolerance was chosen after testing with real-world network conditions.
+
+3. **Dependency Deprecation Warnings**: `slowapi` uses deprecated `asyncio.iscoroutinefunction` (slated for removal in Python 3.16). Tracking for upstream fix.
+
+#### Adjustments for S4-S5
+
+1. **Focus on Integration Testing**: Sprint S4 (retry logic) will benefit from more integration tests to validate exponential backoff behavior under realistic conditions.
+
+2. **Performance Baseline**: Establish benchmark suite before S4 changes to track any performance impact from retry/circuit breaker code.
+
+3. **Documentation Consolidation**: Review all documentation changes across S1-S3 before S5 release to ensure consistency.
+
+---
+
 ## 11. Open Questions
 
 > **Note**: These are genuine open questions that will be answered during development.
@@ -1015,11 +1075,10 @@ warnings.warn(
    - **Review Point**: End of Sprint P7 → Decide for v1.0.0 or defer to v1.1.0
 
 ### Security
-3. ❓ Should we add optional request signing (HMAC) in v1.0.0 or defer to v1.1.0?
-   - **Context**: ASAP spec includes optional request signing
-   - **Action**: Assess complexity during Sprint P1-P2
-   - **Decision**: If simple to add, include; otherwise defer
-   - **Review Point**: End of Sprint P2 → Update PRD Section 4 if included
+3. ✅ ~~Should we add optional request signing (HMAC) in v1.0.0 or defer to v1.1.0?~~
+   - **Status**: RESOLVED - See DD-008 (Defer to v1.1.0+)
+   - **Decision Date**: 2026-01-27 (Sprint S3 Review)
+   - **Rationale**: Current security stack (TLS + Bearer + timestamp/nonce) is sufficient
 
 4. ❓ What should be the default authentication scheme for examples?
    - **Options**: Bearer token (simple), OAuth2 (realistic), both (comprehensive)
@@ -1111,6 +1170,9 @@ warnings.warn(
 | 2026-01-24 | 1.2 | Added review schedule and checkpoints to all Open Questions | ASAP Team |
 | 2026-01-24 | 1.2 | Created PRD review tasks in v0.5.0 (1 checkpoint) and v1.0.0 (7 checkpoints) | ASAP Team |
 | 2026-01-24 | 1.2 | Added final retrospective and post-release review tasks to Sprint P13 | ASAP Team |
+| 2026-01-27 | 1.3 | Sprint S3 Review: Added DD-008 (HMAC deferred to v1.1.0+) | ASAP Team |
+| 2026-01-27 | 1.3 | Sprint S3 Review: Resolved Open Question Q3 | ASAP Team |
+| 2026-01-27 | 1.3 | Sprint S3 Review: Added S1-S3 Learnings section | ASAP Team |
 
 ---
 
@@ -1176,10 +1238,10 @@ Detailed task lists have been created in separate files:
 ---
 
 **Document Status**: ✅ Active (Living Document)
-**Last Updated**: 2026-01-24  
-**Version**: 1.2  
+**Last Updated**: 2026-01-27  
+**Version**: 1.3  
 **Next Review Schedule**:
-- **Sprint S3** (v0.5.0): Security decisions checkpoint
+- ~~**Sprint S3** (v0.5.0): Security decisions checkpoint~~ ✅ COMPLETED (2026-01-27)
 - **Sprint P3** (v1.0.0): Performance decisions checkpoint  
 - **Sprint P13** (v1.0.0): Final review before release
 - **Post-Release**: 2 weeks after v1.0.0 (community feedback)

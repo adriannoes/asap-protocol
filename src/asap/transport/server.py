@@ -867,7 +867,7 @@ class ASAPRequestHandler:
                 self.record_error_metrics(
                     ctx.metrics, payload_type, "invalid_timestamp", duration_seconds
                 )
-                error_response = self.build_error_response(
+                return self.build_error_response(
                     INVALID_PARAMS,
                     data={
                         "error": "Invalid envelope timestamp",
@@ -877,7 +877,6 @@ class ASAPRequestHandler:
                     },
                     request_id=ctx.request_id,
                 )
-                return error_response
 
             # Validate envelope nonce if nonce store is available
             try:
@@ -893,7 +892,7 @@ class ASAPRequestHandler:
                 self.record_error_metrics(
                     ctx.metrics, payload_type, "invalid_nonce", duration_seconds
                 )
-                error_response = self.build_error_response(
+                return self.build_error_response(
                     INVALID_PARAMS,
                     data={
                         "error": "Invalid envelope nonce",
@@ -903,7 +902,6 @@ class ASAPRequestHandler:
                     },
                     request_id=ctx.request_id,
                 )
-                return error_response
 
             # Log request received
             logger.info(
@@ -1078,9 +1076,7 @@ def create_app(
         )
 
     # Create request handler
-    handler = ASAPRequestHandler(
-        registry, manifest, auth_middleware, max_request_size, nonce_store
-    )
+    handler = ASAPRequestHandler(registry, manifest, auth_middleware, max_request_size, nonce_store)
 
     app = FastAPI(
         title="ASAP Protocol Server",

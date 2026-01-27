@@ -20,7 +20,6 @@
 
 ## Sprint P1: Sensitive Data Protection
 
-**Duration**: Flexible (5-7 days)
 **Goal**: Complete MEDIUM priority security tasks
 
 ### Tasks
@@ -50,7 +49,6 @@
 
 ## Sprint P2: Code Quality & LOW Priority Security
 
-**Duration**: Flexible (3-4 days)
 **Goal**: Complete LOW priority security tasks
 
 ### Tasks
@@ -77,7 +75,6 @@
 
 ## Sprint P3: Connection Pooling & Caching
 
-**Duration**: Flexible (5-7 days)
 **Goal**: Implement connection pooling and manifest caching
 
 ### Tasks
@@ -104,7 +101,6 @@
 
 ## Sprint P4: Batch Operations & Compression
 
-**Duration**: Flexible (4-6 days)
 **Goal**: Implement batch operations and compression
 
 ### Tasks
@@ -127,7 +123,6 @@
 
 ## Sprint P5: Real-World Examples
 
-**Duration**: Flexible (6-8 days)
 **Goal**: Create 10+ production-ready examples
 
 ### Tasks
@@ -153,7 +148,6 @@
 
 ## Sprint P6: Debugging Tools
 
-**Duration**: Flexible (4-5 days)
 **Goal**: Build debugging and development tools
 
 ### Tasks
@@ -180,7 +174,6 @@
 
 ## Sprint P7: Property & Load Testing
 
-**Duration**: Flexible (5-7 days)
 **Goal**: Add advanced testing techniques
 
 ### Tasks
@@ -209,7 +202,6 @@
 
 ## Sprint P8: Chaos & Contract Testing
 
-**Duration**: Flexible (4-5 days)
 **Goal**: Chaos engineering and backward compatibility
 
 ### Tasks
@@ -231,7 +223,6 @@
 
 ## Sprint P9: Tutorials & ADRs
 
-**Duration**: Flexible (5-6 days)
 **Goal**: Create comprehensive tutorials and ADRs
 
 ### Tasks
@@ -258,7 +249,6 @@
 
 ## Sprint P10: Deployment & Troubleshooting
 
-**Duration**: Flexible (4-5 days)
 **Goal**: Production deployment guides
 
 ### Tasks
@@ -281,7 +271,6 @@
 
 ## Sprint P11: OpenTelemetry Integration
 
-**Duration**: Flexible (5-7 days)
 **Goal**: Distributed tracing and metrics
 
 ### Tasks
@@ -307,7 +296,6 @@
 
 ## Sprint P12: Dashboards & MCP
 
-**Duration**: Flexible (4-5 days)
 **Goal**: Grafana dashboards and MCP feature parity
 
 ### Tasks
@@ -329,7 +317,6 @@
 
 ## Sprint P13: v1.0.0 Release Preparation
 
-**Duration**: Flexible (5-7 days)
 **Goal**: Final testing, polish, and production release
 
 ### Tasks
@@ -430,5 +417,5 @@
 - **Detailed Tasks**: See sprint group files listed at top
 - **Parent PRD**: [prd-v1-roadmap.md](../../prd/prd-v1-roadmap.md)
 - **PRD Review Schedule**: [prd-review-schedule.md](../../prd/prd-review-schedule.md)
-- **v0.5.0 Tasks**: [../v0.5.0/](../v0.5.0/)
+- **v0.5.0 Tasks**: [tasks-v0.5.0-roadmap.md](../v0.5.0/tasks-v0.5.0-roadmap.md)
 - **GitHub Issues**: [Issue Tracker](https://github.com/adriannoes/asap-protocol/issues)
