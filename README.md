@@ -72,6 +72,8 @@ manifest = Manifest(
         skills=[Skill(id="echo", description="Echo back the input")],
         state_persistence=False,
     ),
+    # Development: HTTP localhost is allowed
+    # Production: Always use HTTPS (e.g., "https://api.example.com/asap")
     endpoints=Endpoint(asap="http://127.0.0.1:8001/asap"),
 )
 
@@ -102,6 +104,8 @@ async def main():
         payload_type="task.request",
         payload=request.model_dump(),
     )
+    # Development: HTTP localhost is allowed (with warning)
+    # Production: Always use HTTPS (e.g., "https://api.example.com")
     async with ASAPClient("http://127.0.0.1:8001") as client:
         response = await client.send(envelope)
         print(response.payload)
@@ -142,7 +146,7 @@ ASAP is ideal for:
 - **MCP integration**: Agents that need to execute tools via Model Context Protocol
 - **Production systems**: High-performance, type-safe agent communication
 
-If you're building simple point-to-point agent communication, a basic HTTP API might suffice. ASAP shines when you need orchestration, state management, and multi-agent coordination.
+If you're building simple point-to-point agent communication, a basic HTTP API might suffice. ASAP shines when you need orchestration, state management and multi-agent coordination.
 
 ## Advanced Topics
 
