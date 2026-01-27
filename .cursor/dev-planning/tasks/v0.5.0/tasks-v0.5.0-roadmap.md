@@ -18,7 +18,6 @@
 
 ## Sprint S1: Quick Wins & Dependency Setup
 
-**Duration**: Flexible (3-5 days)
 **Goal**: Resolve low-hanging fruit and establish dependency monitoring
 
 ### Tasks
@@ -67,7 +66,6 @@
 
 ## Sprint S2: DoS Prevention & Rate Limiting
 
-**Duration**: Flexible (5-7 days)
 **Goal**: Implement rate limiting and request size validation
 
 ### Tasks
@@ -118,76 +116,75 @@
 
 ## Sprint S2.5: Test Infrastructure Refactoring
 
-**Duration**: Flexible (4-6 hours)
 **Goal**: Reorganize test structure and resolve Issue #17 (33 failing tests)
 
 ### Tasks
 
-- [ ] 2.5.1 Fix critical bugs in test_server.py
+- [x] 2.5.1 Fix critical bugs in test_server.py
   - Goal: Resolve UnboundLocalError in TestASAPRequestHandlerHelpers (3 tests)
   - Details: [Sprint S2.5 Detailed - Task 2.5.1](./tasks-v0.5.0-s2.5-detailed.md#task-251-fix-critical-bugs-in-test_serverpy)
 
-- [ ] 2.5.2 Update authentication test fixtures
+- [x] 2.5.2 Update authentication test fixtures
   - Goal: Add isolated_rate_limiter to 4 auth tests
   - Details: [Sprint S2.5 Detailed - Task 2.5.2](./tasks-v0.5.0-s2.5-detailed.md#task-252-update-authentication-test-fixtures)
 
-- [ ] 2.5.3 Create test directory structure
+- [x] 2.5.3 Create test directory structure
   - Goal: Create unit/, integration/, e2e/ directories
   - Details: [Sprint S2.5 Detailed - Task 2.5.3](./tasks-v0.5.0-s2.5-detailed.md#task-253-create-test-directory-structure)
 
-- [ ] 2.5.4 Create transport-specific fixtures
+- [x] 2.5.4 Create transport-specific fixtures
   - Goal: Add transport/conftest.py with isolated fixtures
   - Details: [Sprint S2.5 Detailed - Task 2.5.4](./tasks-v0.5.0-s2.5-detailed.md#task-254-create-transport-specific-fixtures)
 
-- [ ] 2.5.5 Migrate BoundedExecutor to unit tests
+- [x] 2.5.5 Migrate BoundedExecutor to unit tests
   - Goal: Move 8 executor tests to unit/test_bounded_executor.py
   - Details: [Sprint S2.5 Detailed - Task 2.5.5](./tasks-v0.5.0-s2.5-detailed.md#task-255-migrate-boundedexecutor-to-unit-tests)
 
-- [ ] 2.5.6 Migrate rate limiting to integration tests
+- [x] 2.5.6 Migrate rate limiting to integration tests
   - Goal: Move 4 rate limiting tests to integration/test_rate_limiting.py
   - Details: [Sprint S2.5 Detailed - Task 2.5.6](./tasks-v0.5.0-s2.5-detailed.md#task-256-migrate-rate-limiting-to-integration-tests)
 
-- [ ] 2.5.7 Migrate size validation to integration tests
+- [x] 2.5.7 Migrate size validation to integration tests
   - Goal: Move 4 size validation tests to integration/test_request_size_limits.py
   - Details: [Sprint S2.5 Detailed - Task 2.5.7](./tasks-v0.5.0-s2.5-detailed.md#task-257-migrate-size-validation-to-integration-tests)
 
-- [ ] 2.5.8 Migrate thread pool to integration tests
+- [x] 2.5.8 Migrate thread pool to integration tests
   - Goal: Move 3 thread pool tests to integration/test_thread_pool_bounds.py
   - Details: [Sprint S2.5 Detailed - Task 2.5.8](./tasks-v0.5.0-s2.5-detailed.md#task-258-migrate-thread-pool-to-integration-tests)
 
-- [ ] 2.5.9 Migrate metrics cardinality to integration tests
+- [x] 2.5.9 Migrate metrics cardinality to integration tests
   - Goal: Move 1 metrics test to integration/test_metrics_cardinality.py
   - Details: [Sprint S2.5 Detailed - Task 2.5.9](./tasks-v0.5.0-s2.5-detailed.md#task-259-migrate-metrics-cardinality-to-integration-tests)
 
-- [ ] 2.5.10 Migrate E2E tests
+- [x] 2.5.10 Migrate E2E tests
   - Goal: Move test_integration.py to e2e/test_full_agent_flow.py
   - Details: [Sprint S2.5 Detailed - Task 2.5.10](./tasks-v0.5.0-s2.5-detailed.md#task-2510-migrate-e2e-tests)
 
-- [ ] 2.5.11 Fix remaining test_server.py fixtures
+- [x] 2.5.11 Fix remaining test_server.py fixtures
   - Goal: Add isolated_rate_limiter to ~20 remaining tests
   - Details: [Sprint S2.5 Detailed - Task 2.5.11](./tasks-v0.5.0-s2.5-detailed.md#task-2511-fix-remaining-test_serverpy-fixtures)
 
-- [ ] 2.5.12 Clean up test_executors.py
+- [x] 2.5.12 Clean up test_executors.py
   - Goal: Remove empty files after migration
   - Details: [Sprint S2.5 Detailed - Task 2.5.12](./tasks-v0.5.0-s2.5-detailed.md#task-2512-clean-up-test_executorspy)
 
-- [ ] 2.5.13 Add pytest-xdist for parallel execution
+- [x] 2.5.13 Add pytest-xdist for parallel execution
   - Goal: Install pytest-xdist and update CI for parallel tests
   - Details: [Sprint S2.5 Detailed - Task 2.5.13](./tasks-v0.5.0-s2.5-detailed.md#task-2513-add-pytest-xdist-for-parallel-execution)
 
-- [ ] 2.5.14 Validate all Sprint S2 tests together
+- [x] 2.5.14 Validate all Sprint S2 tests together
   - Goal: Ensure all 20 S2 tests pass together without interference
   - Details: [Sprint S2.5 Detailed - Task 2.5.14](./tasks-v0.5.0-s2.5-detailed.md#task-2514-validate-all-sprint-s2-tests-together)
 
-- [ ] 2.5.15 Validate full test suite
+- [x] 2.5.15 Validate full test suite
   - Goal: Verify 578+ tests pass with 0 failures
   - Details: [Sprint S2.5 Detailed - Task 2.5.15](./tasks-v0.5.0-s2.5-detailed.md#task-2515-validate-full-test-suite)
 
-- [ ] 2.5.16 Update documentation
+- [x] 2.5.16 Update documentation
   - Goal: Create docs/testing.md and update CONTRIBUTING.md
   - Details: [Sprint S2.5 Detailed - Task 2.5.16](./tasks-v0.5.0-s2.5-detailed.md#task-2516-update-documentation)
 
-- [ ] 2.5.17 Update roadmap and mark complete
+- [x] 2.5.17 Update roadmap and mark complete
   - Goal: Document sprint completion in roadmap files
   - Details: [Sprint S2.5 Detailed - Task 2.5.17](./tasks-v0.5.0-s2.5-detailed.md#task-2517-update-roadmap-and-mark-complete)
 
@@ -205,56 +202,55 @@
 
 ## Sprint S3: Replay Attack Prevention & HTTPS
 
-**Duration**: Flexible (4-6 days)
 **Goal**: Implement timestamp validation and HTTPS enforcement
 
 ### Tasks
 
-- [ ] 3.1 Add timestamp constants
+- [x] 3.1 Add timestamp constants ✅
   - Goal: Define MAX_ENVELOPE_AGE_SECONDS (5min) and MAX_FUTURE_TOLERANCE_SECONDS (30s)
   - Details: [Sprint S3 Detailed - Task 3.1](./tasks-v0.5.0-s3-detailed.md#task-31-add-timestamp-constants)
 
-- [ ] 3.2 Create validators module
+- [x] 3.2 Create validators module ✅
   - Goal: Implement validate_envelope_timestamp() function
   - Details: [Sprint S3 Detailed - Task 3.2](./tasks-v0.5.0-s3-detailed.md#task-32-create-validators-module)
 
-- [ ] 3.3 Implement nonce support
+- [x] 3.3 Implement nonce support ✅
   - Goal: Optional nonce validation for critical operations
   - Details: [Sprint S3 Detailed - Task 3.3](./tasks-v0.5.0-s3-detailed.md#task-33-implement-nonce-support)
 
-- [ ] 3.4 Integrate timestamp validation in server
+- [x] 3.4 Integrate timestamp validation in server ✅
   - Goal: Validate before handler dispatch
   - Details: [Sprint S3 Detailed - Task 3.4](./tasks-v0.5.0-s3-detailed.md#task-34-integrate-validation-in-server)
 
-- [ ] 3.5 Add HTTPS enforcement to client
+- [x] 3.5 Add HTTPS enforcement to client ✅
   - Goal: require_https=True parameter, validate URLs
   - Details: [Sprint S3 Detailed - Task 3.5](./tasks-v0.5.0-s3-detailed.md#task-35-add-https-enforcement-to-client)
 
-- [ ] 3.6 Add validation tests
-  - Goal: 12+ tests for timestamp, nonce, and HTTPS
+- [x] 3.6 Add validation tests ✅
+  - Goal: 12+ tests for timestamp, nonce, and HTTPS (achieved: 17 tests)
   - Details: [Sprint S3 Detailed - Task 3.6](./tasks-v0.5.0-s3-detailed.md#task-36-add-validation-tests)
 
-- [ ] 3.7 Update documentation
+- [x] 3.7 Update documentation ✅
   - Goal: Document replay prevention and HTTPS in docs/security.md
   - Details: [Sprint S3 Detailed - Task 3.7](./tasks-v0.5.0-s3-detailed.md#task-37-update-documentation)
 
-- [ ] 3.8 PRD review checkpoint
+- [x] 3.8 PRD review checkpoint ✅
   - Goal: Review Q3 (HMAC signing), document learnings
+  - Decision: HMAC deferred to v1.1.0+ (DD-008)
   - Details: [Sprint S3 Detailed - Task 3.8](./tasks-v0.5.0-s3-detailed.md#task-38-prd-review-checkpoint)
 
 ### Definition of Done
-- [ ] Envelopes older than 5 minutes rejected
-- [ ] Future timestamps beyond 30s rejected
-- [ ] HTTPS enforced in production mode
-- [ ] Test coverage >95% maintained
-- [ ] Examples updated to use HTTPS
-- [ ] PRD reviewed and updated with learnings
+- [x] Envelopes older than 5 minutes rejected ✅
+- [x] Future timestamps beyond 30s rejected ✅
+- [x] HTTPS enforced in production mode ✅
+- [x] Test coverage >95% maintained (91.90%) ✅
+- [x] Examples updated to use HTTPS ✅
+- [x] PRD reviewed and updated with learnings ✅
 
 ---
 
 ## Sprint S4: Retry Logic & Authorization
 
-**Duration**: Flexible (3-5 days)
 **Goal**: Implement exponential backoff and authorization validation
 
 ### Tasks
@@ -276,8 +272,12 @@
   - Goal: 12+ tests for backoff, circuit breaker, auth validation
   - Details: [Sprint S4 Detailed - Task 4.4](./tasks-v0.5.0-s4-detailed.md#task-44-add-retry-and-auth-tests)
 
+- [ ] 4.4.5 Improve connection error messages (user feedback)
+  - Goal: Enhanced error messages with troubleshooting guidance
+  - Details: [Sprint S4 Detailed - Task 4.4.5](./tasks-v0.5.0-s4-detailed.md#task-445-improve-connection-error-messages-user-feedback)
+
 - [ ] 4.5 Update documentation
-  - Goal: Document retry config and auth schemes
+  - Goal: Document retry config, auth schemes, and connection troubleshooting
   - Details: [Sprint S4 Detailed - Task 4.5](./tasks-v0.5.0-s4-detailed.md#task-45-update-documentation)
 
 ### Definition of Done
@@ -292,7 +292,6 @@
 
 ## Sprint S5: v0.5.0 Release Preparation
 
-**Duration**: Flexible (2-3 days)
 **Goal**: Final testing, documentation, and release
 
 ### Tasks
@@ -355,21 +354,22 @@
 
 ## Progress Tracking
 
-**Overall Progress**: 16/49 tasks completed (32.65%)
+**Overall Progress**: 24/49 tasks completed (48.98%)
 
 **Sprint Status**:
 - ✅ S1: 7/7 tasks (100%) - All tasks completed
 - ✅ S2: 9/9 tasks (100%) - All tasks completed
 - ✅ S2.5: 17/17 tasks (100%) - Test infrastructure refactoring - **COMPLETE** (Jan 26, 2026)
-- ⏳ S3: 0/8 tasks (0%) - **Includes PRD review checkpoint**
+- ✅ S3: 8/8 tasks (100%) - Replay Prevention & HTTPS + PRD Review - **COMPLETE** (Jan 27, 2026)
 - ⏳ S4: 0/5 tasks (0%)
 - ⏳ S5: 0/7 tasks (0%)
 
 **PRD Maintenance**:
-- Next review: End of Sprint S3
-- Questions to address: Q3 (HMAC signing decision)
+- ✅ Sprint S3 review completed (2026-01-27)
+- Added DD-008: HMAC deferred to v1.1.0+
+- Next review: End of Sprint P3 (v1.0.0)
 
-**Last Updated**: 2026-01-25 (Sprint S2 completed)
+**Last Updated**: 2026-01-27 (Sprint S3 completed)
 
 ---
 
