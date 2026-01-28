@@ -21,9 +21,12 @@ Example:
 """
 
 import asyncio
+import itertools
 import random
 import threading
 import time
+from dataclasses import dataclass
+from email.utils import parsedate_to_datetime
 from enum import Enum
 from typing import Any, Optional
 from urllib.parse import ParseResult
@@ -50,6 +53,32 @@ DEFAULT_TIMEOUT = 60.0
 
 # Default maximum retries
 DEFAULT_MAX_RETRIES = 3
+
+
+@dataclass
+class RetryConfig:
+    """Configuration for retry logic and circuit breaker.
+
+    Groups retry and circuit breaker parameters to simplify client initialization
+    and avoid boolean trap issues.
+
+    Attributes:
+        max_retries: Maximum retry attempts for transient failures (default: 3)
+        base_delay: Base delay in seconds for exponential backoff (default: 1.0)
+        max_delay: Maximum delay in seconds for exponential backoff (default: 60.0)
+        jitter: Whether to add random jitter to backoff delays (default: True)
+        circuit_breaker_enabled: Enable circuit breaker pattern (default: False)
+        circuit_breaker_threshold: Number of consecutive failures before opening circuit (default: 5)
+        circuit_breaker_timeout: Seconds before transitioning OPEN -> HALF_OPEN (default: 60.0)
+    """
+
+    max_retries: int = DEFAULT_MAX_RETRIES
+    base_delay: float = DEFAULT_BASE_DELAY
+    max_delay: float = DEFAULT_MAX_DELAY
+    jitter: bool = True
+    circuit_breaker_enabled: bool = False
+    circuit_breaker_threshold: int = DEFAULT_CIRCUIT_BREAKER_THRESHOLD
+    circuit_breaker_timeout: float = DEFAULT_CIRCUIT_BREAKER_TIMEOUT
 
 
 class CircuitState(str, Enum):
@@ -285,36 +314,85 @@ class ASAPClient:
         self,
         base_url: str,
         timeout: float = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
         transport: httpx.AsyncBaseTransport | httpx.BaseTransport | None = None,
         require_https: bool = True,
-        base_delay: float = DEFAULT_BASE_DELAY,
-        max_delay: float = DEFAULT_MAX_DELAY,
-        jitter: bool = True,
-        circuit_breaker_enabled: bool = False,
-        circuit_breaker_threshold: int = DEFAULT_CIRCUIT_BREAKER_THRESHOLD,
-        circuit_breaker_timeout: float = DEFAULT_CIRCUIT_BREAKER_TIMEOUT,
+        retry_config: Optional[RetryConfig] = None,
+        # Individual retry parameters (for backward compatibility)
+        # If retry_config is provided, these are ignored
+        max_retries: int | None = None,
+        base_delay: float | None = None,
+        max_delay: float | None = None,
+        jitter: bool | None = None,
+        circuit_breaker_enabled: bool | None = None,
+        circuit_breaker_threshold: int | None = None,
+        circuit_breaker_timeout: float | None = None,
     ) -> None:
         """Initialize ASAP client.
 
         Args:
             base_url: Base URL of the remote agent (e.g., "http://localhost:8000")
             timeout: Request timeout in seconds (default: 60)
-            max_retries: Maximum retry attempts for transient failures (default: 3)
             transport: Optional custom transport (for testing). Can be sync or async.
             require_https: If True, enforces HTTPS for non-localhost connections (default: True).
                 HTTP connections to localhost are allowed with a warning for development.
-            base_delay: Base delay in seconds for exponential backoff (default: 1.0)
-            max_delay: Maximum delay in seconds for exponential backoff (default: 60.0)
-            jitter: Whether to add random jitter to backoff delays (default: True)
-            circuit_breaker_enabled: Enable circuit breaker pattern (default: False)
-            circuit_breaker_threshold: Number of consecutive failures before opening circuit (default: 5)
-            circuit_breaker_timeout: Seconds before transitioning OPEN -> HALF_OPEN (default: 60.0)
+            retry_config: Optional RetryConfig dataclass to group retry and circuit breaker parameters.
+                If provided, individual retry parameters are ignored.
+            max_retries: Maximum retry attempts for transient failures (default: 3).
+                Ignored if retry_config is provided.
+            base_delay: Base delay in seconds for exponential backoff (default: 1.0).
+                Ignored if retry_config is provided.
+            max_delay: Maximum delay in seconds for exponential backoff (default: 60.0).
+                Ignored if retry_config is provided.
+            jitter: Whether to add random jitter to backoff delays (default: True).
+                Ignored if retry_config is provided.
+            circuit_breaker_enabled: Enable circuit breaker pattern (default: False).
+                Ignored if retry_config is provided.
+            circuit_breaker_threshold: Number of consecutive failures before opening circuit (default: 5).
+                Ignored if retry_config is provided.
+            circuit_breaker_timeout: Seconds before transitioning OPEN -> HALF_OPEN (default: 60.0).
+                Ignored if retry_config is provided.
 
         Raises:
             ValueError: If URL format is invalid, scheme is not HTTP/HTTPS, or HTTPS is
                 required but URL uses HTTP for non-localhost connections.
+
+        Example:
+            >>> # Using individual parameters (backward compatible)
+            >>> client = ASAPClient("http://localhost:8000", max_retries=5)
+            >>>
+            >>> # Using RetryConfig (recommended)
+            >>> config = RetryConfig(max_retries=5, circuit_breaker_enabled=True)
+            >>> client = ASAPClient("http://localhost:8000", retry_config=config)
         """
+        # Extract retry config values
+        if retry_config is not None:
+            # Use retry_config values
+            max_retries_val = retry_config.max_retries
+            base_delay_val = retry_config.base_delay
+            max_delay_val = retry_config.max_delay
+            jitter_val = retry_config.jitter
+            circuit_breaker_enabled_val = retry_config.circuit_breaker_enabled
+            circuit_breaker_threshold_val = retry_config.circuit_breaker_threshold
+            circuit_breaker_timeout_val = retry_config.circuit_breaker_timeout
+        else:
+            # Use individual parameters with defaults
+            max_retries_val = max_retries if max_retries is not None else DEFAULT_MAX_RETRIES
+            base_delay_val = base_delay if base_delay is not None else DEFAULT_BASE_DELAY
+            max_delay_val = max_delay if max_delay is not None else DEFAULT_MAX_DELAY
+            jitter_val = jitter if jitter is not None else True
+            circuit_breaker_enabled_val = (
+                circuit_breaker_enabled if circuit_breaker_enabled is not None else False
+            )
+            circuit_breaker_threshold_val = (
+                circuit_breaker_threshold
+                if circuit_breaker_threshold is not None
+                else DEFAULT_CIRCUIT_BREAKER_THRESHOLD
+            )
+            circuit_breaker_timeout_val = (
+                circuit_breaker_timeout
+                if circuit_breaker_timeout is not None
+                else DEFAULT_CIRCUIT_BREAKER_TIMEOUT
+            )
         # Validate URL format and scheme
         from urllib.parse import urlparse
 
@@ -358,21 +436,22 @@ class ASAPClient:
 
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
-        self.max_retries = max_retries
+        self.max_retries = max_retries_val
         self.require_https = require_https
-        self.base_delay = base_delay
-        self.max_delay = max_delay
-        self.jitter = jitter
-        self.circuit_breaker_enabled = circuit_breaker_enabled
+        self.base_delay = base_delay_val
+        self.max_delay = max_delay_val
+        self.jitter = jitter_val
+        self.circuit_breaker_enabled = circuit_breaker_enabled_val
         self._transport = transport
         self._client: httpx.AsyncClient | None = None
-        self._request_counter = 0
+        # Thread-safe counter using itertools.count
+        self._request_counter = itertools.count(1)
 
         # Initialize circuit breaker if enabled
-        if circuit_breaker_enabled:
+        if circuit_breaker_enabled_val:
             self._circuit_breaker = CircuitBreaker(
-                threshold=circuit_breaker_threshold,
-                timeout=circuit_breaker_timeout,
+                threshold=circuit_breaker_threshold_val,
+                timeout=circuit_breaker_timeout_val,
             )
         else:
             self._circuit_breaker = None
@@ -577,9 +656,8 @@ class ASAPClient:
         # Generate idempotency key for retries
         idempotency_key = generate_id()
 
-        # Increment request counter for JSON-RPC id
-        self._request_counter += 1
-        request_id = f"req-{self._request_counter}"
+        # Get next request counter value (thread-safe)
+        request_id = f"req-{next(self._request_counter)}"
 
         # Log send attempt with context
         logger.info(
@@ -671,28 +749,61 @@ class ASAPClient:
                         # Check for Retry-After header
                         retry_after = response.headers.get("Retry-After")
                         if retry_after:
-                            try:
-                                # Retry-After can be seconds (int) or HTTP date
-                                delay = float(retry_after)
-                                logger.info(
-                                    "asap.client.retry_after",
-                                    target_url=self.base_url,
-                                    envelope_id=envelope.id,
-                                    attempt=attempt + 1,
-                                    retry_after_seconds=delay,
-                                    message=f"Respecting server Retry-After: {delay}s",
-                                )
-                            except ValueError:
-                                # If Retry-After is a date, fall back to calculated backoff
-                                delay = self._calculate_backoff(attempt)
+                            retry_delay: Optional[float] = None
+                            # Retry-After can be seconds (int/float) or HTTP date
+                            # First, try to parse as seconds (numeric)
+                            if retry_after.replace(".", "", 1).isdigit():
+                                try:
+                                    retry_delay = float(retry_after)
+                                    logger.info(
+                                        "asap.client.retry_after",
+                                        target_url=self.base_url,
+                                        envelope_id=envelope.id,
+                                        attempt=attempt + 1,
+                                        retry_after_seconds=retry_delay,
+                                        message=f"Respecting server Retry-After: {retry_delay}s",
+                                    )
+                                except ValueError:
+                                    pass  # Fall through to date parsing
+                            else:
+                                # Try to parse as HTTP date
+                                try:
+                                    retry_date = parsedate_to_datetime(retry_after)
+                                    if retry_date:
+                                        # Calculate delay in seconds from now until retry_date
+                                        now_timestamp = time.time()
+                                        retry_timestamp = retry_date.timestamp()
+                                        calculated_delay = retry_timestamp - now_timestamp
+                                        # If date is in the past or delay is invalid, fall back to calculated backoff
+                                        if calculated_delay <= 0:
+                                            retry_delay = None  # Will trigger fallback
+                                        else:
+                                            retry_delay = calculated_delay
+                                            logger.info(
+                                                "asap.client.retry_after",
+                                                target_url=self.base_url,
+                                                envelope_id=envelope.id,
+                                                attempt=attempt + 1,
+                                                retry_after_seconds=round(retry_delay, 2),
+                                                retry_after_date=retry_after,
+                                                message=f"Respecting server Retry-After date: {retry_after} ({retry_delay:.2f}s)",
+                                            )
+                                except (ValueError, TypeError, AttributeError, OSError):
+                                    # Invalid date format or timestamp conversion error, fall back to calculated backoff
+                                    pass
+
+                            # If parsing failed or delay is invalid (None or <= 0), use calculated backoff
+                            if retry_delay is None or retry_delay <= 0:
+                                retry_delay = self._calculate_backoff(attempt)
                                 logger.warning(
                                     "asap.client.retry_after_invalid",
                                     target_url=self.base_url,
                                     envelope_id=envelope.id,
                                     retry_after_header=retry_after,
-                                    fallback_delay=round(delay, 2),
+                                    fallback_delay=round(retry_delay, 2),
                                     message="Invalid Retry-After format, using calculated backoff",
                                 )
+                            delay = retry_delay
                         else:
                             # No Retry-After header, use calculated backoff
                             delay = self._calculate_backoff(attempt)
@@ -718,6 +829,21 @@ class ASAPClient:
                             url=self.base_url,
                         )
                         continue
+                    # All retries exhausted, record failure in circuit breaker
+                    if self._circuit_breaker is not None:
+                        previous_state = self._circuit_breaker.get_state()
+                        self._circuit_breaker.record_failure()
+                        current_state = self._circuit_breaker.get_state()
+                        consecutive_failures = self._circuit_breaker.get_consecutive_failures()
+                        # Log state change if circuit opened
+                        if previous_state != current_state and current_state == CircuitState.OPEN:
+                            logger.warning(
+                                "asap.client.circuit_opened",
+                                target_url=self.base_url,
+                                consecutive_failures=consecutive_failures,
+                                threshold=self._circuit_breaker.threshold,
+                                message=f"Circuit breaker opened after {consecutive_failures} consecutive failures (rate limited)",
+                            )
                     raise ASAPConnectionError(
                         f"HTTP rate limit error 429 from {self.base_url} after {self.max_retries} attempts. "
                         f"Server response: {response.text[:200]}",
@@ -725,6 +851,11 @@ class ASAPClient:
                     )
                 if response.status_code >= 400:
                     # Client errors (4xx) are not retriable (except 429 handled above)
+                    # We record a failure in the circuit breaker here because persistent 4xx 
+                    # (like 401/403) can indicate an unhealthy configuration or system state.
+                    if self._circuit_breaker is not None:
+                        self._circuit_breaker.record_failure()
+                        
                     raise ASAPConnectionError(
                         f"HTTP client error {response.status_code} from {self.base_url}. "
                         f"This indicates a problem with the request. "
@@ -740,6 +871,11 @@ class ASAPClient:
 
                 # Check for JSON-RPC error
                 if "error" in json_response:
+                    # Record success pattern (service is reachable)
+                    # A valid JSON-RPC error means the connection and transport are healthy
+                    if self._circuit_breaker is not None:
+                        self._circuit_breaker.record_success()
+
                     error = json_response["error"]
                     raise ASAPRemoteError(
                         error.get("code", -32603),
@@ -782,12 +918,20 @@ class ASAPClient:
 
                 return response_envelope
 
-            except httpx.ConnectError as e:
+            except (httpx.ConnectError, httpx.TimeoutException) as e:
+                is_timeout = isinstance(e, httpx.TimeoutException)
+                error_type = "Timeout" if is_timeout else "Connection error"
                 error_msg = (
-                    f"Connection error to {self.base_url}: {e}. "
+                    f"{error_type} to {self.base_url}: {e}. "
                     f"Verify the agent is running and accessible."
                 )
-                last_exception = ASAPConnectionError(error_msg, cause=e, url=self.base_url)
+                if is_timeout:
+                    last_exception = ASAPTimeoutError(
+                        f"Request timeout after {self.timeout}s", timeout=self.timeout
+                    )
+                else:
+                    last_exception = ASAPConnectionError(error_msg, cause=e, url=self.base_url)
+
                 # Log retry attempt
                 if attempt < self.max_retries - 1:
                     delay = self._calculate_backoff(attempt)
@@ -800,13 +944,14 @@ class ASAPClient:
                         error=str(e),
                         delay_seconds=round(delay, 2),
                         message=(
-                            f"Connection failed to {self.base_url} (attempt {attempt + 1}/{self.max_retries}). "
+                            f"{error_type} to {self.base_url} (attempt {attempt + 1}/{self.max_retries}). "
                             f"Retrying in {delay:.2f}s. "
                             f"Error: {str(e)[:100]}"
                         ),
                     )
                     await asyncio.sleep(delay)
                     continue
+
                 # All retries exhausted, record failure in circuit breaker
                 if self._circuit_breaker is not None:
                     previous_state = self._circuit_breaker.get_state()
@@ -822,62 +967,25 @@ class ASAPClient:
                             threshold=self._circuit_breaker.threshold,
                             message=f"Circuit breaker opened after {consecutive_failures} consecutive failures",
                         )
+
                 # Log final failure with detailed context
                 duration_ms = (time.perf_counter() - start_time) * 1000
+                error_type_name = "ASAPTimeoutError" if is_timeout else "ASAPConnectionError"
                 logger.error(
                     "asap.client.error",
                     target_url=self.base_url,
                     envelope_id=envelope.id,
-                    error="Connection failed after retries",
-                    error_type="ASAPConnectionError",
+                    error=f"{error_type} after retries",
+                    error_type=error_type_name,
                     duration_ms=round(duration_ms, 2),
                     attempts=attempt + 1,
                     max_retries=self.max_retries,
+                    timeout=self.timeout if is_timeout else None,
                     message=(
-                        f"Connection to {self.base_url} failed after {attempt + 1} attempts. "
+                        f"{error_type} to {self.base_url} failed after {attempt + 1} attempts. "
                         f"Total duration: {duration_ms:.2f}ms. "
                         f"Troubleshooting: Verify the agent is running, check network connectivity, "
                         f"and ensure the URL is correct. Original error: {str(e)[:200]}"
-                    ),
-                )
-                raise last_exception from e
-
-            except httpx.TimeoutException as e:
-                # Record failure in circuit breaker
-                if self._circuit_breaker is not None:
-                    previous_state = self._circuit_breaker.get_state()
-                    self._circuit_breaker.record_failure()
-                    current_state = self._circuit_breaker.get_state()
-                    consecutive_failures = self._circuit_breaker.get_consecutive_failures()
-                    # Log state change if circuit opened
-                    if previous_state != current_state and current_state == CircuitState.OPEN:
-                        logger.warning(
-                            "asap.client.circuit_opened",
-                            target_url=self.base_url,
-                            consecutive_failures=consecutive_failures,
-                            threshold=self._circuit_breaker.threshold,
-                            message=f"Circuit breaker opened after {consecutive_failures} consecutive failures",
-                        )
-                duration_ms = (time.perf_counter() - start_time) * 1000
-                last_exception = ASAPTimeoutError(
-                    f"Request timeout after {self.timeout}s", timeout=self.timeout
-                )
-                # Log timeout with context (don't retry)
-                logger.error(
-                    "asap.client.error",
-                    target_url=self.base_url,
-                    envelope_id=envelope.id,
-                    error="Request timeout",
-                    error_type="ASAPTimeoutError",
-                    timeout=self.timeout,
-                    duration_ms=round(duration_ms, 2),
-                    attempt=attempt + 1,
-                    max_retries=self.max_retries,
-                    message=(
-                        f"Request to {self.base_url} timed out after {self.timeout}s "
-                        f"(attempt {attempt + 1}/{self.max_retries}, duration: {duration_ms:.2f}ms). "
-                        f"Troubleshooting: Check network latency, increase timeout if needed, "
-                        f"or verify the agent is responding."
                     ),
                 )
                 raise last_exception from e

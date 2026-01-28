@@ -18,6 +18,7 @@ Public exports:
     create_echo_handler: Factory for echo handler
     create_default_registry: Factory for default registry
     ASAPClient: Async HTTP client for agent communication
+    RetryConfig: Configuration dataclass for retry logic and circuit breaker
     ASAPConnectionError: Connection error exception
     ASAPTimeoutError: Timeout error exception
     ASAPRemoteError: Remote error exception
@@ -45,6 +46,7 @@ from asap.transport.client import (
     ASAPConnectionError,
     ASAPRemoteError,
     ASAPTimeoutError,
+    RetryConfig,
 )
 from asap.transport.handlers import (
     Handler,
@@ -81,4 +83,5 @@ __all__ = [
     "ASAPConnectionError",
     "ASAPTimeoutError",
     "ASAPRemoteError",
+    "RetryConfig",
 ]
