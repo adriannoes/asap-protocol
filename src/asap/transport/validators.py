@@ -138,6 +138,21 @@ class NonceStore(Protocol):
         """
         ...
 
+    def check_and_mark(self, nonce: str, ttl_seconds: int) -> bool:
+        """Atomically check if nonce is used and mark it if not.
+
+        This method performs both check and mark operations atomically to
+        prevent race conditions between concurrent requests.
+
+        Args:
+            nonce: The nonce value to check and mark
+            ttl_seconds: Time-to-live in seconds for the nonce
+
+        Returns:
+            True if nonce was already used, False if it was newly marked
+        """
+        ...
+
 
 class InMemoryNonceStore:
     """In-memory nonce store with TTL-based expiration.
@@ -193,6 +208,26 @@ class InMemoryNonceStore:
             self._cleanup_expired()
             expiry = time.time() + ttl_seconds
             self._store[nonce] = expiry
+
+    def check_and_mark(self, nonce: str, ttl_seconds: int) -> bool:
+        """Atomically check if nonce is used and mark it if not.
+
+        This method performs both check and mark operations atomically to
+        prevent race conditions between concurrent requests with the same nonce.
+
+        Args:
+            nonce: The nonce value to check and mark
+            ttl_seconds: Time-to-live in seconds for the nonce
+
+        Returns:
+            True if nonce was already used, False if it was newly marked
+        """
+        with self._lock:
+            self._cleanup_expired()
+            if nonce in self._store and self._store[nonce] >= time.time():
+                return True  # Already used
+            self._store[nonce] = time.time() + ttl_seconds
+            return False  # Newly marked
 
 
 def validate_envelope_nonce(envelope: Envelope, nonce_store: NonceStore | None) -> None:
@@ -260,24 +295,28 @@ def validate_envelope_nonce(envelope: Envelope, nonce_store: NonceStore | None) 
 
     nonce = envelope.extensions["nonce"]
 
-    # Validate nonce is a string
-    if not isinstance(nonce, str):
+    # Validate nonce is a non-empty string
+    if not isinstance(nonce, str) or not nonce:
         raise InvalidNonceError(
             nonce=str(nonce),
-            message=f"Nonce must be a string, got {type(nonce).__name__}",
+            message=(
+                f"Nonce must be a non-empty string, got "
+                f"{type(nonce).__name__ if not isinstance(nonce, str) else 'empty string'}"
+            ),
             details={"envelope_id": envelope.id},
         )
 
-    # Check if nonce has been used
-    if nonce_store.is_used(nonce):
+    # Use 2x envelope age as TTL to ensure nonces expire after the envelope would
+    # have been rejected anyway, providing some buffer
+    nonce_ttl = MAX_ENVELOPE_AGE_SECONDS * 2  # 10 minutes by default
+
+    # Atomically check and mark nonce as used to prevent race conditions
+    if nonce_store.check_and_mark(nonce, ttl_seconds=nonce_ttl):
         raise InvalidNonceError(
             nonce=nonce,
             message=f"Duplicate nonce detected: {nonce}",
             details={"envelope_id": envelope.id},
         )
-
-    # Mark nonce as used with 10 minute TTL
-    nonce_store.mark_used(nonce, ttl_seconds=600)
 
 
 __all__ = [

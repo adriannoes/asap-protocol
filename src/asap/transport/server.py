@@ -882,10 +882,12 @@ class ASAPRequestHandler:
             try:
                 validate_envelope_nonce(envelope, self.nonce_store)
             except InvalidNonceError as e:
+                # Truncate nonce in logs to prevent full value exposure
+                nonce_prefix = e.nonce[:8] + "..." if len(e.nonce) > 8 else e.nonce
                 logger.warning(
                     "asap.request.invalid_nonce",
                     envelope_id=envelope.id,
-                    nonce=e.nonce,
+                    nonce=nonce_prefix,
                     error=e.message,
                 )
                 duration_seconds = time.perf_counter() - ctx.start_time
