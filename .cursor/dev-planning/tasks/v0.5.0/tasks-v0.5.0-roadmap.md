@@ -290,6 +290,35 @@
 
 ---
 
+## Security Red Team Remediation
+
+**Goal**: Address findings from internal Red Team security assessment (Jan 27, 2026)
+
+### Tasks
+
+- [x] RT.1 Refactor Circuit Breaker for Persistence ✅
+  - Finding: Circuit breaker state was ephemeral per request
+  - Solution: Implemented `CircuitBreakerRegistry` singleton
+
+- [x] RT.2 Fix Concurrency & Blocking Issues ✅
+  - Finding: Risk of event loop blocking
+  - Solution: Reviewed locking strategy (retained fast RLock), added async safeguards
+
+- [x] RT.3 Enhance Type Safety & Input Validation ✅
+  - Finding: `type: ignore` usage and missing null checks
+  - Solution: Strict mypy compliance, explicit `None` checks in `send()`
+
+- [x] RT.4 Security Verification & Regression Testing ✅
+  - Goal: Verify persistence and ensure no regressions
+  - Outcome: New persistence tests added, full suite passing (726 tests)
+
+### Definition of Done
+- [x] All critical/high findings addressed ✅
+- [x] Circuit breaker works across multiple client instances ✅
+- [x] No regressions in test suite ✅
+
+---
+
 ## Sprint S5: v0.5.0 Release Preparation
 
 **Goal**: Final testing, documentation, and release
@@ -368,9 +397,10 @@
 | S2.5 | 13 | Test infrastructure refactoring | 4-6 hours |
 | S3 | 8 | Replay attack + HTTPS + PRD Review | 4-6 days |
 | S4 | 6 | Retry + Authorization (S3 patterns applied) | 3-5 days |
+| Security | 4 | Red Team Remediation (Circuit Breaker, Type Safety) | 1 day |
 | S5 | 11 | Release prep + S3 follow-ups + Issues #11/#12 + Quality Gate | 3-4 days |
 
-**Total**: 54 high-level tasks across 6 sprints
+**Total**: 58 high-level tasks across 6 sprints + security audit
 
 **PRD Review Checkpoints**: 1 (Sprint S3)
 
@@ -378,7 +408,7 @@
 
 ## Progress Tracking
 
-**Overall Progress**: 30/54 tasks completed (55.6%)
+**Overall Progress**: 34/58 tasks completed (58.6%)
 
 **Sprint Status**:
 - ✅ S1: 7/7 tasks (100%) - All tasks completed
@@ -386,6 +416,7 @@
 - ✅ S2.5: 17/17 tasks (100%) - Test infrastructure refactoring - **COMPLETE** (Jan 26, 2026)
 - ✅ S3: 8/8 tasks (100%) - Replay Prevention & HTTPS + PRD Review - **COMPLETE** (Jan 27, 2026)
 - ✅ S4: 6/6 tasks (100%) - Retry Logic & Authorization - **COMPLETE** (Jan 27, 2026)
+- ✅ Security: 4/4 tasks (100%) - Red Team Remediation - **COMPLETE** (Jan 27, 2026)
 - ⏳ S5: 0/11 tasks (0%) - S3 follow-ups + Issues #11/#12 + Final Quality Gate
 
 **PRD Maintenance**:
@@ -395,7 +426,7 @@
 - S5 plan updated with Issues #11, #12 + Final Quality Gate (2026-01-27)
 - Next review: End of Sprint P3 (v1.0.0)
 
-**Last Updated**: 2026-01-27 (S4 completed - Retry Logic & Authorization)
+**Last Updated**: 2026-01-27 (Security Red Team Remediation completed)
 
 ---
 
