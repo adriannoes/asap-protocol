@@ -1,7 +1,6 @@
 # Tasks: ASAP v1.0.0 Release (P13) - Detailed
 
 > **Sprint**: P13 - v1.0.0 Release Preparation
-> **Duration**: Flexible (5-7 days)
 > **Goal**: Final testing, polish, and production release
 
 ---

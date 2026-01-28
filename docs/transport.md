@@ -392,6 +392,171 @@ async with ASAPClient(
 
 ---
 
+## Retry Configuration
+
+The ASAP client implements automatic retry logic with exponential backoff to handle transient failures gracefully. This ensures reliable communication even when network conditions are unstable or servers are temporarily overloaded.
+
+### Exponential Backoff Strategy
+
+The client uses exponential backoff with optional jitter to prevent retry storms and reduce server load:
+
+- **Base Delay**: Initial delay before first retry (default: 1.0 seconds)
+- **Exponential Growth**: Each retry doubles the delay: `base_delay * (2 ** attempt)`
+- **Maximum Delay**: Delay is capped at 60 seconds to prevent excessively long waits
+- **Jitter**: Random component (0-10% of delay) to prevent synchronized retries
+
+#### Retry Delay Pattern
+
+| Attempt | Delay (with jitter) | Delay (without jitter) |
+|---------|---------------------|------------------------|
+| 1st retry | ~1.0-1.1s | 1.0s |
+| 2nd retry | ~2.0-2.2s | 2.0s |
+| 3rd retry | ~4.0-4.4s | 4.0s |
+| 4th retry | ~8.0-8.8s | 8.0s |
+| 5th retry | ~16.0-17.6s | 16.0s |
+| 6th retry | ~32.0-35.2s | 32.0s |
+| 7th+ retry | ~60.0s (capped) | 60.0s (capped) |
+
+### Configuration
+
+```python
+from asap.transport.client import ASAPClient
+from asap.models.constants import DEFAULT_BASE_DELAY, DEFAULT_MAX_DELAY
+
+# Default configuration (exponential backoff with jitter)
+async with ASAPClient(
+    base_url="https://api.example.com",
+    max_retries=3,
+    base_delay=1.0,      # 1 second base delay
+    max_delay=60.0,      # Cap at 60 seconds
+    jitter=True          # Add random jitter (default)
+) as client:
+    response = await client.send(envelope)
+
+# Custom backoff configuration
+async with ASAPClient(
+    base_url="https://api.example.com",
+    max_retries=5,
+    base_delay=2.0,      # Start with 2 seconds
+    max_delay=120.0,    # Cap at 2 minutes
+    jitter=False         # Disable jitter for deterministic delays
+) as client:
+    response = await client.send(envelope)
+```
+
+### Retriable Errors
+
+The client automatically retries on:
+
+- **5xx Server Errors**: HTTP 500, 502, 503, 504 (transient server failures)
+- **Connection Errors**: Network failures, DNS errors, connection timeouts
+- **429 Too Many Requests**: Rate limit responses (with `Retry-After` header support)
+
+The client does **not** retry on:
+
+- **4xx Client Errors**: HTTP 400, 401, 403, 404 (client-side issues)
+- **Circuit Breaker Open**: When circuit breaker is enabled and circuit is open
+
+### Retry-After Header Support
+
+When the server returns HTTP 429 (Too Many Requests) with a `Retry-After` header, the client respects the server-suggested delay instead of using the calculated exponential backoff:
+
+```python
+# Server response includes: Retry-After: 45
+# Client will wait 45 seconds before retrying, regardless of backoff calculation
+```
+
+This ensures proper integration with rate limiting systems and prevents unnecessary retry attempts.
+
+### Circuit Breaker Pattern
+
+For production deployments with high failure rates, you can enable the circuit breaker pattern to prevent cascading failures:
+
+```python
+from asap.transport.client import ASAPClient
+from asap.models.constants import (
+    DEFAULT_CIRCUIT_BREAKER_THRESHOLD,
+    DEFAULT_CIRCUIT_BREAKER_TIMEOUT,
+)
+
+# Enable circuit breaker
+async with ASAPClient(
+    base_url="https://api.example.com",
+    circuit_breaker_enabled=True,
+    circuit_breaker_threshold=5,      # Open after 5 consecutive failures
+    circuit_breaker_timeout=60.0      # Wait 60s before half-open test
+) as client:
+    try:
+        response = await client.send(envelope)
+    except CircuitOpenError as e:
+        # Circuit is open, service is unavailable
+        print(f"Circuit breaker is open: {e.message}")
+```
+
+#### Circuit Breaker States
+
+- **CLOSED**: Normal operation, all requests allowed
+- **OPEN**: Circuit is open, requests rejected immediately (raises `CircuitOpenError`)
+- **HALF_OPEN**: Testing state, allows one request to test if service recovered
+
+#### When to Use Circuit Breaker
+
+Enable circuit breaker when:
+
+- **High Failure Rates**: Service experiences frequent failures
+- **Cascading Failures**: Failures in one service impact others
+- **Resource Protection**: Need to prevent overwhelming a failing service
+- **Fast Failure**: Want immediate feedback instead of waiting for retries
+
+#### Circuit Breaker Configuration
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `circuit_breaker_enabled` | `False` | Enable circuit breaker pattern |
+| `circuit_breaker_threshold` | `5` | Consecutive failures before opening |
+| `circuit_breaker_timeout` | `60.0` | Seconds before transitioning OPEN → HALF_OPEN |
+
+### Best Practices
+
+1. **Default Settings**: Use default exponential backoff for most use cases
+2. **Adjust Max Retries**: Increase `max_retries` for critical operations, decrease for low-priority tasks
+3. **Enable Circuit Breaker**: Use circuit breaker for production deployments with multiple services
+4. **Monitor Retry Metrics**: Track retry attempts and failure rates to identify issues
+5. **Respect Rate Limits**: The client automatically respects `Retry-After` headers from rate-limited responses
+
+### Example: Complete Retry Configuration
+
+```python
+from asap.transport.client import ASAPClient
+from asap.errors import CircuitOpenError, ASAPConnectionError
+
+async def send_with_retry(envelope):
+    """Send envelope with comprehensive retry configuration."""
+    async with ASAPClient(
+        base_url="https://api.example.com",
+        timeout=30.0,
+        max_retries=5,
+        base_delay=1.0,
+        max_delay=60.0,
+        jitter=True,
+        circuit_breaker_enabled=True,
+        circuit_breaker_threshold=5,
+        circuit_breaker_timeout=60.0,
+    ) as client:
+        try:
+            response = await client.send(envelope)
+            return response
+        except CircuitOpenError:
+            # Circuit is open, service unavailable
+            return None
+        except ASAPConnectionError as e:
+            # Connection failed after all retries
+            print(f"Connection failed: {e.message}")
+            raise
+```
+
+---
+
 ## Manifest Schema Reference
 
 ### Manifest Object

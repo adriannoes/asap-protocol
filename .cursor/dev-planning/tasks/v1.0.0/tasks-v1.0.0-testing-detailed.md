@@ -1,7 +1,6 @@
 # Tasks: ASAP v1.0.0 Testing (P7-P8) - Detailed
 
 > **Sprints**: P7-P8 - Advanced testing techniques
-> **Duration**: Flexible (9-12 days)
 > **Goal**: Property-based, load, stress, chaos, and contract testing
 
 ---

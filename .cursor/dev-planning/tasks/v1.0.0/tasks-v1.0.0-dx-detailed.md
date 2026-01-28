@@ -1,7 +1,6 @@
 # Tasks: ASAP v1.0.0 Developer Experience (P5-P6) - Detailed
 
 > **Sprints**: P5-P6 - Improve developer experience
-> **Duration**: Flexible (10-13 days)
 > **Goal**: Real-world examples, testing utilities, debugging tools
 
 ---

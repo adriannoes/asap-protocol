@@ -1,7 +1,6 @@
 # Tasks: ASAP v1.0.0 Security (P1-P2) - Detailed
 
 > **Sprints**: P1-P2 - Complete remaining security hardening
-> **Duration**: Flexible (8-11 days)
 > **Goal**: Resolve all MED+LOW security issues
 > **Prerequisite**: v0.5.0 released
 

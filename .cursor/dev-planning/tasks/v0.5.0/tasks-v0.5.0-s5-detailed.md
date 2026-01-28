@@ -11,8 +11,138 @@
 - `CHANGELOG.md` - v0.5.0 release notes
 - `.github/release-notes-v0.5.0.md` - NEW: Detailed notes
 - `README.md` - Version and feature updates
+- `src/asap/transport/validators.py` - S3 follow-up improvements
+- `src/asap/models/constants.py` - Nonce TTL configuration
 - All files in `src/asap/examples/` - Verify examples
 - All files in `docs/` - Review documentation
+
+---
+
+## S3 Code Review Follow-ups
+
+> These items were identified in PR #19 Code Review as Post-Merge improvements.
+> Priority: Low - nice-to-have before release.
+
+### Task 5.0.1: Add Empty Nonce String Validation
+
+**Source**: [Sprint S3 Code Review - Section 3.2](../code-review/v0.5.0/sprint-s3-code-review.md)
+
+- [ ] 5.0.1.1 Update nonce validation in validators.py
+  - File: `src/asap/transport/validators.py`
+  - Change: Reject empty string nonces
+  - Current: `if not isinstance(nonce, str):`
+  - Updated: `if not isinstance(nonce, str) or not nonce:`
+  - Error message: "Nonce must be a non-empty string"
+
+- [ ] 5.0.1.2 Add test for empty nonce rejection
+  - File: `tests/transport/unit/test_validators.py`
+  - Test: Empty string nonce raises InvalidNonceError
+  - Verify: Error message indicates empty string issue
+
+- [ ] 5.0.1.3 Commit
+  - Command: `git commit -m "fix(validators): reject empty nonce strings"`
+
+**Acceptance**: Empty nonce strings rejected with clear error message
+
+---
+
+### Task 5.0.2: Make Nonce TTL Configurable
+
+**Source**: [Sprint S3 Code Review - Section 3.4](../code-review/v0.5.0/sprint-s3-code-review.md)
+
+- [ ] 5.0.2.1 Add nonce TTL constant to constants.py
+  - File: `src/asap/models/constants.py`
+  - Add: `NONCE_TTL_SECONDS = MAX_ENVELOPE_AGE_SECONDS * 2  # 10 minutes`
+  - Docstring: Explain relationship with envelope age
+
+- [ ] 5.0.2.2 Update validate_envelope_nonce to use constant
+  - File: `src/asap/transport/validators.py`
+  - Import: `from asap.models.constants import NONCE_TTL_SECONDS`
+  - Change: `mark_used(nonce, ttl_seconds=600)` → `mark_used(nonce, ttl_seconds=NONCE_TTL_SECONDS)`
+
+- [ ] 5.0.2.3 Add test for TTL configuration
+  - Verify: TTL matches expected value (2x envelope age)
+  - Document: Why 2x provides safety margin
+
+- [ ] 5.0.2.4 Commit
+  - Command: `git commit -m "refactor(validators): derive nonce TTL from envelope age constant"`
+
+**Acceptance**: Nonce TTL derived from `MAX_ENVELOPE_AGE_SECONDS`, documented
+
+---
+
+### Task 5.0.3: Implement Log Sanitization
+
+**Issue**: [#12](https://github.com/adriannoes/asap-protocol/issues/12) - Security hardening - Sensitive data protection
+**Priority**: MEDIUM (Security Review Task 7.0)
+
+- [ ] 5.0.3.1 Identify sensitive data in logs
+  - Review: `src/asap/transport/middleware.py` - token logging
+  - Review: `src/asap/transport/server.py` - error logging (nonces, credentials)
+  - Review: `src/asap/transport/client.py` - connection logging
+  - List: All places where sensitive data could leak
+
+- [ ] 5.0.3.2 Implement log sanitization utility
+  - File: `src/asap/utils/sanitization.py` (NEW)
+  - Function: `sanitize_token(token: str) -> str` - returns prefix only
+  - Function: `sanitize_nonce(nonce: str) -> str` - returns first 8 chars + "..."
+  - Function: `sanitize_url(url: str) -> str` - masks credentials in URLs
+
+- [ ] 5.0.3.3 Apply sanitization to middleware
+  - File: `src/asap/transport/middleware.py`
+  - Replace: Direct token logging with sanitized version
+  - Pattern: `logger.debug("auth", token_prefix=sanitize_token(token))`
+
+- [ ] 5.0.3.4 Apply sanitization to server
+  - File: `src/asap/transport/server.py`
+  - Update: Nonce logging (already partial, complete it)
+  - Update: Any credential-related logs
+
+- [ ] 5.0.3.5 Add sanitization tests
+  - File: `tests/utils/test_sanitization.py` (NEW)
+  - Test: Token sanitization preserves prefix, hides rest
+  - Test: Nonce sanitization truncates correctly
+  - Test: URL sanitization masks passwords
+
+- [ ] 5.0.3.6 Commit
+  - Command: `git commit -m "feat(security): add log sanitization for sensitive data"`
+  - Closes: Issue #12
+
+**Acceptance**: No sensitive data (full tokens, credentials) in logs, Issue #12 closed
+
+---
+
+### Task 5.0.4: Add Missing Test Coverage
+
+**Issue**: [#11](https://github.com/adriannoes/asap-protocol/issues/11) - Add missing test coverage
+
+- [ ] 5.0.4.1 Run coverage report and identify gaps
+  - Command: `uv run pytest --cov=src/asap --cov-report=html`
+  - Open: `htmlcov/index.html`
+  - Identify: Files with <90% coverage
+  - List: Critical paths without tests
+
+- [ ] 5.0.4.2 Prioritize coverage gaps
+  - Priority 1: Security-critical code (auth, validation, HTTPS)
+  - Priority 2: Error handling paths
+  - Priority 3: Edge cases in transport layer
+  - Document: Which gaps to address in v0.5.0 vs v1.0.0
+
+- [ ] 5.0.4.3 Add tests for Priority 1 gaps
+  - Focus: Uncovered branches in validators.py, middleware.py
+  - Focus: Error paths in client.py, server.py
+  - Goal: 95%+ coverage on security-critical modules
+
+- [ ] 5.0.4.4 Add tests for Priority 2 gaps
+  - Focus: Exception handling paths
+  - Focus: Retry logic edge cases
+  - Goal: 92%+ overall coverage
+
+- [ ] 5.0.4.5 Commit
+  - Command: `git commit -m "test: add missing test coverage for security-critical code"`
+  - Closes: Issue #11
+
+**Acceptance**: Coverage ≥95% on security modules, Issue #11 closed
 
 ---
 
@@ -152,7 +282,46 @@
   - Command: `git add pyproject.toml src/asap/__init__.py CHANGELOG.md`
   - Command: `git commit -m "chore(release): prepare v0.5.0 release"`
 
-**Acceptance**: Release notes ready, version updated, metadata correct
+- [ ] 5.5.6 Final Quality Gate Review (PRE-RELEASE GATE)
+  > **CRITICAL**: This is the final checkpoint before release. Do not proceed until all items pass.
+  
+  - [ ] **Code Quality**:
+    - [ ] `uv run ruff check src/ tests/` - 0 errors
+    - [ ] `uv run mypy --strict src/` - 0 errors
+    - [ ] `uv run ruff format --check src/ tests/` - already formatted
+  
+  - [ ] **Test Coverage**:
+    - [ ] Run: `uv run pytest --cov=src/asap --cov-report=term-missing`
+    - [ ] Overall coverage: ≥92%
+    - [ ] Security modules (validators, middleware, auth): ≥95%
+    - [ ] Transport layer (client, server): ≥90%
+    - [ ] Review: Any uncovered lines are acceptable edge cases
+  
+  - [ ] **Test Stability**:
+    - [ ] Run: `uv run pytest -x --count=3` (run 3 times, fail on first error)
+    - [ ] All tests pass consistently (no flaky tests)
+    - [ ] Run: `uv run pytest -n auto` (parallel execution)
+    - [ ] Parallel tests pass without race conditions
+  
+  - [ ] **Security Verification**:
+    - [ ] `uv run pip-audit` - 0 vulnerabilities
+    - [ ] `uv run bandit -r src/ -ll` - 0 high/medium issues
+    - [ ] Manual check: No secrets in codebase (`git grep -i password src/`)
+    - [ ] Manual check: No sensitive data in logs (review sanitization)
+  
+  - [ ] **Documentation Completeness**:
+    - [ ] All public APIs documented
+    - [ ] All new features in docs/
+    - [ ] CHANGELOG.md updated
+    - [ ] README.md examples work
+  
+  - [ ] **Final Sign-off**:
+    - [ ] All GitHub issues #11, #12, #13 closed
+    - [ ] All CI checks passing on main
+    - [ ] No open PRs blocking release
+    - [ ] Ready to tag and publish
+
+**Acceptance**: All Quality Gate items checked ✅, ready for release
 
 ---
 
@@ -203,7 +372,7 @@
   - Link to release notes
 
 - [ ] 5.7.3 Close resolved issues
-  - Comment on #7, #9, #10, #13
+  - Comment on #7, #9, #10, #11, #12, #13
   - Message: "Fixed in v0.5.0"
   - Close issues
 
@@ -219,8 +388,8 @@
 
 - [ ] 5.8.1 Update roadmap progress
   - Open: `tasks-v0.5.0-roadmap.md`
-  - Mark: Tasks 5.1-5.7 as complete `[x]`
-  - Mark: Overall v0.5.0 as 33/33 (100%)
+  - Mark: Tasks 5.0.1-5.7 as complete `[x]`
+  - Mark: Overall v0.5.0 as 52/52 (100%)
 
 - [ ] 5.8.2 Update detailed file progress
   - Mark: All sub-tasks as complete `[x]`
@@ -240,15 +409,19 @@
 ---
 
 **Sprint S5 Definition of Done**:
+- [ ] S3 follow-ups completed (5.0.1, 5.0.2) - empty nonce, TTL config
+- [ ] Issue #12 closed (5.0.3) - log sanitization
+- [ ] Issue #11 closed (5.0.4) - test coverage
 - [ ] All tasks 5.1-5.8 completed
-- [ ] All CRIT+HIGH tasks completed
-- [ ] Zero breaking changes
-- [ ] CI passes
-- [ ] v0.5.0 on PyPI
-- [ ] GitHub release published
-- [ ] Coverage ≥95%
+- [ ] All CRIT+HIGH security tasks completed
+- [ ] **Final Quality Gate passed** (5.5.6) - all checks green
+- [ ] Zero breaking changes vs v0.1.0
+- [ ] CI passes on all platforms
+- [ ] v0.5.0 published to PyPI
+- [ ] GitHub release created with notes
+- [ ] Coverage ≥92% overall, ≥95% on security modules
 - [ ] Performance regression <5%
-- [ ] Progress tracked everywhere
+- [ ] All open issues (#11, #12, #13) closed
 - [ ] v0.5.0 marked as complete milestone
 
-**Total Sub-tasks**: ~35
+**Total Sub-tasks**: ~55 (added Issues #11, #12 + Final Quality Gate)

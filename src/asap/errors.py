@@ -272,3 +272,88 @@ class InvalidNonceError(ASAPError):
             },
         )
         self.nonce = nonce
+
+
+class CircuitOpenError(ASAPError):
+    """Raised when circuit breaker is open and request is rejected.
+
+    This error occurs when the circuit breaker pattern has detected
+    too many consecutive failures and is preventing further requests
+    to protect the system from cascading failures.
+
+    Attributes:
+        base_url: The URL for which the circuit is open
+        consecutive_failures: Number of consecutive failures that opened the circuit
+    """
+
+    def __init__(
+        self,
+        base_url: str,
+        consecutive_failures: int,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        """Initialize circuit open error.
+
+        Args:
+            base_url: The URL for which the circuit is open
+            consecutive_failures: Number of consecutive failures
+            details: Optional additional context
+        """
+        message = (
+            f"Circuit breaker is OPEN for {base_url}. "
+            f"Too many consecutive failures ({consecutive_failures}). "
+            "Service temporarily unavailable."
+        )
+        super().__init__(
+            code="asap:transport/circuit_open",
+            message=message,
+            details={
+                "base_url": base_url,
+                "consecutive_failures": consecutive_failures,
+                **(details or {}),
+            },
+        )
+        self.base_url = base_url
+        self.consecutive_failures = consecutive_failures
+
+
+class UnsupportedAuthSchemeError(ASAPError):
+    """Raised when an unsupported authentication scheme is specified.
+
+    This error occurs when a Manifest specifies an authentication scheme
+    that is not supported by the current implementation.
+
+    Attributes:
+        scheme: The unsupported scheme name
+        supported_schemes: List of supported schemes
+    """
+
+    def __init__(
+        self,
+        scheme: str,
+        supported_schemes: set[str] | frozenset[str],
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        """Initialize unsupported auth scheme error.
+
+        Args:
+            scheme: The unsupported scheme name
+            supported_schemes: Set of supported schemes
+            details: Optional additional context
+        """
+        supported_list = sorted(supported_schemes)
+        message = (
+            f"Unsupported authentication scheme '{scheme}'. "
+            f"Supported schemes: {', '.join(supported_list)}"
+        )
+        super().__init__(
+            code="asap:auth/unsupported_scheme",
+            message=message,
+            details={
+                "scheme": scheme,
+                "supported_schemes": list(supported_list),
+                **(details or {}),
+            },
+        )
+        self.scheme = scheme
+        self.supported_schemes = supported_schemes

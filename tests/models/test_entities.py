@@ -223,12 +223,7 @@ class TestManifest:
                 asap="https://api.example.com/asap", events="wss://api.example.com/asap/events"
             ),
             auth=AuthScheme(
-                schemes=["bearer", "oauth2"],
-                oauth2={
-                    "authorization_url": "https://auth.example.com/authorize",
-                    "token_url": "https://auth.example.com/token",
-                    "scopes": ["asap:execute", "asap:read"],
-                },
+                schemes=["bearer", "basic"],
             ),
             signature="eyJhbGciOiJFZDI1NTE5...",
         )
@@ -238,7 +233,7 @@ class TestManifest:
         assert manifest.capabilities.skills[0].id == "web_research"
         assert manifest.endpoints.events is not None
         assert manifest.auth is not None
-        assert manifest.auth.schemes == ["bearer", "oauth2"]
+        assert manifest.auth.schemes == ["bearer", "basic"]
         assert manifest.signature == "eyJhbGciOiJFZDI1NTE5..."
 
     def test_manifest_optional_fields(self):
@@ -863,3 +858,142 @@ class TestStateSnapshot:
             updated_at=now,
         )
         assert not completed_task.can_be_cancelled()
+
+
+class TestManifestAuthSchemeValidation:
+    """Test suite for Manifest authentication scheme validation."""
+
+    def test_manifest_with_valid_bearer_scheme(self) -> None:
+        """Test that Manifest with bearer scheme is accepted."""
+        manifest = Manifest(
+            id="urn:asap:agent:test-v1",
+            name="Test Agent",
+            version="1.0.0",
+            description="A test agent",
+            capabilities=Capability(asap_version="0.1", skills=[]),
+            endpoints=Endpoint(asap="https://api.example.com/asap"),
+            auth=AuthScheme(schemes=["bearer"]),
+        )
+
+        assert manifest.auth is not None
+        assert manifest.auth.schemes == ["bearer"]
+
+    def test_manifest_with_valid_basic_scheme(self) -> None:
+        """Test that Manifest with basic scheme is accepted."""
+        manifest = Manifest(
+            id="urn:asap:agent:test-v1",
+            name="Test Agent",
+            version="1.0.0",
+            description="A test agent",
+            capabilities=Capability(asap_version="0.1", skills=[]),
+            endpoints=Endpoint(asap="https://api.example.com/asap"),
+            auth=AuthScheme(schemes=["basic"]),
+        )
+
+        assert manifest.auth is not None
+        assert manifest.auth.schemes == ["basic"]
+
+    def test_manifest_with_multiple_valid_schemes(self) -> None:
+        """Test that Manifest with multiple valid schemes is accepted."""
+        manifest = Manifest(
+            id="urn:asap:agent:test-v1",
+            name="Test Agent",
+            version="1.0.0",
+            description="A test agent",
+            capabilities=Capability(asap_version="0.1", skills=[]),
+            endpoints=Endpoint(asap="https://api.example.com/asap"),
+            auth=AuthScheme(schemes=["bearer", "basic"]),
+        )
+
+        assert manifest.auth is not None
+        assert set(manifest.auth.schemes) == {"bearer", "basic"}
+
+    def test_manifest_with_unsupported_scheme_raises_error(self) -> None:
+        """Test that Manifest with unsupported scheme raises UnsupportedAuthSchemeError."""
+        from asap.errors import UnsupportedAuthSchemeError
+
+        with pytest.raises(UnsupportedAuthSchemeError) as exc_info:
+            Manifest(
+                id="urn:asap:agent:test-v1",
+                name="Test Agent",
+                version="1.0.0",
+                description="A test agent",
+                capabilities=Capability(asap_version="0.1", skills=[]),
+                endpoints=Endpoint(asap="https://api.example.com/asap"),
+                auth=AuthScheme(schemes=["oauth2"]),  # oauth2 not yet supported
+            )
+
+        assert exc_info.value.scheme == "oauth2"
+        assert "oauth2" in exc_info.value.message.lower()
+        assert (
+            "bearer" in exc_info.value.message.lower() or "basic" in exc_info.value.message.lower()
+        )
+
+    def test_manifest_with_mixed_valid_and_invalid_schemes_raises_error(self) -> None:
+        """Test that Manifest with mix of valid and invalid schemes raises error."""
+        from asap.errors import UnsupportedAuthSchemeError
+
+        with pytest.raises(UnsupportedAuthSchemeError) as exc_info:
+            Manifest(
+                id="urn:asap:agent:test-v1",
+                name="Test Agent",
+                version="1.0.0",
+                description="A test agent",
+                capabilities=Capability(asap_version="0.1", skills=[]),
+                endpoints=Endpoint(asap="https://api.example.com/asap"),
+                auth=AuthScheme(schemes=["bearer", "hmac"]),  # hmac not yet supported
+            )
+
+        assert exc_info.value.scheme == "hmac"
+
+    def test_manifest_with_empty_schemes_list(self) -> None:
+        """Test that Manifest with empty schemes list is handled.
+
+        Note: Pydantic doesn't automatically validate non-empty lists.
+        An empty schemes list will pass validation but our validator
+        will iterate over an empty list (which is fine - no error raised).
+        """
+        # Empty schemes list is technically valid (no schemes to validate)
+        # Our validator iterates over schemes, so empty list = no validation needed
+        manifest = Manifest(
+            id="urn:asap:agent:test-v1",
+            name="Test Agent",
+            version="1.0.0",
+            description="A test agent",
+            capabilities=Capability(asap_version="0.1", skills=[]),
+            endpoints=Endpoint(asap="https://api.example.com/asap"),
+            auth=AuthScheme(schemes=[]),  # Empty list - validator handles gracefully
+        )
+
+        assert manifest.auth is not None
+        assert manifest.auth.schemes == []
+
+    def test_manifest_without_auth_works(self) -> None:
+        """Test that Manifest without auth field works (auth is optional)."""
+        manifest = Manifest(
+            id="urn:asap:agent:test-v1",
+            name="Test Agent",
+            version="1.0.0",
+            description="A test agent",
+            capabilities=Capability(asap_version="0.1", skills=[]),
+            endpoints=Endpoint(asap="https://api.example.com/asap"),
+            # auth is None by default
+        )
+
+        assert manifest.auth is None
+
+    def test_manifest_auth_scheme_case_insensitive(self) -> None:
+        """Test that auth scheme validation is case-insensitive."""
+        # Should accept "Bearer" (capitalized) as valid
+        manifest = Manifest(
+            id="urn:asap:agent:test-v1",
+            name="Test Agent",
+            version="1.0.0",
+            description="A test agent",
+            capabilities=Capability(asap_version="0.1", skills=[]),
+            endpoints=Endpoint(asap="https://api.example.com/asap"),
+            auth=AuthScheme(schemes=["Bearer"]),  # Capitalized
+        )
+
+        assert manifest.auth is not None
+        assert manifest.auth.schemes == ["Bearer"]  # Original case preserved

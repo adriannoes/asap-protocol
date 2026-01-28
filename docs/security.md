@@ -47,38 +47,84 @@ ASAP supports multiple authentication schemes configured via the agent's manifes
 
 ### Supported Authentication Schemes
 
-| Scheme | Description | Use Case |
-|--------|-------------|----------|
-| `bearer` | Bearer token authentication | API keys, JWT tokens |
-| `oauth2` | OAuth 2.0 with authorization code or client credentials | Enterprise integrations |
-| `mtls` | Mutual TLS with client certificates | High-security environments |
-| `none` | No authentication (development only) | Local testing |
+The ASAP protocol validates authentication schemes at manifest creation time to ensure only supported schemes are used. The validation is enforced by the `Manifest` model and raises `UnsupportedAuthSchemeError` for invalid schemes.
+
+| Scheme | Description | Use Case | Status |
+|--------|-------------|----------|--------|
+| `bearer` | Bearer token authentication (RFC 6750) | API keys, JWT tokens | ✅ Supported |
+| `basic` | HTTP Basic authentication (RFC 7617) | Simple username/password | ✅ Supported |
+| `oauth2` | OAuth 2.0 with authorization code or client credentials | Enterprise integrations | 🔜 Planned |
+| `hmac` | HMAC-based authentication | Message signing and verification | 🔜 Planned |
+| `mtls` | Mutual TLS with client certificates | High-security environments | 🔜 Planned |
+| `none` | No authentication (development only) | Local testing | ⚠️ Development only |
 
 ### Manifest Configuration
 
-Authentication is declared in the agent manifest's `auth` field:
+Authentication is declared in the agent manifest's `auth` field. The ASAP protocol automatically validates that all specified schemes are supported:
 
 ```python
 from asap.models.entities import AuthScheme, Manifest
+from asap.errors import UnsupportedAuthSchemeError
+from asap.models.constants import SUPPORTED_AUTH_SCHEMES
 
-auth = AuthScheme(
-    schemes=["bearer", "oauth2"],
-    oauth2={
-        "authorization_url": "https://auth.example.com/authorize",
-        "token_url": "https://auth.example.com/token",
-        "scopes": ["asap:execute", "asap:read"]
-    }
-)
-
+# Valid: Bearer token authentication
+auth = AuthScheme(schemes=["bearer"])
 manifest = Manifest(
     id="urn:asap:agent:secure-agent",
     name="Secure Agent",
     version="1.0.0",
-    description="Agent with authentication",
+    description="Agent with Bearer token authentication",
     capabilities=capability,
     endpoints=endpoint,
     auth=auth
 )
+
+# Valid: Multiple supported schemes
+auth = AuthScheme(schemes=["bearer", "basic"])
+manifest = Manifest(
+    id="urn:asap:agent:multi-auth-agent",
+    name="Multi-Auth Agent",
+    version="1.0.0",
+    description="Agent with multiple authentication methods",
+    capabilities=capability,
+    endpoints=endpoint,
+    auth=auth
+)
+
+# Invalid: Unsupported scheme raises UnsupportedAuthSchemeError
+try:
+    auth = AuthScheme(schemes=["oauth2"])  # Not yet supported
+    manifest = Manifest(
+        id="urn:asap:agent:invalid-agent",
+        name="Invalid Agent",
+        version="1.0.0",
+        description="Agent with unsupported scheme",
+        capabilities=capability,
+        endpoints=endpoint,
+        auth=auth
+    )
+except UnsupportedAuthSchemeError as e:
+    print(f"Unsupported scheme: {e.scheme}")
+    print(f"Supported schemes: {e.supported_schemes}")
+```
+
+#### Scheme Validation
+
+The validation occurs automatically when creating a `Manifest` instance:
+
+- **Supported Schemes**: `bearer`, `basic` (validated against `SUPPORTED_AUTH_SCHEMES`)
+- **Validation Error**: Raises `UnsupportedAuthSchemeError` with code `asap:auth/unsupported_scheme`
+- **Error Details**: Includes the unsupported scheme and list of supported schemes
+
+#### Checking Supported Schemes
+
+You can check which schemes are currently supported:
+
+```python
+from asap.models.constants import SUPPORTED_AUTH_SCHEMES
+
+print(f"Supported schemes: {SUPPORTED_AUTH_SCHEMES}")
+# Output: frozenset({'bearer', 'basic'})
 ```
 
 ### Required Headers
@@ -87,6 +133,8 @@ When making requests to authenticated agents, include the appropriate headers:
 
 #### Bearer Token
 
+Bearer token authentication is the most common method for API authentication. Include the token in the `Authorization` header:
+
 ```http
 POST /asap HTTP/1.1
 Host: agent.example.com
@@ -94,7 +142,49 @@ Content-Type: application/json
 Authorization: Bearer <token>
 ```
 
-#### OAuth 2.0
+**Python Example**:
+```python
+from asap.transport.client import ASAPClient
+
+async with ASAPClient("https://api.example.com") as client:
+    # Add Bearer token to client headers
+    client._client.headers["Authorization"] = f"Bearer {my_token}"
+    response = await client.send(envelope)
+```
+
+#### Basic Authentication
+
+HTTP Basic authentication uses username and password encoded in base64:
+
+```http
+POST /asap HTTP/1.1
+Host: agent.example.com
+Content-Type: application/json
+Authorization: Basic <base64-encoded-credentials>
+```
+
+**Python Example**:
+```python
+import base64
+from asap.transport.client import ASAPClient
+
+# Encode credentials
+credentials = base64.b64encode(f"{username}:{password}".encode()).decode()
+
+async with ASAPClient("https://api.example.com") as client:
+    # Add Basic auth header
+    client._client.headers["Authorization"] = f"Basic {credentials}"
+    response = await client.send(envelope)
+```
+
+#### OAuth 2.0 (Planned)
+
+OAuth 2.0 support is planned for future releases. When available, it will support:
+
+- Authorization code flow
+- Client credentials flow
+- Token introspection
+- Token refresh
 
 ```http
 POST /asap HTTP/1.1

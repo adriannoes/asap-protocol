@@ -1,7 +1,6 @@
 # Tasks: ASAP v1.0.0 Performance (P3-P4) - Detailed
 
 > **Sprints**: P3-P4 - Performance optimizations
-> **Duration**: Flexible (9-13 days)
 > **Goal**: Connection pooling, caching, batch operations, compression
 
 ---
