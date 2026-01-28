@@ -19,10 +19,11 @@ from datetime import datetime
 from typing import Any
 
 from packaging.version import InvalidVersion, Version
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
+from asap.errors import UnsupportedAuthSchemeError
 from asap.models.base import ASAPBaseModel
-from asap.models.constants import AGENT_URN_PATTERN, ASAP_PROTOCOL_VERSION
+from asap.models.constants import AGENT_URN_PATTERN, ASAP_PROTOCOL_VERSION, SUPPORTED_AUTH_SCHEMES
 from asap.models.enums import MessageRole, TaskStatus
 from asap.models.types import (
     AgentURN,
@@ -34,6 +35,27 @@ from asap.models.types import (
     SnapshotID,
     TaskID,
 )
+
+
+def _validate_auth_scheme(auth: "AuthScheme") -> None:
+    """Validate that all authentication schemes are supported.
+
+    Checks each scheme in auth.schemes against SUPPORTED_AUTH_SCHEMES
+    and raises UnsupportedAuthSchemeError if any scheme is invalid.
+
+    Args:
+        auth: AuthScheme instance to validate
+
+    Raises:
+        UnsupportedAuthSchemeError: If any scheme is not supported
+    """
+    for scheme in auth.schemes:
+        scheme_lower = scheme.lower()
+        if scheme_lower not in SUPPORTED_AUTH_SCHEMES:
+            raise UnsupportedAuthSchemeError(
+                scheme=scheme,
+                supported_schemes=SUPPORTED_AUTH_SCHEMES,
+            )
 
 
 class Skill(ASAPBaseModel):
@@ -230,6 +252,20 @@ class Manifest(ASAPBaseModel):
         except InvalidVersion as e:
             raise ValueError(f"Invalid semantic version '{v}': {e}") from e
         return v
+
+    @model_validator(mode="after")
+    def validate_auth_schemes(self) -> "Manifest":
+        """Validate that all authentication schemes are supported.
+
+        Raises:
+            UnsupportedAuthSchemeError: If any scheme in auth.schemes is not supported
+
+        Returns:
+            Self (for method chaining)
+        """
+        if self.auth is not None:
+            _validate_auth_scheme(self.auth)
+        return self
 
 
 class Conversation(ASAPBaseModel):
