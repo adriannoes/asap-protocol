@@ -4,18 +4,15 @@ This module tests the exponential backoff implementation in isolation,
 verifying delay calculations, jitter application, and max delay capping.
 """
 
-import asyncio
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import httpx
 import pytest
-
-from asap.models.constants import DEFAULT_BASE_DELAY, DEFAULT_MAX_DELAY
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest, TaskResponse
 from asap.models.enums import TaskStatus
-from asap.transport.client import ASAPClient
+from asap.transport.client import ASAPClient, ASAPConnectionError
 
 if TYPE_CHECKING:
     pass
@@ -125,9 +122,7 @@ class TestBackoffInRetryLoop:
             correlation_id=sample_request_envelope.id,
         )
 
-    async def test_backoff_applied_for_5xx_errors(
-        self, sample_request_envelope: Envelope
-    ) -> None:
+    async def test_backoff_applied_for_5xx_errors(self, sample_request_envelope: Envelope) -> None:
         """Test that backoff is applied when retrying 5xx server errors."""
         call_count = 0
         delays: list[float] = []
@@ -155,6 +150,7 @@ class TestBackoffInRetryLoop:
 
         # Mock asyncio.sleep to capture delays
         with patch("asap.transport.client.asyncio.sleep") as mock_sleep:
+
             async def sleep_capture(delay: float) -> None:
                 delays.append(delay)
                 # Don't actually sleep, just capture the delay
@@ -180,9 +176,7 @@ class TestBackoffInRetryLoop:
         assert delays[0] == pytest.approx(0.1, abs=0.01)
         assert delays[1] == pytest.approx(0.2, abs=0.01)
 
-    async def test_no_backoff_for_4xx_errors(
-        self, sample_request_envelope: Envelope
-    ) -> None:
+    async def test_no_backoff_for_4xx_errors(self, sample_request_envelope: Envelope) -> None:
         """Test that backoff is NOT applied for 4xx client errors."""
         call_count = 0
 
@@ -196,6 +190,7 @@ class TestBackoffInRetryLoop:
 
         # Mock asyncio.sleep to capture delays
         with patch("asyncio.sleep") as mock_sleep:
+
             async def sleep_capture(delay: float) -> None:
                 delays.append(delay)
 
@@ -207,7 +202,7 @@ class TestBackoffInRetryLoop:
                 base_delay=0.1,
                 max_retries=3,
             ) as client:
-                with pytest.raises(Exception):  # Will be ASAPConnectionError
+                with pytest.raises(ASAPConnectionError):
                     await client.send(sample_request_envelope)
 
         # Should have attempted once (4xx errors are not retriable)
@@ -215,9 +210,7 @@ class TestBackoffInRetryLoop:
         # No backoff should be applied for 4xx errors
         assert len(delays) == 0
 
-    async def test_retry_after_header_respected(
-        self, sample_request_envelope: Envelope
-    ) -> None:
+    async def test_retry_after_header_respected(self, sample_request_envelope: Envelope) -> None:
         """Test that Retry-After header is respected for 429 responses."""
         call_count = 0
         delays: list[float] = []
@@ -249,6 +242,7 @@ class TestBackoffInRetryLoop:
 
         # Mock asyncio.sleep to capture delays
         with patch("asap.transport.client.asyncio.sleep") as mock_sleep:
+
             async def sleep_capture(delay: float) -> None:
                 delays.append(delay)
                 # Don't actually sleep, just capture the delay
@@ -306,6 +300,7 @@ class TestBackoffInRetryLoop:
 
         # Mock asyncio.sleep to capture delays
         with patch("asap.transport.client.asyncio.sleep") as mock_sleep:
+
             async def sleep_capture(delay: float) -> None:
                 delays.append(delay)
                 # Don't actually sleep, just capture the delay
@@ -329,9 +324,7 @@ class TestBackoffInRetryLoop:
         # Should fall back to calculated backoff (0.5 * 2^0 = 0.5)
         assert delays[0] == pytest.approx(0.5, abs=0.01)
 
-    async def test_backoff_for_connection_errors(
-        self, sample_request_envelope: Envelope
-    ) -> None:
+    async def test_backoff_for_connection_errors(self, sample_request_envelope: Envelope) -> None:
         """Test that backoff is applied when retrying connection errors."""
         call_count = 0
         delays: list[float] = []
@@ -359,6 +352,7 @@ class TestBackoffInRetryLoop:
 
         # Mock asyncio.sleep to capture delays
         with patch("asap.transport.client.asyncio.sleep") as mock_sleep:
+
             async def sleep_capture(delay: float) -> None:
                 delays.append(delay)
                 # Don't actually sleep, just capture the delay
@@ -418,6 +412,7 @@ class TestBackoffInRetryLoop:
 
         # Mock asyncio.sleep to capture delays
         with patch("asap.transport.client.asyncio.sleep") as mock_sleep:
+
             async def sleep_capture(delay: float) -> None:
                 delays.append(delay)
                 # Don't actually sleep, just capture the delay
@@ -489,6 +484,7 @@ class TestBackoffInRetryLoop:
 
         # Mock asyncio.sleep to capture delays
         with patch("asap.transport.client.asyncio.sleep") as mock_sleep:
+
             async def sleep_capture(delay: float) -> None:
                 delays.append(delay)
 

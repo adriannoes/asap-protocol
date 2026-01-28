@@ -126,9 +126,8 @@ class CircuitBreaker:
             self._consecutive_failures += 1
             self._last_failure_time = time.time()
 
-            if self._consecutive_failures >= self.threshold:
-                if self._state == CircuitState.CLOSED:
-                    self._state = CircuitState.OPEN
+            if self._consecutive_failures >= self.threshold and self._state == CircuitState.CLOSED:
+                self._state = CircuitState.OPEN
 
     def can_attempt(self) -> bool:
         """Check if a request can be attempted.
@@ -413,7 +412,7 @@ class ASAPClient:
             Delay in seconds before next retry attempt
         """
         # Calculate exponential delay: base_delay * (2 ** attempt)
-        delay = self.base_delay * (2 ** attempt)
+        delay = self.base_delay * (2**attempt)
 
         # Cap at max_delay
         delay = min(delay, self.max_delay)
@@ -480,7 +479,7 @@ class ASAPClient:
                 ),
             )
             return False
-        except httpx.TimeoutException as e:
+        except httpx.TimeoutException:
             logger.warning(
                 "asap.client.connection_validation_timeout",
                 target_url=self.base_url,
@@ -566,13 +565,12 @@ class ASAPClient:
             )
 
         # Check circuit breaker state before attempting request
-        if self._circuit_breaker is not None:
-            if not self._circuit_breaker.can_attempt():
-                consecutive_failures = self._circuit_breaker.get_consecutive_failures()
-                raise CircuitOpenError(
-                    base_url=self.base_url,
-                    consecutive_failures=consecutive_failures,
-                )
+        if self._circuit_breaker is not None and not self._circuit_breaker.can_attempt():
+            consecutive_failures = self._circuit_breaker.get_consecutive_failures()
+            raise CircuitOpenError(
+                base_url=self.base_url,
+                consecutive_failures=consecutive_failures,
+            )
 
         start_time = time.perf_counter()
 

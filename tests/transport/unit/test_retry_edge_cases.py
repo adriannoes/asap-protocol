@@ -5,11 +5,7 @@ ensuring robust behavior in unusual scenarios.
 """
 
 from typing import TYPE_CHECKING
-from unittest.mock import patch
 
-import pytest
-
-from asap.models.constants import DEFAULT_BASE_DELAY, DEFAULT_MAX_DELAY
 from asap.transport.client import ASAPClient
 
 if TYPE_CHECKING:
@@ -51,9 +47,7 @@ class TestBackoffEdgeCases:
 
     def test_backoff_with_very_large_max_delay(self) -> None:
         """Test backoff with very large max_delay values."""
-        client = ASAPClient(
-            "http://localhost:8000", base_delay=1.0, max_delay=1000.0, jitter=False
-        )
+        client = ASAPClient("http://localhost:8000", base_delay=1.0, max_delay=1000.0, jitter=False)
 
         # Should allow delays up to max_delay
         assert client._calculate_backoff(0) == 1.0

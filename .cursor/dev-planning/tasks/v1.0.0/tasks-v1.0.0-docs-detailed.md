@@ -1,7 +1,6 @@
 # Tasks: ASAP v1.0.0 Documentation (P9-P10) - Detailed
 
 > **Sprints**: P9-P10 - Complete documentation
-> **Duration**: Flexible (9-11 days)
 > **Goal**: Tutorials, ADRs, deployment guides, troubleshooting
 
 ---

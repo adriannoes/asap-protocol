@@ -825,12 +825,13 @@ class TestImprovedConnectionErrorMessages:
             # Should include status code
             assert "400" in error_message
             # Should indicate it's a client error
-            assert "client error" in error_message.lower() or "problem with the request" in error_message.lower()
+            assert (
+                "client error" in error_message.lower()
+                or "problem with the request" in error_message.lower()
+            )
             assert exc_info.value.url == "http://api.example.com"
 
-    async def test_timeout_error_includes_context(
-        self, sample_request_envelope: Envelope
-    ) -> None:
+    async def test_timeout_error_includes_context(self, sample_request_envelope: Envelope) -> None:
         """Test that timeout errors include context and troubleshooting."""
         from asap.transport.client import ASAPClient, ASAPTimeoutError
 

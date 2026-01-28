@@ -1,7 +1,6 @@
 # Tasks: ASAP v1.0.0 Observability (P11-P12) - Detailed
 
 > **Sprints**: P11-P12 - OpenTelemetry integration and MCP completion
-> **Duration**: Flexible (9-12 days)
 > **Goal**: Distributed tracing, metrics, dashboards, MCP feature parity
 
 ---

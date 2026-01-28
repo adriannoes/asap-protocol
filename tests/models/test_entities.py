@@ -223,12 +223,7 @@ class TestManifest:
                 asap="https://api.example.com/asap", events="wss://api.example.com/asap/events"
             ),
             auth=AuthScheme(
-                schemes=["bearer", "oauth2"],
-                oauth2={
-                    "authorization_url": "https://auth.example.com/authorize",
-                    "token_url": "https://auth.example.com/token",
-                    "scopes": ["asap:execute", "asap:read"],
-                },
+                schemes=["bearer", "basic"],
             ),
             signature="eyJhbGciOiJFZDI1NTE5...",
         )
@@ -238,7 +233,7 @@ class TestManifest:
         assert manifest.capabilities.skills[0].id == "web_research"
         assert manifest.endpoints.events is not None
         assert manifest.auth is not None
-        assert manifest.auth.schemes == ["bearer", "oauth2"]
+        assert manifest.auth.schemes == ["bearer", "basic"]
         assert manifest.signature == "eyJhbGciOiJFZDI1NTE5..."
 
     def test_manifest_optional_fields(self):
@@ -930,7 +925,9 @@ class TestManifestAuthSchemeValidation:
 
         assert exc_info.value.scheme == "oauth2"
         assert "oauth2" in exc_info.value.message.lower()
-        assert "bearer" in exc_info.value.message.lower() or "basic" in exc_info.value.message.lower()
+        assert (
+            "bearer" in exc_info.value.message.lower() or "basic" in exc_info.value.message.lower()
+        )
 
     def test_manifest_with_mixed_valid_and_invalid_schemes_raises_error(self) -> None:
         """Test that Manifest with mix of valid and invalid schemes raises error."""

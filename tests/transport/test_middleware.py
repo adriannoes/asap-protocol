@@ -396,52 +396,52 @@ async def test_authentication_flow_with_invalid_sender(
 
 
 def test_supports_bearer_auth_with_oauth2_only() -> None:
-    """Test that supports_bearer_auth returns False for OAuth2-only manifest."""
-    manifest_oauth2 = Manifest(
-        id="urn:asap:agent:oauth2-only",
-        name="OAuth2 Only Agent",
+    """Test that supports_bearer_auth returns False for basic-only manifest."""
+    manifest_basic = Manifest(
+        id="urn:asap:agent:basic-only",
+        name="Basic Only Agent",
         version="1.0.0",
-        description="Agent with OAuth2 only",
+        description="Agent with Basic auth only",
         capabilities=Capability(
             asap_version="0.1",
             skills=[Skill(id="test", description="Test skill")],
             state_persistence=False,
         ),
         endpoints=Endpoint(asap="http://localhost:8000/asap"),
-        auth=AuthScheme(schemes=["oauth2"]),  # No "bearer"
+        auth=AuthScheme(schemes=["basic"]),  # No "bearer"
     )
 
     def dummy_validator(token: str) -> str | None:
         return "urn:asap:agent:client"
 
     validator = BearerTokenValidator(dummy_validator)
-    middleware = AuthenticationMiddleware(manifest_oauth2, validator)
+    middleware = AuthenticationMiddleware(manifest_basic, validator)
 
     assert not middleware._supports_bearer_auth()
 
 
 @pytest.mark.asyncio
-async def test_verify_authentication_with_oauth2_scheme_fails() -> None:
-    """Test that OAuth2 scheme (non-Bearer) is rejected."""
-    manifest_oauth2 = Manifest(
-        id="urn:asap:agent:oauth2-only",
-        name="OAuth2 Only Agent",
+async def test_verify_authentication_with_basic_scheme_fails() -> None:
+    """Test that Basic scheme (non-Bearer) is rejected."""
+    manifest_basic = Manifest(
+        id="urn:asap:agent:basic-only",
+        name="Basic Only Agent",
         version="1.0.0",
-        description="Agent with OAuth2 only",
+        description="Agent with Basic auth only",
         capabilities=Capability(
             asap_version="0.1",
             skills=[Skill(id="test", description="Test skill")],
             state_persistence=False,
         ),
         endpoints=Endpoint(asap="http://localhost:8000/asap"),
-        auth=AuthScheme(schemes=["oauth2"]),  # No "bearer" support
+        auth=AuthScheme(schemes=["basic"]),  # No "bearer" support
     )
 
     def dummy_validator(token: str) -> str | None:
         return "urn:asap:agent:client"
 
     validator = BearerTokenValidator(dummy_validator)
-    middleware = AuthenticationMiddleware(manifest_oauth2, validator)
+    middleware = AuthenticationMiddleware(manifest_basic, validator)
 
     request = Request(scope={"type": "http", "method": "POST", "path": "/asap", "headers": []})
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="some-token")

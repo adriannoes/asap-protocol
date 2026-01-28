@@ -4,14 +4,15 @@ This module tests the circuit breaker implementation in isolation,
 verifying state transitions, failure tracking, and thread-safety.
 """
 
+import asyncio
 import time
 from typing import TYPE_CHECKING
-from unittest.mock import patch
 
 import httpx
 import pytest
 
 from asap.errors import CircuitOpenError
+from asap.transport.client import ASAPConnectionError
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest, TaskResponse
 from asap.models.enums import TaskStatus
@@ -180,6 +181,7 @@ class TestCircuitBreakerIntegration:
         self, sample_request_envelope: Envelope, sample_response_envelope: Envelope
     ) -> None:
         """Test circuit breaker is disabled by default."""
+
         def mock_transport(request: httpx.Request) -> httpx.Response:
             return create_mock_response(sample_response_envelope)
 
@@ -211,22 +213,34 @@ class TestCircuitBreakerIntegration:
             circuit_breaker_threshold=5,
             max_retries=1,  # Single attempt per request to count failures accurately
         ) as client:
-            # Make 5 requests that fail
-            for i in range(5):
-                with pytest.raises(Exception):  # Will be ASAPConnectionError
+            # Make 4 requests that fail (circuit will open after 5th failure)
+            for _ in range(4):
+                with pytest.raises(ASAPConnectionError):
                     await client.send(sample_request_envelope)
 
-            # Circuit should be open
+            # Circuit should still be closed (4 failures < threshold of 5)
             assert client._circuit_breaker is not None
-            assert client._circuit_breaker.get_state() == CircuitState.OPEN
-            # Should have at least 5 consecutive failures (may be more if circuit was just opened)
-            assert client._circuit_breaker.get_consecutive_failures() >= 5
+            assert client._circuit_breaker.get_state() == CircuitState.CLOSED
+            assert client._circuit_breaker.get_consecutive_failures() == 4
 
-            # Next request should fail immediately with CircuitOpenError
+            # 5th request that fails should open the circuit
+            with pytest.raises(ASAPConnectionError):
+                await client.send(sample_request_envelope)
+
+            # Circuit should now be open after 5 failures
+            assert client._circuit_breaker.get_state() == CircuitState.OPEN
+            # After 5th failure, consecutive_failures should be 5
+            consecutive_failures_after_5th = client._circuit_breaker.get_consecutive_failures()
+            assert consecutive_failures_after_5th == 5
+
+            # Next request should fail immediately with CircuitOpenError (circuit is open)
+            # This happens before the request is sent, so no new failure is recorded
             with pytest.raises(CircuitOpenError) as exc_info:
                 await client.send(sample_request_envelope)
 
-            # consecutive_failures should be at least 5 (may be more if circuit was just opened)
+            # consecutive_failures in error should be 5 (circuit is open, no new failures recorded)
+            # The error message may show 6 due to how the error is constructed, but the actual
+            # consecutive_failures should be 5
             assert exc_info.value.consecutive_failures >= 5
             assert exc_info.value.base_url == "http://localhost:8000"
 
@@ -234,6 +248,7 @@ class TestCircuitBreakerIntegration:
         self, sample_request_envelope: Envelope, sample_response_envelope: Envelope
     ) -> None:
         """Test circuit breaker allows requests when circuit is CLOSED."""
+
         def mock_transport(request: httpx.Request) -> httpx.Response:
             return create_mock_response(sample_response_envelope)
 
@@ -276,7 +291,7 @@ class TestCircuitBreakerIntegration:
         ) as client:
             # Make 5 requests that fail to open circuit
             for _ in range(5):
-                with pytest.raises(Exception):
+                with pytest.raises(ASAPConnectionError):
                     await client.send(sample_request_envelope)
 
             # Circuit should be open
@@ -284,7 +299,7 @@ class TestCircuitBreakerIntegration:
             assert client._circuit_breaker.get_state() == CircuitState.OPEN
 
             # Wait for timeout to transition to HALF_OPEN
-            time.sleep(0.2)
+            await asyncio.sleep(0.2)
 
             # Verify circuit is in HALF_OPEN (can_attempt should return True)
             assert client._circuit_breaker.can_attempt() is True
