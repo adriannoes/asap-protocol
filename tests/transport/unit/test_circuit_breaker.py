@@ -16,7 +16,8 @@ from asap.transport.client import ASAPConnectionError
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest, TaskResponse
 from asap.models.enums import TaskStatus
-from asap.transport.client import ASAPClient, CircuitBreaker, CircuitState
+from asap.transport.client import ASAPClient
+from asap.transport.circuit_breaker import CircuitBreaker, CircuitState, get_registry
 
 if TYPE_CHECKING:
     pass
@@ -145,6 +146,15 @@ class TestCircuitBreakerTimeout:
 
 class TestCircuitBreakerIntegration:
     """Tests for circuit breaker integration with ASAPClient."""
+
+    @pytest.fixture(autouse=True)
+    def clear_registry(self) -> None:
+        """Clear circuit breaker registry before each test to ensure isolation."""
+        registry = get_registry()
+        registry.clear()
+        yield
+        # Clean up after test as well
+        registry.clear()
 
     @pytest.fixture
     def sample_request_envelope(self) -> Envelope:

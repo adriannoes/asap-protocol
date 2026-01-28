@@ -12,6 +12,14 @@ from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest, TaskResponse
 from asap.transport.client import ASAPClient, RetryConfig, ASAPConnectionError, CircuitOpenError, ASAPTimeoutError
 from asap.transport.jsonrpc import ASAP_METHOD
+from asap.transport.circuit_breaker import get_registry
+
+@pytest.fixture(autouse=True)
+def cleanup_registry():
+    get_registry().clear()
+    yield
+    get_registry().clear()
+
 
 @pytest.fixture
 def sample_request_envelope() -> Envelope:
