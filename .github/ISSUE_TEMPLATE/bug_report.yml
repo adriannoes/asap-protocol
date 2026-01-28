@@ -14,7 +14,7 @@ body:
     attributes:
       label: ASAP Protocol Version
       description: What version of asap-protocol are you running?
-      placeholder: e.g. 0.1.0
+      placeholder: e.g. 0.3.0
     validations:
       required: true
 

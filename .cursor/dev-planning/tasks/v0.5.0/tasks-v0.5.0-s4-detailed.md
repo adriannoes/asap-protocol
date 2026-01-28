@@ -1,7 +1,6 @@
 # Tasks: ASAP v0.5.0 Sprint S4 (Detailed)
 
 > **Sprint**: S4 - Retry Logic & Authorization
-> **Duration**: Flexible (3-5 days)
 > **Goal**: Exponential backoff and authorization validation
 
 ---
@@ -53,7 +52,7 @@
 
 ---
 
-## Task 4.2: Implement Circuit Breaker (Optional)
+## Task 4.2: Implement Circuit Breaker
 
 **Reference**: [Task 6.4](./tasks-security-review-report.md)
 
@@ -157,6 +156,38 @@
 
 ---
 
+## Task 4.4.5: Improve Connection Error Messages (User Feedback)
+
+**Feedback Source**: v0.3.0 testing - "Connection errors are handled gracefully"
+
+- [ ] 4.4.5.1 Enhance error messages for connection failures
+  - File: `src/asap/transport/client.py`
+  - Improve `ASAPConnectionError` messages to be more user-friendly
+  - Include: Suggested troubleshooting steps (check URL, verify agent is running)
+  - Example: "Connection failed to {url}. Verify the agent is running and accessible."
+
+- [ ] 4.4.5.2 Add connection validation helper
+  - Method: `_validate_connection(self) -> bool`
+  - Optional: Pre-flight check before sending (can be disabled for performance)
+  - Check: Agent manifest endpoint is accessible
+  - Log: Clear message if validation fails
+
+- [ ] 4.4.5.3 Add connection error context to logs
+  - Enhance logging in `send()` method
+  - Include: URL, attempt number, total retries, error type
+  - Add: Suggested actions in log messages
+
+- [ ] 4.4.5.4 Test improved error messages
+  - Verify: Error messages are clear and actionable
+  - Verify: Logs provide sufficient context for debugging
+
+- [ ] 4.4.5.5 Commit
+  - Command: `git commit -m "feat(transport): improve connection error messages and user guidance"`
+
+**Acceptance**: Error messages are clear, actionable, and include troubleshooting hints
+
+---
+
 ## Task 4.5: Update Documentation
 
 - [ ] 4.5.1 Add Retry Configuration section to docs/transport.md
@@ -169,10 +200,17 @@
   - Configuration: How to set up each
   - Future: oauth2, hmac roadmap
 
-- [ ] 4.5.3 Commit
-  - Command: `git commit -m "docs: add retry and authorization scheme documentation"`
+- [ ] 4.5.3 Add Connection Error Troubleshooting section
+  - File: `docs/error-handling.md` or `docs/transport.md`
+  - Content: Common connection errors and solutions
+  - Include: How to diagnose connection issues
+  - Include: Best practices for error handling in user code
+  - Examples: Checking agent status, verifying URLs, network issues
 
-**Acceptance**: Documentation complete with examples
+- [ ] 4.5.4 Commit
+  - Command: `git commit -m "docs: add retry, authorization, and connection troubleshooting documentation"`
+
+**Acceptance**: Documentation complete with examples including troubleshooting guide
 
 ---
 
@@ -200,10 +238,11 @@
 - [ ] Exponential backoff working
 - [ ] Max delay 60s
 - [ ] Auth schemes validated
+- [ ] Connection error messages improved (user feedback addressed)
 - [ ] 12+ new tests pass
 - [ ] Coverage >95%
-- [ ] Docs updated
+- [ ] Docs updated (including troubleshooting)
 - [ ] Issue #13 closed
 - [ ] Progress tracked in both files
 
-**Total Sub-tasks**: ~30
+**Total Sub-tasks**: ~35 (added connection error improvements)

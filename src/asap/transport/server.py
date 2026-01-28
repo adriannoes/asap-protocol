@@ -51,7 +51,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import ValidationError
 from slowapi.errors import RateLimitExceeded
 
-from asap.errors import ThreadPoolExhaustedError
+from asap.errors import InvalidNonceError, InvalidTimestampError, ThreadPoolExhaustedError
 from asap.models.constants import MAX_REQUEST_SIZE
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.envelope import Envelope
@@ -82,6 +82,12 @@ from asap.transport.jsonrpc import (
     JsonRpcErrorResponse,
     JsonRpcRequest,
     JsonRpcResponse,
+)
+from asap.transport.validators import (
+    InMemoryNonceStore,
+    NonceStore,
+    validate_envelope_nonce,
+    validate_envelope_timestamp,
 )
 
 # Module logger
@@ -142,6 +148,7 @@ class ASAPRequestHandler:
         manifest: Manifest,
         auth_middleware: AuthenticationMiddleware | None = None,
         max_request_size: int = MAX_REQUEST_SIZE,
+        nonce_store: NonceStore | None = None,
     ) -> None:
         """Initialize the request handler.
 
@@ -150,11 +157,13 @@ class ASAPRequestHandler:
             manifest: Agent manifest describing capabilities
             auth_middleware: Optional authentication middleware for request validation
             max_request_size: Maximum allowed request size in bytes
+            nonce_store: Optional nonce store for replay attack prevention
         """
         self.registry = registry
         self.manifest = manifest
         self.auth_middleware = auth_middleware
         self.max_request_size = max_request_size
+        self.nonce_store = nonce_store
 
     def _normalize_payload_type_for_metrics(self, payload_type: str) -> str:
         """Normalize payload type for metrics to prevent cardinality explosion.
@@ -844,6 +853,58 @@ class ASAPRequestHandler:
             if sender_error is not None:
                 return sender_error
 
+            # Validate envelope timestamp to prevent replay attacks
+            try:
+                validate_envelope_timestamp(envelope)
+            except InvalidTimestampError as e:
+                logger.warning(
+                    "asap.request.invalid_timestamp",
+                    envelope_id=envelope.id,
+                    error=e.message,
+                    details=e.details,
+                )
+                duration_seconds = time.perf_counter() - ctx.start_time
+                self.record_error_metrics(
+                    ctx.metrics, payload_type, "invalid_timestamp", duration_seconds
+                )
+                return self.build_error_response(
+                    INVALID_PARAMS,
+                    data={
+                        "error": "Invalid envelope timestamp",
+                        "code": e.code,
+                        "message": e.message,
+                        "details": e.details,
+                    },
+                    request_id=ctx.request_id,
+                )
+
+            # Validate envelope nonce if nonce store is available
+            try:
+                validate_envelope_nonce(envelope, self.nonce_store)
+            except InvalidNonceError as e:
+                # Truncate nonce in logs to prevent full value exposure
+                nonce_prefix = e.nonce[:8] + "..." if len(e.nonce) > 8 else e.nonce
+                logger.warning(
+                    "asap.request.invalid_nonce",
+                    envelope_id=envelope.id,
+                    nonce=nonce_prefix,
+                    error=e.message,
+                )
+                duration_seconds = time.perf_counter() - ctx.start_time
+                self.record_error_metrics(
+                    ctx.metrics, payload_type, "invalid_nonce", duration_seconds
+                )
+                return self.build_error_response(
+                    INVALID_PARAMS,
+                    data={
+                        "error": "Invalid envelope nonce",
+                        "code": e.code,
+                        "message": e.message,
+                        "details": e.details,
+                    },
+                    request_id=ctx.request_id,
+                )
+
             # Log request received
             logger.info(
                 "asap.request.received",
@@ -893,6 +954,7 @@ def create_app(
     rate_limit: str | None = None,
     max_request_size: int | None = None,
     max_threads: int | None = None,
+    require_nonce: bool = False,
 ) -> FastAPI:
     """Create and configure a FastAPI application for ASAP protocol.
 
@@ -920,6 +982,9 @@ def create_app(
         max_threads: Optional maximum number of threads for sync handlers.
             Defaults to ASAP_MAX_THREADS environment variable or min(32, cpu_count + 4).
             Set to None to use unbounded executor (not recommended for production).
+        require_nonce: If True, enables nonce validation for replay attack prevention.
+            When enabled, creates an InMemoryNonceStore and validates nonces in envelopes.
+            Defaults to False (nonce validation is optional).
 
     Returns:
         Configured FastAPI application ready to run
@@ -1003,8 +1068,17 @@ def create_app(
     if max_request_size is None:
         max_request_size = int(os.getenv("ASAP_MAX_REQUEST_SIZE", str(MAX_REQUEST_SIZE)))
 
+    # Create nonce store if required
+    nonce_store: NonceStore | None = None
+    if require_nonce:
+        nonce_store = InMemoryNonceStore()
+        logger.info(
+            "asap.server.nonce_validation_enabled",
+            manifest_id=manifest.id,
+        )
+
     # Create request handler
-    handler = ASAPRequestHandler(registry, manifest, auth_middleware, max_request_size)
+    handler = ASAPRequestHandler(registry, manifest, auth_middleware, max_request_size, nonce_store)
 
     app = FastAPI(
         title="ASAP Protocol Server",

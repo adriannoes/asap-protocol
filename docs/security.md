@@ -4,6 +4,30 @@
 
 ---
 
+## Quick Reference
+
+### Validation Constants
+
+| Constant | Default Value | Description |
+|----------|---------------|-------------|
+| `MAX_ENVELOPE_AGE_SECONDS` | 300 (5 minutes) | Maximum age of envelope before rejection |
+| `MAX_FUTURE_TOLERANCE_SECONDS` | 30 seconds | Maximum future timestamp offset allowed |
+| `MAX_REQUEST_SIZE` | 10,485,760 bytes (10MB) | Maximum request body size |
+| Default Rate Limit | 100/minute | Default requests per minute per sender |
+| Nonce TTL | 600 seconds (10 minutes) | Time-to-live for nonce tracking (2x envelope age) |
+
+### Security Features
+
+| Feature | Status | Configuration |
+|---------|--------|---------------|
+| Timestamp Validation | Always Enabled | Automatic |
+| Nonce Validation | Optional | `require_nonce=True` in `create_app()` |
+| HTTPS Enforcement | Client-side (default) | `require_https=True` (default) |
+| Rate Limiting | Enabled (default) | `rate_limit` parameter or `ASAP_RATE_LIMIT` env var |
+| Request Size Limits | Enabled (default) | `max_request_size` parameter or `ASAP_MAX_REQUEST_SIZE` env var |
+
+---
+
 ## Overview
 
 The ASAP protocol is designed with security as a foundational concern. This guide covers:
@@ -730,6 +754,275 @@ def test_size_limit():
 
 ---
 
+## Replay Attack Prevention
+
+ASAP protocol prevents replay attacks through timestamp validation and optional nonce-based duplicate detection. This ensures that intercepted or maliciously replayed messages cannot be processed after their validity window expires.
+
+### Timestamp Validation
+
+Every ASAP envelope includes a `timestamp` field that is automatically validated by the server. The validation enforces two constraints:
+
+1. **Maximum Age**: Envelopes older than 5 minutes (300 seconds) are rejected
+2. **Future Tolerance**: Envelopes with timestamps more than 30 seconds in the future are rejected
+
+These windows balance security (preventing old message replays) with practical network latency and clock synchronization differences.
+
+#### Configuration
+
+Timestamp validation is **always enabled** on the server. The validation constants can be imported:
+
+```python
+from asap.models.constants import (
+    MAX_ENVELOPE_AGE_SECONDS,      # Default: 300 (5 minutes)
+    MAX_FUTURE_TOLERANCE_SECONDS,  # Default: 30 seconds
+)
+```
+
+#### How It Works
+
+When an envelope is received:
+
+1. The server extracts the `timestamp` field from the envelope
+2. Calculates the age: `current_time - envelope.timestamp`
+3. If age > `MAX_ENVELOPE_AGE_SECONDS`, raises `InvalidTimestampError`
+4. Calculates future offset: `envelope.timestamp - current_time`
+5. If future offset > `MAX_FUTURE_TOLERANCE_SECONDS`, raises `InvalidTimestampError`
+
+#### Error Response
+
+When timestamp validation fails, the server returns:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "request-id",
+  "error": {
+    "code": -32602,
+    "message": "Invalid params",
+    "data": {
+      "error": "Invalid envelope timestamp",
+      "code": "asap:protocol/invalid_timestamp",
+      "message": "Envelope timestamp is too old: 600.0 seconds (max: 300 seconds)",
+      "details": {
+        "timestamp": "2026-01-27T22:43:12.008942+00:00",
+        "age_seconds": 600.0,
+        "envelope_id": "01KG0TJCY8D6NW3DHZCKYJGF5H",
+        "max_age_seconds": 300
+      }
+    }
+  }
+}
+```
+
+### Nonce-Based Duplicate Detection
+
+For additional protection against replay attacks, ASAP supports optional nonce-based duplicate detection. When enabled, the server tracks nonce values and rejects duplicate nonces within a time-to-live (TTL) window.
+
+#### Enabling Nonce Validation
+
+Nonce validation is **optional** and must be explicitly enabled:
+
+```python
+from asap.transport.server import create_app
+
+app = create_app(
+    manifest,
+    require_nonce=True  # Enable nonce validation
+)
+```
+
+When enabled, the server creates an `InMemoryNonceStore` that tracks nonce values with a 10-minute TTL.
+
+#### Using Nonces in Envelopes
+
+Include a nonce in the envelope's `extensions` field:
+
+```python
+from asap.models.envelope import Envelope
+import secrets
+
+envelope = Envelope(
+    asap_version="0.1",
+    sender="urn:asap:agent:client",
+    recipient="urn:asap:agent:server",
+    payload_type="task.request",
+    payload=task_request.model_dump(),
+    extensions={
+        "nonce": secrets.token_urlsafe(32)  # Generate unique nonce
+    }
+)
+```
+
+#### How It Works
+
+1. **No Nonce**: If the envelope has no nonce, validation passes (nonce is optional)
+2. **First Use**: When a nonce is first seen, it's marked as used with a 10-minute TTL
+3. **Duplicate Detection**: If the same nonce is seen again within the TTL window, `InvalidNonceError` is raised
+4. **Expiration**: After the TTL expires, the nonce is removed from the store and can be used again
+
+#### Error Response
+
+When a duplicate nonce is detected:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "request-id",
+  "error": {
+    "code": -32602,
+    "message": "Invalid params",
+    "data": {
+      "error": "Invalid envelope nonce",
+      "code": "asap:protocol/invalid_nonce",
+      "message": "Duplicate nonce detected: abc123...",
+      "details": {
+        "nonce": "abc123...",
+        "envelope_id": "01KG0TJCY8D6NW3DHZCKYJGF5H"
+      }
+    }
+  }
+}
+```
+
+#### Custom Nonce Store
+
+For production deployments with multiple server instances, implement a distributed nonce store:
+
+```python
+from asap.transport.validators import NonceStore
+import redis
+
+class RedisNonceStore:
+    """Redis-based nonce store for distributed deployments."""
+    
+    def __init__(self, redis_client: redis.Redis):
+        self.redis = redis_client
+    
+    def is_used(self, nonce: str) -> bool:
+        """Check if nonce exists in Redis."""
+        return self.redis.exists(f"nonce:{nonce}") > 0
+    
+    def mark_used(self, nonce: str, ttl_seconds: int) -> None:
+        """Store nonce in Redis with TTL."""
+        self.redis.setex(f"nonce:{nonce}", ttl_seconds, "1")
+
+# Use custom store
+redis_client = redis.Redis(host='localhost', port=6379, db=0)
+nonce_store = RedisNonceStore(redis_client)
+
+# Pass to server handler (requires custom handler setup)
+```
+
+### Best Practices
+
+1. **Always Use Timestamps**: Timestamp validation is automatic and always enabled
+2. **Enable Nonces for High-Security**: Use nonce validation for sensitive operations
+3. **Generate Strong Nonces**: Use cryptographically secure random generators (e.g., `secrets.token_urlsafe()`)
+4. **Distributed Deployments**: Use a shared nonce store (Redis, database) for multi-instance deployments
+5. **Monitor Rejections**: Track `InvalidTimestampError` and `InvalidNonceError` to detect potential attacks
+
+---
+
+## HTTPS Enforcement
+
+The ASAP client enforces HTTPS for production connections by default, preventing unencrypted communication that could expose sensitive data or be intercepted by attackers.
+
+### Client-Side Enforcement
+
+The `ASAPClient` validates URL schemes during initialization:
+
+- **HTTPS URLs**: Always accepted
+- **HTTP localhost**: Accepted with a warning (for development)
+- **HTTP production**: Rejected with `ValueError` (security requirement)
+
+#### Default Behavior
+
+```python
+from asap.transport.client import ASAPClient
+
+# HTTPS: Works (production)
+async with ASAPClient("https://api.example.com") as client:
+    response = await client.send(envelope)
+
+# HTTP localhost: Works with warning (development)
+async with ASAPClient("http://localhost:8000") as client:
+    # Logs warning: "Using HTTP for localhost connection. For production, use HTTPS."
+    response = await client.send(envelope)
+
+# HTTP production: Raises ValueError
+try:
+    client = ASAPClient("http://api.example.com")
+except ValueError as e:
+    # Error: "HTTPS is required for non-localhost connections..."
+```
+
+#### Override for Development
+
+For local development or testing, you can disable HTTPS enforcement:
+
+```python
+# Development only: Disable HTTPS requirement
+async with ASAPClient(
+    "http://localhost:8000",
+    require_https=False  # Override default
+) as client:
+    response = await client.send(envelope)
+```
+
+⚠️ **Warning**: Never use `require_https=False` in production. This disables a critical security check.
+
+### Localhost Detection
+
+The client automatically detects localhost connections using:
+
+- Hostname: `localhost`
+- IPv4: `127.0.0.1`
+- IPv6: `::1`
+
+These addresses are allowed to use HTTP with a warning, recognizing that local development often uses unencrypted connections.
+
+### Production Recommendations
+
+1. **Always Use HTTPS**: All production endpoints must use HTTPS
+2. **Valid Certificates**: Use valid SSL certificates (not self-signed)
+3. **TLS 1.2+**: Ensure servers support TLS 1.2 or higher
+4. **Certificate Validation**: Never disable certificate validation in production
+5. **HSTS**: Enable HTTP Strict Transport Security headers on servers
+
+### Server Configuration
+
+While the client enforces HTTPS, servers should also be configured to:
+
+1. **Redirect HTTP to HTTPS**: Automatically redirect all HTTP requests to HTTPS
+2. **HSTS Headers**: Include `Strict-Transport-Security` header
+3. **Valid Certificates**: Use certificates from trusted Certificate Authorities
+
+Example nginx configuration:
+
+```nginx
+server {
+    listen 80;
+    server_name api.example.com;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name api.example.com;
+    
+    ssl_certificate /path/to/cert.pem;
+    ssl_certificate_key /path/to/key.pem;
+    
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    
+    location /asap {
+        proxy_pass http://localhost:8000;
+    }
+}
+```
+
+---
+
 ## Threat Model
 
 ### Attack Vectors and Mitigations
@@ -746,26 +1039,7 @@ def test_size_limit():
 
 ### Replay Attack Prevention
 
-ASAP uses timestamps and optional nonces to prevent replay attacks:
-
-```python
-from datetime import datetime, timezone, timedelta
-
-def is_request_valid(envelope: Envelope, max_age_seconds: int = 300) -> bool:
-    """Check if request is within acceptable time window."""
-    now = datetime.now(timezone.utc)
-    request_time = envelope.timestamp
-    
-    # Reject requests older than max_age
-    if now - request_time > timedelta(seconds=max_age_seconds):
-        return False
-    
-    # Reject requests from the future (with small tolerance)
-    if request_time - now > timedelta(seconds=30):
-        return False
-    
-    return True
-```
+ASAP uses automatic timestamp validation and optional nonce-based duplicate detection to prevent replay attacks. See the [Replay Attack Prevention](#replay-attack-prevention) section above for detailed documentation.
 
 ### Rate Limiting
 

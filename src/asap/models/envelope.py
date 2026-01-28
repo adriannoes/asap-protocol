@@ -65,7 +65,13 @@ class Envelope(ASAPBaseModel):
         default=None, description="Optional trace ID for distributed tracing"
     )
     extensions: dict[str, Any] | None = Field(
-        default=None, description="Optional custom extensions"
+        default=None,
+        description=(
+            "Optional custom extensions. "
+            "Can include a 'nonce' field (string) for replay attack prevention. "
+            "If provided, the nonce must be unique within the TTL window (typically 10 minutes). "
+            "Duplicate nonces will be rejected by the validation layer."
+        ),
     )
 
     @field_validator("id", mode="before")
