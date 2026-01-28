@@ -30,3 +30,45 @@ accounts for reasonable clock synchronization differences between systems.
 
 # URN patterns
 AGENT_URN_PATTERN = r"^urn:asap:agent:[a-z0-9-]+(?::[a-z0-9-]+)?$"
+
+# Authentication schemes
+SUPPORTED_AUTH_SCHEMES = frozenset({"bearer", "basic"})
+"""Supported authentication schemes for agent access.
+
+Currently supports:
+- bearer: Bearer token authentication (RFC 6750)
+- basic: HTTP Basic authentication (RFC 7617)
+
+Future support planned:
+- oauth2: OAuth 2.0 authentication flow
+- hmac: HMAC-based authentication
+"""
+
+# Retry and backoff constants
+DEFAULT_BASE_DELAY = 1.0
+"""Default base delay in seconds for exponential backoff.
+
+This is the initial delay before the first retry attempt. Subsequent retries
+will use exponential backoff: base_delay * (2 ** attempt) + jitter.
+"""
+
+DEFAULT_MAX_DELAY = 60.0
+"""Maximum delay in seconds for exponential backoff.
+
+This caps the maximum delay between retry attempts, preventing excessively
+long waits while still providing exponential backoff for transient failures.
+"""
+
+DEFAULT_CIRCUIT_BREAKER_THRESHOLD = 5
+"""Default threshold for circuit breaker pattern.
+
+Number of consecutive failures required before opening the circuit breaker
+and preventing further requests to a failing endpoint.
+"""
+
+DEFAULT_CIRCUIT_BREAKER_TIMEOUT = 60.0
+"""Default timeout in seconds before circuit breaker transitions from OPEN to HALF_OPEN.
+
+After this timeout, the circuit breaker will allow a test request to determine
+if the service has recovered before closing the circuit.
+"""
