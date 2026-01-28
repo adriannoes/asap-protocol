@@ -740,11 +740,11 @@ class ASAPClient:
                     )
                 if response.status_code >= 400:
                     # Client errors (4xx) are not retriable (except 429 handled above)
-                    # We record a failure in the circuit breaker here because persistent 4xx 
+                    # We record a failure in the circuit breaker here because persistent 4xx
                     # (like 401/403) can indicate an unhealthy configuration or system state.
                     if self._circuit_breaker is not None:
                         self._circuit_breaker.record_failure()
-                        
+
                     raise ASAPConnectionError(
                         f"HTTP client error {response.status_code} from {self.base_url}. "
                         f"This indicates a problem with the request. "

@@ -7,7 +7,7 @@ for sharing circuit breaker state across multiple client instances.
 import threading
 import time
 from enum import Enum
-from typing import Dict, Optional
+from typing import Dict
 
 from asap.models.constants import (
     DEFAULT_CIRCUIT_BREAKER_THRESHOLD,
