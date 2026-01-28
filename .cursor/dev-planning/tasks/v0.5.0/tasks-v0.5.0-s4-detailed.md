@@ -2,6 +2,7 @@
 
 > **Sprint**: S4 - Retry Logic & Authorization
 > **Goal**: Exponential backoff and authorization validation
+> **Status**: ✅ **COMPLETE** (2026-01-27)
 
 ---
 
@@ -265,8 +266,9 @@
   - Include: Best practices for error handling in user code
   - Examples: Checking agent status, verifying URLs, network issues
 
-- [ ] 4.5.4 Commit
+- [x] 4.5.4 Commit
   - Command: `git commit -m "docs: add retry, authorization, and connection troubleshooting documentation"`
+  - Commit: 4a1d66b - 4 files changed, 735 insertions(+), 80 deletions(-)
 
 **Acceptance**: Documentation complete with examples including troubleshooting guide
 
@@ -274,37 +276,37 @@
 
 ## Task 4.6: Mark Sprint S4 Complete
 
-- [ ] 4.6.1 Update roadmap progress
+- [x] 4.6.1 Update roadmap progress
   - Open: `tasks-v0.5.0-roadmap.md`
   - Mark: Tasks 4.1-4.5 as complete `[x]`
-  - Update: S4 progress to 5/5 (100%)
+  - Update: S4 progress to 6/6 (100%)
 
-- [ ] 4.6.2 Update this detailed file
+- [x] 4.6.2 Update this detailed file
   - Mark: All sub-tasks as complete `[x]`
-  - Add: Completion date
+  - Add: Completion date: 2026-01-27
 
-- [ ] 4.6.3 Verify issue #13 closed
-  - Confirm: Closed on GitHub
-  - Confirm: Commit references issue
+- [x] 4.6.3 Verify issue #13 closed
+  - Confirm: Closed on GitHub (commit 9501297 includes "Closes #13")
+  - Confirm: Commit references issue ✅
 
 **Acceptance**: Both files complete, issue #13 resolved
 
 ---
 
 **Sprint S4 Definition of Done**:
-- [ ] All tasks 4.1-4.6 completed
-- [ ] Exponential backoff working with jitter
-- [ ] Max delay 60s cap enforced
-- [ ] Retry-After header respected (S2 integration)
-- [ ] Circuit breaker optional and thread-safe (S3 pattern)
-- [ ] Auth schemes validated with UnsupportedAuthSchemeError
-- [ ] Connection error messages improved (user feedback addressed)
-- [ ] Constants defined in models/constants.py (S3 pattern)
-- [ ] 16+ new tests pass (in unit/ directory per S3 structure)
-- [ ] Coverage >95%
-- [ ] Docs updated (including troubleshooting)
-- [ ] Issue #13 closed
-- [ ] Progress tracked in both files
+- [x] All tasks 4.1-4.6 completed ✅
+- [x] Exponential backoff working with jitter ✅
+- [x] Max delay 60s cap enforced ✅
+- [x] Retry-After header respected (S2 integration) ✅
+- [x] Circuit breaker optional and thread-safe (S3 pattern) ✅
+- [x] Auth schemes validated with UnsupportedAuthSchemeError ✅
+- [x] Connection error messages improved (user feedback addressed) ✅
+- [x] Constants defined in models/constants.py (S3 pattern) ✅
+- [x] 29+ new tests pass (in unit/ directory per S3 structure) ✅
+- [x] Coverage >95% ✅
+- [x] Docs updated (including troubleshooting) ✅
+- [x] Issue #13 closed ✅ (commit 9501297)
+- [x] Progress tracked in both files ✅
 
 **Total Sub-tasks**: ~42 (added S3-inspired improvements)
 

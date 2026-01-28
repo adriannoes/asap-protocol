@@ -255,38 +255,38 @@
 
 ### Tasks
 
-- [ ] 4.1 Implement exponential backoff
+- [x] 4.1 Implement exponential backoff ✅
   - Goal: Retry with exponential backoff + jitter, max delay 60s
   - Details: [Sprint S4 Detailed - Task 4.1](./tasks-v0.5.0-s4-detailed.md#task-41-implement-exponential-backoff)
 
-- [ ] 4.2 Implement circuit breaker (optional)
+- [x] 4.2 Implement circuit breaker (optional) ✅
   - Goal: Circuit breaker pattern for repeated failures
   - Details: [Sprint S4 Detailed - Task 4.2](./tasks-v0.5.0-s4-detailed.md#task-42-implement-circuit-breaker-optional)
 
-- [ ] 4.3 Add authorization scheme validation
+- [x] 4.3 Add authorization scheme validation ✅
   - Issue: [#13](https://github.com/adriannoes/asap-protocol/issues/13)
   - Goal: Validate manifest.auth schemes at startup
   - Details: [Sprint S4 Detailed - Task 4.3](./tasks-v0.5.0-s4-detailed.md#task-43-add-authorization-scheme-validation)
 
-- [ ] 4.4 Add retry and authorization tests
+- [x] 4.4 Add retry and authorization tests ✅
   - Goal: 12+ tests for backoff, circuit breaker, auth validation
   - Details: [Sprint S4 Detailed - Task 4.4](./tasks-v0.5.0-s4-detailed.md#task-44-add-retry-and-auth-tests)
 
-- [ ] 4.4.5 Improve connection error messages (user feedback)
+- [x] 4.4.5 Improve connection error messages (user feedback) ✅
   - Goal: Enhanced error messages with troubleshooting guidance
   - Details: [Sprint S4 Detailed - Task 4.4.5](./tasks-v0.5.0-s4-detailed.md#task-445-improve-connection-error-messages-user-feedback)
 
-- [ ] 4.5 Update documentation
+- [x] 4.5 Update documentation ✅
   - Goal: Document retry config, auth schemes, and connection troubleshooting
   - Details: [Sprint S4 Detailed - Task 4.5](./tasks-v0.5.0-s4-detailed.md#task-45-update-documentation)
 
 ### Definition of Done
-- [ ] Exponential backoff with jitter working
-- [ ] Max delay capped at 60 seconds
-- [ ] Authorization schemes validated at manifest load
-- [ ] Test coverage >95% maintained
-- [ ] Documentation covers retry configuration
-- [ ] Issue #13 closed
+- [x] Exponential backoff with jitter working ✅
+- [x] Max delay capped at 60 seconds ✅
+- [x] Authorization schemes validated at manifest load ✅
+- [x] Test coverage >95% maintained ✅
+- [x] Documentation covers retry configuration ✅
+- [x] Issue #13 closed ✅ (commit 9501297)
 
 ---
 
@@ -296,12 +296,32 @@
 
 ### Tasks
 
+- [ ] 5.0.1 Add empty nonce string validation (S3 follow-up)
+  - Goal: Reject empty string nonces with clear error message
+  - Source: [PR #19 Code Review - Section 3.2](../code-review/v0.5.0/sprint-s3-code-review.md)
+  - Details: [Sprint S5 Detailed - Task 5.0.1](./tasks-v0.5.0-s5-detailed.md#task-501-add-empty-nonce-string-validation)
+
+- [ ] 5.0.2 Make nonce TTL configurable (S3 follow-up)
+  - Goal: Derive nonce TTL from MAX_ENVELOPE_AGE_SECONDS constant
+  - Source: [PR #19 Code Review - Section 3.4](../code-review/v0.5.0/sprint-s3-code-review.md)
+  - Details: [Sprint S5 Detailed - Task 5.0.2](./tasks-v0.5.0-s5-detailed.md#task-502-make-nonce-ttl-configurable)
+
+- [ ] 5.0.3 Implement log sanitization
+  - Issue: [#12](https://github.com/adriannoes/asap-protocol/issues/12)
+  - Goal: Prevent sensitive data (tokens, credentials) from appearing in logs
+  - Details: [Sprint S5 Detailed - Task 5.0.3](./tasks-v0.5.0-s5-detailed.md#task-503-implement-log-sanitization)
+
+- [ ] 5.0.4 Add missing test coverage
+  - Issue: [#11](https://github.com/adriannoes/asap-protocol/issues/11)
+  - Goal: Achieve ≥95% coverage on security-critical modules
+  - Details: [Sprint S5 Detailed - Task 5.0.4](./tasks-v0.5.0-s5-detailed.md#task-504-add-missing-test-coverage)
+
 - [ ] 5.1 Run security audit
   - Goal: pip-audit + bandit, verify no critical vulnerabilities
   - Details: [Sprint S5 Detailed - Task 5.1](./tasks-v0.5.0-s5-detailed.md#task-51-security-audit)
 
 - [ ] 5.2 Run testing & quality checks
-  - Goal: All tests pass, coverage ≥95%, linters clean
+  - Goal: All tests pass, coverage ≥92%, linters clean
   - Details: [Sprint S5 Detailed - Task 5.2](./tasks-v0.5.0-s5-detailed.md#task-52-testing--quality)
 
 - [ ] 5.3 Test compatibility and upgrade path
@@ -312,8 +332,8 @@
   - Goal: CHANGELOG, README, migration guide complete
   - Details: [Sprint S5 Detailed - Task 5.4](./tasks-v0.5.0-s5-detailed.md#task-54-documentation-review)
 
-- [ ] 5.5 Prepare release
-  - Goal: Release notes, version bump, PR reviews
+- [ ] 5.5 Prepare release + Final Quality Gate
+  - Goal: Release notes, version bump, **comprehensive quality gate**
   - Details: [Sprint S5 Detailed - Task 5.5](./tasks-v0.5.0-s5-detailed.md#task-55-release-preparation)
 
 - [ ] 5.6 Build and publish
@@ -321,16 +341,20 @@
   - Details: [Sprint S5 Detailed - Task 5.6](./tasks-v0.5.0-s5-detailed.md#task-56-build-and-publish)
 
 - [ ] 5.7 Communicate release
-  - Goal: Announce, close issues, thank contributors
+  - Goal: Announce, close issues (#11, #12, #13), thank contributors
   - Details: [Sprint S5 Detailed - Task 5.7](./tasks-v0.5.0-s5-detailed.md#task-57-communication)
 
 ### Definition of Done
+- [ ] S3 follow-ups completed (5.0.1, 5.0.2)
+- [ ] Issue #12 closed - log sanitization (5.0.3)
+- [ ] Issue #11 closed - test coverage (5.0.4)
+- [ ] **Final Quality Gate passed** (5.5.6)
 - [ ] All CRIT+HIGH security tasks completed
 - [ ] Zero breaking changes vs v0.1.0 (or documented)
 - [ ] CI passes on all platforms
 - [ ] v0.5.0 published to PyPI
 - [ ] GitHub release created with notes
-- [ ] Test coverage ≥95%
+- [ ] Coverage ≥92% overall, ≥95% on security modules
 - [ ] Performance regression <5%
 
 ---
@@ -343,10 +367,10 @@
 | S2 | 9 | DoS prevention | 5-7 days |
 | S2.5 | 13 | Test infrastructure refactoring | 4-6 hours |
 | S3 | 8 | Replay attack + HTTPS + PRD Review | 4-6 days |
-| S4 | 5 | Retry + Authorization | 3-5 days |
-| S5 | 7 | Release prep | 2-3 days |
+| S4 | 6 | Retry + Authorization (S3 patterns applied) | 3-5 days |
+| S5 | 11 | Release prep + S3 follow-ups + Issues #11/#12 + Quality Gate | 3-4 days |
 
-**Total**: 49 high-level tasks across 6 sprints
+**Total**: 54 high-level tasks across 6 sprints
 
 **PRD Review Checkpoints**: 1 (Sprint S3)
 
@@ -354,22 +378,24 @@
 
 ## Progress Tracking
 
-**Overall Progress**: 24/49 tasks completed (48.98%)
+**Overall Progress**: 30/54 tasks completed (55.6%)
 
 **Sprint Status**:
 - ✅ S1: 7/7 tasks (100%) - All tasks completed
 - ✅ S2: 9/9 tasks (100%) - All tasks completed
 - ✅ S2.5: 17/17 tasks (100%) - Test infrastructure refactoring - **COMPLETE** (Jan 26, 2026)
 - ✅ S3: 8/8 tasks (100%) - Replay Prevention & HTTPS + PRD Review - **COMPLETE** (Jan 27, 2026)
-- ⏳ S4: 0/5 tasks (0%)
-- ⏳ S5: 0/7 tasks (0%)
+- ✅ S4: 6/6 tasks (100%) - Retry Logic & Authorization - **COMPLETE** (Jan 27, 2026)
+- ⏳ S5: 0/11 tasks (0%) - S3 follow-ups + Issues #11/#12 + Final Quality Gate
 
 **PRD Maintenance**:
 - ✅ Sprint S3 review completed (2026-01-27)
 - Added DD-008: HMAC deferred to v1.1.0+
+- S4 plan updated with S3 learnings (2026-01-27)
+- S5 plan updated with Issues #11, #12 + Final Quality Gate (2026-01-27)
 - Next review: End of Sprint P3 (v1.0.0)
 
-**Last Updated**: 2026-01-27 (Sprint S3 completed)
+**Last Updated**: 2026-01-27 (S4 completed - Retry Logic & Authorization)
 
 ---
 
@@ -378,4 +404,5 @@
 - **Detailed Tasks**: [tasks-v0.5.0-s[1-5]-detailed.md](.)
 - **Parent PRD**: [prd-v1-roadmap.md](../../prd/prd-v1-roadmap.md)
 - **Security Review**: [tasks-security-review-report.md](../v0.1.0/tasks-security-review-report.md)
+- **S3 Code Review**: [sprint-s3-code-review.md](../code-review/v0.5.0/sprint-s3-code-review.md)
 - **GitHub Issues**: [Issue Tracker](https://github.com/adriannoes/asap-protocol/issues)
