@@ -177,20 +177,36 @@ class ASAPConnectionError(Exception):
     or when the remote server returns an HTTP error status.
 
     Attributes:
-        message: Error description
+        message: Error description with troubleshooting suggestions
         cause: Original exception that caused this error
+        url: URL that failed to connect (if available)
     """
 
-    def __init__(self, message: str, cause: Exception | None = None) -> None:
+    def __init__(
+        self, message: str, cause: Exception | None = None, url: str | None = None
+    ) -> None:
         """Initialize connection error.
 
         Args:
             message: Error description
             cause: Original exception that caused this error
+            url: URL that failed to connect (for better error messages)
         """
-        super().__init__(message)
-        self.message = message
+        # Enhance message with troubleshooting suggestions if URL is provided
+        if url and "Verify" not in message and "troubleshooting" not in message.lower():
+            enhanced_message = (
+                f"{message}\n"
+                f"Troubleshooting: Connection failed to {url}. "
+                "Verify the agent is running and accessible. "
+                "Check the URL format, network connectivity, and firewall settings."
+            )
+        else:
+            enhanced_message = message
+
+        super().__init__(enhanced_message)
+        self.message = enhanced_message
         self.cause = cause
+        self.url = url
 
 
 class ASAPTimeoutError(Exception):
@@ -409,6 +425,85 @@ class ASAPClient:
 
         return float(delay)
 
+    async def _validate_connection(self) -> bool:
+        """Validate that the agent endpoint is accessible.
+
+        Performs a pre-flight check by attempting to access the agent's
+        manifest endpoint. This can be used to detect connection issues
+        before sending actual requests.
+
+        Note: This is an optional validation step that can be disabled
+        for performance reasons in production environments.
+
+        Returns:
+            True if connection is valid, False otherwise
+
+        Raises:
+            ASAPConnectionError: If connection validation fails
+        """
+        if not self._client:
+            raise ASAPConnectionError(
+                "Client not connected. Use 'async with' context.",
+                url=self.base_url,
+            )
+
+        try:
+            # Try to access a lightweight endpoint (manifest or health check)
+            # Using HEAD request to minimize bandwidth
+            response = await self._client.head(
+                f"{self.base_url}/.well-known/asap/manifest.json",
+                timeout=min(self.timeout, 5.0),  # Shorter timeout for validation
+            )
+            # Any 2xx or 3xx response indicates the server is reachable
+            is_valid = 200 <= response.status_code < 400
+            if not is_valid:
+                logger.warning(
+                    "asap.client.connection_validation_failed",
+                    target_url=self.base_url,
+                    status_code=response.status_code,
+                    message=(
+                        f"Connection validation failed for {self.base_url}. "
+                        f"Server returned status {response.status_code}. "
+                        f"Verify the agent is running and the URL is correct."
+                    ),
+                )
+            return is_valid
+        except httpx.ConnectError as e:
+            logger.warning(
+                "asap.client.connection_validation_failed",
+                target_url=self.base_url,
+                error=str(e),
+                message=(
+                    f"Connection validation failed for {self.base_url}. "
+                    f"Cannot reach the agent. Verify the agent is running and accessible. "
+                    f"Error: {str(e)[:200]}"
+                ),
+            )
+            return False
+        except httpx.TimeoutException as e:
+            logger.warning(
+                "asap.client.connection_validation_timeout",
+                target_url=self.base_url,
+                timeout=self.timeout,
+                message=(
+                    f"Connection validation timed out for {self.base_url}. "
+                    f"Check network connectivity and firewall settings."
+                ),
+            )
+            return False
+        except Exception as e:
+            logger.warning(
+                "asap.client.connection_validation_error",
+                target_url=self.base_url,
+                error=str(e),
+                error_type=type(e).__name__,
+                message=(
+                    f"Connection validation encountered an error for {self.base_url}: {e}. "
+                    f"Verify the agent is running and accessible."
+                ),
+            )
+            return False
+
     @property
     def is_connected(self) -> bool:
         """Check if client has an active connection."""
@@ -465,7 +560,10 @@ class ASAPClient:
             ...     response.payload_type
         """
         if not self._client:
-            raise ASAPConnectionError("Client not connected. Use 'async with' context.")
+            raise ASAPConnectionError(
+                "Client not connected. Use 'async with' context.",
+                url=self.base_url,
+            )
 
         # Check circuit breaker state before attempting request
         if self._circuit_breaker is not None:
@@ -485,7 +583,7 @@ class ASAPClient:
         self._request_counter += 1
         request_id = f"req-{self._request_counter}"
 
-        # Log send attempt
+        # Log send attempt with context
         logger.info(
             "asap.client.send",
             target_url=self.base_url,
@@ -493,6 +591,11 @@ class ASAPClient:
             trace_id=envelope.trace_id,
             payload_type=envelope.payload_type,
             idempotency_key=idempotency_key,
+            max_retries=self.max_retries,
+            message=(
+                f"Sending envelope {envelope.id} to {self.base_url} "
+                f"(payload: {envelope.payload_type}, max_retries: {self.max_retries})"
+            ),
         )
 
         # Build JSON-RPC request
@@ -522,7 +625,10 @@ class ASAPClient:
                 # Check HTTP status
                 if response.status_code >= 500:
                     # Server errors (5xx) are retriable
-                    error_msg = f"HTTP server error {response.status_code}: {response.text}"
+                    error_msg = (
+                        f"HTTP server error {response.status_code} from {self.base_url}. "
+                        f"Server returned: {response.text[:200]}"
+                    )
                     if attempt < self.max_retries - 1:
                         delay = self._calculate_backoff(attempt)
                         logger.warning(
@@ -531,6 +637,8 @@ class ASAPClient:
                             attempt=attempt + 1,
                             max_retries=self.max_retries,
                             delay_seconds=round(delay, 2),
+                            target_url=self.base_url,
+                            message=f"Server error {response.status_code}, retrying in {delay:.2f}s (attempt {attempt + 1}/{self.max_retries})",
                         )
                         logger.info(
                             "asap.client.retry",
@@ -541,7 +649,7 @@ class ASAPClient:
                             delay_seconds=round(delay, 2),
                         )
                         await asyncio.sleep(delay)
-                        last_exception = ASAPConnectionError(error_msg)
+                        last_exception = ASAPConnectionError(error_msg, url=self.base_url)
                         continue
                     # All retries exhausted, record failure in circuit breaker
                     if self._circuit_breaker is not None:
@@ -558,7 +666,7 @@ class ASAPClient:
                                 threshold=self._circuit_breaker.threshold,
                                 message=f"Circuit breaker opened after {consecutive_failures} consecutive failures",
                             )
-                    raise ASAPConnectionError(error_msg)
+                    raise ASAPConnectionError(error_msg, url=self.base_url)
                 if response.status_code == 429:
                     # Rate limit (429) is retriable, respect Retry-After header
                     if attempt < self.max_retries - 1:
@@ -607,16 +715,23 @@ class ASAPClient:
                         )
                         await asyncio.sleep(delay)
                         last_exception = ASAPConnectionError(
-                            f"HTTP rate limit error 429: {response.text}"
+                            f"HTTP rate limit error 429 from {self.base_url}. "
+                            f"Server response: {response.text[:200]}",
+                            url=self.base_url,
                         )
                         continue
                     raise ASAPConnectionError(
-                        f"HTTP rate limit error 429: {response.text}"
+                        f"HTTP rate limit error 429 from {self.base_url} after {self.max_retries} attempts. "
+                        f"Server response: {response.text[:200]}",
+                        url=self.base_url,
                     )
                 if response.status_code >= 400:
                     # Client errors (4xx) are not retriable (except 429 handled above)
                     raise ASAPConnectionError(
-                        f"HTTP client error {response.status_code}: {response.text}"
+                        f"HTTP client error {response.status_code} from {self.base_url}. "
+                        f"This indicates a problem with the request. "
+                        f"Server response: {response.text[:200]}",
+                        url=self.base_url,
                     )
 
                 # Parse JSON response
@@ -670,7 +785,11 @@ class ASAPClient:
                 return response_envelope
 
             except httpx.ConnectError as e:
-                last_exception = ASAPConnectionError(f"Connection error: {e}", cause=e)
+                error_msg = (
+                    f"Connection error to {self.base_url}: {e}. "
+                    f"Verify the agent is running and accessible."
+                )
+                last_exception = ASAPConnectionError(error_msg, cause=e, url=self.base_url)
                 # Log retry attempt
                 if attempt < self.max_retries - 1:
                     delay = self._calculate_backoff(attempt)
@@ -682,6 +801,11 @@ class ASAPClient:
                         max_retries=self.max_retries,
                         error=str(e),
                         delay_seconds=round(delay, 2),
+                        message=(
+                            f"Connection failed to {self.base_url} (attempt {attempt + 1}/{self.max_retries}). "
+                            f"Retrying in {delay:.2f}s. "
+                            f"Error: {str(e)[:100]}"
+                        ),
                     )
                     await asyncio.sleep(delay)
                     continue
@@ -700,7 +824,7 @@ class ASAPClient:
                             threshold=self._circuit_breaker.threshold,
                             message=f"Circuit breaker opened after {consecutive_failures} consecutive failures",
                         )
-                # Log final failure
+                # Log final failure with detailed context
                 duration_ms = (time.perf_counter() - start_time) * 1000
                 logger.error(
                     "asap.client.error",
@@ -710,6 +834,13 @@ class ASAPClient:
                     error_type="ASAPConnectionError",
                     duration_ms=round(duration_ms, 2),
                     attempts=attempt + 1,
+                    max_retries=self.max_retries,
+                    message=(
+                        f"Connection to {self.base_url} failed after {attempt + 1} attempts. "
+                        f"Total duration: {duration_ms:.2f}ms. "
+                        f"Troubleshooting: Verify the agent is running, check network connectivity, "
+                        f"and ensure the URL is correct. Original error: {str(e)[:200]}"
+                    ),
                 )
                 raise last_exception from e
 
@@ -733,7 +864,7 @@ class ASAPClient:
                 last_exception = ASAPTimeoutError(
                     f"Request timeout after {self.timeout}s", timeout=self.timeout
                 )
-                # Log timeout (don't retry)
+                # Log timeout with context (don't retry)
                 logger.error(
                     "asap.client.error",
                     target_url=self.base_url,
@@ -742,6 +873,14 @@ class ASAPClient:
                     error_type="ASAPTimeoutError",
                     timeout=self.timeout,
                     duration_ms=round(duration_ms, 2),
+                    attempt=attempt + 1,
+                    max_retries=self.max_retries,
+                    message=(
+                        f"Request to {self.base_url} timed out after {self.timeout}s "
+                        f"(attempt {attempt + 1}/{self.max_retries}, duration: {duration_ms:.2f}ms). "
+                        f"Troubleshooting: Check network latency, increase timeout if needed, "
+                        f"or verify the agent is responding."
+                    ),
                 )
                 raise last_exception from e
 
@@ -791,11 +930,20 @@ class ASAPClient:
                     duration_ms=round(duration_ms, 2),
                 )
                 # Wrap unexpected errors
-                raise ASAPConnectionError(f"Unexpected error: {e}", cause=e) from e
+                raise ASAPConnectionError(
+                    f"Unexpected error connecting to {self.base_url}: {e}. "
+                    f"Verify the agent is running and accessible.",
+                    cause=e,
+                    url=self.base_url,
+                ) from e
 
         # Defensive code: This should never be reached because the loop above
         # always either returns successfully or raises an exception.
         # Kept as a safety net for future code changes.
         if last_exception:  # pragma: no cover
             raise last_exception
-        raise ASAPConnectionError("Max retries exceeded")  # pragma: no cover
+        raise ASAPConnectionError(
+            f"Max retries ({self.max_retries}) exceeded for {self.base_url}. "
+            f"Verify the agent is running and accessible.",
+            url=self.base_url,
+        )  # pragma: no cover

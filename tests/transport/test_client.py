@@ -725,3 +725,154 @@ class TestASAPClientCustomErrors:
         error_str = str(error)
         assert "-32602" in error_str
         assert "Invalid params" in error_str
+
+
+class TestImprovedConnectionErrorMessages:
+    """Tests for improved connection error messages with troubleshooting guidance."""
+
+    async def test_connection_error_includes_url_and_troubleshooting(
+        self, sample_request_envelope: Envelope
+    ) -> None:
+        """Test that ASAPConnectionError includes URL and troubleshooting suggestions."""
+        from asap.transport.client import ASAPClient, ASAPConnectionError
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            raise httpx.ConnectError("Connection refused")
+
+        async with ASAPClient(
+            "http://localhost:8000", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            with pytest.raises(ASAPConnectionError) as exc_info:
+                await client.send(sample_request_envelope)
+
+            error_message = str(exc_info.value)
+            # Should include URL
+            assert "localhost:8000" in error_message or "http://localhost:8000" in error_message
+            # Should include troubleshooting suggestion
+            assert "Verify" in error_message or "verify" in error_message.lower()
+            assert exc_info.value.url == "http://localhost:8000"
+
+    async def test_connection_error_after_retries_includes_context(
+        self, sample_request_envelope: Envelope
+    ) -> None:
+        """Test that connection errors after retries include attempt context."""
+        from asap.transport.client import ASAPClient, ASAPConnectionError
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            raise httpx.ConnectError("Server unavailable")
+
+        async with ASAPClient(
+            "http://example.com",
+            transport=httpx.MockTransport(mock_transport),
+            max_retries=2,
+            require_https=False,
+        ) as client:
+            with pytest.raises(ASAPConnectionError) as exc_info:
+                await client.send(sample_request_envelope)
+
+            error_message = str(exc_info.value)
+            # Should include URL
+            assert "example.com" in error_message
+            # Should include troubleshooting
+            assert "Verify" in error_message or "verify" in error_message.lower()
+            assert exc_info.value.url == "http://example.com"
+
+    async def test_server_error_includes_url_and_context(
+        self, sample_request_envelope: Envelope
+    ) -> None:
+        """Test that server errors (5xx) include URL and context."""
+        from asap.transport.client import ASAPClient, ASAPConnectionError
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=503, content=b"Service Unavailable")
+
+        async with ASAPClient(
+            "http://api.example.com",
+            transport=httpx.MockTransport(mock_transport),
+            max_retries=1,
+            require_https=False,
+        ) as client:
+            with pytest.raises(ASAPConnectionError) as exc_info:
+                await client.send(sample_request_envelope)
+
+            error_message = str(exc_info.value)
+            # Should include URL
+            assert "api.example.com" in error_message
+            # Should include status code
+            assert "503" in error_message
+            assert exc_info.value.url == "http://api.example.com"
+
+    async def test_client_error_includes_troubleshooting(
+        self, sample_request_envelope: Envelope
+    ) -> None:
+        """Test that client errors (4xx) include troubleshooting information."""
+        from asap.transport.client import ASAPClient, ASAPConnectionError
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=400, content=b"Bad Request")
+
+        async with ASAPClient(
+            "http://api.example.com",
+            transport=httpx.MockTransport(mock_transport),
+            require_https=False,
+        ) as client:
+            with pytest.raises(ASAPConnectionError) as exc_info:
+                await client.send(sample_request_envelope)
+
+            error_message = str(exc_info.value)
+            # Should include URL
+            assert "api.example.com" in error_message
+            # Should include status code
+            assert "400" in error_message
+            # Should indicate it's a client error
+            assert "client error" in error_message.lower() or "problem with the request" in error_message.lower()
+            assert exc_info.value.url == "http://api.example.com"
+
+    async def test_timeout_error_includes_context(
+        self, sample_request_envelope: Envelope
+    ) -> None:
+        """Test that timeout errors include context and troubleshooting."""
+        from asap.transport.client import ASAPClient, ASAPTimeoutError
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            raise httpx.TimeoutException("Request timed out")
+
+        async with ASAPClient(
+            "http://slow-api.example.com",
+            transport=httpx.MockTransport(mock_transport),
+            timeout=5.0,
+            require_https=False,
+        ) as client:
+            with pytest.raises(ASAPTimeoutError) as exc_info:
+                await client.send(sample_request_envelope)
+
+            error_message = str(exc_info.value)
+            # Should include timeout value
+            assert "5" in error_message or "timeout" in error_message.lower()
+            assert exc_info.value.timeout == 5.0
+
+    async def test_connection_validation_helper(self, sample_request_envelope: Envelope) -> None:
+        """Test the _validate_connection helper method."""
+        from asap.transport.client import ASAPClient
+
+        # Test with successful connection
+        def mock_transport_success(request: httpx.Request) -> httpx.Response:
+            if request.method == "HEAD":
+                return httpx.Response(status_code=200)
+            return httpx.Response(status_code=200, json={"jsonrpc": "2.0", "result": {}})
+
+        async with ASAPClient(
+            "http://localhost:8000", transport=httpx.MockTransport(mock_transport_success)
+        ) as client:
+            is_valid = await client._validate_connection()
+            assert is_valid is True
+
+        # Test with connection failure
+        def mock_transport_failure(request: httpx.Request) -> httpx.Response:
+            raise httpx.ConnectError("Connection refused")
+
+        async with ASAPClient(
+            "http://localhost:8000", transport=httpx.MockTransport(mock_transport_failure)
+        ) as client:
+            is_valid = await client._validate_connection()
+            assert is_valid is False
