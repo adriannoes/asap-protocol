@@ -23,11 +23,9 @@ Example:
 import asyncio
 import itertools
 import random
-import threading
 import time
 from dataclasses import dataclass
 from email.utils import parsedate_to_datetime
-from enum import Enum
 from typing import Any, Optional
 from urllib.parse import ParseResult
 
@@ -43,6 +41,7 @@ from asap.models.constants import (
 from asap.models.envelope import Envelope
 from asap.models.ids import generate_id
 from asap.observability import get_logger
+from asap.transport.circuit_breaker import CircuitBreaker, CircuitState, get_registry
 from asap.transport.jsonrpc import ASAP_METHOD
 
 # Module logger
@@ -79,123 +78,6 @@ class RetryConfig:
     circuit_breaker_enabled: bool = False
     circuit_breaker_threshold: int = DEFAULT_CIRCUIT_BREAKER_THRESHOLD
     circuit_breaker_timeout: float = DEFAULT_CIRCUIT_BREAKER_TIMEOUT
-
-
-class CircuitState(str, Enum):
-    """Circuit breaker states.
-
-    CLOSED: Normal operation, requests are allowed
-    OPEN: Circuit is open, requests are rejected immediately
-    HALF_OPEN: Testing state, allows one request to test if service recovered
-    """
-
-    CLOSED = "closed"
-    OPEN = "open"
-    HALF_OPEN = "half_open"
-
-
-class CircuitBreaker:
-    """Circuit breaker pattern implementation for resilient request handling.
-
-    The circuit breaker prevents cascading failures by opening the circuit
-    after a threshold of consecutive failures, then attempting to recover
-    after a timeout period.
-
-    States:
-    - CLOSED: Normal operation, all requests allowed
-    - OPEN: Circuit is open, all requests rejected immediately
-    - HALF_OPEN: Testing state, allows one request to test recovery
-
-    This implementation is thread-safe using RLock for concurrent access.
-
-    Attributes:
-        threshold: Number of consecutive failures before opening circuit
-        timeout: Seconds to wait before transitioning from OPEN to HALF_OPEN
-        _state: Current circuit state
-        _consecutive_failures: Number of consecutive failures
-        _last_failure_time: Timestamp of last failure (for timeout calculation)
-        _lock: Thread lock for thread-safe state transitions
-    """
-
-    def __init__(
-        self,
-        threshold: int = DEFAULT_CIRCUIT_BREAKER_THRESHOLD,
-        timeout: float = DEFAULT_CIRCUIT_BREAKER_TIMEOUT,
-    ) -> None:
-        """Initialize circuit breaker.
-
-        Args:
-            threshold: Number of consecutive failures before opening (default: 5)
-            timeout: Seconds before transitioning OPEN -> HALF_OPEN (default: 60.0)
-        """
-        self.threshold = threshold
-        self.timeout = timeout
-        self._state = CircuitState.CLOSED
-        self._consecutive_failures = 0
-        self._last_failure_time: float | None = None
-        self._lock = threading.RLock()
-
-    def record_success(self) -> None:
-        """Record a successful request.
-
-        Resets failure count and closes circuit if it was HALF_OPEN.
-        """
-        with self._lock:
-            self._consecutive_failures = 0
-            if self._state == CircuitState.HALF_OPEN:
-                self._state = CircuitState.CLOSED
-                self._last_failure_time = None
-
-    def record_failure(self) -> None:
-        """Record a failed request.
-
-        Increments failure count and opens circuit if threshold is reached.
-        """
-        with self._lock:
-            self._consecutive_failures += 1
-            self._last_failure_time = time.time()
-
-            if self._consecutive_failures >= self.threshold and self._state == CircuitState.CLOSED:
-                self._state = CircuitState.OPEN
-
-    def can_attempt(self) -> bool:
-        """Check if a request can be attempted.
-
-        Returns:
-            True if request can be attempted, False if circuit is open
-        """
-        with self._lock:
-            # Check if we should transition from OPEN to HALF_OPEN
-            if self._state == CircuitState.OPEN:
-                if self._last_failure_time is not None:
-                    elapsed = time.time() - self._last_failure_time
-                    if elapsed >= self.timeout:
-                        # Transition to HALF_OPEN to test recovery
-                        self._state = CircuitState.HALF_OPEN
-                        return True
-                # Still in OPEN state, reject request
-                return False
-
-            # CLOSED or HALF_OPEN: allow request
-            return True
-
-    def get_state(self) -> CircuitState:
-        """Get current circuit state.
-
-        Returns:
-            Current circuit state
-        """
-        with self._lock:
-            return self._state
-
-    def get_consecutive_failures(self) -> int:
-        """Get number of consecutive failures.
-
-        Returns:
-            Number of consecutive failures
-        """
-        with self._lock:
-            return self._consecutive_failures
 
 
 class ASAPConnectionError(Exception):
@@ -314,7 +196,7 @@ class ASAPClient:
         self,
         base_url: str,
         timeout: float = DEFAULT_TIMEOUT,
-        transport: httpx.AsyncBaseTransport | httpx.BaseTransport | None = None,
+        transport: httpx.AsyncBaseTransport | None = None,
         require_https: bool = True,
         retry_config: Optional[RetryConfig] = None,
         # Individual retry parameters (for backward compatibility)
@@ -332,7 +214,8 @@ class ASAPClient:
         Args:
             base_url: Base URL of the remote agent (e.g., "http://localhost:8000")
             timeout: Request timeout in seconds (default: 60)
-            transport: Optional custom transport (for testing). Can be sync or async.
+            transport: Optional custom async transport (for testing). Must be an instance
+                of httpx.AsyncBaseTransport (e.g., httpx.MockTransport).
             require_https: If True, enforces HTTPS for non-localhost connections (default: True).
                 HTTP connections to localhost are allowed with a warning for development.
             retry_config: Optional RetryConfig dataclass to group retry and circuit breaker parameters.
@@ -448,8 +331,12 @@ class ASAPClient:
         self._request_counter = itertools.count(1)
 
         # Initialize circuit breaker if enabled
+        # Use registry to ensure state is shared across multiple client instances
+        # for the same base_url
         if circuit_breaker_enabled_val:
-            self._circuit_breaker = CircuitBreaker(
+            registry = get_registry()
+            self._circuit_breaker = registry.get_or_create(
+                base_url=self.base_url,
                 threshold=circuit_breaker_threshold_val,
                 timeout=circuit_breaker_timeout_val,
             )
@@ -591,10 +478,8 @@ class ASAPClient:
         """Enter async context and open connection."""
         # Create the async client
         if self._transport:
-            # MockTransport works for both sync and async, so we cast it
-            # This is safe because httpx.MockTransport is compatible with async usage
             self._client = httpx.AsyncClient(
-                transport=self._transport,  # type: ignore[arg-type]
+                transport=self._transport,
                 timeout=self.timeout,
             )
         else:
@@ -627,6 +512,7 @@ class ASAPClient:
             Response envelope from the remote agent
 
         Raises:
+            ValueError: If envelope is None
             ASAPConnectionError: If connection fails or HTTP error occurs
             ASAPTimeoutError: If request times out
             ASAPRemoteError: If remote agent returns JSON-RPC error
@@ -637,6 +523,9 @@ class ASAPClient:
             ...     response = await client.send(envelope)
             ...     response.payload_type
         """
+        if envelope is None:
+            raise ValueError("envelope cannot be None")
+
         if not self._client:
             raise ASAPConnectionError(
                 "Client not connected. Use 'async with' context.",

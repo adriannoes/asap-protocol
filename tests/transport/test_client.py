@@ -487,6 +487,19 @@ class TestASAPClientRetryEdgeCases:
         assert "not connected" in str(exc_info.value).lower()
         assert "async with" in str(exc_info.value)
 
+    async def test_send_raises_on_none_envelope(self) -> None:
+        """Test send() raises ValueError when envelope is None."""
+        from asap.transport.client import ASAPClient
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, json={"jsonrpc": "2.0", "result": {}})
+
+        async with ASAPClient(
+            "http://localhost:8000", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            with pytest.raises(ValueError, match="envelope cannot be None"):
+                await client.send(None)  # type: ignore[arg-type]
+
     async def test_send_raises_on_max_retries_exceeded(
         self, sample_request_envelope: Envelope
     ) -> None:
