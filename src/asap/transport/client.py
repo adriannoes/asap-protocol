@@ -883,22 +883,8 @@ class ASAPClient:
                 raise last_exception from e
 
             except (ASAPConnectionError, ASAPRemoteError, ASAPTimeoutError):
-                # Re-raise our custom errors (but record failure if not already recorded)
-                if self._circuit_breaker is not None and attempt == self.max_retries - 1:
-                    # Only record on final attempt to avoid double-counting
-                    previous_state = self._circuit_breaker.get_state()
-                    self._circuit_breaker.record_failure()
-                    current_state = self._circuit_breaker.get_state()
-                    consecutive_failures = self._circuit_breaker.get_consecutive_failures()
-                    # Log state change if circuit opened
-                    if previous_state != current_state and current_state == CircuitState.OPEN:
-                        logger.warning(
-                            "asap.client.circuit_opened",
-                            target_url=self.base_url,
-                            consecutive_failures=consecutive_failures,
-                            threshold=self._circuit_breaker.threshold,
-                            message=f"Circuit breaker opened after {consecutive_failures} consecutive failures",
-                        )
+                # Re-raise our custom errors without recording failure again
+                # (failures are already recorded before these exceptions are raised)
                 raise
 
             except Exception as e:
