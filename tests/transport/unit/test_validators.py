@@ -5,6 +5,7 @@ without HTTP dependencies or rate limiting.
 """
 
 from datetime import datetime, timezone, timedelta
+from unittest.mock import patch
 
 import pytest
 
@@ -210,11 +211,18 @@ class TestNonceValidation:
         # Mark with very short TTL (1 second)
         store.mark_used("expiring-nonce-789", ttl_seconds=1)
 
-        # Wait for expiration
-        time.sleep(1.1)
+        # Use time mocking to simulate expiration without actual sleep
+        current_time = time.time()
+        with patch("asap.transport.validators.time.time") as mock_time:
+            # First call: nonce still valid (just marked)
+            mock_time.return_value = current_time + 0.5
+            # Verify nonce is still marked as used
+            assert store.is_used("expiring-nonce-789")
 
-        # After expiration, should be allowed again
-        validate_envelope_nonce(envelope, store)
+            # Second call: nonce expired (past TTL)
+            mock_time.return_value = current_time + 1.1
+            # After expiration, should be allowed again
+            validate_envelope_nonce(envelope, store)
 
     def test_invalid_nonce_type_raises_error(self) -> None:
         """Test that non-string nonces raise error."""
@@ -231,4 +239,22 @@ class TestNonceValidation:
         with pytest.raises(InvalidNonceError) as exc_info:
             validate_envelope_nonce(envelope, store)
 
-        assert "must be a string" in exc_info.value.message.lower()
+        assert "must be a non-empty string" in exc_info.value.message.lower()
+
+    def test_empty_nonce_string_raises_error(self) -> None:
+        """Test that empty string nonces raise error."""
+        store = InMemoryNonceStore()
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:test",
+            recipient="urn:asap:agent:test",
+            payload_type="TaskRequest",
+            payload={},
+            extensions={"nonce": ""},  # Invalid: empty string
+        )
+
+        with pytest.raises(InvalidNonceError) as exc_info:
+            validate_envelope_nonce(envelope, store)
+
+        assert "must be a non-empty string" in exc_info.value.message.lower()
+        assert "empty string" in exc_info.value.message.lower()

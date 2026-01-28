@@ -95,7 +95,7 @@ class TestNonceValidationEdgeCases:
         with pytest.raises(InvalidNonceError) as exc_info:
             validate_envelope_nonce(envelope, store)
 
-        assert "must be a string" in str(exc_info.value).lower()
+        assert "must be a non-empty string" in str(exc_info.value).lower()
 
     def test_nonce_none_value_raises_error(self) -> None:
         """None nonce value should raise InvalidNonceError."""
@@ -112,4 +112,4 @@ class TestNonceValidationEdgeCases:
         with pytest.raises(InvalidNonceError) as exc_info:
             validate_envelope_nonce(envelope, store)
 
-        assert "must be a string" in str(exc_info.value).lower()
+        assert "must be a non-empty string" in str(exc_info.value).lower()
