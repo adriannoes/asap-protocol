@@ -4,6 +4,30 @@
 
 ---
 
+## Quick Reference
+
+### Validation Constants
+
+| Constant | Default Value | Description |
+|----------|---------------|-------------|
+| `MAX_ENVELOPE_AGE_SECONDS` | 300 (5 minutes) | Maximum age of envelope before rejection |
+| `MAX_FUTURE_TOLERANCE_SECONDS` | 30 seconds | Maximum future timestamp offset allowed |
+| `MAX_REQUEST_SIZE` | 10,485,760 bytes (10MB) | Maximum request body size |
+| Default Rate Limit | 100/minute | Default requests per minute per sender |
+| Nonce TTL | 600 seconds (10 minutes) | Time-to-live for nonce tracking (2x envelope age) |
+
+### Security Features
+
+| Feature | Status | Configuration |
+|---------|--------|---------------|
+| Timestamp Validation | Always Enabled | Automatic |
+| Nonce Validation | Optional | `require_nonce=True` in `create_app()` |
+| HTTPS Enforcement | Client-side (default) | `require_https=True` (default) |
+| Rate Limiting | Enabled (default) | `rate_limit` parameter or `ASAP_RATE_LIMIT` env var |
+| Request Size Limits | Enabled (default) | `max_request_size` parameter or `ASAP_MAX_REQUEST_SIZE` env var |
+
+---
+
 ## Overview
 
 The ASAP protocol is designed with security as a foundational concern. This guide covers:
