@@ -22,6 +22,7 @@ Example:
 
 import time
 from typing import Any
+from urllib.parse import ParseResult
 
 import httpx
 
@@ -205,7 +206,7 @@ class ASAPClient:
         self._request_counter = 0
 
     @staticmethod
-    def _is_localhost(parsed_url: Any) -> bool:
+    def _is_localhost(parsed_url: ParseResult) -> bool:
         """Check if URL points to localhost.
 
         Detects localhost, 127.0.0.1, and ::1 (IPv6 localhost).
@@ -221,7 +222,8 @@ class ASAPClient:
             return False
 
         hostname_lower = hostname.lower()
-        return hostname_lower in ("localhost", "127.0.0.1", "::1")
+        # Handle both ::1 and [::1] (bracket notation from URL parsing)
+        return hostname_lower in ("localhost", "127.0.0.1", "::1", "[::1]")
 
     @property
     def is_connected(self) -> bool:

@@ -221,19 +221,19 @@ class InvalidTimestampError(ASAPError):
             future_offset_seconds: Offset in seconds from current time (if too far in future)
             details: Optional additional context
         """
+        # Build details dict with optional fields
+        details_dict: dict[str, Any] = {"timestamp": timestamp}
+        if age_seconds is not None:
+            details_dict["age_seconds"] = age_seconds
+        if future_offset_seconds is not None:
+            details_dict["future_offset_seconds"] = future_offset_seconds
+        if details:
+            details_dict.update(details)
+
         super().__init__(
             code="asap:protocol/invalid_timestamp",
             message=message,
-            details={
-                "timestamp": timestamp,
-                **(age_seconds is not None and {"age_seconds": age_seconds} or {}),
-                **(
-                    future_offset_seconds is not None
-                    and {"future_offset_seconds": future_offset_seconds}
-                    or {}
-                ),
-                **(details or {}),
-            },
+            details=details_dict,
         )
         self.timestamp = timestamp
         self.age_seconds = age_seconds
