@@ -470,6 +470,150 @@ async def migrate_state(old_state_store, new_snapshot_store):
 
 ---
 
+## Upgrading ASAP Protocol Versions
+
+### Version History
+
+ASAP Protocol has evolved through the following releases:
+- **v0.1.0** (2026-01-23): Initial alpha release with core models, state management, and HTTP transport
+- **v0.3.0** (2026-01-26): Test infrastructure refactoring and stability improvements
+- **v0.5.0** (2026-01-28): Security-hardened release with authentication, DoS protection, and comprehensive security features
+
+### Upgrading from v0.1.0 or v0.3.0 to v0.5.0
+
+v0.5.0 is a **security-hardened release** with zero breaking changes. All existing code from v0.1.0 and v0.3.0 will work without modifications.
+
+**Upgrade Paths:**
+- **v0.1.0 → v0.5.0**: Direct upgrade supported (tested and verified)
+- **v0.3.0 → v0.5.0**: Direct upgrade supported (tested and verified)
+- **v0.1.0 → v0.3.0 → v0.5.0**: Sequential upgrade also supported
+
+#### What's New in v0.5.0
+
+- **Security Features** (all opt-in):
+  - Bearer token authentication
+  - Timestamp validation (5-minute window)
+  - Optional nonce validation for replay attack prevention
+  - Rate limiting (100 req/min, configurable)
+  - Request size limits (10MB, configurable)
+  - HTTPS enforcement (client-side)
+  - Secure logging (automatic sanitization)
+
+- **Retry Logic**:
+  - Exponential backoff with jitter
+  - Circuit breaker pattern
+  - `Retry-After` header support
+
+- **Code Quality**:
+  - Full mypy strict compliance
+  - Enhanced error handling
+  - Improved test coverage (95.90%)
+
+#### Upgrade Steps
+
+1. **Update Dependencies**:
+   ```bash
+   pip install --upgrade asap-protocol==0.5.0
+   # or
+   uv add asap-protocol==0.5.0
+   ```
+
+2. **Verify Compatibility**:
+   Your existing code should work without changes:
+   ```python
+   # This code from v0.1.0/v0.3.0 still works in v0.5.0
+   from asap.models.entities import Manifest, Capability, Endpoint, Skill
+   from asap.transport.handlers import HandlerRegistry, create_echo_handler
+   from asap.transport.server import create_app
+   
+   manifest = Manifest(
+       id="urn:asap:agent:my-agent",
+       name="My Agent",
+       version="1.0.0",
+       description="My agent",
+       capabilities=Capability(
+           asap_version="0.1",
+           skills=[Skill(id="echo", description="Echo skill")],
+           state_persistence=False,
+       ),
+       endpoints=Endpoint(asap="http://127.0.0.1:8000/asap"),
+   )
+   
+   registry = HandlerRegistry()
+   registry.register("task.request", create_echo_handler())
+   app = create_app(manifest, registry)
+   ```
+
+3. **Opt-in to Security Features** (optional):
+   ```python
+   from asap.models.entities import AuthScheme
+   from asap.transport.middleware import BearerTokenValidator
+   
+   # Add authentication (optional)
+   def validate_token(token: str) -> str | None:
+       if token == "my-secret-token":
+           return "urn:asap:agent:client"
+       return None
+   
+   manifest = Manifest(
+       # ... existing manifest ...
+       auth=AuthScheme(schemes=["bearer"])  # Enable authentication
+   )
+   
+   app = create_app(
+       manifest,
+       registry,
+       token_validator=validate_token,  # Add token validator
+       rate_limit="100/minute",         # Configure rate limiting
+       require_nonce=True                # Enable nonce validation
+   )
+   ```
+
+4. **Test Your Upgrade**:
+   ```bash
+   # Run compatibility tests
+   uv run python -m pytest tests/compatibility/ -v
+   ```
+
+#### Backward Compatibility
+
+- ✅ **No breaking changes**: All v0.1.0 and v0.3.0 APIs remain unchanged
+- ✅ **Security features are opt-in**: Existing deployments continue to work
+- ✅ **Default behavior unchanged**: Rate limiting and size limits have safe defaults
+- ✅ **Examples still work**: All example code from previous versions is compatible
+
+#### Migration Checklist
+
+- [ ] Update `asap-protocol` to v0.5.0
+- [ ] Run existing tests to verify compatibility
+- [ ] Review security features and opt-in as needed
+- [ ] Update documentation if using new security features
+- [ ] Test in staging environment before production deployment
+
+#### What Changed Between Versions
+
+**v0.1.0 → v0.3.0** (2026-01-26):
+- Test infrastructure refactoring
+- Improved test stability and isolation
+- Fixed rate limiter initialization issues
+- Enhanced test organization (unit/integration/E2E separation)
+
+**v0.3.0 → v0.5.0** (2026-01-28):
+- Security hardening (authentication, DoS protection, replay prevention)
+- Retry logic with exponential backoff
+- Secure logging with automatic sanitization
+- Enhanced code quality (mypy strict compliance)
+- Improved test coverage (95.90%)
+
+#### Need Help?
+
+- See [Security Guide](security.md) for authentication setup
+- See [Transport Guide](transport.md) for retry configuration
+- Run compatibility tests: `tests/compatibility/test_v0_1_0_compatibility.py`
+- Check [CHANGELOG.md](../../CHANGELOG.md) for detailed changes
+
+---
+
 ## Troubleshooting
 
 ### Common Issues

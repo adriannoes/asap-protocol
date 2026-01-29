@@ -365,7 +365,7 @@ This PRD covers the roadmap from **v0.1.0** (initial alpha) to **v1.0.0** (produ
 ### Backward Compatibility Strategy
 
 All v0.x releases **MUST** maintain backward compatibility:
-- Existing v0.1.0 clients can communicate with v0.5.0/v1.0.0 servers
+- Existing v0.1.0 and v0.3.0 clients can communicate with v0.5.0/v1.0.0 servers
 - Envelope schema remains stable (only additive changes)
 - New features use optional fields or separate payload types
 - Deprecation warnings for 2 minor versions before removal
@@ -575,7 +575,7 @@ warnings.warn(
 - [ ] Update CHANGELOG.md with all v0.5.0 changes
 - [ ] Review all documentation for accuracy
 - [ ] Run benchmark suite and verify no regressions
-- [ ] Test upgrade path from v0.1.0 → v0.5.0
+- [ ] Test upgrade paths from v0.1.0 → v0.5.0 and v0.3.0 → v0.5.0
 - [ ] Create release notes
 - [ ] Tag and publish v0.5.0 to PyPI
 
@@ -856,7 +856,7 @@ warnings.warn(
 - [ ] Run full security audit
 - [ ] Review all documentation
 - [ ] Test all examples
-- [ ] Test upgrade paths (v0.1.0 → v1.0.0, v0.5.0 → v1.0.0)
+- [ ] Test upgrade paths (v0.1.0 → v1.0.0, v0.3.0 → v1.0.0, v0.5.0 → v1.0.0)
 - [ ] Create comprehensive release notes
 - [ ] Update CHANGELOG.md
 - [ ] Review and merge open PRs

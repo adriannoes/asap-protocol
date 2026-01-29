@@ -23,3 +23,6 @@ You can run the agents separately if needed:
 
 - The echo agent exposes `/.well-known/asap/manifest.json` for readiness checks.
 - Update ports in `asap.examples.run_demo` if you change the defaults.
+- These examples use the basic ASAP API without authentication or advanced security features.
+  For production use, consider adding authentication via `manifest.auth` and enabling
+  additional security features (see `docs/security.md`).

@@ -658,6 +658,77 @@ class TestSizeLimitMiddleware:
             response = client.post("/test", content="body")
             assert response.status_code == 200
 
+    @pytest.mark.asyncio
+    async def test_size_limit_middleware_handles_valueerror_on_invalid_content_length(
+        self,
+    ) -> None:
+        """Test that SizeLimitMiddleware handles ValueError for invalid Content-Length."""
+        from fastapi import Request
+
+        app = FastAPI()
+
+        @app.post("/test")
+        async def test_endpoint() -> dict:
+            return {"status": "ok"}
+
+        middleware = SizeLimitMiddleware(app, max_size=1024)
+
+        # Create a mock request with invalid Content-Length header
+        mock_request = MagicMock(spec=Request)
+        mock_request.headers = {"content-length": "invalid-number"}
+        mock_request.method = "POST"
+
+        # Mock the call_next to return a response
+        async def mock_call_next(request: Request) -> JSONResponse:
+            return JSONResponse(content={"status": "ok"})
+
+        # Should not raise ValueError, should continue to handler
+        # The ValueError is caught and handled internally
+        response = await middleware.dispatch(mock_request, mock_call_next)
+        assert response.status_code == 200
+
+    def test_get_sender_from_envelope_handles_exceptions(self) -> None:
+        """Test that _get_sender_from_envelope handles exceptions gracefully."""
+        from fastapi import Request
+
+        # Test with request that has no body (AttributeError)
+        mock_request = MagicMock(spec=Request)
+        del mock_request.body  # Remove body attribute
+        mock_request.headers = {}
+
+        # Should fall back to IP address
+        sender = _get_sender_from_envelope(mock_request)
+        assert sender is not None  # Should return IP address
+
+        # Test with request that has invalid JSON (KeyError/TypeError)
+        mock_request2 = MagicMock(spec=Request)
+        mock_request2.body = MagicMock()
+        mock_request2.json = MagicMock(return_value={"not_envelope": {}})
+        mock_request2.headers = {}
+
+        sender2 = _get_sender_from_envelope(mock_request2)
+        assert sender2 is not None  # Should fall back to IP address
+
+    @pytest.mark.asyncio
+    async def test_authentication_middleware_raises_runtime_error_when_validator_is_none(
+        self, manifest_with_bearer_auth: Manifest
+    ) -> None:
+        """Test that verify_authentication raises RuntimeError when validator is None but auth is required."""
+        # Create middleware with a validator first (to pass __init__ validation)
+        validator = BearerTokenValidator(lambda t: "urn:asap:agent:test" if t == "valid" else None)
+        middleware = AuthenticationMiddleware(manifest_with_bearer_auth, validator=validator)
+
+        # Force validator to None to test defensive check (simulating edge case)
+        middleware.validator = None
+
+        mock_request = MagicMock(spec=Request)
+        mock_credentials = HTTPAuthorizationCredentials(scheme="bearer", credentials="test-token")
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await middleware.verify_authentication(mock_request, mock_credentials)
+
+        assert "Token validator is None" in str(exc_info.value)
+
 
 class TestLimiterCreation:
     """Tests for limiter factory functions."""

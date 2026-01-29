@@ -10,6 +10,7 @@ from unittest.mock import patch
 import pytest
 
 from asap.errors import InvalidNonceError, InvalidTimestampError
+from asap.models.constants import MAX_ENVELOPE_AGE_SECONDS, NONCE_TTL_SECONDS
 from asap.models.envelope import Envelope
 from asap.transport.validators import (
     InMemoryNonceStore,
@@ -258,3 +259,44 @@ class TestNonceValidation:
 
         assert "must be a non-empty string" in exc_info.value.message.lower()
         assert "empty string" in exc_info.value.message.lower()
+
+    def test_is_used_returns_false_for_nonexistent_nonce(self) -> None:
+        """Test that is_used returns False when nonce is not in store."""
+        store = InMemoryNonceStore()
+        # Check nonce that was never added
+        assert store.is_used("nonexistent-nonce") is False
+
+    def test_nonce_ttl_uses_configured_constant(self) -> None:
+        """Test that nonce TTL uses the configured constant (2x envelope age).
+
+        This test verifies that the nonce TTL is derived from MAX_ENVELOPE_AGE_SECONDS
+        as specified in NONCE_TTL_SECONDS. The 2x multiplier provides a safety margin
+        to ensure nonces remain valid for the full envelope validation window while
+        preventing unbounded growth of the nonce store.
+        """
+        import time
+
+        store = InMemoryNonceStore()
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:test",
+            recipient="urn:asap:agent:test",
+            payload_type="TaskRequest",
+            payload={},
+            extensions={"nonce": "ttl-test-nonce"},
+        )
+
+        # Verify TTL constant is 2x envelope age
+        assert NONCE_TTL_SECONDS == MAX_ENVELOPE_AGE_SECONDS * 2
+
+        # Validate nonce (this should mark it with the configured TTL)
+        validate_envelope_nonce(envelope, store)
+
+        # Verify nonce is stored with correct TTL by checking expiration time
+        current_time = time.time()
+        with store._lock:
+            assert "ttl-test-nonce" in store._store
+            expiry_time = store._store["ttl-test-nonce"]
+            # TTL should be approximately NONCE_TTL_SECONDS (allow small timing variance)
+            actual_ttl = expiry_time - current_time
+            assert abs(actual_ttl - NONCE_TTL_SECONDS) < 1.0  # Within 1 second tolerance

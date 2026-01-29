@@ -56,6 +56,7 @@ from asap.models.constants import MAX_REQUEST_SIZE
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.envelope import Envelope
 from asap.observability import get_logger, get_metrics
+from asap.utils.sanitization import sanitize_nonce
 from asap.transport.middleware import (
     AuthenticationMiddleware,
     BearerTokenValidator,
@@ -817,7 +818,9 @@ class ASAPRequestHandler:
             if parse_error is not None:
                 return parse_error
             # Type narrowing: rpc_request is not None here
-            assert rpc_request is not None
+            # Use explicit check instead of assert to avoid removal in optimized builds
+            if rpc_request is None:
+                raise RuntimeError("Internal error: rpc_request is None after validation")
 
             # Create request context
             ctx = RequestContext(
@@ -882,12 +885,12 @@ class ASAPRequestHandler:
             try:
                 validate_envelope_nonce(envelope, self.nonce_store)
             except InvalidNonceError as e:
-                # Truncate nonce in logs to prevent full value exposure
-                nonce_prefix = e.nonce[:8] + "..." if len(e.nonce) > 8 else e.nonce
+                # Sanitize nonce in logs to prevent full value exposure
+                nonce_sanitized = sanitize_nonce(e.nonce)
                 logger.warning(
                     "asap.request.invalid_nonce",
                     envelope_id=envelope.id,
-                    nonce=nonce_prefix,
+                    nonce=nonce_sanitized,
                     error=e.message,
                 )
                 duration_seconds = time.perf_counter() - ctx.start_time

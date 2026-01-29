@@ -32,7 +32,6 @@ Example:
     >>> middleware = AuthenticationMiddleware(manifest, validator)
 """
 
-import hashlib
 import uuid
 from typing import Any, Awaitable, Callable, Protocol
 from collections.abc import Sequence
@@ -47,6 +46,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from asap.models.entities import Manifest
 from asap.observability import get_logger
+from asap.utils.sanitization import sanitize_token
 
 logger = get_logger(__name__)
 
@@ -259,7 +259,8 @@ HTTP_TOO_MANY_REQUESTS = 429
 
 # Error messages
 ERROR_AUTH_REQUIRED = "Authentication required"
-ERROR_INVALID_TOKEN = "Invalid authentication token"
+# nosec B105: This is an error message constant, not a hardcoded password
+ERROR_INVALID_TOKEN = "Invalid authentication token"  # nosec B105
 ERROR_SENDER_MISMATCH = "Sender does not match authenticated identity"
 ERROR_RATE_LIMIT_EXCEEDED = "Rate limit exceeded"
 
@@ -498,12 +499,12 @@ class AuthenticationMiddleware:
         agent_id = self.validator(token)
 
         if agent_id is None:
-            # Log token hash instead of prefix to avoid exposing token data
-            token_hash = hashlib.sha256(token.encode()).hexdigest()[:16]
+            # Log sanitized token to avoid exposing full token data
+            token_prefix = sanitize_token(token)
             logger.warning(
                 "asap.auth.invalid_token",
                 manifest_id=self.manifest.id,
-                token_hash=token_hash,
+                token_prefix=token_prefix,
             )
             raise HTTPException(
                 status_code=HTTP_UNAUTHORIZED,

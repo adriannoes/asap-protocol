@@ -28,6 +28,20 @@ to prevent attacks using artificially future-dated messages. This tolerance
 accounts for reasonable clock synchronization differences between systems.
 """
 
+NONCE_TTL_SECONDS = MAX_ENVELOPE_AGE_SECONDS * 2  # 10 minutes by default
+"""Time-to-live for nonce values in seconds.
+
+Nonces are stored with a TTL of 2x the maximum envelope age to ensure they
+expire after the envelope would have been rejected anyway. This provides a
+safety margin for edge cases where an envelope might be processed near the
+age limit, while preventing the nonce store from growing unbounded.
+
+The 2x multiplier ensures that:
+- Nonces remain valid for the full envelope validation window
+- Nonces expire shortly after envelopes would be rejected, preventing unbounded growth
+- There's a buffer for clock skew and processing delays
+"""
+
 # URN patterns
 AGENT_URN_PATTERN = r"^urn:asap:agent:[a-z0-9-]+(?::[a-z0-9-]+)?$"
 

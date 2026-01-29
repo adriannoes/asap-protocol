@@ -116,6 +116,91 @@ First alpha release of the ASAP Protocol Python implementation.
 - **Test Execution**: Process isolation via `pytest-xdist` for complete state separation
 - **Test Coverage**: Maintained comprehensive coverage across all modules
 
+## [0.5.0] - 2026-01-28
+
+Security-hardened release with comprehensive authentication, DoS protection, replay attack prevention, and secure logging.
+
+**Version History**: This release builds upon v0.1.0 (initial alpha) and v0.3.0 (test infrastructure improvements). All features from previous versions are preserved with zero breaking changes.
+
+### Added
+
+#### Security Features (Sprint S1-S4)
+- **Authentication**: Bearer token authentication with configurable token validators
+  - `AuthenticationMiddleware` for request authentication
+  - `BearerTokenValidator` for token validation
+  - Sender verification to ensure authenticated requests match envelope sender
+  - Support for multiple authentication schemes via `AuthScheme` model
+- **Replay Attack Prevention**:
+  - Timestamp validation with 5-minute window (`MAX_ENVELOPE_AGE_SECONDS`)
+  - Optional nonce validation for replay attack prevention (`require_nonce=True`)
+  - `InMemoryNonceStore` for nonce tracking with configurable TTL (10 minutes)
+  - Empty nonce string validation with clear error messages
+- **DoS Protection**:
+  - Rate limiting (100 requests/minute per sender, configurable)
+  - Request size limits (10MB default, configurable via `max_request_size`)
+  - Thread pool bounds via `BoundedExecutor` to prevent resource exhaustion
+  - Circuit breaker pattern for client-side failure handling
+- **HTTPS Enforcement**: Client-side HTTPS validation in production mode (`require_https=True`)
+- **Secure Logging**: Automatic sanitization of sensitive data in logs
+  - `sanitize_token()`: Masks full tokens, shows only prefix
+  - `sanitize_nonce()`: Truncates nonces in error logs
+  - `sanitize_url()`: Masks credentials in connection URLs
+- **Input Validation**: Enhanced validation with strict schema enforcement
+
+#### Retry Logic (Sprint S4)
+- Exponential backoff with jitter for automatic retry on transient failures
+- Configurable retry parameters (`max_retries`, `base_delay`, `max_delay`, `jitter`)
+- `Retry-After` header support for rate-limited responses
+- Circuit breaker integration for production deployments
+
+#### Code Quality Improvements
+- Removed all `type: ignore` suppressions, achieved full mypy strict compliance (Issue #10)
+- Refactored `handle_message` into smaller, testable helper functions (Issue #9)
+- Enhanced type safety with explicit `None` checks and proper error handling
+
+#### Testing & Coverage
+- Comprehensive test coverage: 753 tests with 95.90% coverage
+- Compatibility tests for v0.1.0 and v0.3.0 upgrade paths
+- Security-focused test suites for authentication, rate limiting, and validation
+- Automated upgrade test scripts for version compatibility verification
+
+#### Documentation
+- Updated `docs/security.md` with comprehensive security guidance
+- Enhanced `docs/transport.md` with retry configuration and circuit breaker documentation
+- Added security features to README "Why ASAP?" section
+- Created compatibility test documentation
+
+### Changed
+
+- **FastAPI Upgrade**: Upgraded from 0.124 to 0.128.0+ (Issue #7)
+- **Dependency Monitoring**: Configured Dependabot for automated security updates
+- **Nonce TTL**: Made configurable, derived from `MAX_ENVELOPE_AGE_SECONDS` constant (2x envelope age)
+- **Rate Limiting**: Enabled by default (100/minute) with per-sender tracking
+- **Request Size Limits**: Enabled by default (10MB) with configurable limits
+
+### Security
+
+- **Zero Breaking Changes**: All security features are opt-in for backward compatibility
+- **Security Audit**: Passed `pip-audit` (no known vulnerabilities) and `bandit` (all issues addressed)
+- **Log Sanitization**: Prevents sensitive data leakage in logs (Issue #12)
+- **Test Coverage**: Achieved ≥95% coverage on security-critical modules (Issue #11)
+
+### Fixed
+
+- Fixed empty nonce string validation (now rejects with clear error message)
+- Enhanced error handling for invalid Content-Length headers
+- Improved exception handling in authentication middleware
+- Fixed circuit breaker persistence across client instances (Red Team remediation)
+
+### Technical Details
+
+- **Python**: Requires Python 3.13+
+- **Dependencies**: Pydantic 2.12.5+, FastAPI 0.128.0+, httpx 0.28.1+, structlog 24.1+
+- **Type Safety**: Full mypy strict mode compliance
+- **Test Coverage**: 753 tests with 95.90% overall coverage
+- **Linting**: Ruff for linting and formatting, all checks passing
+- **Issues Closed**: #7, #9, #10, #11, #12, #13
+
 ## [Unreleased]
 
 ### Added

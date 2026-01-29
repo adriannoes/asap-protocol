@@ -211,7 +211,7 @@
   - Details: [Testing Detailed - Task 8.1](./tasks-v1.0.0-testing-detailed.md#task-81-chaos-engineering)
 
 - [ ] 8.2 Implement contract tests
-  - Goal: Guarantee backward compatibility (v0.1.0, v0.5.0 → v1.0.0)
+  - Goal: Guarantee backward compatibility (v0.1.0, v0.3.0, v0.5.0 → v1.0.0)
   - Details: [Testing Detailed - Task 8.2](./tasks-v1.0.0-testing-detailed.md#task-82-contract-testing)
 
 ### Definition of Done
