@@ -43,6 +43,7 @@ from asap.models.ids import generate_id
 from asap.observability import get_logger
 from asap.transport.circuit_breaker import CircuitBreaker, CircuitState, get_registry
 from asap.transport.jsonrpc import ASAP_METHOD
+from asap.utils.sanitization import sanitize_url
 
 # Module logger
 logger = get_logger(__name__)
@@ -336,7 +337,7 @@ class ASAPClient:
         if circuit_breaker_enabled_val:
             registry = get_registry()
             self._circuit_breaker = registry.get_or_create(
-                base_url=self.base_url,
+                base_url=sanitize_url(self.base_url),
                 threshold=circuit_breaker_threshold_val,
                 timeout=circuit_breaker_timeout_val,
             )
@@ -384,8 +385,10 @@ class ASAPClient:
         delay = min(delay, self.max_delay)
 
         # Add jitter if enabled (random value between 0 and 10% of delay)
+        # Note: random.uniform is appropriate here - jitter for retry backoff
+        # does not require cryptographic security, only statistical distribution
         if self.jitter:
-            jitter_amount: float = random.uniform(0, delay * 0.1)
+            jitter_amount: float = random.uniform(0, delay * 0.1)  # nosec B311
             delay += jitter_amount
 
         return float(delay)
@@ -409,7 +412,7 @@ class ASAPClient:
         if not self._client:
             raise ASAPConnectionError(
                 "Client not connected. Use 'async with' context.",
-                url=self.base_url,
+                url=sanitize_url(self.base_url),
             )
 
         try:
@@ -424,7 +427,7 @@ class ASAPClient:
             if not is_valid:
                 logger.warning(
                     "asap.client.connection_validation_failed",
-                    target_url=self.base_url,
+                    target_url=sanitize_url(self.base_url),
                     status_code=response.status_code,
                     message=(
                         f"Connection validation failed for {self.base_url}. "
@@ -436,7 +439,7 @@ class ASAPClient:
         except httpx.ConnectError as e:
             logger.warning(
                 "asap.client.connection_validation_failed",
-                target_url=self.base_url,
+                target_url=sanitize_url(self.base_url),
                 error=str(e),
                 message=(
                     f"Connection validation failed for {self.base_url}. "
@@ -448,7 +451,7 @@ class ASAPClient:
         except httpx.TimeoutException:
             logger.warning(
                 "asap.client.connection_validation_timeout",
-                target_url=self.base_url,
+                target_url=sanitize_url(self.base_url),
                 timeout=self.timeout,
                 message=(
                     f"Connection validation timed out for {self.base_url}. "
@@ -459,7 +462,7 @@ class ASAPClient:
         except Exception as e:
             logger.warning(
                 "asap.client.connection_validation_error",
-                target_url=self.base_url,
+                target_url=sanitize_url(self.base_url),
                 error=str(e),
                 error_type=type(e).__name__,
                 message=(
@@ -529,14 +532,14 @@ class ASAPClient:
         if not self._client:
             raise ASAPConnectionError(
                 "Client not connected. Use 'async with' context.",
-                url=self.base_url,
+                url=sanitize_url(self.base_url),
             )
 
         # Check circuit breaker state before attempting request
         if self._circuit_breaker is not None and not self._circuit_breaker.can_attempt():
             consecutive_failures = self._circuit_breaker.get_consecutive_failures()
             raise CircuitOpenError(
-                base_url=self.base_url,
+                base_url=sanitize_url(self.base_url),
                 consecutive_failures=consecutive_failures,
             )
 
@@ -548,17 +551,18 @@ class ASAPClient:
         # Get next request counter value (thread-safe)
         request_id = f"req-{next(self._request_counter)}"
 
-        # Log send attempt with context
+        # Log send attempt with context (sanitize URL to hide credentials)
+        sanitized_url = sanitize_url(self.base_url)
         logger.info(
             "asap.client.send",
-            target_url=self.base_url,
+            target_url=sanitized_url,
             envelope_id=envelope.id,
             trace_id=envelope.trace_id,
             payload_type=envelope.payload_type,
             idempotency_key=idempotency_key,
             max_retries=self.max_retries,
             message=(
-                f"Sending envelope {envelope.id} to {self.base_url} "
+                f"Sending envelope {envelope.id} to {sanitized_url} "
                 f"(payload: {envelope.payload_type}, max_retries: {self.max_retries})"
             ),
         )
@@ -602,12 +606,12 @@ class ASAPClient:
                             attempt=attempt + 1,
                             max_retries=self.max_retries,
                             delay_seconds=round(delay, 2),
-                            target_url=self.base_url,
+                            target_url=sanitize_url(self.base_url),
                             message=f"Server error {response.status_code}, retrying in {delay:.2f}s (attempt {attempt + 1}/{self.max_retries})",
                         )
                         logger.info(
                             "asap.client.retry",
-                            target_url=self.base_url,
+                            target_url=sanitize_url(self.base_url),
                             envelope_id=envelope.id,
                             attempt=attempt + 1,
                             max_retries=self.max_retries,
@@ -626,7 +630,7 @@ class ASAPClient:
                         if previous_state != current_state and current_state == CircuitState.OPEN:
                             logger.warning(
                                 "asap.client.circuit_opened",
-                                target_url=self.base_url,
+                                target_url=sanitize_url(self.base_url),
                                 consecutive_failures=consecutive_failures,
                                 threshold=self._circuit_breaker.threshold,
                                 message=f"Circuit breaker opened after {consecutive_failures} consecutive failures",
@@ -646,7 +650,7 @@ class ASAPClient:
                                     retry_delay = float(retry_after)
                                     logger.info(
                                         "asap.client.retry_after",
-                                        target_url=self.base_url,
+                                        target_url=sanitize_url(self.base_url),
                                         envelope_id=envelope.id,
                                         attempt=attempt + 1,
                                         retry_after_seconds=retry_delay,
@@ -670,7 +674,7 @@ class ASAPClient:
                                             retry_delay = calculated_delay
                                             logger.info(
                                                 "asap.client.retry_after",
-                                                target_url=self.base_url,
+                                                target_url=sanitize_url(self.base_url),
                                                 envelope_id=envelope.id,
                                                 attempt=attempt + 1,
                                                 retry_after_seconds=round(retry_delay, 2),
@@ -686,7 +690,7 @@ class ASAPClient:
                                 retry_delay = self._calculate_backoff(attempt)
                                 logger.warning(
                                     "asap.client.retry_after_invalid",
-                                    target_url=self.base_url,
+                                    target_url=sanitize_url(self.base_url),
                                     envelope_id=envelope.id,
                                     retry_after_header=retry_after,
                                     fallback_delay=round(retry_delay, 2),
@@ -705,7 +709,7 @@ class ASAPClient:
                         )
                         logger.info(
                             "asap.client.retry",
-                            target_url=self.base_url,
+                            target_url=sanitize_url(self.base_url),
                             envelope_id=envelope.id,
                             attempt=attempt + 1,
                             max_retries=self.max_retries,
@@ -715,7 +719,7 @@ class ASAPClient:
                         last_exception = ASAPConnectionError(
                             f"HTTP rate limit error 429 from {self.base_url}. "
                             f"Server response: {response.text[:200]}",
-                            url=self.base_url,
+                            url=sanitize_url(self.base_url),
                         )
                         continue
                     # All retries exhausted, record failure in circuit breaker
@@ -728,7 +732,7 @@ class ASAPClient:
                         if previous_state != current_state and current_state == CircuitState.OPEN:
                             logger.warning(
                                 "asap.client.circuit_opened",
-                                target_url=self.base_url,
+                                target_url=sanitize_url(self.base_url),
                                 consecutive_failures=consecutive_failures,
                                 threshold=self._circuit_breaker.threshold,
                                 message=f"Circuit breaker opened after {consecutive_failures} consecutive failures (rate limited)",
@@ -736,7 +740,7 @@ class ASAPClient:
                     raise ASAPConnectionError(
                         f"HTTP rate limit error 429 from {self.base_url} after {self.max_retries} attempts. "
                         f"Server response: {response.text[:200]}",
-                        url=self.base_url,
+                        url=sanitize_url(self.base_url),
                     )
                 if response.status_code >= 400:
                     # Client errors (4xx) are not retriable (except 429 handled above)
@@ -749,7 +753,7 @@ class ASAPClient:
                         f"HTTP client error {response.status_code} from {self.base_url}. "
                         f"This indicates a problem with the request. "
                         f"Server response: {response.text[:200]}",
-                        url=self.base_url,
+                        url=sanitize_url(self.base_url),
                     )
 
                 # Parse JSON response
@@ -789,7 +793,7 @@ class ASAPClient:
                     if previous_state != current_state and current_state == CircuitState.CLOSED:
                         logger.info(
                             "asap.client.circuit_closed",
-                            target_url=self.base_url,
+                            target_url=sanitize_url(self.base_url),
                             message="Circuit breaker closed after successful request",
                         )
 
@@ -797,7 +801,7 @@ class ASAPClient:
                 duration_ms = (time.perf_counter() - start_time) * 1000
                 logger.info(
                     "asap.client.response",
-                    target_url=self.base_url,
+                    target_url=sanitize_url(self.base_url),
                     envelope_id=envelope.id,
                     response_id=response_envelope.id,
                     trace_id=envelope.trace_id,
@@ -826,7 +830,7 @@ class ASAPClient:
                     delay = self._calculate_backoff(attempt)
                     logger.warning(
                         "asap.client.retry",
-                        target_url=self.base_url,
+                        target_url=sanitize_url(self.base_url),
                         envelope_id=envelope.id,
                         attempt=attempt + 1,
                         max_retries=self.max_retries,
@@ -851,7 +855,7 @@ class ASAPClient:
                     if previous_state != current_state and current_state == CircuitState.OPEN:
                         logger.warning(
                             "asap.client.circuit_opened",
-                            target_url=self.base_url,
+                            target_url=sanitize_url(self.base_url),
                             consecutive_failures=consecutive_failures,
                             threshold=self._circuit_breaker.threshold,
                             message=f"Circuit breaker opened after {consecutive_failures} consecutive failures",
@@ -862,7 +866,7 @@ class ASAPClient:
                 error_type_name = "ASAPTimeoutError" if is_timeout else "ASAPConnectionError"
                 logger.error(
                     "asap.client.error",
-                    target_url=self.base_url,
+                    target_url=sanitize_url(self.base_url),
                     envelope_id=envelope.id,
                     error=f"{error_type} after retries",
                     error_type=error_type_name,
@@ -895,7 +899,7 @@ class ASAPClient:
                     if previous_state != current_state and current_state == CircuitState.OPEN:
                         logger.warning(
                             "asap.client.circuit_opened",
-                            target_url=self.base_url,
+                            target_url=sanitize_url(self.base_url),
                             consecutive_failures=consecutive_failures,
                             threshold=self._circuit_breaker.threshold,
                             message=f"Circuit breaker opened after {consecutive_failures} consecutive failures",
@@ -904,7 +908,7 @@ class ASAPClient:
                 duration_ms = (time.perf_counter() - start_time) * 1000
                 logger.exception(
                     "asap.client.error",
-                    target_url=self.base_url,
+                    target_url=sanitize_url(self.base_url),
                     envelope_id=envelope.id,
                     error=str(e),
                     error_type=type(e).__name__,
@@ -915,7 +919,7 @@ class ASAPClient:
                     f"Unexpected error connecting to {self.base_url}: {e}. "
                     f"Verify the agent is running and accessible.",
                     cause=e,
-                    url=self.base_url,
+                    url=sanitize_url(self.base_url),
                 ) from e
 
         # Defensive code: This should never be reached because the loop above
@@ -926,5 +930,5 @@ class ASAPClient:
         raise ASAPConnectionError(
             f"Max retries ({self.max_retries}) exceeded for {self.base_url}. "
             f"Verify the agent is running and accessible.",
-            url=self.base_url,
+            url=sanitize_url(self.base_url),
         )  # pragma: no cover
