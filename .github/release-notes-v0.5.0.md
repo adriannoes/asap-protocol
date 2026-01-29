@@ -56,6 +56,7 @@ All features are **opt-in**; no breaking changes for existing users.
 
 ## Full Changelog
 
-See [CHANGELOG.md](../CHANGELOG.md) for the complete list of changes, fixes, and technical details.
+- [CHANGELOG.md](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md) — full list of changes, fixes, and technical details.
+- **Compare**: [v0.1.0...v0.5.0](https://github.com/adriannoes/asap-protocol/compare/v0.1.0...v0.5.0)
 
 **Issues closed**: #7, #9, #10, #11, #12, #13
