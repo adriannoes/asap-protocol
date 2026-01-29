@@ -56,7 +56,18 @@
   - Test: Non-sensitive preserved
   - Test: Debug mode shows all
 
-- [ ] 1.1.6 Commit
+- [ ] 1.1.6 Add integration tests for sanitization in production-like scenarios
+  - **Context**: v0.5.0 implemented basic sanitization (sanitize_token, sanitize_nonce, sanitize_url) with comprehensive unit tests (19 tests, 100% coverage). This task adds E2E validation in realistic scenarios.
+  - File: `tests/observability/test_logging_integration.py` (NEW)
+  - Test: Auth failure logs show `Bearer sk_live_...` not full token
+  - Test: Nonce replay logs show `01HXA...` not full nonce
+  - Test: Client connection failure logs show `https://user:***@...` not password
+  - Test: Debug mode logs full data, production mode sanitizes
+  - Setup: Real server with structlog, capture logs, assert on log strings
+  - Rationale: Validates sanitization works in full request/response cycle, catches edge cases missed by unit tests
+  - **Note**: v0.5.0 unit tests sufficient for release; integration tests justify effort when observability is complete
+
+- [ ] 1.1.7 Commit
   - Command: `git commit -m "feat(observability): add log sanitization for sensitive data"`
   - Close issue #12
 

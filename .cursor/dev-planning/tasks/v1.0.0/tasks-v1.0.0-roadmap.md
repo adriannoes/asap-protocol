@@ -26,7 +26,8 @@
 
 - [ ] 1.1 Implement log sanitization
   - Issue: [#12](https://github.com/adriannoes/asap-protocol/issues/12)
-  - Goal: Redact tokens/secrets from logs, add debug mode
+  - Goal: Redact tokens/secrets from logs, add debug mode, integration tests for production scenarios
+  - Note: v0.5.0 delivered basic sanitization (unit tests); v1.0.0 adds debug mode + E2E validation
   - Details: [Security Detailed - Task 1.1](./tasks-v1.0.0-security-detailed.md#task-11-implement-log-sanitization)
 
 - [ ] 1.2 Add handler security documentation
@@ -39,7 +40,8 @@
 
 ### Definition of Done
 - [ ] Tokens/secrets redacted from logs
-- [ ] Debug mode working
+- [ ] Debug mode working (ASAP_DEBUG env var)
+- [ ] Integration tests validate sanitization in E2E scenarios (auth fail, nonce replay, connection errors)
 - [ ] Path traversal detection working
 - [ ] Test coverage >95%
 - [ ] Issue #12 closed
