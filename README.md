@@ -1,12 +1,13 @@
 # ASAP: Async Simple Agent Protocol
 
-![ASAP Protocol Banner](https://raw.githubusercontent.com/adriannoes/asap-protocol/main/.cursor/docs/asap-protocol-banner.png)
+![ASAP Protocol Banner](https://raw.githubusercontent.com/adriannoes/asap-protocol/main/.github/assets/asap-protocol-banner.png)
+
 
 > A streamlined, scalable, asynchronous protocol for agent-to-agent communication and task coordination. Built as a simpler, more powerful alternative to A2A with native MCP integration and stateful orchestration.
 
-**Quick Info**: `v0.5.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/0.5.0/) | [Changelog](CHANGELOG.md)
+**Quick Info**: `v0.5.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://asap-protocol.org) | [PyPI](https://pypi.org/project/asap-protocol/0.5.0/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
 
-⚠️ **Alpha Release**: ASAP Protocol is currently in **alpha** (v0.5.0). We're actively developing and improving the protocol based on real-world usage. Your feedback, contributions, and suggestions are essential to help us evolve and make ASAP better for the entire community. See our [Contributing](#contributing) section to get involved!
+⚠️ **Alpha Release**: ASAP Protocol is currently in **alpha** (v0.5.0). We're actively developing and improving the protocol based on real-world usage. Your feedback, contributions, and suggestions are essential to help us evolve and make ASAP better for the entire community. See our [Contributing](https://github.com/adriannoes/asap-protocol#contributing) section to get involved!
 
 ## Why ASAP?
 
@@ -48,7 +49,7 @@ For reproducible environments, prefer `uv` when possible.
 
 - **Python**: 3.13 or higher
 - **Dependencies**: Automatically installed via `uv` or `pip`
-- **Optional**: For development, see [Contributing](CONTRIBUTING.md).
+- **Optional**: For development, see [Contributing](https://github.com/adriannoes/asap-protocol/blob/main/CONTRIBUTING.md).
 
 ## Quick Start
 
@@ -129,10 +130,10 @@ Transport:
 
 ## Documentation
 
-- [Spec](.cursor/docs/general-specs.md)
-- [Docs](docs/index.md)
-- [API Reference](docs/api-reference.md)
-- [Changelog](CHANGELOG.md)
+- [Spec](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/docs/general-specs.md)
+- [Docs](https://asap-protocol.org)
+- [API Reference](https://asap-protocol.org)
+- [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
 - [PyPI Package](https://pypi.org/project/asap-protocol/0.5.0/)
 
 ## When to Use ASAP?
@@ -149,12 +150,12 @@ If you're building simple point-to-point agent communication, a basic HTTP API m
 
 Explore these guides for detailed information on specific features:
 
-- **[State Management](docs/state-management.md)**: Task lifecycle, state machine, and snapshot persistence for resumable workflows.
-- **[Error Handling](docs/error-handling.md)**: Structured error taxonomy and recovery patterns for robust agent communication.
-- **[Transport Layer](docs/transport.md)**: HTTP/JSON-RPC binding details, async handlers, and server configuration.
-- **[Security](docs/security.md)**: Production security practices, rate limiting, DoS protection, and authentication.
-- **[Observability](docs/observability.md)**: Tracing, metrics, and logging for debugging multi-agent systems.
-- **[Testing](docs/testing.md)**: Testing strategies and utilities for ASAP-based agents.
+- **[State Management](https://github.com/adriannoes/asap-protocol/blob/main/docs/state-management.md)**: Task lifecycle, state machine, and snapshot persistence for resumable workflows.
+- **[Error Handling](https://github.com/adriannoes/asap-protocol/blob/main/docs/error-handling.md)**: Structured error taxonomy and recovery patterns for robust agent communication.
+- **[Transport Layer](https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md)**: HTTP/JSON-RPC binding details, async handlers, and server configuration.
+- **[Security](https://github.com/adriannoes/asap-protocol/blob/main/docs/security.md)**: Production security practices, rate limiting, DoS protection, and authentication.
+- **[Observability](https://github.com/adriannoes/asap-protocol/blob/main/docs/observability.md)**: Tracing, metrics, and logging for debugging multi-agent systems.
+- **[Testing](https://github.com/adriannoes/asap-protocol/blob/main/docs/testing.md)**: Testing strategies and utilities for ASAP-based agents.
 
 ### Examples & Demos
 
@@ -164,11 +165,11 @@ Run the built-in multi-agent demo to see ASAP in action:
 uv run python -m asap.examples.run_demo
 ```
 
-See [`src/asap/examples/`](src/asap/examples/) for complete example implementations.
+See [`src/asap/examples/`](https://github.com/adriannoes/asap-protocol/tree/main/src/asap/examples) for complete example implementations.
 
 ### CLI Tools
 
-The ASAP CLI provides utilities for schema management. See [CLI documentation](docs/index.md#cli) or run `asap --help` for available commands.
+The ASAP CLI provides utilities for schema management. See [CLI documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#cli) or run `asap --help` for available commands.
 
 ## Contributing
 
@@ -176,8 +177,8 @@ We love contributions! Whether it's fixing a bug, improving documentation or pro
 
 **As an alpha release, community feedback and contributions are essential** for ASAP Protocol's evolution. We're actively working on improvements and your input helps shape the future of the protocol. Every contribution, from bug reports to feature suggestions, documentation improvements and code contributions, makes a real difference.
 
-Check out our [Contributing Guidelines](CONTRIBUTING.md) to get started. It's easier than you think! 🚀
+Check out our [Contributing Guidelines](https://github.com/adriannoes/asap-protocol/blob/main/CONTRIBUTING.md) to get started. It's easier than you think! 🚀
 
 ## License
 
-This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache 2.0 License - see the [LICENSE](https://github.com/adriannoes/asap-protocol/blob/main/LICENSE) file for details.
