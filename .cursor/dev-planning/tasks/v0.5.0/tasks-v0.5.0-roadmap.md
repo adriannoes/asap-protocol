@@ -418,7 +418,7 @@
 - ✅ S3: 8/8 tasks (100%) - Replay Prevention & HTTPS + PRD Review - **COMPLETE** (Jan 27, 2026)
 - ✅ S4: 6/6 tasks (100%) - Retry Logic & Authorization - **COMPLETE** (Jan 27, 2026)
 - ✅ Security: 4/4 tasks (100%) - Red Team Remediation - **COMPLETE** (Jan 27, 2026)
-- ⏳ S5: 0/11 tasks (0%) - S3 follow-ups + Issues #11/#12 + Final Quality Gate
+- ⏳ S5: 9/11 tasks (tag pushed; PyPI + GitHub release to do locally) - S3 follow-ups + Issues #11/#12 + Final Quality Gate
 
 **PRD Maintenance**:
 - ✅ Sprint S3 review completed (2026-01-27)
@@ -427,7 +427,7 @@
 - S5 plan updated with Issues #11, #12 + Final Quality Gate (2026-01-27)
 - Next review: End of Sprint P3 (v1.0.0)
 
-**Last Updated**: 2026-01-27 (Security Red Team Remediation completed)
+**Last Updated**: 2026-01-28 (v0.5.0 tag pushed; PyPI + GitHub release to do locally)
 
 ---
 

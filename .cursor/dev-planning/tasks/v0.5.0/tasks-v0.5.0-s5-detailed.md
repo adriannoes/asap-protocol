@@ -427,23 +427,18 @@ All of the following issues were **completed during v0.5.0** (work is done in co
   - Import: `python -c "import asap; print(asap.__version__)"`
   - ✅ **Status**: Installed from wheel; prints "0.5.0".
 
-- [x] 5.6.3 Tag release (local only; push deferred)
+- [x] 5.6.3 Tag release
   - Command: `git tag v0.5.0` ✅
-  - Push: `git push origin v0.5.0` — **deferred** (do when ready for final go-live).
+  - Push: `git push origin v0.5.0` ✅ **Done.**
 
-- [ ] 5.6.4 Publish to PyPI
-  - Command: `uv publish`
+- [ ] 5.6.4 Publish to PyPI *(run locally — token required)*
+  - Command: `uv publish` (or `twine upload dist/asap_protocol-0.5.0*` with `TWINE_USERNAME=__token__` and `TWINE_PASSWORD=<pypi-token>`)
   - Verify: https://pypi.org/project/asap-protocol/0.5.0/
   - Check: Package page loads, metadata correct
 
-- [ ] 5.6.5 Create GitHub release
-  - Visit: https://github.com/adriannoes/asap-protocol/releases/new
-  - Tag: v0.5.0
-  - Title: "v0.5.0 - Security-Hardened Release"
-  - Body: Paste from `.github/release-notes-v0.5.0.md`
-  - Assets: Attach dist/*.whl and dist/*.tar.gz
-  - Check: "This is a pre-release" (still alpha)
-  - Publish
+- [ ] 5.6.5 Create GitHub release *(run locally or via GitHub UI)*
+  - **UI**: https://github.com/adriannoes/asap-protocol/releases/new → Tag v0.5.0, title "v0.5.0 - Security-Hardened Release", body from `.github/release-notes-v0.5.0.md`, attach `dist/*.whl` and `dist/*.tar.gz`, mark pre-release → Publish.
+  - **CLI**: `gh auth login` then `gh release create v0.5.0 --title "v0.5.0 - Security-Hardened Release" --notes-file .github/release-notes-v0.5.0.md --prerelease dist/asap_protocol-0.5.0*`
 
 - [x] 5.6.6 Cleanup temporary test scripts
   - Delete: `scripts/test_upgrade_v0_1_0.sh`
@@ -461,7 +456,7 @@ All of the following issues were **completed during v0.5.0** (work is done in co
 
 ## Release Runbook (main — when ready to ship)
 
-**Ready to launch**: Pre-release done (version 0.5.0, scripts removed, PRs reviewed, quality gate passed). Build, test build, and local tag are done; **push tag, PyPI, and GitHub release are deferred** until you run the final steps below.
+**Launch status**: Main and tag `v0.5.0` are pushed. **Remaining (run locally)**: Publish to PyPI (`uv publish`), create GitHub release (UI or `gh release create`), then 5.7 (communication) and 5.8 (mark complete).
 
 Execute in order. Steps 1–6 (pre-flight through local tag) are **done**. When ready for go-live:
 
@@ -480,11 +475,11 @@ Execute in order. Steps 1–6 (pre-flight through local tag) are **done**. When 
 
 5. **Test build** ✅ — `import asap; print(asap.__version__)` → `0.5.0`.
 
-6. **Tag** ✅ local; **push tag** (when ready): `git push origin v0.5.0`.
+6. **Tag and push** ✅ — `git push origin v0.5.0` **done.**
 
-7. **Publish**: `uv publish` → verify https://pypi.org/project/asap-protocol/0.5.0/
+7. **Publish to PyPI** *(local)*: `uv publish` (or twine with token) → verify https://pypi.org/project/asap-protocol/0.5.0/
 
-8. **GitHub release**: Releases → New release → Tag `v0.5.0`, title "v0.5.0 - Security-Hardened Release", body from `.github/release-notes-v0.5.0.md`, attach `dist/*.whl` and `dist/*.tar.gz`, mark pre-release → Publish.
+8. **GitHub release** *(local or UI)*: Create release for tag `v0.5.0`, title "v0.5.0 - Security-Hardened Release", body from `.github/release-notes-v0.5.0.md`, attach `dist/*.whl` and `dist/*.tar.gz`, mark pre-release → Publish.
 
 9. **Communication**: Update README badges if needed; post in GitHub Discussions; comment "Fixed in v0.5.0" on #7, #9, #10, #11, #12, #13 and close.
 
