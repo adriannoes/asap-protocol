@@ -14,6 +14,7 @@ from asap.errors import InvalidNonceError, InvalidTimestampError
 from asap.models.constants import (
     MAX_ENVELOPE_AGE_SECONDS,
     MAX_FUTURE_TOLERANCE_SECONDS,
+    NONCE_TTL_SECONDS,
 )
 from asap.models.envelope import Envelope
 
@@ -306,12 +307,8 @@ def validate_envelope_nonce(envelope: Envelope, nonce_store: NonceStore | None) 
             details={"envelope_id": envelope.id},
         )
 
-    # Use 2x envelope age as TTL to ensure nonces expire after the envelope would
-    # have been rejected anyway, providing some buffer
-    nonce_ttl = MAX_ENVELOPE_AGE_SECONDS * 2  # 10 minutes by default
-
     # Atomically check and mark nonce as used to prevent race conditions
-    if nonce_store.check_and_mark(nonce, ttl_seconds=nonce_ttl):
+    if nonce_store.check_and_mark(nonce, ttl_seconds=NONCE_TTL_SECONDS):
         raise InvalidNonceError(
             nonce=nonce,
             message=f"Duplicate nonce detected: {nonce}",
