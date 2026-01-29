@@ -354,7 +354,7 @@
   - Details: [Sprint S5 Detailed - Task 5.2](./tasks-v0.5.0-s5-detailed.md#task-52-testing--quality)
 
 - [ ] 5.3 Test compatibility and upgrade path
-  - Goal: Verify v0.1.0 → v0.5.0 upgrade works smoothly
+  - Goal: Verify v0.1.0 → v0.5.0 and v0.3.0 → v0.5.0 upgrade paths work smoothly
   - Details: [Sprint S5 Detailed - Task 5.3](./tasks-v0.5.0-s5-detailed.md#task-53-compatibility-testing)
 
 - [ ] 5.4 Review and update documentation
