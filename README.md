@@ -4,7 +4,7 @@
 
 > A streamlined, scalable, asynchronous protocol for agent-to-agent communication and task coordination. Built as a simpler, more powerful alternative to A2A with native MCP integration and stateful orchestration.
 
-**Quick Info**: `v0.5.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](CHANGELOG.md)
+**Quick Info**: `v0.5.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/0.5.0/) | [Changelog](CHANGELOG.md)
 
 ⚠️ **Alpha Release**: ASAP Protocol is currently in **alpha** (v0.5.0). We're actively developing and improving the protocol based on real-world usage. Your feedback, contributions, and suggestions are essential to help us evolve and make ASAP better for the entire community. See our [Contributing](#contributing) section to get involved!
 
@@ -56,7 +56,7 @@ Or with pip:
 pip install asap-protocol
 ```
 
-📦 **Available on [PyPI](https://pypi.org/project/asap-protocol/)**
+📦 **Available on [PyPI](https://pypi.org/project/asap-protocol/0.5.0/)**
 
 For reproducible environments, prefer `uv` when possible.
 
@@ -149,7 +149,7 @@ Transport:
 - [Docs](docs/index.md)
 - [API Reference](docs/api-reference.md)
 - [Changelog](CHANGELOG.md)
-- [PyPI Package](https://pypi.org/project/asap-protocol/)
+- [PyPI Package](https://pypi.org/project/asap-protocol/0.5.0/)
 
 ## When to Use ASAP?
 

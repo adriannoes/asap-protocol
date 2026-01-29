@@ -1,9 +1,9 @@
 # PRD: ASAP Protocol v1.0 Roadmap
 
-> **Status**: Planning
-> **Current Version**: v0.1.0 (released 2026-01-23)
+> **Status**: Planning (v0.5.0 complete)
+> **Current Version**: v0.5.0 (released 2026-01-28)
 > **Target**: v1.0.0 (Production-Ready Release)
-> **Intermediate Milestone**: v0.5.0 (Security-Hardened Release)
+> **Intermediate Milestone**: v0.5.0 (Security-Hardened Release) ✅
 
 ---
 

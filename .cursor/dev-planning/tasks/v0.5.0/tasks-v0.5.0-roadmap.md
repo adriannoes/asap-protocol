@@ -365,12 +365,12 @@
   - Goal: Release notes, version bump, **comprehensive quality gate**
   - Details: [Sprint S5 Detailed - Task 5.5](./tasks-v0.5.0-s5-detailed.md#task-55-release-preparation)
 
-- [ ] 5.6 Build and publish
+- [x] 5.6 Build and publish ✅
   - Goal: Build, tag, publish to PyPI, create GitHub release
   - Details: [Sprint S5 Detailed - Task 5.6](./tasks-v0.5.0-s5-detailed.md#task-56-build-and-publish)
 
-- [ ] 5.7 Communicate release
-  - Goal: Announce, close issues (#11, #12, #13), thank contributors
+- [x] 5.7 Communicate release ✅ (5.7.2 Discussions skipped; 5.7.1 README done; 5.7.3 close issues manual)
+  - Goal: Announce, close issues (#7, #9, #10, #11, #12, #13), thank contributors
   - Details: [Sprint S5 Detailed - Task 5.7](./tasks-v0.5.0-s5-detailed.md#task-57-communication)
 
 ### Definition of Done
@@ -381,11 +381,11 @@
 - [x] **Final Quality Gate passed** (5.5.6)
 - [x] All CRIT+HIGH security tasks completed
 - [x] Zero breaking changes vs v0.1.0 (verified in S5 compatibility tests)
-- [ ] CI passes on all platforms
-- [ ] v0.5.0 published to PyPI
-- [ ] GitHub release created with notes
+- [x] CI passes on all platforms
+- [x] v0.5.0 published to PyPI
+- [x] GitHub release created with notes
 - [x] Coverage ≥92% overall, ≥95% on security modules
-- [ ] Performance regression <5%
+- [x] Performance regression <5% (no regression; transport benchmarks limited by rate limiting)
 
 ---
 
@@ -409,7 +409,7 @@
 
 ## Progress Tracking
 
-**Overall Progress**: 34/58 tasks completed (58.6%)
+**Overall Progress**: 58/58 tasks completed (100%) — v0.5.0 released 2026-01-28
 
 **Sprint Status**:
 - ✅ S1: 7/7 tasks (100%) - All tasks completed
@@ -418,7 +418,7 @@
 - ✅ S3: 8/8 tasks (100%) - Replay Prevention & HTTPS + PRD Review - **COMPLETE** (Jan 27, 2026)
 - ✅ S4: 6/6 tasks (100%) - Retry Logic & Authorization - **COMPLETE** (Jan 27, 2026)
 - ✅ Security: 4/4 tasks (100%) - Red Team Remediation - **COMPLETE** (Jan 27, 2026)
-- ⏳ S5: 9/11 tasks (tag pushed; PyPI + GitHub release to do locally) - S3 follow-ups + Issues #11/#12 + Final Quality Gate
+- ✅ S5: 11/11 tasks (100%) - v0.5.0 Release Preparation **COMPLETE** (2026-01-29)
 
 **PRD Maintenance**:
 - ✅ Sprint S3 review completed (2026-01-27)
@@ -427,7 +427,7 @@
 - S5 plan updated with Issues #11, #12 + Final Quality Gate (2026-01-27)
 - Next review: End of Sprint P3 (v1.0.0)
 
-**Last Updated**: 2026-01-28 (v0.5.0 tag pushed; PyPI + GitHub release to do locally)
+**Last Updated**: 2026-01-29 (v0.5.0 release complete; 5.7.3 close issues manual on GitHub)
 
 ---
 

@@ -431,14 +431,14 @@ All of the following issues were **completed during v0.5.0** (work is done in co
   - Command: `git tag v0.5.0` ✅
   - Push: `git push origin v0.5.0` ✅ **Done.**
 
-- [ ] 5.6.4 Publish to PyPI *(run locally — token required)*
-  - Command: `uv publish` (or `twine upload dist/asap_protocol-0.5.0*` with `TWINE_USERNAME=__token__` and `TWINE_PASSWORD=<pypi-token>`)
+- [x] 5.6.4 Publish to PyPI
+  - Command: `uv publish` / `twine upload dist/asap_protocol-0.5.0*`
   - Verify: https://pypi.org/project/asap-protocol/0.5.0/
-  - Check: Package page loads, metadata correct
+  - ✅ **Status**: v0.5.0 published to PyPI.
 
-- [ ] 5.6.5 Create GitHub release *(run locally or via GitHub UI)*
-  - **UI**: https://github.com/adriannoes/asap-protocol/releases/new → Tag v0.5.0, title "v0.5.0 - Security-Hardened Release", body from `.github/release-notes-v0.5.0.md`, attach `dist/*.whl` and `dist/*.tar.gz`, mark pre-release → Publish.
-  - **CLI**: `gh auth login` then `gh release create v0.5.0 --title "v0.5.0 - Security-Hardened Release" --notes-file .github/release-notes-v0.5.0.md --prerelease dist/asap_protocol-0.5.0*`
+- [x] 5.6.5 Create GitHub release
+  - Tag v0.5.0, title "v0.5.0 - Security-Hardened Release", body from `.github/release-notes-v0.5.0.md`, assets attached, pre-release.
+  - ✅ **Status**: GitHub release created.
 
 - [x] 5.6.6 Cleanup temporary test scripts
   - Delete: `scripts/test_upgrade_v0_1_0.sh`
@@ -452,11 +452,15 @@ All of the following issues were **completed during v0.5.0** (work is done in co
 
 **Acceptance**: Built, published to PyPI, GitHub release created, temporary scripts removed
 
+### Release description review
+
+The [GitHub release v0.5.0](https://github.com/adriannoes/asap-protocol/releases/tag/v0.5.0) is live with a detailed CHANGELOG-style body. **Suggested edit** (optional): in the "Testing & Coverage" bullet, the phrase "Automated upgrade test scripts" refers to the removed `.sh` scripts; you may replace it with "Compatibility tests for v0.1.0 and v0.3.0 upgrade paths" to match the current repo (pytest tests in `tests/compatibility/`). The rest of the description is accurate.
+
 ---
 
 ## Release Runbook (main — when ready to ship)
 
-**Launch status**: Main and tag `v0.5.0` are pushed. **Remaining (run locally)**: Publish to PyPI (`uv publish`), create GitHub release (UI or `gh release create`), then 5.7 (communication) and 5.8 (mark complete).
+**Launch status**: Main, tag, PyPI, and GitHub release are done. **Remaining**: 5.7 (communication), 5.8 (mark complete).
 
 Execute in order. Steps 1–6 (pre-flight through local tag) are **done**. When ready for go-live:
 
@@ -477,11 +481,11 @@ Execute in order. Steps 1–6 (pre-flight through local tag) are **done**. When 
 
 6. **Tag and push** ✅ — `git push origin v0.5.0` **done.**
 
-7. **Publish to PyPI** *(local)*: `uv publish` (or twine with token) → verify https://pypi.org/project/asap-protocol/0.5.0/
+7. **Publish to PyPI** ✅ — v0.5.0 on https://pypi.org/project/asap-protocol/0.5.0/
 
-8. **GitHub release** *(local or UI)*: Create release for tag `v0.5.0`, title "v0.5.0 - Security-Hardened Release", body from `.github/release-notes-v0.5.0.md`, attach `dist/*.whl` and `dist/*.tar.gz`, mark pre-release → Publish.
+8. **GitHub release** ✅ — Release created for v0.5.0.
 
-9. **Communication**: Update README badges if needed; post in GitHub Discussions; comment "Fixed in v0.5.0" on #7, #9, #10, #11, #12, #13 and close.
+9. **Communication** (5.7): Update README badges if needed; post in GitHub Discussions; comment "Fixed in v0.5.0" on #7, #9, #10, #11, #12, #13 and close.
 
 10. **Mark complete**: Update `tasks-v0.5.0-roadmap.md` and this file (5.8.1–5.8.4).
 
@@ -489,20 +493,18 @@ Execute in order. Steps 1–6 (pre-flight through local tag) are **done**. When 
 
 ## Task 5.7: Communication *(on main after publish)*
 
-- [ ] 5.7.1 Update README badges
+- [x] 5.7.1 Update README badges
   - Update version badge (if exists)
-  - Update PyPI link
+  - Update PyPI link to 0.5.0
+  - ✅ **Status**: README PyPI link updated to https://pypi.org/project/asap-protocol/0.5.0/
 
-- [ ] 5.7.2 Announce on GitHub
-  - Post to: GitHub Discussions (Announcements)
-  - Title: "v0.5.0 Released - Security Hardening"
-  - Content: Highlight security improvements
-  - Link to release notes
+- [x] 5.7.2 Announce on GitHub *(skipped — not doing)*
+  - Post to: GitHub Discussions (Announcements) — **Skipped per decision.**
 
-- [ ] 5.7.3 Close resolved issues
+- [x] 5.7.3 Close resolved issues
   - Comment on #7, #9, #10, #11, #12, #13
   - Message: "Fixed in v0.5.0"
-  - Close issues
+  - ✅ **Status**: #11 and #12 commented and closed via GitHub API; #7, #9, #10, #13 were already closed.
 
 **Acceptance**: Announcement posted, issues closed
 
@@ -510,23 +512,20 @@ Execute in order. Steps 1–6 (pre-flight through local tag) are **done**. When 
 
 ## Task 5.8: Mark Sprint S5 and v0.5.0 Complete *(on main after release)*
 
-- [ ] 5.8.1 Update roadmap progress
+- [x] 5.8.1 Update roadmap progress
   - Open: `tasks-v0.5.0-roadmap.md`
-  - Mark: Tasks 5.0.1-5.7 as complete `[x]`
-  - Mark: Overall v0.5.0 as 52/52 (100%)
+  - Mark: Tasks 5.0.1-5.7 as complete `[x]` (5.7.2 skipped)
+  - Mark: Overall v0.5.0 complete
 
-- [ ] 5.8.2 Update detailed file progress
+- [x] 5.8.2 Update detailed file progress
   - Mark: All sub-tasks as complete `[x]`
-  - Add: Completion date
+  - Completion date: 2026-01-29
 
-- [ ] 5.8.3 Update main README
-  - File: `../../README.md` (tasks main README)
-  - Update: v0.5.0 status from "In Planning" to "Released"
-  - Add: Release date
+- [x] 5.8.3 Update planning docs
+  - PRD `prd-v1-roadmap.md`: Current Version → v0.5.0 (released 2026-01-28)
 
-- [ ] 5.8.4 Archive sprint documents
-  - Consider: Move to `completed/v0.5.0/` or keep in place
-  - Document: v0.5.0 completion in parent README
+- [x] 5.8.4 Archive sprint documents
+  - Keep in place; v0.5.0 completion documented in roadmap and this file.
 
 **Acceptance**: All tracking complete, v0.5.0 marked as released
 
@@ -543,11 +542,11 @@ Execute in order. Steps 1–6 (pre-flight through local tag) are **done**. When 
 - [x] **Final Quality Gate passed** (5.5.6) - all checks green
 - [x] Zero breaking changes vs v0.1.0 (compatibility tests)
 - [x] Coverage ≥92% overall, ≥95% on security modules
-- [ ] CI passes on main (after push)
-- [ ] 5.5.5 Final commit + push → then 5.6–5.8 (build, tag, PyPI, GitHub release, communication, mark complete)
-- [ ] v0.5.0 published to PyPI
-- [ ] GitHub release created with notes
-- [ ] All open issues (#7, #9, #10, #11, #12, #13) closed on GitHub at release (5.7.3)
-- [ ] v0.5.0 marked as complete milestone (5.8)
+- [x] CI passes on main
+- [x] 5.5.5 Final commit + push; 5.6 (build, tag, PyPI, GitHub release) done
+- [x] v0.5.0 published to PyPI
+- [x] GitHub release created with notes
+- [x] All open issues (#7, #9, #10, #11, #12, #13) closed on GitHub (5.7.3 done)
+- [x] v0.5.0 marked as complete milestone (5.8)
 
 **Total Sub-tasks**: ~57 (added Issues #11, #12 + Final Quality Gate + cleanup task)
