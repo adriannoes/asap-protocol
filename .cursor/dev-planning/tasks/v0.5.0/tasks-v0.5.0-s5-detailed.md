@@ -417,19 +417,19 @@ All of the following issues were **completed during v0.5.0** (work is done in co
 
 ## Task 5.6: Build and Publish *(on main at release)*
 
-- [ ] 5.6.1 Build distribution
-  - Command: `uv build`
+- [x] 5.6.1 Build distribution
+  - Command: `uv build` (or `python -m build --outdir dist` / `pip wheel . -w dist`)
   - Expected: Creates dist/ with .whl and .tar.gz
-  - Verify: Files exist and sizes reasonable
+  - ✅ **Status**: dist/ contains `asap_protocol-0.5.0-py3-none-any.whl` and `asap_protocol-0.5.0.tar.gz`.
 
-- [ ] 5.6.2 Test build locally
+- [x] 5.6.2 Test build locally
   - Install in clean env: `pip install dist/*.whl`
   - Import: `python -c "import asap; print(asap.__version__)"`
-  - Expected: Prints "0.5.0"
+  - ✅ **Status**: Installed from wheel; prints "0.5.0".
 
-- [ ] 5.6.3 Tag release
-  - Command: `git tag v0.5.0`
-  - Push: `git push origin v0.5.0`
+- [x] 5.6.3 Tag release (local only; push deferred)
+  - Command: `git tag v0.5.0` ✅
+  - Push: `git push origin v0.5.0` — **deferred** (do when ready for final go-live).
 
 - [ ] 5.6.4 Publish to PyPI
   - Command: `uv publish`
@@ -461,29 +461,26 @@ All of the following issues were **completed during v0.5.0** (work is done in co
 
 ## Release Runbook (main — when ready to ship)
 
-**Ready to launch**: All pre-release tasks are done (version 0.5.0, scripts removed, PRs reviewed, quality gate passed). Proceed with the steps below to commit, push, build, tag, and publish.
+**Ready to launch**: Pre-release done (version 0.5.0, scripts removed, PRs reviewed, quality gate passed). Build, test build, and local tag are done; **push tag, PyPI, and GitHub release are deferred** until you run the final steps below.
 
-Execute in order. Commit and push only at step 2; no commits before that.
+Execute in order. Steps 1–6 (pre-flight through local tag) are **done**. When ready for go-live:
 
-1. **Pre-flight** (already done locally):
+1. **Pre-flight** ✅ (already done locally):
    - Version 0.5.0 in `pyproject.toml` and `src/asap/__init__.py`
    - `tests/test_version.py` asserts `0.5.0`
    - Scripts `test_upgrade_v0_1_0.sh` and `test_upgrade_v0_3_0.sh` removed
    - Quality gate: `uv run ruff check src/ tests/`, `uv run mypy src/`, `PYTHONPATH=src uv run pytest -q`
 
-2. **Commit and push**:
-   - `git status`
-   - `git add .`
-   - `git commit -m "chore(release): prepare v0.5.0 release"`
-   - `git push origin main`
+2. **Commit and push** ✅ (already done):
+   - `git commit -m "chore(release): prepare v0.5.0 release"` → `git push origin main`
 
 3. **Final sign-off**: Confirm CI green on main; close issues #7, #9, #10, #11, #12, #13 on GitHub (work already done in v0.5.0).
 
-4. **Build**: `uv build` → verify `dist/` contains `.whl` and `.tar.gz`.
+4. **Build** ✅ — dist/ has `.whl` and `.tar.gz`.
 
-5. **Test build**: `pip install dist/*.whl` in a clean env; `python -c "import asap; print(asap.__version__)"` → `0.5.0`.
+5. **Test build** ✅ — `import asap; print(asap.__version__)` → `0.5.0`.
 
-6. **Tag and push**: `git tag v0.5.0` → `git push origin v0.5.0`.
+6. **Tag** ✅ local; **push tag** (when ready): `git push origin v0.5.0`.
 
 7. **Publish**: `uv publish` → verify https://pypi.org/project/asap-protocol/0.5.0/
 
