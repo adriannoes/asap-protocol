@@ -6,7 +6,7 @@ communication by sending a task request from the coordinator logic.
 
 import asyncio
 import signal
-import subprocess
+import subprocess  # nosec B404
 import sys
 import time
 from typing import Sequence
@@ -34,8 +34,15 @@ def start_process(command: Sequence[str]) -> subprocess.Popen[str]:
 
     Returns:
         Started subprocess handle.
+
+    Note:
+        This is example/demo code that only executes trusted commands
+        (sys.executable with known modules). The command is controlled
+        and not user input.
     """
-    return subprocess.Popen(command, text=True)
+    # nosec B404, B603: This is example code executing trusted commands only
+    # (sys.executable with known Python modules, not user input)
+    return subprocess.Popen(command, text=True)  # nosec B404, B603
 
 
 def wait_for_ready(url: str, timeout_seconds: float) -> None:

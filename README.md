@@ -4,9 +4,9 @@
 
 > A streamlined, scalable, asynchronous protocol for agent-to-agent communication and task coordination. Built as a simpler, more powerful alternative to A2A with native MCP integration and stateful orchestration.
 
-**Quick Info**: `v0.3.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](CHANGELOG.md)
+**Quick Info**: `v0.5.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](CHANGELOG.md)
 
-⚠️ **Alpha Release**: ASAP Protocol is currently in **alpha** (v0.3.0). We're actively developing and improving the protocol based on real-world usage. Your feedback, contributions, and suggestions are essential to help us evolve and make ASAP better for the entire community. See our [Contributing](#contributing) section to get involved!
+⚠️ **Alpha Release**: ASAP Protocol is currently in **alpha** (v0.5.0). We're actively developing and improving the protocol based on real-world usage. Your feedback, contributions, and suggestions are essential to help us evolve and make ASAP better for the entire community. See our [Contributing](#contributing) section to get involved!
 
 ## Why ASAP?
 
@@ -17,6 +17,18 @@ Building multi-agent systems today suffers from three core technical challenges 
 
 **ASAP** provides a production-ready communication layer that simplifies these complexities. It introduces a standardized, stateful orchestration framework that ensures your agents can coordinate reliably across distributed environments.
 
+### Security-First Design
+
+v0.5.0 introduces comprehensive security hardening:
+- **Authentication**: Bearer token authentication with configurable token validators
+- **Replay Attack Prevention**: Timestamp validation (5-minute window) and optional nonce tracking
+- **DoS Protection**: Built-in rate limiting (100 req/min), request size limits (10MB), and thread pool bounds
+- **HTTPS Enforcement**: Client-side HTTPS validation in production mode
+- **Secure Logging**: Automatic sanitization of sensitive data (tokens, credentials, nonces) in logs
+- **Input Validation**: Strict schema validation with Pydantic v2 for all incoming requests
+
+All security features are **opt-in** to maintain backward compatibility with existing deployments.
+
 ### Key Features
 
 - **Stateful Orchestration**: Native task state machine with built-in snapshotting for durable, resumable agent workflows.
@@ -25,6 +37,7 @@ Building multi-agent systems today suffers from three core technical challenges 
 - **Observable Chains**: First-class support for `trace_id` and `correlation_id` to debug complex multi-agent delegation.
 - **MCP Integration**: Uses the Model Context Protocol (MCP) as a tool-execution substrate, wrapped in a high-level coordination envelope.
 - **Async-Native**: Engineered from the ground up for high-concurrency environments using `asyncio` and `httpx`. Supports both sync and async handlers with automatic event loop management.
+- **Security-Hardened (v0.5.0)**: Authentication (Bearer tokens), replay attack prevention (timestamp + nonce validation), HTTPS enforcement, secure logging, and comprehensive input validation. All security features are opt-in for backward compatibility.
 - **DoS Protection**: Built-in rate limiting (100 req/min), request size limits (10MB), and thread pool bounds to prevent resource exhaustion attacks.
 
 💡 **Performance Note**: Pure Python codebase leveraging Rust-accelerated dependencies (`pydantic-core`, `orjson`, `python-ulid`) for native-level performance without build complexity.
@@ -65,7 +78,7 @@ from asap.transport.server import create_app
 manifest = Manifest(
     id="urn:asap:agent:echo-agent",
     name="Echo Agent",
-    version="0.3.0",
+    version="0.5.0",
     description="Echoes task input as output",
     capabilities=Capability(
         asap_version="0.1",
