@@ -660,3 +660,88 @@ class TestASAPRequestHandlerHelpers:
         error_data = json.loads(content)
         assert error_data["error"]["code"] == INTERNAL_ERROR
         assert "Internal validation error" in error_data["error"]["data"]["error"]
+
+    @pytest.mark.asyncio
+    async def test_parse_and_validate_request_handles_httpexception(
+        self, handler: ASAPRequestHandler
+    ) -> None:
+        """Test that _parse_and_validate_request handles HTTPException correctly."""
+        from fastapi import HTTPException, Request
+        from unittest.mock import patch
+
+        request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
+
+        # Mock parse_json_body to raise HTTPException (e.g., 413 Payload Too Large)
+        async def mock_parse_json_body(req: Request) -> dict:
+            raise HTTPException(status_code=413, detail="Request too large")
+
+        with patch.object(handler, "parse_json_body", side_effect=mock_parse_json_body):
+            result = await handler._parse_and_validate_request(request)
+
+        rpc_request, error_response = result
+        assert rpc_request is None
+        assert error_response is not None
+        assert isinstance(error_response, JSONResponse)
+        assert error_response.status_code == 413
+
+        content = bytes(error_response.body).decode()
+        error_data = json.loads(content)
+        assert error_data["detail"] == "Request too large"
+
+    def test_validate_request_size_handles_invalid_content_length(
+        self, handler: ASAPRequestHandler
+    ) -> None:
+        """Test that _validate_request_size handles ValueError for invalid Content-Length header.
+
+        This test covers the ValueError exception handler in _validate_request_size
+        (server.py lines 683-685) which handles invalid Content-Length headers gracefully.
+        """
+        from fastapi import Request
+
+        # Create request with invalid Content-Length header
+        request = Request(
+            scope={
+                "type": "http",
+                "method": "POST",
+                "path": "/asap",
+                "headers": [(b"content-length", b"invalid-number")],
+            }
+        )
+
+        # Should not raise ValueError, should handle gracefully
+        # The ValueError is caught and handled internally (line 683-685)
+        # This test verifies the exception handler exists and works
+        # We can access the private method for testing coverage
+        try:
+            handler._validate_request_size(request, max_size=1024)
+            # If no exception, test passed - ValueError was caught internally
+            assert True
+        except ValueError:
+            # This should not happen as ValueError is caught internally
+            pytest.fail("ValueError should be caught internally in _validate_request_size")
+
+    def test_validate_request_size_raises_httpexception_for_large_content(
+        self, handler: ASAPRequestHandler
+    ) -> None:
+        """Test that _validate_request_size raises HTTPException for content exceeding max size.
+
+        This test covers the HTTPException raised when Content-Length exceeds max_size
+        (server.py lines 679-682).
+        """
+        from fastapi import HTTPException, Request
+
+        # Create request with Content-Length exceeding max_size
+        request = Request(
+            scope={
+                "type": "http",
+                "method": "POST",
+                "path": "/asap",
+                "headers": [(b"content-length", b"2048")],  # 2048 bytes > 1024 max
+            }
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            handler._validate_request_size(request, max_size=1024)
+
+        assert exc_info.value.status_code == 413
+        assert "exceeds maximum" in str(exc_info.value.detail)
