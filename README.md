@@ -1,6 +1,6 @@
 # ASAP: Async Simple Agent Protocol
 
-![ASAP Protocol Banner](https://raw.githubusercontent.com/adriannoes/asap-protocol/main/.cursor/docs/asap-protocol-banner.png)
+![ASAP Protocol Banner](https://raw.githubusercontent.com/adriannoes/asap-protocol/main/.github/assets/asap-protocol-banner.png)
 
 
 > A streamlined, scalable, asynchronous protocol for agent-to-agent communication and task coordination. Built as a simpler, more powerful alternative to A2A with native MCP integration and stateful orchestration.
