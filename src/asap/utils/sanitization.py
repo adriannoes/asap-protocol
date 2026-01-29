@@ -22,12 +22,21 @@ Example:
 import re
 from urllib.parse import urlparse, urlunparse
 
+# Sanitization configuration
+SANITIZE_PREFIX_LENGTH = 8
+"""Number of characters to show when truncating sensitive values.
+
+This constant defines how many characters of a sensitive value (token, nonce)
+are preserved when sanitizing for logs. The value balances security (preventing
+full exposure) with debuggability (allowing identification of value types).
+"""
+
 
 def sanitize_token(token: str) -> str:
     """Sanitize a token for safe logging.
 
-    Returns only the first 8 characters followed by "..." to prevent
-    full token exposure in logs while still allowing identification
+    Returns only the first SANITIZE_PREFIX_LENGTH characters followed by "..."
+    to prevent full token exposure in logs while still allowing identification
     of token type (e.g., "sk_live_", "pk_test_").
 
     Args:
@@ -44,23 +53,23 @@ def sanitize_token(token: str) -> str:
     """
     if not token:
         return ""
-    if len(token) <= 8:
+    if len(token) <= SANITIZE_PREFIX_LENGTH:
         return token
-    return f"{token[:8]}..."
+    return f"{token[:SANITIZE_PREFIX_LENGTH]}..."
 
 
 def sanitize_nonce(nonce: str) -> str:
     """Sanitize a nonce for safe logging.
 
-    Returns the first 8 characters followed by "..." to prevent
-    full nonce exposure in logs while still allowing identification
+    Returns the first SANITIZE_PREFIX_LENGTH characters followed by "..."
+    to prevent full nonce exposure in logs while still allowing identification
     for debugging purposes.
 
     Args:
         nonce: The nonce to sanitize
 
     Returns:
-        Sanitized nonce string showing first 8 characters + "..." (e.g., "a1b2c3d4...")
+        Sanitized nonce string showing first characters + "..." (e.g., "a1b2c3d4...")
 
     Example:
         >>> sanitize_nonce("a1b2c3d4e5f6g7h8i9j0")
@@ -70,9 +79,9 @@ def sanitize_nonce(nonce: str) -> str:
     """
     if not nonce:
         return ""
-    if len(nonce) <= 8:
+    if len(nonce) <= SANITIZE_PREFIX_LENGTH:
         return nonce
-    return f"{nonce[:8]}..."
+    return f"{nonce[:SANITIZE_PREFIX_LENGTH]}..."
 
 
 def sanitize_url(url: str) -> str:
