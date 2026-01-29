@@ -2,6 +2,7 @@
 
 ![ASAP Protocol Banner](https://raw.githubusercontent.com/adriannoes/asap-protocol/main/.cursor/docs/asap-protocol-banner.png)
 
+
 > A streamlined, scalable, asynchronous protocol for agent-to-agent communication and task coordination. Built as a simpler, more powerful alternative to A2A with native MCP integration and stateful orchestration.
 
 **Quick Info**: `v0.5.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/0.5.0/) | [Changelog](CHANGELOG.md)
