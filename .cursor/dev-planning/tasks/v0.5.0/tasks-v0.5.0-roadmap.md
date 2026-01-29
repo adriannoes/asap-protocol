@@ -54,8 +54,8 @@
   - Details: [Sprint S1 Detailed - Task 1.6](./tasks-v0.5.0-s1-detailed.md#task-16-verify-ci-integration)
 
 ### Definition of Done
-- [ ] All GitHub issues #7, #9, #10 closed
-- [ ] Dependabot configured and verified
+- [x] Work for issues #7, #9, #10 completed in v0.5.0 (close on GitHub at release)
+- [x] Dependabot configured and verified
 - [ ] CI passes with updated FastAPI
 - [ ] No breaking changes introduced
 - [ ] Documentation updated (CONTRIBUTING.md, SECURITY.md)
@@ -325,43 +325,43 @@
 
 ### Tasks
 
-- [ ] 5.0.1 Add empty nonce string validation (S3 follow-up)
+- [x] 5.0.1 Add empty nonce string validation (S3 follow-up) ✅
   - Goal: Reject empty string nonces with clear error message
   - Source: [PR #19 Code Review - Section 3.2](../code-review/v0.5.0/sprint-s3-code-review.md)
   - Details: [Sprint S5 Detailed - Task 5.0.1](./tasks-v0.5.0-s5-detailed.md#task-501-add-empty-nonce-string-validation)
 
-- [ ] 5.0.2 Make nonce TTL configurable (S3 follow-up)
+- [x] 5.0.2 Make nonce TTL configurable (S3 follow-up) ✅
   - Goal: Derive nonce TTL from MAX_ENVELOPE_AGE_SECONDS constant
   - Source: [PR #19 Code Review - Section 3.4](../code-review/v0.5.0/sprint-s3-code-review.md)
   - Details: [Sprint S5 Detailed - Task 5.0.2](./tasks-v0.5.0-s5-detailed.md#task-502-make-nonce-ttl-configurable)
 
-- [ ] 5.0.3 Implement log sanitization
-  - Issue: [#12](https://github.com/adriannoes/asap-protocol/issues/12)
+- [x] 5.0.3 Implement log sanitization ✅
+  - Issue: [#12](https://github.com/adriannoes/asap-protocol/issues/12) — work done; close on GitHub at release
   - Goal: Prevent sensitive data (tokens, credentials) from appearing in logs
   - Details: [Sprint S5 Detailed - Task 5.0.3](./tasks-v0.5.0-s5-detailed.md#task-503-implement-log-sanitization)
 
-- [ ] 5.0.4 Add missing test coverage
-  - Issue: [#11](https://github.com/adriannoes/asap-protocol/issues/11)
+- [x] 5.0.4 Add missing test coverage ✅
+  - Issue: [#11](https://github.com/adriannoes/asap-protocol/issues/11) — work done; close on GitHub at release
   - Goal: Achieve ≥95% coverage on security-critical modules
   - Details: [Sprint S5 Detailed - Task 5.0.4](./tasks-v0.5.0-s5-detailed.md#task-504-add-missing-test-coverage)
 
-- [ ] 5.1 Run security audit
+- [x] 5.1 Run security audit ✅
   - Goal: pip-audit + bandit, verify no critical vulnerabilities
   - Details: [Sprint S5 Detailed - Task 5.1](./tasks-v0.5.0-s5-detailed.md#task-51-security-audit)
 
-- [ ] 5.2 Run testing & quality checks
+- [x] 5.2 Run testing & quality checks ✅
   - Goal: All tests pass, coverage ≥92%, linters clean
   - Details: [Sprint S5 Detailed - Task 5.2](./tasks-v0.5.0-s5-detailed.md#task-52-testing--quality)
 
-- [ ] 5.3 Test compatibility and upgrade path
+- [x] 5.3 Test compatibility and upgrade path ✅
   - Goal: Verify v0.1.0 → v0.5.0 and v0.3.0 → v0.5.0 upgrade paths work smoothly
   - Details: [Sprint S5 Detailed - Task 5.3](./tasks-v0.5.0-s5-detailed.md#task-53-compatibility-testing)
 
-- [ ] 5.4 Review and update documentation
+- [x] 5.4 Review and update documentation ✅
   - Goal: CHANGELOG, README, migration guide complete
   - Details: [Sprint S5 Detailed - Task 5.4](./tasks-v0.5.0-s5-detailed.md#task-54-documentation-review)
 
-- [ ] 5.5 Prepare release + Final Quality Gate
+- [x] 5.5 Prepare release + Final Quality Gate ✅ (version bump, PRs reviewed; final commit at release)
   - Goal: Release notes, version bump, **comprehensive quality gate**
   - Details: [Sprint S5 Detailed - Task 5.5](./tasks-v0.5.0-s5-detailed.md#task-55-release-preparation)
 
@@ -374,16 +374,17 @@
   - Details: [Sprint S5 Detailed - Task 5.7](./tasks-v0.5.0-s5-detailed.md#task-57-communication)
 
 ### Definition of Done
-- [ ] S3 follow-ups completed (5.0.1, 5.0.2)
-- [ ] Issue #12 closed - log sanitization (5.0.3)
-- [ ] Issue #11 closed - test coverage (5.0.4)
-- [ ] **Final Quality Gate passed** (5.5.6)
-- [ ] All CRIT+HIGH security tasks completed
-- [ ] Zero breaking changes vs v0.1.0 (or documented)
+- [x] S3 follow-ups completed (5.0.1, 5.0.2)
+- [x] Issue #12 work done - log sanitization (5.0.3); close on GitHub at release
+- [x] Issue #11 work done - test coverage (5.0.4); close on GitHub at release
+- [x] Issues #7, #9, #10, #13 work done in S1/S4; close on GitHub at release (5.7.3)
+- [x] **Final Quality Gate passed** (5.5.6)
+- [x] All CRIT+HIGH security tasks completed
+- [x] Zero breaking changes vs v0.1.0 (verified in S5 compatibility tests)
 - [ ] CI passes on all platforms
 - [ ] v0.5.0 published to PyPI
 - [ ] GitHub release created with notes
-- [ ] Coverage ≥92% overall, ≥95% on security modules
+- [x] Coverage ≥92% overall, ≥95% on security modules
 - [ ] Performance regression <5%
 
 ---

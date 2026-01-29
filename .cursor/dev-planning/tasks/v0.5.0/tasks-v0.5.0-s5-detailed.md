@@ -19,10 +19,25 @@
 - `tests/utils/test_sanitization.py` - NEW: Comprehensive sanitization tests
 - `tests/compatibility/test_v0_1_0_compatibility.py` - Compatibility tests for v0.1.0 API (5.5.6: removed prints, unused Any)
 - `tests/compatibility/test_v0_3_0_compatibility.py` - Compatibility tests for v0.3.0 API (5.5.6: removed prints, unused Any)
-- `scripts/test_upgrade_v0_1_0.sh` - TEMPORARY: Manual upgrade test script (to be removed in 5.6.5)
-- `scripts/test_upgrade_v0_3_0.sh` - TEMPORARY: Manual upgrade test script (to be removed in 5.6.5)
 - All files in `src/asap/examples/` - Verify examples
 - All files in `docs/` - Review documentation
+
+---
+
+## Issues Addressed in v0.5.0
+
+All of the following issues were **completed during v0.5.0** (work is done in code/docs). Closing them on GitHub (comment "Fixed in v0.5.0" + close) is done at release time in Task 5.7.3.
+
+| Issue | Title / Goal | Where completed | Status |
+|------|----------------|------------------|--------|
+| **#7** | Upgrade FastAPI from 0.124 to 0.128.0+ | Sprint S1 (Task 1.3); `pyproject.toml` has `fastapi>=0.128.0` | ✅ Done in v0.5.0 |
+| **#9** | Refactor `handle_message` into smaller helpers | Sprint S1 (Task 1.2); server.py helpers `_validate_envelope`, `_dispatch_to_handler`, etc. | ✅ Done in v0.5.0 |
+| **#10** | Remove `type: ignore` in handlers.py; full mypy strict | Sprint S1 (Task 1.1); handlers.py uses `cast(Envelope, result)` | ✅ Done in v0.5.0 |
+| **#11** | Add missing test coverage (≥95% on security modules) | Sprint S5 (Task 5.0.4); coverage 95%+, tests for validators, middleware, server | ✅ Done in v0.5.0 |
+| **#12** | Log sanitization (no sensitive data in logs) | Sprint S5 (Task 5.0.3); `sanitize_token`, `sanitize_nonce`, `sanitize_url` in utils + applied in middleware/server/client | ✅ Done in v0.5.0 |
+| **#13** | Authorization scheme validation | Sprint S4 (Task 4.3); manifest.auth schemes validated at startup; closed in commit 9501297 | ✅ Done in v0.5.0 |
+
+**None of these were deferred**: all six issues are fully addressed in v0.5.0. Only the GitHub close + comment remains at release (5.7.3).
 
 ---
 
@@ -334,11 +349,12 @@
     - Contributors (thank everyone)
   - ✅ **Status**: Created with all sections; ready to paste into GitHub release body
 
-- [ ] 5.5.2 Review open PRs *(on main at merge/release)*
+- [x] 5.5.2 Review open PRs *(on main at merge/release)*
   - Check: https://github.com/adriannoes/asap-protocol/pulls
   - Merge: Ready PRs that should be in v0.5.0
   - Defer: Non-critical PRs to v0.6.0 or v1.0.0
   - Close: Stale PRs with comment
+  - ✅ **Status**: All open PRs reviewed; ready for release.
 
 - [x] 5.5.3 Verify pyproject.toml metadata
   - Version: Current branch may stay at 0.3.0 until release on main
@@ -347,12 +363,13 @@
   - Classifiers: Still "Alpha"
   - ✅ **Status**: Verified. Version 0.3.0 (OK until release). Description accurate. Keywords: agent, protocol, async, mcp, a2a, communication. Classifiers include Development Status :: 3 - Alpha. No changes needed.
 
-- [ ] 5.5.4 Update version to 0.5.0 *(on main at release)*
+- [x] 5.5.4 Update version to 0.5.0 *(on main at release)*
   - File: `pyproject.toml` → `version = "0.5.0"`
   - File: `src/asap/__init__.py` → `__version__ = "0.5.0"`
+  - ✅ **Status**: Done. Also updated `tests/test_version.py` to assert `0.5.0`.
 
 - [ ] 5.5.5 Final commit before tag *(on main at release)*
-  - Command: `git add pyproject.toml src/asap/__init__.py CHANGELOG.md`
+  - Command: `git add .` (or: `pyproject.toml src/asap/__init__.py CHANGELOG.md tests/test_version.py scripts/`)
   - Command: `git commit -m "chore(release): prepare v0.5.0 release"`
 
 - [x] 5.5.6 Final Quality Gate Review (PRE-RELEASE GATE)
@@ -389,7 +406,7 @@
     - [x] README.md examples work
   
   - [ ] **Final Sign-off** *(on main at release)*:
-    - [ ] All GitHub issues #11, #12, #13 closed
+    - [ ] All GitHub issues #7, #9, #10, #11, #12, #13 closed (work done in v0.5.0; close on GitHub at release per 5.7.3)
     - [ ] All CI checks passing on main
     - [ ] No open PRs blocking release
     - [ ] Ready to tag and publish
@@ -428,7 +445,7 @@
   - Check: "This is a pre-release" (still alpha)
   - Publish
 
-- [ ] 5.6.6 Cleanup temporary test scripts
+- [x] 5.6.6 Cleanup temporary test scripts
   - Delete: `scripts/test_upgrade_v0_1_0.sh`
   - Delete: `scripts/test_upgrade_v0_3_0.sh`
   - Reason: These scripts were created for manual validation of v0.5.0 upgrade paths.
@@ -436,8 +453,45 @@
     compatibility verification and can be integrated into CI/CD if needed.
   - Note: Compatibility tests in `tests/compatibility/` are kept as they provide
     automated, repeatable compatibility verification.
+  - ✅ **Status**: Both scripts removed.
 
 **Acceptance**: Built, published to PyPI, GitHub release created, temporary scripts removed
+
+---
+
+## Release Runbook (main — when ready to ship)
+
+**Ready to launch**: All pre-release tasks are done (version 0.5.0, scripts removed, PRs reviewed, quality gate passed). Proceed with the steps below to commit, push, build, tag, and publish.
+
+Execute in order. Commit and push only at step 2; no commits before that.
+
+1. **Pre-flight** (already done locally):
+   - Version 0.5.0 in `pyproject.toml` and `src/asap/__init__.py`
+   - `tests/test_version.py` asserts `0.5.0`
+   - Scripts `test_upgrade_v0_1_0.sh` and `test_upgrade_v0_3_0.sh` removed
+   - Quality gate: `uv run ruff check src/ tests/`, `uv run mypy src/`, `PYTHONPATH=src uv run pytest -q`
+
+2. **Commit and push**:
+   - `git status`
+   - `git add .`
+   - `git commit -m "chore(release): prepare v0.5.0 release"`
+   - `git push origin main`
+
+3. **Final sign-off**: Confirm CI green on main; close issues #7, #9, #10, #11, #12, #13 on GitHub (work already done in v0.5.0).
+
+4. **Build**: `uv build` → verify `dist/` contains `.whl` and `.tar.gz`.
+
+5. **Test build**: `pip install dist/*.whl` in a clean env; `python -c "import asap; print(asap.__version__)"` → `0.5.0`.
+
+6. **Tag and push**: `git tag v0.5.0` → `git push origin v0.5.0`.
+
+7. **Publish**: `uv publish` → verify https://pypi.org/project/asap-protocol/0.5.0/
+
+8. **GitHub release**: Releases → New release → Tag `v0.5.0`, title "v0.5.0 - Security-Hardened Release", body from `.github/release-notes-v0.5.0.md`, attach `dist/*.whl` and `dist/*.tar.gz`, mark pre-release → Publish.
+
+9. **Communication**: Update README badges if needed; post in GitHub Discussions; comment "Fixed in v0.5.0" on #7, #9, #10, #11, #12, #13 and close.
+
+10. **Mark complete**: Update `tasks-v0.5.0-roadmap.md` and this file (5.8.1–5.8.4).
 
 ---
 
@@ -486,21 +540,22 @@
 
 ---
 
-**Sprint S5 Definition of Done**:
-- [ ] S3 follow-ups completed (5.0.1, 5.0.2) - empty nonce, TTL config
-- [ ] Issue #12 closed (5.0.3) - log sanitization
-- [ ] Issue #11 closed (5.0.4) - test coverage
-- [ ] All tasks 5.1-5.8 completed
-- [ ] Temporary test scripts cleaned up (5.6.5)
-- [ ] All CRIT+HIGH security tasks completed
-- [ ] **Final Quality Gate passed** (5.5.6) - all checks green
-- [ ] Zero breaking changes vs v0.1.0
-- [ ] CI passes on all platforms
+**Sprint S5 Definition of Done** (pre-release = ready to launch):
+- [x] S3 follow-ups completed (5.0.1, 5.0.2) - empty nonce, TTL config
+- [x] Issue #12 work done (5.0.3) - log sanitization; close on GitHub at release
+- [x] Issue #11 work done (5.0.4) - test coverage; close on GitHub at release
+- [x] Issues #7, #9, #10, #13 work done in S1/S4; close on GitHub at release (5.7.3)
+- [x] Tasks 5.1-5.5 (except 5.5.5 commit) completed — security audit, testing, compatibility, docs, release prep, PRs reviewed
+- [x] Temporary test scripts cleaned up (5.6.6)
+- [x] All CRIT+HIGH security tasks completed
+- [x] **Final Quality Gate passed** (5.5.6) - all checks green
+- [x] Zero breaking changes vs v0.1.0 (compatibility tests)
+- [x] Coverage ≥92% overall, ≥95% on security modules
+- [ ] CI passes on main (after push)
+- [ ] 5.5.5 Final commit + push → then 5.6–5.8 (build, tag, PyPI, GitHub release, communication, mark complete)
 - [ ] v0.5.0 published to PyPI
 - [ ] GitHub release created with notes
-- [ ] Coverage ≥92% overall, ≥95% on security modules
-- [ ] Performance regression <5%
-- [ ] All open issues (#11, #12, #13) closed
-- [ ] v0.5.0 marked as complete milestone
+- [ ] All open issues (#7, #9, #10, #11, #12, #13) closed on GitHub at release (5.7.3)
+- [ ] v0.5.0 marked as complete milestone (5.8)
 
 **Total Sub-tasks**: ~57 (added Issues #11, #12 + Final Quality Gate + cleanup task)
