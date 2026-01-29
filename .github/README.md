@@ -1,6 +1,7 @@
 # ASAP: Async Simple Agent Protocol
 
-![ASAP Protocol Banner](.cursor/docs/asap-protocol-banner.png)
+![ASAP Protocol Banner](https://raw.githubusercontent.com/adriannoes/asap-protocol/main/.github/assets/asap-protocol-banner.png)
+
 
 > A streamlined, scalable, asynchronous protocol for agent-to-agent communication and task coordination. Built as a simpler, more powerful alternative to A2A with native MCP integration and stateful orchestration.
 
@@ -17,30 +18,14 @@ Building multi-agent systems today suffers from three core technical challenges 
 
 **ASAP** provides a production-ready communication layer that simplifies these complexities. It introduces a standardized, stateful orchestration framework that ensures your agents can coordinate reliably across distributed environments.
 
-### Security-First Design
-
-v0.5.0 introduces comprehensive security hardening:
-- **Authentication**: Bearer token authentication with configurable token validators
-- **Replay Attack Prevention**: Timestamp validation (5-minute window) and optional nonce tracking
-- **DoS Protection**: Built-in rate limiting (100 req/min), request size limits (10MB), and thread pool bounds
-- **HTTPS Enforcement**: Client-side HTTPS validation in production mode
-- **Secure Logging**: Automatic sanitization of sensitive data (tokens, credentials, nonces) in logs
-- **Input Validation**: Strict schema validation with Pydantic v2 for all incoming requests
-
-All security features are **opt-in** to maintain backward compatibility with existing deployments.
-
 ### Key Features
 
-- **Stateful Orchestration**: Native task state machine with built-in snapshotting for durable, resumable agent workflows.
-- **Schema-First Design**: Strict Pydantic v2 models providing automatic JSON Schema generation for guaranteed cross-agent interoperability.
-- **High-Performance Core**: Built on Python 3.13+, leveraging `uvloop` (C) and `pydantic-core` (Rust) for ultra-low latency validation and I/O.
-- **Observable Chains**: First-class support for `trace_id` and `correlation_id` to debug complex multi-agent delegation.
-- **MCP Integration**: Uses the Model Context Protocol (MCP) as a tool-execution substrate, wrapped in a high-level coordination envelope.
-- **Async-Native**: Engineered from the ground up for high-concurrency environments using `asyncio` and `httpx`. Supports both sync and async handlers with automatic event loop management.
-- **Security-Hardened (v0.5.0)**: Authentication (Bearer tokens), replay attack prevention (timestamp + nonce validation), HTTPS enforcement, secure logging, and comprehensive input validation. All security features are opt-in for backward compatibility.
-- **DoS Protection**: Built-in rate limiting (100 req/min), request size limits (10MB), and thread pool bounds to prevent resource exhaustion attacks.
-
-💡 **Performance Note**: Pure Python codebase leveraging Rust-accelerated dependencies (`pydantic-core`, `orjson`, `python-ulid`) for native-level performance without build complexity.
+- **Stateful orchestration** — Task state machine with snapshotting for resumable workflows.
+- **Schema-first** — Pydantic v2 + JSON Schema for cross-agent interoperability.
+- **Async-native** — `asyncio` + `httpx`; sync and async handlers supported.
+- **MCP integration** — Tool execution and coordination in a single envelope.
+- **Observable** — `trace_id` and `correlation_id` for debugging.
+- **Security (v0.5.0)** — Bearer auth, replay prevention, HTTPS, rate limiting (100 req/min). Opt-in.
 
 ## Installation
 
@@ -64,7 +49,7 @@ For reproducible environments, prefer `uv` when possible.
 
 - **Python**: 3.13 or higher
 - **Dependencies**: Automatically installed via `uv` or `pip`
-- **Optional**: For development, see [Contributing](CONTRIBUTING.md)
+- **Optional**: For development, see [Contributing](CONTRIBUTING.md).
 
 ## Quick Start
 
