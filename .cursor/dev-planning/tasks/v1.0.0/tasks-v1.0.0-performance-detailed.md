@@ -214,38 +214,38 @@
 
 ### Task 4.4: Documentation Enhancements
 
-- [ ] 4.4.1 Document connection pooling defaults
+- [x] 4.4.1 Document connection pooling defaults
   - File: `src/asap/transport/client.py`
   - Action: Clarify `None` defaults mapping to constants and tuning guide.
 
-- [ ] 4.4.2 Document compression threshold
+- [x] 4.4.2 Document compression threshold
   - File: `src/asap/transport/compression.py`
   - Action: Add note about latency vs bandwidth trade-offs for small payloads.
 
-- [ ] 4.4.3 Red Team: Document registry singleton
+- [x] 4.4.3 Red Team: Document registry singleton
   - File: `src/asap/transport/circuit_breaker.py`
   - Action: Add warning about state persistence in tests (RT-W1).
 
 ### Task 4.5: Observability Improvements
 
-- [ ] 4.5.1 Explicit Retry-After logging
+- [x] 4.5.1 Explicit Retry-After logging
   - File: `src/asap/transport/client.py`
   - Action: Log specific warning when Retry-After header is unparseable.
 
-- [ ] 4.5.2 Decompression bomb logging
+- [x] 4.5.2 Decompression bomb logging
   - File: `src/asap/transport/server.py`
   - Action: Add warning log with compression ratio when size limit exceeded.
 
 ### Task 4.6: Code Quality & Consistency
 
-- [ ] 4.6.1 Update default manifest version
+- [x] 4.6.1 Update default manifest version
   - File: `src/asap/transport/server.py`
   - Action: Change "0.3.0" to "1.0.0-dev".
 
-- [ ] 4.6.2 Precise Brotli exception handling
+- [x] 4.6.2 Precise Brotli exception handling
   - File: `src/asap/transport/compression.py`
   - Action: Catch `brotli.error` explicitly before wrapping in OSError.
 
-- [ ] 4.6.3 Modern typing updates (RT-W2)
+- [x] 4.6.3 Modern typing updates (RT-W2)
   - File: `src/asap/transport/circuit_breaker.py`
   - Action: Replace `typing.Dict` with `dict`.
