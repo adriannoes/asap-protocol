@@ -102,10 +102,12 @@
 
 ### Task 4.1: Implement Batch Operations
 
-- [ ] 4.1.1 Add send_batch method to ASAPClient
+- [x] 4.1.1 Add send_batch method to ASAPClient
   - Method: `async def send_batch(envelopes: list[Envelope]) -> list[Envelope]`
   - Use: asyncio.gather for parallel sends
   - Return: List of responses in same order
+  - Added: return_exceptions parameter for error handling flexibility
+  - Tests: 9 tests covering all scenarios
 
 - [ ] 4.1.2 Add HTTP/2 multiplexing
   - Config: httpx client with http2=True

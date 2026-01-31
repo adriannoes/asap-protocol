@@ -1088,3 +1088,97 @@ class ASAPClient:
                 cause=e,
                 url=sanitize_url(url),
             ) from e
+
+    async def send_batch(
+        self,
+        envelopes: list[Envelope],
+        return_exceptions: bool = False,
+    ) -> list[Envelope | BaseException]:
+        """Send multiple envelopes in parallel using asyncio.gather.
+
+        Uses asyncio.gather to send all envelopes concurrently, leveraging
+        connection pooling and HTTP/2 multiplexing for optimal throughput.
+
+        Args:
+            envelopes: List of ASAP envelopes to send
+            return_exceptions: If True, exceptions are returned in the result list
+                instead of being raised. If False (default), the first exception
+                encountered will be raised.
+
+        Returns:
+            List of response envelopes in the same order as input envelopes.
+            If return_exceptions=True, failed sends will have the exception
+            in their position instead of an Envelope.
+
+        Raises:
+            ValueError: If envelopes list is empty
+            ASAPConnectionError: If any send fails (when return_exceptions=False)
+            ASAPTimeoutError: If any send times out (when return_exceptions=False)
+            ASAPRemoteError: If any remote agent returns error (when return_exceptions=False)
+            CircuitOpenError: If circuit breaker is open (when return_exceptions=False)
+
+        Example:
+            >>> async with ASAPClient("http://localhost:8000") as client:
+            ...     responses = await client.send_batch([env1, env2, env3])
+            ...     for response in responses:
+            ...         print(response.payload_type)
+            >>>
+            >>> # With error handling
+            >>> async with ASAPClient("http://localhost:8000") as client:
+            ...     results = await client.send_batch(envelopes, return_exceptions=True)
+            ...     for i, result in enumerate(results):
+            ...         if isinstance(result, BaseException):
+            ...             print(f"Envelope {i} failed: {result}")
+            ...         else:
+            ...             print(f"Envelope {i} succeeded: {result.id}")
+        """
+        if not envelopes:
+            raise ValueError("envelopes list cannot be empty")
+
+        if not self._client:
+            raise ASAPConnectionError(
+                "Client not connected. Use 'async with' context.",
+                url=sanitize_url(self.base_url),
+            )
+
+        batch_size = len(envelopes)
+        logger.info(
+            "asap.client.send_batch",
+            target_url=sanitize_url(self.base_url),
+            batch_size=batch_size,
+            message=f"Sending batch of {batch_size} envelopes to {sanitize_url(self.base_url)}",
+        )
+
+        start_time = time.perf_counter()
+
+        # Create send tasks for all envelopes
+        tasks = [self.send(envelope) for envelope in envelopes]
+
+        # Execute all tasks concurrently
+        results = await asyncio.gather(*tasks, return_exceptions=return_exceptions)
+
+        duration_ms = (time.perf_counter() - start_time) * 1000
+
+        # Count successes and failures
+        if return_exceptions:
+            success_count = sum(1 for r in results if isinstance(r, Envelope))
+            failure_count = batch_size - success_count
+        else:
+            success_count = batch_size
+            failure_count = 0
+
+        logger.info(
+            "asap.client.send_batch_complete",
+            target_url=sanitize_url(self.base_url),
+            batch_size=batch_size,
+            success_count=success_count,
+            failure_count=failure_count,
+            duration_ms=round(duration_ms, 2),
+            throughput_per_second=round(batch_size / (duration_ms / 1000), 2) if duration_ms > 0 else 0,
+            message=(
+                f"Batch of {batch_size} envelopes completed in {duration_ms:.2f}ms "
+                f"({success_count} succeeded, {failure_count} failed)"
+            ),
+        )
+
+        return results
