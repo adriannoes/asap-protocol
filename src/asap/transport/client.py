@@ -185,6 +185,13 @@ class ASAPClient:
     The client should be used as an async context manager to ensure
     proper connection lifecycle management.
 
+    Features:
+        - HTTP/2 multiplexing (enabled by default) for improved batch performance
+        - Connection pooling supporting 1000+ concurrent requests
+        - Automatic retry with exponential backoff
+        - Circuit breaker pattern for fault tolerance
+        - Batch operations via send_batch() method
+
     Attributes:
         base_url: Base URL of the remote agent
         timeout: Request timeout in seconds
@@ -197,9 +204,18 @@ class ASAPClient:
         Single-agent: 100 (default). Small cluster: 200–500. Large cluster: 500–1000.
         Supports 1000+ concurrent requests via connection reuse when pool_maxsize < concurrency.
 
+    HTTP/2 Multiplexing:
+        HTTP/2 is enabled by default (http2=True) and provides request multiplexing over
+        a single TCP connection, reducing latency for batch operations. If the server
+        doesn't support HTTP/2, the client automatically falls back to HTTP/1.1.
+
     Example:
         >>> async with ASAPClient("http://localhost:8000") as client:
         ...     response = await client.send(envelope)
+        >>>
+        >>> # Batch operations with HTTP/2 multiplexing
+        >>> async with ASAPClient("https://agent.example.com") as client:
+        ...     responses = await client.send_batch([env1, env2, env3])
     """
 
     _circuit_breaker: Optional[CircuitBreaker]
@@ -215,6 +231,8 @@ class ASAPClient:
         pool_connections: int | None = None,
         pool_maxsize: int | None = None,
         pool_timeout: float | None = None,
+        # HTTP/2 multiplexing for improved batch performance
+        http2: bool = True,
         # Individual retry parameters (for backward compatibility)
         # If retry_config is provided, these are ignored
         max_retries: int | None = None,
@@ -237,6 +255,10 @@ class ASAPClient:
             pool_maxsize: Max total connections in pool (default: 100). Passed to httpx.Limits.
             pool_timeout: Seconds to wait when acquiring a connection from the pool (default: 5.0).
                 HTTP connections to localhost are allowed with a warning for development.
+            http2: Enable HTTP/2 multiplexing for improved batch performance (default: True).
+                HTTP/2 allows multiple concurrent requests over a single TCP connection,
+                reducing latency for batch operations. Falls back to HTTP/1.1 if server
+                doesn't support HTTP/2.
             retry_config: Optional RetryConfig dataclass to group retry and circuit breaker parameters.
                 If provided, individual retry parameters are ignored.
             max_retries: Maximum retry attempts for transient failures (default: 3).
@@ -350,6 +372,7 @@ class ASAPClient:
         self.jitter = jitter_val
         self.circuit_breaker_enabled = circuit_breaker_enabled_val
         self._transport = transport
+        self._http2 = http2
         self._client: httpx.AsyncClient | None = None
         # Thread-safe counter using itertools.count
         self._request_counter = itertools.count(1)
@@ -504,7 +527,11 @@ class ASAPClient:
         return self._client is not None
 
     async def __aenter__(self) -> "ASAPClient":
-        """Enter async context and open connection."""
+        """Enter async context and open connection.
+
+        Creates an httpx.AsyncClient with configured pool limits and HTTP/2 support.
+        HTTP/2 enables multiplexing for improved batch performance.
+        """
         limits = httpx.Limits(
             max_keepalive_connections=self._pool_connections,
             max_connections=self._pool_maxsize,
@@ -512,15 +539,18 @@ class ASAPClient:
         )
         timeout_config = httpx.Timeout(self.timeout, pool=self._pool_timeout)
         if self._transport:
+            # Custom transport (for testing) - http2 not applicable with mock transports
             self._client = httpx.AsyncClient(
                 transport=self._transport,
                 timeout=timeout_config,
                 limits=limits,
             )
         else:
+            # Production client with HTTP/2 multiplexing support
             self._client = httpx.AsyncClient(
                 timeout=timeout_config,
                 limits=limits,
+                http2=self._http2,
             )
         return self
 

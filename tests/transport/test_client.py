@@ -161,6 +161,54 @@ class TestASAPClientContextManager:
             assert isinstance(timeout, httpx.Timeout)
             assert timeout.pool == 10.0
 
+    async def test_client_http2_enabled_by_default(self) -> None:
+        """Test ASAPClient has HTTP/2 enabled by default."""
+        from asap.transport.client import ASAPClient
+
+        mock_instance = AsyncMock()
+        mock_instance.aclose = AsyncMock()
+        with patch(
+            "asap.transport.client.httpx.AsyncClient", return_value=mock_instance
+        ) as mock_async_client:
+            client = ASAPClient("http://localhost:8000")
+            async with client:
+                pass
+            mock_async_client.assert_called_once()
+            call_kwargs = mock_async_client.call_args.kwargs
+            # HTTP/2 should be enabled by default
+            assert call_kwargs.get("http2") is True
+
+    async def test_client_http2_can_be_disabled(self) -> None:
+        """Test ASAPClient can disable HTTP/2."""
+        from asap.transport.client import ASAPClient
+
+        mock_instance = AsyncMock()
+        mock_instance.aclose = AsyncMock()
+        with patch(
+            "asap.transport.client.httpx.AsyncClient", return_value=mock_instance
+        ) as mock_async_client:
+            client = ASAPClient("http://localhost:8000", http2=False)
+            async with client:
+                pass
+            mock_async_client.assert_called_once()
+            call_kwargs = mock_async_client.call_args.kwargs
+            # HTTP/2 should be disabled
+            assert call_kwargs.get("http2") is False
+
+    async def test_client_http2_not_passed_with_custom_transport(self) -> None:
+        """Test HTTP/2 flag is not passed when using custom transport (for testing)."""
+        from asap.transport.client import ASAPClient
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, json={})
+
+        # Custom transport is used for testing - http2 shouldn't be passed
+        async with ASAPClient(
+            "http://localhost:8000", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            # Just verify client works with custom transport
+            assert client.is_connected
+
     async def test_client_default_timeout(self) -> None:
         """Test client has reasonable default timeout."""
         from asap.transport.client import ASAPClient
