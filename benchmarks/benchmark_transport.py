@@ -31,11 +31,16 @@ from asap.transport.client import ASAPClient
 from asap.transport.jsonrpc import JsonRpcRequest, JsonRpcResponse
 from asap.transport.server import create_app
 
-# Concurrency for connection-pooling benchmark (20 for CI; use 1000 for full validation)
-CONCURRENCY_POOLING_BENCHMARK = 20
+# Concurrency for connection-pooling benchmark
+# Use FULL_BENCHMARK=1 env var for production-scale values (1000)
+# Default to 20 for fast CI feedback
+import os
+
+use_full_benchmark = os.getenv("FULL_BENCHMARK", "0") == "1"
+CONCURRENCY_POOLING_BENCHMARK = 1000 if use_full_benchmark else 20
 
 # Batch size for batch operations benchmark (100 for full; 20 for CI speed)
-BATCH_SIZE_BENCHMARK = 20
+BATCH_SIZE_BENCHMARK = 100 if use_full_benchmark else 20
 
 
 class TestJsonRpcProcessing:
@@ -269,7 +274,7 @@ class TestConnectionPooling:
         With pool_maxsize=100 and 1000 concurrent requests to the same host, httpx
         reuses connections from the pool, giving >90% connection reuse in practice.
         """
-        app = create_app(sample_manifest, handler_registry)
+        app = create_app(sample_manifest, handler_registry, rate_limit="100000/minute")
         transport = httpx.ASGITransport(app=app)
         base_url = "http://testserver"
         # 1000+ concurrent supported; CONCURRENCY_POOLING_BENCHMARK for CI speed

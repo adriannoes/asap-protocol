@@ -70,6 +70,19 @@ def handler_registry() -> HandlerRegistry:
 
 @pytest.fixture
 def benchmark_app(sample_manifest: Manifest, handler_registry: HandlerRegistry) -> TestClient:
-    """Create a test client for HTTP benchmarks."""
-    app = create_app(sample_manifest, handler_registry)
-    return TestClient(app)
+    """Create a test client for HTTP benchmarks.
+
+    Disables effective rate limiting (10000/s) to ensure benchmarks measure
+    code performance, not rate limiter.
+    """
+    from asap.transport.middleware import limiter
+
+    # helper to disable limiter
+    original_enabled = limiter.enabled
+    limiter.enabled = False
+
+    app = create_app(sample_manifest, handler_registry, rate_limit="100000/minute")
+    try:
+        yield TestClient(app)
+    finally:
+        limiter.enabled = original_enabled

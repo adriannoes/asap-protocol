@@ -155,13 +155,15 @@ class TestCompressPayload:
 
     def test_compression_ineffective_returns_original(self) -> None:
         """Verify if compression increases size, original is returned."""
-        # Random-looking data that doesn't compress well
-        import os
+        # Use fixed seed for deterministic behavior
+        import random
 
-        random_data = os.urandom(2000)
+        rng = random.Random(42)  # Fixed seed
+        # Generate random bytes which are hard to compress
+        random_data = bytes(rng.getrandbits(8) for _ in range(2000))
+
         result, algorithm = compress_payload(random_data)
         # If compression was ineffective, should return IDENTITY
-        # Note: This may or may not trigger depending on random data compressibility
         assert algorithm in (CompressionAlgorithm.IDENTITY, CompressionAlgorithm.GZIP)
 
     def test_default_threshold_constant(self) -> None:

@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 import httpx
 import pytest
+from typing import Generator
 
 from asap.errors import CircuitOpenError
 from asap.transport.client import ASAPConnectionError
@@ -148,7 +149,7 @@ class TestCircuitBreakerIntegration:
     """Tests for circuit breaker integration with ASAPClient."""
 
     @pytest.fixture(autouse=True)
-    def clear_registry(self) -> None:
+    def clear_registry(self) -> Generator[None, None, None]:
         """Clear circuit breaker registry before each test to ensure isolation."""
         registry = get_registry()
         registry.clear()
