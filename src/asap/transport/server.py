@@ -672,6 +672,9 @@ class ASAPRequestHandler:
             return
         try:
             body_bytes = response.body
+            # Handle both bytes and memoryview
+            if isinstance(body_bytes, memoryview):
+                body_bytes = body_bytes.tobytes()
             response_dict: dict[str, Any] = json.loads(body_bytes.decode("utf-8"))
         except (ValueError, AttributeError):
             response_dict = {"_raw": "(unable to decode response body)"}
@@ -1128,9 +1131,7 @@ class ASAPRequestHandler:
             payload_type = result  # type: ignore[assignment]
 
             # Build and return success response
-            success_resp = self._build_success_response(
-                response_envelope, ctx, payload_type
-            )
+            success_resp = self._build_success_response(response_envelope, ctx, payload_type)
             self._log_response_debug(success_resp)
             return success_resp
 
@@ -1305,9 +1306,7 @@ def create_app(
     # Start handler file watcher when hot reload is enabled (only with default registry)
     if hot_reload and use_default_registry:
         _handlers_module = sys.modules.get("asap.transport.handlers")
-        _handlers_file = (
-            getattr(_handlers_module, "__file__", "") if _handlers_module else ""
-        )
+        _handlers_file = getattr(_handlers_module, "__file__", "") if _handlers_module else ""
         if _handlers_file and Path(_handlers_file).exists():
             watcher = threading.Thread(
                 target=_run_handler_watcher,
