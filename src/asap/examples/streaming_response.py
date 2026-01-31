@@ -54,11 +54,12 @@ def stream_task_updates(
             },
         )
         yield update
+        message = update.progress.get("message") if update.progress else None
         logger.info(
             "asap.streaming_response.update",
             task_id=task_id,
             percent=percent,
-            message=update.progress.get("message"),
+            message=message,
         )
 
 

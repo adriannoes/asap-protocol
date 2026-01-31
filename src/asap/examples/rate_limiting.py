@@ -104,7 +104,7 @@ def run_demo() -> None:
     )
 
     # create_limiter uses _get_sender_from_envelope as key_func
-    limiter = create_limiter(["50/minute"])
+    _limiter = create_limiter(["50/minute"])
     logger.info(
         "asap.rate_limiting.limiter_created",
         limits=["50/minute"],

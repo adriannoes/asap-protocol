@@ -92,7 +92,9 @@ def build_orchestrator_manifest(asap_endpoint: str = "http://localhost:8000/asap
         capabilities=Capability(
             asap_version="0.1",
             skills=[
-                Skill(id="orchestrate", description="Delegate and coordinate work across sub-agents"),
+                Skill(
+                    id="orchestrate", description="Delegate and coordinate work across sub-agents"
+                ),
             ],
             state_persistence=False,
         ),

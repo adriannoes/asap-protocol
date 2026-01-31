@@ -36,7 +36,9 @@ class WorkflowState:
     task_id: str | None = None
 
 
-def make_step(name: str, fn: Callable[[dict[str, Any]], dict[str, Any]]) -> Callable[[WorkflowState], WorkflowState]:
+def make_step(
+    name: str, fn: Callable[[dict[str, Any]], dict[str, Any]]
+) -> Callable[[WorkflowState], WorkflowState]:
     """Wrap a function as a workflow step that takes and returns WorkflowState.
 
     Args:
@@ -46,6 +48,7 @@ def make_step(name: str, fn: Callable[[dict[str, Any]], dict[str, Any]]) -> Call
     Returns:
         Callable(WorkflowState) -> WorkflowState.
     """
+
     def step(state: WorkflowState) -> WorkflowState:
         out = fn(state.data)
         logger.info(
@@ -88,6 +91,7 @@ def run_workflow(
 
 def run_demo() -> WorkflowState:
     """Run a demo workflow: fetch -> transform -> summarize."""
+
     def fetch(data: dict[str, Any]) -> dict[str, Any]:
         # Simulate fetching raw data
         return {"raw": ["item1", "item2", "item3"], "count": 3}

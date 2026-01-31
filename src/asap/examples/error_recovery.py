@@ -20,7 +20,7 @@ import time
 from typing import Callable, Sequence, TypeVar
 
 from asap.observability import get_logger
-from asap.transport.circuit_breaker import CircuitBreaker, CircuitState, get_registry
+from asap.transport.circuit_breaker import CircuitBreaker, CircuitState
 from asap.transport.client import RetryConfig
 
 logger = get_logger(__name__)
@@ -145,7 +145,7 @@ def demo_circuit_breaker(
     breaker = CircuitBreaker(threshold=threshold, timeout=timeout)
 
     # CLOSED -> record failures until OPEN
-    for i in range(threshold):
+    for _ in range(threshold):
         breaker.record_failure()
     assert breaker.get_state() == CircuitState.OPEN
     assert breaker.can_attempt() is False
@@ -175,6 +175,7 @@ def demo_circuit_breaker(
 
 def demo_fallback() -> None:
     """Demonstrate fallback: primary raises, fallback returns default result."""
+
     def primary() -> str:
         raise RuntimeError("Primary agent unavailable")
 

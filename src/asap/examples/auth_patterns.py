@@ -103,6 +103,7 @@ def static_map_validator(token_to_agent: dict[str, str]) -> Callable[[str], str 
     Returns:
         Callable(token) -> agent_id or None.
     """
+
     def validate(token: str) -> str | None:
         return token_to_agent.get(token)
 
@@ -144,7 +145,10 @@ def run_demo() -> None:
     )
 
     # Custom validator: static map
-    token_map = {"demo-token-123": "urn:asap:agent:client-a", "other-token": "urn:asap:agent:client-b"}
+    token_map = {
+        "demo-token-123": "urn:asap:agent:client-a",
+        "other-token": "urn:asap:agent:client-b",
+    }
     validator_static = static_map_validator(token_map)
     bearer_validator = BearerTokenValidator(validator_static)
     agent_id = bearer_validator("demo-token-123")
@@ -170,7 +174,9 @@ def run_demo() -> None:
         "asap.auth_patterns.oauth2_concept",
         schemes=manifest_oauth2.auth.schemes if manifest_oauth2.auth else [],
         oauth2_urls=(
-            list(manifest_oauth2.auth.oauth2.keys()) if manifest_oauth2.auth and manifest_oauth2.auth.oauth2 else []
+            list(manifest_oauth2.auth.oauth2.keys())
+            if manifest_oauth2.auth and manifest_oauth2.auth.oauth2
+            else []
         ),
     )
 
