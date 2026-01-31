@@ -7,6 +7,7 @@ without requiring live servers (mocks or in-process demos only).
 from __future__ import annotations
 
 from asap.examples import auth_patterns
+from asap.testing import assert_envelope_valid
 from asap.examples import error_recovery
 from asap.examples import long_running
 from asap.examples import mcp_integration
@@ -36,7 +37,7 @@ class TestOrchestrationExample:
             conversation_id="conv-1",
             trace_id="trace-1",
         )
-        assert env.payload_type == "task.request"
+        assert_envelope_valid(env, allowed_payload_types=["task.request"])
         assert env.recipient == "urn:asap:agent:worker-a"
         assert env.payload.get("skill_id") == "echo"
 

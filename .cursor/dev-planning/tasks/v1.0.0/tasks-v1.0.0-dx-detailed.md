@@ -14,9 +14,17 @@
 - `src/asap/examples/mcp_integration.py` - NEW: MCP tools
 - `src/asap/examples/auth_patterns.py` - NEW: Auth examples
 - (5+ more examples)
-- `src/asap/testing/__init__.py` - NEW: Testing utilities
-- `src/asap/testing/fixtures.py` - NEW: Pytest fixtures
-- `src/asap/testing/mocks.py` - NEW: Mock agents
+- `src/asap/testing/__init__.py` - Testing utilities package (Task 5.2.1)
+- `src/asap/testing/mocks.py` - MockAgent: pre-set/default responses, request recording, delay, failure (Task 5.2.2)
+- `tests/testing/__init__.py` - Tests for asap.testing
+- `tests/testing/test_mocks.py` - Unit tests for MockAgent
+- `src/asap/testing/assertions.py` - assert_envelope_valid, assert_task_completed, assert_response_correlates (Task 5.2.4)
+- `tests/testing/test_assertions.py` - Unit tests for assertions
+- `docs/testing.md` - Section "ASAP Testing Utilities" (Task 5.2.5)
+- Refactored: tests/examples/test_echo_agent.py, test_coordinator.py, test_examples_dx.py; tests/transport/test_handlers.py, test_client.py; tests/e2e/test_two_agents.py; tests/transport/e2e/test_full_agent_flow.py (Task 5.2.6)
+- `src/asap/testing/fixtures.py` - mock_agent, mock_client, mock_snapshot_store, test_agent(), test_client() (Task 5.2.3)
+- `tests/conftest.py` - pytest_plugins for asap.testing.fixtures
+- `tests/testing/test_fixtures.py` - Tests for fixtures and context managers
 - `tests/examples/` - Example tests
 
 ### Sprint P6: Debugging Tools
@@ -92,33 +100,33 @@
 
 ### Task 5.2: Create Testing Utilities
 
-- [ ] 5.2.1 Create asap.testing module
+- [x] 5.2.1 Create asap.testing module
   - Directory: `src/asap/testing/`
   - Files: __init__.py, fixtures.py, mocks.py, assertions.py
 
-- [ ] 5.2.2 Implement MockAgent
+- [x] 5.2.2 Implement MockAgent
   - File: `src/asap/testing/mocks.py`
   - Class: Configurable mock agent
-  - Features: Pre-set responses, request recording
+  - Features: Pre-set responses, request recording, set_default_response, set_delay, set_failure, requests_for_skill
 
-- [ ] 5.2.3 Implement pytest fixtures
+- [x] 5.2.3 Implement pytest fixtures
   - File: `src/asap/testing/fixtures.py`
   - Fixtures: mock_agent, mock_client, mock_snapshot_store
   - Context managers: test_agent(), test_client()
 
-- [ ] 5.2.4 Implement custom assertions
+- [x] 5.2.4 Implement custom assertions
   - File: `src/asap/testing/assertions.py`
-  - Functions: assert_envelope_valid(), assert_task_completed()
+  - Functions: assert_envelope_valid(), assert_task_completed(), assert_response_correlates()
 
-- [ ] 5.2.5 Document testing utilities
+- [x] 5.2.5 Document testing utilities
   - File: Update `docs/testing.md`
   - Show: How to use each utility
   - Examples: Reducing test boilerplate
 
-- [ ] 5.2.6 Refactor existing tests to use utilities
-  - Pick: 5-10 tests to refactor as examples
-  - Measure: Boilerplate reduction
-  - Target: 50% less code
+- [x] 5.2.6 Refactor existing tests to use utilities
+  - Refactored 8 tests across 6 files (examples, transport, e2e)
+  - Replaced ~20 manual assert lines with assert_envelope_valid, assert_task_completed, assert_response_correlates
+  - Files: test_echo_agent, test_coordinator, test_examples_dx, test_handlers, test_client, test_two_agents, test_full_agent_flow
 
 - [ ] 5.2.7 Commit
   - Command: `git commit -m "feat(testing): add testing utilities for easier test authoring"`

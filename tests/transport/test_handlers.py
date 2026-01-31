@@ -17,6 +17,7 @@ from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest, TaskResponse
+from asap.testing import assert_envelope_valid, assert_response_correlates
 
 if TYPE_CHECKING:
     pass
@@ -213,7 +214,10 @@ class TestHandlerRegistry:
         result = registry.dispatch(sample_task_request_envelope, sample_manifest)
 
         assert result == response_envelope
-        assert result.payload_type == "task.response"
+        assert_envelope_valid(
+            result, allowed_payload_types=["task.response"]
+        )
+        assert_response_correlates(sample_task_request_envelope, result)
 
     def test_dispatch_unknown_payload_type_raises_error(self, sample_manifest: Manifest) -> None:
         """Test dispatching unknown payload type raises error."""

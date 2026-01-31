@@ -296,6 +296,8 @@ class TestBrotliCompression:
         result = select_best_encoding("br, gzip")
         assert result == CompressionAlgorithm.BROTLI
 
+    # These two tests run only when brotli is NOT installed (they verify the
+    # "brotli unavailable" path). With brotli in dev deps they are skipped.
     @pytest.mark.skipif(is_brotli_available(), reason="brotli is installed")
     def test_brotli_not_in_encodings_when_unavailable(self) -> None:
         """Verify brotli is not in supported encodings when unavailable."""

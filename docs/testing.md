@@ -376,6 +376,198 @@ def test_something(create_isolated_app, manifest):
 
 **Why we created it**: Simplifies app creation for tests that need complete isolation.
 
+---
+
+## ASAP Testing Utilities (`asap.testing`)
+
+The `asap.testing` package provides **MockAgent**, **pytest fixtures**, **context managers**, and **custom assertions** to reduce boilerplate when testing ASAP protocol integrations. Use these utilities to simulate agents, validate envelopes, and assert task outcomes without starting real servers.
+
+### MockAgent
+
+`MockAgent` simulates an ASAP agent in memory. Pre-set responses per skill, record incoming requests, and optionally add delay or raise exceptions for error-path tests.
+
+**Basic usage:**
+
+```python
+from asap.testing import MockAgent
+from asap.models.envelope import Envelope
+from asap.models.payloads import TaskRequest, TaskResponse
+
+agent = MockAgent("urn:asap:agent:mock")
+agent.set_response(
+    "echo",
+    TaskResponse(task_id="t1", status="completed").model_dump(),
+)
+
+req = Envelope(
+    asap_version="0.1",
+    sender="urn:asap:agent:a",
+    recipient=agent.agent_id,
+    payload_type="TaskRequest",
+    payload=TaskRequest(conversation_id="c", skill_id="echo", input={}).model_dump(),
+)
+out = agent.handle(req)
+
+assert out is not None
+assert out.payload_type == "TaskResponse"
+assert len(agent.requests) == 1
+assert agent.requests_for_skill("echo")[0] == req
+```
+
+**Optional behavior:**
+
+- **Default response**: `agent.set_default_response(payload)` — used when no skill-specific response is set.
+- **Delay**: `agent.set_delay(0.5)` — sleep (seconds) before returning the response (e.g. for timeout tests).
+- **Simulated failure**: `agent.set_failure(ValueError("error"))` — `handle()` records the request then raises; failure is cleared after one call.
+- **Clear**: `agent.clear()` — clears recorded requests and all pre-set responses.
+
+### Pytest Fixtures (asap.testing)
+
+These fixtures are loaded via `pytest_plugins` in `tests/conftest.py`. Request them by name in your test parameters.
+
+| Fixture | Type | Description |
+|--------|------|-------------|
+| `mock_agent` | `MockAgent` | Fresh MockAgent per test. |
+| `mock_snapshot_store` | `InMemorySnapshotStore` | Empty in-memory snapshot store per test. |
+| `mock_client` | async | `ASAPClient` already entered; use in async tests. Base URL: `http://localhost:9999`. |
+
+**Example using fixtures:**
+
+```python
+def test_echo_roundtrip(mock_agent: MockAgent) -> None:
+    mock_agent.set_response(
+        "echo",
+        TaskResponse(task_id="t1", status="completed").model_dump(),
+    )
+    req = Envelope(
+        asap_version="0.1",
+        sender="urn:asap:agent:a",
+        recipient=mock_agent.agent_id,
+        payload_type="TaskRequest",
+        payload=TaskRequest(
+            conversation_id="c", skill_id="echo", input={}
+        ).model_dump(),
+    )
+    out = mock_agent.handle(req)
+    assert out is not None
+    assert_task_completed(out)
+```
+
+### Context Managers
+
+Use context managers when you want an agent or client scoped to a block, with cleanup on exit.
+
+**`test_agent(agent_id="urn:asap:agent:mock")`** — yields a `MockAgent` and calls `agent.clear()` on exit:
+
+```python
+from asap.testing.fixtures import test_agent
+
+with test_agent("urn:asap:agent:custom") as agent:
+    agent.set_response("echo", response_payload)
+    out = agent.handle(req)
+    assert out is not None
+# agent is cleared after the block
+```
+
+**`test_client(base_url="http://localhost:9999")`** — async context manager yielding an open `ASAPClient`:
+
+```python
+from asap.testing.fixtures import test_client
+
+async with test_client("http://localhost:8000") as client:
+    response = await client.send(envelope)
+    assert response is not None
+```
+
+### Custom Assertions
+
+Use these instead of ad-hoc `assert` logic for envelopes and task status.
+
+**`assert_envelope_valid(envelope, require_id=True, require_timestamp=True, allowed_payload_types=None)`**
+
+Checks that the envelope has required fields and, optionally, that `payload_type` is in `allowed_payload_types`. Fails with clear messages.
+
+```python
+from asap.testing import assert_envelope_valid
+
+assert_envelope_valid(response_envelope)
+assert_envelope_valid(
+    response_envelope,
+    allowed_payload_types=["TaskResponse", "TaskUpdate"],
+)
+```
+
+**`assert_task_completed(payload, status_key="status", completed_value="completed")`**
+
+Asserts that a task response (dict or Envelope) indicates completion. Accepts either a payload dict or an Envelope (uses `envelope.payload`).
+
+```python
+from asap.testing import assert_task_completed
+
+assert_task_completed({"status": "completed"})
+assert_task_completed(response_envelope)  # envelope.payload must have status=completed
+```
+
+**`assert_response_correlates(request_envelope, response_envelope, correlation_id_field="correlation_id")`**
+
+Asserts that the response’s correlation id matches the request’s id.
+
+```python
+from asap.testing import assert_response_correlates
+
+assert_response_correlates(request_envelope, response_envelope)
+```
+
+### Reducing Test Boilerplate
+
+**Before** (manual setup and assertions):
+
+```python
+def test_echo_response():
+    agent_id = "urn:asap:agent:echo"
+    responses = {}
+    responses["echo"] = {"task_id": "t1", "status": "completed"}
+    req = Envelope(
+        asap_version="0.1",
+        sender="urn:asap:agent:a",
+        recipient=agent_id,
+        payload_type="TaskRequest",
+        payload={"conversation_id": "c", "skill_id": "echo", "input": {}},
+    )
+    # ... manual handling and building response envelope ...
+    assert response is not None
+    assert response.payload_type == "TaskResponse"
+    assert response.sender == agent_id
+    assert response.payload.get("status") == "completed"
+    assert response.correlation_id == req.id
+```
+
+**After** (using MockAgent and assertions):
+
+```python
+def test_echo_response(mock_agent: MockAgent) -> None:
+    mock_agent.set_response(
+        "echo",
+        TaskResponse(task_id="t1", status="completed").model_dump(),
+    )
+    req = Envelope(
+        asap_version="0.1",
+        sender="urn:asap:agent:a",
+        recipient=mock_agent.agent_id,
+        payload_type="TaskRequest",
+        payload=TaskRequest(
+            conversation_id="c", skill_id="echo", input={}
+        ).model_dump(),
+    )
+    out = mock_agent.handle(req)
+
+    assert_envelope_valid(out, allowed_payload_types=["TaskResponse"])
+    assert_task_completed(out)
+    assert_response_correlates(req, out)
+```
+
+Using `mock_agent`, `assert_envelope_valid`, `assert_task_completed`, and `assert_response_correlates` keeps tests shorter and failures easier to interpret.
+
 ### How Fixtures Provide Test Isolation
 
 Fixtures ensure test isolation by:
@@ -550,6 +742,15 @@ class TestMyFeature(NoRateLimitTestBase):
 7. **Deterministic**: Tests should produce the same results every time
 
 ## Troubleshooting
+
+### Skipped Tests (Brotli)
+
+Some compression tests are conditional on the optional **brotli** package:
+
+- **When brotli is installed** (default with `uv sync --extra dev`): Tests that require brotli run (compress/decompress, server brotli). A few tests that verify the "brotli unavailable" path are skipped (they run only in envs without brotli).
+- **When brotli is not installed**: The brotli-dependent tests are skipped; the "unavailable" tests run.
+
+To run all brotli-related tests, install dev dependencies (brotli is in `[project.optional-dependencies] dev`). The remaining skips are intentional: they assert behavior when brotli is missing.
 
 ### Tests Failing with HTTP 429 (Rate Limit Exceeded)
 

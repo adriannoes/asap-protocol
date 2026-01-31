@@ -7,6 +7,11 @@ import pytest
 
 from asap.examples.coordinator import build_task_envelope, create_coordinator_app
 from asap.examples.echo_agent import create_echo_app
+from asap.testing import (
+    assert_envelope_valid,
+    assert_response_correlates,
+    assert_task_completed,
+)
 from asap.transport.client import ASAPClient
 
 
@@ -36,8 +41,10 @@ async def test_two_agents_echo_flow() -> None:
     async with ASAPClient("http://echo-agent", transport=transport, require_https=False) as client:
         response = await client.send(envelope)
 
-    assert response.payload_type == "task.response"
-    assert response.payload["status"] == "completed"
+    assert_envelope_valid(
+        response, allowed_payload_types=["task.response"]
+    )
+    assert_task_completed(response)
     assert response.payload["result"]["echoed"] == payload
     assert response.trace_id == envelope.trace_id
-    assert response.correlation_id == envelope.id
+    assert_response_correlates(envelope, response)

@@ -193,6 +193,7 @@ class TestBrotliDecompression(NoRateLimitTestBase):
         json_response = response.json()
         assert "result" in json_response
 
+    # Runs only when brotli is NOT installed (verifies error path).
     @pytest.mark.skipif(is_brotli_available(), reason="brotli is installed")
     def test_brotli_unavailable_returns_error(
         self,

@@ -14,6 +14,7 @@ from asap.examples.echo_agent import (
 )
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest
+from asap.testing import assert_envelope_valid, assert_task_completed
 from asap.transport.jsonrpc import JsonRpcRequest
 
 
@@ -102,10 +103,14 @@ class TestCreateEchoApp:
         assert response.status_code == 200
         data = response.json()
         assert "result" in data
-        result_envelope = data["result"]["envelope"]
-        assert result_envelope["payload_type"] == "task.response"
-        # The echo handler echoes the input inside "echoed" key
-        assert result_envelope["payload"]["result"]["echoed"] == {"message": "Hello, Echo!"}
+        result_envelope = Envelope.model_validate(data["result"]["envelope"])
+        assert_envelope_valid(
+            result_envelope, allowed_payload_types=["task.response"]
+        )
+        assert_task_completed(result_envelope)
+        assert result_envelope.payload["result"]["echoed"] == {
+            "message": "Hello, Echo!"
+        }
 
 
 class TestParseArgs:
