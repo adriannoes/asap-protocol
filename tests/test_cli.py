@@ -332,3 +332,56 @@ class TestCliValidateSchema:
         assert result.exit_code != 0
         # Should contain some field information in the error
         assert "id" in result.output.lower() or "validation" in result.output.lower()
+
+
+class TestCliTrace:
+    """Tests for trace command."""
+
+    def test_help_shows_trace_command(self) -> None:
+        """Ensure --help shows trace command."""
+        runner = CliRunner()
+        result = runner.invoke(app, ["--help"])
+        assert result.exit_code == 0
+        output = strip_ansi(result.stdout)
+        assert "trace" in output
+
+    def test_trace_requires_trace_id(self) -> None:
+        """Ensure trace command requires trace_id argument."""
+        runner = CliRunner()
+        result = runner.invoke(app, ["trace"])
+        assert result.exit_code != 0
+        assert "trace_id" in result.output.lower() or "required" in result.output.lower()
+
+    def test_trace_from_log_file(self, tmp_path: Path) -> None:
+        """Ensure trace parses log file and prints ASCII diagram."""
+        log_lines = [
+            '{"event": "asap.request.received", "envelope_id": "e1", "trace_id": "trace-abc", '
+            '"sender": "urn:asap:agent:client", "recipient": "urn:asap:agent:echo", "timestamp": "2026-01-31T12:00:00Z"}',
+            '{"event": "asap.request.processed", "envelope_id": "e1", "trace_id": "trace-abc", "duration_ms": 14}',
+        ]
+        log_file = tmp_path / "asap.log"
+        log_file.write_text("\n".join(log_lines), encoding="utf-8")
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["trace", "trace-abc", "--log-file", str(log_file)])
+
+        assert result.exit_code == 0
+        assert "client -> echo (14ms)" in result.stdout
+
+    def test_trace_no_match_exits_non_zero(self, tmp_path: Path) -> None:
+        """Ensure trace exits with 1 when no trace found."""
+        log_file = tmp_path / "empty.log"
+        log_file.write_text("", encoding="utf-8")
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["trace", "nonexistent", "--log-file", str(log_file)])
+
+        assert result.exit_code != 0
+        assert "No trace found" in result.stdout
+
+    def test_trace_missing_log_file_fails(self) -> None:
+        """Ensure trace fails when --log-file path does not exist."""
+        runner = CliRunner()
+        result = runner.invoke(app, ["trace", "t1", "--log-file", "/nonexistent/asap.log"])
+        assert result.exit_code != 0
+        assert "not found" in result.output.lower() or "No such" in result.output

@@ -32,6 +32,18 @@
 - `src/asap/observability/trace_ui.py` - NEW: Optional web UI
 - `src/asap/transport/server.py` - Hot reload, debug mode (extend)
 
+### Task 5.3: PRD Review Checkpoint
+- `.cursor/dev-planning/prd/prd-v1-roadmap.md` - DD-010 (auth scheme), Q4 resolved, Q6 resolved (defer plugin)
+- `.cursor/dev-planning/prd/prd-review-schedule.md` - Q4/Q6 status updated
+
+### Task 6.1: Trace Visualization
+- `src/asap/observability/trace_parser.py` - Parse JSON logs, filter by trace_id, extract_trace_ids, build hops, format ASCII
+- `src/asap/observability/trace_ui.py` - FastAPI Web UI: browse traces, list IDs, visualize (GET /, POST /api/traces/list, /api/traces/visualize)
+- `src/asap/cli.py` - `asap trace <trace-id> [--log-file PATH]` command
+- `tests/observability/test_trace_parser.py` - Unit tests for trace parser (incl. extract_trace_ids)
+- `tests/observability/test_trace_ui.py` - Tests for trace UI endpoints
+- `tests/test_cli.py` - TestCliTrace tests for trace command
+
 ---
 
 ## Sprint P5: Examples & Testing Utilities
@@ -128,7 +140,7 @@
   - Replaced ~20 manual assert lines with assert_envelope_valid, assert_task_completed, assert_response_correlates
   - Files: test_echo_agent, test_coordinator, test_examples_dx, test_handlers, test_client, test_two_agents, test_full_agent_flow
 
-- [ ] 5.2.7 Commit
+- [x] 5.2.7 Commit
   - Command: `git commit -m "feat(testing): add testing utilities for easier test authoring"`
 
 **Acceptance**: Testing module created, 50% boilerplate reduction
@@ -137,20 +149,20 @@
 
 ### Task 5.3: PRD Review Checkpoint
 
-- [ ] 5.3.1 Review Q4 (auth scheme for examples)
+- [x] 5.3.1 Review Q4 (auth scheme for examples)
   - Options: Bearer (simple), OAuth2 (realistic), both
   - Decide based on example complexity
-  - Document as DD-009
+  - Document as DD-010 (DD-009 already used for connection pool)
 
-- [ ] 5.3.2 Review Q6 (pytest-asap plugin)
+- [x] 5.3.2 Review Q6 (pytest-asap plugin)
   - Assess testing utilities usage
   - Decide: Create plugin now or defer to v1.1.0
 
-- [ ] 5.3.3 Update PRD
-  - Add DD-009 for auth scheme decision
-  - Update Q6 status
+- [x] 5.3.3 Update PRD
+  - Add DD-010 for auth scheme decision
+  - Update Q6 status (defer pytest-asap to v1.1.0)
 
-**Acceptance**: Q4 answered (DD-009), Q6 decided
+**Acceptance**: Q4 answered (DD-010), Q6 decided
 
 ---
 
@@ -158,19 +170,19 @@
 
 ### Task 6.1: Implement Trace Visualization
 
-- [ ] 6.1.1 Add trace command to cli.py
-  - Command: `asap trace [trace-id]`
-  - Logic: Search logs for trace_id
+- [x] 6.1.1 Add trace command to cli.py
+  - Command: `asap trace <trace-id> [--log-file PATH]`
+  - Logic: Search logs for trace_id (JSON lines from ASAP_LOG_FORMAT=json)
   - Output: ASCII diagram of request flow
 
-- [ ] 6.1.2 Add timing information
-  - Show: Latency for each hop
+- [x] 6.1.2 Add timing information
+  - Show: Latency for each hop (from asap.request.processed duration_ms)
   - Format: Agent A -> Agent B (15ms) -> Agent C (23ms)
 
-- [ ] 6.1.3 Optional: Web UI for traces
+- [x] 6.1.3 Optional: Web UI for traces
   - File: `src/asap/observability/trace_ui.py`
   - Framework: FastAPI + simple HTML
-  - Features: Browse traces, search, visualize
+  - Features: Browse traces (list trace IDs), search, visualize (POST /api/traces/list, /api/traces/visualize)
 
 - [ ] 6.1.4 Commit
   - Command: `git commit -m "feat(cli): add trace visualization command"`
