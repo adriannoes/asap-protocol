@@ -385,7 +385,7 @@ class HandlerRegistry:
             else:
                 # Sync handler - run in thread pool to avoid blocking event loop
                 # Also handle async callable objects that return awaitables
-                loop = asyncio.get_event_loop()
+                loop = asyncio.get_running_loop()
                 # Use bounded executor if provided, otherwise use default (unbounded)
                 executor = self._executor if self._executor is not None else None
                 result: object = await loop.run_in_executor(executor, handler, envelope, manifest)
