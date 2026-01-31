@@ -1080,6 +1080,23 @@ client = ASAPClient("http://agent.example.com", pool_connections=500, pool_maxsi
 
 ---
 
+#### DD-011: Trace JSON Export
+**Decision**: ✅ Support JSON export in v1.0.0 via `asap trace <trace-id> --format json`.
+
+**Rationale** (Sprint P6 Review - 2026-01-31):
+- Trace command already produces structured data (hops with sender, recipient, duration_ms); exposing it as JSON enables piping to jq, CI scripts, and integration with observability platforms without requiring full OpenTelemetry first.
+- Effort is minimal: one helper in trace_parser and a CLI option; backward compatible (default remains ASCII).
+- Aligns with PRD Section 4.4 (Debugging Tools) and supports "integration with observability platforms" (Q5 consideration).
+
+**Implementation** (v1.0.0 Sprint P6, Task 6.3):
+- `src/asap/observability/trace_parser.py`: `trace_to_json_export(trace_id, hops)` returning a JSON-serializable dict.
+- `src/asap/cli.py`: `asap trace <trace-id> [--format ascii|json]`; default `ascii`; `json` outputs `{"trace_id": "...", "hops": [{...}]}`.
+- Tests: `test_trace_format_json_outputs_structured_json`, `test_trace_invalid_format_fails` in `tests/test_cli.py`.
+
+**Future**: OpenTelemetry integration (Sprint P11) will provide full distributed tracing; JSON export remains useful for ad-hoc analysis and tooling.
+
+---
+
 ### Sprint S1-S3 Learnings
 
 > **Review Date**: 2026-01-27 (End of Sprint S3)
@@ -1148,10 +1165,10 @@ client = ASAPClient("http://agent.example.com", pool_connections=500, pool_maxsi
    - **Choice**: Both — Bearer (simple demos) and Bearer + OAuth2 concept (realistic deployments)
 
 ### Developer Experience
-5. ❓ Should trace visualization CLI tool support JSON export for external tools?
-   - **Action**: Gather feedback during Sprint P6 implementation
-   - **Consider**: JSON export for integration with observability platforms
-   - **Review Point**: End of Sprint P6 → Decide and implement if valuable
+5. ✅ ~~Should trace visualization CLI tool support JSON export for external tools?~~
+   - **Decision**: See DD-011 in Section 10
+   - **Resolved**: 2026-01-31 (End of Sprint P6, Task 6.3)
+   - **Choice**: Yes — `asap trace <trace-id> --format json` outputs structured JSON for piping and observability integration
 
 6. ✅ ~~Should we provide pytest plugins for easier testing?~~
    - **Decision**: Defer `pytest-asap` plugin to v1.1.0
@@ -1236,6 +1253,7 @@ client = ASAPClient("http://agent.example.com", pool_connections=500, pool_maxsi
 | 2026-01-27 | 1.3 | Sprint S3 Review: Resolved Open Question Q3 | ASAP Team |
 | 2026-01-27 | 1.3 | Sprint S3 Review: Added S1-S3 Learnings section | ASAP Team |
 | 2026-01-30 | 1.4 | Sprint P1 Checkpoint: Confirmed Q3/DD-008 (HMAC defer to v1.1.0+) | ASAP Team |
+| 2026-01-31 | 1.5 | Sprint P6 Checkpoint: DD-011 Trace JSON export; Q5 resolved | ASAP Team |
 
 ---
 
