@@ -4,9 +4,11 @@ This module tests the HandlerRegistry class that manages payload-type-specific
 handlers for processing ASAP envelopes.
 """
 
+import inspect
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 import pytest
 
@@ -18,6 +20,71 @@ from asap.models.payloads import TaskRequest, TaskResponse
 
 if TYPE_CHECKING:
     pass
+
+
+class TestValidateHandler:
+    """Tests for validate_handler helper."""
+
+    def test_validate_handler_accepts_two_param_function(self) -> None:
+        """Test that validate_handler accepts (envelope, manifest) signature."""
+        from asap.transport.handlers import validate_handler
+
+        def handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+            return envelope
+
+        validate_handler(handler)  # No raise
+
+    def test_validate_handler_accepts_three_param_with_self(self) -> None:
+        """Test that validate_handler accepts (self, envelope, manifest) for callable class."""
+        from asap.transport.handlers import validate_handler
+
+        class HandlerClass:
+            def __call__(self, envelope: Envelope, manifest: Manifest) -> Envelope:
+                return envelope
+
+        validate_handler(HandlerClass())  # No raise
+
+    def test_validate_handler_rejects_non_callable(self) -> None:
+        """Test that validate_handler rejects non-callable."""
+        from asap.transport.handlers import validate_handler
+
+        with pytest.raises(TypeError) as exc_info:
+            validate_handler("not a handler")
+        assert "callable" in exc_info.value.args[0].lower()
+
+    def test_validate_handler_rejects_wrong_parameter_count(self) -> None:
+        """Test that validate_handler rejects wrong number of parameters."""
+        from asap.transport.handlers import validate_handler
+
+        def bad_one(envelope: Envelope) -> Envelope:
+            return envelope
+
+        with pytest.raises(TypeError) as exc_info:
+            validate_handler(bad_one)
+        assert "2 parameters" in exc_info.value.args[0] or "envelope" in exc_info.value.args[0]
+
+        def bad_four(envelope: Envelope, manifest: Manifest, a: int, b: int) -> Envelope:
+            return envelope
+
+        with pytest.raises(TypeError) as exc_info:
+            validate_handler(bad_four)
+        assert "4 parameters" in exc_info.value.args[0]
+
+    def test_validate_handler_rejects_when_signature_inspection_fails(
+        self,
+    ) -> None:
+        """Test that validate_handler raises when inspect.signature fails."""
+        from asap.transport.handlers import validate_handler
+
+        def handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+            return envelope
+
+        with (
+            patch.object(inspect, "signature", side_effect=ValueError("unsupported callable")),
+            pytest.raises(TypeError) as exc_info,
+        ):
+            validate_handler(handler)
+        assert "could not be inspected" in exc_info.value.args[0].lower()
 
 
 # Test fixtures
@@ -338,6 +405,26 @@ class TestHandlerRegistry:
         # Check that error was logged (structlog may not appear in caplog)
         # The exception is re-raised, which is the important behavior
 
+    def test_dispatch_raises_when_sync_handler_returns_awaitable(
+        self, sample_task_request_envelope: Envelope, sample_manifest: Manifest
+    ) -> None:
+        """Test that sync dispatch raises when handler returns a coroutine."""
+        from asap.transport.handlers import HandlerRegistry
+
+        async def async_impl(envelope: Envelope, manifest: Manifest) -> Envelope:
+            return envelope
+
+        def handler_returning_awaitable(envelope: Envelope, manifest: Manifest) -> "Envelope":
+            return async_impl(envelope, manifest)  # type: ignore[return-value]
+
+        registry = HandlerRegistry()
+        registry.register("task.request", handler_returning_awaitable)
+
+        with pytest.raises(TypeError) as exc_info:
+            registry.dispatch(sample_task_request_envelope, sample_manifest)
+        assert "awaitable" in exc_info.value.args[0].lower()
+        assert "dispatch_async" in exc_info.value.args[0].lower()
+
 
 class TestHandlerNotFoundError:
     """Tests for HandlerNotFoundError exception."""
@@ -504,9 +591,7 @@ class TestHandlerRegistryThreadSafety:
                 for i in range(registrations_per_thread):
                     payload_type = f"thread{thread_id}.type{i}"
 
-                    def handler(
-                        envelope: Envelope, manifest: Manifest, tid: int = thread_id, idx: int = i
-                    ) -> Envelope:
+                    def handler(envelope: Envelope, manifest: Manifest) -> Envelope:
                         return envelope
 
                     registry.register(payload_type, handler)
