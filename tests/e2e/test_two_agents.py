@@ -41,9 +41,7 @@ async def test_two_agents_echo_flow() -> None:
     async with ASAPClient("http://echo-agent", transport=transport, require_https=False) as client:
         response = await client.send(envelope)
 
-    assert_envelope_valid(
-        response, allowed_payload_types=["task.response"]
-    )
+    assert_envelope_valid(response, allowed_payload_types=["task.response"])
     assert_task_completed(response)
     assert response.payload["result"]["echoed"] == payload
     assert response.trace_id == envelope.trace_id

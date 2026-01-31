@@ -111,15 +111,11 @@ class TestFullRoundTrip(NoRateLimitTestBase):
         response_envelope = Envelope(**json_rpc_response["result"]["envelope"])
 
         # Verify response envelope
-        assert_envelope_valid(
-            response_envelope, allowed_payload_types=["task.response"]
-        )
+        assert_envelope_valid(response_envelope, allowed_payload_types=["task.response"])
         assert_task_completed(response_envelope)
         assert response_envelope.sender == "urn:asap:agent:integration-test"
         assert response_envelope.recipient == sample_task_request_envelope.sender
-        assert_response_correlates(
-            sample_task_request_envelope, response_envelope
-        )
+        assert_response_correlates(sample_task_request_envelope, response_envelope)
         assert response_envelope.trace_id == sample_task_request_envelope.trace_id
 
     def test_response_contains_task_response_payload(
@@ -222,9 +218,7 @@ class TestCorrelationAndTracing(NoRateLimitTestBase):
         json_rpc_response = response.json()
         response_envelope = Envelope(**json_rpc_response["result"]["envelope"])
 
-        assert_response_correlates(
-            sample_task_request_envelope, response_envelope
-        )
+        assert_response_correlates(sample_task_request_envelope, response_envelope)
 
     def test_trace_id_propagated_through_response(self, test_app: TestClient) -> None:
         """Test trace_id is propagated from request to response."""

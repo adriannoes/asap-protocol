@@ -17,11 +17,13 @@ def test_index_returns_html() -> None:
 
 def test_list_traces_returns_trace_ids() -> None:
     """POST /api/traces/list returns unique trace IDs from log lines."""
-    log_lines = "\n".join([
-        '{"event": "asap.request.received", "trace_id": "t1", "envelope_id": "e1"}',
-        '{"event": "asap.request.processed", "trace_id": "t1", "envelope_id": "e1"}',
-        '{"event": "asap.request.received", "trace_id": "t2", "envelope_id": "e2"}',
-    ])
+    log_lines = "\n".join(
+        [
+            '{"event": "asap.request.received", "trace_id": "t1", "envelope_id": "e1"}',
+            '{"event": "asap.request.processed", "trace_id": "t1", "envelope_id": "e1"}',
+            '{"event": "asap.request.received", "trace_id": "t2", "envelope_id": "e2"}',
+        ]
+    )
     response = client.post("/api/traces/list", json={"log_lines": log_lines})
     assert response.status_code == 200
     data = response.json()
@@ -37,11 +39,13 @@ def test_list_traces_empty_returns_empty_list() -> None:
 
 def test_visualize_returns_diagram() -> None:
     """POST /api/traces/visualize returns hops and ASCII diagram."""
-    log_lines = "\n".join([
-        '{"event": "asap.request.received", "envelope_id": "e1", "trace_id": "viz-1", '
-        '"sender": "urn:asap:agent:a", "recipient": "urn:asap:agent:b", "timestamp": "2026-01-31T12:00:00Z"}',
-        '{"event": "asap.request.processed", "envelope_id": "e1", "trace_id": "viz-1", "duration_ms": 10}',
-    ])
+    log_lines = "\n".join(
+        [
+            '{"event": "asap.request.received", "envelope_id": "e1", "trace_id": "viz-1", '
+            '"sender": "urn:asap:agent:a", "recipient": "urn:asap:agent:b", "timestamp": "2026-01-31T12:00:00Z"}',
+            '{"event": "asap.request.processed", "envelope_id": "e1", "trace_id": "viz-1", "duration_ms": 10}',
+        ]
+    )
     response = client.post(
         "/api/traces/visualize",
         json={"log_lines": log_lines, "trace_id": "viz-1"},

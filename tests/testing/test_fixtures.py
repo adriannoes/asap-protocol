@@ -29,9 +29,7 @@ class TestMockAgentFixture:
             sender="urn:asap:agent:a",
             recipient=mock_agent.agent_id,
             payload_type="TaskRequest",
-            payload=TaskRequest(
-                conversation_id="c", skill_id="echo", input={}
-            ).model_dump(),
+            payload=TaskRequest(conversation_id="c", skill_id="echo", input={}).model_dump(),
         )
         out = mock_agent.handle(req)
         assert out is not None
@@ -59,9 +57,7 @@ class TestTestAgentContextManager:
             sender="urn:asap:agent:a",
             recipient="urn:asap:agent:custom",
             payload_type="TaskRequest",
-            payload=TaskRequest(
-                conversation_id="c", skill_id="echo", input={}
-            ).model_dump(),
+            payload=TaskRequest(conversation_id="c", skill_id="echo", input={}).model_dump(),
         )
         with agent_context("urn:asap:agent:custom") as agent:
             assert agent.agent_id == "urn:asap:agent:custom"

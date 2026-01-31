@@ -368,6 +368,36 @@ class TestCliTrace:
         assert result.exit_code == 0
         assert "client -> echo (14ms)" in result.stdout
 
+    def test_trace_format_json_outputs_structured_json(self, tmp_path: Path) -> None:
+        """Ensure trace --format json outputs valid JSON for external tools."""
+        log_lines = [
+            '{"event": "asap.request.received", "envelope_id": "e1", "trace_id": "trace-xyz", '
+            '"sender": "urn:asap:agent:a", "recipient": "urn:asap:agent:b", "timestamp": "2026-01-31T12:00:00Z"}',
+            '{"event": "asap.request.processed", "envelope_id": "e1", "trace_id": "trace-xyz", "duration_ms": 42}',
+        ]
+        log_file = tmp_path / "asap.log"
+        log_file.write_text("\n".join(log_lines), encoding="utf-8")
+
+        runner = CliRunner()
+        result = runner.invoke(
+            app, ["trace", "trace-xyz", "--log-file", str(log_file), "--format", "json"]
+        )
+
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["trace_id"] == "trace-xyz"
+        assert len(data["hops"]) == 1
+        assert data["hops"][0]["sender"] == "urn:asap:agent:a"
+        assert data["hops"][0]["recipient"] == "urn:asap:agent:b"
+        assert data["hops"][0]["duration_ms"] == 42
+
+    def test_trace_invalid_format_fails(self) -> None:
+        """Ensure trace rejects invalid --format values."""
+        runner = CliRunner()
+        result = runner.invoke(app, ["trace", "t1", "--format", "xml"])
+        assert result.exit_code != 0
+        assert "ascii" in result.output.lower() or "json" in result.output.lower()
+
     def test_trace_no_match_exits_non_zero(self, tmp_path: Path) -> None:
         """Ensure trace exits with 1 when no trace found."""
         log_file = tmp_path / "empty.log"

@@ -214,9 +214,7 @@ class TestHandlerRegistry:
         result = registry.dispatch(sample_task_request_envelope, sample_manifest)
 
         assert result == response_envelope
-        assert_envelope_valid(
-            result, allowed_payload_types=["task.response"]
-        )
+        assert_envelope_valid(result, allowed_payload_types=["task.response"])
         assert_response_correlates(sample_task_request_envelope, result)
 
     def test_dispatch_unknown_payload_type_raises_error(self, sample_manifest: Manifest) -> None:

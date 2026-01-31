@@ -337,7 +337,7 @@ class TestASAPRequestHandlerHelpers:
                 trace_id=envelope.trace_id,
             )
 
-        handler.registry.register("task.request", sync_handler)
+        handler.registry_holder.registry.register("task.request", sync_handler)
 
         envelope = Envelope(
             asap_version="0.1",
@@ -762,10 +762,34 @@ class TestDebugLogMode:
     """Tests for ASAP_DEBUG_LOG: full request/response logging."""
 
     def test_debug_log_mode_logs_request_and_response(
-        self, client: TestClient, sample_manifest: Manifest
+        self, sample_manifest: Manifest, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """When ASAP_DEBUG_LOG=true, handler logs debug_request and debug_response."""
         from unittest.mock import patch
+        import uuid
+        from slowapi import Limiter
+        from slowapi.util import get_remote_address
+
+        # Use aggressive monkeypatch to replace global limiter (learned from v0.5.0)
+        # This prevents rate limit state from accumulating across tests
+        isolated_limiter = Limiter(
+            key_func=get_remote_address,
+            default_limits=["999999/minute"],  # Very high limit
+            storage_uri=f"memory://{uuid.uuid4()}",  # Unique storage for isolation
+        )
+
+        # Replace in BOTH modules (aggressive monkeypatch pattern from v0.5.0)
+        import asap.transport.middleware as middleware_module
+        import asap.transport.server as server_module
+
+        monkeypatch.setattr(middleware_module, "limiter", isolated_limiter)
+        monkeypatch.setattr(server_module, "limiter", isolated_limiter)
+
+        # Create app - it will use the monkeypatched limiter
+        app = create_app(sample_manifest, rate_limit="999999/minute")
+        # Ensure app.state.limiter also uses our isolated instance
+        app.state.limiter = isolated_limiter
+        client = TestClient(app)
 
         envelope = Envelope(
             asap_version="0.1",
@@ -801,9 +825,7 @@ class TestDebugLogMode:
 class TestSwaggerUiDebugMode:
     """Tests for Swagger UI /docs enabled only when ASAP_DEBUG=true."""
 
-    def test_docs_disabled_when_not_debug(
-        self, sample_manifest: Manifest
-    ) -> None:
+    def test_docs_disabled_when_not_debug(self, sample_manifest: Manifest) -> None:
         """When ASAP_DEBUG is not set, /docs and /openapi.json return 404."""
         from unittest.mock import patch
 

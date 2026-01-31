@@ -103,9 +103,7 @@ class TestBuildTaskEnvelope:
         payload = {"key": "value"}
         envelope = build_task_envelope(payload)
 
-        assert_envelope_valid(
-            envelope, allowed_payload_types=["task.request"]
-        )
+        assert_envelope_valid(envelope, allowed_payload_types=["task.request"])
 
     def test_build_task_envelope_has_correct_sender_recipient(self) -> None:
         """Test that envelope has correct sender and recipient."""

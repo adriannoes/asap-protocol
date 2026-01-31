@@ -117,6 +117,7 @@ class TestErrorRecoveryExample:
 
     def test_with_fallback_returns_fallback_on_error(self) -> None:
         """with_fallback returns fallback result when primary raises."""
+
         def fail() -> None:
             raise RuntimeError("fail")
 
@@ -269,6 +270,7 @@ class TestMultiStepWorkflowExample:
 
     def test_run_workflow_applies_steps_in_order(self) -> None:
         """run_workflow applies steps and returns final state."""
+
         def step_a(data: dict) -> dict:
             return {"a": 1}
 

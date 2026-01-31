@@ -284,9 +284,7 @@ class TestASAPClientSend:
         ) as client:
             response = await client.send(sample_request_envelope)
 
-        assert_envelope_valid(
-            response, allowed_payload_types=["task.response"]
-        )
+        assert_envelope_valid(response, allowed_payload_types=["task.response"])
         assert_response_correlates(sample_request_envelope, response)
 
     async def test_send_includes_envelope_in_request(

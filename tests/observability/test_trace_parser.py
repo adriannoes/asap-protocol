@@ -2,7 +2,6 @@
 
 import json
 
-import pytest
 
 from asap.observability.trace_parser import (
     EVENT_PROCESSED,
@@ -14,6 +13,7 @@ from asap.observability.trace_parser import (
     format_ascii_diagram,
     parse_log_line,
     parse_trace_from_lines,
+    trace_to_json_export,
 )
 
 
@@ -163,6 +163,30 @@ class TestFormatAsciiDiagram:
         assert format_ascii_diagram([]) == ""
 
 
+class TestTraceToJsonExport:
+    """Tests for trace_to_json_export (JSON output for external tools)."""
+
+    def test_single_hop(self) -> None:
+        hops = [TraceHop("urn:asap:agent:a", "urn:asap:agent:b", 15.0)]
+        out = trace_to_json_export("trace-1", hops)
+        assert out["trace_id"] == "trace-1"
+        assert len(out["hops"]) == 1
+        assert out["hops"][0]["sender"] == "urn:asap:agent:a"
+        assert out["hops"][0]["recipient"] == "urn:asap:agent:b"
+        assert out["hops"][0]["duration_ms"] == 15.0
+
+    def test_multiple_hops_and_round_trip(self) -> None:
+        hops = [
+            TraceHop("urn:asap:agent:a", "urn:asap:agent:b", 10.0),
+            TraceHop("urn:asap:agent:b", "urn:asap:agent:c", None),
+        ]
+        out = trace_to_json_export("t2", hops)
+        assert out["trace_id"] == "t2"
+        assert len(out["hops"]) == 2
+        assert out["hops"][1]["duration_ms"] is None
+        assert json.loads(json.dumps(out)) == out
+
+
 class TestExtractTraceIds:
     """Tests for extract_trace_ids."""
 
@@ -191,20 +215,24 @@ class TestParseTraceFromLines:
 
     def test_full_flow(self) -> None:
         lines = [
-            json.dumps({
-                "event": EVENT_RECEIVED,
-                "envelope_id": "e1",
-                "trace_id": "trace-123",
-                "sender": "urn:asap:agent:client",
-                "recipient": "urn:asap:agent:echo",
-                "timestamp": "2026-01-31T12:00:00Z",
-            }),
-            json.dumps({
-                "event": EVENT_PROCESSED,
-                "envelope_id": "e1",
-                "trace_id": "trace-123",
-                "duration_ms": 12.5,
-            }),
+            json.dumps(
+                {
+                    "event": EVENT_RECEIVED,
+                    "envelope_id": "e1",
+                    "trace_id": "trace-123",
+                    "sender": "urn:asap:agent:client",
+                    "recipient": "urn:asap:agent:echo",
+                    "timestamp": "2026-01-31T12:00:00Z",
+                }
+            ),
+            json.dumps(
+                {
+                    "event": EVENT_PROCESSED,
+                    "envelope_id": "e1",
+                    "trace_id": "trace-123",
+                    "duration_ms": 12.5,
+                }
+            ),
         ]
         hops, diagram = parse_trace_from_lines(lines, "trace-123")
         assert len(hops) == 1
