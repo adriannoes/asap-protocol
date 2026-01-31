@@ -122,8 +122,9 @@
   - Tests: 2 benchmarks (test_batch_vs_sequential, test_batch_with_errors)
   - Note: Real HTTP/2 provides ~10x improvement with network latency
 
-- [ ] 4.1.4 Commit
+- [x] 4.1.4 Commit
   - Command: `git commit -m "feat(transport): add batch operations with HTTP/2 multiplexing"`
+  - Done: 97aede2
 
 **Acceptance**: 10x throughput improvement for batches
 
