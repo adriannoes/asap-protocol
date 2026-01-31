@@ -1122,9 +1122,7 @@ class TestASAPClientSendBatch:
             transport=httpx.MockTransport(mock_transport),
             max_retries=1,  # Reduce retries for faster test
         ) as client:
-            results = await client.send_batch(
-                multiple_request_envelopes, return_exceptions=True
-            )
+            results = await client.send_batch(multiple_request_envelopes, return_exceptions=True)
 
         assert len(results) == 5
         # Check that most results are Envelopes

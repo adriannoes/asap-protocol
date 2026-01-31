@@ -56,7 +56,7 @@ def is_brotli_available() -> bool:
         True if brotli package is installed, False otherwise
     """
     try:
-        import brotli  # noqa: F401
+        import brotli  # type: ignore[import-not-found]  # noqa: F401
 
         return True
     except ImportError:
@@ -132,7 +132,8 @@ def compress_brotli(data: bytes) -> bytes:
     import brotli
 
     # Quality 4 is a good balance of speed and compression ratio
-    return brotli.compress(data, quality=4)
+    result: bytes = brotli.compress(data, quality=4)
+    return result
 
 
 def decompress_brotli(data: bytes) -> bytes:
@@ -150,7 +151,8 @@ def decompress_brotli(data: bytes) -> bytes:
     """
     import brotli
 
-    return brotli.decompress(data)
+    result: bytes = brotli.decompress(data)
+    return result
 
 
 def compress_payload(
@@ -295,8 +297,7 @@ def decompress_payload(
             decompressed = decompress_brotli(data)
         else:
             raise ValueError(
-                f"Unsupported Content-Encoding: {encoding}. "
-                f"Supported: gzip, br, identity"
+                f"Unsupported Content-Encoding: {encoding}. Supported: gzip, br, identity"
             )
 
         decompressed_size = len(decompressed)

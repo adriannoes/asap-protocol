@@ -95,6 +95,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "scripts/**" = ["T201"]
 "src/asap/examples/**" = ["T201"]
+"benchmarks/**" = ["T201"]
 
 [tool.ruff.format]
 quote-style = "double"

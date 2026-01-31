@@ -1270,7 +1270,9 @@ class ASAPClient:
             success_count=success_count,
             failure_count=failure_count,
             duration_ms=round(duration_ms, 2),
-            throughput_per_second=round(batch_size / (duration_ms / 1000), 2) if duration_ms > 0 else 0,
+            throughput_per_second=round(batch_size / (duration_ms / 1000), 2)
+            if duration_ms > 0
+            else 0,
             message=(
                 f"Batch of {batch_size} envelopes completed in {duration_ms:.2f}ms "
                 f"({success_count} succeeded, {failure_count} failed)"

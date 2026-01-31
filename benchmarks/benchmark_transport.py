@@ -449,12 +449,12 @@ class TestBatchOperations:
         speedup = sequential_time_ms / batch_time_ms if batch_time_ms > 0 else 1.0
 
         # Log results for visibility
-        print(f"\n=== Batch Operations Benchmark ===")
+        print("\n=== Batch Operations Benchmark ===")
         print(f"Batch size: {batch_size}")
         print(f"Sequential time: {sequential_time_ms:.2f}ms")
         print(f"Batch time: {batch_time_ms:.2f}ms")
         print(f"Speedup: {speedup:.2f}x")
-        print(f"Note: Real HTTP/2 provides ~10x speedup with network latency")
+        print("Note: Real HTTP/2 provides ~10x speedup with network latency")
 
         # Both should complete successfully
         assert batch_time_ms > 0, "Batch should complete"
@@ -599,9 +599,7 @@ class TestCompression:
         Target: 70% size reduction (compressed size <= 30% of original).
         """
         from asap.transport.compression import (
-            CompressionAlgorithm,
             compress_gzip,
-            is_brotli_available,
         )
 
         # Create 1MB payload
@@ -618,9 +616,11 @@ class TestCompression:
         compressed, compressed_size, reduction_pct = benchmark(compress_with_gzip)
 
         # Log results
-        print(f"\n=== Compression Benchmark (1MB JSON Payload) ===")
+        print("\n=== Compression Benchmark (1MB JSON Payload) ===")
         print(f"Original size: {original_size:,} bytes ({original_size / 1024:.1f} KB)")
-        print(f"Compressed size (gzip): {compressed_size:,} bytes ({compressed_size / 1024:.1f} KB)")
+        print(
+            f"Compressed size (gzip): {compressed_size:,} bytes ({compressed_size / 1024:.1f} KB)"
+        )
         print(f"Reduction: {reduction_pct:.1f}%")
         print(f"Compression ratio: {original_size / compressed_size:.1f}:1")
 
@@ -664,7 +664,7 @@ class TestCompression:
         benchmark(compress_with_brotli)
 
         # Log comparison
-        print(f"\n=== Compression Comparison (100KB JSON) ===")
+        print("\n=== Compression Comparison (100KB JSON) ===")
         print(f"Original size: {original_size:,} bytes")
         print(f"Gzip: {gzip_size:,} bytes ({gzip_reduction:.1f}% reduction)")
         print(f"Brotli: {brotli_size:,} bytes ({brotli_reduction:.1f}% reduction)")
@@ -672,7 +672,9 @@ class TestCompression:
 
         # Both should achieve >70% reduction on JSON
         assert gzip_reduction >= 70.0, f"Gzip reduction {gzip_reduction:.1f}% below target 70%"
-        assert brotli_reduction >= 70.0, f"Brotli reduction {brotli_reduction:.1f}% below target 70%"
+        assert brotli_reduction >= 70.0, (
+            f"Brotli reduction {brotli_reduction:.1f}% below target 70%"
+        )
         # Brotli should be at least as good as gzip
         assert brotli_size <= gzip_size, "Brotli should compress at least as well as gzip"
 
@@ -703,7 +705,7 @@ class TestCompression:
         total_mb = payload_size_mb * iterations
         throughput_mbps = total_mb / elapsed if elapsed > 0 else 0
 
-        print(f"\n=== Compression Throughput ===")
+        print("\n=== Compression Throughput ===")
         print(f"Payload size: {len(payload):,} bytes ({payload_size_mb:.2f} MB)")
         print(f"Iterations: {iterations}")
         print(f"Total compressed: {total_mb:.2f} MB")
@@ -756,17 +758,16 @@ class TestCompression:
         # Should return identity (no compression)
         assert algorithm == CompressionAlgorithm.IDENTITY
         assert result == small_payload
-        print(f"\n=== Small Payload (below threshold) ===")
+        print("\n=== Small Payload (below threshold) ===")
         print(f"Payload size: {len(small_payload)} bytes")
         print(f"Threshold: {COMPRESSION_THRESHOLD} bytes")
-        print(f"Compression: skipped (IDENTITY)")
+        print("Compression: skipped (IDENTITY)")
 
     def test_end_to_end_compression_envelope(self, benchmark: Any) -> None:
         """Benchmark end-to-end compression of ASAP Envelope.
 
         Tests realistic scenario: serialize envelope -> compress -> decompress -> deserialize.
         """
-        import json
 
         from asap.transport.compression import (
             CompressionAlgorithm,
@@ -786,8 +787,7 @@ class TestCompression:
                 "input": {
                     "query": "ASAP protocol performance testing" * 100,
                     "items": [
-                        {"id": i, "name": f"item_{i}", "data": "x" * 100}
-                        for i in range(500)
+                        {"id": i, "name": f"item_{i}", "data": "x" * 100} for i in range(500)
                     ],
                 },
             },
@@ -810,7 +810,7 @@ class TestCompression:
             decompressed = decompress_payload(compressed, algorithm.value)
             assert decompressed == envelope_bytes
 
-        print(f"\n=== End-to-End Envelope Compression ===")
+        print("\n=== End-to-End Envelope Compression ===")
         print(f"Original envelope size: {original_size:,} bytes")
         print(f"Compressed size: {compressed_size:,} bytes")
         print(f"Algorithm: {algorithm.value}")
@@ -818,4 +818,6 @@ class TestCompression:
 
         # Should achieve good compression for large envelope
         if original_size > 1024:  # Above threshold
-            assert reduction_pct >= 50.0, f"Expected at least 50% reduction, got {reduction_pct:.1f}%"
+            assert reduction_pct >= 50.0, (
+                f"Expected at least 50% reduction, got {reduction_pct:.1f}%"
+            )

@@ -10,7 +10,7 @@ Tests cover:
 
 import gzip
 import json
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -21,8 +21,7 @@ from asap.transport.compression import is_brotli_available
 from asap.transport.handlers import HandlerRegistry, create_echo_handler
 from asap.transport.server import create_app
 
-if TYPE_CHECKING:
-    pass
+from ..conftest import NoRateLimitTestBase
 
 
 @pytest.fixture
@@ -84,7 +83,7 @@ def sample_jsonrpc_request(sample_envelope: Envelope) -> dict[str, Any]:
     }
 
 
-class TestGzipDecompression:
+class TestGzipDecompression(NoRateLimitTestBase):
     """Tests for gzip decompression on server."""
 
     def test_gzip_compressed_request_succeeds(
@@ -166,7 +165,7 @@ class TestGzipDecompression:
         assert response.status_code == 200
 
 
-class TestBrotliDecompression:
+class TestBrotliDecompression(NoRateLimitTestBase):
     """Tests for brotli decompression on server."""
 
     @pytest.mark.skipif(not is_brotli_available(), reason="brotli not installed")
@@ -216,7 +215,7 @@ class TestBrotliDecompression:
         assert response.status_code in (400, 415)
 
 
-class TestCompressionErrorHandling:
+class TestCompressionErrorHandling(NoRateLimitTestBase):
     """Tests for compression error handling."""
 
     def test_invalid_gzip_data_returns_error(
@@ -262,7 +261,7 @@ class TestCompressionErrorHandling:
         body_json = json.dumps(sample_jsonrpc_request).encode("utf-8")
         compressed = gzip.compress(body_json)
         # Truncate the compressed data
-        truncated = compressed[:len(compressed) // 2]
+        truncated = compressed[: len(compressed) // 2]
 
         response = test_app.post(
             "/asap",
@@ -276,7 +275,7 @@ class TestCompressionErrorHandling:
         assert response.status_code == 400
 
 
-class TestDecompressionBombPrevention:
+class TestDecompressionBombPrevention(NoRateLimitTestBase):
     """Tests for decompression bomb prevention."""
 
     def test_decompressed_size_limit_enforced(
@@ -329,7 +328,7 @@ class TestDecompressionBombPrevention:
         assert "Decompressed request size" in response.json()["detail"]
 
 
-class TestCompressionRoundTrip:
+class TestCompressionRoundTrip(NoRateLimitTestBase):
     """End-to-end tests for compression round trip."""
 
     def test_large_payload_compression_round_trip(
