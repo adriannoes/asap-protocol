@@ -19,6 +19,13 @@ You can run the agents separately if needed:
 - `uv run python -m asap.examples.echo_agent --host 127.0.0.1 --port 8001`
 - `uv run python -m asap.examples.coordinator`
 
+## Handler security example
+
+- `asap.examples.secure_handler` provides `create_secure_handler()`: a handler that
+  validates payload with `TaskRequest`, validates file parts with `FilePart` (URI checks),
+  and logs with `sanitize_for_logging()`. Use it as a reference for input validation
+  (see `docs/security.md` Handler Security).
+
 ## Notes
 
 - The echo agent exposes `/.well-known/asap/manifest.json` for readiness checks.

@@ -14,6 +14,10 @@ from pydantic import Discriminator, Field, TypeAdapter, field_validator
 from asap.models.base import ASAPBaseModel
 from asap.models.types import MIMEType
 
+# Security: reject URIs that could lead to path traversal or local file access
+PATH_TRAVERSAL_PATTERN = re.compile(r"\.\.")
+FILE_URI_PREFIX = "file://"
+
 
 class TextPart(ASAPBaseModel):
     """Plain text content part.
@@ -70,7 +74,7 @@ class FilePart(ASAPBaseModel):
 
     Attributes:
         type: Discriminator field, always "file"
-        uri: File URI (can be asap://, file://, https://, or data: URI)
+        uri: File URI (asap://, https://, or data:; file:// and path traversal rejected)
         mime_type: MIME type of the file (e.g., "application/pdf")
         inline_data: Optional base64-encoded inline file data
 
@@ -91,11 +95,37 @@ class FilePart(ASAPBaseModel):
     """
 
     type: Literal["file"] = Field(..., description="Part type discriminator")
-    uri: str = Field(..., description="File URI (asap://, file://, https://, data:)")
+    uri: str = Field(
+        ...,
+        description="File URI (asap://, https://, data:; file:// and .. rejected)",
+    )
     mime_type: MIMEType = Field(..., description="MIME type (e.g., application/pdf)")
     inline_data: str | None = Field(
         default=None, description="Optional base64-encoded inline file data"
     )
+
+    @field_validator("uri")
+    @classmethod
+    def validate_uri(cls, v: str) -> str:
+        """Validate URI: reject path traversal and suspicious file:// URIs.
+
+        Rejects URIs containing '..' (path traversal) and file:// URIs
+        to prevent reading arbitrary server paths from user-supplied input.
+
+        Args:
+            v: URI string to validate
+
+        Returns:
+            The same URI if valid
+
+        Raises:
+            ValueError: If URI contains path traversal or is a file:// URI
+        """
+        if PATH_TRAVERSAL_PATTERN.search(v):
+            raise ValueError(f"URI must not contain path traversal (..): {v!r}")
+        if v.strip().lower().startswith(FILE_URI_PREFIX):
+            raise ValueError("file:// URIs are not allowed for security (path traversal risk)")
+        return v
 
     @field_validator("mime_type")
     @classmethod
@@ -201,7 +231,7 @@ Example:
     >>> # Deserializes to FilePart
     >>> file_part = Part.validate_python({
     ...     "type": "file",
-    ...     "uri": "file://test.pdf",
+    ...     "uri": "https://example.com/doc.pdf",
     ...     "mime_type": "application/pdf"
     ... })
 """
