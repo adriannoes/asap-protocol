@@ -4,29 +4,30 @@ Thanks for helping out! Here's how to get started quickly.
 
 ## Quick Start
 
-1.  **Setup**: You need `uv` installed.
+1.  **Setup**: You need `uv` installed. Use `--dev` so that dev dependencies (pytest-xdist, ruff, mypy, etc.) are installed and local test runs match CI (including `pytest -n auto`).
     ```bash
     git clone https://github.com/adriannoes/asap-protocol.git
     cd asap-protocol
-    uv sync --all-extras
+    uv sync --all-extras --dev
     ```
 
-2.  **Verify**:
+2.  **Verify** (CI runs the same: `pytest -n auto --tb=short --cov=src --cov-report=xml`):
     ```bash
-    uv run pytest
+    uv run pytest -n auto --tb=short --cov=src --cov-report=xml
     ```
+    If you see `unrecognized arguments: -n`, run `uv sync --all-extras --dev` and try again.
 
 ## Development Workflow
 
 -   **Linting & Formatting**: `uv run ruff check .` and `uv run ruff format .`
 -   **Type Checking**: `uv run mypy src/`
--   **Testing**: `uv run pytest` (or `uv run pytest --cov=src` for coverage)
+-   **Testing**: `uv run pytest -n auto --tb=short --cov=src --cov-report=xml` (same as CI). For a quick run without coverage: `uv run pytest -n auto`.
 
 ## Pull Requests
 
 1.  **Branch**: Create a feature branch (`git checkout -b feature/my-cool-feature`).
 2.  **Commit**: Use [Conventional Commits](https://www.conventionalcommits.org/) (e.g., `feat: add awesome feature`, `fix: resolve crash`).
-3.  **Test**: Ensure `uv run pytest` passes.
+3.  **Test**: Ensure `uv run pytest -n auto --tb=short --cov=src` passes (or `uv run pytest` if dev deps are not installed).
 4.  **Push**: Open a PR on GitHub.
 
 ## Testing
@@ -54,7 +55,7 @@ Tests are organized into three categories:
 
 2. **For rate limiting tests**: Use aggressive monkeypatch fixtures (see [Testing Guide](docs/testing.md))
 
-3. **Run with parallel execution**: Use `pytest -n auto` for process-level isolation
+3. **Run with parallel execution**: Use `pytest -n auto` for process-level isolation (requires `uv sync --all-extras --dev` so pytest-xdist is installed; otherwise you get `unrecognized arguments: -n`).
 
 ### Test Isolation Strategy
 
@@ -69,6 +70,8 @@ See the [Testing Guide](docs/testing.md) for complete details on:
 - Writing new tests
 - Using fixtures
 - Troubleshooting test interference
+
+**Troubleshooting**: If you see `unrecognized arguments: -n`, run `uv sync --all-extras --dev` so pytest-xdist is installed. If you see an INTERNALERROR when using `-n auto` with `--cov`, try running without parallel: `uv run pytest --tb=short --cov=src --cov-report=xml` (CI uses `-n auto` and may not hit this).
 
 ## Guidelines
 
