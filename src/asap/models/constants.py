@@ -42,8 +42,10 @@ The 2x multiplier ensures that:
 - There's a buffer for clock skew and processing delays
 """
 
-# URN patterns
+# URN patterns and limits
 AGENT_URN_PATTERN = r"^urn:asap:agent:[a-z0-9-]+(?::[a-z0-9-]+)?$"
+MAX_URN_LENGTH = 256
+"""Maximum length for agent URNs to prevent abuse and ensure consistent storage."""
 
 # Authentication schemes
 SUPPORTED_AUTH_SCHEMES = frozenset({"bearer", "basic"})

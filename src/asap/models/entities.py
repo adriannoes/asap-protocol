@@ -23,7 +23,13 @@ from pydantic import Field, field_validator, model_validator
 
 from asap.errors import UnsupportedAuthSchemeError
 from asap.models.base import ASAPBaseModel
-from asap.models.constants import AGENT_URN_PATTERN, ASAP_PROTOCOL_VERSION, SUPPORTED_AUTH_SCHEMES
+from asap.models.constants import (
+    AGENT_URN_PATTERN,
+    ASAP_PROTOCOL_VERSION,
+    MAX_TASK_DEPTH,
+    MAX_URN_LENGTH,
+    SUPPORTED_AUTH_SCHEMES,
+)
 from asap.models.enums import MessageRole, TaskStatus
 from asap.models.types import (
     AgentURN,
@@ -56,6 +62,28 @@ def _validate_auth_scheme(auth: "AuthScheme") -> None:
                 scheme=scheme,
                 supported_schemes=SUPPORTED_AUTH_SCHEMES,
             )
+
+
+def _validate_agent_urn(v: str) -> str:
+    """Validate agent URN format and length.
+
+    Ensures URN matches AGENT_URN_PATTERN (urn:asap:agent:name or
+    urn:asap:agent:name:sub) and does not exceed MAX_URN_LENGTH.
+
+    Args:
+        v: URN string to validate
+
+    Returns:
+        The same string if valid
+
+    Raises:
+        ValueError: If format is invalid or length exceeds MAX_URN_LENGTH
+    """
+    if len(v) > MAX_URN_LENGTH:
+        raise ValueError(f"Agent URN must be at most {MAX_URN_LENGTH} characters, got {len(v)}")
+    if not re.match(AGENT_URN_PATTERN, v):
+        raise ValueError(f"Agent ID must follow URN format 'urn:asap:agent:{{name}}', got: {v}")
+    return v
 
 
 class Skill(ASAPBaseModel):
@@ -191,6 +219,12 @@ class Agent(ASAPBaseModel):
     manifest_uri: str = Field(..., description="URL to agent's manifest")
     capabilities: list[str] = Field(..., min_length=1, description="Agent capability strings")
 
+    @field_validator("id")
+    @classmethod
+    def validate_urn_format(cls, v: str) -> str:
+        """Validate agent ID URN format and length."""
+        return _validate_agent_urn(v)
+
 
 class Manifest(ASAPBaseModel):
     """Self-describing metadata about an agent's capabilities.
@@ -238,10 +272,8 @@ class Manifest(ASAPBaseModel):
     @field_validator("id")
     @classmethod
     def validate_urn_format(cls, v: str) -> str:
-        """Validate that agent ID follows URN format."""
-        if not re.match(AGENT_URN_PATTERN, v):
-            raise ValueError(f"Agent ID must follow URN format 'urn:asap:agent:{{name}}', got: {v}")
-        return v
+        """Validate that agent ID follows URN format and length limits."""
+        return _validate_agent_urn(v)
 
     @field_validator("version")
     @classmethod
@@ -311,6 +343,7 @@ class Task(ASAPBaseModel):
         conversation_id: ID of the conversation this task belongs to
         parent_task_id: Optional ID of parent task (for subtasks)
         status: Current task status (submitted, working, completed, etc.)
+        depth: Nesting depth (0 = root); must be ≤ MAX_TASK_DEPTH to prevent infinite recursion
         progress: Optional progress information (percent, message, ETA)
         created_at: Timestamp when the task was created (UTC)
         updated_at: Timestamp of last status update (UTC)
@@ -331,6 +364,12 @@ class Task(ASAPBaseModel):
     conversation_id: ConversationID = Field(..., description="Parent conversation ID")
     parent_task_id: TaskID | None = Field(default=None, description="Parent task ID for subtasks")
     status: TaskStatus = Field(..., description="Task status (submitted, working, etc.)")
+    depth: int = Field(
+        0,
+        ge=0,
+        le=MAX_TASK_DEPTH,
+        description="Nesting depth for subtasks (0 = root); prevents infinite recursion",
+    )
     progress: dict[str, Any] | None = Field(
         default=None, description="Progress info (percent, message, ETA)"
     )
