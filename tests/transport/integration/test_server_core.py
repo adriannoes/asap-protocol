@@ -659,8 +659,8 @@ class TestServerExceptionHandling(NoRateLimitTestBase):
         assert "error" in data
         # Internal error code is -32603
         assert data["error"]["code"] == -32603
-        assert "Intentional test error" in data["error"]["data"]["error"]
-        assert data["error"]["data"]["type"] == "RuntimeError"
+        # Production (no ASAP_DEBUG): generic message only
+        assert "Internal server error" in data["error"]["data"]["error"]
 
     def test_handler_exception_records_error_metrics(self, manifest: Manifest) -> None:
         """Test that handler exceptions record error metrics."""

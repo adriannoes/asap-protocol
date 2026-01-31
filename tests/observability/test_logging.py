@@ -10,10 +10,13 @@ from unittest.mock import patch
 import structlog
 
 from asap.observability.logging import (
+    REDACTED_PLACEHOLDER,
     bind_context,
     clear_context,
     configure_logging,
     get_logger,
+    is_debug_mode,
+    sanitize_for_logging,
 )
 
 
@@ -154,6 +157,85 @@ class TestContextBinding:
         # After clearing, the context should not have the bound keys
         assert "key1" not in ctx
         assert "key2" not in ctx
+
+
+class TestSanitizeForLogging:
+    """Tests for sanitize_for_logging (sensitive data redaction)."""
+
+    def test_tokens_redacted(self) -> None:
+        """Test that token-like keys are redacted."""
+        data = {"token": "sk_live_abc123", "authorization": "Bearer xyz"}
+        result = sanitize_for_logging(data)
+        assert result["token"] == REDACTED_PLACEHOLDER
+        assert result["authorization"] == REDACTED_PLACEHOLDER
+
+    def test_password_and_secret_redacted(self) -> None:
+        """Test that password and secret keys are redacted."""
+        data = {"password": "secret123", "api_secret": "key456"}
+        result = sanitize_for_logging(data)
+        assert result["password"] == REDACTED_PLACEHOLDER
+        assert result["api_secret"] == REDACTED_PLACEHOLDER
+
+    def test_nested_objects_sanitized(self) -> None:
+        """Test that nested dicts are recursively sanitized."""
+        data = {"user": "alice", "nested": {"token": "sk_live_xyz", "id": 1}}
+        result = sanitize_for_logging(data)
+        assert result["user"] == "alice"
+        assert result["nested"]["token"] == REDACTED_PLACEHOLDER
+        assert result["nested"]["id"] == 1
+
+    def test_non_sensitive_preserved(self) -> None:
+        """Test that non-sensitive keys and correlation_id are preserved."""
+        data = {"user": "alice", "correlation_id": "c123", "trace_id": "t456"}
+        result = sanitize_for_logging(data)
+        assert result["user"] == "alice"
+        assert result["correlation_id"] == "c123"
+        assert result["trace_id"] == "t456"
+
+    def test_list_of_dicts_sanitized(self) -> None:
+        """Test that lists of dicts are sanitized."""
+        data = {"items": [{"name": "a", "password": "p1"}, {"name": "b", "token": "t1"}]}
+        result = sanitize_for_logging(data)
+        assert result["items"][0]["name"] == "a"
+        assert result["items"][0]["password"] == REDACTED_PLACEHOLDER
+        assert result["items"][1]["name"] == "b"
+        assert result["items"][1]["token"] == REDACTED_PLACEHOLDER
+
+    def test_empty_dict_returns_empty(self) -> None:
+        """Test that empty dict returns empty dict."""
+        assert sanitize_for_logging({}) == {}
+
+    def test_sensitive_key_case_insensitive(self) -> None:
+        """Test that sensitive key matching is case-insensitive."""
+        data = {"PASSWORD": "pwd", "Token": "t1", "Authorization": "Bearer x"}
+        result = sanitize_for_logging(data)
+        assert result["PASSWORD"] == REDACTED_PLACEHOLDER
+        assert result["Token"] == REDACTED_PLACEHOLDER
+        assert result["Authorization"] == REDACTED_PLACEHOLDER
+
+
+class TestIsDebugMode:
+    """Tests for ASAP_DEBUG environment variable (is_debug_mode)."""
+
+    def test_debug_mode_false_when_unset(self) -> None:
+        """Test that is_debug_mode is False when ASAP_DEBUG is unset or empty."""
+        with patch.dict("os.environ", {"ASAP_DEBUG": ""}):
+            assert is_debug_mode() is False
+
+    def test_debug_mode_true_when_true(self) -> None:
+        """Test that is_debug_mode is True when ASAP_DEBUG=true."""
+        with patch.dict("os.environ", {"ASAP_DEBUG": "true"}):
+            assert is_debug_mode() is True
+
+    def test_debug_mode_true_when_1(self) -> None:
+        """Test that is_debug_mode is True when ASAP_DEBUG=1."""
+        with patch.dict("os.environ", {"ASAP_DEBUG": "1"}):
+            assert is_debug_mode() is True
+
+    def test_debug_mode_false_when_false(self) -> None:
+        """Test that is_debug_mode is False when ASAP_DEBUG=false."""
+        with patch.dict("os.environ", {"ASAP_DEBUG": "false"}):
+            assert is_debug_mode() is False
 
 
 class TestLoggingIntegration:

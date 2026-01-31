@@ -43,6 +43,7 @@ Example:
 import json
 import os
 import time
+import traceback
 from dataclasses import dataclass
 from typing import Any, Callable, TypeVar
 
@@ -55,7 +56,7 @@ from asap.errors import InvalidNonceError, InvalidTimestampError, ThreadPoolExha
 from asap.models.constants import MAX_REQUEST_SIZE
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.envelope import Envelope
-from asap.observability import get_logger, get_metrics
+from asap.observability import get_logger, get_metrics, is_debug_mode, sanitize_for_logging
 from asap.utils.sanitization import sanitize_nonce
 from asap.transport.middleware import (
     AuthenticationMiddleware,
@@ -297,11 +298,13 @@ class ASAPRequestHandler:
             payload_type = envelope.payload_type
             return envelope, payload_type
         except ValidationError as e:
-            logger.warning(
-                "asap.request.invalid_envelope",
-                error="Invalid envelope structure",
-                validation_errors=str(e.errors()),
-            )
+            log_data: dict[str, Any] = {
+                "error": "Invalid envelope structure",
+                "validation_errors": e.errors(),
+            }
+            if not is_debug_mode():
+                log_data = sanitize_for_logging(log_data)
+            logger.warning("asap.request.invalid_envelope", **log_data)
             duration_seconds = time.perf_counter() - ctx.start_time
             self.record_error_metrics(ctx.metrics, "unknown", "invalid_envelope", duration_seconds)
             error_response = self.build_error_response(
@@ -556,7 +559,7 @@ class ASAPRequestHandler:
         # Record error metrics (normalized to prevent cardinality explosion)
         self.record_error_metrics(ctx.metrics, payload_type, "internal_error", duration_seconds)
 
-        # Log error
+        # Always log full error server-side for diagnostics
         logger.exception(
             "asap.request.error",
             error=str(error),
@@ -564,12 +567,18 @@ class ASAPRequestHandler:
             duration_ms=round(duration_ms, 2),
         )
 
-        # Internal server error
+        # Production: generic error to client; debug: full error and stack trace
+        if is_debug_mode():
+            error_data: dict[str, Any] = {
+                "error": str(error),
+                "type": type(error).__name__,
+                "traceback": traceback.format_exc(),
+            }
+        else:
+            error_data = {"error": "Internal server error"}
+
         internal_error = JsonRpcErrorResponse(
-            error=JsonRpcError.from_code(
-                INTERNAL_ERROR,
-                data={"error": str(error), "type": type(error).__name__},
-            ),
+            error=JsonRpcError.from_code(INTERNAL_ERROR, data=error_data),
             id=ctx.request_id,
         )
         return JSONResponse(
@@ -756,12 +765,18 @@ class ASAPRequestHandler:
                         error_message = "JSON-RPC 'params' must be an object"
                         break
 
-            logger.warning(
-                "asap.request.invalid_structure",
-                error=error_message,
-                error_type=type(e).__name__,
-                validation_errors=str(e.errors()) if isinstance(e, ValidationError) else str(e),
-            )
+            log_struct: dict[str, Any] = {
+                "error": error_message,
+                "error_type": type(e).__name__,
+                "validation_errors": (
+                    e.errors()
+                    if isinstance(e, ValidationError)
+                    else [{"type": "type_error", "loc": (), "msg": str(e), "input": None}]
+                ),
+            }
+            if not is_debug_mode():
+                log_struct = sanitize_for_logging(log_struct)
+            logger.warning("asap.request.invalid_structure", **log_struct)
             error_response = self.build_error_response(
                 error_code,
                 data={
@@ -860,12 +875,14 @@ class ASAPRequestHandler:
             try:
                 validate_envelope_timestamp(envelope)
             except InvalidTimestampError as e:
-                logger.warning(
-                    "asap.request.invalid_timestamp",
-                    envelope_id=envelope.id,
-                    error=e.message,
-                    details=e.details,
-                )
+                log_ts: dict[str, Any] = {
+                    "envelope_id": envelope.id,
+                    "error": e.message,
+                    "details": e.details,
+                }
+                if not is_debug_mode() and isinstance(e.details, dict):
+                    log_ts["details"] = sanitize_for_logging(e.details)
+                logger.warning("asap.request.invalid_timestamp", **log_ts)
                 duration_seconds = time.perf_counter() - ctx.start_time
                 self.record_error_metrics(
                     ctx.metrics, payload_type, "invalid_timestamp", duration_seconds
@@ -887,11 +904,12 @@ class ASAPRequestHandler:
             except InvalidNonceError as e:
                 # Sanitize nonce in logs to prevent full value exposure
                 nonce_sanitized = sanitize_nonce(e.nonce)
+                error_msg = e.message if is_debug_mode() else "Duplicate nonce detected"
                 logger.warning(
                     "asap.request.invalid_nonce",
                     envelope_id=envelope.id,
                     nonce=nonce_sanitized,
-                    error=e.message,
+                    error=error_msg,
                 )
                 duration_seconds = time.perf_counter() - ctx.start_time
                 self.record_error_metrics(
