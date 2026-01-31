@@ -1,0 +1,147 @@
+# Rate Limiting Testing Pattern
+
+> Quick reference for testing with slowapi rate limiting. For detailed documentation, see: `.cursor/dev-planning/code-review/v1.0.0/rate-limiting-testing-patterns.md`
+
+## Problem
+
+`slowapi.Limiter` maintains global state that persists across test executions, causing HTTP 429 errors in test suites due to accumulated rate limit violations.
+
+## Solution: Aggressive Monkeypatch Pattern
+
+**ALWAYS** apply this pattern when writing tests that interact with FastAPI endpoints using rate limiting:
+
+```python
+def test_something(sample_manifest: Manifest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test description."""
+    import uuid
+    from slowapi import Limiter
+    from slowapi.util import get_remote_address
+
+    # Step 1: Create isolated limiter with unique storage
+    isolated_limiter = Limiter(
+        key_func=get_remote_address,
+        default_limits=["999999/minute"],  # High limit for non-rate-limiting tests
+        storage_uri=f"memory://{uuid.uuid4()}",  # Unique storage per test
+    )
+
+    # Step 2: Replace in BOTH modules (CRITICAL - don't skip either!)
+    import asap.transport.middleware as middleware_module
+    import asap.transport.server as server_module
+    monkeypatch.setattr(middleware_module, "limiter", isolated_limiter)
+    monkeypatch.setattr(server_module, "limiter", isolated_limiter)
+
+    # Step 3: Create app AFTER monkeypatching
+    app = create_app(sample_manifest, rate_limit="999999/minute")
+    
+    # Step 4: Also replace app.state.limiter for runtime consistency
+    app.state.limiter = isolated_limiter
+    client = TestClient(app)
+
+    # Now test code is fully isolated
+    response = client.post("/asap", json=request_body)
+    assert response.status_code == 200  # No HTTP 429!
+```
+
+## Critical Rules
+
+1. **ALWAYS replace in BOTH modules**: `asap.transport.middleware` AND `asap.transport.server`
+   - Skipping either causes the decorator `@limiter.limit()` to use the old global limiter
+
+2. **ALWAYS monkeypatch BEFORE creating app**: 
+   - ❌ `app = create_app(); monkeypatch.setattr(...)`
+   - ✅ `monkeypatch.setattr(...); app = create_app()`
+
+3. **ALWAYS use unique storage_uri**: `f"memory://{uuid.uuid4()}"`
+   - Ensures complete isolation between test runs
+
+4. **ALWAYS replace app.state.limiter** after creating app:
+   - Ensures runtime code also uses the isolated limiter
+
+5. **Use high limits for non-rate-limiting tests**: `"999999/minute"`
+   - For tests specifically testing rate limiting, use realistic limits like `"10/minute"`
+
+## Decision Tree
+
+```
+┌─ Is this test specifically testing rate limiting behavior?
+│  ├─ YES → Use aggressive monkeypatch + moderate limits (e.g., "10/minute")
+│  │        Place in dedicated test_rate_limiting.py file
+│  └─ NO  → Use aggressive monkeypatch + high limits ("999999/minute")
+│           Prevents interference from accumulated state
+```
+
+## Common Mistakes
+
+### ❌ Only replacing app.state.limiter
+```python
+app = create_app(manifest)
+app.state.limiter = isolated_limiter  # Decorator ignores this!
+```
+
+### ❌ Only replacing in one module
+```python
+monkeypatch.setattr(middleware_module, "limiter", isolated_limiter)
+# Forgot server_module! Decorator still uses old limiter
+```
+
+### ❌ Creating app before monkeypatching
+```python
+app = create_app(manifest)  # Decorator already captured old limiter
+monkeypatch.setattr(...)    # Too late!
+```
+
+### ✅ Correct Pattern
+```python
+# 1. Create isolated limiter
+isolated_limiter = Limiter(...)
+
+# 2. Monkeypatch BOTH modules
+monkeypatch.setattr(middleware_module, "limiter", isolated_limiter)
+monkeypatch.setattr(server_module, "limiter", isolated_limiter)
+
+# 3. Create app
+app = create_app(manifest)
+
+# 4. Replace app.state.limiter
+app.state.limiter = isolated_limiter
+```
+
+## Alternative: NoRateLimitTestBase Mixin
+
+For test classes where NO tests need rate limiting:
+
+```python
+from tests.transport.conftest import NoRateLimitTestBase
+
+class TestMyFeature(NoRateLimitTestBase):
+    """Rate limiting automatically disabled for all tests."""
+    
+    def test_something(self):
+        # No manual monkeypatch needed - fixture handles it
+        app = create_app(manifest)
+        # Rate limiting is disabled automatically
+```
+
+## Process Isolation
+
+ALWAYS run tests with pytest-xdist for process isolation:
+
+```bash
+# Local development and CI
+pytest -n auto
+
+# Debugging (disable parallel execution)
+pytest -n 0
+```
+
+## When in Doubt
+
+1. Read the detailed documentation: `.cursor/dev-planning/code-review/v1.0.0/rate-limiting-testing-patterns.md`
+2. Check existing examples: `tests/transport/test_server.py::TestDebugLogMode`
+3. Check v0.5.0 fixtures: `tests/transport/conftest.py`
+
+## History
+
+- **v0.5.0 Sprint S2.5**: Resolved Issue #17 (33 failing tests due to rate limit interference)
+- **v1.0.0 Sprint P5-P6**: Applied pattern, prevented regressions in debug log tests
+- **See also**: `.cursor/dev-planning/tasks/v1.0.0/upstream-slowapi-deprecation.md`
