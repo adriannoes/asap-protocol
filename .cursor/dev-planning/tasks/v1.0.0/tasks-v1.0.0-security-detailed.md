@@ -75,7 +75,7 @@
   - Rationale: Validates sanitization works in full request/response cycle, catches edge cases missed by unit tests
   - **Note**: v0.5.0 unit tests sufficient for release; integration tests justify effort when observability is complete
 
-- [ ] 1.1.7 Commit (deferred until PR)
+- [x] 1.1.7 Commit (deferred until PR)
   - Command: `git commit -m "feat(observability): add log sanitization for sensitive data"`
   - Close issue #12
 
@@ -110,7 +110,7 @@
   - Create: `src/asap/examples/secure_handler.py`
   - Show: Proper input validation
 
-- [ ] 1.2.6 Commit (deferred until PR)
+- [x] 1.2.6 Commit (deferred until PR)
   - Command: `git commit -m "feat(security): add handler input validation"`
 
 **Acceptance**: Handler security documented, FilePart validated
@@ -146,7 +146,7 @@
   - Test: Multiple threads registering handlers
   - Test: Concurrent handler dispatch
 
-- [ ] 2.1.3 Commit (deferred until PR)
+- [x] 2.1.3 Commit (deferred until PR)
   - Command: `git commit -m "refactor(transport): improve HandlerRegistry thread safety"`
 
 **Acceptance**: Thread-safe handler registration
@@ -170,7 +170,7 @@
   - Test: Invalid URN characters
   - Test: Task depth limits
 
-- [ ] 2.2.4 Commit (deferred until PR)
+- [x] 2.2.4 Commit (deferred until PR)
   - Command: `git commit -m "feat(models): add enhanced URN and depth validation"`
 
 **Acceptance**: URN max 256 chars, depth validated
