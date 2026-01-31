@@ -44,8 +44,7 @@ class VisualizeBody(BaseModel):
 def _hops_to_dict(hops: list[TraceHop]) -> list[dict[str, Any]]:
     """Convert TraceHop list to JSON-serializable dicts."""
     return [
-        {"sender": h.sender, "recipient": h.recipient, "duration_ms": h.duration_ms}
-        for h in hops
+        {"sender": h.sender, "recipient": h.recipient, "duration_ms": h.duration_ms} for h in hops
     ]
 
 

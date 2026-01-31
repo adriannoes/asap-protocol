@@ -62,9 +62,7 @@ def parse_log_line(line: str) -> dict[str, object] | None:
         return None
 
 
-def filter_records_by_trace_id(
-    lines: Iterable[str], trace_id: str
-) -> list[dict[str, object]]:
+def filter_records_by_trace_id(lines: Iterable[str], trace_id: str) -> list[dict[str, object]]:
     """Filter and parse log lines that contain the given trace_id.
 
     Only lines that are valid JSON and contain trace_id (string match) are returned.
@@ -200,9 +198,30 @@ def extract_trace_ids(lines: Iterable[str]) -> list[str]:
     return sorted(seen)
 
 
-def parse_trace_from_lines(
-    lines: Iterable[str], trace_id: str
-) -> tuple[list[TraceHop], str]:
+def trace_to_json_export(trace_id: str, hops: list[TraceHop]) -> dict[str, object]:
+    """Build a JSON-serializable dict for a trace (for --format json and external tools).
+
+    Args:
+        trace_id: Trace ID.
+        hops: Ordered list of TraceHop from build_hops.
+
+    Returns:
+        Dict with keys: trace_id, hops (list of {sender, recipient, duration_ms}).
+    """
+    return {
+        "trace_id": trace_id,
+        "hops": [
+            {
+                "sender": h.sender,
+                "recipient": h.recipient,
+                "duration_ms": h.duration_ms,
+            }
+            for h in hops
+        ],
+    }
+
+
+def parse_trace_from_lines(lines: Iterable[str], trace_id: str) -> tuple[list[TraceHop], str]:
     """Parse logs and build ASCII diagram for a trace_id.
 
     Args:
