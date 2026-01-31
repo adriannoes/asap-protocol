@@ -7,7 +7,6 @@ for sharing circuit breaker state across multiple client instances.
 import threading
 import time
 from enum import Enum
-from typing import Dict
 
 from asap.models.constants import (
     DEFAULT_CIRCUIT_BREAKER_THRESHOLD,
@@ -136,7 +135,7 @@ class CircuitBreakerRegistry:
 
     def __init__(self) -> None:
         """Initialize registry."""
-        self._breakers: Dict[str, CircuitBreaker] = {}
+        self._breakers: dict[str, CircuitBreaker] = {}
         self._lock = threading.RLock()
 
     def get_or_create(
@@ -176,6 +175,7 @@ class CircuitBreakerRegistry:
 # Global registry instance
 # In a more complex app, this might be injected, but a module-level singleton
 # is standard for this pattern in Python clients.
+# WARNING: This state persists across tests. Use get_registry().clear() in tearDown.
 _registry = CircuitBreakerRegistry()
 
 

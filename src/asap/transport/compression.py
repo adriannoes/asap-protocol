@@ -151,8 +151,11 @@ def decompress_brotli(data: bytes) -> bytes:
     """
     import brotli
 
-    result: bytes = brotli.decompress(data)
-    return result
+    try:
+        result: bytes = brotli.decompress(data)
+        return result
+    except brotli.error as e:
+        raise OSError(f"Brotli decompression failed: {e}") from e
 
 
 def compress_payload(
@@ -176,10 +179,13 @@ def compress_payload(
         Tuple of (compressed_data, algorithm_used)
         If compression is skipped, returns (original_data, IDENTITY)
 
-    Example:
-        >>> data = b'{"message": "hello"}' * 100
         >>> compressed, algorithm = compress_payload(data)
         >>> print(f"Compressed {len(data)} -> {len(compressed)} bytes using {algorithm.value}")
+
+    Note:
+        Compression adds CPU overhead which may increase latency for very small payloads.
+        For extremely latency-sensitive scenarios, consider increasing the threshold
+        or disabling compression if payloads are typically small.
     """
     # Skip compression for small payloads
     if len(data) < threshold:
@@ -195,6 +201,7 @@ def compress_payload(
     if preferred_algorithm is not None:
         algorithm = preferred_algorithm
     elif is_brotli_available():
+        # TODO: Add prefer_fast_compression option to prefer gzip even when brotli is available
         algorithm = CompressionAlgorithm.BROTLI
     else:
         algorithm = CompressionAlgorithm.GZIP

@@ -71,7 +71,10 @@ DEFAULT_MAX_RETRIES = 3
 # Connection pool defaults (support 1000+ concurrent via reuse)
 DEFAULT_POOL_CONNECTIONS = 100
 DEFAULT_POOL_MAXSIZE = 100
+# Timeout for acquiring a connection from the pool (distinct from request timeout)
 DEFAULT_POOL_TIMEOUT = 5.0
+# Maximum time to wait for manifest retrieval
+MANIFEST_REQUEST_TIMEOUT = 10.0
 
 
 @dataclass
@@ -278,9 +281,17 @@ class ASAPClient:
             transport: Optional custom async transport (for testing). Must be an instance
                 of httpx.AsyncBaseTransport (e.g., httpx.MockTransport).
             require_https: If True, enforces HTTPS for non-localhost connections (default: True).
-            pool_connections: Max keep-alive connections in pool (default: 100). Passed to httpx.Limits.
-            pool_maxsize: Max total connections in pool (default: 100). Passed to httpx.Limits.
-            pool_timeout: Seconds to wait when acquiring a connection from the pool (default: 5.0).
+            pool_connections: Max keep-alive connections in pool. Default: DEFAULT_POOL_CONNECTIONS (100).
+                Controls how many idle connections are kept open.
+            pool_maxsize: Max total connections in pool. Default: DEFAULT_POOL_MAXSIZE (100).
+                Controls maximum number of concurrent connections.
+                Tuning:
+                - Single agent: 100 (default)
+                - Small cluster: 200-500
+                - Large cluster: 500-1000
+                Safe to increase if OS file descriptor limits allow.
+            pool_timeout: Seconds to wait for connection from pool. Default: DEFAULT_POOL_TIMEOUT (5.0).
+                Increase if you see PoolTimeout exceptions under high load.
                 HTTP connections to localhost are allowed with a warning for development.
             http2: Enable HTTP/2 multiplexing for improved batch performance (default: True).
                 HTTP/2 allows multiple concurrent requests over a single TCP connection,
@@ -716,9 +727,19 @@ class ASAPClient:
 
                 response = await self._client.post(
                     f"{self.base_url}/asap",
-                    content=request_body,
                     headers=headers,
+                    content=request_body,
                 )
+
+                # Log HTTP protocol version for debugging fallback behavior
+                if self._http2 and response.http_version != "HTTP/2":
+                    logger.debug(
+                        "asap.client.http_fallback",
+                        target_url=sanitize_url(self.base_url),
+                        requested="HTTP/2",
+                        actual=response.http_version,
+                        message=f"HTTP/2 requested but used {response.http_version}",
+                    )
 
                 # Check HTTP status
                 if response.status_code >= 500:
@@ -1115,7 +1136,7 @@ class ASAPClient:
         try:
             response = await self._client.get(
                 url,
-                timeout=min(self.timeout, 10.0),  # Shorter timeout for manifest
+                timeout=min(self.timeout, MANIFEST_REQUEST_TIMEOUT),  # Cap timeout for manifest
             )
 
             if response.status_code >= 400:

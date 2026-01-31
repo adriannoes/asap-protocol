@@ -71,6 +71,8 @@ class ManifestCache:
             default_ttl: Default TTL in seconds for cache entries (default: 300.0)
         """
         self._cache: dict[str, CacheEntry] = {}
+        # TODO: Add max_size limit to prevent memory exhaustion (Review 4.6)
+        # Suggestion: Use LRU or simple max limit with random eviction
         self._lock = Lock()
         self._default_ttl = default_ttl
 

@@ -766,9 +766,14 @@ class ASAPRequestHandler:
 
                     # Validate decompressed size to prevent decompression bombs
                     if decompressed_size > self.max_request_size:
+                        compression_ratio = (
+                            decompressed_size / compressed_size if compressed_size > 0 else 0
+                        )
                         logger.warning(
                             "asap.request.decompressed_size_exceeded",
                             decompressed_size=decompressed_size,
+                            original_compressed_size=compressed_size,
+                            compression_ratio=round(compression_ratio, 2),
                             max_size=self.max_request_size,
                         )
                         raise HTTPException(
@@ -1203,8 +1208,9 @@ def create_app(
         max_request_size=max_request_size,
     )
 
-    # Note: Request size limits should be configured at the ASGI server level (e.g., uvicorn).
-    # For production, consider setting --limit-max-requests or using a reverse proxy
+    # Note: Request size limits should be configured at the ASGI server level
+    # (e.g., uvicorn --limit-max-body).
+    # For production, consider using a reverse proxy
     # (nginx, traefik) to enforce request size limits (e.g., 10MB max).
 
     @app.get("/.well-known/asap/manifest.json")
@@ -1282,7 +1288,7 @@ def _create_default_manifest() -> Manifest:
     return Manifest(
         id="urn:asap:agent:default-server",
         name="ASAP Default Server",
-        version="0.3.0",
+        version="1.0.0-dev",
         description="Default ASAP protocol server with echo capabilities",
         capabilities=Capability(
             asap_version="0.1",
