@@ -97,6 +97,24 @@ class TestNonceValidationEdgeCases:
 
         assert "must be a non-empty string" in str(exc_info.value).lower()
 
+    def test_nonce_empty_string_raises_error(self) -> None:
+        """Empty string nonce should raise InvalidNonceError (Sprint 3 follow-up)."""
+        store = InMemoryNonceStore()
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:test",
+            recipient="urn:asap:agent:target",
+            payload_type="TaskRequest",
+            payload={"skill_id": "test", "conversation_id": "conv_1", "input": {}},
+            extensions={"nonce": ""},
+        )
+
+        with pytest.raises(InvalidNonceError) as exc_info:
+            validate_envelope_nonce(envelope, store)
+
+        assert "must be a non-empty string" in str(exc_info.value).lower()
+        assert exc_info.value.nonce == ""
+
     def test_nonce_none_value_raises_error(self) -> None:
         """None nonce value should raise InvalidNonceError."""
         store = InMemoryNonceStore()

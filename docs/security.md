@@ -844,6 +844,106 @@ def test_size_limit():
 
 ---
 
+## Handler Security
+
+Handlers process incoming ASAP envelopes and must validate all inputs before use. Unvalidated payloads, URIs, or envelope fields can lead to path traversal, injection, or information disclosure.
+
+### Input Validation Requirements
+
+1. **Validate payload structure**: Parse payloads with Pydantic models (e.g. `TaskRequest`) so required fields and types are enforced.
+2. **Validate URIs in parts**: Reject path traversal (`../`) and suspicious `file://` URIs in `FilePart` and similar fields. Use the built-in `FilePart` URI validator.
+3. **Validate handler signature**: Handlers must accept `(envelope: Envelope, manifest: Manifest)` and return `Envelope` (sync) or `Awaitable[Envelope]` (async). Use `validate_handler()` when registering custom handlers.
+4. **Do not trust envelope payload as raw dict**: Always parse into typed models and handle `ValidationError`.
+5. **Sanitize data before logging**: Use `sanitize_for_logging()` for envelope or payload data in log messages.
+
+### Handler Security Review Checklist
+
+Before deploying a handler, verify:
+
+- [ ] Payload is parsed with a Pydantic model (e.g. `TaskRequest(**envelope.payload)` inside try/except).
+- [ ] All user-controlled strings (URIs, IDs, file paths) are validated or allowlisted.
+- [ ] No path traversal possible: `FilePart` URIs use the built-in validator; custom file paths are normalized and checked against a base directory.
+- [ ] Handler signature is `(envelope: Envelope, manifest: Manifest)` and return type is `Envelope` or `Awaitable[Envelope]`.
+- [ ] Errors are logged server-side with full context; responses to clients are generic in production (no stack traces or internal details).
+- [ ] No secrets or PII are logged; use `sanitize_for_logging()` when logging payloads or envelope content.
+
+### Secure vs Insecure Handlers
+
+**Insecure**: Raw payload, no URI validation, secrets in logs.
+
+```python
+def bad_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+    # BAD: No payload validation
+    uri = envelope.payload.get("file_uri")  # type: ignore[union-attr]
+    # BAD: Path traversal possible
+    with open(uri.replace("file://", "")) as f:
+        data = f.read()
+    # BAD: Logging raw payload (may contain secrets)
+    logger.info("request", payload=envelope.payload)
+    return build_response(envelope, data)
+```
+
+**Secure**: Typed payload, validated URIs, sanitized logging.
+
+```python
+from asap.models.payloads import TaskRequest
+from asap.models.parts import FilePart
+from asap.observability import sanitize_for_logging
+
+def good_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+    # GOOD: Parse and validate payload
+    try:
+        task_request = TaskRequest(**envelope.payload)
+    except ValidationError as e:
+        raise MalformedEnvelopeError(reason="Invalid TaskRequest", details={"errors": e.errors()})
+    # GOOD: Use validated parts (FilePart validates URIs, rejects path traversal)
+    for part in task_request.input.get("parts", []):
+        if part.get("type") == "file":
+            file_part = FilePart.model_validate(part)  # URI validated here
+            # Process file_part.uri safely
+    # GOOD: Sanitize before logging
+    logger.info("request", payload=sanitize_for_logging(envelope.payload))
+    return build_response(envelope, result)
+```
+
+### FilePart URI Validation
+
+`FilePart` validates `uri` to block path traversal and risky `file://` usage:
+
+- Rejects URIs containing `../` (path traversal).
+- Rejects `file://` URIs that are not explicitly allowed (e.g. allowlisted base path).
+- Allows `asap://`, `https://`, and `data:` URIs when they meet format checks.
+
+See `src/asap/models/parts.py` for the implementation. Use `FilePart` for any user-supplied file reference so validation is applied consistently.
+
+### Handler signature validation
+
+Use `validate_handler(handler)` from `asap.transport.handlers` to ensure a handler has the required signature `(envelope: Envelope, manifest: Manifest)` before registering it. The registry calls this automatically on `register()` so invalid handlers are rejected at registration time.
+
+```python
+from asap.transport.handlers import HandlerRegistry, validate_handler
+
+def my_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+    ...
+
+registry = HandlerRegistry()
+validate_handler(my_handler)  # Optional: fail fast before register
+registry.register("task.request", my_handler)
+```
+
+### Handler sandboxing (optional)
+
+Handlers run in the same process as the server and have the same privileges. For untrusted or third-party handlers, consider:
+
+- Running them in a separate process or worker pool with restricted resources.
+- Validating and sanitizing all payload inputs before use (see input validation above).
+- Using a bounded executor for sync handlers to limit CPU time (see `HandlerRegistry(executor=...)`).
+- Not exposing sensitive environment variables or files to handler code.
+
+ASAP does not provide a sandbox; implement process or resource isolation at the deployment level if needed.
+
+---
+
 ## Replay Attack Prevention
 
 ASAP protocol prevents replay attacks through timestamp validation and optional nonce-based duplicate detection. This ensures that intercepted or maliciously replayed messages cannot be processed after their validity window expires.

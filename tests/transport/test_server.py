@@ -466,7 +466,8 @@ class TestASAPRequestHandlerHelpers:
         error_data = json.loads(content)
         assert "error" in error_data
         assert error_data["error"]["code"] == INTERNAL_ERROR
-        assert "Test error" in error_data["error"]["data"]["error"]
+        # Production: generic message only; full error only when ASAP_DEBUG is set
+        assert error_data["error"]["data"]["error"] == "Internal server error"
 
     @pytest.mark.asyncio
     async def test_authenticate_request_without_middleware(

@@ -78,6 +78,50 @@ class TestAgent:
         assert agent.id == data["id"]
         assert agent.capabilities == data["capabilities"]
 
+    def test_agent_urn_max_length_rejected(self) -> None:
+        """Test that Agent rejects URN longer than MAX_URN_LENGTH (256)."""
+        from asap.models.constants import MAX_URN_LENGTH
+
+        long_name = "a" * (MAX_URN_LENGTH - len("urn:asap:agent:") + 1)
+        long_urn = f"urn:asap:agent:{long_name}"
+
+        with pytest.raises(ValidationError) as exc_info:
+            Agent(
+                id=long_urn,
+                manifest_uri="https://example.com/manifest.json",
+                capabilities=["task.execute"],
+            )
+        errors = exc_info.value.errors()
+        assert any("256" in str(e.get("msg", "")) for e in errors)
+
+    def test_agent_urn_invalid_characters_rejected(self) -> None:
+        """Test that Agent rejects URN with invalid characters (e.g. uppercase, spaces)."""
+        with pytest.raises(ValidationError):
+            Agent(
+                id="urn:asap:agent:InvalidName",
+                manifest_uri="https://example.com/manifest.json",
+                capabilities=["task.execute"],
+            )
+        with pytest.raises(ValidationError):
+            Agent(
+                id="urn:asap:agent:name with spaces",
+                manifest_uri="https://example.com/manifest.json",
+                capabilities=["task.execute"],
+            )
+
+    def test_agent_urn_valid_at_max_length(self) -> None:
+        """Test that Agent accepts URN at exactly MAX_URN_LENGTH characters."""
+        from asap.models.constants import MAX_URN_LENGTH
+
+        name_len = MAX_URN_LENGTH - len("urn:asap:agent:")
+        valid_urn = "urn:asap:agent:" + "a" * name_len
+        agent = Agent(
+            id=valid_urn,
+            manifest_uri="https://example.com/manifest.json",
+            capabilities=["task.execute"],
+        )
+        assert len(agent.id) == MAX_URN_LENGTH
+
 
 class TestSkill:
     """Test suite for Skill model."""
@@ -249,6 +293,25 @@ class TestManifest:
 
         assert manifest.auth is None
         assert manifest.signature is None
+
+    def test_manifest_urn_max_length_rejected(self) -> None:
+        """Test that Manifest rejects agent id URN longer than MAX_URN_LENGTH (256)."""
+        from asap.models.constants import MAX_URN_LENGTH
+
+        long_name = "a" * (MAX_URN_LENGTH - len("urn:asap:agent:") + 1)
+        long_urn = f"urn:asap:agent:{long_name}"
+
+        with pytest.raises(ValidationError) as exc_info:
+            Manifest(
+                id=long_urn,
+                name="Test",
+                version="1.0.0",
+                description="Test",
+                capabilities=Capability(asap_version="0.1", skills=[]),
+                endpoints=Endpoint(asap="https://example.com/asap"),
+            )
+        errors = exc_info.value.errors()
+        assert any("256" in str(e.get("msg", "")) for e in errors)
 
     def test_manifest_is_immutable(self):
         """Test that Manifest instances are immutable."""
@@ -437,6 +500,53 @@ class TestTask:
 
         assert task.parent_task_id == parent_id
 
+    def test_task_depth_default(self):
+        """Test that Task defaults depth to 0 when not provided."""
+        from datetime import datetime, timezone
+        from asap.models.entities import Task
+
+        task = Task(
+            id=generate_id(),
+            conversation_id=generate_id(),
+            status="submitted",
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+        assert task.depth == 0
+
+    def test_task_depth_valid(self):
+        """Test that Task accepts depth in range [0, MAX_TASK_DEPTH]."""
+        from datetime import datetime, timezone
+        from asap.models.constants import MAX_TASK_DEPTH
+        from asap.models.entities import Task
+
+        for d in (0, 1, MAX_TASK_DEPTH):
+            task = Task(
+                id=generate_id(),
+                conversation_id=generate_id(),
+                status="submitted",
+                depth=d,
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+            )
+            assert task.depth == d
+
+    def test_task_depth_exceeds_max_rejected(self):
+        """Test that Task rejects depth > MAX_TASK_DEPTH."""
+        from datetime import datetime, timezone
+        from asap.models.constants import MAX_TASK_DEPTH
+        from asap.models.entities import Task
+
+        with pytest.raises(ValidationError):
+            Task(
+                id=generate_id(),
+                conversation_id=generate_id(),
+                status="submitted",
+                depth=MAX_TASK_DEPTH + 1,
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+            )
+
     def test_task_timestamps(self):
         """Test that Task timestamps are properly set."""
         from datetime import datetime, timezone
@@ -465,6 +575,7 @@ class TestTask:
         assert "id" in schema["properties"]
         assert "conversation_id" in schema["properties"]
         assert "status" in schema["properties"]
+        assert "depth" in schema["properties"]
         assert "progress" in schema["properties"]
         assert "created_at" in schema["properties"]
         assert "updated_at" in schema["properties"]

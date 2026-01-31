@@ -24,28 +24,30 @@
 
 ### Tasks
 
-- [ ] 1.1 Implement log sanitization
+- [x] 1.1 Implement log sanitization
   - Issue: [#12](https://github.com/adriannoes/asap-protocol/issues/12)
   - Goal: Redact tokens/secrets from logs, add debug mode, integration tests for production scenarios
   - Note: v0.5.0 delivered basic sanitization (unit tests); v1.0.0 adds debug mode + E2E validation
   - Details: [Security Detailed - Task 1.1](./tasks-v1.0.0-security-detailed.md#task-11-implement-log-sanitization)
 
-- [ ] 1.2 Add handler security documentation
+- [x] 1.2 Add handler security documentation
   - Goal: Document requirements, add FilePart URI validation
   - Details: [Security Detailed - Task 1.2](./tasks-v1.0.0-security-detailed.md#task-12-handler-security-documentation)
 
-- [ ] 1.3 PRD review checkpoint
+- [x] 1.3 PRD review checkpoint
   - Goal: Review Q3 (HMAC signing decision)
   - Details: [Security Detailed - Task 1.3](./tasks-v1.0.0-security-detailed.md#task-13-prd-review-checkpoint)
 
 ### Definition of Done
-- [ ] Tokens/secrets redacted from logs
-- [ ] Debug mode working (ASAP_DEBUG env var)
-- [ ] Integration tests validate sanitization in E2E scenarios (auth fail, nonce replay, connection errors)
-- [ ] Path traversal detection working
-- [ ] Test coverage >95%
-- [ ] Issue #12 closed
-- [ ] PRD updated
+- [x] Tokens/secrets redacted from logs
+- [x] Debug mode working (ASAP_DEBUG env var)
+- [x] Integration tests validate sanitization in E2E scenarios (auth fail, nonce replay, connection errors)
+- [x] Path traversal detection working
+- [x] Test coverage >95%
+- [x] Issue #12 closed
+- [x] PRD updated
+
+**Progress: 100%** (P1 complete)
 
 ---
 
@@ -55,23 +57,25 @@
 
 ### Tasks
 
-- [ ] 2.1 Improve HandlerRegistry thread safety
+- [x] 2.1 Improve HandlerRegistry thread safety
   - Goal: Thread-safe handler registration and execution
   - Details: [Security Detailed - Task 2.1](./tasks-v1.0.0-security-detailed.md#task-21-thread-safety-improvements)
 
-- [ ] 2.2 Add enhanced URN and depth validation
+- [x] 2.2 Add enhanced URN and depth validation
   - Goal: Max 256 char URNs, task depth limits
   - Details: [Security Detailed - Task 2.2](./tasks-v1.0.0-security-detailed.md#task-22-enhanced-urn-validation)
 
-- [ ] 2.3 Run final code quality audit
+- [x] 2.3 Run final code quality audit
   - Goal: Zero linter errors, ≥95% coverage
   - Details: [Security Detailed - Task 2.3](./tasks-v1.0.0-security-detailed.md#task-23-final-code-quality-audit)
 
 ### Definition of Done
-- [ ] All security issues resolved (CRIT+HIGH+MED+LOW)
-- [ ] Thread safety improved
-- [ ] URN validation enhanced
-- [ ] Test coverage >95%
+- [x] All security issues resolved (CRIT+HIGH+MED+LOW)
+- [x] Thread safety improved
+- [x] URN validation enhanced
+- [x] Test coverage >95%
+
+**Progress: 100%** (P2 complete)
 
 ---
 
@@ -260,7 +264,7 @@
   - Details: [Docs Detailed - Task 10.1](./tasks-v1.0.0-docs-detailed.md#task-101-create-cloud-native-deployment)
 
 - [ ] 10.2 Write troubleshooting guide
-  - Goal: Cover 80% of common issues
+  - Goal: Cover 90% of common issues
   - Details: [Docs Detailed - Task 10.2](./tasks-v1.0.0-docs-detailed.md#task-102-write-troubleshooting-guide)
 
 ### Definition of Done
@@ -313,13 +317,13 @@
 ### Definition of Done
 - [ ] 3 Grafana dashboards working
 - [ ] MCP 100% spec compliant
-- [ ] Documentation complete
+- [ ] Documentation completeEnt˜
 
 ---
 
 ## Sprint P13: v1.0.0 Release Preparation
 
-**Goal**: Final testing, polish, and production release
+**Goal**: Final testing, polish and production release
 
 ### Tasks
 
@@ -382,11 +386,11 @@
 
 ## Progress Tracking
 
-**Overall Progress**: 0/38 tasks completed (0%)
+**Overall Progress**: 5/38 tasks completed (13%)
 
 **Sprint Status**:
-- ⏳ P1: 0/3 tasks (0%) - **Includes PRD review**
-- ⏳ P2: 0/3 tasks (0%)
+- ✅ P1: 3/3 tasks (100%) - **Includes PRD review**
+- ⏳ P2: 2/3 tasks (67%)
 - ⏳ P3: 0/3 tasks (0%) - **Includes PRD review**
 - ⏳ P4: 0/2 tasks (0%)
 - ⏳ P5: 0/3 tasks (0%) - **Includes PRD review**
@@ -408,7 +412,7 @@
 - P9: Decide i18n scope (DD-010)
 - P13: Final review + retrospective
 
-**Last Updated**: 2026-01-24
+**Last Updated**: 2026-01-30
 
 **Prerequisites**: v0.5.0 must be released before starting Sprint P1
 

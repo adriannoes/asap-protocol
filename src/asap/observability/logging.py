@@ -13,6 +13,7 @@ Environment Variables:
     ASAP_LOG_FORMAT: Set to "json" for JSON output, "console" for colored output
     ASAP_LOG_LEVEL: Set log level (DEBUG, INFO, WARNING, ERROR)
     ASAP_SERVICE_NAME: Service name to include in logs
+    ASAP_DEBUG: Set to "true" or "1" to log full data and stack traces; otherwise sensitive fields are redacted
 
 Example:
     >>> from asap.observability.logging import get_logger, configure_logging
@@ -42,9 +43,81 @@ DEFAULT_SERVICE_NAME = "asap-protocol"
 ENV_LOG_FORMAT = "ASAP_LOG_FORMAT"
 ENV_LOG_LEVEL = "ASAP_LOG_LEVEL"
 ENV_SERVICE_NAME = "ASAP_SERVICE_NAME"
+ENV_DEBUG = "ASAP_DEBUG"
+
+# Placeholder for redacted sensitive values in logs
+REDACTED_PLACEHOLDER = "***REDACTED***"
+
+# Key substrings (case-insensitive) that indicate sensitive data to redact
+_SENSITIVE_KEY_PATTERNS = frozenset(
+    {
+        "password",
+        "token",
+        "secret",
+        "key",
+        "authorization",
+        "auth",
+        "credential",
+        "api_key",
+        "apikey",
+        "access_token",
+        "refresh_token",
+    }
+)
 
 # Module-level flag to track if logging has been configured
 _logging_configured = False
+
+
+def _is_sensitive_key(key: str) -> bool:
+    """Return True if the key name indicates sensitive data that should be redacted."""
+    lower = key.lower()
+    return any(pattern in lower for pattern in _SENSITIVE_KEY_PATTERNS)
+
+
+def sanitize_for_logging(data: dict[str, Any]) -> dict[str, Any]:
+    """Sanitize a dict for safe logging by redacting sensitive field values.
+
+    Keys matching (case-insensitive) password, token, secret, key, authorization,
+    auth, credential, api_key, apikey, access_token, refresh_token have their
+    values replaced with REDACTED_PLACEHOLDER. Handles nested
+    dicts and lists of dicts recursively. Non-sensitive keys and correlation_id
+    are preserved for debugging.
+
+    Args:
+        data: The dict to sanitize (e.g. envelope payload or request params).
+
+    Returns:
+        A new dict with sensitive values replaced; nested structures are deep-copied
+        and sanitized. Non-dict/non-list values for sensitive keys are redacted.
+
+    Example:
+        >>> sanitize_for_logging({"user": "alice", "password": "secret123"})
+        {'user': 'alice', 'password': '***REDACTED***'}
+        >>> sanitize_for_logging({"nested": {"token": "sk_live_abc"}})
+        {'nested': {'token': '***REDACTED***'}}
+    """
+    if not data:
+        return {}
+    result: dict[str, Any] = {}
+    for k, v in data.items():
+        if _is_sensitive_key(k):
+            result[k] = REDACTED_PLACEHOLDER
+        elif isinstance(v, dict):
+            result[k] = sanitize_for_logging(v)
+        elif isinstance(v, list):
+            result[k] = [
+                sanitize_for_logging(item) if isinstance(item, dict) else item for item in v
+            ]
+        else:
+            result[k] = v
+    return result
+
+
+def is_debug_mode() -> bool:
+    """Return True if ASAP_DEBUG is set to a truthy value (e.g. true, 1)."""
+    value = os.environ.get(ENV_DEBUG, "").strip().lower()
+    return value in ("true", "1", "yes", "on")
 
 
 def _get_log_level() -> str:

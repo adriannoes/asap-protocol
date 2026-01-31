@@ -138,7 +138,9 @@ class TestFilePart:
 
         for mime_type in mime_types:
             part = FilePart(
-                type="file", uri=f"file://example.{mime_type.split('/')[-1]}", mime_type=mime_type
+                type="file",
+                uri=f"https://example.com/example.{mime_type.split('/')[-1]}",
+                mime_type=mime_type,
             )
             assert part.mime_type == mime_type
 
@@ -160,7 +162,7 @@ class TestFilePart:
         with pytest.raises(ValidationError) as exc_info:
             FilePart(
                 type="file",
-                uri="file://example.txt",
+                uri="https://example.com/example.txt",
                 mime_type="invalid-mime-type",  # Invalid format
             )
 
@@ -170,7 +172,7 @@ class TestFilePart:
         with pytest.raises(ValidationError) as exc_info:
             FilePart(
                 type="file",
-                uri="file://example.txt",
+                uri="https://example.com/example.txt",
                 mime_type="text",  # Missing subtype
             )
 
@@ -180,14 +182,14 @@ class TestFilePart:
         # Valid MIME types should work
         part = FilePart(
             type="file",
-            uri="file://example.txt",
+            uri="https://example.com/example.txt",
             mime_type="text/plain",
         )
         assert part.mime_type == "text/plain"
 
         part = FilePart(
             type="file",
-            uri="file://example.json",
+            uri="https://example.com/example.json",
             mime_type="application/vnd.api+json",
         )
         assert part.mime_type == "application/vnd.api+json"
@@ -199,7 +201,7 @@ class TestFilePart:
         with pytest.raises(ValidationError) as exc_info:
             FilePart(
                 type="file",
-                uri="file://example.txt",
+                uri="https://example.com/example.txt",
                 mime_type="text/plain",
                 inline_data="!!!not-valid-base64!!!",
             )
@@ -214,7 +216,7 @@ class TestFilePart:
         with pytest.raises(ValidationError) as exc_info:
             FilePart(
                 type="file",
-                uri="file://example.txt",
+                uri="https://example.com/example.txt",
                 mime_type="text/plain",
                 inline_data="SGVsbG8g V29ybGQ=",  # Space in middle
             )
@@ -233,7 +235,7 @@ class TestFilePart:
 
         part = FilePart(
             type="file",
-            uri="file://example.txt",
+            uri="https://example.com/example.txt",
             mime_type="text/plain",
             inline_data=valid_base64,
         )
@@ -249,12 +251,85 @@ class TestFilePart:
 
         part = FilePart(
             type="file",
-            uri="file://example.txt",
+            uri="https://example.com/example.txt",
             mime_type="text/plain",
             inline_data=None,
         )
 
         assert part.inline_data is None
+
+    def test_file_part_uri_rejects_path_traversal(self) -> None:
+        """Test that FilePart rejects URIs containing path traversal (..)."""
+        from asap.models.parts import FilePart
+
+        with pytest.raises(ValidationError) as exc_info:
+            FilePart(
+                type="file",
+                uri="https://example.com/../../../etc/passwd",
+                mime_type="text/plain",
+            )
+        error_detail = exc_info.value.errors()[0]
+        assert "path traversal" in error_detail["msg"].lower() or ".." in error_detail["msg"]
+
+        with pytest.raises(ValidationError) as exc_info:
+            FilePart(
+                type="file",
+                uri="asap://artifacts/../secret",
+                mime_type="application/pdf",
+            )
+        error_detail = exc_info.value.errors()[0]
+        assert "path traversal" in error_detail["msg"].lower() or ".." in error_detail["msg"]
+
+    def test_file_part_uri_rejects_file_scheme(self) -> None:
+        """Test that FilePart rejects file:// URIs for security."""
+        from asap.models.parts import FilePart
+
+        with pytest.raises(ValidationError) as exc_info:
+            FilePart(
+                type="file",
+                uri="file:///etc/passwd",
+                mime_type="text/plain",
+            )
+        error_detail = exc_info.value.errors()[0]
+        assert (
+            "file://" in error_detail["msg"].lower() or "not allowed" in error_detail["msg"].lower()
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            FilePart(
+                type="file",
+                uri="FILE:///path/to/file",
+                mime_type="text/plain",
+            )
+        error_detail = exc_info.value.errors()[0]
+        assert (
+            "file://" in error_detail["msg"].lower() or "not allowed" in error_detail["msg"].lower()
+        )
+
+    def test_file_part_uri_accepts_valid_uris(self) -> None:
+        """Test that FilePart accepts asap://, https://, and data: URIs."""
+        from asap.models.parts import FilePart
+
+        part_asap = FilePart(
+            type="file",
+            uri="asap://artifacts/task_123/report.pdf",
+            mime_type="application/pdf",
+        )
+        assert part_asap.uri == "asap://artifacts/task_123/report.pdf"
+
+        part_https = FilePart(
+            type="file",
+            uri="https://example.com/doc.pdf",
+            mime_type="application/pdf",
+        )
+        assert part_https.uri == "https://example.com/doc.pdf"
+
+        part_data = FilePart(
+            type="file",
+            uri="data:text/plain;base64,SGVsbG8=",
+            mime_type="text/plain",
+        )
+        assert part_data.uri == "data:text/plain;base64,SGVsbG8="
 
 
 class TestResourcePart:
@@ -380,11 +455,15 @@ class TestPartDiscriminatedUnion:
         """Test deserializing FilePart through Part union."""
         from asap.models.parts import Part
 
-        data = {"type": "file", "uri": "file://test.pdf", "mime_type": "application/pdf"}
+        data = {
+            "type": "file",
+            "uri": "https://example.com/test.pdf",
+            "mime_type": "application/pdf",
+        }
         part = Part.validate_python(data)
 
         assert part.type == "file"
-        assert part.uri == "file://test.pdf"
+        assert part.uri == "https://example.com/test.pdf"
 
     def test_part_union_resource_deserialization(self):
         """Test deserializing ResourcePart through Part union."""

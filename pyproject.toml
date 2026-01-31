@@ -136,6 +136,10 @@ asyncio_default_fixture_loop_scope = "function"
 [tool.coverage.run]
 source = ["asap"]
 branch = true
+omit = [
+    "src/asap/examples/run_demo.py",
+    "src/asap/examples/secure_handler.py",
+]
 
 [tool.coverage.report]
 precision = 2

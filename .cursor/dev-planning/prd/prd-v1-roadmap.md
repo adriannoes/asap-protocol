@@ -1173,6 +1173,7 @@ warnings.warn(
 | 2026-01-27 | 1.3 | Sprint S3 Review: Added DD-008 (HMAC deferred to v1.1.0+) | ASAP Team |
 | 2026-01-27 | 1.3 | Sprint S3 Review: Resolved Open Question Q3 | ASAP Team |
 | 2026-01-27 | 1.3 | Sprint S3 Review: Added S1-S3 Learnings section | ASAP Team |
+| 2026-01-30 | 1.4 | Sprint P1 Checkpoint: Confirmed Q3/DD-008 (HMAC defer to v1.1.0+) | ASAP Team |
 
 ---
 

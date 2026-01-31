@@ -95,6 +95,45 @@ Returns:
 """
 
 
+def validate_handler(handler: Handler) -> None:
+    """Validate that a handler has the required signature (envelope, manifest).
+
+    Checks that the handler is callable and accepts exactly two parameters
+    (envelope and manifest), matching the Handler protocol. Use when
+    registering custom handlers to fail fast on invalid signatures.
+
+    Args:
+        handler: The handler callable to validate (sync or async).
+
+    Raises:
+        TypeError: If handler is not callable or does not have the required
+            signature (two parameters for a function, or three for a bound
+            callable with self/cls).
+
+    Example:
+        >>> validate_handler(create_echo_handler())
+        >>> def bad(x, y, z): ...
+        >>> validate_handler(bad)
+        Traceback (most recent call last):
+            ...
+        TypeError: Handler must accept (envelope, manifest); got 3 parameters
+    """
+    if not callable(handler):
+        raise TypeError("Handler must be callable")
+    try:
+        sig = inspect.signature(handler)
+    except (ValueError, TypeError):
+        raise TypeError("Handler signature could not be inspected") from None
+    params = list(sig.parameters)
+    # Allow (envelope, manifest) or (self, envelope, manifest) / (cls, envelope, manifest)
+    if len(params) == 2 or len(params) == 3 and params[0] in ("self", "cls"):
+        pass
+    else:
+        raise TypeError(
+            f"Handler must accept (envelope, manifest); got {len(params)} parameters: {params}"
+        )
+
+
 class HandlerNotFoundError(ASAPError):
     """Raised when no handler is registered for a payload type.
 
@@ -181,6 +220,7 @@ class HandlerRegistry:
             >>> registry = HandlerRegistry()
             >>> registry.register("task.request", create_echo_handler())
         """
+        validate_handler(handler)
         with self._lock:
             is_override = payload_type in self._handlers
             self._handlers[payload_type] = handler
@@ -244,6 +284,8 @@ class HandlerRegistry:
                     envelope_id=envelope.id,
                 )
                 raise HandlerNotFoundError(payload_type)
+            # Copy handler reference under lock so execution uses a stable snapshot
+            # (safe if another thread replaces the handler before we invoke)
             handler = self._handlers[payload_type]
 
         # Log dispatch start
@@ -321,6 +363,8 @@ class HandlerRegistry:
                     envelope_id=envelope.id,
                 )
                 raise HandlerNotFoundError(payload_type)
+            # Copy handler reference under lock so execution uses a stable snapshot
+            # (safe if another thread replaces the handler before we invoke)
             handler = self._handlers[payload_type]
 
         # Log dispatch start
@@ -341,7 +385,7 @@ class HandlerRegistry:
             else:
                 # Sync handler - run in thread pool to avoid blocking event loop
                 # Also handle async callable objects that return awaitables
-                loop = asyncio.get_event_loop()
+                loop = asyncio.get_running_loop()
                 # Use bounded executor if provided, otherwise use default (unbounded)
                 executor = self._executor if self._executor is not None else None
                 result: object = await loop.run_in_executor(executor, handler, envelope, manifest)
