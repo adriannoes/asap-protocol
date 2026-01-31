@@ -49,7 +49,21 @@ ENV_DEBUG = "ASAP_DEBUG"
 REDACTED_PLACEHOLDER = "***REDACTED***"
 
 # Key substrings (case-insensitive) that indicate sensitive data to redact
-_SENSITIVE_KEY_PATTERNS = frozenset({"password", "token", "secret", "key", "authorization", "auth"})
+_SENSITIVE_KEY_PATTERNS = frozenset(
+    {
+        "password",
+        "token",
+        "secret",
+        "key",
+        "authorization",
+        "auth",
+        "credential",
+        "api_key",
+        "apikey",
+        "access_token",
+        "refresh_token",
+    }
+)
 
 # Module-level flag to track if logging has been configured
 _logging_configured = False
@@ -65,7 +79,8 @@ def sanitize_for_logging(data: dict[str, Any]) -> dict[str, Any]:
     """Sanitize a dict for safe logging by redacting sensitive field values.
 
     Keys matching (case-insensitive) password, token, secret, key, authorization,
-    or auth have their values replaced with REDACTED_PLACEHOLDER. Handles nested
+    auth, credential, api_key, apikey, access_token, refresh_token have their
+    values replaced with REDACTED_PLACEHOLDER. Handles nested
     dicts and lists of dicts recursively. Non-sensitive keys and correlation_id
     are preserved for debugging.
 
