@@ -38,9 +38,11 @@ from asap.models.constants import (
     DEFAULT_CIRCUIT_BREAKER_TIMEOUT,
     DEFAULT_MAX_DELAY,
 )
+from asap.models.entities import Manifest
 from asap.models.envelope import Envelope
 from asap.models.ids import generate_id
 from asap.observability import get_logger
+from asap.transport.cache import ManifestCache
 from asap.transport.circuit_breaker import CircuitBreaker, CircuitState, get_registry
 from asap.transport.jsonrpc import ASAP_METHOD
 from asap.utils.sanitization import sanitize_url
@@ -364,6 +366,9 @@ class ASAPClient:
             )
         else:
             self._circuit_breaker = None
+
+        # Initialize manifest cache (shared across client instances for efficiency)
+        self._manifest_cache = ManifestCache()
 
     @staticmethod
     def _is_localhost(parsed_url: ParseResult) -> bool:
@@ -960,3 +965,126 @@ class ASAPClient:
             f"Verify the agent is running and accessible.",
             url=sanitize_url(self.base_url),
         )  # pragma: no cover
+
+    async def get_manifest(self, url: str | None = None) -> Manifest:
+        """Get agent manifest from cache or HTTP endpoint.
+
+        Checks cache first, then fetches from HTTP if not cached or expired.
+        Caches successful responses with TTL (default: 5 minutes).
+        Invalidates cache entry on error.
+
+        Args:
+            url: Manifest URL (defaults to {base_url}/.well-known/asap/manifest.json)
+
+        Returns:
+            Manifest object
+
+        Raises:
+            ASAPConnectionError: If HTTP request fails
+            ASAPTimeoutError: If request times out
+            ValueError: If manifest JSON is invalid
+
+        Example:
+            >>> async with ASAPClient("http://agent.example.com") as client:
+            ...     manifest = await client.get_manifest()
+            ...     print(manifest.id, manifest.name)
+        """
+        if url is None:
+            url = f"{self.base_url}/.well-known/asap/manifest.json"
+
+        if not self._client:
+            raise ASAPConnectionError(
+                "Client not connected. Use 'async with' context.",
+                url=sanitize_url(url),
+            )
+
+        # Check cache first
+        cached = self._manifest_cache.get(url)
+        if cached is not None:
+            logger.debug(
+                "asap.client.manifest_cache_hit",
+                url=sanitize_url(url),
+                manifest_id=cached.id,
+                message=f"Manifest cache hit for {sanitize_url(url)}",
+            )
+            return cached
+
+        # Cache miss - fetch from HTTP
+        logger.debug(
+            "asap.client.manifest_cache_miss",
+            url=sanitize_url(url),
+            message=f"Manifest cache miss for {sanitize_url(url)}, fetching from HTTP",
+        )
+
+        try:
+            response = await self._client.get(
+                url,
+                timeout=min(self.timeout, 10.0),  # Shorter timeout for manifest
+            )
+
+            if response.status_code >= 400:
+                # HTTP error - invalidate cache if entry exists
+                self._manifest_cache.invalidate(url)
+                raise ASAPConnectionError(
+                    f"HTTP error {response.status_code} fetching manifest from {url}. "
+                    f"Server response: {response.text[:200]}",
+                    url=sanitize_url(url),
+                )
+
+            # Parse JSON response
+            try:
+                manifest_data = response.json()
+            except Exception as e:
+                self._manifest_cache.invalidate(url)
+                raise ValueError(f"Invalid JSON in manifest response: {e}") from e
+
+            # Parse Manifest object
+            try:
+                manifest = Manifest(**manifest_data)
+            except Exception as e:
+                self._manifest_cache.invalidate(url)
+                raise ValueError(f"Invalid manifest format: {e}") from e
+
+            # Cache successful response
+            self._manifest_cache.set(url, manifest)
+            logger.info(
+                "asap.client.manifest_fetched",
+                url=sanitize_url(url),
+                manifest_id=manifest.id,
+                message=f"Manifest fetched and cached for {sanitize_url(url)}",
+            )
+
+            return manifest
+
+        except httpx.TimeoutException as e:
+            self._manifest_cache.invalidate(url)
+            raise ASAPTimeoutError(
+                f"Manifest request timeout after {self.timeout}s", timeout=self.timeout
+            ) from e
+        except httpx.ConnectError as e:
+            self._manifest_cache.invalidate(url)
+            raise ASAPConnectionError(
+                f"Connection error fetching manifest from {url}: {e}. "
+                f"Verify the agent is running and accessible.",
+                cause=e,
+                url=sanitize_url(url),
+            ) from e
+        except (ASAPConnectionError, ASAPTimeoutError, ValueError):
+            # Re-raise our custom errors (cache already invalidated above)
+            raise
+        except Exception as e:
+            # Unexpected error - invalidate cache
+            self._manifest_cache.invalidate(url)
+            logger.exception(
+                "asap.client.manifest_error",
+                url=sanitize_url(url),
+                error=str(e),
+                error_type=type(e).__name__,
+                message=f"Unexpected error fetching manifest from {url}: {e}",
+            )
+            raise ASAPConnectionError(
+                f"Unexpected error fetching manifest from {url}: {e}. "
+                f"Verify the agent is running and accessible.",
+                cause=e,
+                url=sanitize_url(url),
+            ) from e

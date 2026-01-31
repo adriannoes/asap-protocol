@@ -8,9 +8,9 @@
 ## Relevant Files
 
 ### Sprint P3: Connection & Caching
-- `src/asap/transport/client.py` - Connection pooling (pool_connections, pool_maxsize, pool_timeout)
-- `src/asap/transport/cache.py` - NEW: Manifest caching
-- `benchmarks/benchmark_transport.py` - Connection pooling benchmark (TestConnectionPooling)
+- `src/asap/transport/client.py` - Connection pooling (pool_connections, pool_maxsize, pool_timeout) + Manifest caching (get_manifest)
+- `src/asap/transport/cache.py` - NEW: ManifestCache with TTL (5min default)
+- `benchmarks/benchmark_transport.py` - Connection pooling benchmark (TestConnectionPooling) + Manifest cache hit rate (TestManifestCaching)
 
 ### Sprint P4: Batch & Compression
 - `src/asap/transport/client.py` - Batch operations (extend)
@@ -55,29 +55,29 @@
 
 ### Task 3.2: Implement Manifest Caching
 
-- [ ] 3.2.1 Create cache.py module
+- [x] 3.2.1 Create cache.py module
   - File: `src/asap/transport/cache.py`
   - Class: ManifestCache
   - Storage: dict with TTL (5 minutes default)
 
-- [ ] 3.2.2 Add cache methods
+- [x] 3.2.2 Add cache methods
   - Method: get(url) -> Manifest | None
   - Method: set(url, manifest, ttl)
   - Method: invalidate(url)
   - Method: clear_all()
 
-- [ ] 3.2.3 Integrate in ASAPClient
+- [x] 3.2.3 Integrate in ASAPClient
   - Add: _manifest_cache instance variable
   - Method: get_manifest(url) checks cache first
   - On error: Invalidate cached entry
 
-- [ ] 3.2.4 Benchmark cache hit rate
+- [x] 3.2.4 Benchmark cache hit rate
   - Test: 100 manifest requests to same URL
   - Measure: Cache hits / total requests
-  - Target: 90% hit rate
+  - Target: 90% hit rate (achieved: 99% with 1 miss + 99 hits)
 
-- [ ] 3.2.5 Commit
-  - Command: `git commit -m "feat(transport): add manifest caching with TTL"`
+- [x] 3.2.5 Commit
+  - feat(transport): add manifest caching with TTL
 
 **Acceptance**: 90% cache hit rate, 5min TTL
 

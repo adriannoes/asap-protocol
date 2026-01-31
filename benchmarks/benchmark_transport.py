@@ -289,3 +289,61 @@ class TestConnectionPooling:
         for resp in results:
             assert isinstance(resp, Envelope)
             assert resp.payload_type is not None
+
+
+class TestManifestCaching:
+    """Benchmarks for manifest caching (cache hit rate)."""
+
+    @pytest.mark.asyncio
+    async def test_manifest_cache_hit_rate(
+        self,
+        sample_manifest: Any,
+        handler_registry: Any,
+    ) -> None:
+        """Benchmark manifest cache hit rate (target: >90%).
+
+        Makes 100 requests to the same manifest URL and measures cache hit rate.
+        First request is a cache miss, subsequent requests should be cache hits.
+        """
+        app = create_app(sample_manifest, handler_registry)
+        transport = httpx.ASGITransport(app=app)
+        base_url = "http://testserver"
+        manifest_url = f"{base_url}/.well-known/asap/manifest.json"
+        total_requests = 100
+
+        # Track cache state before each request
+        cache_hits = 0
+        cache_misses = 0
+
+        async with ASAPClient(
+            base_url,
+            transport=transport,
+            require_https=False,
+        ) as client:
+            for i in range(total_requests):
+                # Check if manifest is in cache before request
+                cached_before = client._manifest_cache.get(manifest_url)
+                manifest = await client.get_manifest(manifest_url)
+                # Check if manifest is in cache after request
+                cached_after = client._manifest_cache.get(manifest_url)
+
+                # If cached before request, it was a cache hit
+                if cached_before is not None:
+                    cache_hits += 1
+                else:
+                    cache_misses += 1
+
+                # Verify manifest is correct
+                assert manifest.id == sample_manifest.id
+                # Verify manifest is cached after first request
+                if i == 0:
+                    assert cached_after is not None, "First request should cache manifest"
+
+        # Calculate hit rate
+        hit_rate = cache_hits / total_requests if total_requests > 0 else 0.0
+        # Target: >90% hit rate (first request is miss, rest should be hits)
+        # With 100 requests: 1 miss + 99 hits = 99% hit rate
+        assert (
+            hit_rate >= 0.90
+        ), f"Cache hit rate {hit_rate:.2%} ({cache_hits}/{total_requests}) below target 90%"
+        assert cache_misses == 1, f"Expected 1 cache miss, got {cache_misses}"
