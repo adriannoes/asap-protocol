@@ -4,6 +4,8 @@ This module tests the sanitization functions that prevent sensitive data
 from being exposed in logs.
 """
 
+from unittest.mock import patch
+
 from asap.utils.sanitization import sanitize_nonce, sanitize_token, sanitize_url
 
 
@@ -144,6 +146,14 @@ class TestSanitizeUrl:
         result = sanitize_url(invalid_url)
         # Should mask credentials even if parsing fails
         assert "pass" not in result or "***" in result
+
+    def test_sanitize_url_exception_uses_regex_fallback(self) -> None:
+        """Test that when URL parsing raises, fallback regex masks credentials."""
+        url_with_creds = "https://user:secret@example.com/api"
+        with patch("asap.utils.sanitization.urlparse", side_effect=ValueError("mock")):
+            result = sanitize_url(url_with_creds)
+        assert "secret" not in result
+        assert "***" in result
 
     def test_url_with_special_characters_in_password(self) -> None:
         """Test that URLs with special characters in password are sanitized."""
