@@ -11,23 +11,22 @@ Thanks for helping out! Here's how to get started quickly.
     uv sync --all-extras --dev
     ```
 
-2.  **Verify** (CI runs the same: `pytest -n auto --tb=short --cov=src --cov-report=xml`):
+2.  **Verify** (CI runs the same: `pytest --tb=short --cov=src --cov-report=xml`):
     ```bash
-    uv run pytest -n auto --tb=short --cov=src --cov-report=xml
+    uv run pytest --tb=short --cov=src --cov-report=xml
     ```
-    If you see `unrecognized arguments: -n`, run `uv sync --all-extras --dev` and try again.
 
 ## Development Workflow
 
 -   **Linting & Formatting**: `uv run ruff check .` and `uv run ruff format .`
 -   **Type Checking**: `uv run mypy src/`
--   **Testing**: `uv run pytest -n auto --tb=short --cov=src --cov-report=xml` (same as CI). For a quick run without coverage: `uv run pytest -n auto`.
+-   **Testing**: `uv run pytest --tb=short --cov=src --cov-report=xml` (same as CI). For a faster run with parallel workers: `uv run pytest -n auto` (requires dev deps; avoid combining -n with --cov due to known xdist+cov interaction).
 
 ## Pull Requests
 
 1.  **Branch**: Create a feature branch (`git checkout -b feature/my-cool-feature`).
 2.  **Commit**: Use [Conventional Commits](https://www.conventionalcommits.org/) (e.g., `feat: add awesome feature`, `fix: resolve crash`).
-3.  **Test**: Ensure `uv run pytest -n auto --tb=short --cov=src` passes (or `uv run pytest` if dev deps are not installed).
+3.  **Test**: Ensure `uv run pytest --tb=short --cov=src` passes (same as CI).
 4.  **Push**: Open a PR on GitHub.
 
 ## Testing
@@ -55,7 +54,7 @@ Tests are organized into three categories:
 
 2. **For rate limiting tests**: Use aggressive monkeypatch fixtures (see [Testing Guide](docs/testing.md))
 
-3. **Run with parallel execution**: Use `pytest -n auto` for process-level isolation (requires `uv sync --all-extras --dev` so pytest-xdist is installed; otherwise you get `unrecognized arguments: -n`).
+3. **Run with parallel execution**: Use `pytest -n auto` for process-level isolation when not collecting coverage (CI runs with `pytest --tb=short --cov=src --cov-report=xml` without -n to avoid xdist+cov INTERNALERROR).
 
 ### Test Isolation Strategy
 
@@ -71,7 +70,7 @@ See the [Testing Guide](docs/testing.md) for complete details on:
 - Using fixtures
 - Troubleshooting test interference
 
-**Troubleshooting**: If you see `unrecognized arguments: -n`, run `uv sync --all-extras --dev` so pytest-xdist is installed. If you see an INTERNALERROR when using `-n auto` with `--cov`, try running without parallel: `uv run pytest --tb=short --cov=src --cov-report=xml` (CI uses `-n auto` and may not hit this).
+**Troubleshooting**: If you see `unrecognized arguments: -n`, run `uv sync --all-extras --dev` so pytest-xdist is installed. CI runs tests with coverage without `-n auto` to avoid a known pytest-xdist + pytest-cov interaction; use `uv run pytest --tb=short --cov=src --cov-report=xml` to match CI.
 
 ## Guidelines
 

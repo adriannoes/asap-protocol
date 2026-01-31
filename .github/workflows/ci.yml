@@ -60,8 +60,8 @@ jobs:
       - name: Run tests
         env:
           PYTHONPATH: src
-        # -n auto: Automatically detect CPU count for parallel execution (pytest-xdist)
-        run: uv run pytest -n auto --tb=short --cov=src --cov-report=xml
+        # Run without -n auto when using --cov to avoid pytest-xdist + pytest-cov INTERNALERROR (KeyError WorkerController)
+        run: uv run pytest --tb=short --cov=src --cov-report=xml
         
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
