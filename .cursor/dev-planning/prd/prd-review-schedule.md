@@ -201,9 +201,9 @@ Each checkpoint has corresponding tasks in the roadmap files:
 | Q1 | Connection pool size | ⏳ Pending | Sprint P3 | TBD |
 | Q2 | Adaptive rate limiting | ⏳ Pending | Sprint P7 | TBD |
 | Q3 | HMAC signing (if deferred) | ⏳ Pending | Sprint P1 | TBD |
-| Q4 | Auth scheme for examples | ⏳ Pending | Sprint P5 | TBD |
-| Q5 | Trace JSON export | ⏳ Pending | Sprint P6 | TBD |
-| Q6 | pytest-asap plugin | ⏳ Pending | Sprint P5/P7 | TBD |
+| Q4 | Auth scheme for examples | ✅ Resolved | Sprint P5 | DD-010: Both Bearer + OAuth2 concept |
+| Q5 | Trace JSON export | ✅ Resolved | Sprint P6 | DD-011: Implemented --format json in v1.0.0 |
+| Q6 | pytest-asap plugin | ✅ Resolved | Sprint P5 | Defer to v1.1.0 |
 | Q7 | Video tutorials | ⏳ Pending | Post-release | TBD |
 | Q8 | i18n languages | ⏳ Pending | Sprint P9 | TBD |
 | Q9 | Discord/Slack community | ⏳ Pending | Post-release | TBD |

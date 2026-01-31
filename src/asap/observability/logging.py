@@ -14,6 +14,7 @@ Environment Variables:
     ASAP_LOG_LEVEL: Set log level (DEBUG, INFO, WARNING, ERROR)
     ASAP_SERVICE_NAME: Service name to include in logs
     ASAP_DEBUG: Set to "true" or "1" to log full data and stack traces; otherwise sensitive fields are redacted
+    ASAP_DEBUG_LOG: Set to "true" or "1" to log full request/response bodies (structured JSON); for development
 
 Example:
     >>> from asap.observability.logging import get_logger, configure_logging
@@ -44,6 +45,7 @@ ENV_LOG_FORMAT = "ASAP_LOG_FORMAT"
 ENV_LOG_LEVEL = "ASAP_LOG_LEVEL"
 ENV_SERVICE_NAME = "ASAP_SERVICE_NAME"
 ENV_DEBUG = "ASAP_DEBUG"
+ENV_DEBUG_LOG = "ASAP_DEBUG_LOG"
 
 # Placeholder for redacted sensitive values in logs
 REDACTED_PLACEHOLDER = "***REDACTED***"
@@ -117,6 +119,12 @@ def sanitize_for_logging(data: dict[str, Any]) -> dict[str, Any]:
 def is_debug_mode() -> bool:
     """Return True if ASAP_DEBUG is set to a truthy value (e.g. true, 1)."""
     value = os.environ.get(ENV_DEBUG, "").strip().lower()
+    return value in ("true", "1", "yes", "on")
+
+
+def is_debug_log_mode() -> bool:
+    """Return True if ASAP_DEBUG_LOG is set to a truthy value (log full request/response)."""
+    value = os.environ.get(ENV_DEBUG_LOG, "").strip().lower()
     return value in ("true", "1", "yes", "on")
 
 

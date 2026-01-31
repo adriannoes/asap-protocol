@@ -14,6 +14,7 @@ import pytest
 from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest, TaskResponse
+from asap.testing import assert_envelope_valid, assert_response_correlates
 
 if TYPE_CHECKING:
     pass
@@ -283,8 +284,8 @@ class TestASAPClientSend:
         ) as client:
             response = await client.send(sample_request_envelope)
 
-        assert response.payload_type == "task.response"
-        assert response.correlation_id == sample_request_envelope.id
+        assert_envelope_valid(response, allowed_payload_types=["task.response"])
+        assert_response_correlates(sample_request_envelope, response)
 
     async def test_send_includes_envelope_in_request(
         self, sample_request_envelope: Envelope, sample_response_envelope: Envelope

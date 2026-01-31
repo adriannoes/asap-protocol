@@ -40,11 +40,15 @@ Example:
     >>> # Run with: uvicorn asap.transport.server:app --host 0.0.0.0 --port 8000
 """
 
+import importlib
 import json
 import os
+import sys
+import threading
 import time
 import traceback
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable, TypeVar
 
 from fastapi import FastAPI, HTTPException, Request
@@ -56,7 +60,13 @@ from asap.errors import InvalidNonceError, InvalidTimestampError, ThreadPoolExha
 from asap.models.constants import MAX_REQUEST_SIZE
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.envelope import Envelope
-from asap.observability import get_logger, get_metrics, is_debug_mode, sanitize_for_logging
+from asap.observability import (
+    get_logger,
+    get_metrics,
+    is_debug_log_mode,
+    is_debug_mode,
+    sanitize_for_logging,
+)
 from asap.utils.sanitization import sanitize_nonce
 from asap.transport.middleware import (
     AuthenticationMiddleware,
@@ -103,6 +113,68 @@ logger = get_logger(__name__)
 T = TypeVar("T")
 HandlerResult = tuple[T | None, JSONResponse | None]
 
+# Environment variable to enable handler hot reload (development)
+ENV_HOT_RELOAD = "ASAP_HOT_RELOAD"
+
+
+class RegistryHolder:
+    """Mutable holder for HandlerRegistry to support hot reload.
+
+    When hot reload is enabled, a background thread watches handlers.py and
+    replaces the registry on file change so new handler code is used without
+    restarting the server.
+    """
+
+    def __init__(self, registry: HandlerRegistry) -> None:
+        self.registry = registry
+        self._executor: BoundedExecutor | None = None
+
+    def replace_registry(self, new_registry: HandlerRegistry) -> None:
+        """Replace the held registry (e.g. after reloading handlers module)."""
+        if self._executor is not None:
+            new_registry._executor = self._executor
+        self.registry = new_registry
+
+
+def _run_handler_watcher(holder: RegistryHolder, handlers_path: str) -> None:
+    """Background thread: watch handlers_path and reload registry on change."""
+    try:
+        from watchfiles import watch
+    except ImportError:
+        logger.warning(
+            "asap.server.handler_watcher_skip",
+            path=handlers_path,
+            message="watchfiles not installed; hot reload disabled. Install with: pip install watchfiles",
+        )
+        return
+    try:
+        for changes in watch(handlers_path):
+            if not changes:
+                continue
+            try:
+                import asap.transport.handlers as handlers_module
+
+                importlib.reload(handlers_module)
+                new_registry = handlers_module.create_default_registry()
+                holder.replace_registry(new_registry)
+                logger.info(
+                    "asap.server.handlers_reloaded",
+                    path=handlers_path,
+                    handlers=new_registry.list_handlers(),
+                )
+            except Exception as e:
+                logger.warning(
+                    "asap.server.handlers_reload_failed",
+                    path=handlers_path,
+                    error=str(e),
+                )
+    except Exception as e:
+        logger.warning(
+            "asap.server.handler_watcher_stopped",
+            path=handlers_path,
+            error=str(e),
+        )
+
 
 @dataclass
 class RequestContext:
@@ -144,13 +216,13 @@ class ASAPRequestHandler:
         auth_middleware: Optional authentication middleware
 
     Example:
-        >>> handler = ASAPRequestHandler(registry, manifest, auth_middleware)
+        >>> handler = ASAPRequestHandler(RegistryHolder(registry), manifest, auth_middleware)
         >>> response = await handler.handle_message(request)
     """
 
     def __init__(
         self,
-        registry: HandlerRegistry,
+        registry_holder: RegistryHolder,
         manifest: Manifest,
         auth_middleware: AuthenticationMiddleware | None = None,
         max_request_size: int = MAX_REQUEST_SIZE,
@@ -159,13 +231,13 @@ class ASAPRequestHandler:
         """Initialize the request handler.
 
         Args:
-            registry: Handler registry for dispatching payloads
+            registry_holder: Holder for handler registry (supports hot reload).
             manifest: Agent manifest describing capabilities
             auth_middleware: Optional authentication middleware for request validation
             max_request_size: Maximum allowed request size in bytes
             nonce_store: Optional nonce store for replay attack prevention
         """
-        self.registry = registry
+        self.registry_holder = registry_holder
         self.manifest = manifest
         self.auth_middleware = auth_middleware
         self.max_request_size = max_request_size
@@ -184,7 +256,7 @@ class ASAPRequestHandler:
         Returns:
             The payload type if registered, or "other" if unknown
         """
-        if self.registry.has_handler(payload_type):
+        if self.registry_holder.registry.has_handler(payload_type):
             return payload_type
         return "other"
 
@@ -341,7 +413,9 @@ class ASAPRequestHandler:
         """
         payload_type = envelope.payload_type
         try:
-            response_envelope = await self.registry.dispatch_async(envelope, self.manifest)
+            response_envelope = await self.registry_holder.registry.dispatch_async(
+                envelope, self.manifest
+            )
             return response_envelope, payload_type
         except ThreadPoolExhaustedError as e:
             # Thread pool exhausted - service temporarily unavailable
@@ -588,6 +662,35 @@ class ASAPRequestHandler:
         return JSONResponse(
             status_code=200,
             content=internal_error.model_dump(),
+        )
+
+    def _log_request_debug(self, rpc_request: JsonRpcRequest) -> None:
+        """Log full JSON-RPC request when ASAP_DEBUG_LOG is enabled (structured JSON)."""
+        if not is_debug_log_mode():
+            return
+        request_dict: dict[str, Any] = rpc_request.model_dump()
+        if not is_debug_mode():
+            request_dict = sanitize_for_logging(request_dict)
+        logger.info("asap.request.debug_request", request_json=request_dict)
+
+    def _log_response_debug(self, response: JSONResponse) -> None:
+        """Log full response when ASAP_DEBUG_LOG is enabled (structured JSON)."""
+        if not is_debug_log_mode():
+            return
+        try:
+            body_bytes = response.body
+            # Handle both bytes and memoryview
+            if isinstance(body_bytes, memoryview):
+                body_bytes = body_bytes.tobytes()
+            response_dict: dict[str, Any] = json.loads(body_bytes.decode("utf-8"))
+        except (ValueError, AttributeError):
+            response_dict = {"_raw": "(unable to decode response body)"}
+        if not is_debug_mode():
+            response_dict = sanitize_for_logging(response_dict)
+        logger.info(
+            "asap.request.debug_response",
+            status_code=response.status_code,
+            response_json=response_dict,
         )
 
     async def _parse_and_validate_request(
@@ -906,11 +1009,15 @@ class ASAPRequestHandler:
             parse_result = await self._parse_and_validate_request(request)
             rpc_request, parse_error = parse_result
             if parse_error is not None:
+                self._log_response_debug(parse_error)
                 return parse_error
             # Type narrowing: rpc_request is not None here
             # Use explicit check instead of assert to avoid removal in optimized builds
             if rpc_request is None:
                 raise RuntimeError("Internal error: rpc_request is None after validation")
+
+            # Log full request when ASAP_DEBUG_LOG is enabled
+            self._log_request_debug(rpc_request)
 
             # Create request context
             ctx = RequestContext(
@@ -924,6 +1031,7 @@ class ASAPRequestHandler:
             auth_result = await self._authenticate_request(request, ctx)
             authenticated_agent_id, auth_error = auth_result
             if auth_error is not None:
+                self._log_response_debug(auth_error)
                 return auth_error
 
             # Validate and extract envelope
@@ -931,6 +1039,7 @@ class ASAPRequestHandler:
             envelope_or_none, result = envelope_result
             if envelope_or_none is None:
                 # result is JSONResponse when envelope is None
+                self._log_response_debug(result)  # type: ignore[arg-type]
                 return result  # type: ignore[return-value]
             envelope = envelope_or_none
             # result is payload_type (str) when envelope is not None
@@ -944,6 +1053,7 @@ class ASAPRequestHandler:
                 payload_type,
             )
             if sender_error is not None:
+                self._log_response_debug(sender_error)
                 return sender_error
 
             # Validate envelope timestamp to prevent replay attacks
@@ -962,7 +1072,7 @@ class ASAPRequestHandler:
                 self.record_error_metrics(
                     ctx.metrics, payload_type, "invalid_timestamp", duration_seconds
                 )
-                return self.build_error_response(
+                err_resp = self.build_error_response(
                     INVALID_PARAMS,
                     data={
                         "error": "Invalid envelope timestamp",
@@ -972,6 +1082,8 @@ class ASAPRequestHandler:
                     },
                     request_id=ctx.request_id,
                 )
+                self._log_response_debug(err_resp)
+                return err_resp
 
             # Validate envelope nonce if nonce store is available
             try:
@@ -990,7 +1102,7 @@ class ASAPRequestHandler:
                 self.record_error_metrics(
                     ctx.metrics, payload_type, "invalid_nonce", duration_seconds
                 )
-                return self.build_error_response(
+                err_resp = self.build_error_response(
                     INVALID_PARAMS,
                     data={
                         "error": "Invalid envelope nonce",
@@ -1000,6 +1112,8 @@ class ASAPRequestHandler:
                     },
                     request_id=ctx.request_id,
                 )
+                self._log_response_debug(err_resp)
+                return err_resp
 
             # Log request received
             logger.info(
@@ -1017,13 +1131,16 @@ class ASAPRequestHandler:
             response_or_none, result = dispatch_result
             if response_or_none is None:
                 # result is JSONResponse when response is None
+                self._log_response_debug(result)  # type: ignore[arg-type]
                 return result  # type: ignore[return-value]
             response_envelope = response_or_none
             # result is payload_type (str) when response is not None
             payload_type = result  # type: ignore[assignment]
 
             # Build and return success response
-            return self._build_success_response(response_envelope, ctx, payload_type)
+            success_resp = self._build_success_response(response_envelope, ctx, payload_type)
+            self._log_response_debug(success_resp)
+            return success_resp
 
         except Exception as e:
             # Create minimal context for error handling if we don't have rpc_request yet
@@ -1040,7 +1157,9 @@ class ASAPRequestHandler:
                     metrics=temp_metrics,
                     rpc_request=temp_rpc_request,
                 )
-            return self._handle_internal_error(e, ctx, payload_type)
+            err_resp = self._handle_internal_error(e, ctx, payload_type)
+            self._log_response_debug(err_resp)
+            return err_resp
 
 
 def create_app(
@@ -1051,6 +1170,7 @@ def create_app(
     max_request_size: int | None = None,
     max_threads: int | None = None,
     require_nonce: bool = False,
+    hot_reload: bool | None = None,
 ) -> FastAPI:
     """Create and configure a FastAPI application for ASAP protocol.
 
@@ -1081,6 +1201,8 @@ def create_app(
         require_nonce: If True, enables nonce validation for replay attack prevention.
             When enabled, creates an InMemoryNonceStore and validates nonces in envelopes.
             Defaults to False (nonce validation is optional).
+        hot_reload: If True, watch handlers.py and reload handler registry on file change
+            (development only). Defaults to ASAP_HOT_RELOAD env or False.
 
     Returns:
         Configured FastAPI application ready to run
@@ -1137,12 +1259,22 @@ def create_app(
         )
 
     # Use default registry if none provided
+    use_default_registry = registry is None
     if registry is None:
         registry = create_default_registry()
 
     # Attach executor to registry if provided
     if executor is not None:
         registry._executor = executor
+
+    # Wrap registry in holder for hot reload support
+    registry_holder = RegistryHolder(registry)
+    if executor is not None:
+        registry_holder._executor = executor
+
+    # Resolve hot_reload from env if not specified
+    if hot_reload is None:
+        hot_reload = os.getenv(ENV_HOT_RELOAD, "").strip().lower() in ("true", "1", "yes")
 
     # Create authentication middleware if auth is configured
     auth_middleware: AuthenticationMiddleware | None = None
@@ -1174,12 +1306,45 @@ def create_app(
         )
 
     # Create request handler
-    handler = ASAPRequestHandler(registry, manifest, auth_middleware, max_request_size, nonce_store)
+    handler = ASAPRequestHandler(
+        registry_holder, manifest, auth_middleware, max_request_size, nonce_store
+    )
+
+    # Start handler file watcher when hot reload is enabled (only with default registry)
+    if hot_reload and use_default_registry:
+        _handlers_module = sys.modules.get("asap.transport.handlers")
+        _handlers_file = getattr(_handlers_module, "__file__", "") if _handlers_module else ""
+        if _handlers_file and Path(_handlers_file).exists():
+            watcher = threading.Thread(
+                target=_run_handler_watcher,
+                args=(registry_holder, _handlers_file),
+                name="asap-handler-watcher",
+                daemon=True,
+            )
+            watcher.start()
+            logger.info(
+                "asap.server.hot_reload_enabled",
+                manifest_id=manifest.id,
+                path=_handlers_file,
+            )
+        else:
+            logger.warning(
+                "asap.server.hot_reload_skipped",
+                reason="handlers module path not found",
+            )
+
+    # Enable Swagger UI (/docs) and ReDoc (/redoc) only when ASAP_DEBUG=true
+    _docs_url = "/docs" if is_debug_mode() else None
+    _redoc_url = "/redoc" if is_debug_mode() else None
+    _openapi_url = "/openapi.json" if is_debug_mode() else None
 
     app = FastAPI(
         title="ASAP Protocol Server",
         description=f"ASAP server for {manifest.name}",
         version=manifest.version,
+        docs_url=_docs_url,
+        redoc_url=_redoc_url,
+        openapi_url=_openapi_url,
     )
 
     # Add size limit middleware (runs before routing)

@@ -128,6 +128,20 @@ Transport:
 - `HandlerRegistry`: payload dispatch registry (supports both sync and async handlers)
 - `ASAPClient`: async HTTP client with automatic retry for server errors (5xx)
 
+### Development: Handler hot reload (`ASAP_HOT_RELOAD`)
+
+When running the server during development, you can enable **handler hot reload** so that changes to the handlers module are picked up without restarting the process. This is a **development-only** feature and must not be used in production.
+
+- Set the environment variable `ASAP_HOT_RELOAD=1` (or `true` / `yes`) before starting the server.
+- The implementation uses a **background thread** that watches the handlers file and reloads the registry when it changes. The server continues serving requests while the watcher runs.
+- Hot reload is only active when using the default registry (e.g. `create_app(..., use_default_registry=True)`). If `watchfiles` is not installed, hot reload is skipped and a warning is logged; install it with `pip install watchfiles` to use this feature.
+
+**Example:**
+
+```bash
+ASAP_HOT_RELOAD=1 uv run uvicorn asap.transport.server:app --factory ...
+```
+
 ## Documentation
 
 - [Spec](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/docs/general-specs.md)
@@ -157,7 +171,7 @@ Explore these guides for detailed information on specific features:
 - **[Observability](https://github.com/adriannoes/asap-protocol/blob/main/docs/observability.md)**: Tracing, metrics, and logging for debugging multi-agent systems.
 - **[Testing](https://github.com/adriannoes/asap-protocol/blob/main/docs/testing.md)**: Testing strategies and utilities for ASAP-based agents.
 
-### Examples & Demos
+### Advanced Examples
 
 Run the built-in multi-agent demo to see ASAP in action:
 
@@ -165,7 +179,19 @@ Run the built-in multi-agent demo to see ASAP in action:
 uv run python -m asap.examples.run_demo
 ```
 
-See [`src/asap/examples/`](https://github.com/adriannoes/asap-protocol/tree/main/src/asap/examples) for complete example implementations.
+The package includes **14+ real-world examples** in [`src/asap/examples/`](https://github.com/adriannoes/asap-protocol/tree/main/src/asap/examples). Full list and usage: [Examples README](src/asap/examples/README.md).
+
+| Category | Examples |
+|----------|----------|
+| **Core** | `run_demo`, `echo_agent`, `coordinator`, `secure_handler` |
+| **Orchestration** | `orchestration` (multi-agent, task coordination, state tracking) |
+| **State** | `long_running` (checkpoints, resume after crash), `state_migration` (move state between agents) |
+| **Resilience** | `error_recovery` (retry, circuit breaker, fallback) |
+| **Integration** | `mcp_integration` (MCP tools via envelopes) |
+| **Auth & limits** | `auth_patterns` (Bearer, validators, OAuth2 concept), `rate_limiting` (per-sender, per-endpoint) |
+| **Concepts** | `websocket_concept` (WebSocket design), `streaming_response` (TaskUpdate streaming), `multi_step_workflow` (pipeline) |
+
+Run any example: `uv run python -m asap.examples.<module_name> [options]`
 
 ### CLI Tools
 

@@ -41,7 +41,7 @@ from asap.transport.jsonrpc import (
     PARSE_ERROR,
     JsonRpcRequest,
 )
-from asap.transport.server import ASAPRequestHandler, RequestContext, create_app
+from asap.transport.server import ASAPRequestHandler, RegistryHolder, RequestContext, create_app
 
 
 @pytest.fixture
@@ -112,6 +112,11 @@ class TestAppFactory:
         manifest_route = routes_by_path["/.well-known/asap/manifest.json"]
         assert "GET" in manifest_route.methods  # type: ignore[attr-defined]
 
+    def test_create_app_with_hot_reload_returns_app(self, sample_manifest: Manifest) -> None:
+        """Test that create_app(..., hot_reload=True) returns an app (watcher starts in background)."""
+        app = create_app(sample_manifest, hot_reload=True)
+        assert isinstance(app, FastAPI)
+
 
 class TestManifestEndpoint:
     """Tests for GET /.well-known/asap/manifest.json endpoint."""
@@ -178,7 +183,7 @@ class TestASAPRequestHandlerHelpers:
     def handler(self, sample_manifest: Manifest) -> ASAPRequestHandler:
         """Create ASAPRequestHandler instance for testing."""
         registry = HandlerRegistry()
-        return ASAPRequestHandler(registry, sample_manifest, None)
+        return ASAPRequestHandler(RegistryHolder(registry), sample_manifest, None)
 
     @pytest.fixture
     def metrics(self) -> MetricsCollector:
@@ -332,7 +337,7 @@ class TestASAPRequestHandlerHelpers:
                 trace_id=envelope.trace_id,
             )
 
-        handler.registry.register("task.request", sync_handler)
+        handler.registry_holder.registry.register("task.request", sync_handler)
 
         envelope = Envelope(
             asap_version="0.1",
@@ -751,3 +756,95 @@ class TestASAPRequestHandlerHelpers:
 
         assert exc_info.value.status_code == 413
         assert "exceeds maximum" in str(exc_info.value.detail)
+
+
+class TestDebugLogMode:
+    """Tests for ASAP_DEBUG_LOG: full request/response logging."""
+
+    def test_debug_log_mode_logs_request_and_response(
+        self, sample_manifest: Manifest, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When ASAP_DEBUG_LOG=true, handler logs debug_request and debug_response."""
+        from unittest.mock import patch
+        import uuid
+        from slowapi import Limiter
+        from slowapi.util import get_remote_address
+
+        # Use aggressive monkeypatch to replace global limiter (learned from v0.5.0)
+        # This prevents rate limit state from accumulating across tests
+        isolated_limiter = Limiter(
+            key_func=get_remote_address,
+            default_limits=["999999/minute"],  # Very high limit
+            storage_uri=f"memory://{uuid.uuid4()}",  # Unique storage for isolation
+        )
+
+        # Replace in BOTH modules (aggressive monkeypatch pattern from v0.5.0)
+        import asap.transport.middleware as middleware_module
+        import asap.transport.server as server_module
+
+        monkeypatch.setattr(middleware_module, "limiter", isolated_limiter)
+        monkeypatch.setattr(server_module, "limiter", isolated_limiter)
+
+        # Create app - it will use the monkeypatched limiter
+        app = create_app(sample_manifest, rate_limit="999999/minute")
+        # Ensure app.state.limiter also uses our isolated instance
+        app.state.limiter = isolated_limiter
+        client = TestClient(app)
+
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient=sample_manifest.id,
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-debug",
+                skill_id="echo",
+                input={"message": "hello"},
+            ).model_dump(),
+        )
+        body = {
+            "jsonrpc": "2.0",
+            "method": "asap.send",
+            "params": {"envelope": envelope.model_dump(mode="json")},
+            "id": "debug-1",
+        }
+
+        with (
+            patch("asap.transport.server.is_debug_log_mode", return_value=True),
+            patch("asap.transport.server.logger") as mock_logger,
+        ):
+            response = client.post("/asap", json=body)
+
+        assert response.status_code == 200
+        info_calls = [c for c in mock_logger.info.call_args_list if c[0]]
+        events = [c[0][0] for c in info_calls if c[0]]
+        assert "asap.request.debug_request" in events
+        assert "asap.request.debug_response" in events
+
+
+class TestSwaggerUiDebugMode:
+    """Tests for Swagger UI /docs enabled only when ASAP_DEBUG=true."""
+
+    def test_docs_disabled_when_not_debug(self, sample_manifest: Manifest) -> None:
+        """When ASAP_DEBUG is not set, /docs and /openapi.json return 404."""
+        from unittest.mock import patch
+
+        with patch.dict("os.environ", {"ASAP_DEBUG": ""}, clear=False):
+            app = create_app(sample_manifest, rate_limit="100000/minute")
+            client = TestClient(app)
+
+        assert client.get("/docs").status_code == 404
+        assert client.get("/openapi.json").status_code == 404
+
+    def test_docs_enabled_when_debug(self, sample_manifest: Manifest) -> None:
+        """When ASAP_DEBUG=true, /docs and /openapi.json are available."""
+        from unittest.mock import patch
+
+        with patch.dict("os.environ", {"ASAP_DEBUG": "true"}):
+            app = create_app(sample_manifest, rate_limit="100000/minute")
+            client = TestClient(app)
+
+        # /docs may redirect (307) or return 200
+        docs_resp = client.get("/docs")
+        assert docs_resp.status_code in (200, 307)
+        assert client.get("/openapi.json").status_code == 200

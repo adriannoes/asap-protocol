@@ -1,6 +1,7 @@
 """Command-line interface for ASAP Protocol utilities.
 
-This module provides CLI commands for schema export, inspection, and validation.
+This module provides CLI commands for schema export, inspection, validation,
+trace visualization, and an interactive REPL for testing payloads.
 
 Example:
     >>> # From terminal:
@@ -9,9 +10,14 @@ Example:
     >>> # asap list-schemas
     >>> # asap show-schema agent
     >>> # asap validate-schema message.json --schema-type envelope
+    >>> # asap trace <trace-id> [--log-file asap.log] [--format ascii|json]
+    >>> # asap repl  # Interactive REPL with ASAP models
 """
 
+import code
 import json
+import os
+import sys
 from pathlib import Path
 from typing import Annotated, Optional
 
@@ -19,6 +25,10 @@ import typer
 from pydantic import ValidationError
 
 from asap import __version__
+from asap.models import Envelope, TaskRequest, generate_id
+from asap.models.entities import Capability, Endpoint, Manifest, Skill
+
+from asap.observability.trace_parser import parse_trace_from_lines, trace_to_json_export
 from asap.schemas import SCHEMA_REGISTRY, export_all_schemas, get_schema_json, list_schema_entries
 
 app = typer.Typer(help="ASAP Protocol CLI.")
@@ -209,6 +219,132 @@ def validate_schema(
         raise typer.BadParameter(f"Validation error:\n{error_details}")
 
     typer.echo(f"Valid {effective_schema_type} schema: {file}")
+
+
+# Environment variable for default trace log file
+ENV_TRACE_LOG = "ASAP_TRACE_LOG"
+
+# REPL banner and namespace
+REPL_BANNER = (
+    "ASAP Protocol REPL - test payloads interactively.\n"
+    "  Envelope, TaskRequest, Manifest, generate_id, sample_envelope() available.\n"
+    "  Type exit() or Ctrl-D to quit."
+)
+
+
+def _repl_namespace() -> dict[str, object]:
+    """Build namespace for the ASAP REPL with models and a sample envelope helper."""
+
+    def sample_envelope() -> Envelope:
+        """Return a sample task.request envelope for quick testing."""
+        return Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:repl-sender",
+            recipient="urn:asap:agent:repl-recipient",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id=f"conv-{generate_id()}",
+                skill_id="echo",
+                input={"message": "hello from REPL"},
+            ).model_dump(),
+        )
+
+    return {
+        "Envelope": Envelope,
+        "TaskRequest": TaskRequest,
+        "Manifest": Manifest,
+        "Capability": Capability,
+        "Endpoint": Endpoint,
+        "Skill": Skill,
+        "generate_id": generate_id,
+        "sample_envelope": sample_envelope,
+    }
+
+
+@app.command("repl")
+def repl() -> None:
+    """Start an interactive REPL with ASAP models for testing payloads.
+
+    Provides Envelope, TaskRequest, Manifest, generate_id, and sample_envelope()
+    in the namespace. Use Python's code module for the interactive loop.
+    """
+    namespace = _repl_namespace()
+    code.interact(banner=REPL_BANNER, local=namespace)
+
+
+@app.command("trace")
+def trace(
+    trace_id: Annotated[
+        Optional[str],
+        typer.Argument(help="Trace ID to search for in logs (e.g. from envelope.trace_id)."),
+    ] = None,
+    log_file: Annotated[
+        Optional[Path],
+        typer.Option(
+            "--log-file",
+            "-f",
+            help="Log file to search (JSON lines). Default: ASAP_TRACE_LOG env or stdin.",
+        ),
+    ] = None,
+    output_format: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            "-o",
+            help="Output format: ascii (diagram) or json (for external tools).",
+        ),
+    ] = "ascii",
+) -> None:
+    """Show request flow and timing for a trace ID from ASAP JSON logs.
+
+    Searches log lines for asap.request.received and asap.request.processed
+    events with the given trace_id and prints an ASCII diagram of the flow
+    with latency per hop (e.g. agent_a -> agent_b (15ms) -> agent_c (23ms)).
+
+    Use --format json to output structured JSON for piping to jq, CI, or
+    observability platforms.
+
+    Logs must be JSON lines (ASAP_LOG_FORMAT=json). Use --log-file to pass
+    a file, or set ASAP_TRACE_LOG; otherwise reads from stdin.
+    """
+    effective_log_file = log_file
+    if effective_log_file is None and os.environ.get(ENV_TRACE_LOG):
+        effective_log_file = Path(os.environ[ENV_TRACE_LOG])
+
+    if trace_id is None or trace_id.strip() == "":
+        typer.echo(
+            "Error: trace_id is required. Usage: asap trace <trace-id> [--log-file PATH]", err=True
+        )
+        raise typer.Exit(1)
+
+    trace_id = trace_id.strip()
+    fmt = output_format.strip().lower() if output_format else "ascii"
+    if fmt not in ("ascii", "json"):
+        typer.echo("Error: --format must be 'ascii' or 'json'", err=True)
+        raise typer.Exit(1)
+
+    def _lines() -> list[str]:
+        if effective_log_file is None:
+            return sys.stdin.readlines()
+        if not effective_log_file.exists():
+            raise typer.BadParameter(f"Log file not found: {effective_log_file}")
+        return effective_log_file.read_text(encoding="utf-8").splitlines()
+
+    try:
+        lines = _lines()
+    except typer.BadParameter:
+        raise
+    except OSError as exc:
+        raise typer.BadParameter(f"Cannot read log file: {exc}") from exc
+
+    hops, diagram = parse_trace_from_lines(lines, trace_id)
+    if not hops:
+        typer.echo(f"No trace found for: {trace_id}")
+        raise typer.Exit(1)
+    if fmt == "json":
+        typer.echo(json.dumps(trace_to_json_export(trace_id, hops), indent=2))
+    else:
+        typer.echo(diagram)
 
 
 def main() -> None:

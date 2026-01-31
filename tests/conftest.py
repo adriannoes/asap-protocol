@@ -12,6 +12,9 @@ from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest
 
+# Load asap.testing fixtures (mock_agent, mock_client, mock_snapshot_store)
+pytest_plugins = ["asap.testing.fixtures"]
+
 
 @pytest.fixture
 def sample_manifest() -> Manifest:

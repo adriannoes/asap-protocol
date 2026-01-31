@@ -133,22 +133,24 @@
 
 ### Tasks
 
-- [ ] 5.1 Create 10+ real-world examples
+- [x] 5.1 Create 10+ real-world examples
   - Goal: Multi-agent, long-running, error recovery, MCP, auth patterns, etc.
   - Details: [DX Detailed - Task 5.1](./tasks-v1.0.0-dx-detailed.md#task-51-create-real-world-examples)
 
-- [ ] 5.2 Create testing utilities
+- [x] 5.2 Create testing utilities
   - Goal: Reduce test boilerplate by 50%
   - Details: [DX Detailed - Task 5.2](./tasks-v1.0.0-dx-detailed.md#task-52-create-testing-utilities)
 
-- [ ] 5.3 PRD review checkpoint
+- [x] 5.3 PRD review checkpoint
   - Goal: Review Q4 (auth scheme), Q6 (pytest plugin)
   - Details: [DX Detailed - Task 5.3](./tasks-v1.0.0-dx-detailed.md#task-53-prd-review-checkpoint)
 
 ### Definition of Done
-- [ ] 10+ examples created and tested
-- [ ] Testing utilities reduce boilerplate by 50%
-- [ ] PRD Q4, Q6 answered
+- [x] 10+ examples created and tested
+- [x] Testing utilities reduce boilerplate by 50%
+- [x] PRD Q4, Q6 answered
+
+**Progress: 100%** (P5 complete)
 
 ---
 
@@ -158,23 +160,25 @@
 
 ### Tasks
 
-- [ ] 6.1 Implement trace visualization
+- [x] 6.1 Implement trace visualization
   - Goal: CLI command to visualize request flow
   - Details: [DX Detailed - Task 6.1](./tasks-v1.0.0-dx-detailed.md#task-61-implement-trace-visualization)
 
-- [ ] 6.2 Add development server improvements
+- [x] 6.2 Add development server improvements
   - Goal: Hot reload, debug logging, REPL, Swagger UI
   - Details: [DX Detailed - Task 6.2](./tasks-v1.0.0-dx-detailed.md#task-62-development-server-improvements)
 
-- [ ] 6.3 PRD review checkpoint
+- [x] 6.3 PRD review checkpoint
   - Goal: Review Q5 (trace JSON export)
   - Details: [DX Detailed - Task 6.3](./tasks-v1.0.0-dx-detailed.md#task-63-prd-review-checkpoint)
 
 ### Definition of Done
-- [ ] Trace command working
-- [ ] Hot reload functional
-- [ ] Debug mode comprehensive
-- [ ] PRD Q5 answered
+- [x] Trace command working
+- [x] Hot reload functional
+- [x] Debug mode comprehensive
+- [x] PRD Q5 answered
+
+**Progress: 100%** (P6 complete)
 
 ---
 

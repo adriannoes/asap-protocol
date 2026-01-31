@@ -332,3 +332,115 @@ class TestCliValidateSchema:
         assert result.exit_code != 0
         # Should contain some field information in the error
         assert "id" in result.output.lower() or "validation" in result.output.lower()
+
+
+class TestCliTrace:
+    """Tests for trace command."""
+
+    def test_help_shows_trace_command(self) -> None:
+        """Ensure --help shows trace command."""
+        runner = CliRunner()
+        result = runner.invoke(app, ["--help"])
+        assert result.exit_code == 0
+        output = strip_ansi(result.stdout)
+        assert "trace" in output
+
+    def test_trace_requires_trace_id(self) -> None:
+        """Ensure trace command requires trace_id argument."""
+        runner = CliRunner()
+        result = runner.invoke(app, ["trace"])
+        assert result.exit_code != 0
+        assert "trace_id" in result.output.lower() or "required" in result.output.lower()
+
+    def test_trace_from_log_file(self, tmp_path: Path) -> None:
+        """Ensure trace parses log file and prints ASCII diagram."""
+        log_lines = [
+            '{"event": "asap.request.received", "envelope_id": "e1", "trace_id": "trace-abc", '
+            '"sender": "urn:asap:agent:client", "recipient": "urn:asap:agent:echo", "timestamp": "2026-01-31T12:00:00Z"}',
+            '{"event": "asap.request.processed", "envelope_id": "e1", "trace_id": "trace-abc", "duration_ms": 14}',
+        ]
+        log_file = tmp_path / "asap.log"
+        log_file.write_text("\n".join(log_lines), encoding="utf-8")
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["trace", "trace-abc", "--log-file", str(log_file)])
+
+        assert result.exit_code == 0
+        assert "client -> echo (14ms)" in result.stdout
+
+    def test_trace_format_json_outputs_structured_json(self, tmp_path: Path) -> None:
+        """Ensure trace --format json outputs valid JSON for external tools."""
+        log_lines = [
+            '{"event": "asap.request.received", "envelope_id": "e1", "trace_id": "trace-xyz", '
+            '"sender": "urn:asap:agent:a", "recipient": "urn:asap:agent:b", "timestamp": "2026-01-31T12:00:00Z"}',
+            '{"event": "asap.request.processed", "envelope_id": "e1", "trace_id": "trace-xyz", "duration_ms": 42}',
+        ]
+        log_file = tmp_path / "asap.log"
+        log_file.write_text("\n".join(log_lines), encoding="utf-8")
+
+        runner = CliRunner()
+        result = runner.invoke(
+            app, ["trace", "trace-xyz", "--log-file", str(log_file), "--format", "json"]
+        )
+
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["trace_id"] == "trace-xyz"
+        assert len(data["hops"]) == 1
+        assert data["hops"][0]["sender"] == "urn:asap:agent:a"
+        assert data["hops"][0]["recipient"] == "urn:asap:agent:b"
+        assert data["hops"][0]["duration_ms"] == 42
+
+    def test_trace_invalid_format_fails(self) -> None:
+        """Ensure trace rejects invalid --format values."""
+        runner = CliRunner()
+        result = runner.invoke(app, ["trace", "t1", "--format", "xml"])
+        assert result.exit_code != 0
+        assert "ascii" in result.output.lower() or "json" in result.output.lower()
+
+    def test_trace_no_match_exits_non_zero(self, tmp_path: Path) -> None:
+        """Ensure trace exits with 1 when no trace found."""
+        log_file = tmp_path / "empty.log"
+        log_file.write_text("", encoding="utf-8")
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["trace", "nonexistent", "--log-file", str(log_file)])
+
+        assert result.exit_code != 0
+        assert "No trace found" in result.stdout
+
+    def test_trace_missing_log_file_fails(self) -> None:
+        """Ensure trace fails when --log-file path does not exist."""
+        runner = CliRunner()
+        result = runner.invoke(app, ["trace", "t1", "--log-file", "/nonexistent/asap.log"])
+        assert result.exit_code != 0
+        assert "not found" in result.output.lower() or "No such" in result.output
+
+
+class TestCliRepl:
+    """Tests for repl command."""
+
+    def test_help_shows_repl_command(self) -> None:
+        """Ensure --help shows repl command."""
+        runner = CliRunner()
+        result = runner.invoke(app, ["--help"])
+        assert result.exit_code == 0
+        output = strip_ansi(result.stdout)
+        assert "repl" in output
+
+    def test_repl_help(self) -> None:
+        """Ensure repl --help shows usage."""
+        runner = CliRunner()
+        result = runner.invoke(app, ["repl", "--help"])
+        assert result.exit_code == 0
+        output = strip_ansi(result.stdout)
+        assert "REPL" in output or "interactive" in output.lower()
+
+    def test_repl_starts_and_exits(self) -> None:
+        """Ensure repl starts and exits when given exit() via stdin."""
+        runner = CliRunner()
+        result = runner.invoke(app, ["repl"], input="exit()\n")
+        assert result.exit_code == 0
+        # Banner may go to stdout or stderr depending on code.interact()
+        combined = result.stdout + result.stderr
+        assert "REPL" in combined or "sample_envelope" in combined or ">>> " in combined

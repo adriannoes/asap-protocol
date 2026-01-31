@@ -7,7 +7,7 @@ handlers for processing ASAP envelopes.
 import inspect
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import patch
 
 import pytest
@@ -17,6 +17,7 @@ from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest, TaskResponse
+from asap.testing import assert_envelope_valid, assert_response_correlates
 
 if TYPE_CHECKING:
     pass
@@ -49,7 +50,7 @@ class TestValidateHandler:
         from asap.transport.handlers import validate_handler
 
         with pytest.raises(TypeError) as exc_info:
-            validate_handler("not a handler")
+            validate_handler(cast(Any, "not a handler"))
         assert "callable" in exc_info.value.args[0].lower()
 
     def test_validate_handler_rejects_wrong_parameter_count(self) -> None:
@@ -60,14 +61,14 @@ class TestValidateHandler:
             return envelope
 
         with pytest.raises(TypeError) as exc_info:
-            validate_handler(bad_one)
+            validate_handler(cast(Any, bad_one))
         assert "2 parameters" in exc_info.value.args[0] or "envelope" in exc_info.value.args[0]
 
         def bad_four(envelope: Envelope, manifest: Manifest, a: int, b: int) -> Envelope:
             return envelope
 
         with pytest.raises(TypeError) as exc_info:
-            validate_handler(bad_four)
+            validate_handler(cast(Any, bad_four))
         assert "4 parameters" in exc_info.value.args[0]
 
     def test_validate_handler_rejects_when_signature_inspection_fails(
@@ -213,7 +214,8 @@ class TestHandlerRegistry:
         result = registry.dispatch(sample_task_request_envelope, sample_manifest)
 
         assert result == response_envelope
-        assert result.payload_type == "task.response"
+        assert_envelope_valid(result, allowed_payload_types=["task.response"])
+        assert_response_correlates(sample_task_request_envelope, result)
 
     def test_dispatch_unknown_payload_type_raises_error(self, sample_manifest: Manifest) -> None:
         """Test dispatching unknown payload type raises error."""
@@ -484,7 +486,8 @@ class TestTaskRequestHandler:
         from asap.transport.handlers import create_echo_handler
 
         handler = create_echo_handler()
-        result = handler(sample_task_request_envelope, sample_manifest)
+        raw = handler(sample_task_request_envelope, sample_manifest)
+        result = cast(Envelope, raw)
 
         assert result.payload_type == "task.response"
         assert result.sender == sample_manifest.id
@@ -498,7 +501,8 @@ class TestTaskRequestHandler:
         from asap.transport.handlers import create_echo_handler
 
         handler = create_echo_handler()
-        result = handler(sample_task_request_envelope, sample_manifest)
+        raw = handler(sample_task_request_envelope, sample_manifest)
+        result = cast(Envelope, raw)
 
         response_payload = TaskResponse(**result.payload)
         assert response_payload.status == TaskStatus.COMPLETED
@@ -524,7 +528,8 @@ class TestTaskRequestHandler:
         )
 
         handler = create_echo_handler()
-        result = handler(envelope, sample_manifest)
+        raw = handler(envelope, sample_manifest)
+        result = cast(Envelope, raw)
 
         assert result.trace_id == "trace_abc123"
 
@@ -535,7 +540,8 @@ class TestTaskRequestHandler:
         from asap.transport.handlers import create_echo_handler
 
         handler = create_echo_handler()
-        result = handler(sample_task_request_envelope, sample_manifest)
+        raw = handler(sample_task_request_envelope, sample_manifest)
+        result = cast(Envelope, raw)
 
         response_payload = TaskResponse(**result.payload)
         assert response_payload.task_id is not None

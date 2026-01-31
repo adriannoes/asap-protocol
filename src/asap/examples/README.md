@@ -1,35 +1,96 @@
+# ASAP Protocol Examples
+
+This directory contains real-world examples for the ASAP protocol: minimal agents, demos, and patterns you can reuse.
+
 ## Overview
 
-The examples demonstrate a minimal end-to-end flow between two agents:
-an echo agent and a coordinator agent.
+Examples cover:
 
-## Running the demo
+- **Core flow**: Echo agent, coordinator, and a full demo (run_demo).
+- **Advanced patterns**: Multi-agent orchestration, long-running tasks with checkpoints, error recovery, MCP integration, state migration, auth, rate limiting.
+- **Concepts**: WebSocket (not implemented), streaming responses, multi-step workflows.
 
-Run the demo runner module from the repository root:
+Run any example from the repository root with:
 
-- `uv run python -m asap.examples.run_demo`
+```bash
+uv run python -m asap.examples.<module_name> [options]
+```
 
-This starts the echo agent on port 8001 and the coordinator agent on port 8000.
-The coordinator sends a TaskRequest to the echo agent and logs the response.
+## Running the full demo
 
-## Running agents individually
+Starts the echo agent on port 8001 and the coordinator on port 8000; the coordinator sends a TaskRequest to the echo agent and logs the response.
 
-You can run the agents separately if needed:
+```bash
+uv run python -m asap.examples.run_demo
+```
+
+Run agents individually:
 
 - `uv run python -m asap.examples.echo_agent --host 127.0.0.1 --port 8001`
-- `uv run python -m asap.examples.coordinator`
+- `uv run python -m asap.examples.coordinator --echo-url http://127.0.0.1:8001`
 
-## Handler security example
+---
 
-- `asap.examples.secure_handler` provides `create_secure_handler()`: a handler that
-  validates payload with `TaskRequest`, validates file parts with `FilePart` (URI checks),
-  and logs with `sanitize_for_logging()`. Use it as a reference for input validation
-  (see `docs/security.md` Handler Security).
+## Examples by topic
+
+### Core agents and demo
+
+| Module | Description | Usage |
+|--------|-------------|--------|
+| **run_demo** | Full demo: echo + coordinator, one TaskRequest round-trip | `uv run python -m asap.examples.run_demo` |
+| **echo_agent** | Minimal echo agent (FastAPI app, manifest, echo handler) | `uv run python -m asap.examples.echo_agent [--host H] [--port P]` |
+| **coordinator** | Coordinator that dispatches TaskRequest to echo agent | `uv run python -m asap.examples.coordinator [--echo-url URL] [--message MSG]` |
+| **secure_handler** | Reference handler: TaskRequest validation, FilePart URI checks, sanitize_for_logging | Use `create_secure_handler()` in your handler registry (see `docs/security.md`) |
+
+### Multi-agent and orchestration
+
+| Module | Description | Usage |
+|--------|-------------|--------|
+| **orchestration** | Main agent delegates to 2 sub-agents; task coordination and state tracking | `uv run python -m asap.examples.orchestration [--worker-a-url URL] [--worker-b-url URL]` (start two echo agents on 8001 and 8002 first) |
+
+### State and long-running tasks
+
+| Module | Description | Usage |
+|--------|-------------|--------|
+| **long_running** | Long-running task with checkpoints (StateSnapshot); save, “crash”, resume | `uv run python -m asap.examples.long_running [--num-steps N] [--crash-after N]` |
+| **state_migration** | Move task state between agents (StateQuery, StateRestore, SnapshotStore) | `uv run python -m asap.examples.state_migration` |
+
+### Error recovery and resilience
+
+| Module | Description | Usage |
+|--------|-------------|--------|
+| **error_recovery** | Retry with backoff, circuit breaker, fallback patterns | `uv run python -m asap.examples.error_recovery [--skip-retry] [--skip-circuit] [--skip-fallback]` |
+
+### MCP and integration
+
+| Module | Description | Usage |
+|--------|-------------|--------|
+| **mcp_integration** | Call MCP tools via ASAP envelopes (McpToolCall, McpToolResult) | `uv run python -m asap.examples.mcp_integration [--agent-url URL]` (local build only if no URL) |
+
+### Authentication and rate limiting
+
+| Module | Description | Usage |
+|--------|-------------|--------|
+| **auth_patterns** | Bearer auth, custom token validators, OAuth2 concept (manifest + create_app) | `uv run python -m asap.examples.auth_patterns` |
+| **rate_limiting** | Per-sender and per-endpoint rate limit patterns (create_limiter, ASAP_RATE_LIMIT) | `uv run python -m asap.examples.rate_limiting` |
+
+### Concepts (no full implementation)
+
+| Module | Description | Usage |
+|--------|-------------|--------|
+| **websocket_concept** | How WebSocket would work with ASAP (comments/pseudocode only) | `uv run python -m asap.examples.websocket_concept` |
+
+### Streaming and workflows
+
+| Module | Description | Usage |
+|--------|-------------|--------|
+| **streaming_response** | Stream TaskUpdate progress chunks (simulated streaming) | `uv run python -m asap.examples.streaming_response [--chunks N]` |
+| **multi_step_workflow** | Multi-step pipeline: fetch → transform → summarize (WorkflowState, run_workflow) | `uv run python -m asap.examples.multi_step_workflow` |
+
+---
 
 ## Notes
 
 - The echo agent exposes `/.well-known/asap/manifest.json` for readiness checks.
 - Update ports in `asap.examples.run_demo` if you change the defaults.
-- These examples use the basic ASAP API without authentication or advanced security features.
-  For production use, consider adding authentication via `manifest.auth` and enabling
-  additional security features (see `docs/security.md`).
+- Examples use the basic ASAP API; for production, add authentication via `manifest.auth` and follow `docs/security.md`.

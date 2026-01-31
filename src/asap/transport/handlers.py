@@ -32,7 +32,7 @@ import time
 from collections.abc import Awaitable
 from concurrent.futures import Executor
 from threading import RLock
-from typing import Protocol, cast
+from typing import Callable, Protocol, TypeAlias, cast
 
 from asap.errors import ASAPError
 from asap.models.entities import Manifest
@@ -93,6 +93,10 @@ Args:
 Returns:
     Response envelope to send back (sync) or awaitable (async)
 """
+
+# Type alias for factories that return a sync handler (useful in tests)
+SyncHandlerFactory: TypeAlias = Callable[[], SyncHandler]
+"""Type alias for callables that return a SyncHandler (e.g. create_echo_handler)."""
 
 
 def validate_handler(handler: Handler) -> None:

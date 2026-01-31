@@ -1060,6 +1060,43 @@ client = ASAPClient("http://agent.example.com", pool_connections=500, pool_maxsi
 
 ---
 
+#### DD-010: Authentication Scheme for Examples
+**Decision**: ✅ Use **both** Bearer (simple) and Bearer + OAuth2 discovery (realistic) in examples.
+
+**Rationale** (Sprint P5 Review - 2026-01-31):
+- **Bearer-only**: Covers simple demos, local dev, and minimal setup; single token_validator with create_app.
+- **Bearer + OAuth2 concept**: Covers realistic deployments; ASAP validates Bearer; clients obtain tokens via OAuth2; manifest exposes oauth2 discovery (authorization_url, token_url, scopes).
+- Example complexity is manageable: `auth_patterns.py` already demonstrates both without extra dependencies.
+- Custom validators (static map, env-based) remain documented for testing and small fixed sets.
+
+**Implementation** (v1.0.0 Sprint P5):
+- `src/asap/examples/auth_patterns.py`: Bearer-only manifest, OAuth2-concept manifest, static/env validators, create_app with token_validator.
+- Docs and README reference Bearer for quick start and OAuth2 concept for production-style auth.
+
+**Options considered**:
+- Bearer only: Rejected as too narrow; real deployments often use OAuth2.
+- OAuth2 only: Rejected; Bearer-only is better for onboarding and tests.
+- Both: **Chosen** — comprehensive and matches current example set.
+
+---
+
+#### DD-011: Trace JSON Export
+**Decision**: ✅ Support JSON export in v1.0.0 via `asap trace <trace-id> --format json`.
+
+**Rationale** (Sprint P6 Review - 2026-01-31):
+- Trace command already produces structured data (hops with sender, recipient, duration_ms); exposing it as JSON enables piping to jq, CI scripts, and integration with observability platforms without requiring full OpenTelemetry first.
+- Effort is minimal: one helper in trace_parser and a CLI option; backward compatible (default remains ASCII).
+- Aligns with PRD Section 4.4 (Debugging Tools) and supports "integration with observability platforms" (Q5 consideration).
+
+**Implementation** (v1.0.0 Sprint P6, Task 6.3):
+- `src/asap/observability/trace_parser.py`: `trace_to_json_export(trace_id, hops)` returning a JSON-serializable dict.
+- `src/asap/cli.py`: `asap trace <trace-id> [--format ascii|json]`; default `ascii`; `json` outputs `{"trace_id": "...", "hops": [{...}]}`.
+- Tests: `test_trace_format_json_outputs_structured_json`, `test_trace_invalid_format_fails` in `tests/test_cli.py`.
+
+**Future**: OpenTelemetry integration (Sprint P11) will provide full distributed tracing; JSON export remains useful for ad-hoc analysis and tooling.
+
+---
+
 ### Sprint S1-S3 Learnings
 
 > **Review Date**: 2026-01-27 (End of Sprint S3)
@@ -1122,21 +1159,21 @@ client = ASAPClient("http://agent.example.com", pool_connections=500, pool_maxsi
    - **Decision Date**: 2026-01-27 (Sprint S3 Review)
    - **Rationale**: Current security stack (TLS + Bearer + timestamp/nonce) is sufficient
 
-4. ❓ What should be the default authentication scheme for examples?
-   - **Options**: Bearer token (simple), OAuth2 (realistic), both (comprehensive)
-   - **Action**: Decide during Sprint P5 when creating examples
-   - **Review Point**: Sprint P5, Task 5.1.6 → Document decision as DD-009
+4. ✅ ~~What should be the default authentication scheme for examples?~~
+   - **Decision**: See DD-010 in Section 10
+   - **Resolved**: 2026-01-31 (End of Sprint P5, Task 5.3)
+   - **Choice**: Both — Bearer (simple demos) and Bearer + OAuth2 concept (realistic deployments)
 
 ### Developer Experience
-5. ❓ Should trace visualization CLI tool support JSON export for external tools?
-   - **Action**: Gather feedback during Sprint P6 implementation
-   - **Consider**: JSON export for integration with observability platforms
-   - **Review Point**: End of Sprint P6 → Decide and implement if valuable
+5. ✅ ~~Should trace visualization CLI tool support JSON export for external tools?~~
+   - **Decision**: See DD-011 in Section 10
+   - **Resolved**: 2026-01-31 (End of Sprint P6, Task 6.3)
+   - **Choice**: Yes — `asap trace <trace-id> --format json` outputs structured JSON for piping and observability integration
 
-6. ❓ Should we provide pytest plugins for easier testing?
-   - **Example**: `pytest-asap` with custom markers and fixtures
-   - **Action**: Assess during Sprint P5 based on testing utilities usage
-   - **Review Point**: Mid-Sprint P7 → If utilities popular, plan plugin for v1.1.0
+6. ✅ ~~Should we provide pytest plugins for easier testing?~~
+   - **Decision**: Defer `pytest-asap` plugin to v1.1.0
+   - **Resolved**: 2026-01-31 (End of Sprint P5, Task 5.3)
+   - **Rationale**: `asap.testing` (fixtures, MockAgent, assertions) already reduces boilerplate; 8+ test files refactored with ~50% less boilerplate. A plugin would add markers/auto-discovery; better to gather v1.0.0 feedback and add plugin in v1.1.0 if demand exists.
 
 ### Documentation
 7. ❓ Should we create video tutorials in addition to written docs?
@@ -1216,6 +1253,7 @@ client = ASAPClient("http://agent.example.com", pool_connections=500, pool_maxsi
 | 2026-01-27 | 1.3 | Sprint S3 Review: Resolved Open Question Q3 | ASAP Team |
 | 2026-01-27 | 1.3 | Sprint S3 Review: Added S1-S3 Learnings section | ASAP Team |
 | 2026-01-30 | 1.4 | Sprint P1 Checkpoint: Confirmed Q3/DD-008 (HMAC defer to v1.1.0+) | ASAP Team |
+| 2026-01-31 | 1.5 | Sprint P6 Checkpoint: DD-011 Trace JSON export; Q5 resolved | ASAP Team |
 
 ---
 
