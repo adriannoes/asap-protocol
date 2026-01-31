@@ -81,6 +81,115 @@ End-to-end tests validate the full agent flow using real agent implementations. 
 
 **Example**: `test_full_agent_flow.py` tests complete round-trip agent interactions.
 
+### Chaos Engineering Tests (`tests/chaos/`)
+
+Chaos engineering tests validate system resilience under adverse conditions. These tests simulate real-world failure scenarios that distributed systems may encounter.
+
+**Test modules:**
+
+| Module | Tests | Description |
+|--------|-------|-------------|
+| `test_network_partition.py` | 12 | Network partition and connectivity issues |
+| `test_crashes.py` | 13 | Server crashes and 5xx error responses |
+| `test_message_reliability.py` | 19 | Message loss, duplication, and corruption |
+| `test_clock_skew.py` | 25 | Clock synchronization and timestamp validation |
+
+**Running chaos tests:**
+
+```bash
+# Run all chaos tests
+uv run pytest tests/chaos/ -v
+
+# Run specific chaos test module
+uv run pytest tests/chaos/test_network_partition.py -v
+
+# Run with verbose output for debugging
+uv run pytest tests/chaos/ -v --tb=long
+```
+
+**Test categories:**
+
+#### Network Partition (`test_network_partition.py`)
+
+Simulates network-level failures:
+- Complete connection failures (server unreachable)
+- Connection timeouts (server unresponsive)
+- Intermittent failures (flaky networks)
+- DNS resolution failures
+- SSL/TLS handshake failures
+- Circuit breaker behavior under sustained failures
+
+#### Server Crashes (`test_crashes.py`)
+
+Simulates server-side failures:
+- Server crash during request (connection reset)
+- HTTP 502 Bad Gateway (proxy/load balancer issues)
+- HTTP 503 Service Unavailable (server restarting)
+- HTTP 504 Gateway Timeout (slow backend)
+- Rolling restart scenarios (K8s deployments)
+- OOM kill patterns
+- Cascading failures
+
+#### Message Reliability (`test_message_reliability.py`)
+
+Simulates message-level issues:
+- Message loss (timeout, no response)
+- Message duplication (idempotency testing)
+- Out-of-order delivery
+- Partial message corruption (truncated JSON)
+- Malformed responses
+- Retry behavior with same envelope ID
+
+#### Clock Skew (`test_clock_skew.py`)
+
+Simulates clock synchronization issues:
+- Past timestamps (stale messages, replay attacks)
+- Future timestamps (sender clock ahead)
+- Timezone handling (UTC, positive/negative offsets)
+- Clock drift detection
+- Multi-datacenter clock variance
+- NTP sync failure scenarios
+- VM snapshot/resume clock skew
+
+**Key patterns used:**
+
+1. **Mock transports**: Uses `httpx.MockTransport` to simulate network behavior
+2. **Circuit breakers**: Tests circuit breaker state transitions
+3. **Retry validation**: Verifies retry counts and exponential backoff
+4. **Error message clarity**: Ensures errors are actionable
+
+**Example chaos test:**
+
+```python
+from unittest.mock import patch
+import httpx
+import pytest
+from asap.transport.client import ASAPClient, ASAPConnectionError
+
+async def test_intermittent_failure(sample_envelope, response_envelope):
+    """Test client resilience to intermittent failures."""
+    call_count = 0
+
+    def mock_transport(request: httpx.Request) -> httpx.Response:
+        nonlocal call_count
+        call_count += 1
+        # First 2 attempts fail, 3rd succeeds
+        if call_count <= 2:
+            raise httpx.ConnectError("Network flaky")
+        return create_mock_response(response_envelope)
+
+    with patch("asap.transport.client.asyncio.sleep"):
+        async with ASAPClient(
+            "http://localhost:8000",
+            transport=httpx.MockTransport(mock_transport),
+            max_retries=5,
+        ) as client:
+            response = await client.send(sample_envelope)
+            assert response.payload_type == "task.response"
+
+    assert call_count == 3  # 2 failures + 1 success
+```
+
 ## Test Isolation Strategy
 
 The ASAP Protocol test suite uses a **three-pronged approach** to ensure complete test isolation and prevent interference, especially from rate limiting:
