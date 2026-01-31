@@ -156,4 +156,10 @@ skip_covered = false
 [dependency-groups]
 dev = [
     "bandit>=1.9.3",
+    "hypothesis>=6.92",
+    "jsonschema>=4.20",
+    "locust>=2.20",
+    "memory-profiler>=0.61",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
 ]
