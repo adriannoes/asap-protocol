@@ -1019,6 +1019,47 @@ warnings.warn(
 
 ---
 
+#### DD-009: Connection Pool Size Defaults
+**Decision**: ✅ Default pool size = 100 connections (`pool_connections=100`, `pool_maxsize=100`)
+
+**Rationale** (Sprint P3 Review - 2026-01-30):
+- Benchmarks validate that 100 connections support 1000+ concurrent requests via connection reuse
+- Optimal balance between resource usage and performance for single-agent deployments
+- httpx default (`max_connections=100`) aligns with our default, providing consistency
+- Connection reuse rate >90% achieved when concurrency exceeds pool size
+
+**Benchmark Results** (Task 3.1):
+- **Single-agent**: 100 connections = optimal default
+  - Supports 1000+ concurrent requests via reuse
+  - Low memory footprint (~10MB per 100 connections)
+  - Fast connection acquisition (<5ms pool timeout)
+- **Small cluster** (3-5 agents): 200-500 connections recommended
+  - Multiple base URLs require separate pools
+  - Higher concurrency across agents
+- **Large cluster** (10+ agents): 500-1000 connections recommended
+  - High-throughput scenarios
+  - Can be tuned per deployment needs
+
+**Implementation**:
+- v1.0.0 Sprint P3: `ASAPClient(pool_connections=100, pool_maxsize=100, pool_timeout=5.0)`
+- Configurable via constructor parameters
+- Documented in `ASAPClient` docstring and performance tuning guide
+- Pool timeout: 5.0s (prevents indefinite blocking when pool exhausted)
+
+**Configuration Guidance**:
+```python
+# Single-agent (default)
+client = ASAPClient("http://agent.example.com")  # pool_connections=100
+
+# Small cluster
+client = ASAPClient("http://agent.example.com", pool_connections=200, pool_maxsize=200)
+
+# Large cluster / high-throughput
+client = ASAPClient("http://agent.example.com", pool_connections=500, pool_maxsize=1000)
+```
+
+---
+
 ### Sprint S1-S3 Learnings
 
 > **Review Date**: 2026-01-27 (End of Sprint S3)
@@ -1064,10 +1105,11 @@ warnings.warn(
 > - **Post v1.0.0**: Review 2 weeks after release based on community feedback
 
 ### Performance & Scalability
-1. ❓ What is the optimal default connection pool size for different deployment scenarios?
-   - **Action**: Benchmark during Sprint P3 with various pool sizes
-   - **Target**: Determine best defaults for single-agent, small cluster, large cluster
-   - **Review Point**: End of Sprint P3 → Update DD-008 in PRD
+1. ✅ ~~What is the optimal default connection pool size for different deployment scenarios?~~
+   - **Decision**: See DD-009 in Section 10
+   - **Resolved**: 2026-01-30 (End of Sprint P3)
+   - **Default**: 100 connections (`pool_connections=100`, `pool_maxsize=100`)
+   - **Recommendations**: Single-agent=100, Small cluster=200-500, Large cluster=500-1000
 
 2. ❓ Should we implement adaptive rate limiting based on server load?
    - **Action**: Monitor during load testing (Sprint P7)

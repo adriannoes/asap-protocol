@@ -85,16 +85,16 @@
 
 ### Task 3.3: PRD Review Checkpoint
 
-- [ ] 3.3.1 Review Q1 (connection pool size)
+- [x] 3.3.1 Review Q1 (connection pool size)
   - Analyze benchmark results from Task 3.1
   - Document optimal defaults
-  - Add DD-008 to PRD Section 10
+  - Add DD-009 to PRD Section 10
 
-- [ ] 3.3.2 Update PRD
+- [x] 3.3.2 Update PRD
   - Document pool size recommendations
   - Mark Q1 as resolved
 
-**Acceptance**: Q1 answered, DD-008 added
+**Acceptance**: Q1 answered, DD-009 added
 
 ---
 
