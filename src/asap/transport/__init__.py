@@ -48,6 +48,16 @@ from asap.transport.client import (
     ASAPTimeoutError,
     RetryConfig,
 )
+from asap.transport.compression import (
+    COMPRESSION_THRESHOLD,
+    CompressionAlgorithm,
+    compress_payload,
+    decompress_payload,
+    get_accept_encoding_header,
+    get_supported_encodings,
+    is_brotli_available,
+    select_best_encoding,
+)
 from asap.transport.handlers import (
     Handler,
     HandlerNotFoundError,
@@ -84,4 +94,13 @@ __all__ = [
     "ASAPTimeoutError",
     "ASAPRemoteError",
     "RetryConfig",
+    # Compression
+    "COMPRESSION_THRESHOLD",
+    "CompressionAlgorithm",
+    "compress_payload",
+    "decompress_payload",
+    "get_accept_encoding_header",
+    "get_supported_encodings",
+    "is_brotli_available",
+    "select_best_encoding",
 ]

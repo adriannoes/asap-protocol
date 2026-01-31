@@ -10,6 +10,7 @@ The ASAPClient provides:
 - Retry logic with idempotency keys
 - Proper error handling and timeouts
 - Structured logging for observability
+- Compression support (gzip/brotli) for bandwidth reduction
 
 Example:
     >>> from asap.transport.client import ASAPClient
@@ -18,10 +19,15 @@ Example:
     >>> async with ASAPClient("http://agent.example.com") as client:
     ...     response = await client.send(request_envelope)
     ...     print(response.payload_type)
+    >>>
+    >>> # With compression enabled (default for payloads > 1KB)
+    >>> async with ASAPClient("http://agent.example.com", compression=True) as client:
+    ...     response = await client.send(large_envelope)  # Compressed automatically
 """
 
 import asyncio
 import itertools
+import json
 import random
 import time
 from dataclasses import dataclass
@@ -44,6 +50,12 @@ from asap.models.ids import generate_id
 from asap.observability import get_logger
 from asap.transport.cache import ManifestCache
 from asap.transport.circuit_breaker import CircuitBreaker, CircuitState, get_registry
+from asap.transport.compression import (
+    COMPRESSION_THRESHOLD,
+    CompressionAlgorithm,
+    compress_payload,
+    get_accept_encoding_header,
+)
 from asap.transport.jsonrpc import ASAP_METHOD
 from asap.utils.sanitization import sanitize_url
 
@@ -191,6 +203,7 @@ class ASAPClient:
         - Automatic retry with exponential backoff
         - Circuit breaker pattern for fault tolerance
         - Batch operations via send_batch() method
+        - Compression support (gzip/brotli) for bandwidth reduction
 
     Attributes:
         base_url: Base URL of the remote agent
@@ -198,6 +211,8 @@ class ASAPClient:
         max_retries: Maximum retry attempts for transient failures
         require_https: Whether HTTPS is required for non-localhost connections
         is_connected: Whether the client has an active connection
+        compression: Whether compression is enabled for requests
+        compression_threshold: Minimum payload size to trigger compression
         _circuit_breaker: Optional circuit breaker instance
 
     Pool sizing (pool_connections / pool_maxsize):
@@ -209,6 +224,11 @@ class ASAPClient:
         a single TCP connection, reducing latency for batch operations. If the server
         doesn't support HTTP/2, the client automatically falls back to HTTP/1.1.
 
+    Compression:
+        Compression is enabled by default (compression=True) for payloads exceeding
+        1KB. Supports gzip (standard) and brotli (optional, requires brotli package).
+        Brotli provides ~20% better compression than gzip for JSON payloads.
+
     Example:
         >>> async with ASAPClient("http://localhost:8000") as client:
         ...     response = await client.send(envelope)
@@ -216,6 +236,10 @@ class ASAPClient:
         >>> # Batch operations with HTTP/2 multiplexing
         >>> async with ASAPClient("https://agent.example.com") as client:
         ...     responses = await client.send_batch([env1, env2, env3])
+        >>>
+        >>> # Disable compression for specific client
+        >>> async with ASAPClient("http://localhost:8000", compression=False) as client:
+        ...     response = await client.send(envelope)  # No compression
     """
 
     _circuit_breaker: Optional[CircuitBreaker]
@@ -233,6 +257,9 @@ class ASAPClient:
         pool_timeout: float | None = None,
         # HTTP/2 multiplexing for improved batch performance
         http2: bool = True,
+        # Compression settings for bandwidth reduction
+        compression: bool = True,
+        compression_threshold: int = COMPRESSION_THRESHOLD,
         # Individual retry parameters (for backward compatibility)
         # If retry_config is provided, these are ignored
         max_retries: int | None = None,
@@ -259,6 +286,12 @@ class ASAPClient:
                 HTTP/2 allows multiple concurrent requests over a single TCP connection,
                 reducing latency for batch operations. Falls back to HTTP/1.1 if server
                 doesn't support HTTP/2.
+            compression: Enable request compression for bandwidth reduction (default: True).
+                When enabled, payloads exceeding compression_threshold are compressed
+                using gzip or brotli (if available). The server must support the
+                Content-Encoding header to decompress requests.
+            compression_threshold: Minimum payload size in bytes to trigger compression
+                (default: 1024 = 1KB). Payloads smaller than this are sent uncompressed.
             retry_config: Optional RetryConfig dataclass to group retry and circuit breaker parameters.
                 If provided, individual retry parameters are ignored.
             max_retries: Maximum retry attempts for transient failures (default: 3).
@@ -287,6 +320,9 @@ class ASAPClient:
             >>> # Using RetryConfig (recommended)
             >>> config = RetryConfig(max_retries=5, circuit_breaker_enabled=True)
             >>> client = ASAPClient("http://localhost:8000", retry_config=config)
+            >>>
+            >>> # With compression disabled
+            >>> client = ASAPClient("http://localhost:8000", compression=False)
         """
         # Extract retry config values
         if retry_config is not None:
@@ -373,6 +409,8 @@ class ASAPClient:
         self.circuit_breaker_enabled = circuit_breaker_enabled_val
         self._transport = transport
         self._http2 = http2
+        self._compression = compression
+        self._compression_threshold = compression_threshold
         self._client: httpx.AsyncClient | None = None
         # Thread-safe counter using itertools.count
         self._request_counter = itertools.count(1)
@@ -641,17 +679,45 @@ class ASAPClient:
             "id": request_id,
         }
 
+        # Serialize to bytes for compression
+        request_body = json.dumps(json_rpc_request).encode("utf-8")
+
+        # Apply compression if enabled and payload exceeds threshold
+        content_encoding: str | None = None
+        if self._compression:
+            compressed_body, algorithm = compress_payload(
+                request_body,
+                threshold=self._compression_threshold,
+            )
+            if algorithm != CompressionAlgorithm.IDENTITY:
+                request_body = compressed_body
+                content_encoding = algorithm.value
+                logger.debug(
+                    "asap.client.compression_applied",
+                    target_url=sanitized_url,
+                    envelope_id=envelope.id,
+                    algorithm=content_encoding,
+                    original_size=len(json.dumps(json_rpc_request).encode("utf-8")),
+                    compressed_size=len(request_body),
+                )
+
         # Attempt with retries
         last_exception: Exception | None = None
         for attempt in range(self.max_retries):
             try:
+                # Build headers
+                headers = {
+                    "Content-Type": "application/json",
+                    "X-Idempotency-Key": idempotency_key,
+                    "Accept-Encoding": get_accept_encoding_header(),
+                }
+                if content_encoding:
+                    headers["Content-Encoding"] = content_encoding
+
                 response = await self._client.post(
                     f"{self.base_url}/asap",
-                    json=json_rpc_request,
-                    headers={
-                        "Content-Type": "application/json",
-                        "X-Idempotency-Key": idempotency_key,
-                    },
+                    content=request_body,
+                    headers=headers,
                 )
 
                 # Check HTTP status
