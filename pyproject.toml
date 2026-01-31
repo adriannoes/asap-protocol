@@ -128,10 +128,9 @@ minversion = "8.0"
 addopts = [
     "--strict-markers",
     "--strict-config",
-    "--cov=src",
-    "--cov-report=term-missing",
-    "--cov-report=html",
 ]
+# Coverage options: use explicitly when needed (e.g., pytest --cov=src --cov-report=xml)
+# NOT included in addopts to avoid conflicts with pytest-xdist (-n auto)
 testpaths = ["tests", "benchmarks"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

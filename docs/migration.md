@@ -564,7 +564,7 @@ v0.5.0 is a **security-hardened release** with zero breaking changes. All existi
        manifest,
        registry,
        token_validator=validate_token,  # Add token validator
-       rate_limit="100/minute",         # Configure rate limiting
+       rate_limit="10/second;100/minute", # Burst + sustained rate limiting
        require_nonce=True                # Enable nonce validation
    )
    ```

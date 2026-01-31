@@ -188,25 +188,27 @@
 
 ### Tasks
 
-- [ ] 7.1 Add property-based testing
+- [x] 7.1 Add property-based testing
   - Issue: [#11](https://github.com/adriannoes/asap-protocol/issues/11)
   - Goal: 100+ property tests, edge case coverage
   - Details: [Testing Detailed - Task 7.1](./tasks-v1.0.0-testing-detailed.md#task-71-add-property-based-testing)
 
-- [ ] 7.2 Add load & stress testing
+- [x] 7.2 Add load & stress testing
   - Goal: <5ms p95 latency, identify breaking point
   - Details: [Testing Detailed - Task 7.2](./tasks-v1.0.0-testing-detailed.md#task-72-add-load--stress-testing)
 
-- [ ] 7.3 PRD review checkpoint
+- [x] 7.3 PRD review checkpoint
   - Goal: Review Q2 (adaptive rate limiting)
   - Details: [Testing Detailed - Task 7.3](./tasks-v1.0.0-testing-detailed.md#task-73-prd-review-checkpoint)
 
 ### Definition of Done
-- [ ] 100+ property tests passing
-- [ ] <5ms p95 latency
-- [ ] No memory leaks
-- [ ] Issue #11 closed
-- [ ] PRD Q2 answered
+- [x] 100+ property tests passing
+- [x] <5ms p95 latency
+- [x] No memory leaks
+- [x] Issue #11 closed
+- [x] PRD Q2 answered
+
+**Progress: 100%** (P7 complete)
 
 ---
 
@@ -216,18 +218,21 @@
 
 ### Tasks
 
-- [ ] 8.1 Implement chaos tests
+- [x] 8.1 Implement chaos tests
   - Goal: Verify graceful degradation under failures
   - Details: [Testing Detailed - Task 8.1](./tasks-v1.0.0-testing-detailed.md#task-81-chaos-engineering)
 
-- [ ] 8.2 Implement contract tests
-  - Goal: Guarantee backward compatibility (v0.1.0, v0.3.0, v0.5.0 → v1.0.0)
+- [x] 8.2 Implement contract tests
+  - Goal: Guarantee backward compatibility (v0.1.0 → v1.0.0, v0.5.0 ↔ v1.0.0)
+  - Note: v0.3.0 skipped (API identical to v0.1.0), focus on v0.5.0 (production with security)
   - Details: [Testing Detailed - Task 8.2](./tasks-v1.0.0-testing-detailed.md#task-82-contract-testing)
 
 ### Definition of Done
-- [ ] Chaos tests verify resilience
-- [ ] Contract tests pass
-- [ ] 800+ total tests
+- [x] Chaos tests verify resilience
+- [x] Contract tests pass
+- [x] 800+ total tests
+
+**Progress: 100%** (P8 complete)
 
 ---
 
@@ -332,7 +337,7 @@
 ### Tasks
 
 - [ ] 13.1 Run comprehensive testing
-  - Goal: 800+ tests pass, benchmarks meet targets
+  - Goal: 900+ tests pass, benchmarks meet targets
   - Details: [Release Detailed - Task 13.1](./tasks-v1.0.0-release-detailed.md#task-131-comprehensive-testing)
 
 - [ ] 13.2 Review all documentation

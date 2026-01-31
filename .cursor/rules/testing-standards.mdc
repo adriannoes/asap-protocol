@@ -1,7 +1,11 @@
 ---
-description: Standards for writing Python tests in ASAP Protocol
-globs: tests/**/*.py
-alwaysApply: true
+description: "Testing standards for pytest, fixtures, async patterns, and test organization. Apply when writing or reviewing tests."
+globs:
+  - "tests/**/*.py"
+  - "**/test_*.py"
+  - "**/*_test.py"
+  - "**/conftest.py"
+alwaysApply: false
 ---
 
 # Testing Standards (Pytest + UV)
