@@ -54,6 +54,11 @@ DEFAULT_TIMEOUT = 60.0
 # Default maximum retries
 DEFAULT_MAX_RETRIES = 3
 
+# Connection pool defaults (support 1000+ concurrent via reuse)
+DEFAULT_POOL_CONNECTIONS = 100
+DEFAULT_POOL_MAXSIZE = 100
+DEFAULT_POOL_TIMEOUT = 5.0
+
 
 @dataclass
 class RetryConfig:
@@ -186,6 +191,10 @@ class ASAPClient:
         is_connected: Whether the client has an active connection
         _circuit_breaker: Optional circuit breaker instance
 
+    Pool sizing (pool_connections / pool_maxsize):
+        Single-agent: 100 (default). Small cluster: 200–500. Large cluster: 500–1000.
+        Supports 1000+ concurrent requests via connection reuse when pool_maxsize < concurrency.
+
     Example:
         >>> async with ASAPClient("http://localhost:8000") as client:
         ...     response = await client.send(envelope)
@@ -200,6 +209,10 @@ class ASAPClient:
         transport: httpx.AsyncBaseTransport | None = None,
         require_https: bool = True,
         retry_config: Optional[RetryConfig] = None,
+        # Connection pool (httpx.Limits); enables 1000+ concurrent via reuse
+        pool_connections: int | None = None,
+        pool_maxsize: int | None = None,
+        pool_timeout: float | None = None,
         # Individual retry parameters (for backward compatibility)
         # If retry_config is provided, these are ignored
         max_retries: int | None = None,
@@ -218,6 +231,9 @@ class ASAPClient:
             transport: Optional custom async transport (for testing). Must be an instance
                 of httpx.AsyncBaseTransport (e.g., httpx.MockTransport).
             require_https: If True, enforces HTTPS for non-localhost connections (default: True).
+            pool_connections: Max keep-alive connections in pool (default: 100). Passed to httpx.Limits.
+            pool_maxsize: Max total connections in pool (default: 100). Passed to httpx.Limits.
+            pool_timeout: Seconds to wait when acquiring a connection from the pool (default: 5.0).
                 HTTP connections to localhost are allowed with a warning for development.
             retry_config: Optional RetryConfig dataclass to group retry and circuit breaker parameters.
                 If provided, individual retry parameters are ignored.
@@ -320,6 +336,11 @@ class ASAPClient:
 
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self._pool_connections = (
+            pool_connections if pool_connections is not None else DEFAULT_POOL_CONNECTIONS
+        )
+        self._pool_maxsize = pool_maxsize if pool_maxsize is not None else DEFAULT_POOL_MAXSIZE
+        self._pool_timeout = pool_timeout if pool_timeout is not None else DEFAULT_POOL_TIMEOUT
         self.max_retries = max_retries_val
         self.require_https = require_https
         self.base_delay = base_delay_val
@@ -479,15 +500,22 @@ class ASAPClient:
 
     async def __aenter__(self) -> "ASAPClient":
         """Enter async context and open connection."""
-        # Create the async client
+        limits = httpx.Limits(
+            max_keepalive_connections=self._pool_connections,
+            max_connections=self._pool_maxsize,
+            keepalive_expiry=DEFAULT_POOL_TIMEOUT,
+        )
+        timeout_config = httpx.Timeout(self.timeout, pool=self._pool_timeout)
         if self._transport:
             self._client = httpx.AsyncClient(
                 transport=self._transport,
-                timeout=self.timeout,
+                timeout=timeout_config,
+                limits=limits,
             )
         else:
             self._client = httpx.AsyncClient(
-                timeout=self.timeout,
+                timeout=timeout_config,
+                limits=limits,
             )
         return self
 

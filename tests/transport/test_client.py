@@ -6,6 +6,7 @@ communication between ASAP agents.
 
 import json
 from typing import TYPE_CHECKING
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
@@ -129,6 +130,34 @@ class TestASAPClientContextManager:
 
         client = ASAPClient("http://localhost:8000", timeout=30.0)
         assert client.timeout == 30.0
+
+    async def test_client_creates_async_client_with_pool_limits(self) -> None:
+        """Test ASAPClient passes pool config to httpx.AsyncClient as Limits and Timeout."""
+        from asap.transport.client import ASAPClient, DEFAULT_POOL_TIMEOUT
+
+        mock_instance = AsyncMock()
+        mock_instance.aclose = AsyncMock()
+        with patch("asap.transport.client.httpx.AsyncClient", return_value=mock_instance) as mock_async_client:
+            client = ASAPClient(
+                "http://localhost:8000",
+                pool_connections=50,
+                pool_maxsize=200,
+                pool_timeout=10.0,
+            )
+            async with client:
+                pass
+            mock_async_client.assert_called_once()
+            call_kwargs = mock_async_client.call_args.kwargs
+            assert "limits" in call_kwargs
+            limits = call_kwargs["limits"]
+            assert isinstance(limits, httpx.Limits)
+            assert limits.max_keepalive_connections == 50
+            assert limits.max_connections == 200
+            assert limits.keepalive_expiry == DEFAULT_POOL_TIMEOUT
+            assert "timeout" in call_kwargs
+            timeout = call_kwargs["timeout"]
+            assert isinstance(timeout, httpx.Timeout)
+            assert timeout.pool == 10.0
 
     async def test_client_default_timeout(self) -> None:
         """Test client has reasonable default timeout."""
