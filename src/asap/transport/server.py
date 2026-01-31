@@ -85,6 +85,10 @@ from asap.transport.jsonrpc import (
     JsonRpcRequest,
     JsonRpcResponse,
 )
+from asap.transport.compression import (
+    decompress_payload,
+    get_supported_encodings,
+)
 from asap.transport.validators import (
     InMemoryNonceStore,
     NonceStore,
@@ -694,10 +698,11 @@ class ASAPRequestHandler:
                 pass
 
     async def parse_json_body(self, request: Request) -> dict[str, Any]:
-        """Parse JSON body from request with size validation.
+        """Parse JSON body from request with size validation and decompression.
 
         Validates request size before parsing to prevent DoS attacks.
         Checks both Content-Length header and actual body size.
+        Automatically decompresses gzip/brotli encoded requests.
 
         Args:
             request: FastAPI request object
@@ -707,8 +712,25 @@ class ASAPRequestHandler:
 
         Raises:
             HTTPException: If request size exceeds maximum (413)
+            HTTPException: If Content-Encoding is unsupported (415)
             ValueError: If JSON is invalid
         """
+        # Check Content-Encoding header for compressed requests
+        content_encoding = request.headers.get("content-encoding", "").lower().strip()
+
+        # Validate encoding is supported before reading body
+        supported_encodings = get_supported_encodings() + ["identity", ""]
+        if content_encoding and content_encoding not in supported_encodings:
+            logger.warning(
+                "asap.request.unsupported_encoding",
+                content_encoding=content_encoding,
+                supported=supported_encodings,
+            )
+            raise HTTPException(
+                status_code=415,
+                detail=f"Unsupported Content-Encoding: {content_encoding}. Supported: {', '.join(get_supported_encodings())}",
+            )
+
         # Read body in chunks and validate size incrementally to prevent OOM attacks
         # Note: Content-Length header validation is handled by SizeLimitMiddleware
         # This validates actual body size during streaming to prevent OOM attacks
@@ -727,6 +749,59 @@ class ASAPRequestHandler:
                         status_code=413,
                         detail=f"Request size ({len(body_bytes)} bytes) exceeds maximum ({self.max_request_size} bytes)",
                     )
+
+            # Decompress if Content-Encoding is specified
+            if content_encoding and content_encoding not in ("identity", ""):
+                try:
+                    compressed_size = len(body_bytes)
+                    body_bytes = bytearray(decompress_payload(bytes(body_bytes), content_encoding))
+                    decompressed_size = len(body_bytes)
+
+                    logger.debug(
+                        "asap.request.decompressed",
+                        content_encoding=content_encoding,
+                        compressed_size=compressed_size,
+                        decompressed_size=decompressed_size,
+                    )
+
+                    # Validate decompressed size to prevent decompression bombs
+                    if decompressed_size > self.max_request_size:
+                        compression_ratio = (
+                            decompressed_size / compressed_size if compressed_size > 0 else 0
+                        )
+                        logger.warning(
+                            "asap.request.decompressed_size_exceeded",
+                            decompressed_size=decompressed_size,
+                            original_compressed_size=compressed_size,
+                            compression_ratio=round(compression_ratio, 2),
+                            max_size=self.max_request_size,
+                        )
+                        raise HTTPException(
+                            status_code=413,
+                            detail=f"Decompressed request size ({decompressed_size} bytes) exceeds maximum ({self.max_request_size} bytes)",
+                        )
+                except ValueError as e:
+                    # Decompression failed (invalid compressed data or unsupported encoding)
+                    logger.warning(
+                        "asap.request.decompression_failed",
+                        content_encoding=content_encoding,
+                        error=str(e),
+                    )
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Failed to decompress request: {e}",
+                    ) from e
+                except (OSError, EOFError) as e:
+                    # Invalid gzip/brotli data (OSError) or truncated data (EOFError)
+                    logger.warning(
+                        "asap.request.invalid_compressed_data",
+                        content_encoding=content_encoding,
+                        error=str(e),
+                    )
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Invalid compressed data: {e}",
+                    ) from e
 
             # Parse JSON from bytes
             body: dict[str, Any] = json.loads(body_bytes.decode("utf-8"))
@@ -1133,8 +1208,9 @@ def create_app(
         max_request_size=max_request_size,
     )
 
-    # Note: Request size limits should be configured at the ASGI server level (e.g., uvicorn).
-    # For production, consider setting --limit-max-requests or using a reverse proxy
+    # Note: Request size limits should be configured at the ASGI server level
+    # (e.g., uvicorn --limit-max-body).
+    # For production, consider using a reverse proxy
     # (nginx, traefik) to enforce request size limits (e.g., 10MB max).
 
     @app.get("/.well-known/asap/manifest.json")
@@ -1212,7 +1288,7 @@ def _create_default_manifest() -> Manifest:
     return Manifest(
         id="urn:asap:agent:default-server",
         name="ASAP Default Server",
-        version="0.3.0",
+        version="1.0.0-dev",
         description="Default ASAP protocol server with echo capabilities",
         capabilities=Capability(
             asap_version="0.1",

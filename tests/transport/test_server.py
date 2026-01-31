@@ -476,7 +476,8 @@ class TestASAPRequestHandlerHelpers:
         """Test _authenticate_request when auth middleware is None."""
         from fastapi import Request
 
-        request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
+        # Create a mock request with headers (required for compression detection)
+        request = Request(scope={"type": "http", "method": "POST", "path": "/asap", "headers": []})
         rpc_request = JsonRpcRequest(
             method="asap.send",
             params={},
@@ -537,8 +538,8 @@ class TestASAPRequestHandlerHelpers:
         """Test _parse_and_validate_request with invalid JSON."""
         from fastapi import Request
 
-        # Create a mock request
-        request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
+        # Create a mock request with headers (required for compression detection)
+        request = Request(scope={"type": "http", "method": "POST", "path": "/asap", "headers": []})
 
         # Mock the stream() method to return invalid JSON bytes
         async def invalid_json_stream() -> collections.abc.AsyncGenerator[bytes, None]:
@@ -564,7 +565,8 @@ class TestASAPRequestHandlerHelpers:
         """Test _parse_and_validate_request with non-dict body."""
         from fastapi import Request
 
-        request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
+        # Create a mock request with headers (required for compression detection)
+        request = Request(scope={"type": "http", "method": "POST", "path": "/asap", "headers": []})
 
         # Mock the stream() method to return a JSON array (not a dict)
         async def array_json_stream() -> collections.abc.AsyncGenerator[bytes, None]:
@@ -616,7 +618,8 @@ class TestASAPRequestHandlerHelpers:
         from fastapi import Request
         from unittest.mock import AsyncMock
 
-        request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
+        # Create a mock request with headers (required for compression detection)
+        request = Request(scope={"type": "http", "method": "POST", "path": "/asap", "headers": []})
         # Make request.json() raise an exception that's not ValueError
         request.json = AsyncMock(side_effect=RuntimeError("Unexpected error"))  # type: ignore[method-assign]
 
@@ -638,7 +641,8 @@ class TestASAPRequestHandlerHelpers:
         from fastapi import Request
         from unittest.mock import patch
 
-        request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
+        # Create a mock request with headers (required for compression detection)
+        request = Request(scope={"type": "http", "method": "POST", "path": "/asap", "headers": []})
 
         # Mock the stream() method to return valid JSON
         async def valid_json_stream() -> collections.abc.AsyncGenerator[bytes, None]:
@@ -670,7 +674,8 @@ class TestASAPRequestHandlerHelpers:
         from fastapi import HTTPException, Request
         from unittest.mock import patch
 
-        request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
+        # Create a mock request with headers (required for compression detection)
+        request = Request(scope={"type": "http", "method": "POST", "path": "/asap", "headers": []})
 
         # Mock parse_json_body to raise HTTPException (e.g., 413 Payload Too Large)
         async def mock_parse_json_body(req: Request) -> dict:

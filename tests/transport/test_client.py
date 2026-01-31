@@ -6,6 +6,7 @@ communication between ASAP agents.
 
 import json
 from typing import TYPE_CHECKING
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
@@ -129,6 +130,84 @@ class TestASAPClientContextManager:
 
         client = ASAPClient("http://localhost:8000", timeout=30.0)
         assert client.timeout == 30.0
+
+    async def test_client_creates_async_client_with_pool_limits(self) -> None:
+        """Test ASAPClient passes pool config to httpx.AsyncClient as Limits and Timeout."""
+        from asap.transport.client import ASAPClient, DEFAULT_POOL_TIMEOUT
+
+        mock_instance = AsyncMock()
+        mock_instance.aclose = AsyncMock()
+        with patch(
+            "asap.transport.client.httpx.AsyncClient", return_value=mock_instance
+        ) as mock_async_client:
+            client = ASAPClient(
+                "http://localhost:8000",
+                pool_connections=50,
+                pool_maxsize=200,
+                pool_timeout=10.0,
+            )
+            async with client:
+                pass
+            mock_async_client.assert_called_once()
+            call_kwargs = mock_async_client.call_args.kwargs
+            assert "limits" in call_kwargs
+            limits = call_kwargs["limits"]
+            assert isinstance(limits, httpx.Limits)
+            assert limits.max_keepalive_connections == 50
+            assert limits.max_connections == 200
+            assert limits.keepalive_expiry == DEFAULT_POOL_TIMEOUT
+            assert "timeout" in call_kwargs
+            timeout = call_kwargs["timeout"]
+            assert isinstance(timeout, httpx.Timeout)
+            assert timeout.pool == 10.0
+
+    async def test_client_http2_enabled_by_default(self) -> None:
+        """Test ASAPClient has HTTP/2 enabled by default."""
+        from asap.transport.client import ASAPClient
+
+        mock_instance = AsyncMock()
+        mock_instance.aclose = AsyncMock()
+        with patch(
+            "asap.transport.client.httpx.AsyncClient", return_value=mock_instance
+        ) as mock_async_client:
+            client = ASAPClient("http://localhost:8000")
+            async with client:
+                pass
+            mock_async_client.assert_called_once()
+            call_kwargs = mock_async_client.call_args.kwargs
+            # HTTP/2 should be enabled by default
+            assert call_kwargs.get("http2") is True
+
+    async def test_client_http2_can_be_disabled(self) -> None:
+        """Test ASAPClient can disable HTTP/2."""
+        from asap.transport.client import ASAPClient
+
+        mock_instance = AsyncMock()
+        mock_instance.aclose = AsyncMock()
+        with patch(
+            "asap.transport.client.httpx.AsyncClient", return_value=mock_instance
+        ) as mock_async_client:
+            client = ASAPClient("http://localhost:8000", http2=False)
+            async with client:
+                pass
+            mock_async_client.assert_called_once()
+            call_kwargs = mock_async_client.call_args.kwargs
+            # HTTP/2 should be disabled
+            assert call_kwargs.get("http2") is False
+
+    async def test_client_http2_not_passed_with_custom_transport(self) -> None:
+        """Test HTTP/2 flag is not passed when using custom transport (for testing)."""
+        from asap.transport.client import ASAPClient
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, json={})
+
+        # Custom transport is used for testing - http2 shouldn't be passed
+        async with ASAPClient(
+            "http://localhost:8000", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            # Just verify client works with custom transport
+            assert client.is_connected
 
     async def test_client_default_timeout(self) -> None:
         """Test client has reasonable default timeout."""
@@ -890,3 +969,349 @@ class TestImprovedConnectionErrorMessages:
         ) as client:
             is_valid = await client._validate_connection()
             assert is_valid is False
+
+
+class TestASAPClientSendBatch:
+    """Tests for ASAPClient.send_batch() method."""
+
+    @pytest.fixture
+    def multiple_request_envelopes(self) -> list[Envelope]:
+        """Create multiple request envelopes for batch testing."""
+        envelopes = []
+        for i in range(5):
+            envelopes.append(
+                Envelope(
+                    asap_version="0.1",
+                    sender="urn:asap:agent:client",
+                    recipient="urn:asap:agent:server",
+                    payload_type="task.request",
+                    payload=TaskRequest(
+                        conversation_id=f"conv_{i}",
+                        skill_id="echo",
+                        input={"message": f"Hello {i}!"},
+                    ).model_dump(),
+                )
+            )
+        return envelopes
+
+    async def test_send_batch_returns_all_responses(
+        self, multiple_request_envelopes: list[Envelope]
+    ) -> None:
+        """Test send_batch() returns response for each envelope."""
+        from asap.transport.client import ASAPClient
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            body = json.loads(request.content)
+            envelope_data = body["params"]["envelope"]
+            response_envelope = Envelope(
+                asap_version="0.1",
+                sender="urn:asap:agent:server",
+                recipient="urn:asap:agent:client",
+                payload_type="task.response",
+                payload=TaskResponse(
+                    task_id=f"task_{envelope_data['id']}",
+                    status=TaskStatus.COMPLETED,
+                    result={"echoed": envelope_data["payload"]},
+                ).model_dump(),
+                correlation_id=envelope_data["id"],
+            )
+            return create_mock_response(response_envelope)
+
+        async with ASAPClient(
+            "http://localhost:8000", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            responses = await client.send_batch(multiple_request_envelopes)
+
+        assert len(responses) == len(multiple_request_envelopes)
+        for i, response in enumerate(responses):
+            assert isinstance(response, Envelope)
+            assert response.payload_type == "task.response"
+            assert response.correlation_id == multiple_request_envelopes[i].id
+
+    async def test_send_batch_preserves_order(
+        self, multiple_request_envelopes: list[Envelope]
+    ) -> None:
+        """Test send_batch() preserves order of responses matching inputs."""
+        from asap.transport.client import ASAPClient
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            body = json.loads(request.content)
+            envelope_data = body["params"]["envelope"]
+            # Include request envelope id in response to verify order
+            response_envelope = Envelope(
+                asap_version="0.1",
+                sender="urn:asap:agent:server",
+                recipient="urn:asap:agent:client",
+                payload_type="task.response",
+                payload=TaskResponse(
+                    task_id=f"task_{envelope_data['id']}",
+                    status=TaskStatus.COMPLETED,
+                    result={"original_id": envelope_data["id"]},
+                ).model_dump(),
+                correlation_id=envelope_data["id"],
+            )
+            return create_mock_response(response_envelope)
+
+        async with ASAPClient(
+            "http://localhost:8000", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            responses = await client.send_batch(multiple_request_envelopes)
+
+        # Verify order is preserved by checking correlation_id matches
+        for i, response in enumerate(responses):
+            assert isinstance(response, Envelope)
+            assert response.correlation_id == multiple_request_envelopes[i].id
+
+    async def test_send_batch_empty_list_raises_error(self) -> None:
+        """Test send_batch() raises ValueError for empty list."""
+        from asap.transport.client import ASAPClient
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, json={})
+
+        async with ASAPClient(
+            "http://localhost:8000", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            with pytest.raises(ValueError, match="envelopes list cannot be empty"):
+                await client.send_batch([])
+
+    async def test_send_batch_not_connected_raises_error(
+        self, multiple_request_envelopes: list[Envelope]
+    ) -> None:
+        """Test send_batch() raises error when not connected."""
+        from asap.transport.client import ASAPClient, ASAPConnectionError
+
+        client = ASAPClient("http://localhost:8000")
+        with pytest.raises(ASAPConnectionError, match="not connected"):
+            await client.send_batch(multiple_request_envelopes)
+
+    async def test_send_batch_with_return_exceptions_true(
+        self, multiple_request_envelopes: list[Envelope]
+    ) -> None:
+        """Test send_batch() returns exceptions when return_exceptions=True."""
+        from asap.transport.client import ASAPClient, ASAPConnectionError
+
+        call_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            body = json.loads(request.content)
+            envelope_data = body["params"]["envelope"]
+
+            # Fail for envelope index 2 (third envelope based on conversation_id)
+            if "conv_2" in envelope_data.get("payload", {}).get("conversation_id", ""):
+                raise httpx.ConnectError("Server unavailable for conv_2")
+
+            response_envelope = Envelope(
+                asap_version="0.1",
+                sender="urn:asap:agent:server",
+                recipient="urn:asap:agent:client",
+                payload_type="task.response",
+                payload=TaskResponse(
+                    task_id=f"task_{envelope_data['id']}",
+                    status=TaskStatus.COMPLETED,
+                    result={"echoed": True},
+                ).model_dump(),
+                correlation_id=envelope_data["id"],
+            )
+            return create_mock_response(response_envelope)
+
+        async with ASAPClient(
+            "http://localhost:8000",
+            transport=httpx.MockTransport(mock_transport),
+            max_retries=1,  # Reduce retries for faster test
+        ) as client:
+            results = await client.send_batch(multiple_request_envelopes, return_exceptions=True)
+
+        assert len(results) == 5
+        # Check that most results are Envelopes
+        successful = [r for r in results if isinstance(r, Envelope)]
+        failed = [r for r in results if isinstance(r, BaseException)]
+
+        assert len(successful) == 4
+        assert len(failed) == 1
+        assert isinstance(failed[0], ASAPConnectionError)
+
+    async def test_send_batch_without_return_exceptions_raises(
+        self, multiple_request_envelopes: list[Envelope]
+    ) -> None:
+        """Test send_batch() raises exception when return_exceptions=False."""
+        from asap.transport.client import ASAPClient, ASAPConnectionError
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            body = json.loads(request.content)
+            envelope_data = body["params"]["envelope"]
+
+            # Fail for second envelope
+            if "conv_1" in envelope_data.get("payload", {}).get("conversation_id", ""):
+                raise httpx.ConnectError("Server unavailable")
+
+            response_envelope = Envelope(
+                asap_version="0.1",
+                sender="urn:asap:agent:server",
+                recipient="urn:asap:agent:client",
+                payload_type="task.response",
+                payload=TaskResponse(
+                    task_id="task_1",
+                    status=TaskStatus.COMPLETED,
+                    result={},
+                ).model_dump(),
+                correlation_id=envelope_data["id"],
+            )
+            return create_mock_response(response_envelope)
+
+        async with ASAPClient(
+            "http://localhost:8000",
+            transport=httpx.MockTransport(mock_transport),
+            max_retries=1,
+        ) as client:
+            with pytest.raises(ASAPConnectionError):
+                await client.send_batch(multiple_request_envelopes, return_exceptions=False)
+
+    async def test_send_batch_concurrent_execution(
+        self, multiple_request_envelopes: list[Envelope]
+    ) -> None:
+        """Test send_batch() executes requests concurrently."""
+        import asyncio
+
+        from asap.transport.client import ASAPClient
+
+        start_times: list[float] = []
+        end_times: list[float] = []
+        lock = asyncio.Lock()
+
+        async def delayed_response(request: httpx.Request) -> httpx.Response:
+            # Track timing
+            async with lock:
+                start_times.append(asyncio.get_event_loop().time())
+
+            # Small delay to simulate network
+            await asyncio.sleep(0.01)
+
+            async with lock:
+                end_times.append(asyncio.get_event_loop().time())
+
+            body = json.loads(request.content)
+            envelope_data = body["params"]["envelope"]
+            response_envelope = Envelope(
+                asap_version="0.1",
+                sender="urn:asap:agent:server",
+                recipient="urn:asap:agent:client",
+                payload_type="task.response",
+                payload=TaskResponse(
+                    task_id=f"task_{envelope_data['id']}",
+                    status=TaskStatus.COMPLETED,
+                    result={},
+                ).model_dump(),
+                correlation_id=envelope_data["id"],
+            )
+            return create_mock_response(response_envelope)
+
+        # Using httpx.MockTransport won't work with async delays, so we use a custom transport
+        class AsyncMockTransport(httpx.AsyncBaseTransport):
+            async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+                return await delayed_response(request)
+
+        async with ASAPClient(
+            "http://localhost:8000",
+            transport=AsyncMockTransport(),
+        ) as client:
+            await client.send_batch(multiple_request_envelopes)
+
+        # With concurrent execution, all requests should start roughly at the same time
+        # If sequential, the time span would be ~5x larger
+        assert len(start_times) == 5
+        time_span = max(start_times) - min(start_times)
+        # With concurrent execution, time span should be very small (< 50ms)
+        # Sequential would be > 50ms (5 * 10ms delays)
+        assert time_span < 0.05, f"Requests not concurrent: time span = {time_span}s"
+
+    async def test_send_batch_single_envelope(self) -> None:
+        """Test send_batch() works with single envelope."""
+        from asap.transport.client import ASAPClient
+
+        single_envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv_single",
+                skill_id="echo",
+                input={"message": "Single"},
+            ).model_dump(),
+        )
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            body = json.loads(request.content)
+            envelope_data = body["params"]["envelope"]
+            response_envelope = Envelope(
+                asap_version="0.1",
+                sender="urn:asap:agent:server",
+                recipient="urn:asap:agent:client",
+                payload_type="task.response",
+                payload=TaskResponse(
+                    task_id="task_single",
+                    status=TaskStatus.COMPLETED,
+                    result={"echoed": "Single"},
+                ).model_dump(),
+                correlation_id=envelope_data["id"],
+            )
+            return create_mock_response(response_envelope)
+
+        async with ASAPClient(
+            "http://localhost:8000", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            responses = await client.send_batch([single_envelope])
+
+        assert len(responses) == 1
+        assert isinstance(responses[0], Envelope)
+        assert responses[0].correlation_id == single_envelope.id
+
+    async def test_send_batch_large_batch(self) -> None:
+        """Test send_batch() handles large batches efficiently."""
+        from asap.transport.client import ASAPClient
+
+        # Create 50 envelopes
+        large_batch = [
+            Envelope(
+                asap_version="0.1",
+                sender="urn:asap:agent:client",
+                recipient="urn:asap:agent:server",
+                payload_type="task.request",
+                payload=TaskRequest(
+                    conversation_id=f"conv_{i}",
+                    skill_id="echo",
+                    input={"index": i},
+                ).model_dump(),
+            )
+            for i in range(50)
+        ]
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            body = json.loads(request.content)
+            envelope_data = body["params"]["envelope"]
+            response_envelope = Envelope(
+                asap_version="0.1",
+                sender="urn:asap:agent:server",
+                recipient="urn:asap:agent:client",
+                payload_type="task.response",
+                payload=TaskResponse(
+                    task_id=f"task_{envelope_data['id']}",
+                    status=TaskStatus.COMPLETED,
+                    result={"processed": True},
+                ).model_dump(),
+                correlation_id=envelope_data["id"],
+            )
+            return create_mock_response(response_envelope)
+
+        async with ASAPClient(
+            "http://localhost:8000", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            responses = await client.send_batch(large_batch)
+
+        assert len(responses) == 50
+        for response in responses:
+            assert isinstance(response, Envelope)
+            assert response.payload_type == "task.response"

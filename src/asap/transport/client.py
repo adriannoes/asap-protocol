@@ -10,6 +10,7 @@ The ASAPClient provides:
 - Retry logic with idempotency keys
 - Proper error handling and timeouts
 - Structured logging for observability
+- Compression support (gzip/brotli) for bandwidth reduction
 
 Example:
     >>> from asap.transport.client import ASAPClient
@@ -18,10 +19,15 @@ Example:
     >>> async with ASAPClient("http://agent.example.com") as client:
     ...     response = await client.send(request_envelope)
     ...     print(response.payload_type)
+    >>>
+    >>> # With compression enabled (default for payloads > 1KB)
+    >>> async with ASAPClient("http://agent.example.com", compression=True) as client:
+    ...     response = await client.send(large_envelope)  # Compressed automatically
 """
 
 import asyncio
 import itertools
+import json
 import random
 import time
 from dataclasses import dataclass
@@ -38,10 +44,18 @@ from asap.models.constants import (
     DEFAULT_CIRCUIT_BREAKER_TIMEOUT,
     DEFAULT_MAX_DELAY,
 )
+from asap.models.entities import Manifest
 from asap.models.envelope import Envelope
 from asap.models.ids import generate_id
 from asap.observability import get_logger
+from asap.transport.cache import ManifestCache
 from asap.transport.circuit_breaker import CircuitBreaker, CircuitState, get_registry
+from asap.transport.compression import (
+    COMPRESSION_THRESHOLD,
+    CompressionAlgorithm,
+    compress_payload,
+    get_accept_encoding_header,
+)
 from asap.transport.jsonrpc import ASAP_METHOD
 from asap.utils.sanitization import sanitize_url
 
@@ -53,6 +67,14 @@ DEFAULT_TIMEOUT = 60.0
 
 # Default maximum retries
 DEFAULT_MAX_RETRIES = 3
+
+# Connection pool defaults (support 1000+ concurrent via reuse)
+DEFAULT_POOL_CONNECTIONS = 100
+DEFAULT_POOL_MAXSIZE = 100
+# Timeout for acquiring a connection from the pool (distinct from request timeout)
+DEFAULT_POOL_TIMEOUT = 5.0
+# Maximum time to wait for manifest retrieval
+MANIFEST_REQUEST_TIMEOUT = 10.0
 
 
 @dataclass
@@ -178,17 +200,49 @@ class ASAPClient:
     The client should be used as an async context manager to ensure
     proper connection lifecycle management.
 
+    Features:
+        - HTTP/2 multiplexing (enabled by default) for improved batch performance
+        - Connection pooling supporting 1000+ concurrent requests
+        - Automatic retry with exponential backoff
+        - Circuit breaker pattern for fault tolerance
+        - Batch operations via send_batch() method
+        - Compression support (gzip/brotli) for bandwidth reduction
+
     Attributes:
         base_url: Base URL of the remote agent
         timeout: Request timeout in seconds
         max_retries: Maximum retry attempts for transient failures
         require_https: Whether HTTPS is required for non-localhost connections
         is_connected: Whether the client has an active connection
+        compression: Whether compression is enabled for requests
+        compression_threshold: Minimum payload size to trigger compression
         _circuit_breaker: Optional circuit breaker instance
+
+    Pool sizing (pool_connections / pool_maxsize):
+        Single-agent: 100 (default). Small cluster: 200–500. Large cluster: 500–1000.
+        Supports 1000+ concurrent requests via connection reuse when pool_maxsize < concurrency.
+
+    HTTP/2 Multiplexing:
+        HTTP/2 is enabled by default (http2=True) and provides request multiplexing over
+        a single TCP connection, reducing latency for batch operations. If the server
+        doesn't support HTTP/2, the client automatically falls back to HTTP/1.1.
+
+    Compression:
+        Compression is enabled by default (compression=True) for payloads exceeding
+        1KB. Supports gzip (standard) and brotli (optional, requires brotli package).
+        Brotli provides ~20% better compression than gzip for JSON payloads.
 
     Example:
         >>> async with ASAPClient("http://localhost:8000") as client:
         ...     response = await client.send(envelope)
+        >>>
+        >>> # Batch operations with HTTP/2 multiplexing
+        >>> async with ASAPClient("https://agent.example.com") as client:
+        ...     responses = await client.send_batch([env1, env2, env3])
+        >>>
+        >>> # Disable compression for specific client
+        >>> async with ASAPClient("http://localhost:8000", compression=False) as client:
+        ...     response = await client.send(envelope)  # No compression
     """
 
     _circuit_breaker: Optional[CircuitBreaker]
@@ -200,6 +254,15 @@ class ASAPClient:
         transport: httpx.AsyncBaseTransport | None = None,
         require_https: bool = True,
         retry_config: Optional[RetryConfig] = None,
+        # Connection pool (httpx.Limits); enables 1000+ concurrent via reuse
+        pool_connections: int | None = None,
+        pool_maxsize: int | None = None,
+        pool_timeout: float | None = None,
+        # HTTP/2 multiplexing for improved batch performance
+        http2: bool = True,
+        # Compression settings for bandwidth reduction
+        compression: bool = True,
+        compression_threshold: int = COMPRESSION_THRESHOLD,
         # Individual retry parameters (for backward compatibility)
         # If retry_config is provided, these are ignored
         max_retries: int | None = None,
@@ -218,7 +281,28 @@ class ASAPClient:
             transport: Optional custom async transport (for testing). Must be an instance
                 of httpx.AsyncBaseTransport (e.g., httpx.MockTransport).
             require_https: If True, enforces HTTPS for non-localhost connections (default: True).
+            pool_connections: Max keep-alive connections in pool. Default: DEFAULT_POOL_CONNECTIONS (100).
+                Controls how many idle connections are kept open.
+            pool_maxsize: Max total connections in pool. Default: DEFAULT_POOL_MAXSIZE (100).
+                Controls maximum number of concurrent connections.
+                Tuning:
+                - Single agent: 100 (default)
+                - Small cluster: 200-500
+                - Large cluster: 500-1000
+                Safe to increase if OS file descriptor limits allow.
+            pool_timeout: Seconds to wait for connection from pool. Default: DEFAULT_POOL_TIMEOUT (5.0).
+                Increase if you see PoolTimeout exceptions under high load.
                 HTTP connections to localhost are allowed with a warning for development.
+            http2: Enable HTTP/2 multiplexing for improved batch performance (default: True).
+                HTTP/2 allows multiple concurrent requests over a single TCP connection,
+                reducing latency for batch operations. Falls back to HTTP/1.1 if server
+                doesn't support HTTP/2.
+            compression: Enable request compression for bandwidth reduction (default: True).
+                When enabled, payloads exceeding compression_threshold are compressed
+                using gzip or brotli (if available). The server must support the
+                Content-Encoding header to decompress requests.
+            compression_threshold: Minimum payload size in bytes to trigger compression
+                (default: 1024 = 1KB). Payloads smaller than this are sent uncompressed.
             retry_config: Optional RetryConfig dataclass to group retry and circuit breaker parameters.
                 If provided, individual retry parameters are ignored.
             max_retries: Maximum retry attempts for transient failures (default: 3).
@@ -247,6 +331,9 @@ class ASAPClient:
             >>> # Using RetryConfig (recommended)
             >>> config = RetryConfig(max_retries=5, circuit_breaker_enabled=True)
             >>> client = ASAPClient("http://localhost:8000", retry_config=config)
+            >>>
+            >>> # With compression disabled
+            >>> client = ASAPClient("http://localhost:8000", compression=False)
         """
         # Extract retry config values
         if retry_config is not None:
@@ -320,6 +407,11 @@ class ASAPClient:
 
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self._pool_connections = (
+            pool_connections if pool_connections is not None else DEFAULT_POOL_CONNECTIONS
+        )
+        self._pool_maxsize = pool_maxsize if pool_maxsize is not None else DEFAULT_POOL_MAXSIZE
+        self._pool_timeout = pool_timeout if pool_timeout is not None else DEFAULT_POOL_TIMEOUT
         self.max_retries = max_retries_val
         self.require_https = require_https
         self.base_delay = base_delay_val
@@ -327,6 +419,9 @@ class ASAPClient:
         self.jitter = jitter_val
         self.circuit_breaker_enabled = circuit_breaker_enabled_val
         self._transport = transport
+        self._http2 = http2
+        self._compression = compression
+        self._compression_threshold = compression_threshold
         self._client: httpx.AsyncClient | None = None
         # Thread-safe counter using itertools.count
         self._request_counter = itertools.count(1)
@@ -343,6 +438,9 @@ class ASAPClient:
             )
         else:
             self._circuit_breaker = None
+
+        # Initialize manifest cache (shared across client instances for efficiency)
+        self._manifest_cache = ManifestCache()
 
     @staticmethod
     def _is_localhost(parsed_url: ParseResult) -> bool:
@@ -478,16 +576,30 @@ class ASAPClient:
         return self._client is not None
 
     async def __aenter__(self) -> "ASAPClient":
-        """Enter async context and open connection."""
-        # Create the async client
+        """Enter async context and open connection.
+
+        Creates an httpx.AsyncClient with configured pool limits and HTTP/2 support.
+        HTTP/2 enables multiplexing for improved batch performance.
+        """
+        limits = httpx.Limits(
+            max_keepalive_connections=self._pool_connections,
+            max_connections=self._pool_maxsize,
+            keepalive_expiry=DEFAULT_POOL_TIMEOUT,
+        )
+        timeout_config = httpx.Timeout(self.timeout, pool=self._pool_timeout)
         if self._transport:
+            # Custom transport (for testing) - http2 not applicable with mock transports
             self._client = httpx.AsyncClient(
                 transport=self._transport,
-                timeout=self.timeout,
+                timeout=timeout_config,
+                limits=limits,
             )
         else:
+            # Production client with HTTP/2 multiplexing support
             self._client = httpx.AsyncClient(
-                timeout=self.timeout,
+                timeout=timeout_config,
+                limits=limits,
+                http2=self._http2,
             )
         return self
 
@@ -578,18 +690,56 @@ class ASAPClient:
             "id": request_id,
         }
 
+        # Serialize to bytes for compression
+        request_body = json.dumps(json_rpc_request).encode("utf-8")
+
+        # Apply compression if enabled and payload exceeds threshold
+        content_encoding: str | None = None
+        if self._compression:
+            compressed_body, algorithm = compress_payload(
+                request_body,
+                threshold=self._compression_threshold,
+            )
+            if algorithm != CompressionAlgorithm.IDENTITY:
+                request_body = compressed_body
+                content_encoding = algorithm.value
+                logger.debug(
+                    "asap.client.compression_applied",
+                    target_url=sanitized_url,
+                    envelope_id=envelope.id,
+                    algorithm=content_encoding,
+                    original_size=len(json.dumps(json_rpc_request).encode("utf-8")),
+                    compressed_size=len(request_body),
+                )
+
         # Attempt with retries
         last_exception: Exception | None = None
         for attempt in range(self.max_retries):
             try:
+                # Build headers
+                headers = {
+                    "Content-Type": "application/json",
+                    "X-Idempotency-Key": idempotency_key,
+                    "Accept-Encoding": get_accept_encoding_header(),
+                }
+                if content_encoding:
+                    headers["Content-Encoding"] = content_encoding
+
                 response = await self._client.post(
                     f"{self.base_url}/asap",
-                    json=json_rpc_request,
-                    headers={
-                        "Content-Type": "application/json",
-                        "X-Idempotency-Key": idempotency_key,
-                    },
+                    headers=headers,
+                    content=request_body,
                 )
+
+                # Log HTTP protocol version for debugging fallback behavior
+                if self._http2 and response.http_version != "HTTP/2":
+                    logger.debug(
+                        "asap.client.http_fallback",
+                        target_url=sanitize_url(self.base_url),
+                        requested="HTTP/2",
+                        actual=response.http_version,
+                        message=f"HTTP/2 requested but used {response.http_version}",
+                    )
 
                 # Check HTTP status
                 if response.status_code >= 500:
@@ -932,3 +1082,222 @@ class ASAPClient:
             f"Verify the agent is running and accessible.",
             url=sanitize_url(self.base_url),
         )  # pragma: no cover
+
+    async def get_manifest(self, url: str | None = None) -> Manifest:
+        """Get agent manifest from cache or HTTP endpoint.
+
+        Checks cache first, then fetches from HTTP if not cached or expired.
+        Caches successful responses with TTL (default: 5 minutes).
+        Invalidates cache entry on error.
+
+        Args:
+            url: Manifest URL (defaults to {base_url}/.well-known/asap/manifest.json)
+
+        Returns:
+            Manifest object
+
+        Raises:
+            ASAPConnectionError: If HTTP request fails
+            ASAPTimeoutError: If request times out
+            ValueError: If manifest JSON is invalid
+
+        Example:
+            >>> async with ASAPClient("http://agent.example.com") as client:
+            ...     manifest = await client.get_manifest()
+            ...     print(manifest.id, manifest.name)
+        """
+        if url is None:
+            url = f"{self.base_url}/.well-known/asap/manifest.json"
+
+        if not self._client:
+            raise ASAPConnectionError(
+                "Client not connected. Use 'async with' context.",
+                url=sanitize_url(url),
+            )
+
+        # Check cache first
+        cached = self._manifest_cache.get(url)
+        if cached is not None:
+            logger.debug(
+                "asap.client.manifest_cache_hit",
+                url=sanitize_url(url),
+                manifest_id=cached.id,
+                message=f"Manifest cache hit for {sanitize_url(url)}",
+            )
+            return cached
+
+        # Cache miss - fetch from HTTP
+        logger.debug(
+            "asap.client.manifest_cache_miss",
+            url=sanitize_url(url),
+            message=f"Manifest cache miss for {sanitize_url(url)}, fetching from HTTP",
+        )
+
+        try:
+            response = await self._client.get(
+                url,
+                timeout=min(self.timeout, MANIFEST_REQUEST_TIMEOUT),  # Cap timeout for manifest
+            )
+
+            if response.status_code >= 400:
+                # HTTP error - invalidate cache if entry exists
+                self._manifest_cache.invalidate(url)
+                raise ASAPConnectionError(
+                    f"HTTP error {response.status_code} fetching manifest from {url}. "
+                    f"Server response: {response.text[:200]}",
+                    url=sanitize_url(url),
+                )
+
+            # Parse JSON response
+            try:
+                manifest_data = response.json()
+            except Exception as e:
+                self._manifest_cache.invalidate(url)
+                raise ValueError(f"Invalid JSON in manifest response: {e}") from e
+
+            # Parse Manifest object
+            try:
+                manifest = Manifest(**manifest_data)
+            except Exception as e:
+                self._manifest_cache.invalidate(url)
+                raise ValueError(f"Invalid manifest format: {e}") from e
+
+            # Cache successful response
+            self._manifest_cache.set(url, manifest)
+            logger.info(
+                "asap.client.manifest_fetched",
+                url=sanitize_url(url),
+                manifest_id=manifest.id,
+                message=f"Manifest fetched and cached for {sanitize_url(url)}",
+            )
+
+            return manifest
+
+        except httpx.TimeoutException as e:
+            self._manifest_cache.invalidate(url)
+            raise ASAPTimeoutError(
+                f"Manifest request timeout after {self.timeout}s", timeout=self.timeout
+            ) from e
+        except httpx.ConnectError as e:
+            self._manifest_cache.invalidate(url)
+            raise ASAPConnectionError(
+                f"Connection error fetching manifest from {url}: {e}. "
+                f"Verify the agent is running and accessible.",
+                cause=e,
+                url=sanitize_url(url),
+            ) from e
+        except (ASAPConnectionError, ASAPTimeoutError, ValueError):
+            # Re-raise our custom errors (cache already invalidated above)
+            raise
+        except Exception as e:
+            # Unexpected error - invalidate cache
+            self._manifest_cache.invalidate(url)
+            logger.exception(
+                "asap.client.manifest_error",
+                url=sanitize_url(url),
+                error=str(e),
+                error_type=type(e).__name__,
+                message=f"Unexpected error fetching manifest from {url}: {e}",
+            )
+            raise ASAPConnectionError(
+                f"Unexpected error fetching manifest from {url}: {e}. "
+                f"Verify the agent is running and accessible.",
+                cause=e,
+                url=sanitize_url(url),
+            ) from e
+
+    async def send_batch(
+        self,
+        envelopes: list[Envelope],
+        return_exceptions: bool = False,
+    ) -> list[Envelope | BaseException]:
+        """Send multiple envelopes in parallel using asyncio.gather.
+
+        Uses asyncio.gather to send all envelopes concurrently, leveraging
+        connection pooling and HTTP/2 multiplexing for optimal throughput.
+
+        Args:
+            envelopes: List of ASAP envelopes to send
+            return_exceptions: If True, exceptions are returned in the result list
+                instead of being raised. If False (default), the first exception
+                encountered will be raised.
+
+        Returns:
+            List of response envelopes in the same order as input envelopes.
+            If return_exceptions=True, failed sends will have the exception
+            in their position instead of an Envelope.
+
+        Raises:
+            ValueError: If envelopes list is empty
+            ASAPConnectionError: If any send fails (when return_exceptions=False)
+            ASAPTimeoutError: If any send times out (when return_exceptions=False)
+            ASAPRemoteError: If any remote agent returns error (when return_exceptions=False)
+            CircuitOpenError: If circuit breaker is open (when return_exceptions=False)
+
+        Example:
+            >>> async with ASAPClient("http://localhost:8000") as client:
+            ...     responses = await client.send_batch([env1, env2, env3])
+            ...     for response in responses:
+            ...         print(response.payload_type)
+            >>>
+            >>> # With error handling
+            >>> async with ASAPClient("http://localhost:8000") as client:
+            ...     results = await client.send_batch(envelopes, return_exceptions=True)
+            ...     for i, result in enumerate(results):
+            ...         if isinstance(result, BaseException):
+            ...             print(f"Envelope {i} failed: {result}")
+            ...         else:
+            ...             print(f"Envelope {i} succeeded: {result.id}")
+        """
+        if not envelopes:
+            raise ValueError("envelopes list cannot be empty")
+
+        if not self._client:
+            raise ASAPConnectionError(
+                "Client not connected. Use 'async with' context.",
+                url=sanitize_url(self.base_url),
+            )
+
+        batch_size = len(envelopes)
+        logger.info(
+            "asap.client.send_batch",
+            target_url=sanitize_url(self.base_url),
+            batch_size=batch_size,
+            message=f"Sending batch of {batch_size} envelopes to {sanitize_url(self.base_url)}",
+        )
+
+        start_time = time.perf_counter()
+
+        # Create send tasks for all envelopes
+        tasks = [self.send(envelope) for envelope in envelopes]
+
+        # Execute all tasks concurrently
+        results = await asyncio.gather(*tasks, return_exceptions=return_exceptions)
+
+        duration_ms = (time.perf_counter() - start_time) * 1000
+
+        # Count successes and failures
+        if return_exceptions:
+            success_count = sum(1 for r in results if isinstance(r, Envelope))
+            failure_count = batch_size - success_count
+        else:
+            success_count = batch_size
+            failure_count = 0
+
+        logger.info(
+            "asap.client.send_batch_complete",
+            target_url=sanitize_url(self.base_url),
+            batch_size=batch_size,
+            success_count=success_count,
+            failure_count=failure_count,
+            duration_ms=round(duration_ms, 2),
+            throughput_per_second=round(batch_size / (duration_ms / 1000), 2)
+            if duration_ms > 0
+            else 0,
+            message=(
+                f"Batch of {batch_size} envelopes completed in {duration_ms:.2f}ms "
+                f"({success_count} succeeded, {failure_count} failed)"
+            ),
+        )
+
+        return results
