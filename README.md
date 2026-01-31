@@ -128,6 +128,20 @@ Transport:
 - `HandlerRegistry`: payload dispatch registry (supports both sync and async handlers)
 - `ASAPClient`: async HTTP client with automatic retry for server errors (5xx)
 
+### Development: Handler hot reload (`ASAP_HOT_RELOAD`)
+
+When running the server during development, you can enable **handler hot reload** so that changes to the handlers module are picked up without restarting the process. This is a **development-only** feature and must not be used in production.
+
+- Set the environment variable `ASAP_HOT_RELOAD=1` (or `true` / `yes`) before starting the server.
+- The implementation uses a **background thread** that watches the handlers file and reloads the registry when it changes. The server continues serving requests while the watcher runs.
+- Hot reload is only active when using the default registry (e.g. `create_app(..., use_default_registry=True)`). If `watchfiles` is not installed, hot reload is skipped and a warning is logged; install it with `pip install watchfiles` to use this feature.
+
+**Example:**
+
+```bash
+ASAP_HOT_RELOAD=1 uv run uvicorn asap.transport.server:app --factory ...
+```
+
 ## Documentation
 
 - [Spec](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/docs/general-specs.md)

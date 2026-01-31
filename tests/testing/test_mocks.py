@@ -143,3 +143,25 @@ class TestMockAgent:
         agent.clear()
         assert len(agent.requests) == 0
         assert agent.handle(req) is None
+
+    def test_reset_clears_internal_state_for_isolation(self) -> None:
+        """reset() clears registry and requests so no state leaks between scenarios."""
+        agent = MockAgent("urn:asap:agent:isolated")
+        agent.set_response("echo", TaskResponse(task_id="1", status="completed").model_dump())
+        req = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:a",
+            recipient=agent.agent_id,
+            payload_type="TaskRequest",
+            payload=TaskRequest(conversation_id="c", skill_id="echo", input={}).model_dump(),
+        )
+        agent.handle(req)
+        assert len(agent.requests) == 1
+        agent.reset()
+        assert len(agent.requests) == 0
+        assert agent.handle(req) is None
+        # After reset, same agent can be reused with new responses
+        agent.set_response("echo", TaskResponse(task_id="2", status="completed").model_dump())
+        out = agent.handle(req)
+        assert out is not None
+        assert len(agent.requests) == 2  # one from handle after reset (None), one from this handle

@@ -3,6 +3,7 @@
 import pytest
 
 from asap.models.envelope import Envelope
+from asap.models.enums import TaskStatus
 from asap.models.payloads import TaskRequest, TaskResponse
 from asap.state.snapshot import InMemorySnapshotStore
 from asap.testing.fixtures import (
@@ -22,7 +23,7 @@ class TestMockAgentFixture:
         assert mock_agent.agent_id == "urn:asap:agent:mock"
         mock_agent.set_response(
             "echo",
-            TaskResponse(task_id="t1", status="completed").model_dump(),
+            TaskResponse(task_id="t1", status=TaskStatus.COMPLETED).model_dump(),
         )
         req = Envelope(
             asap_version="0.1",
@@ -63,7 +64,7 @@ class TestTestAgentContextManager:
             assert agent.agent_id == "urn:asap:agent:custom"
             agent.set_response(
                 "echo",
-                TaskResponse(task_id="t1", status="completed").model_dump(),
+                TaskResponse(task_id="t1", status=TaskStatus.COMPLETED).model_dump(),
             )
             out = agent.handle(req)
             assert out is not None

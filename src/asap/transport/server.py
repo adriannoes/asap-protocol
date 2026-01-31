@@ -140,7 +140,14 @@ def _run_handler_watcher(holder: RegistryHolder, handlers_path: str) -> None:
     """Background thread: watch handlers_path and reload registry on change."""
     try:
         from watchfiles import watch
-
+    except ImportError:
+        logger.warning(
+            "asap.server.handler_watcher_skip",
+            path=handlers_path,
+            message="watchfiles not installed; hot reload disabled. Install with: pip install watchfiles",
+        )
+        return
+    try:
         for changes in watch(handlers_path):
             if not changes:
                 continue

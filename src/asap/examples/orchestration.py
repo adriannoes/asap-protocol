@@ -140,20 +140,22 @@ def build_task_envelope(
 
 
 async def send_to_sub_agent(
-    base_url: str,
+    client: ASAPClient,
     envelope: Envelope,
 ) -> Envelope:
     """Send an envelope to a sub-agent and return the response envelope.
 
+    Uses the provided client so the caller can reuse a single ASAPClient
+    instance for multiple requests (e.g. one client per worker in run_orchestration).
+
     Args:
-        base_url: Base URL of the sub-agent (no trailing /asap).
+        client: Open ASAPClient connected to the sub-agent (caller owns lifecycle).
         envelope: TaskRequest envelope to send.
 
     Returns:
         Response envelope from the sub-agent (e.g. TaskResponse).
     """
-    async with ASAPClient(base_url) as client:
-        return await client.send(envelope)
+    return await client.send(envelope)
 
 
 async def run_orchestration(
@@ -188,53 +190,54 @@ async def run_orchestration(
 
     bind_context(trace_id=trace_id, correlation_id=conversation_id)
     try:
-        # Step 1: send to sub-agent A
-        state.step = "sent_to_a"
-        envelope_a = build_task_envelope(
-            recipient_id=SUB_AGENT_A_ID,
-            skill_id="echo",
-            input_payload=payload_a,
-            conversation_id=conversation_id,
-            trace_id=trace_id,
-        )
-        logger.info(
-            "asap.orchestration.sent_to_a",
-            envelope_id=envelope_a.id,
-            recipient=SUB_AGENT_A_ID,
-        )
-        try:
-            response_a = await send_to_sub_agent(worker_a_url, envelope_a)
-            state.result_a = response_a.payload
-            state.step = "received_from_a"
-        except Exception as e:  # noqa: BLE001
-            state.error = f"worker_a: {e!s}"
-            state.step = "failed_at_a"
-            clear_context()
-            return state
+        async with ASAPClient(worker_a_url) as client_a, ASAPClient(worker_b_url) as client_b:
+            # Step 1: send to sub-agent A (reuse client_a)
+            state.step = "sent_to_a"
+            envelope_a = build_task_envelope(
+                recipient_id=SUB_AGENT_A_ID,
+                skill_id="echo",
+                input_payload=payload_a,
+                conversation_id=conversation_id,
+                trace_id=trace_id,
+            )
+            logger.info(
+                "asap.orchestration.sent_to_a",
+                envelope_id=envelope_a.id,
+                recipient=SUB_AGENT_A_ID,
+            )
+            try:
+                response_a = await send_to_sub_agent(client_a, envelope_a)
+                state.result_a = response_a.payload
+                state.step = "received_from_a"
+            except Exception as e:  # noqa: BLE001
+                state.error = f"worker_a: {e!s}"
+                state.step = "failed_at_a"
+                clear_context()
+                return state
 
-        # Step 2: send to sub-agent B (task coordination: B runs after A)
-        state.step = "sent_to_b"
-        envelope_b = build_task_envelope(
-            recipient_id=SUB_AGENT_B_ID,
-            skill_id="echo",
-            input_payload=payload_b,
-            conversation_id=conversation_id,
-            trace_id=trace_id,
-        )
-        logger.info(
-            "asap.orchestration.sent_to_b",
-            envelope_id=envelope_b.id,
-            recipient=SUB_AGENT_B_ID,
-        )
-        try:
-            response_b = await send_to_sub_agent(worker_b_url, envelope_b)
-            state.result_b = response_b.payload
-            state.step = "received_from_b"
-        except Exception as e:  # noqa: BLE001
-            state.error = f"worker_b: {e!s}"
-            state.step = "failed_at_b"
-            clear_context()
-            return state
+            # Step 2: send to sub-agent B (reuse client_b; B runs after A)
+            state.step = "sent_to_b"
+            envelope_b = build_task_envelope(
+                recipient_id=SUB_AGENT_B_ID,
+                skill_id="echo",
+                input_payload=payload_b,
+                conversation_id=conversation_id,
+                trace_id=trace_id,
+            )
+            logger.info(
+                "asap.orchestration.sent_to_b",
+                envelope_id=envelope_b.id,
+                recipient=SUB_AGENT_B_ID,
+            )
+            try:
+                response_b = await send_to_sub_agent(client_b, envelope_b)
+                state.result_b = response_b.payload
+                state.step = "received_from_b"
+            except Exception as e:  # noqa: BLE001
+                state.error = f"worker_b: {e!s}"
+                state.step = "failed_at_b"
+                clear_context()
+                return state
 
         state.step = "completed"
         state.completed = True

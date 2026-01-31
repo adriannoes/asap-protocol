@@ -1,0 +1,26 @@
+---
+description: Standards for writing Python tests in ASAP Protocol
+globs: tests/**/*.py
+alwaysApply: true
+---
+
+# Testing Standards (Pytest + UV)
+
+## 1. Tooling & Environment
+- **Runner:** Always use `uv run pytest`.
+- **Async:** We use `pytest-asyncio` with `asyncio_mode = "auto"`.
+- **Parallelism:** We use `pytest-xdist` (`-n auto`).
+
+## 2. Directory Structure
+- **Unit:** `tests/{module}/unit/` (No HTTP, pure logic).
+- **Integration:** `tests/{module}/integration/` (Server, Rate Limits, DB).
+- **E2E:** `tests/e2e/`.
+
+## 3. Fixtures & Mocks
+- **Do NOT import fixtures manually.** They are loaded automatically from `asap.testing.fixtures` via `conftest.py`.
+- **Rate Limiting:** If testing transport/API, you MUST use the patterns in `tests/transport/conftest.py` (e.g., `isolated_limiter_factory`, `NoRateLimitTestBase`) to avoid flaky tests due to global state.
+- **Typing:** All tests must have type hints. Use `TYPE_CHECKING` imports for fixtures like `CaptureFixture` or `MockerFixture`.
+
+## 4. Anti-Patterns
+- Never use `time.sleep()`. Use `asyncio.sleep()`.
+- Do not bypass `ruff` or `mypy` checks in tests.
