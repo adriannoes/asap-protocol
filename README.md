@@ -157,7 +157,7 @@ Explore these guides for detailed information on specific features:
 - **[Observability](https://github.com/adriannoes/asap-protocol/blob/main/docs/observability.md)**: Tracing, metrics, and logging for debugging multi-agent systems.
 - **[Testing](https://github.com/adriannoes/asap-protocol/blob/main/docs/testing.md)**: Testing strategies and utilities for ASAP-based agents.
 
-### Examples & Demos
+### Advanced Examples
 
 Run the built-in multi-agent demo to see ASAP in action:
 
@@ -165,7 +165,19 @@ Run the built-in multi-agent demo to see ASAP in action:
 uv run python -m asap.examples.run_demo
 ```
 
-See [`src/asap/examples/`](https://github.com/adriannoes/asap-protocol/tree/main/src/asap/examples) for complete example implementations.
+The package includes **14+ real-world examples** in [`src/asap/examples/`](https://github.com/adriannoes/asap-protocol/tree/main/src/asap/examples). Full list and usage: [Examples README](src/asap/examples/README.md).
+
+| Category | Examples |
+|----------|----------|
+| **Core** | `run_demo`, `echo_agent`, `coordinator`, `secure_handler` |
+| **Orchestration** | `orchestration` (multi-agent, task coordination, state tracking) |
+| **State** | `long_running` (checkpoints, resume after crash), `state_migration` (move state between agents) |
+| **Resilience** | `error_recovery` (retry, circuit breaker, fallback) |
+| **Integration** | `mcp_integration` (MCP tools via envelopes) |
+| **Auth & limits** | `auth_patterns` (Bearer, validators, OAuth2 concept), `rate_limiting` (per-sender, per-endpoint) |
+| **Concepts** | `websocket_concept` (WebSocket design), `streaming_response` (TaskUpdate streaming), `multi_step_workflow` (pipeline) |
+
+Run any example: `uv run python -m asap.examples.<module_name> [options]`
 
 ### CLI Tools
 

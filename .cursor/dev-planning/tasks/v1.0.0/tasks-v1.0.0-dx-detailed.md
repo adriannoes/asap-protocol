@@ -8,7 +8,7 @@
 ## Relevant Files
 
 ### Sprint P5: Examples & Testing Utilities
-- `src/asap/examples/orchestration.py` - NEW: Multi-agent example
+- `src/asap/examples/orchestration.py` - Multi-agent example (Task 5.1.1)
 - `src/asap/examples/long_running.py` - NEW: Checkpoints example
 - `src/asap/examples/error_recovery.py` - NEW: Retry patterns
 - `src/asap/examples/mcp_integration.py` - NEW: MCP tools
@@ -30,58 +30,60 @@
 
 ### Task 5.1: Create Real-World Examples
 
-- [ ] 5.1.1 Multi-agent orchestration (3+ agents)
+- [x] 5.1.1 Multi-agent orchestration (3+ agents)
   - File: `src/asap/examples/orchestration.py`
   - Scenario: Main agent delegates to 2 sub-agents
   - Show: Task coordination, state tracking
 
-- [ ] 5.1.2 Long-running task with checkpoints
+- [x] 5.1.2 Long-running task with checkpoints
   - File: `src/asap/examples/long_running.py`
   - Scenario: Task saves snapshots, resumes after crash
   - Show: StateSnapshot usage
 
-- [ ] 5.1.3 Error recovery patterns
+- [x] 5.1.3 Error recovery patterns
   - File: `src/asap/examples/error_recovery.py`
   - Show: Retry with backoff, circuit breaker, fallback
 
-- [ ] 5.1.4 MCP tool integration
+- [x] 5.1.4 MCP tool integration
   - File: `src/asap/examples/mcp_integration.py`
   - Show: Calling MCP tools via ASAP envelopes
 
-- [ ] 5.1.5 State migration
+- [x] 5.1.5 State migration
   - File: `src/asap/examples/state_migration.py`
   - Show: Moving task state between agents
 
-- [ ] 5.1.6 Authentication patterns
+- [x] 5.1.6 Authentication patterns
   - File: `src/asap/examples/auth_patterns.py`
   - Show: Bearer, custom validators, OAuth2 concept
 
-- [ ] 5.1.7 Rate limiting strategies
+- [x] 5.1.7 Rate limiting strategies
   - File: `src/asap/examples/rate_limiting.py`
   - Show: Per-sender, per-endpoint patterns
 
-- [ ] 5.1.8 WebSocket concept (not implemented)
+- [x] 5.1.8 WebSocket concept (not implemented)
   - File: `src/asap/examples/websocket_concept.py`
   - Show: How WebSocket would work (comments/pseudocode)
 
-- [ ] 5.1.9 Add 2+ more creative examples
+- [x] 5.1.9 Add 2+ more creative examples
   - Ideas: Streaming responses, multi-step workflows, etc.
+  - Files: `streaming_response.py`, `multi_step_workflow.py`
 
-- [ ] 5.1.10 Add README for examples
+- [x] 5.1.10 Add README for examples
   - File: Update `src/asap/examples/README.md`
   - List all examples with descriptions
   - Usage instructions for each
 
-- [ ] 5.1.11 Add tests for examples
+- [x] 5.1.11 Add tests for examples
   - Directory: `tests/examples/`
   - Test each example runs successfully
   - Verify output correctness
+  - File: `tests/examples/test_examples_dx.py` (28 tests)
 
-- [ ] 5.1.12 Update main README
+- [x] 5.1.12 Update main README
   - Section: Expand "Advanced Examples"
   - Link to all 10+ examples
 
-- [ ] 5.1.13 Commit
+- [x] 5.1.13 Commit
   - Command: `git commit -m "docs(examples): add 10+ real-world usage examples"`
 
 **Acceptance**: 10+ examples, all tested, README updated
