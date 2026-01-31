@@ -131,7 +131,9 @@ addopts = [
 ]
 # Coverage options: use explicitly when needed (e.g., pytest --cov=src --cov-report=xml)
 # NOT included in addopts to avoid conflicts with pytest-xdist (-n auto)
-testpaths = ["tests", "benchmarks"]
+testpaths = ["tests"]
+# Note: benchmarks/ excluded from testpaths - Locust monkey-patches gevent/ssl which
+# conflicts with pytest-xdist. Run benchmarks separately: uv run pytest benchmarks/
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 # Ignore slowapi deprecation (asyncio.iscoroutinefunction → inspect.iscoroutinefunction in 3.16)
