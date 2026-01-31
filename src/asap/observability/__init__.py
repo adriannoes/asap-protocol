@@ -25,6 +25,7 @@ from asap.observability.logging import (
     clear_context,
     configure_logging,
     get_logger,
+    is_debug_log_mode,
     is_debug_mode,
     sanitize_for_logging,
 )
@@ -40,6 +41,7 @@ __all__ = [
     "configure_logging",
     "get_logger",
     "get_metrics",
+    "is_debug_log_mode",
     "is_debug_mode",
     "reset_metrics",
     "MetricsCollector",

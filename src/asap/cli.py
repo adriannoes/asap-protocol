@@ -1,7 +1,7 @@
 """Command-line interface for ASAP Protocol utilities.
 
 This module provides CLI commands for schema export, inspection, validation,
-and trace visualization.
+trace visualization, and an interactive REPL for testing payloads.
 
 Example:
     >>> # From terminal:
@@ -11,8 +11,10 @@ Example:
     >>> # asap show-schema agent
     >>> # asap validate-schema message.json --schema-type envelope
     >>> # asap trace <trace-id> --log-file asap.log
+    >>> # asap repl  # Interactive REPL with ASAP models
 """
 
+import code
 import json
 import os
 import sys
@@ -23,6 +25,8 @@ import typer
 from pydantic import ValidationError
 
 from asap import __version__
+from asap.models import Envelope, TaskRequest, generate_id
+from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.observability.trace_parser import parse_trace_from_lines
 from asap.schemas import SCHEMA_REGISTRY, export_all_schemas, get_schema_json, list_schema_entries
 
@@ -218,6 +222,52 @@ def validate_schema(
 
 # Environment variable for default trace log file
 ENV_TRACE_LOG = "ASAP_TRACE_LOG"
+
+# REPL banner and namespace
+REPL_BANNER = (
+    "ASAP Protocol REPL - test payloads interactively.\n"
+    "  Envelope, TaskRequest, Manifest, generate_id, sample_envelope() available.\n"
+    "  Type exit() or Ctrl-D to quit."
+)
+
+
+def _repl_namespace() -> dict[str, object]:
+    """Build namespace for the ASAP REPL with models and a sample envelope helper."""
+    def sample_envelope() -> Envelope:
+        """Return a sample task.request envelope for quick testing."""
+        return Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:repl-sender",
+            recipient="urn:asap:agent:repl-recipient",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id=f"conv-{generate_id()}",
+                skill_id="echo",
+                input={"message": "hello from REPL"},
+            ).model_dump(),
+        )
+
+    return {
+        "Envelope": Envelope,
+        "TaskRequest": TaskRequest,
+        "Manifest": Manifest,
+        "Capability": Capability,
+        "Endpoint": Endpoint,
+        "Skill": Skill,
+        "generate_id": generate_id,
+        "sample_envelope": sample_envelope,
+    }
+
+
+@app.command("repl")
+def repl() -> None:
+    """Start an interactive REPL with ASAP models for testing payloads.
+
+    Provides Envelope, TaskRequest, Manifest, generate_id, and sample_envelope()
+    in the namespace. Use Python's code module for the interactive loop.
+    """
+    namespace = _repl_namespace()
+    code.interact(banner=REPL_BANNER, local=namespace)
 
 
 @app.command("trace")

@@ -28,9 +28,10 @@
 - `tests/examples/` - Example tests
 
 ### Sprint P6: Debugging Tools
-- `src/asap/cli.py` - Trace command (extend)
+- `src/asap/cli.py` - Trace command, repl command (extend)
 - `src/asap/observability/trace_ui.py` - NEW: Optional web UI
-- `src/asap/transport/server.py` - Hot reload, debug mode (extend)
+- `src/asap/observability/logging.py` - ASAP_DEBUG_LOG, is_debug_log_mode() (Task 6.2.2)
+- `src/asap/transport/server.py` - Hot reload, debug logging mode (extend)
 
 ### Task 5.3: PRD Review Checkpoint
 - `.cursor/dev-planning/prd/prd-v1-roadmap.md` - DD-010 (auth scheme), Q4 resolved, Q6 resolved (defer plugin)
@@ -43,6 +44,26 @@
 - `tests/observability/test_trace_parser.py` - Unit tests for trace parser (incl. extract_trace_ids)
 - `tests/observability/test_trace_ui.py` - Tests for trace UI endpoints
 - `tests/test_cli.py` - TestCliTrace tests for trace command
+
+### Task 6.2.1: Hot Reload
+- `pyproject.toml` - Added watchfiles>=0.21.0
+- `src/asap/transport/server.py` - RegistryHolder, _run_handler_watcher, create_app(hot_reload), ASAPRequestHandler(registry_holder)
+- `tests/transport/test_server.py` - RegistryHolder in handler fixture, test_create_app_with_hot_reload_returns_app
+
+### Task 6.2.2: Debug Logging Mode
+- `src/asap/observability/logging.py` - ENV_DEBUG_LOG, is_debug_log_mode()
+- `src/asap/observability/__init__.py` - Export is_debug_log_mode
+- `src/asap/transport/server.py` - _log_request_debug, _log_response_debug; log full request/response when ASAP_DEBUG_LOG=true (structured JSON)
+- `tests/observability/test_logging.py` - TestIsDebugLogMode (is_debug_log_mode true/false)
+- `tests/transport/test_server.py` - TestDebugLogMode (debug_request and debug_response logged when ASAP_DEBUG_LOG=true)
+
+### Task 6.2.3: Built-in REPL
+- `src/asap/cli.py` - repl command, _repl_namespace(), REPL_BANNER; code.interact with Envelope, TaskRequest, Manifest, generate_id, sample_envelope()
+- `tests/test_cli.py` - TestCliRepl (help shows repl, repl --help, repl starts and exits with exit())
+
+### Task 6.2.4: Swagger UI in debug mode
+- `src/asap/transport/server.py` - docs_url, redoc_url, openapi_url set from is_debug_mode(); /docs and /openapi.json only when ASAP_DEBUG=true
+- `tests/transport/test_server.py` - TestSwaggerUiDebugMode (docs disabled when not debug, enabled when ASAP_DEBUG=true)
 
 ---
 
@@ -184,8 +205,8 @@
   - Framework: FastAPI + simple HTML
   - Features: Browse traces (list trace IDs), search, visualize (POST /api/traces/list, /api/traces/visualize)
 
-- [ ] 6.1.4 Commit
-  - Command: `git commit -m "feat(cli): add trace visualization command"`
+- [x] 6.1.4 Commit
+  - Done: `git commit -m "feat(cli): add trace visualization command and optional Web UI"`
 
 **Acceptance**: Trace command works, shows flow and timing
 
@@ -193,27 +214,28 @@
 
 ### Task 6.2: Development Server Improvements
 
-- [ ] 6.2.1 Add hot reload for handlers
+- [x] 6.2.1 Add hot reload for handlers
   - Use: watchfiles library
   - Monitor: src/asap/transport/handlers.py changes
-  - Reload: Handler registry on file change
+  - Reload: Handler registry on file change (RegistryHolder + ASAP_HOT_RELOAD env)
 
-- [ ] 6.2.2 Add debug logging mode
+- [x] 6.2.2 Add debug logging mode
   - Environment: ASAP_DEBUG_LOG=true
   - Behavior: Log all requests/responses
   - Format: Structured JSON logs
 
-- [ ] 6.2.3 Add built-in REPL
+- [x] 6.2.3 Add built-in REPL
   - Command: `asap repl`
   - Features: Test payloads interactively
   - Use: Python's code module
 
-- [ ] 6.2.4 Enable Swagger UI in debug mode
+- [x] 6.2.4 Enable Swagger UI in debug mode
   - FastAPI: Enable /docs endpoint
   - Condition: Only if ASAP_DEBUG=true
 
-- [ ] 6.2.5 Commit
+- [x] 6.2.5 Commit
   - Command: `git commit -m "feat(dev): add hot reload, debug logging, and REPL"`
+  - Decision on slowapi and upstream PR #246: documented in `.cursor/dev-planning/upstream-slowapi-deprecation.md`
 
 **Acceptance**: Hot reload works, debug mode detailed, REPL functional
 

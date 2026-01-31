@@ -15,6 +15,7 @@ from asap.observability.logging import (
     clear_context,
     configure_logging,
     get_logger,
+    is_debug_log_mode,
     is_debug_mode,
     sanitize_for_logging,
 )
@@ -236,6 +237,35 @@ class TestIsDebugMode:
         """Test that is_debug_mode is False when ASAP_DEBUG=false."""
         with patch.dict("os.environ", {"ASAP_DEBUG": "false"}):
             assert is_debug_mode() is False
+
+
+class TestIsDebugLogMode:
+    """Tests for ASAP_DEBUG_LOG environment variable (is_debug_log_mode)."""
+
+    def test_debug_log_mode_false_when_empty(self) -> None:
+        """Test that is_debug_log_mode is False when ASAP_DEBUG_LOG is empty."""
+        with patch.dict("os.environ", {"ASAP_DEBUG_LOG": ""}):
+            assert is_debug_log_mode() is False
+
+    def test_debug_log_mode_true_when_true(self) -> None:
+        """Test that is_debug_log_mode is True when ASAP_DEBUG_LOG=true."""
+        with patch.dict("os.environ", {"ASAP_DEBUG_LOG": "true"}):
+            assert is_debug_log_mode() is True
+
+    def test_debug_log_mode_true_when_1(self) -> None:
+        """Test that is_debug_log_mode is True when ASAP_DEBUG_LOG=1."""
+        with patch.dict("os.environ", {"ASAP_DEBUG_LOG": "1"}):
+            assert is_debug_log_mode() is True
+
+    def test_debug_log_mode_true_when_yes(self) -> None:
+        """Test that is_debug_log_mode is True when ASAP_DEBUG_LOG=yes."""
+        with patch.dict("os.environ", {"ASAP_DEBUG_LOG": "yes"}):
+            assert is_debug_log_mode() is True
+
+    def test_debug_log_mode_false_when_false(self) -> None:
+        """Test that is_debug_log_mode is False when ASAP_DEBUG_LOG=false."""
+        with patch.dict("os.environ", {"ASAP_DEBUG_LOG": "false"}):
+            assert is_debug_log_mode() is False
 
 
 class TestLoggingIntegration:

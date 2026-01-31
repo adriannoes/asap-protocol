@@ -385,3 +385,32 @@ class TestCliTrace:
         result = runner.invoke(app, ["trace", "t1", "--log-file", "/nonexistent/asap.log"])
         assert result.exit_code != 0
         assert "not found" in result.output.lower() or "No such" in result.output
+
+
+class TestCliRepl:
+    """Tests for repl command."""
+
+    def test_help_shows_repl_command(self) -> None:
+        """Ensure --help shows repl command."""
+        runner = CliRunner()
+        result = runner.invoke(app, ["--help"])
+        assert result.exit_code == 0
+        output = strip_ansi(result.stdout)
+        assert "repl" in output
+
+    def test_repl_help(self) -> None:
+        """Ensure repl --help shows usage."""
+        runner = CliRunner()
+        result = runner.invoke(app, ["repl", "--help"])
+        assert result.exit_code == 0
+        output = strip_ansi(result.stdout)
+        assert "REPL" in output or "interactive" in output.lower()
+
+    def test_repl_starts_and_exits(self) -> None:
+        """Ensure repl starts and exits when given exit() via stdin."""
+        runner = CliRunner()
+        result = runner.invoke(app, ["repl"], input="exit()\n")
+        assert result.exit_code == 0
+        # Banner may go to stdout or stderr depending on code.interact()
+        combined = result.stdout + result.stderr
+        assert "REPL" in combined or "sample_envelope" in combined or ">>> " in combined
