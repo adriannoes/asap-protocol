@@ -10,7 +10,7 @@ Example:
     >>> # asap list-schemas
     >>> # asap show-schema agent
     >>> # asap validate-schema message.json --schema-type envelope
-    >>> # asap trace <trace-id> --log-file asap.log
+    >>> # asap trace <trace-id> [--log-file asap.log] [--format ascii|json]
     >>> # asap repl  # Interactive REPL with ASAP models
 """
 
@@ -27,7 +27,8 @@ from pydantic import ValidationError
 from asap import __version__
 from asap.models import Envelope, TaskRequest, generate_id
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
-from asap.observability.trace_parser import parse_trace_from_lines
+
+from asap.observability.trace_parser import parse_trace_from_lines, trace_to_json_export
 from asap.schemas import SCHEMA_REGISTRY, export_all_schemas, get_schema_json, list_schema_entries
 
 app = typer.Typer(help="ASAP Protocol CLI.")
@@ -233,6 +234,7 @@ REPL_BANNER = (
 
 def _repl_namespace() -> dict[str, object]:
     """Build namespace for the ASAP REPL with models and a sample envelope helper."""
+
     def sample_envelope() -> Envelope:
         """Return a sample task.request envelope for quick testing."""
         return Envelope(
@@ -284,12 +286,23 @@ def trace(
             help="Log file to search (JSON lines). Default: ASAP_TRACE_LOG env or stdin.",
         ),
     ] = None,
+    output_format: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            "-o",
+            help="Output format: ascii (diagram) or json (for external tools).",
+        ),
+    ] = "ascii",
 ) -> None:
     """Show request flow and timing for a trace ID from ASAP JSON logs.
 
     Searches log lines for asap.request.received and asap.request.processed
     events with the given trace_id and prints an ASCII diagram of the flow
     with latency per hop (e.g. agent_a -> agent_b (15ms) -> agent_c (23ms)).
+
+    Use --format json to output structured JSON for piping to jq, CI, or
+    observability platforms.
 
     Logs must be JSON lines (ASAP_LOG_FORMAT=json). Use --log-file to pass
     a file, or set ASAP_TRACE_LOG; otherwise reads from stdin.
@@ -299,10 +312,16 @@ def trace(
         effective_log_file = Path(os.environ[ENV_TRACE_LOG])
 
     if trace_id is None or trace_id.strip() == "":
-        typer.echo("Error: trace_id is required. Usage: asap trace <trace-id> [--log-file PATH]", err=True)
+        typer.echo(
+            "Error: trace_id is required. Usage: asap trace <trace-id> [--log-file PATH]", err=True
+        )
         raise typer.Exit(1)
 
     trace_id = trace_id.strip()
+    fmt = output_format.strip().lower() if output_format else "ascii"
+    if fmt not in ("ascii", "json"):
+        typer.echo("Error: --format must be 'ascii' or 'json'", err=True)
+        raise typer.Exit(1)
 
     def _lines() -> list[str]:
         if effective_log_file is None:
@@ -318,11 +337,14 @@ def trace(
     except OSError as exc:
         raise typer.BadParameter(f"Cannot read log file: {exc}") from exc
 
-    _, diagram = parse_trace_from_lines(lines, trace_id)
-    if not diagram:
+    hops, diagram = parse_trace_from_lines(lines, trace_id)
+    if not hops:
         typer.echo(f"No trace found for: {trace_id}")
         raise typer.Exit(1)
-    typer.echo(diagram)
+    if fmt == "json":
+        typer.echo(json.dumps(trace_to_json_export(trace_id, hops), indent=2))
+    else:
+        typer.echo(diagram)
 
 
 def main() -> None:
