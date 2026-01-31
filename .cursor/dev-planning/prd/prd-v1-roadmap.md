@@ -1060,6 +1060,26 @@ client = ASAPClient("http://agent.example.com", pool_connections=500, pool_maxsi
 
 ---
 
+#### DD-010: Authentication Scheme for Examples
+**Decision**: ✅ Use **both** Bearer (simple) and Bearer + OAuth2 discovery (realistic) in examples.
+
+**Rationale** (Sprint P5 Review - 2026-01-31):
+- **Bearer-only**: Covers simple demos, local dev, and minimal setup; single token_validator with create_app.
+- **Bearer + OAuth2 concept**: Covers realistic deployments; ASAP validates Bearer; clients obtain tokens via OAuth2; manifest exposes oauth2 discovery (authorization_url, token_url, scopes).
+- Example complexity is manageable: `auth_patterns.py` already demonstrates both without extra dependencies.
+- Custom validators (static map, env-based) remain documented for testing and small fixed sets.
+
+**Implementation** (v1.0.0 Sprint P5):
+- `src/asap/examples/auth_patterns.py`: Bearer-only manifest, OAuth2-concept manifest, static/env validators, create_app with token_validator.
+- Docs and README reference Bearer for quick start and OAuth2 concept for production-style auth.
+
+**Options considered**:
+- Bearer only: Rejected as too narrow; real deployments often use OAuth2.
+- OAuth2 only: Rejected; Bearer-only is better for onboarding and tests.
+- Both: **Chosen** — comprehensive and matches current example set.
+
+---
+
 ### Sprint S1-S3 Learnings
 
 > **Review Date**: 2026-01-27 (End of Sprint S3)
@@ -1122,10 +1142,10 @@ client = ASAPClient("http://agent.example.com", pool_connections=500, pool_maxsi
    - **Decision Date**: 2026-01-27 (Sprint S3 Review)
    - **Rationale**: Current security stack (TLS + Bearer + timestamp/nonce) is sufficient
 
-4. ❓ What should be the default authentication scheme for examples?
-   - **Options**: Bearer token (simple), OAuth2 (realistic), both (comprehensive)
-   - **Action**: Decide during Sprint P5 when creating examples
-   - **Review Point**: Sprint P5, Task 5.1.6 → Document decision as DD-009
+4. ✅ ~~What should be the default authentication scheme for examples?~~
+   - **Decision**: See DD-010 in Section 10
+   - **Resolved**: 2026-01-31 (End of Sprint P5, Task 5.3)
+   - **Choice**: Both — Bearer (simple demos) and Bearer + OAuth2 concept (realistic deployments)
 
 ### Developer Experience
 5. ❓ Should trace visualization CLI tool support JSON export for external tools?
@@ -1133,10 +1153,10 @@ client = ASAPClient("http://agent.example.com", pool_connections=500, pool_maxsi
    - **Consider**: JSON export for integration with observability platforms
    - **Review Point**: End of Sprint P6 → Decide and implement if valuable
 
-6. ❓ Should we provide pytest plugins for easier testing?
-   - **Example**: `pytest-asap` with custom markers and fixtures
-   - **Action**: Assess during Sprint P5 based on testing utilities usage
-   - **Review Point**: Mid-Sprint P7 → If utilities popular, plan plugin for v1.1.0
+6. ✅ ~~Should we provide pytest plugins for easier testing?~~
+   - **Decision**: Defer `pytest-asap` plugin to v1.1.0
+   - **Resolved**: 2026-01-31 (End of Sprint P5, Task 5.3)
+   - **Rationale**: `asap.testing` (fixtures, MockAgent, assertions) already reduces boilerplate; 8+ test files refactored with ~50% less boilerplate. A plugin would add markers/auto-discovery; better to gather v1.0.0 feedback and add plugin in v1.1.0 if demand exists.
 
 ### Documentation
 7. ❓ Should we create video tutorials in addition to written docs?
