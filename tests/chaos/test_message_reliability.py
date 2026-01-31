@@ -594,7 +594,9 @@ class TestPartialCorruption:
                 max_retries=2,
             ) as client:
                 # Should raise error due to invalid JSON (not retried)
-                with pytest.raises((ASAPConnectionError, ASAPRemoteError, ValueError, ValidationError)):
+                with pytest.raises(
+                    (ASAPConnectionError, ASAPRemoteError, ValueError, ValidationError)
+                ):
                     await client.send(sample_request_envelope)
 
         # JSON errors are NOT retried - only connection/timeout errors are
@@ -630,7 +632,9 @@ class TestPartialCorruption:
                 max_retries=1,
             ) as client:
                 # Should raise validation error (client may wrap in ASAPConnectionError)
-                with pytest.raises((ASAPConnectionError, ASAPRemoteError, ValueError, ValidationError)):
+                with pytest.raises(
+                    (ASAPConnectionError, ASAPRemoteError, ValueError, ValidationError)
+                ):
                     await client.send(sample_request_envelope)
 
     async def test_wrong_payload_type_in_response(self, sample_request_envelope: Envelope) -> None:
@@ -744,7 +748,9 @@ class TestMessageReliabilityEdgeCases:
                 transport=httpx.MockTransport(mock_transport),
                 max_retries=1,
             ) as client:
-                with pytest.raises((ASAPConnectionError, ASAPRemoteError, ValueError, ValidationError)):
+                with pytest.raises(
+                    (ASAPConnectionError, ASAPRemoteError, ValueError, ValidationError)
+                ):
                     await client.send(sample_request_envelope)
 
     async def test_null_json_response(self, sample_request_envelope: Envelope) -> None:
@@ -762,7 +768,9 @@ class TestMessageReliabilityEdgeCases:
                 transport=httpx.MockTransport(mock_transport),
                 max_retries=1,
             ) as client:
-                with pytest.raises((ASAPConnectionError, ASAPRemoteError, ValueError, ValidationError)):
+                with pytest.raises(
+                    (ASAPConnectionError, ASAPRemoteError, ValueError, ValidationError)
+                ):
                     await client.send(sample_request_envelope)
 
     async def test_json_rpc_error_response(self, sample_request_envelope: Envelope) -> None:
