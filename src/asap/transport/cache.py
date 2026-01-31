@@ -136,9 +136,7 @@ class ManifestCache:
             Number of expired entries removed
         """
         with self._lock:
-            expired_urls = [
-                url for url, entry in self._cache.items() if entry.is_expired()
-            ]
+            expired_urls = [url for url, entry in self._cache.items() if entry.is_expired()]
             for url in expired_urls:
                 del self._cache[url]
             return len(expired_urls)

@@ -17,9 +17,6 @@ Performance targets:
 Run with: uv run pytest benchmarks/benchmark_transport.py --benchmark-only -v
 """
 
-# Concurrency for connection-pooling benchmark (20 for CI; use 1000 for full validation)
-CONCURRENCY_POOLING_BENCHMARK = 20
-
 import asyncio
 from typing import Any
 
@@ -31,6 +28,9 @@ from asap.models.envelope import Envelope
 from asap.transport.client import ASAPClient
 from asap.transport.jsonrpc import JsonRpcRequest, JsonRpcResponse
 from asap.transport.server import create_app
+
+# Concurrency for connection-pooling benchmark (20 for CI; use 1000 for full validation)
+CONCURRENCY_POOLING_BENCHMARK = 20
 
 
 class TestJsonRpcProcessing:
@@ -343,7 +343,7 @@ class TestManifestCaching:
         hit_rate = cache_hits / total_requests if total_requests > 0 else 0.0
         # Target: >90% hit rate (first request is miss, rest should be hits)
         # With 100 requests: 1 miss + 99 hits = 99% hit rate
-        assert (
-            hit_rate >= 0.90
-        ), f"Cache hit rate {hit_rate:.2%} ({cache_hits}/{total_requests}) below target 90%"
+        assert hit_rate >= 0.90, (
+            f"Cache hit rate {hit_rate:.2%} ({cache_hits}/{total_requests}) below target 90%"
+        )
         assert cache_misses == 1, f"Expected 1 cache miss, got {cache_misses}"

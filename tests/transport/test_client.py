@@ -137,7 +137,9 @@ class TestASAPClientContextManager:
 
         mock_instance = AsyncMock()
         mock_instance.aclose = AsyncMock()
-        with patch("asap.transport.client.httpx.AsyncClient", return_value=mock_instance) as mock_async_client:
+        with patch(
+            "asap.transport.client.httpx.AsyncClient", return_value=mock_instance
+        ) as mock_async_client:
             client = ASAPClient(
                 "http://localhost:8000",
                 pool_connections=50,
