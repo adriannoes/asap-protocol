@@ -112,17 +112,17 @@
 
 ### Task 9.3: PRD Review Checkpoint
 
-- [ ] 9.3.1 Review Q8 (i18n languages)
+- [x] 9.3.1 Review Q8 (i18n languages)
   - Check PyPI download stats since v0.5.0
   - Analyze: Geographic distribution
   - Decide: English-only, +PT-BR, or more
-  - Document as DD-010
+  - Document as DD-013
 
-- [ ] 9.3.2 Update PRD
-  - Add DD-010 for i18n decision
+- [x] 9.3.2 Update PRD
+  - Add DD-013 for i18n decision
   - Update Q8 status
 
-**Acceptance**: Q8 answered (DD-010), i18n scope decided
+**Acceptance**: Q8 answered (DD-013), i18n scope decided
 
 ---
 
@@ -218,7 +218,7 @@
   - Confirm: All tutorials tested
   - Confirm: ADRs reviewed
   - Confirm: Deployment tested
-  - Confirm: PRD Q8 answered (DD-010)
+  - Confirm: PRD Q8 answered (DD-013)
 
 **Acceptance**: Both files complete, docs 100%
 
@@ -232,7 +232,7 @@
 - [ ] K8s deployment <10 min
 - [ ] Troubleshooting guide complete
 - [ ] Health checks working
-- [ ] PRD Q8 answered (DD-010)
+- [x] PRD Q8 answered (DD-013)
 - [ ] Progress tracked in both files
 
 **Total Sub-tasks**: ~85
