@@ -4,6 +4,7 @@ Tests cover:
 - App factory creation
 - Route registration
 - POST /asap endpoint
+- GET /health and GET /ready (liveness/readiness probes)
 - GET /.well-known/asap/manifest.json endpoint
 - GET /asap/metrics endpoint
 - Error handling
@@ -27,7 +28,7 @@ from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
 
-from asap.models.entities import Capability, Endpoint, Manifest, Skill
+from asap.models.entities import Manifest
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest
 from asap.observability import get_metrics, reset_metrics
@@ -42,28 +43,6 @@ from asap.transport.jsonrpc import (
     JsonRpcRequest,
 )
 from asap.transport.server import ASAPRequestHandler, RegistryHolder, RequestContext, create_app
-
-
-@pytest.fixture
-def sample_manifest() -> Manifest:
-    """Create a sample manifest for testing."""
-    return Manifest(
-        id="urn:asap:agent:test-server",
-        name="Test Server",
-        version="1.0.0",
-        description="Test server for unit tests",
-        capabilities=Capability(
-            asap_version="0.1",
-            skills=[
-                Skill(
-                    id="echo",
-                    description="Echo input as output",
-                )
-            ],
-            state_persistence=False,
-        ),
-        endpoints=Endpoint(asap="http://localhost:8000/asap"),
-    )
 
 
 @pytest.fixture
@@ -98,6 +77,8 @@ class TestAppFactory:
 
         # Required routes
         assert "/asap" in routes
+        assert "/health" in routes
+        assert "/ready" in routes
         assert "/.well-known/asap/manifest.json" in routes
 
     def test_app_has_correct_http_methods(self, app: FastAPI) -> None:
@@ -112,10 +93,32 @@ class TestAppFactory:
         manifest_route = routes_by_path["/.well-known/asap/manifest.json"]
         assert "GET" in manifest_route.methods  # type: ignore[attr-defined]
 
+        # health and ready should accept GET
+        health_route = routes_by_path["/health"]
+        assert "GET" in health_route.methods  # type: ignore[attr-defined]
+        ready_route = routes_by_path["/ready"]
+        assert "GET" in ready_route.methods  # type: ignore[attr-defined]
+
     def test_create_app_with_hot_reload_returns_app(self, sample_manifest: Manifest) -> None:
         """Test that create_app(..., hot_reload=True) returns an app (watcher starts in background)."""
         app = create_app(sample_manifest, hot_reload=True)
         assert isinstance(app, FastAPI)
+
+
+class TestHealthEndpoints:
+    """Tests for GET /health and GET /ready (liveness/readiness probes)."""
+
+    def test_health_returns_ok(self, client: TestClient) -> None:
+        """Test that /health returns 200 with status ok."""
+        response = client.get("/health")
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
+
+    def test_ready_returns_ok(self, client: TestClient) -> None:
+        """Test that /ready returns 200 with status ok."""
+        response = client.get("/ready")
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
 
 
 class TestManifestEndpoint:

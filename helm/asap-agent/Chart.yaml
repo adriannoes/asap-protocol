@@ -1,0 +1,17 @@
+apiVersion: v2
+name: asap-agent
+description: ASAP Protocol agent - Async Simple Agent Protocol for agent-to-agent communication
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - asap
+  - agent
+  - protocol
+  - async
+home: https://github.com/adriannoes/asap-protocol
+sources:
+  - https://github.com/adriannoes/asap-protocol
+maintainers:
+  - name: ASAP Protocol Contributors
+    url: https://github.com/adriannoes/asap-protocol

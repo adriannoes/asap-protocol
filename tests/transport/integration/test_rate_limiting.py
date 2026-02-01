@@ -11,6 +11,7 @@ import collections.abc
 import time
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -147,6 +148,33 @@ class TestRateLimiting:
 
         return app  # type: ignore[return-value]
 
+    @pytest.fixture
+    def isolated_app_from_env_2_per_minute(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        isolated_limiter_factory: "collections.abc.Callable[[collections.abc.Sequence[str] | None], Limiter]",
+        rate_limit_manifest: Manifest,
+    ) -> "FastAPI":
+        """Create an app with rate limit from ASAP_RATE_LIMIT env var (2/minute).
+
+        Follow-up to test_docs_troubleshooting_smoke.test_create_app_reads_asap_rate_limit_from_env:
+        validates that when create_app(rate_limit=None) reads from env, the limiter
+        is actually enforced at runtime (POST /asap returns 429 when exceeded).
+        """
+        limiter = isolated_limiter_factory(["2/minute"])
+
+        import asap.transport.middleware as middleware_module
+        import asap.transport.server as server_module
+
+        monkeypatch.setattr(middleware_module, "limiter", limiter)
+        monkeypatch.setattr(server_module, "limiter", limiter)
+
+        with patch.dict("os.environ", {"ASAP_RATE_LIMIT": "2/minute"}):
+            app = create_app(rate_limit_manifest, rate_limit=None)
+        app.state.limiter = limiter
+
+        return app  # type: ignore[return-value]
+
     def test_requests_within_limit_succeed(
         self,
         isolated_app_5_per_minute: "FastAPI",
@@ -246,3 +274,31 @@ class TestRateLimiting:
         rpc_request = _create_test_rpc_request(sender=sender)
         response = client.post("/asap", json=rpc_request.model_dump(mode="json"))
         assert response.status_code == 200
+
+    def test_asap_rate_limit_env_var_enforced_at_runtime(
+        self,
+        isolated_app_from_env_2_per_minute: "FastAPI",
+    ) -> None:
+        """POST to /asap under low limit from ASAP_RATE_LIMIT env returns 429 when exceeded.
+
+        Complement to test_docs_troubleshooting_smoke.test_create_app_reads_asap_rate_limit_from_env:
+        that test validates env var is read (app creation succeeds). This test validates
+        the limiter enforces the configured limit at runtime.
+        """
+        client = TestClient(isolated_app_from_env_2_per_minute)
+
+        # 2 requests within limit
+        for _i in range(2):
+            rpc_request = _create_test_rpc_request()
+            response = client.post("/asap", json=rpc_request.model_dump(mode="json"))
+            assert response.status_code == 200
+
+        # 3rd request exceeds 2/minute limit -> 429
+        rpc_request = _create_test_rpc_request()
+        response = client.post("/asap", json=rpc_request.model_dump(mode="json"))
+
+        assert response.status_code == HTTP_TOO_MANY_REQUESTS
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == HTTP_TOO_MANY_REQUESTS
+        assert ERROR_RATE_LIMIT_EXCEEDED in data["error"]["message"]

@@ -1,0 +1,22 @@
+# ASAP Protocol - Kubernetes Service
+#
+# Exposes the ASAP agent deployment on a stable ClusterIP (and optional NodePort/LoadBalancer).
+# Deploy: kubectl apply -f k8s/service.yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: asap-agent
+  labels:
+    app: asap-agent
+    app.kubernetes.io/name: asap-protocol
+    app.kubernetes.io/component: agent
+spec:
+  type: ClusterIP
+  selector:
+    app: asap-agent
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+      protocol: TCP

@@ -31,6 +31,7 @@ dependencies = [
     "structlog>=24.1",
     "typer>=0.21.1",
     "watchfiles>=0.21.0",
+    "brotli>=1.2.0",
 ]
 
 [project.optional-dependencies]

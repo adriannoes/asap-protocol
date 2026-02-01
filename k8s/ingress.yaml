@@ -1,0 +1,37 @@
+# ASAP Protocol - Kubernetes Ingress (optional)
+#
+# Exposes the ASAP agent via HTTP(S) when an Ingress controller is installed
+# (e.g. ingress-nginx, traefik). Adjust spec.ingressClassName and host to your cluster.
+#
+# Deploy: kubectl apply -f k8s/ingress.yaml
+# Requires: Service asap-agent and an Ingress controller
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: asap-agent
+  labels:
+    app: asap-agent
+    app.kubernetes.io/name: asap-protocol
+    app.kubernetes.io/component: agent
+  # Uncomment to add TLS (replace secret name and host)
+  # annotations:
+  #   cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: asap-agent.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: asap-agent
+                port:
+                  number: 8000
+  # Uncomment for TLS
+  # tls:
+  #   - hosts:
+  #       - asap-agent.local
+  #     secretName: asap-agent-tls

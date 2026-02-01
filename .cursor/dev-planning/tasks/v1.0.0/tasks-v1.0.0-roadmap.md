@@ -270,19 +270,21 @@
 
 ### Tasks
 
-- [ ] 10.1 Create cloud-native deployment
+- [x] 10.1 Create cloud-native deployment
   - Goal: Docker, K8s, Helm, health checks
   - Details: [Docs Detailed - Task 10.1](./tasks-v1.0.0-docs-detailed.md#task-101-create-cloud-native-deployment)
 
-- [ ] 10.2 Write troubleshooting guide
+- [x] 10.2 Write troubleshooting guide
   - Goal: Cover 90% of common issues
   - Details: [Docs Detailed - Task 10.2](./tasks-v1.0.0-docs-detailed.md#task-102-write-troubleshooting-guide)
 
 ### Definition of Done
-- [ ] K8s deployment <10 min
-- [ ] Docker images published
-- [ ] Troubleshooting guide complete
-- [ ] Health checks working
+- [x] K8s deployment <10 min
+- [x] Docker images published
+- [x] Troubleshooting guide complete
+- [x] Health checks working
+
+**Progress: 100%** (P10 complete)
 
 ---
 
@@ -397,19 +399,19 @@
 
 ## Progress Tracking
 
-**Overall Progress**: 10/38 tasks completed (26%)
+**Overall Progress**: 27/38 tasks completed (71%)
 
 **Sprint Status**:
 - ✅ P1: 3/3 tasks (100%) - **Includes PRD review**
-- ⏳ P2: 2/3 tasks (67%)
+- ✅ P2: 3/3 tasks (100%)
 - ✅ P3: 3/3 tasks (100%) - **Includes PRD review**
 - ✅ P4: 2/2 tasks (100%)
-- ⏳ P5: 0/3 tasks (0%) - **Includes PRD review**
-- ⏳ P6: 0/3 tasks (0%) - **Includes PRD review**
-- ⏳ P7: 0/3 tasks (0%) - **Includes PRD review**
-- ⏳ P8: 0/2 tasks (0%)
-- ⏳ P9: 0/3 tasks (0%) - **Includes PRD review**
-- ⏳ P10: 0/2 tasks (0%)
+- ✅ P5: 3/3 tasks (100%) - **Includes PRD review**
+- ✅ P6: 3/3 tasks (100%) - **Includes PRD review**
+- ✅ P7: 3/3 tasks (100%) - **Includes PRD review**
+- ✅ P8: 2/2 tasks (100%)
+- ✅ P9: 3/3 tasks (100%) - **Includes PRD review**
+- ✅ P10: 2/2 tasks (100%)
 - ⏳ P11: 0/3 tasks (0%)
 - ⏳ P12: 0/2 tasks (0%)
 - ⏳ P13: 0/6 tasks (0%) - **Includes final PRD review**
@@ -423,7 +425,7 @@
 - P9: Decide i18n scope (DD-011)
 - P13: Final review + retrospective
 
-**Last Updated**: 2026-01-31
+**Last Updated**: 2026-02-01
 
 **Prerequisites**: v0.5.0 must be released before starting Sprint P1
 

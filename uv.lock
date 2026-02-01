@@ -37,6 +37,7 @@ name = "asap-protocol"
 version = "0.5.0"
 source = { editable = "." }
 dependencies = [
+    { name = "brotli" },
     { name = "fastapi" },
     { name = "httpx", extra = ["http2"] },
     { name = "packaging" },
@@ -79,6 +80,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "brotli", specifier = ">=1.2.0" },
     { name = "brotli", marker = "extra == 'dev'", specifier = ">=1.1.0" },
     { name = "fastapi", specifier = ">=0.128.0" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.28.1" },
