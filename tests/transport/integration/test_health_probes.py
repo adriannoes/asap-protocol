@@ -34,17 +34,13 @@ def client(app_with_full_middleware: FastAPI) -> TestClient:
 class TestHealthProbesIntegration(NoRateLimitTestBase):
     """Integration tests for /health and /ready under full middleware stack."""
 
-    def test_health_returns_200(
-        self, client: TestClient
-    ) -> None:
+    def test_health_returns_200(self, client: TestClient) -> None:
         """GET /health returns 200 when app has compression and size-limit middleware."""
         response = client.get("/health")
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
 
-    def test_ready_returns_200(
-        self, client: TestClient
-    ) -> None:
+    def test_ready_returns_200(self, client: TestClient) -> None:
         """GET /ready returns 200 when app has compression and size-limit middleware."""
         response = client.get("/ready")
         assert response.status_code == 200

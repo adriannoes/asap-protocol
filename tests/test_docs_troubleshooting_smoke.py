@@ -45,9 +45,7 @@ class TestDocumentedEndpoints:
 class TestDocumentedEnvVarsReadByServer:
     """Verify server reads env vars documented in FAQ (Config)."""
 
-    def test_create_app_reads_asap_rate_limit_from_env(
-        self, sample_manifest: Manifest
-    ) -> None:
+    def test_create_app_reads_asap_rate_limit_from_env(self, sample_manifest: Manifest) -> None:
         """Validate env var read: create_app succeeds when ASAP_RATE_LIMIT is set.
 
         This test asserts that the server reads ASAP_RATE_LIMIT from the environment

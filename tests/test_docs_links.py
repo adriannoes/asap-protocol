@@ -114,14 +114,14 @@ def test_docs_internal_links_targets_exist(
 
 def test_extract_links_handles_markdown_formats() -> None:
     """LINK_PATTERN and _normalize_href handle standard and extended markdown link formats."""
-    content = '''
+    content = """
 [simple](path.md)
 [anchor](path.md#section)
 [with title](path.md "Optional Title")
 [with single-quote title](other.md 'Title')
 [angle brackets](<path with spaces.md>)
 [external](https://example.com)
-'''
+"""
     links = _extract_links(content)
     assert links[0] == "path.md"
     assert links[1] == "path.md#section"
