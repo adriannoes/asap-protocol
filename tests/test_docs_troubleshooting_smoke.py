@@ -6,9 +6,14 @@ without starting a real server or using the network. Safe to run in CI.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from fastapi.testclient import TestClient
 
 from asap.transport.server import app as default_app
+
+if TYPE_CHECKING:
+    from asap.models.entities import Manifest
 
 
 class TestDocumentedEndpoints:
@@ -40,27 +45,22 @@ class TestDocumentedEndpoints:
 class TestDocumentedEnvVarsReadByServer:
     """Verify server reads env vars documented in FAQ (Config)."""
 
-    def test_create_app_reads_asap_rate_limit_from_env(self) -> None:
-        """create_app uses ASAP_RATE_LIMIT when set (doc: FAQ Config)."""
+    def test_create_app_reads_asap_rate_limit_from_env(
+        self, sample_manifest: Manifest
+    ) -> None:
+        """Validate env var read: create_app succeeds when ASAP_RATE_LIMIT is set.
+
+        This test asserts that the server reads ASAP_RATE_LIMIT from the environment
+        (app creation succeeds; /health returns 200). It does NOT assert that the
+        rate limiter enforces the limit at runtime (e.g. 429 under load).
+        See doc: FAQ Config.
+        """
         from unittest.mock import patch
 
-        from asap.models.entities import Capability, Endpoint, Manifest, Skill
         from asap.transport.server import create_app
 
-        manifest = Manifest(
-            id="urn:asap:agent:env-test",
-            name="Env Test",
-            version="0.1",
-            description="Test",
-            capabilities=Capability(
-                asap_version="0.1",
-                skills=[Skill(id="echo", description="Echo")],
-                state_persistence=False,
-            ),
-            endpoints=Endpoint(asap="http://localhost:8000/asap"),
-        )
         with patch.dict("os.environ", {"ASAP_RATE_LIMIT": "99/second;999/minute"}):
-            app = create_app(manifest, rate_limit=None)
+            app = create_app(sample_manifest, rate_limit=None)
         assert app is not None
         client = TestClient(app)
         assert client.get("/health").status_code == 200
