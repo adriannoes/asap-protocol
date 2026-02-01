@@ -43,6 +43,12 @@ plugins:
 
 nav:
   - Home: index.md
+  - Tutorials:
+      - Building Your First Agent: tutorials/first-agent.md
+      - Stateful Workflows: tutorials/stateful-workflows.md
+      - Multi-Agent Orchestration: tutorials/multi-agent.md
+      - Building Resilient Agents: tutorials/resilience.md
+      - Production Deployment Checklist: tutorials/production-checklist.md
   - Guides:
       - Security: security.md
       - State Management: state-management.md

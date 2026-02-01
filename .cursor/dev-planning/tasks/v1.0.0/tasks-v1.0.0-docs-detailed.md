@@ -8,10 +8,11 @@
 ## Relevant Files
 
 ### Sprint P9: Tutorials & ADRs
-- `docs/tutorials/first-agent.md` - NEW: Quickstart
-- `docs/tutorials/stateful-workflows.md` - NEW: Intermediate
-- `docs/tutorials/multi-agent.md` - NEW: Advanced
-- `docs/tutorials/production-checklist.md` - NEW: DevOps
+- `docs/tutorials/first-agent.md` - Quickstart (9.1.1 done)
+- `docs/tutorials/stateful-workflows.md` - Intermediate (9.1.2 done)
+- `docs/tutorials/multi-agent.md` - Advanced (9.1.3 done)
+- `docs/tutorials/resilience.md` - Advanced (9.1.4 done)
+- `docs/tutorials/production-checklist.md` - DevOps (9.1.5 done)
 - `docs/adr/` - NEW: Architecture Decision Records (15+)
 - `mkdocs.yml` - Update navigation
 
@@ -28,34 +29,40 @@
 
 ### Task 9.1: Write Step-by-Step Tutorials
 
-- [ ] 9.1.1 "Building Your First Agent" (15-min quickstart)
+- [x] 9.1.1 "Building Your First Agent" (15-min quickstart)
   - File: `docs/tutorials/first-agent.md`
   - Content: Echo agent from scratch
   - Includes: Server setup, client, testing
   - Target: Complete in 15 minutes
 
-- [ ] 9.1.2 "Stateful Workflows" (intermediate)
+- [x] 9.1.2 "Stateful Workflows" (intermediate)
   - File: `docs/tutorials/stateful-workflows.md`
   - Content: Long-running task with snapshots
   - Show: Save/restore state, resume after crash
 
-- [ ] 9.1.3 "Multi-Agent Orchestration" (advanced)
+- [x] 9.1.3 "Multi-Agent Orchestration" (advanced)
   - File: `docs/tutorials/multi-agent.md`
   - Content: 3+ agents collaborating
   - Show: Task delegation, coordination
 
-- [ ] 9.1.4 "Production Deployment Checklist" (devops)
+- [x] 9.1.4 "Building Resilient Agents" (advanced)
+  - File: `docs/tutorials/resilience.md`
+  - Content: Retries, circuit breakers, state recovery
+  - Context: Lessons from Sprint 8 chaos testing
+
+- [x] 9.1.5 "Production Deployment Checklist" (DevOps)
   - File: `docs/tutorials/production-checklist.md`
   - Content: Security, monitoring, scaling
   - Checklist format with action items
 
-- [ ] 9.1.5 Test all tutorials
+- [x] 9.1.6 Test all tutorials
   - Follow each tutorial step-by-step
   - Verify: No missing steps or errors
+  - Check if the shortcuts that create cross-references are working correctly
   - Update: Fix any issues found
 
-- [ ] 9.1.6 Commit
-  - Command: `git commit -m "docs(tutorials): add 4 step-by-step tutorials"`
+- [x] 9.1.7 Commit
+  - Command: `git commit -m "docs(tutorials): add 5 step-by-step tutorials"`
 
 **Acceptance**: 4 tutorials, tested, beginner→advanced coverage
 
@@ -84,6 +91,8 @@
   - ADR-013: MCP integration approach
   - ADR-014: Testing strategy (TDD, property-based)
   - ADR-015: Observability design (trace_id, correlation_id)
+  - ADR-016: Versioning Policy (SemVer, contract tests)
+  - ADR-017: Failure Injection Strategy (Chaos testing)
 
 - [ ] 9.2.3 Add ADR index
   - File: `docs/adr/README.md`
@@ -168,20 +177,25 @@
   - Format: Error → Cause → Solution
   - Include: Stack trace examples
 
-- [ ] 10.2.3 Add debugging checklist
+- [ ] 10.2.3 Document Chaos Failure Modes
+  - Content: Scenarios from Sprint 8 (latency, drops)
+  - Show: Expected logs vs actual failures
+  - Diagnosing: "Is it the network or the agent?"
+
+- [ ] 10.2.4 Add debugging checklist
   - Step-by-step: How to debug issues
   - Tools: Logs, traces, metrics
   - Examples: Real debugging scenarios
 
-- [ ] 10.2.4 Add performance tuning tips
+- [ ] 10.2.5 Add performance tuning tips
   - Content: Connection pools, caching, compression
   - Benchmarks: Before/after measurements
 
-- [ ] 10.2.5 Add FAQ section
+- [ ] 10.2.6 Add FAQ section
   - Content: 30+ frequently asked questions
   - Categories: Setup, config, errors, best practices
 
-- [ ] 10.2.6 Commit
+- [ ] 10.2.7 Commit
   - Command: `git commit -m "docs: add comprehensive troubleshooting guide"`
 
 **Acceptance**: Troubleshooting covers 80% of common issues
