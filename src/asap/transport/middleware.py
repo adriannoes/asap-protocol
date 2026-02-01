@@ -32,8 +32,10 @@ Example:
     >>> middleware = AuthenticationMiddleware(manifest, validator)
 """
 
+import asyncio
+import inspect
 import uuid
-from typing import Any, Awaitable, Callable, Protocol
+from typing import Any, Awaitable, Callable, Protocol, cast
 from collections.abc import Sequence
 
 from fastapi import HTTPException, Request
@@ -156,8 +158,15 @@ def create_test_limiter(limits: Sequence[str] | None = None) -> Limiter:
 def create_limiter(limits: Sequence[str] | None = None) -> Limiter:
     """Create a new limiter instance for production use.
 
-    Creates an isolated limiter instance with its own storage, allowing
-    multiple FastAPI app instances to have independent rate limiters.
+    Creates an isolated limiter instance with its own in-memory storage
+    (``memory://``), allowing multiple FastAPI app instances to have
+    independent rate limiters.
+
+    **Multi-worker warning:** ``memory://`` storage is per-process. In
+    multi-worker deployments (e.g., Gunicorn with 4 workers), each worker
+    has isolated limits—effective rate = configured limit × number of workers
+    (e.g., 10/s → 40/s across workers). For shared limits in production,
+    use Redis-backed storage via slowapi's ``storage_uri``.
 
     Args:
         limits: Optional list of rate limit strings (e.g., ["100/minute"]).
@@ -175,10 +184,16 @@ def create_limiter(limits: Sequence[str] | None = None) -> Limiter:
 
     # Use unique storage URI to ensure isolation between app instances
     unique_storage_id = str(uuid.uuid4())
+    storage_uri = f"memory://{unique_storage_id}"
+    logger.warning(
+        "asap.rate_limit.memory_storage",
+        message="memory:// storage is per-process; in multi-worker deployments "
+        "(e.g., Gunicorn), effective rate = limit × workers. Use Redis for shared limits.",
+    )
     return Limiter(
         key_func=_get_sender_from_envelope,
         default_limits=list(limits),
-        storage_uri=f"memory://{unique_storage_id}",
+        storage_uri=storage_uri,
     )
 
 
@@ -271,25 +286,32 @@ class TokenValidator(Protocol):
     """Protocol for token validation implementations.
 
     Custom validators must implement this interface to integrate
-    with the authentication middleware.
+    with the authentication middleware. Validators may be sync or async.
+    Sync validators that perform I/O (e.g., DB/Redis lookups) are run
+    in a thread pool to avoid blocking the event loop.
 
-    Example:
-        >>> class MyTokenValidator:
+    Example (sync):
+        >>> class MySyncValidator:
         ...     def __call__(self, token: str) -> str | None:
-        ...         # Validate token against database, JWT, etc.
         ...         if is_valid(token):
         ...             return extract_agent_id(token)
         ...         return None
+
+    Example (async):
+        >>> class MyAsyncValidator:
+        ...     async def __call__(self, token: str) -> str | None:
+        ...         return await db.lookup_agent(token)
     """
 
-    def __call__(self, token: str) -> str | None:
+    def __call__(self, token: str) -> str | None | Awaitable[str | None]:
         """Validate a token and return the authenticated agent ID.
 
         Args:
             token: The authentication token to validate
 
         Returns:
-            The agent ID (URN) if token is valid, None otherwise
+            The agent ID (URN) if token is valid, None otherwise.
+            May return a coroutine for async validators.
 
         Example:
             >>> validator = BearerTokenValidator(my_validate_func)
@@ -303,15 +325,14 @@ class BearerTokenValidator:
     """Default Bearer token validator implementation.
 
     Wraps a validation function to conform to the TokenValidator protocol.
-    The validation function should take a token string and return an agent ID
-    if valid, or None if invalid.
+    The validation function may be sync or async. Sync validators that perform
+    I/O are run in a thread pool by the middleware to avoid blocking the loop.
 
     Attributes:
         validate_func: Function that validates tokens and returns agent IDs
 
     Example:
         >>> def my_validator(token: str) -> str | None:
-        ...     # Check token in database
         ...     if token in valid_tokens:
         ...         return valid_tokens[token]["agent_id"]
         ...     return None
@@ -320,22 +341,28 @@ class BearerTokenValidator:
         >>> agent_id = validator("abc123")
     """
 
-    def __init__(self, validate_func: Callable[[str], str | None]) -> None:
+    def __init__(
+        self,
+        validate_func: Callable[[str], str | None | Awaitable[str | None]],
+    ) -> None:
         """Initialize the Bearer token validator.
 
         Args:
-            validate_func: Function that validates tokens and returns agent IDs
+            validate_func: Sync or async function that validates tokens
+                and returns agent IDs. Sync functions with I/O are run
+                in a thread pool to avoid blocking the event loop.
         """
         self.validate_func = validate_func
 
-    def __call__(self, token: str) -> str | None:
+    def __call__(self, token: str) -> str | None | Awaitable[str | None]:
         """Validate a token and return the authenticated agent ID.
 
         Args:
             token: The authentication token to validate
 
         Returns:
-            The agent ID (URN) if token is valid, None otherwise
+            The agent ID (URN) if token is valid, None otherwise.
+            May return a coroutine for async validate_func.
         """
         return self.validate_func(token)
 
@@ -498,7 +525,19 @@ class AuthenticationMiddleware:
                 "Token validator is None but authentication is required. "
                 "This should not happen if middleware was initialized correctly."
             )
-        agent_id = self.validator(token)
+        # Run async validators in main loop; run sync validators in thread pool
+        # to avoid blocking (e.g., DB/Redis lookups in sync validators)
+        if inspect.iscoroutinefunction(self.validator.__call__):
+            result = self.validator(token)
+            agent_id = await cast(Awaitable[str | None], result)
+        else:
+            # Cast: to_thread expects Callable[..., T]; TokenValidator may return Awaitable
+            # but we handle that below (BearerTokenValidator wrapping async func)
+            agent_id = await asyncio.to_thread(
+                cast("Callable[[str], str | None]", self.validator), token
+            )
+            if inspect.isawaitable(agent_id):
+                agent_id = await cast(Awaitable[str | None], agent_id)
 
         if agent_id is None:
             # Log sanitized token to avoid exposing full token data

@@ -35,56 +35,14 @@ from asap.transport.client import (
     ASAPTimeoutError,
 )
 
+from .conftest import create_mock_response
+
 if TYPE_CHECKING:
     pass
 
 
-def create_mock_response(envelope: Envelope, request_id: str | int = "req-1") -> httpx.Response:
-    """Create a mock HTTP response with JSON-RPC wrapped envelope."""
-    json_rpc_response = {
-        "jsonrpc": "2.0",
-        "result": {"envelope": envelope.model_dump(mode="json")},
-        "id": request_id,
-    }
-    return httpx.Response(
-        status_code=200,
-        json=json_rpc_response,
-    )
-
-
 class TestMessageLoss:
     """Tests for message loss scenarios."""
-
-    @pytest.fixture
-    def sample_request_envelope(self) -> Envelope:
-        """Create a sample request envelope for testing."""
-        return Envelope(
-            asap_version="0.1",
-            sender="urn:asap:agent:client",
-            recipient="urn:asap:agent:server",
-            payload_type="task.request",
-            payload=TaskRequest(
-                conversation_id="conv_loss_001",
-                skill_id="echo",
-                input={"message": "Message loss test"},
-            ).model_dump(),
-        )
-
-    @pytest.fixture
-    def sample_response_envelope(self, sample_request_envelope: Envelope) -> Envelope:
-        """Create a sample response envelope for testing."""
-        return Envelope(
-            asap_version="0.1",
-            sender="urn:asap:agent:server",
-            recipient="urn:asap:agent:client",
-            payload_type="task.response",
-            payload=TaskResponse(
-                task_id="task_loss_001",
-                status=TaskStatus.COMPLETED,
-                result={"echoed": {"message": "Message loss test"}},
-            ).model_dump(),
-            correlation_id=sample_request_envelope.id,
-        )
 
     async def test_complete_message_loss_timeout(self, sample_request_envelope: Envelope) -> None:
         """Test client behavior when response is completely lost.
@@ -222,37 +180,6 @@ class TestMessageDuplication:
         registry.clear()
         yield
         registry.clear()
-
-    @pytest.fixture
-    def sample_request_envelope(self) -> Envelope:
-        """Create a sample request envelope for testing."""
-        return Envelope(
-            asap_version="0.1",
-            sender="urn:asap:agent:client",
-            recipient="urn:asap:agent:server",
-            payload_type="task.request",
-            payload=TaskRequest(
-                conversation_id="conv_dup_001",
-                skill_id="echo",
-                input={"message": "Duplication test"},
-            ).model_dump(),
-        )
-
-    @pytest.fixture
-    def sample_response_envelope(self, sample_request_envelope: Envelope) -> Envelope:
-        """Create a sample response envelope for testing."""
-        return Envelope(
-            asap_version="0.1",
-            sender="urn:asap:agent:server",
-            recipient="urn:asap:agent:client",
-            payload_type="task.response",
-            payload=TaskResponse(
-                task_id="task_dup_001",
-                status=TaskStatus.COMPLETED,
-                result={"echoed": {"message": "Duplication test"}},
-            ).model_dump(),
-            correlation_id=sample_request_envelope.id,
-        )
 
     async def test_duplicate_response_handling(
         self, sample_request_envelope: Envelope, sample_response_envelope: Envelope
@@ -419,21 +346,6 @@ class TestMessageDuplication:
 class TestOutOfOrderDelivery:
     """Tests for out-of-order message delivery scenarios."""
 
-    @pytest.fixture
-    def sample_request_envelope(self) -> Envelope:
-        """Create a sample request envelope for testing."""
-        return Envelope(
-            asap_version="0.1",
-            sender="urn:asap:agent:client",
-            recipient="urn:asap:agent:server",
-            payload_type="task.request",
-            payload=TaskRequest(
-                conversation_id="conv_order_001",
-                skill_id="echo",
-                input={"message": "Order test"},
-            ).model_dump(),
-        )
-
     async def test_response_for_different_request(self, sample_request_envelope: Envelope) -> None:
         """Test client behavior when receiving a response for a different request.
 
@@ -537,37 +449,6 @@ class TestOutOfOrderDelivery:
 
 class TestPartialCorruption:
     """Tests for partial message corruption scenarios."""
-
-    @pytest.fixture
-    def sample_request_envelope(self) -> Envelope:
-        """Create a sample request envelope for testing."""
-        return Envelope(
-            asap_version="0.1",
-            sender="urn:asap:agent:client",
-            recipient="urn:asap:agent:server",
-            payload_type="task.request",
-            payload=TaskRequest(
-                conversation_id="conv_corrupt_001",
-                skill_id="echo",
-                input={"message": "Corruption test"},
-            ).model_dump(),
-        )
-
-    @pytest.fixture
-    def sample_response_envelope(self, sample_request_envelope: Envelope) -> Envelope:
-        """Create a sample response envelope for testing."""
-        return Envelope(
-            asap_version="0.1",
-            sender="urn:asap:agent:server",
-            recipient="urn:asap:agent:client",
-            payload_type="task.response",
-            payload=TaskResponse(
-                task_id="task_corrupt_001",
-                status=TaskStatus.COMPLETED,
-                result={"echoed": {"message": "Corruption test"}},
-            ).model_dump(),
-            correlation_id=sample_request_envelope.id,
-        )
 
     async def test_truncated_json_response(self, sample_request_envelope: Envelope) -> None:
         """Test client behavior when response JSON is truncated.
@@ -701,37 +582,6 @@ class TestPartialCorruption:
 
 class TestMessageReliabilityEdgeCases:
     """Edge case tests for message reliability scenarios."""
-
-    @pytest.fixture
-    def sample_request_envelope(self) -> Envelope:
-        """Create a sample request envelope for testing."""
-        return Envelope(
-            asap_version="0.1",
-            sender="urn:asap:agent:client",
-            recipient="urn:asap:agent:server",
-            payload_type="task.request",
-            payload=TaskRequest(
-                conversation_id="conv_edge_001",
-                skill_id="echo",
-                input={"message": "Edge case test"},
-            ).model_dump(),
-        )
-
-    @pytest.fixture
-    def sample_response_envelope(self, sample_request_envelope: Envelope) -> Envelope:
-        """Create a sample response envelope for testing."""
-        return Envelope(
-            asap_version="0.1",
-            sender="urn:asap:agent:server",
-            recipient="urn:asap:agent:client",
-            payload_type="task.response",
-            payload=TaskResponse(
-                task_id="task_edge_001",
-                status=TaskStatus.COMPLETED,
-                result={"echoed": {"message": "Edge case test"}},
-            ).model_dump(),
-            correlation_id=sample_request_envelope.id,
-        )
 
     async def test_empty_response_body(self, sample_request_envelope: Envelope) -> None:
         """Test client behavior when response body is empty.

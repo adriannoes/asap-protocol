@@ -1,6 +1,6 @@
 # Rate Limiting Testing Pattern
 
-> Quick reference for testing with slowapi rate limiting. For detailed documentation, see: `.cursor/dev-planning/code-review/v1.0.0/rate-limiting-testing-patterns.md`
+> Quick reference for testing with slowapi rate limiting. Full documentation: `.cursor/docs/rate-limiting-testing-patterns.md`
 
 ## Problem
 
@@ -136,7 +136,7 @@ pytest -n 0
 
 ## When in Doubt
 
-1. Read the detailed documentation: `.cursor/dev-planning/code-review/v1.0.0/rate-limiting-testing-patterns.md`
+1. Read the full documentation: `.cursor/docs/rate-limiting-testing-patterns.md`
 2. Check existing examples: `tests/transport/test_server.py::TestDebugLogMode`
 3. Check v0.5.0 fixtures: `tests/transport/conftest.py`
 

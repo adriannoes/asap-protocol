@@ -6,10 +6,13 @@ This module tests the authentication middleware functionality:
 - Authentication bypass when not configured
 - Error responses for invalid auth
 - Custom token validators
+- Non-blocking sync validator execution (thread pool)
 
 Note: Rate limiting tests have been migrated to tests/transport/integration/test_rate_limiting.py
 """
 
+import asyncio
+import time
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -203,6 +206,63 @@ async def test_verify_authentication_valid_token(
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="valid-token-123")
 
     agent_id = await middleware.verify_authentication(request, credentials)
+    assert agent_id == "urn:asap:agent:client-1"
+
+
+@pytest.mark.asyncio
+async def test_verify_authentication_sync_validator_does_not_block_event_loop(
+    manifest_with_bearer_auth: Manifest,
+) -> None:
+    """Regression: sync validators with blocking I/O run in thread pool, not blocking the loop.
+
+    A sync validator that sleeps (simulating DB/Redis latency) would block the event
+    loop if called directly. The middleware runs sync validators via asyncio.to_thread,
+    so concurrent auth requests complete in parallel rather than sequentially.
+    """
+
+    def slow_sync_validator(token: str) -> str | None:
+        """Simulate blocking I/O (e.g., DB lookup). Runs in thread pool."""
+        time.sleep(0.15)
+        return "urn:asap:agent:client-1" if token == "valid-token" else None
+
+    validator = BearerTokenValidator(slow_sync_validator)
+    middleware = AuthenticationMiddleware(manifest_with_bearer_auth, validator)
+
+    request1 = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
+    request2 = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
+    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="valid-token")
+
+    start = time.monotonic()
+    results = await asyncio.gather(
+        middleware.verify_authentication(request1, creds),
+        middleware.verify_authentication(request2, creds),
+    )
+    elapsed = time.monotonic() - start
+
+    assert results[0] == "urn:asap:agent:client-1"
+    assert results[1] == "urn:asap:agent:client-1"
+    # If blocking: ~0.3s sequential. If non-blocking: ~0.15s parallel.
+    assert elapsed < 0.25, f"Sync validator blocked loop: {elapsed:.2f}s (expected <0.25s)"
+
+
+@pytest.mark.asyncio
+async def test_verify_authentication_async_validator(
+    manifest_with_bearer_auth: Manifest,
+) -> None:
+    """Test that async validators work correctly (awaited in main loop)."""
+
+    async def async_validator(token: str) -> str | None:
+        await asyncio.sleep(0.01)  # Simulate async I/O
+        return "urn:asap:agent:client-1" if token == "valid-token" else None
+
+    # BearerTokenValidator can wrap async functions (returns coroutine)
+    validator = BearerTokenValidator(async_validator)
+    middleware = AuthenticationMiddleware(manifest_with_bearer_auth, validator)
+
+    request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
+    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="valid-token")
+
+    agent_id = await middleware.verify_authentication(request, creds)
     assert agent_id == "urn:asap:agent:client-1"
 
 

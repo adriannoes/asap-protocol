@@ -130,7 +130,7 @@ Transport:
 
 ### Development: Handler hot reload (`ASAP_HOT_RELOAD`)
 
-When running the server during development, you can enable **handler hot reload** so that changes to the handlers module are picked up without restarting the process. This is a **development-only** feature and must not be used in production.
+**Development only** — Do not enable `ASAP_HOT_RELOAD` in production. It is intended for local development so that changes to the handlers module are picked up without restarting the process.
 
 - Set the environment variable `ASAP_HOT_RELOAD=1` (or `true` / `yes`) before starting the server.
 - The implementation uses a **background thread** that watches the handlers file and reloads the registry when it changes. The server continues serving requests while the watcher runs.

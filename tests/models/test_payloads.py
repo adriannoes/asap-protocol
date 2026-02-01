@@ -1,5 +1,7 @@
 """Tests for Task payload models (requests, responses, updates, cancellations)."""
 
+from asap.models.enums import MessageRole, TaskStatus, UpdateType
+
 
 class TestTaskRequest:
     """Test suite for TaskRequest payload model."""
@@ -82,7 +84,7 @@ class TestTaskResponse:
         """Test creating a TaskResponse with minimal required fields."""
         from asap.models.payloads import TaskResponse
 
-        response = TaskResponse(task_id="task_01HX5K4N", status="completed")
+        response = TaskResponse(task_id="task_01HX5K4N", status=TaskStatus.COMPLETED)
 
         assert response.task_id == "task_01HX5K4N"
         assert response.status == "completed"
@@ -96,7 +98,7 @@ class TestTaskResponse:
 
         result = {"summary": "Analysis complete with 3 key findings", "artifacts": ["art_01HX5K6Q"]}
 
-        response = TaskResponse(task_id="task_123", status="completed", result=result)
+        response = TaskResponse(task_id="task_123", status=TaskStatus.COMPLETED, result=result)
 
         assert response.result is not None
         assert response.result["summary"] == "Analysis complete with 3 key findings"
@@ -108,7 +110,9 @@ class TestTaskResponse:
 
         final_state = {"version": 5, "data": {"completed": True, "findings": 3}}
 
-        response = TaskResponse(task_id="task_123", status="completed", final_state=final_state)
+        response = TaskResponse(
+            task_id="task_123", status=TaskStatus.COMPLETED, final_state=final_state
+        )
 
         assert response.final_state is not None
         assert response.final_state["version"] == 5
@@ -119,7 +123,7 @@ class TestTaskResponse:
 
         metrics = {"duration_ms": 45000, "tokens_used": 12500}
 
-        response = TaskResponse(task_id="task_123", status="completed", metrics=metrics)
+        response = TaskResponse(task_id="task_123", status=TaskStatus.COMPLETED, metrics=metrics)
 
         assert response.metrics is not None
         assert response.metrics["duration_ms"] == 45000
@@ -154,7 +158,10 @@ class TestTaskUpdate:
         }
 
         update = TaskUpdate(
-            task_id="task_123", update_type="progress", status="working", progress=progress
+            task_id="task_123",
+            update_type=UpdateType.PROGRESS,
+            status=TaskStatus.WORKING,
+            progress=progress,
         )
 
         assert update.task_id == "task_123"
@@ -179,8 +186,8 @@ class TestTaskUpdate:
 
         update = TaskUpdate(
             task_id="task_123",
-            update_type="input_required",
-            status="input_required",
+            update_type=UpdateType.INPUT_REQUIRED,
+            status=TaskStatus.INPUT_REQUIRED,
             input_request=input_request,
         )
 
@@ -215,8 +222,8 @@ class TestTaskUpdate:
         with pytest.raises(ValueError, match="progress.percent must be a number"):
             TaskUpdate(
                 task_id="task_123",
-                update_type="progress",
-                status="working",
+                update_type=UpdateType.PROGRESS,
+                status=TaskStatus.WORKING,
                 progress={"percent": "fifty"},  # String instead of number
             )
 
@@ -229,16 +236,16 @@ class TestTaskUpdate:
         with pytest.raises(ValueError, match="progress.percent must be between 0 and 100"):
             TaskUpdate(
                 task_id="task_123",
-                update_type="progress",
-                status="working",
+                update_type=UpdateType.PROGRESS,
+                status=TaskStatus.WORKING,
                 progress={"percent": 150},  # Over 100
             )
 
         with pytest.raises(ValueError, match="progress.percent must be between 0 and 100"):
             TaskUpdate(
                 task_id="task_123",
-                update_type="progress",
-                status="working",
+                update_type=UpdateType.PROGRESS,
+                status=TaskStatus.WORKING,
                 progress={"percent": -10},  # Negative
             )
 
@@ -248,8 +255,8 @@ class TestTaskUpdate:
 
         update = TaskUpdate(
             task_id="task_123",
-            update_type="progress",
-            status="working",
+            update_type=UpdateType.PROGRESS,
+            status=TaskStatus.WORKING,
             progress={"message": "Working..."},  # No percent field
         )
 
@@ -261,16 +268,16 @@ class TestTaskUpdate:
 
         update_zero = TaskUpdate(
             task_id="task_123",
-            update_type="progress",
-            status="working",
+            update_type=UpdateType.PROGRESS,
+            status=TaskStatus.WORKING,
             progress={"percent": 0},
         )
         assert update_zero.progress["percent"] == 0
 
         update_hundred = TaskUpdate(
             task_id="task_456",
-            update_type="progress",
-            status="working",
+            update_type=UpdateType.PROGRESS,
+            status=TaskStatus.WORKING,
             progress={"percent": 100},
         )
         assert update_hundred.progress["percent"] == 100
@@ -322,7 +329,7 @@ class TestMessageSend:
             task_id="task_123",
             message_id="msg_456",
             sender="urn:asap:agent:coordinator",
-            role="user",
+            role=MessageRole.USER,
             parts=["part_789"],
         )
 
@@ -340,7 +347,7 @@ class TestMessageSend:
             task_id="task_123",
             message_id="msg_456",
             sender="urn:asap:agent:assistant",
-            role="assistant",
+            role=MessageRole.ASSISTANT,
             parts=["part_1", "part_2", "part_3"],
         )
 

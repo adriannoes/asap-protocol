@@ -28,3 +28,11 @@ alwaysApply: false
 ## 4. Anti-Patterns
 - Never use `time.sleep()`. Use `asyncio.sleep()`.
 - Do not bypass `ruff` or `mypy` checks in tests.
+
+## 5. CI and pytest-xdist
+
+When running tests in parallel (`-n auto`), follow these rules to avoid INTERNALERROR (exit code 3) and flaky CI:
+
+- **Rate limiter isolation:** The global rate limiter (slowapi) is shared across workers. `tests/conftest.py` provides an autouse fixture `_isolate_rate_limiter` that replaces it with an isolated instance per test. Do not remove this fixture; tests that need specific rate limits (e.g. `tests/transport/integration/test_rate_limiting.py`) skip isolation via `request.fspath` check.
+- **Coverage and xdist:** Do NOT add `--cov=src` or `--cov-report=*` to pytest `addopts` in `pyproject.toml`. Running coverage with pytest-xdist can cause INTERNALERROR. Run coverage only in a dedicated CI job without `-n auto` (e.g. `uv run pytest --cov=src --cov-report=xml`).
+- **Benchmarks and testpaths:** `testpaths` must include only `tests/`, not `benchmarks/`. The benchmarks use Locust, which monkey-patches gevent/ssl on import; that conflicts with pytest-xdist workers. Run benchmarks separately when needed: `uv run pytest benchmarks/` or `uv run locust -f benchmarks/load_test.py`.

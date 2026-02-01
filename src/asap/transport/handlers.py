@@ -439,18 +439,19 @@ class HandlerRegistry:
             return list(self._handlers.keys())
 
 
-def create_echo_handler() -> Handler:
-    """Create an echo handler that echoes TaskRequest input.
+def create_echo_handler() -> SyncHandler:
+    """Create a synchronous echo handler that echoes TaskRequest input.
 
     The echo handler is a simple implementation that:
     - Receives a TaskRequest envelope
     - Returns a TaskResponse with the input echoed back
     - Preserves trace_id and sets correlation_id
 
+    Returns SyncHandler (not Handler) so tests can use it without casting.
     This is useful for testing and as a base for custom handlers.
 
     Returns:
-        Handler function that echoes TaskRequest input
+        SyncHandler that echoes TaskRequest input
 
     Example:
         >>> handler = create_echo_handler()

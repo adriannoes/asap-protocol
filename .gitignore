@@ -160,8 +160,14 @@ cython_debug/
 .vscode/
 *.swp
 *.swo
+*~
 
-# Project specific
+# Temporary / backup
+*.tmp
+*.temp
+*.bak
+
+# Project specific (Cursor: keep .cursor/ tracked; ignore local-only paths)
 !/.cursor/
 .cursor/docs/design-decisions.md
 .cursor/docs/wiki

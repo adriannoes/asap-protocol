@@ -3,6 +3,8 @@
 > **Document**: Rate Limiting Testing Best Practices
 > **Sprint Context**: v0.5.0 S2.5 (Issue #17) and v1.0.0 P5-P6
 > **Last Updated**: 2026-01-31
+>
+> **Enforceable rule and quick checklist**: `.cursor/rules/testing-rate-limiting.mdc`
 
 ---
 
@@ -55,38 +57,7 @@ limiter2 = Limiter(storage_uri=f"memory://{uuid.uuid4()}")
 
 ### Implementation Pattern
 
-#### Pattern 1: Aggressive Monkeypatch (Recommended)
-
-```python
-def test_something(sample_manifest: Manifest, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test that needs rate limiting isolation."""
-    import uuid
-    from slowapi import Limiter
-    from slowapi.util import get_remote_address
-
-    # Create isolated limiter with unique storage
-    isolated_limiter = Limiter(
-        key_func=get_remote_address,
-        default_limits=["999999/minute"],  # Very high limit for testing
-        storage_uri=f"memory://{uuid.uuid4()}",  # Unique storage
-    )
-
-    # CRITICAL: Replace in BOTH modules (aggressive monkeypatch)
-    import asap.transport.middleware as middleware_module
-    import asap.transport.server as server_module
-    monkeypatch.setattr(middleware_module, "limiter", isolated_limiter)
-    monkeypatch.setattr(server_module, "limiter", isolated_limiter)
-
-    # Now create app - it will use the monkeypatched limiter
-    app = create_app(sample_manifest, rate_limit="999999/minute")
-    # ALSO replace app.state.limiter for runtime consistency
-    app.state.limiter = isolated_limiter
-    client = TestClient(app)
-
-    # Test code here - fully isolated from other tests
-    response = client.post("/asap", json=request_body)
-    assert response.status_code == 200  # No HTTP 429!
-```
+Apply the **canonical pattern** (steps, critical rules, and code block) from `.cursor/rules/testing-rate-limiting.mdc`. Summary: create an isolated limiter with `storage_uri=f"memory://{uuid.uuid4()}"`, monkeypatch `limiter` in both `asap.transport.middleware` and `asap.transport.server` *before* creating the app, then create the app and set `app.state.limiter`. Use high limits (e.g. `"999999/minute"`) for tests that are not asserting rate limiting; use moderate limits (e.g. `"10/minute"`) only in dedicated rate-limiting tests.
 
 #### Pattern 2: Using Test Fixtures (v0.5.0 Approach)
 
@@ -232,6 +203,8 @@ tests/
 
 ## Decision Tree: When to Use Each Pattern
 
+Canonical version: `.cursor/rules/testing-rate-limiting.mdc`
+
 ```
 ┌─ Testing rate limiting functionality itself?
 │  ├─ YES → Use Pattern 1 (Aggressive Monkeypatch) + moderate limits (10/minute)
@@ -249,45 +222,9 @@ tests/
 
 ## Common Pitfalls and Solutions
 
-### Pitfall 1: Only Replacing app.state.limiter
+For **critical rules** and **common mistakes** (only replacing `app.state.limiter`, patching only one module, creating app before monkeypatching), see `.cursor/rules/testing-rate-limiting.mdc`.
 
-```python
-# ❌ WRONG
-app = create_app(manifest)
-app.state.limiter = isolated_limiter  # Decorator ignores this
-
-# ✅ CORRECT
-monkeypatch.setattr(middleware_module, "limiter", isolated_limiter)
-monkeypatch.setattr(server_module, "limiter", isolated_limiter)
-app = create_app(manifest)
-app.state.limiter = isolated_limiter
-```
-
-### Pitfall 2: Forgetting to Replace in Both Modules
-
-```python
-# ❌ WRONG (only one module)
-monkeypatch.setattr(middleware_module, "limiter", isolated_limiter)
-# server_module still has old limiter!
-
-# ✅ CORRECT (both modules)
-monkeypatch.setattr(middleware_module, "limiter", isolated_limiter)
-monkeypatch.setattr(server_module, "limiter", isolated_limiter)
-```
-
-### Pitfall 3: Creating App Before Monkeypatching
-
-```python
-# ❌ WRONG ORDER
-app = create_app(manifest)  # Decorator already captured old limiter
-monkeypatch.setattr(...)    # Too late!
-
-# ✅ CORRECT ORDER
-monkeypatch.setattr(...)    # First, replace limiter
-app = create_app(manifest)  # Now decorator uses new limiter
-```
-
-### Pitfall 4: Reusing TestClient Across Tests
+### Pitfall: Reusing TestClient Across Tests
 
 ```python
 # ❌ WRONG (shared client)
@@ -404,26 +341,11 @@ def create_app(manifest: Manifest, rate_limit: str | None = None) -> FastAPI:
 
 ## Checklist for New Tests Involving Rate Limiting
 
-- [ ] Test specifically tests rate limiting behavior?
-  - [ ] YES → Use aggressive monkeypatch + moderate limits (10/minute)
-  - [ ] NO → Use aggressive monkeypatch + high limits (999999/minute)
+Use the **decision tree** and **critical rules** in `.cursor/rules/testing-rate-limiting.mdc` as the canonical checklist. Summary:
 
-- [ ] Multiple tests in same class?
-  - [ ] YES → Consider `NoRateLimitTestBase` mixin
-  - [ ] NO → Use per-test monkeypatch
-
-- [ ] Applied aggressive monkeypatch pattern?
-  - [ ] Imported `uuid`, `Limiter`, `get_remote_address`
-  - [ ] Created isolated limiter with unique storage_uri
-  - [ ] Replaced in `asap.transport.middleware`
-  - [ ] Replaced in `asap.transport.server`
-  - [ ] Created app AFTER monkeypatching
-  - [ ] Assigned to `app.state.limiter`
-
-- [ ] Test organization
-  - [ ] Rate limiting tests in dedicated file?
-  - [ ] Using process isolation (`pytest -n auto`)?
-  - [ ] Fixture scope correct (`function`, not `module`)?
+- [ ] Chose pattern from decision tree (rate-limiting test? → moderate limits + dedicated file; else → high limits or `NoRateLimitTestBase`).
+- [ ] Applied aggressive monkeypatch per the rule (both modules, before creating app, unique storage, `app.state.limiter`).
+- [ ] Test organization: rate-limiting tests in dedicated file; process isolation (`pytest -n auto`); fixture scope `function`, not `module`.
 
 ---
 
@@ -435,6 +357,7 @@ def create_app(manifest: Manifest, rate_limit: str | None = None) -> FastAPI:
 - **v1.0.0 Sprint P5-P6**: Applied lessons learned, prevented regressions
 
 ### Related Documents
+- `.cursor/rules/testing-rate-limiting.mdc` - Enforceable rule and quick reference (canonical pattern and critical rules)
 - `.cursor/dev-planning/tasks/v0.5.0/tasks-v0.5.0-s2-detailed.md` - Initial rate limiting implementation
 - `.cursor/dev-planning/tasks/v0.5.0/tasks-v0.5.0-s2.5-detailed.md` - Problem resolution
 - `.cursor/dev-planning/tasks/v1.0.0/upstream-slowapi-deprecation.md` - slowapi deprecation warning

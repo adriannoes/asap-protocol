@@ -24,7 +24,7 @@ import pytest
 from asap.errors import CircuitOpenError
 from asap.models.envelope import Envelope
 from asap.models.enums import TaskStatus
-from asap.models.payloads import TaskRequest, TaskResponse
+from asap.models.payloads import TaskResponse
 from asap.transport.circuit_breaker import CircuitState, get_registry
 from asap.transport.client import (
     ASAPClient,
@@ -33,56 +33,14 @@ from asap.transport.client import (
     RetryConfig,
 )
 
+from .conftest import create_mock_response
+
 if TYPE_CHECKING:
     pass
 
 
-def create_mock_response(envelope: Envelope, request_id: str | int = "req-1") -> httpx.Response:
-    """Create a mock HTTP response with JSON-RPC wrapped envelope."""
-    json_rpc_response = {
-        "jsonrpc": "2.0",
-        "result": {"envelope": envelope.model_dump(mode="json")},
-        "id": request_id,
-    }
-    return httpx.Response(
-        status_code=200,
-        json=json_rpc_response,
-    )
-
-
 class TestServerCrashBasic:
     """Tests for basic server crash scenarios."""
-
-    @pytest.fixture
-    def sample_request_envelope(self) -> Envelope:
-        """Create a sample request envelope for testing."""
-        return Envelope(
-            asap_version="0.1",
-            sender="urn:asap:agent:client",
-            recipient="urn:asap:agent:server",
-            payload_type="task.request",
-            payload=TaskRequest(
-                conversation_id="conv_crash_001",
-                skill_id="echo",
-                input={"message": "Crash test"},
-            ).model_dump(),
-        )
-
-    @pytest.fixture
-    def sample_response_envelope(self, sample_request_envelope: Envelope) -> Envelope:
-        """Create a sample response envelope for testing."""
-        return Envelope(
-            asap_version="0.1",
-            sender="urn:asap:agent:server",
-            recipient="urn:asap:agent:client",
-            payload_type="task.response",
-            payload=TaskResponse(
-                task_id="task_crash_001",
-                status=TaskStatus.COMPLETED,
-                result={"echoed": {"message": "Crash test"}},
-            ).model_dump(),
-            correlation_id=sample_request_envelope.id,
-        )
 
     async def test_server_crash_during_request(self, sample_request_envelope: Envelope) -> None:
         """Test client behavior when server crashes during request.
@@ -221,37 +179,6 @@ class TestServerCrashWithCircuitBreaker:
         yield
         registry.clear()
 
-    @pytest.fixture
-    def sample_request_envelope(self) -> Envelope:
-        """Create a sample request envelope for testing."""
-        return Envelope(
-            asap_version="0.1",
-            sender="urn:asap:agent:client",
-            recipient="urn:asap:agent:server",
-            payload_type="task.request",
-            payload=TaskRequest(
-                conversation_id="conv_crash_cb_001",
-                skill_id="echo",
-                input={"message": "Crash with circuit breaker"},
-            ).model_dump(),
-        )
-
-    @pytest.fixture
-    def sample_response_envelope(self, sample_request_envelope: Envelope) -> Envelope:
-        """Create a sample response envelope for testing."""
-        return Envelope(
-            asap_version="0.1",
-            sender="urn:asap:agent:server",
-            recipient="urn:asap:agent:client",
-            payload_type="task.response",
-            payload=TaskResponse(
-                task_id="task_crash_cb_001",
-                status=TaskStatus.COMPLETED,
-                result={"echoed": {"message": "Crash with circuit breaker"}},
-            ).model_dump(),
-            correlation_id=sample_request_envelope.id,
-        )
-
     async def test_circuit_opens_on_repeated_crashes(
         self, sample_request_envelope: Envelope
     ) -> None:
@@ -341,37 +268,6 @@ class TestServerCrashWithCircuitBreaker:
 
 class TestServerCrashPatterns:
     """Tests for specific server crash patterns."""
-
-    @pytest.fixture
-    def sample_request_envelope(self) -> Envelope:
-        """Create a sample request envelope for testing."""
-        return Envelope(
-            asap_version="0.1",
-            sender="urn:asap:agent:client",
-            recipient="urn:asap:agent:server",
-            payload_type="task.request",
-            payload=TaskRequest(
-                conversation_id="conv_crash_pattern_001",
-                skill_id="echo",
-                input={"message": "Pattern test"},
-            ).model_dump(),
-        )
-
-    @pytest.fixture
-    def sample_response_envelope(self, sample_request_envelope: Envelope) -> Envelope:
-        """Create a sample response envelope for testing."""
-        return Envelope(
-            asap_version="0.1",
-            sender="urn:asap:agent:server",
-            recipient="urn:asap:agent:client",
-            payload_type="task.response",
-            payload=TaskResponse(
-                task_id="task_crash_pattern_001",
-                status=TaskStatus.COMPLETED,
-                result={"echoed": {"message": "Pattern test"}},
-            ).model_dump(),
-            correlation_id=sample_request_envelope.id,
-        )
 
     async def test_rolling_restart_scenario(
         self, sample_request_envelope: Envelope, sample_response_envelope: Envelope
@@ -508,21 +404,6 @@ class TestServerCrashPatterns:
 
 class TestServerCrashEdgeCases:
     """Edge case tests for server crash scenarios."""
-
-    @pytest.fixture
-    def sample_request_envelope(self) -> Envelope:
-        """Create a sample request envelope for testing."""
-        return Envelope(
-            asap_version="0.1",
-            sender="urn:asap:agent:client",
-            recipient="urn:asap:agent:server",
-            payload_type="task.request",
-            payload=TaskRequest(
-                conversation_id="conv_crash_edge_001",
-                skill_id="echo",
-                input={"message": "Edge case test"},
-            ).model_dump(),
-        )
 
     async def test_incomplete_response_before_crash(
         self, sample_request_envelope: Envelope

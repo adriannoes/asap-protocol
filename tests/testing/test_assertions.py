@@ -3,6 +3,7 @@
 import pytest
 
 from asap.models.envelope import Envelope
+from asap.models.enums import TaskStatus
 from asap.models.payloads import TaskRequest, TaskResponse
 from asap.testing.assertions import (
     assert_envelope_valid,
@@ -19,7 +20,7 @@ def _make_request_envelope(
 ) -> Envelope:
     """Build a minimal valid request envelope."""
     payload = (
-        TaskResponse(task_id="t1", status="completed").model_dump()
+        TaskResponse(task_id="t1", status=TaskStatus.COMPLETED).model_dump()
         if payload_type == "TaskResponse"
         else TaskRequest(conversation_id="c", skill_id="echo", input={}).model_dump()
     )
@@ -93,7 +94,7 @@ class TestAssertTaskCompleted:
             sender="urn:asap:agent:b",
             recipient="urn:asap:agent:a",
             payload_type="TaskResponse",
-            payload=TaskResponse(task_id="t1", status="completed").model_dump(),
+            payload=TaskResponse(task_id="t1", status=TaskStatus.COMPLETED).model_dump(),
             correlation_id="req_01",
         )
         assert_task_completed(envelope)
@@ -118,7 +119,7 @@ class TestAssertResponseCorrelates:
             sender="urn:asap:agent:b",
             recipient="urn:asap:agent:a",
             payload_type="TaskResponse",
-            payload=TaskResponse(task_id="t1", status="completed").model_dump(),
+            payload=TaskResponse(task_id="t1", status=TaskStatus.COMPLETED).model_dump(),
             correlation_id=request.id,
         )
         assert_response_correlates(request, response)
@@ -131,7 +132,7 @@ class TestAssertResponseCorrelates:
             sender="urn:asap:agent:b",
             recipient="urn:asap:agent:a",
             payload_type="TaskResponse",
-            payload=TaskResponse(task_id="t1", status="completed").model_dump(),
+            payload=TaskResponse(task_id="t1", status=TaskStatus.COMPLETED).model_dump(),
             correlation_id="other_id",
         )
         with pytest.raises(
@@ -148,7 +149,7 @@ class TestAssertResponseCorrelates:
             sender="urn:asap:agent:b",
             recipient="urn:asap:agent:a",
             payload_type="TaskResponse",
-            payload=TaskResponse(task_id="t1", status="completed").model_dump(),
+            payload=TaskResponse(task_id="t1", status=TaskStatus.COMPLETED).model_dump(),
             correlation_id="req_01HX5K4N",
         )
         with pytest.raises(AssertionError, match="Request envelope must have"):

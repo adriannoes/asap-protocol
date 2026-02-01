@@ -15,6 +15,7 @@ from asap.errors import InvalidTransitionError
 from asap.models.entities import Task
 from asap.models.enums import TaskStatus
 
+__all__ = ["TaskStatus", "can_transition", "transition", "VALID_TRANSITIONS"]
 
 # Valid state transitions mapping
 VALID_TRANSITIONS: dict[TaskStatus, set[TaskStatus]] = {
