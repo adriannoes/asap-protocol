@@ -242,23 +242,25 @@
 
 ### Tasks
 
-- [ ] 9.1 Write step-by-step tutorials
+- [x] 9.1 Write step-by-step tutorials
   - Goal: 4+ tutorials (beginner → advanced → devops)
   - Details: [Docs Detailed - Task 9.1](./tasks-v1.0.0-docs-detailed.md#task-91-write-step-by-step-tutorials)
 
-- [ ] 9.2 Write Architecture Decision Records
+- [x] 9.2 Write Architecture Decision Records
   - Goal: 15+ ADRs documenting key decisions
   - Details: [Docs Detailed - Task 9.2](./tasks-v1.0.0-docs-detailed.md#task-92-write-architecture-decision-records)
 
-- [ ] 9.3 PRD review checkpoint
-  - Goal: Review Q8 (i18n languages), document as DD-010
+- [x] 9.3 PRD review checkpoint
+  - Goal: Review Q8 (i18n languages), document as DD-013
   - Details: [Docs Detailed - Task 9.3](./tasks-v1.0.0-docs-detailed.md#task-93-prd-review-checkpoint)
 
 ### Definition of Done
-- [ ] 4+ tutorials complete
-- [ ] 15+ ADRs written
-- [ ] Docs well-organized
-- [ ] PRD Q8 answered
+- [x] 4+ tutorials complete
+- [x] 15+ ADRs written
+- [x] Docs well-organized
+- [x] PRD Q8 answered (DD-013: English-only v1.0.0)
+
+**Progress: 100%** (P9 complete)
 
 ---
 

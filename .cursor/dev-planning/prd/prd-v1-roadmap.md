@@ -1137,6 +1137,29 @@ Based on load testing results:
 
 ---
 
+#### DD-013: i18n Documentation Scope
+**Decision**: ✅ English-only for v1.0.0. Reassess in v1.1.0.
+
+**Rationale** (Sprint P9 Review - 2026-02-01):
+- PyPI stats (pypistats.org): ~308 downloads/month, ~23/day — early stage
+- No reliable geographic breakdown from public APIs
+- Single source of truth minimizes maintenance; English is the standard for OSS dev docs
+- Reassess post-v1.0.0 if community requests PT-BR or other languages
+
+**Alternatives Considered**:
+1. **English-only** → Chosen
+2. **English + PT-BR** → Defer to v1.1.0 if demand exists
+3. **English + multiple** → Too early; would fragment effort
+
+**v1.0.0 Implementation**:
+- All documentation (docs/, tutorials, ADRs, README) in English only
+- Code comments and docstrings in English (per project rules)
+- No translation infrastructure in v1.0.0
+
+**Future** (v1.1.0+): If community requests PT-BR or other languages, add translations. Threshold: explicit demand via GitHub Issues/Discussions or significant adoption in non-English regions.
+
+---
+
 ### Sprint S1-S3 Learnings
 
 > **Review Date**: 2026-01-27 (End of Sprint S3)
@@ -1221,10 +1244,10 @@ Based on load testing results:
    - **Action**: Defer decision to post-v1.0.0 based on community demand
    - **Review Point**: 2 weeks after v1.0.0 → Check GitHub Discussions feedback
 
-8. ❓ What languages should we support for i18n documentation?
-   - **Options**: English-only, English + Portuguese, English + multiple
-   - **Action**: Assess based on PyPI download geography post-v0.5.0
-   - **Review Point**: Start of Sprint P9 → Review PyPI stats, decide i18n scope
+8. ✅ ~~What languages should we support for i18n documentation?~~
+   - **Decision**: See DD-013 in Section 10
+   - **Resolved**: 2026-02-01 (Start of Sprint P9)
+   - **Choice**: English-only for v1.0.0 — Reassess in v1.1.0 based on community demand
 
 ### Community & Ecosystem
 9. ❓ Should we create a Discord/Slack community for ASAP developers?
@@ -1294,6 +1317,7 @@ Based on load testing results:
 | 2026-01-27 | 1.3 | Sprint S3 Review: Added S1-S3 Learnings section | ASAP Team |
 | 2026-01-30 | 1.4 | Sprint P1 Checkpoint: Confirmed Q3/DD-008 (HMAC defer to v1.1.0+) | ASAP Team |
 | 2026-01-31 | 1.5 | Sprint P6 Checkpoint: DD-011 Trace JSON export; Q5 resolved | ASAP Team |
+| 2026-02-01 | 1.6 | Sprint P9 Checkpoint: DD-013 i18n scope (English-only v1.0.0); Q8 resolved | ASAP Team |
 
 ---
 
@@ -1359,8 +1383,8 @@ Detailed task lists have been created in separate files:
 ---
 
 **Document Status**: ✅ Active (Living Document)
-**Last Updated**: 2026-01-27  
-**Version**: 1.3  
+**Last Updated**: 2026-02-01  
+**Version**: 1.6  
 **Next Review Schedule**:
 - ~~**Sprint S3** (v0.5.0): Security decisions checkpoint~~ ✅ COMPLETED (2026-01-27)
 - **Sprint P3** (v1.0.0): Performance decisions checkpoint  

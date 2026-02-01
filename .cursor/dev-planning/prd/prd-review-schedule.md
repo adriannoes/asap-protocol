@@ -37,7 +37,7 @@ The PRD is a **living document** that evolves with the project. This document tr
 | 3 | **DX Examples** | P5 | End of sprint | Q4: Auth scheme for examples<br>Q6: pytest-asap plugin assessment | DD-009 for auth<br>Plugin decision |
 | 4 | **Debugging Tools** | P6 | End of sprint | Q5: Trace JSON export support | Implement or defer |
 | 5 | **Load Testing** | P7 | End of sprint | Q2: Adaptive rate limiting | Include in v1.0.0 or defer |
-| 6 | **Documentation i18n** | P9 | Start of sprint | Q8: i18n languages (check PyPI stats) | DD-010 for i18n scope |
+| 6 | **Documentation i18n** | P9 | Start of sprint | Q8: i18n languages (check PyPI stats) | DD-013 for i18n scope ✅ |
 | 7 | **Final Review** | P13 | Start of sprint | All remaining Q1-Q12 | Complete PRD<br>Create retrospective |
 
 **Total Checkpoints**: 7
@@ -205,7 +205,7 @@ Each checkpoint has corresponding tasks in the roadmap files:
 | Q5 | Trace JSON export | ✅ Resolved | Sprint P6 | DD-011: Implemented --format json in v1.0.0 |
 | Q6 | pytest-asap plugin | ✅ Resolved | Sprint P5 | Defer to v1.1.0 |
 | Q7 | Video tutorials | ⏳ Pending | Post-release | TBD |
-| Q8 | i18n languages | ⏳ Pending | Sprint P9 | TBD |
+| Q8 | i18n languages | ✅ Resolved | Sprint P9 | DD-013: English-only v1.0.0, reassess v1.1.0 |
 | Q9 | Discord/Slack community | ⏳ Pending | Post-release | TBD |
 | Q10 | Foundation sponsorship | ⏳ Pending | Post-release | TBD |
 | Q11 | Next transport binding | ⏳ Pending | v1.1.0 planning | TBD |
