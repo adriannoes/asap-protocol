@@ -137,7 +137,11 @@ class RegistryHolder:
 
 
 def _run_handler_watcher(holder: RegistryHolder, handlers_path: str) -> None:
-    """Background thread: watch handlers_path and reload registry on change."""
+    """Background thread: watch handlers_path and reload registry on change.
+
+    Graceful degradation: if watchfiles is not installed, hot reload is skipped
+    and the server runs normally without file watching.
+    """
     try:
         from watchfiles import watch
     except ImportError:
@@ -1194,6 +1198,10 @@ def create_app(
             Rate limiting is IP-based (per client IP address) to prevent DoS attacks.
             Uses token bucket pattern: burst limit + sustained limit.
             Defaults to ASAP_RATE_LIMIT environment variable or "10/second;100/minute".
+            **Warning:** The default storage is ``memory://`` (per-process). In
+            multi-worker deployments (e.g., Gunicorn with 4 workers), each worker
+            has isolated limits, so effective rate = limit × workers (e.g.,
+            10/s → 40/s). For production, use Redis-backed storage via slowapi.
         max_request_size: Optional maximum request size in bytes.
             Defaults to ASAP_MAX_REQUEST_SIZE environment variable or 10MB.
         max_threads: Optional maximum number of threads for sync handlers.
@@ -1353,6 +1361,7 @@ def create_app(
 
     # Configure rate limiting
     if rate_limit is None:
+        # Default matches DD-012: Burst allowance for better UX with bursty agent traffic
         rate_limit_str = os.getenv("ASAP_RATE_LIMIT", "10/second;100/minute")
     else:
         rate_limit_str = rate_limit

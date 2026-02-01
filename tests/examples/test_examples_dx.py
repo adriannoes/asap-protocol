@@ -271,10 +271,10 @@ class TestMultiStepWorkflowExample:
     def test_run_workflow_applies_steps_in_order(self) -> None:
         """run_workflow applies steps and returns final state."""
 
-        def step_a(data: dict) -> dict:
+        def step_a(data: dict[str, object]) -> dict[str, object]:
             return {"a": 1}
 
-        def step_b(data: dict) -> dict:
+        def step_b(data: dict[str, object]) -> dict[str, object]:
             return {**data, "b": 2}
 
         steps = [

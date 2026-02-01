@@ -3,6 +3,7 @@
 import pytest
 
 from asap.models.envelope import Envelope
+from asap.models.enums import TaskStatus
 from asap.models.payloads import TaskRequest, TaskResponse
 from asap.testing.mocks import MockAgent
 
@@ -13,7 +14,7 @@ class TestMockAgent:
     def test_set_response_and_handle_returns_envelope(self) -> None:
         """Handle returns envelope built from pre-set response for skill_id."""
         agent = MockAgent("urn:asap:agent:mock")
-        resp_payload = TaskResponse(task_id="task_1", status="completed").model_dump()
+        resp_payload = TaskResponse(task_id="task_1", status=TaskStatus.COMPLETED).model_dump()
         agent.set_response("echo", resp_payload)
         req = Envelope(
             asap_version="0.1",
@@ -50,7 +51,7 @@ class TestMockAgent:
     def test_set_default_response_used_when_no_skill_match(self) -> None:
         """Default response is used when skill_id has no specific response."""
         agent = MockAgent()
-        default = TaskResponse(task_id="task_1", status="completed").model_dump()
+        default = TaskResponse(task_id="task_1", status=TaskStatus.COMPLETED).model_dump()
         agent.set_default_response(default)
         req = Envelope(
             asap_version="0.1",
@@ -91,7 +92,9 @@ class TestMockAgent:
     def test_set_failure_raises_on_handle(self) -> None:
         """When set_failure is set, handle raises after recording request."""
         agent = MockAgent()
-        agent.set_response("echo", TaskResponse(task_id="1", status="completed").model_dump())
+        agent.set_response(
+            "echo", TaskResponse(task_id="1", status=TaskStatus.COMPLETED).model_dump()
+        )
         agent.set_failure(ValueError("simulated failure"))
         req = Envelope(
             asap_version="0.1",
@@ -110,7 +113,9 @@ class TestMockAgent:
     def test_set_delay_sleeps_before_return(self) -> None:
         """set_delay causes handle to sleep before returning."""
         agent = MockAgent()
-        agent.set_response("echo", TaskResponse(task_id="1", status="completed").model_dump())
+        agent.set_response(
+            "echo", TaskResponse(task_id="1", status=TaskStatus.COMPLETED).model_dump()
+        )
         agent.set_delay(0.05)
         req = Envelope(
             asap_version="0.1",
@@ -130,7 +135,9 @@ class TestMockAgent:
     def test_clear_resets_requests_and_responses(self) -> None:
         """clear() empties requests and pre-set responses."""
         agent = MockAgent()
-        agent.set_response("echo", TaskResponse(task_id="1", status="completed").model_dump())
+        agent.set_response(
+            "echo", TaskResponse(task_id="1", status=TaskStatus.COMPLETED).model_dump()
+        )
         req = Envelope(
             asap_version="0.1",
             sender="urn:asap:agent:a",
@@ -147,7 +154,9 @@ class TestMockAgent:
     def test_reset_clears_internal_state_for_isolation(self) -> None:
         """reset() clears registry and requests so no state leaks between scenarios."""
         agent = MockAgent("urn:asap:agent:isolated")
-        agent.set_response("echo", TaskResponse(task_id="1", status="completed").model_dump())
+        agent.set_response(
+            "echo", TaskResponse(task_id="1", status=TaskStatus.COMPLETED).model_dump()
+        )
         req = Envelope(
             asap_version="0.1",
             sender="urn:asap:agent:a",
@@ -161,7 +170,9 @@ class TestMockAgent:
         assert len(agent.requests) == 0
         assert agent.handle(req) is None
         # After reset, same agent can be reused with new responses
-        agent.set_response("echo", TaskResponse(task_id="2", status="completed").model_dump())
+        agent.set_response(
+            "echo", TaskResponse(task_id="2", status=TaskStatus.COMPLETED).model_dump()
+        )
         out = agent.handle(req)
         assert out is not None
         assert len(agent.requests) == 2  # one from handle after reset (None), one from this handle
