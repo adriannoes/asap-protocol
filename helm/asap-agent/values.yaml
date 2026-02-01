@@ -50,6 +50,7 @@ securityContext:
   runAsNonRoot: true
   runAsUser: 1000
   allowPrivilegeEscalation: false
+  # Intentional: false to allow writable /app/logs and /app/data (agent logs, temp files).
   readOnlyRootFilesystem: false
   capabilities:
     drop:
