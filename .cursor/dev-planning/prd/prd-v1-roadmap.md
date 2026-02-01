@@ -1097,6 +1097,46 @@ client = ASAPClient("http://agent.example.com", pool_connections=500, pool_maxsi
 
 ---
 
+#### DD-012: Adaptive Rate Limiting
+**Decision**: ❌ Defer fully adaptive rate limiting to v1.1.0+. ✅ Implement burst allowance in v1.0.0.
+
+**Rationale** (Sprint P7 Review - 2026-01-31):
+Based on load testing results:
+- Server sustained **1,500+ RPS** with zero errors under 50 concurrent users
+- Static rate limiting (via `ASAP_RATE_LIMIT` env var) provides sufficient flexibility
+- No breaking point reached in stress tests; system remained stable throughout
+- Adaptive rate limiting adds significant complexity (load detection, dynamic adjustment algorithms, potential oscillation issues)
+
+**Load Test Results**:
+| Metric | Result |
+|--------|--------|
+| Max RPS | 1,532 |
+| p95 Latency | 21ms (at 50 users) |
+| Error Rate | 0% |
+| Breaking Point | Not reached |
+
+**Alternatives Considered**:
+1. **Simple adaptive**: Increase/decrease limits based on CPU/memory → Rejected due to platform dependency
+2. **Token bucket with backpressure**: Automatic throttling → Considered for v1.1.0
+3. **Circuit breaker integration**: Trip circuit when rate exceeded → Already implemented separately
+4. **Burst allowance**: Allow short bursts while limiting sustained traffic → ✅ **Implemented in v1.0.0**
+
+**v1.0.0 Implementation** (Burst Allowance):
+- Changed default from `"100/minute"` to `"10/second;100/minute"`
+- Allows bursts of up to 10 req/s while maintaining 100/min sustained limit
+- Zero complexity increase (already supported by slowapi)
+- Significantly improves experience for bursty traffic patterns
+
+**Current Solution**:
+- Burst + sustained rate limiting via `ASAP_RATE_LIMIT` environment variable
+- Default: `"10/second;100/minute"` (burst + sustained)
+- Configurable per deployment based on expected load
+- Prometheus metrics for monitoring rate limit hits
+
+**Future** (v1.1.0+): If demand exists, implement fully dynamic rate limiting with load-based adjustment.
+
+---
+
 ### Sprint S1-S3 Learnings
 
 > **Review Date**: 2026-01-27 (End of Sprint S3)
@@ -1148,10 +1188,10 @@ client = ASAPClient("http://agent.example.com", pool_connections=500, pool_maxsi
    - **Default**: 100 connections (`pool_connections=100`, `pool_maxsize=100`)
    - **Recommendations**: Single-agent=100, Small cluster=200-500, Large cluster=500-1000
 
-2. ❓ Should we implement adaptive rate limiting based on server load?
-   - **Action**: Monitor during load testing (Sprint P7)
-   - **Consider**: Dynamic limits that increase/decrease with server capacity
-   - **Review Point**: End of Sprint P7 → Decide for v1.0.0 or defer to v1.1.0
+2. ✅ ~~Should we implement adaptive rate limiting based on server load?~~
+   - **Decision**: See DD-012 in Section 10
+   - **Resolved**: 2026-01-31 (End of Sprint P7)
+   - **Choice**: Defer to v1.1.0+ — Static rate limiting (via ASAP_RATE_LIMIT env var) is sufficient; load tests showed 1,500+ RPS with zero errors
 
 ### Security
 3. ✅ ~~Should we add optional request signing (HMAC) in v1.0.0 or defer to v1.1.0?~~

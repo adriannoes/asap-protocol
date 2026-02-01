@@ -54,7 +54,9 @@ logger = get_logger(__name__)
 AUTH_SCHEME_BEARER = "bearer"
 
 # Rate limiting default configuration
-DEFAULT_RATE_LIMIT = "100/minute"
+# Uses token bucket pattern: burst limit (per second) + sustained limit (per minute)
+# This allows short bursts while preventing sustained abuse
+DEFAULT_RATE_LIMIT = "10/second;100/minute"
 
 
 def _get_sender_from_envelope(request: Request) -> str:

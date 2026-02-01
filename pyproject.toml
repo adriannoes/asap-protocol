@@ -128,11 +128,12 @@ minversion = "8.0"
 addopts = [
     "--strict-markers",
     "--strict-config",
-    "--cov=src",
-    "--cov-report=term-missing",
-    "--cov-report=html",
 ]
-testpaths = ["tests", "benchmarks"]
+# Coverage options: use explicitly when needed (e.g., pytest --cov=src --cov-report=xml)
+# NOT included in addopts to avoid conflicts with pytest-xdist (-n auto)
+testpaths = ["tests"]
+# Note: benchmarks/ excluded from testpaths - Locust monkey-patches gevent/ssl which
+# conflicts with pytest-xdist. Run benchmarks separately: uv run pytest benchmarks/
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 # Ignore slowapi deprecation (asyncio.iscoroutinefunction → inspect.iscoroutinefunction in 3.16)
@@ -156,4 +157,10 @@ skip_covered = false
 [dependency-groups]
 dev = [
     "bandit>=1.9.3",
+    "hypothesis>=6.92",
+    "jsonschema>=4.20",
+    "locust>=2.20",
+    "memory-profiler>=0.61",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
 ]

@@ -13,7 +13,7 @@
 | `MAX_ENVELOPE_AGE_SECONDS` | 300 (5 minutes) | Maximum age of envelope before rejection |
 | `MAX_FUTURE_TOLERANCE_SECONDS` | 30 seconds | Maximum future timestamp offset allowed |
 | `MAX_REQUEST_SIZE` | 10,485,760 bytes (10MB) | Maximum request body size |
-| Default Rate Limit | 100/minute | Default requests per minute per sender |
+| Default Rate Limit | 10/second;100/minute | Burst (10/s) + sustained (100/min) per sender |
 | Nonce TTL | 600 seconds (10 minutes) | Time-to-live for nonce tracking (2x envelope age) |
 
 ### Security Features
@@ -570,7 +570,8 @@ The rate limit string follows the format: `<number>/<unit>` where unit can be:
 - `day`
 
 Examples:
-- `"100/minute"` - 100 requests per minute
+- `"10/second;100/minute"` - Burst (10/s) + sustained (100/min) - **default**
+- `"100/minute"` - 100 requests per minute (no burst allowance)
 - `"10/second"` - 10 requests per second
 - `"1000/hour"` - 1000 requests per hour
 
@@ -638,8 +639,8 @@ The response includes:
 import os
 from asap.transport.server import create_app
 
-# Read from environment or use default
-rate_limit = os.getenv("ASAP_RATE_LIMIT", "100/minute")
+# Read from environment or use default (burst + sustained)
+rate_limit = os.getenv("ASAP_RATE_LIMIT", "10/second;100/minute")
 
 app = create_app(
     manifest,

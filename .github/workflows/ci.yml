@@ -43,26 +43,46 @@ jobs:
       - name: Type check with mypy
         run: uv run mypy src/
 
+  # Fast gate: parallel tests, no coverage (avoids pytest-xdist + pytest-cov INTERNALERROR)
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
-        
+
       - name: Set up Python
         run: uv python install 3.13
-        
+
       - name: Install dependencies
         run: uv sync --all-extras --dev
-        
+
       - name: Run tests
         env:
           PYTHONPATH: src
-        # -n auto: Automatically detect CPU count for parallel execution (pytest-xdist)
-        run: uv run pytest -n auto --tb=short --cov=src --cov-report=xml
-        
+        run: uv run pytest -n auto --tb=short
+
+  # Coverage (runs in parallel with test): sequential pytest + Codecov upload
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Run tests with coverage
+        env:
+          PYTHONPATH: src
+        run: uv run pytest --tb=short --cov=src --cov-report=xml
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:

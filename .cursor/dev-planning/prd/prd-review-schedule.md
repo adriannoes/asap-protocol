@@ -199,7 +199,7 @@ Each checkpoint has corresponding tasks in the roadmap files:
 | ID | Question | Status | Review Point | Resolution |
 |----|----------|--------|--------------|------------|
 | Q1 | Connection pool size | ⏳ Pending | Sprint P3 | TBD |
-| Q2 | Adaptive rate limiting | ⏳ Pending | Sprint P7 | TBD |
+| Q2 | Adaptive rate limiting | ✅ Resolved | Sprint P7 | DD-012: Defer to v1.1.0+ |
 | Q3 | HMAC signing (if deferred) | ⏳ Pending | Sprint P1 | TBD |
 | Q4 | Auth scheme for examples | ✅ Resolved | Sprint P5 | DD-010: Both Bearer + OAuth2 concept |
 | Q5 | Trace JSON export | ✅ Resolved | Sprint P6 | DD-011: Implemented --format json in v1.0.0 |

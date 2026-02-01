@@ -1,5 +1,5 @@
 ---
-description: "Conventional Commits specification and pre-push CI verification guidelines for generating commit messages and ensuring code quality before pushing to the repository"
+description: "Git workflow standards: Conventional Commits format for commit messages and pre-push CI verification commands. Apply when creating commits, pushing code, or working with git operations."
 alwaysApply: true
 ---
 

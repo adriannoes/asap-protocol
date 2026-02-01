@@ -1190,9 +1190,10 @@ def create_app(
         token_validator: Optional function to validate Bearer tokens.
             Required if manifest.auth is configured. Should return agent ID
             if token is valid, None otherwise.
-        rate_limit: Optional rate limit string (e.g., "100/minute").
+        rate_limit: Optional rate limit string (e.g., "10/second;100/minute").
             Rate limiting is IP-based (per client IP address) to prevent DoS attacks.
-            Defaults to ASAP_RATE_LIMIT environment variable or "100/minute".
+            Uses token bucket pattern: burst limit + sustained limit.
+            Defaults to ASAP_RATE_LIMIT environment variable or "10/second;100/minute".
         max_request_size: Optional maximum request size in bytes.
             Defaults to ASAP_MAX_REQUEST_SIZE environment variable or 10MB.
         max_threads: Optional maximum number of threads for sync handlers.
@@ -1352,7 +1353,7 @@ def create_app(
 
     # Configure rate limiting
     if rate_limit is None:
-        rate_limit_str = os.getenv("ASAP_RATE_LIMIT", "100/minute")
+        rate_limit_str = os.getenv("ASAP_RATE_LIMIT", "10/second;100/minute")
     else:
         rate_limit_str = rate_limit
 

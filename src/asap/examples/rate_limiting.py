@@ -4,7 +4,7 @@ This module shows how rate limiting is configured and how per-sender
 and per-endpoint patterns work with the server.
 
 Patterns:
-    1. Global limit: create_app(..., rate_limit="100/minute") or ASAP_RATE_LIMIT env.
+    1. Global limit: create_app(..., rate_limit="10/second;100/minute") or ASAP_RATE_LIMIT env.
     2. Per-sender: key_func returns sender URN when available (envelope.sender), else IP.
     3. Per-endpoint: apply different limit strings to different routes (e.g. /asap vs /metrics).
 
@@ -30,10 +30,11 @@ logger = get_logger(__name__)
 def get_server_rate_limit_config() -> str:
     """Return the effective rate limit string used by create_app.
 
-    create_app uses rate_limit parameter or ASAP_RATE_LIMIT env, default "100/minute".
+    create_app uses rate_limit parameter or ASAP_RATE_LIMIT env.
+    Default is "10/second;100/minute" (burst + sustained).
 
     Returns:
-        Rate limit string (e.g. "100/minute").
+        Rate limit string (e.g. "10/second;100/minute").
     """
     return os.environ.get("ASAP_RATE_LIMIT", DEFAULT_RATE_LIMIT)
 
@@ -70,9 +71,9 @@ def per_endpoint_limits_concept() -> dict[str, str]:
         Map from route/path description to limit string.
     """
     return {
-        "asap": "100/minute",
-        "metrics": "10/minute",
-        "manifest": "200/minute",
+        "asap": "10/second;100/minute",  # Burst + sustained for main endpoint
+        "metrics": "10/minute",  # Lower limit for metrics scraping
+        "manifest": "200/minute",  # Higher limit for discovery
     }
 
 
