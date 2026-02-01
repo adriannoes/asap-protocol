@@ -6,10 +6,6 @@ without starting a real server or using the network. Safe to run in CI.
 
 from __future__ import annotations
 
-import re
-from pathlib import Path
-
-import pytest
 from fastapi.testclient import TestClient
 
 from asap.transport.server import app as default_app

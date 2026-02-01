@@ -84,10 +84,6 @@ def test_docs_internal_links_targets_exist(
             continue
         if not resolved.exists():
             missing.append((from_file, href, resolved))
-    assert not missing, (
-        "Internal doc links pointing to missing files:\n"
-        + "\n".join(
-            f"  {f.relative_to(DOCS_ROOT)} -> {href} (resolved: {r})"
-            for f, href, r in missing
-        )
+    assert not missing, "Internal doc links pointing to missing files:\n" + "\n".join(
+        f"  {f.relative_to(DOCS_ROOT)} -> {href} (resolved: {r})" for f, href, r in missing
     )
