@@ -144,11 +144,10 @@ ASAP_HOT_RELOAD=1 uv run uvicorn asap.transport.server:app --factory ...
 
 ## Documentation
 
-- [Spec](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/docs/general-specs.md)
-- [Docs](https://asap-protocol.org)
-- [API Reference](https://asap-protocol.org)
-- [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
-- [PyPI Package](https://pypi.org/project/asap-protocol/0.5.0/)
+- [Docs](https://asap-protocol.org) | [API Reference](https://asap-protocol.org)
+- [Tutorials](docs/tutorials/) — Step-by-step guides from first agent to production checklist
+- [Architecture Decision Records](docs/adr/) — Key design decisions (ULID, async-first, JSON-RPC, etc.)
+- [Spec](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/docs/general-specs.md) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md) | [PyPI Package](https://pypi.org/project/asap-protocol/0.5.0/)
 
 ## When to Use ASAP?
 
