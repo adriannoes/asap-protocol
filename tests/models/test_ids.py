@@ -11,7 +11,7 @@ from asap.models.ids import extract_timestamp, generate_id
 class TestGenerateId:
     """Test suite for generate_id() function."""
 
-    def test_returns_valid_ulid_string(self):
+    def test_returns_valid_ulid_string(self) -> None:
         """Test that generate_id() returns a valid ULID string of 26 characters."""
         ulid = generate_id()
 
@@ -21,7 +21,7 @@ class TestGenerateId:
         valid_chars = set("0123456789ABCDEFGHJKMNPQRSTVWXYZ")
         assert all(c in valid_chars for c in ulid), "ULID contains invalid characters"
 
-    def test_uniqueness_across_multiple_calls(self):
+    def test_uniqueness_across_multiple_calls(self) -> None:
         """Test that multiple calls to generate_id() produce unique IDs."""
         # Generate 1000 IDs to test uniqueness
         ids = [generate_id() for _ in range(1000)]
@@ -29,7 +29,7 @@ class TestGenerateId:
         # All IDs should be unique
         assert len(ids) == len(set(ids)), "Generated IDs should be unique"
 
-    async def test_ids_are_sortable_when_timestamps_differ(self):
+    async def test_ids_are_sortable_when_timestamps_differ(self) -> None:
         """Test that IDs generated in different milliseconds are lexicographically ordered.
 
         ULID guarantees lexicographic order by creation time only when timestamps
@@ -51,7 +51,7 @@ class TestGenerateId:
 class TestExtractTimestamp:
     """Test suite for extract_timestamp() function."""
 
-    def test_extracts_timestamp_from_ulid(self):
+    def test_extracts_timestamp_from_ulid(self) -> None:
         """Test that extract_timestamp() correctly extracts the timestamp from a ULID."""
         # Generate a ULID
         ulid = generate_id()
@@ -71,7 +71,7 @@ class TestExtractTimestamp:
         time_diff = abs((now - timestamp).total_seconds())
         assert time_diff < 1.0, "Extracted timestamp should be close to current time"
 
-    def test_timestamp_consistency(self):
+    def test_timestamp_consistency(self) -> None:
         """Test that the timestamp extracted matches the generation time."""
         before = datetime.now(timezone.utc)
         ulid = generate_id()
@@ -89,7 +89,7 @@ class TestExtractTimestamp:
             "Timestamp should not be after the generation window (accounting for ms precision)"
         )
 
-    def test_invalid_ulid_raises_error(self):
+    def test_invalid_ulid_raises_error(self) -> None:
         """Test that extract_timestamp() raises an error for invalid ULIDs."""
         with pytest.raises((ValueError, AttributeError)):
             extract_timestamp("invalid-ulid")
