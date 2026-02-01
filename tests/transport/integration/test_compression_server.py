@@ -15,30 +15,13 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from asap.models.entities import Capability, Endpoint, Manifest, Skill
+from asap.models.entities import Manifest
 from asap.models.envelope import Envelope
 from asap.transport.compression import is_brotli_available
 from asap.transport.handlers import HandlerRegistry, create_echo_handler
 from asap.transport.server import create_app
 
 from ..conftest import NoRateLimitTestBase
-
-
-@pytest.fixture
-def test_manifest() -> Manifest:
-    """Create a test manifest."""
-    return Manifest(
-        id="urn:asap:agent:compression-test",
-        name="Compression Test Agent",
-        version="1.0.0",
-        description="Test agent for compression",
-        capabilities=Capability(
-            asap_version="0.1",
-            skills=[Skill(id="echo", description="Echo back input")],
-            state_persistence=False,
-        ),
-        endpoints=Endpoint(asap="http://localhost:8000/asap"),
-    )
 
 
 @pytest.fixture
@@ -50,19 +33,19 @@ def test_registry() -> HandlerRegistry:
 
 
 @pytest.fixture
-def test_app(test_manifest: Manifest, test_registry: HandlerRegistry) -> TestClient:
+def test_app(no_auth_manifest: Manifest, test_registry: HandlerRegistry) -> TestClient:
     """Create a test client for the ASAP server."""
-    app = create_app(test_manifest, test_registry)
+    app = create_app(no_auth_manifest, test_registry)
     return TestClient(app)
 
 
 @pytest.fixture
-def sample_envelope() -> Envelope:
+def sample_envelope(no_auth_manifest: Manifest) -> Envelope:
     """Create a sample envelope for testing."""
     return Envelope(
         asap_version="0.1",
         sender="urn:asap:agent:client",
-        recipient="urn:asap:agent:compression-test",
+        recipient=no_auth_manifest.id,
         payload_type="task.request",
         payload={
             "conversation_id": "conv_001",
@@ -281,13 +264,13 @@ class TestDecompressionBombPrevention(NoRateLimitTestBase):
 
     def test_decompressed_size_limit_enforced(
         self,
-        test_manifest: Manifest,
+        no_auth_manifest: Manifest,
         test_registry: HandlerRegistry,
     ) -> None:
         """Verify decompressed size limit is enforced."""
         # Create app with small max request size
         small_max_size = 1024  # 1KB
-        app = create_app(test_manifest, test_registry, max_request_size=small_max_size)
+        app = create_app(no_auth_manifest, test_registry, max_request_size=small_max_size)
         client = TestClient(app)
 
         # Create a request that compresses well but exceeds limit when decompressed

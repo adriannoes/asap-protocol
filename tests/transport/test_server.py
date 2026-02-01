@@ -28,7 +28,7 @@ from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
 
-from asap.models.entities import Capability, Endpoint, Manifest, Skill
+from asap.models.entities import Manifest
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest
 from asap.observability import get_metrics, reset_metrics
@@ -43,28 +43,6 @@ from asap.transport.jsonrpc import (
     JsonRpcRequest,
 )
 from asap.transport.server import ASAPRequestHandler, RegistryHolder, RequestContext, create_app
-
-
-@pytest.fixture
-def sample_manifest() -> Manifest:
-    """Create a sample manifest for testing."""
-    return Manifest(
-        id="urn:asap:agent:test-server",
-        name="Test Server",
-        version="1.0.0",
-        description="Test server for unit tests",
-        capabilities=Capability(
-            asap_version="0.1",
-            skills=[
-                Skill(
-                    id="echo",
-                    description="Echo input as output",
-                )
-            ],
-            state_persistence=False,
-        ),
-        endpoints=Endpoint(asap="http://localhost:8000/asap"),
-    )
 
 
 @pytest.fixture

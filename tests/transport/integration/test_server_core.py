@@ -34,28 +34,6 @@ from ..conftest import NoRateLimitTestBase, TEST_RATE_LIMIT_DEFAULT
 
 
 @pytest.fixture
-def sample_manifest() -> Manifest:
-    """Create a sample manifest for testing."""
-    return Manifest(
-        id="urn:asap:agent:test-server",
-        name="Test Server",
-        version="1.0.0",
-        description="Test server for unit tests",
-        capabilities=Capability(
-            asap_version="0.1",
-            skills=[
-                Skill(
-                    id="echo",
-                    description="Echo input as output",
-                )
-            ],
-            state_persistence=False,
-        ),
-        endpoints=Endpoint(asap="http://localhost:8000/asap"),
-    )
-
-
-@pytest.fixture
 def app(sample_manifest: Manifest) -> FastAPI:
     """Create FastAPI app for testing.
 
