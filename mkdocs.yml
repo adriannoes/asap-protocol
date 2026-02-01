@@ -49,6 +49,25 @@ nav:
       - Multi-Agent Orchestration: tutorials/multi-agent.md
       - Building Resilient Agents: tutorials/resilience.md
       - Production Deployment Checklist: tutorials/production-checklist.md
+  - Architecture Decision Records:
+      - Index: adr/README.md
+      - ADR-001 ULID for ID Generation: adr/ADR-001-ulid-for-id-generation.md
+      - ADR-002 Async-First API: adr/ADR-002-async-first-api-design.md
+      - ADR-003 JSON-RPC 2.0: adr/ADR-003-jsonrpc20-binding.md
+      - ADR-004 Pydantic for Models: adr/ADR-004-pydantic-for-models.md
+      - ADR-005 State Machine: adr/ADR-005-state-machine-design.md
+      - ADR-006 Security Defaults: adr/ADR-006-security-defaults.md
+      - ADR-007 FastAPI for Server: adr/ADR-007-fastapi-for-server.md
+      - ADR-008 httpx for Client: adr/ADR-008-httpx-for-client.md
+      - ADR-009 Snapshot vs Event-Sourced: adr/ADR-009-snapshot-vs-event-sourced.md
+      - ADR-010 Python 3.13+: adr/ADR-010-python-313-requirement.md
+      - ADR-011 Per-Sender Rate Limiting: adr/ADR-011-per-sender-rate-limiting.md
+      - ADR-012 Error Taxonomy: adr/ADR-012-error-taxonomy.md
+      - ADR-013 MCP Integration: adr/ADR-013-mcp-integration-approach.md
+      - ADR-014 Testing Strategy: adr/ADR-014-testing-strategy.md
+      - ADR-015 Observability Design: adr/ADR-015-observability-design.md
+      - ADR-016 Versioning Policy: adr/ADR-016-versioning-policy.md
+      - ADR-017 Failure Injection: adr/ADR-017-failure-injection-strategy.md
   - Guides:
       - Security: security.md
       - State Management: state-management.md

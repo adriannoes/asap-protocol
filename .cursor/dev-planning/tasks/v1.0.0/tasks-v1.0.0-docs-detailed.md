@@ -13,7 +13,7 @@
 - `docs/tutorials/multi-agent.md` - Advanced (9.1.3 done)
 - `docs/tutorials/resilience.md` - Advanced (9.1.4 done)
 - `docs/tutorials/production-checklist.md` - DevOps (9.1.5 done)
-- `docs/adr/` - NEW: Architecture Decision Records (15+)
+- `docs/adr/` - 17 ADRs + template + README (9.2 done)
 - `mkdocs.yml` - Update navigation
 
 ### Sprint P10: Deployment & Troubleshooting
@@ -70,12 +70,12 @@
 
 ### Task 9.2: Write Architecture Decision Records
 
-- [ ] 9.2.1 Create ADR directory and template
+- [x] 9.2.1 Create ADR directory and template
   - Directory: `docs/adr/`
   - Template: Use MADR format
   - File: `template.md` with standard sections
 
-- [ ] 9.2.2 Write 15+ ADRs
+- [x] 9.2.2 Write 15+ ADRs
   - ADR-001: ULID for ID generation
   - ADR-002: Async-first API design
   - ADR-003: JSON-RPC 2.0 binding
@@ -94,16 +94,16 @@
   - ADR-016: Versioning Policy (SemVer, contract tests)
   - ADR-017: Failure Injection Strategy (Chaos testing)
 
-- [ ] 9.2.3 Add ADR index
+- [x] 9.2.3 Add ADR index
   - File: `docs/adr/README.md`
   - List all ADRs with status
   - Link to each ADR
 
-- [ ] 9.2.4 Update mkdocs navigation
+- [x] 9.2.4 Update mkdocs navigation
   - Add ADRs to nav tree
   - Add Tutorials to nav tree
 
-- [ ] 9.2.5 Commit
+- [x] 9.2.5 Commit
   - Command: `git commit -m "docs(adr): add 15 Architecture Decision Records"`
 
 **Acceptance**: 15+ ADRs, well-organized, linked in nav
