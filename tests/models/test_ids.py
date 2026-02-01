@@ -1,5 +1,6 @@
 """Tests for ULID-based ID generation."""
 
+import asyncio
 from datetime import datetime, timezone
 
 import pytest
@@ -28,14 +29,23 @@ class TestGenerateId:
         # All IDs should be unique
         assert len(ids) == len(set(ids)), "Generated IDs should be unique"
 
-    def test_ids_are_sortable_by_timestamp(self):
-        """Test that IDs generated in sequence are lexicographically sortable."""
-        id1 = generate_id()
-        id2 = generate_id()
-        id3 = generate_id()
+    async def test_ids_are_sortable_when_timestamps_differ(self):
+        """Test that IDs generated in different milliseconds are lexicographically ordered.
 
-        # ULIDs are lexicographically sortable by timestamp
-        assert id1 <= id2 <= id3, "ULIDs should be sortable by generation time"
+        ULID guarantees lexicographic order by creation time only when timestamps
+        (millisecond precision) differ. Within the same millisecond, the random
+        component can break order. We enforce a 2ms gap so timestamps differ.
+        """
+        id_before = generate_id()
+        await asyncio.sleep(0.002)  # Ensure different millisecond
+        id_after = generate_id()
+
+        assert id_before < id_after, (
+            "ULIDs with different timestamps should be lexicographically ordered"
+        )
+        ts_before = extract_timestamp(id_before)
+        ts_after = extract_timestamp(id_after)
+        assert ts_before <= ts_after, "Extracted timestamps should reflect generation order"
 
 
 class TestExtractTimestamp:

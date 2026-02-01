@@ -2,9 +2,12 @@
 
 ULIDs (Universally Unique Lexicographically Sortable Identifiers) provide:
 - 128-bit compatibility with UUID
-- Lexicographic sorting by timestamp
+- Lexicographic sorting by creation time when timestamps differ (millisecond precision)
 - Canonically encoded as 26-character string (Crockford's Base32)
-- Monotonically increasing within the same millisecond
+
+Note: Order is guaranteed only across different milliseconds. Two ULIDs generated
+within the same millisecond share the same timestamp prefix; their lexicographic
+order is then determined by the random component and may not match generation order.
 """
 
 from datetime import datetime
@@ -18,7 +21,8 @@ def generate_id() -> str:
     Returns:
         A 26-character ULID string that is:
         - Globally unique
-        - Lexicographically sortable by creation time
+        - Lexicographically sortable by creation time when generated in different
+          milliseconds (within the same millisecond, order is not guaranteed)
         - URL-safe (uses Crockford's Base32 alphabet)
 
     Example:
@@ -26,7 +30,7 @@ def generate_id() -> str:
         >>> len(id1)
         26
         >>> id2 = generate_id()
-        >>> id1 < id2  # Sortable by time
+        >>> id1 < id2  # True when timestamps differ (e.g. different ms)
         True
     """
     return str(ULID())
