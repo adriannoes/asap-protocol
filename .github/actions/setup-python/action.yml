@@ -1,0 +1,20 @@
+# Composite action: Install uv (with cache), Python 3.13, and sync dependencies.
+# Use after actions/checkout so pyproject.toml and uv.lock are present.
+name: "Setup Python (uv)"
+description: "Install uv with cache, Python 3.13, and sync dev dependencies"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+
+    - name: Set up Python
+      run: uv python install 3.13
+      shell: bash
+
+    - name: Install dependencies
+      run: uv sync --all-extras --dev
+      shell: bash
