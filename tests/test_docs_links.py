@@ -11,10 +11,33 @@ from pathlib import Path
 
 import pytest
 
-# Pattern: [text](path) or [text](path#anchor)
+# Pattern: [text](path), [text](path#anchor), [text](path "title"), [text](<path>)
 LINK_PATTERN = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
 
 DOCS_ROOT = Path(__file__).resolve().parent.parent / "docs"
+
+
+def _normalize_href(raw: str) -> str:
+    """Extract link path from raw markdown link destination.
+
+    Handles:
+    - path, path#anchor
+    - path "title" or path 'title' (extract path only)
+    - <path> (angle-bracketed URLs)
+
+    Args:
+        raw: Raw string between parentheses in [text](raw)
+
+    Returns:
+        The resolved path/URL for link resolution
+    """
+    raw = raw.strip()
+    if raw.startswith("<") and ">" in raw:
+        end = raw.index(">")
+        return raw[1:end].strip()
+    # Strip optional title: path "title" or path 'title'
+    parts = raw.split(None, 1)
+    return parts[0] if parts else raw
 
 
 def _collect_md_files(root: Path) -> list[Path]:
@@ -22,7 +45,7 @@ def _collect_md_files(root: Path) -> list[Path]:
 
 
 def _extract_links(content: str) -> list[str]:
-    return [m.group(2).strip() for m in LINK_PATTERN.finditer(content)]
+    return [_normalize_href(m.group(2)) for m in LINK_PATTERN.finditer(content)]
 
 
 def _is_external(href: str) -> bool:
@@ -87,3 +110,22 @@ def test_docs_internal_links_targets_exist(
     assert not missing, "Internal doc links pointing to missing files:\n" + "\n".join(
         f"  {f.relative_to(DOCS_ROOT)} -> {href} (resolved: {r})" for f, href, r in missing
     )
+
+
+def test_extract_links_handles_markdown_formats() -> None:
+    """LINK_PATTERN and _normalize_href handle standard and extended markdown link formats."""
+    content = '''
+[simple](path.md)
+[anchor](path.md#section)
+[with title](path.md "Optional Title")
+[with single-quote title](other.md 'Title')
+[angle brackets](<path with spaces.md>)
+[external](https://example.com)
+'''
+    links = _extract_links(content)
+    assert links[0] == "path.md"
+    assert links[1] == "path.md#section"
+    assert links[2] == "path.md"  # title stripped
+    assert links[3] == "other.md"  # single-quote title stripped
+    assert links[4] == "path with spaces.md"  # angle-bracketed
+    assert links[5] == "https://example.com"
