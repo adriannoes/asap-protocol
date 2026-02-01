@@ -1,0 +1,16 @@
+ASAP Protocol agent has been deployed.
+
+  Release: {{ .Release.Name }}
+  Image:   {{ .Values.image.repository }}:{{ .Values.image.tag }}
+
+To access the agent (port-forward):
+
+  kubectl port-forward svc/{{ include "asap-agent.fullname" . }} 8000:{{ .Values.service.port }}
+
+Then open:
+
+  http://localhost:8000/.well-known/asap/manifest.json
+
+To run a quick test:
+
+  curl http://localhost:8000/.well-known/asap/manifest.json

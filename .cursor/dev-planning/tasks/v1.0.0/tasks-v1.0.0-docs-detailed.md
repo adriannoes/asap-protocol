@@ -130,32 +130,32 @@
 
 ### Task 10.1: Create Cloud-Native Deployment
 
-- [ ] 10.1.1 Create Dockerfile
+- [x] 10.1.1 Create Dockerfile
   - File: `Dockerfile`
   - Base: python:3.13-slim
   - Multi-stage: Build + runtime
   - Non-root user, minimal layers
 
-- [ ] 10.1.2 Create Kubernetes manifests
+- [x] 10.1.2 Create Kubernetes manifests
   - Directory: `k8s/`
   - Files: deployment.yaml, service.yaml, ingress.yaml
   - Features: Health probes, resource limits
 
-- [ ] 10.1.3 Create Helm chart
+- [x] 10.1.3 Create Helm chart
   - Directory: `helm/asap-agent/`
   - Files: Chart.yaml, values.yaml, templates/
   - Configurable: All important settings
 
-- [ ] 10.1.4 Add health check endpoints
+- [x] 10.1.4 Add health check endpoints
   - File: `src/asap/transport/server.py`
   - Endpoints: /health (always OK), /ready (readiness check)
 
-- [ ] 10.1.5 Test Kubernetes deployment
+- [x] 10.1.5 Test Kubernetes deployment
   - Tool: minikube or kind
   - Deploy using Helm
   - Target: Deploy in <10 minutes
 
-- [ ] 10.1.6 Build and publish Docker images
+- [x] 10.1.6 Build and publish Docker images
   - Registry: ghcr.io/adriannoes/asap-protocol
   - Tags: latest, v1.0.0, v1.0, v1
 

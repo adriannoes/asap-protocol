@@ -75,6 +75,7 @@ nav:
       - Metrics: metrics.md
       - Migration: migration.md
       - Testing: testing.md
+      - Deployment (Kubernetes): deployment/kubernetes.md
   - API Reference:
       - Models:
           - Entities: api/models/entities.md

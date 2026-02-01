@@ -1388,6 +1388,30 @@ def create_app(
     # For production, consider using a reverse proxy
     # (nginx, traefik) to enforce request size limits (e.g., 10MB max).
 
+    @app.get("/health")
+    async def health() -> JSONResponse:
+        """Liveness probe: always OK if the process is running.
+
+        Used by Kubernetes livenessProbe and Docker HEALTHCHECK.
+        Returns 200 with {"status": "ok"}.
+
+        Returns:
+            JSONResponse with status ok
+        """
+        return JSONResponse(status_code=200, content={"status": "ok"})
+
+    @app.get("/ready")
+    async def ready() -> JSONResponse:
+        """Readiness probe: OK when the server is ready to accept traffic.
+
+        Used by Kubernetes readinessProbe. Returns 200 when the app
+        is initialized and can serve requests.
+
+        Returns:
+            JSONResponse with status ok
+        """
+        return JSONResponse(status_code=200, content={"status": "ok"})
+
     @app.get("/.well-known/asap/manifest.json")
     async def get_manifest() -> dict[str, Any]:
         """Return the agent's manifest for discovery.

@@ -1,0 +1,81 @@
+# ASAP Protocol - Kubernetes Deployment
+#
+# Deploy: kubectl apply -f k8s/deployment.yaml
+# Requires: Docker image built (e.g. asap-protocol:latest) or from registry
+#           ghcr.io/adriannoes/asap-protocol
+#
+# Health probes: /health (liveness), /ready (readiness)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asap-agent
+  labels:
+    app: asap-agent
+    app.kubernetes.io/name: asap-protocol
+    app.kubernetes.io/component: agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: asap-agent
+  template:
+    metadata:
+      labels:
+        app: asap-agent
+        app.kubernetes.io/name: asap-protocol
+        app.kubernetes.io/component: agent
+    spec:
+      containers:
+        - name: asap-agent
+          # Use your built image or ghcr.io/adriannoes/asap-protocol:latest
+          image: asap-protocol:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            - name: ASAP_HOST
+              value: "0.0.0.0"
+            - name: ASAP_PORT
+              value: "8000"
+            - name: ASAP_DEBUG
+              value: "false"
+            - name: ASAP_RATE_LIMIT
+              value: "10/second;100/minute"
+          # Liveness: restart if the app stops responding
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          # Readiness: don't send traffic until app is ready
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
