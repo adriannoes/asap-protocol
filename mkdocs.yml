@@ -76,6 +76,7 @@ nav:
       - Migration: migration.md
       - Testing: testing.md
       - Deployment (Kubernetes): deployment/kubernetes.md
+      - Troubleshooting: troubleshooting.md
   - API Reference:
       - Models:
           - Entities: api/models/entities.md
