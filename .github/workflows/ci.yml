@@ -1,3 +1,5 @@
+# Single job: one runner, sequential steps. Reliable and simple.
+# Branch protection should require the status check "ci" (this job name).
 name: CI
 
 on:
@@ -11,9 +13,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: lint
+  ci:
+    name: ci
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -25,33 +28,20 @@ jobs:
           uv run ruff check . --output-format=github
           uv run ruff format --check .
 
-  typecheck:
-    name: typecheck
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: ./.github/actions/setup-python
-
       - name: Type check
         run: uv run mypy src/
 
-  test:
-    name: test
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: ./.github/actions/setup-python
-
       - name: Tests with coverage
-        timeout-minutes: 18
+        timeout-minutes: 20
         env:
           PYTHONPATH: src
         run: uv run pytest --tb=short --cov=src --cov-report=xml
+
+      - name: Security audit
+        run: uv run pip-audit
+
+      - name: Build docs
+        run: uv run mkdocs build
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -60,15 +50,3 @@ jobs:
           fail_ci_if_error: false
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-  security:
-    name: security
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: ./.github/actions/setup-python
-
-      - name: Security audit
-        run: uv run pip-audit

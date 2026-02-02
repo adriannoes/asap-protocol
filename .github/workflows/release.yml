@@ -1,3 +1,4 @@
+# Runs only on tag push (e.g. v1.0.0): validates CHANGELOG, builds Docker image, publishes to PyPI and creates GitHub Release.
 name: Release (PyPI + Docker)
 
 on:
