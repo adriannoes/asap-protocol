@@ -8,10 +8,14 @@
 ## Relevant Files
 
 ### Sprint P11: OpenTelemetry Integration
-- `src/asap/observability/tracing.py` - NEW: OTel tracing
-- `src/asap/observability/metrics.py` - OTel metrics (extend)
-- `pyproject.toml` - Add OTel dependencies
-- `docs/observability.md` - Update with OTel (extend)
+- `src/asap/observability/tracing.py` - OTel tracing (configure_tracing, spans, W3C propagation)
+- `src/asap/observability/metrics.py` - 20+ metrics (counters, histograms), Prometheus/OpenMetrics export
+- `pyproject.toml` - OTel dependencies
+- `docs/observability.md` - OpenTelemetry section, env vars, Jaeger
+- `src/asap/transport/server.py` - tracing + error counters
+- `src/asap/transport/handlers.py` - handler spans + handler metrics
+- `src/asap/transport/client.py` - transport send/error/retry metrics
+- `src/asap/state/machine.py` - state transition spans + metrics
 
 ### Sprint P12: Dashboards & MCP
 - `src/asap/observability/dashboards/` - NEW: Grafana dashboards
@@ -25,13 +29,13 @@
 
 ### Task 11.1: Add OpenTelemetry Dependencies
 
-- [ ] 11.1.1 Add OTel packages
+- [x] 11.1.1 Add OTel packages
   - Command: `uv add "opentelemetry-api>=1.20"`
   - Command: `uv add "opentelemetry-sdk>=1.20"`
   - Command: `uv add "opentelemetry-instrumentation-fastapi>=0.41"`
   - Command: `uv add "opentelemetry-instrumentation-httpx>=0.41"`
 
-- [ ] 11.1.2 Verify imports
+- [x] 11.1.2 Verify imports
   - Test: Import all OTel packages
   - Check: No conflicts with existing dependencies
 
@@ -41,31 +45,31 @@
 
 ### Task 11.2: Implement Tracing Integration
 
-- [ ] 11.2.1 Create tracing.py module
+- [x] 11.2.1 Create tracing.py module
   - File: `src/asap/observability/tracing.py`
   - Function: configure_tracing() setup
   - Auto-instrument: FastAPI and httpx
 
-- [ ] 11.2.2 Add custom spans
+- [x] 11.2.2 Add custom spans
   - Span: Handler execution
   - Span: State transitions
   - Attributes: agent URN, payload type
 
-- [ ] 11.2.3 Add context propagation
+- [x] 11.2.3 Add context propagation
   - Inject: trace_id/span_id into envelope.extensions
   - Standard: W3C Trace Context
 
-- [ ] 11.2.4 Test with Jaeger
-  - Run: Jaeger in Docker
-  - Send: Test requests
-  - Verify: Traces appear in Jaeger UI
+- [x] 11.2.4 Test with Jaeger
+  - Run: Jaeger in Docker (jaegertracing/all-in-one:1.53)
+  - Send: Test requests (integration test)
+  - Verify: Traces appear in Jaeger API (tests/observability/test_jaeger_tracing.py)
 
-- [ ] 11.2.5 Document zero-config setup
+- [x] 11.2.5 Document zero-config setup
   - File: Update `docs/observability.md`
   - Show: Environment variables for auto-config
 
 - [ ] 11.2.6 Commit
-  - Command: `git commit -m "feat(observability): add OpenTelemetry tracing integration"`
+  - Command: `git commit -m "feat(observability): add OpenTelemetry tracing integration"` (at end of sprint)
 
 **Acceptance**: Tracing works, Jaeger tested, zero-config for dev
 
@@ -73,20 +77,20 @@
 
 ### Task 11.3: Implement Structured Metrics
 
-- [ ] 11.3.1 Add OTel metrics to metrics.py
+- [x] 11.3.1 Add OTel metrics to metrics.py
   - Metrics: 20+ counters, histograms, gauges
   - Instrument: Transport, handlers, state machine
 
-- [ ] 11.3.2 Enhance Prometheus export
+- [x] 11.3.2 Enhance Prometheus export
   - Update: Existing /asap/metrics endpoint
   - Support: Prometheus + OpenMetrics format
 
-- [ ] 11.3.3 Test metrics
+- [x] 11.3.3 Test metrics
   - Send: Requests and verify metrics increment
   - Check: Prometheus scrape works
 
 - [ ] 11.3.4 Commit
-  - Command: `git commit -m "feat(observability): add OpenTelemetry metrics"`
+  - Command: `git commit -m "feat(observability): add OpenTelemetry metrics"` (at end of sprint)
 
 **Acceptance**: 20+ metrics, Prometheus export works
 
