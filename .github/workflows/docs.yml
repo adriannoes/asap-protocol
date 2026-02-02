@@ -1,10 +1,14 @@
 # Deploys MkDocs to gh-pages on push to main only.
-# Doc build is verified in CI on every PR; this workflow only deploys.
+# Only runs when docs or mkdocs.yml change.
 name: Docs
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'src/asap/**'  # API docs may reference source
 
 jobs:
   deploy:

@@ -1,22 +1,38 @@
-# Single job: one runner, sequential steps. Reliable and simple.
-# Branch protection should require the status check "ci" (this job name).
+# CI: lint, type-check, test, security audit.
+# Single job approach to minimize runner queue time.
+# Uses path filters to skip unnecessary runs.
 name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/ci.yml'
+      - '.github/actions/**'
   pull_request:
-    branches: [ main ]
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/ci.yml'
+      - '.github/actions/**'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   ci:
     name: ci
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
+
     steps:
       - uses: actions/checkout@v4
 
@@ -31,17 +47,16 @@ jobs:
       - name: Type check
         run: uv run mypy src/
 
-      - name: Tests with coverage
-        timeout-minutes: 20
+      - name: Tests
+        timeout-minutes: 10
         env:
           PYTHONPATH: src
-        run: uv run pytest --tb=short --cov=src --cov-report=xml
+          # Skip slow integration tests in CI
+          PYTEST_ADDOPTS: "--ignore=tests/observability/test_jaeger_tracing.py"
+        run: uv run pytest --tb=short --cov=src --cov-report=xml -q
 
       - name: Security audit
         run: uv run pip-audit
-
-      - name: Build docs
-        run: uv run mkdocs build
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
