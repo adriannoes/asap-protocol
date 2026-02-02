@@ -1,5 +1,6 @@
 # Deploys MkDocs to gh-pages on push to main only.
-# Only runs when docs or mkdocs.yml change.
+# Doc build is verified in CI (type-check job); this workflow only deploys.
+# Path filters avoid redeploy when only code changed.
 name: Docs
 
 on:

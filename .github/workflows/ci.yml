@@ -1,6 +1,6 @@
-# CI: lint, type-check, test, security audit.
-# Single job approach to minimize runner queue time.
-# Uses path filters to skip unnecessary runs.
+# CI: lint, type-check (+ docs build), test, coverage, security.
+# Parallel jobs after lint for faster feedback. Path filters avoid unnecessary runs.
+# Branch protection can require: lint, type-check, test, coverage, security.
 name: CI
 
 on:
@@ -9,8 +9,10 @@ on:
     paths:
       - 'src/**'
       - 'tests/**'
+      - 'docs/**'
       - 'pyproject.toml'
       - 'uv.lock'
+      - 'mkdocs.yml'
       - '.github/workflows/ci.yml'
       - '.github/actions/**'
   pull_request:
@@ -18,8 +20,10 @@ on:
     paths:
       - 'src/**'
       - 'tests/**'
+      - 'docs/**'
       - 'pyproject.toml'
       - 'uv.lock'
+      - 'mkdocs.yml'
       - '.github/workflows/ci.yml'
       - '.github/actions/**'
 
@@ -28,35 +32,72 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci:
-    name: ci
+  lint:
+    name: lint
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Python
         uses: ./.github/actions/setup-python
 
-      - name: Lint
+      - name: Lint with ruff
         run: |
           uv run ruff check . --output-format=github
           uv run ruff format --check .
 
-      - name: Type check
+  type-check:
+    name: type-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python
+
+      - name: Type check with mypy
         run: uv run mypy src/
 
-      - name: Tests
-        timeout-minutes: 10
+      - name: Build docs
+        run: uv run mkdocs build
+
+  # Fast gate: parallel tests, no coverage (avoids pytest-xdist + pytest-cov INTERNALERROR)
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    needs: [lint]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python
+
+      - name: Run tests
         env:
           PYTHONPATH: src
-          # Skip slow integration tests in CI
-          PYTEST_ADDOPTS: "--ignore=tests/observability/test_jaeger_tracing.py"
-        run: uv run pytest --tb=short --cov=src --cov-report=xml -q
+        run: uv run pytest -n auto --tb=short
+        timeout-minutes: 12
 
-      - name: Security audit
-        run: uv run pip-audit
+  # Coverage: sequential pytest + Codecov (no -n auto)
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    needs: [lint]
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python
+
+      - name: Run tests with coverage
+        env:
+          PYTHONPATH: src
+        run: uv run pytest --tb=short --cov=src --cov-report=xml
+        timeout-minutes: 15
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -65,3 +106,17 @@ jobs:
           fail_ci_if_error: false
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  security:
+    name: security
+    runs-on: ubuntu-latest
+    needs: [lint]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python
+
+      - name: Scan for vulnerabilities
+        run: uv run pip-audit
