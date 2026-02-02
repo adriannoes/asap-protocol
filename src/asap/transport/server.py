@@ -67,7 +67,13 @@ from asap.observability import (
     is_debug_mode,
     sanitize_for_logging,
 )
+from asap.observability.tracing import (
+    configure_tracing,
+    extract_and_activate_envelope_trace_context,
+    inject_envelope_trace_context,
+)
 from asap.utils.sanitization import sanitize_nonce
+from opentelemetry import context
 from asap.transport.middleware import (
     AuthenticationMiddleware,
     BearerTokenValidator,
@@ -316,6 +322,23 @@ class ASAPRequestHandler:
             duration_seconds,
             {"payload_type": normalized_payload_type, "status": "error"},
         )
+        # Specific error counters for observability
+        if error_type == "parse_error":
+            metrics.increment_counter("asap_parse_errors_total")
+        elif error_type == "auth_failed":
+            metrics.increment_counter("asap_auth_failures_total")
+        elif error_type == "invalid_timestamp":
+            metrics.increment_counter("asap_invalid_timestamp_total")
+        elif error_type == "invalid_nonce":
+            metrics.increment_counter("asap_invalid_nonce_total")
+        elif error_type == "sender_mismatch":
+            metrics.increment_counter("asap_sender_mismatch_total")
+        elif error_type in (
+            "invalid_envelope",
+            "missing_envelope",
+            "invalid_params",
+        ):
+            metrics.increment_counter("asap_validation_errors_total", {"reason": error_type})
 
     def _validate_envelope(
         self,
@@ -575,6 +598,7 @@ class ASAPRequestHandler:
         Returns:
             JSON-RPC success response
         """
+        response_envelope = inject_envelope_trace_context(response_envelope)
         duration_seconds = time.perf_counter() - ctx.start_time
         duration_ms = duration_seconds * 1000
 
@@ -1049,102 +1073,107 @@ class ASAPRequestHandler:
             # result is payload_type (str) when envelope is not None
             payload_type = result  # type: ignore[assignment]
 
-            # Verify sender matches authenticated identity
-            sender_error = self._verify_sender_matches_auth(
-                authenticated_agent_id,
-                envelope,
-                ctx,
-                payload_type,
-            )
-            if sender_error is not None:
-                self._log_response_debug(sender_error)
-                return sender_error
-
-            # Validate envelope timestamp to prevent replay attacks
+            trace_token = extract_and_activate_envelope_trace_context(envelope)
             try:
-                validate_envelope_timestamp(envelope)
-            except InvalidTimestampError as e:
-                log_ts: dict[str, Any] = {
-                    "envelope_id": envelope.id,
-                    "error": e.message,
-                    "details": e.details,
-                }
-                if not is_debug_mode() and isinstance(e.details, dict):
-                    log_ts["details"] = sanitize_for_logging(e.details)
-                logger.warning("asap.request.invalid_timestamp", **log_ts)
-                duration_seconds = time.perf_counter() - ctx.start_time
-                self.record_error_metrics(
-                    ctx.metrics, payload_type, "invalid_timestamp", duration_seconds
+                # Verify sender matches authenticated identity
+                sender_error = self._verify_sender_matches_auth(
+                    authenticated_agent_id,
+                    envelope,
+                    ctx,
+                    payload_type,
                 )
-                err_resp = self.build_error_response(
-                    INVALID_PARAMS,
-                    data={
-                        "error": "Invalid envelope timestamp",
-                        "code": e.code,
-                        "message": e.message,
+                if sender_error is not None:
+                    self._log_response_debug(sender_error)
+                    return sender_error
+
+                # Validate envelope timestamp to prevent replay attacks
+                try:
+                    validate_envelope_timestamp(envelope)
+                except InvalidTimestampError as e:
+                    log_ts: dict[str, Any] = {
+                        "envelope_id": envelope.id,
+                        "error": e.message,
                         "details": e.details,
-                    },
-                    request_id=ctx.request_id,
-                )
-                self._log_response_debug(err_resp)
-                return err_resp
+                    }
+                    if not is_debug_mode() and isinstance(e.details, dict):
+                        log_ts["details"] = sanitize_for_logging(e.details)
+                    logger.warning("asap.request.invalid_timestamp", **log_ts)
+                    duration_seconds = time.perf_counter() - ctx.start_time
+                    self.record_error_metrics(
+                        ctx.metrics, payload_type, "invalid_timestamp", duration_seconds
+                    )
+                    err_resp = self.build_error_response(
+                        INVALID_PARAMS,
+                        data={
+                            "error": "Invalid envelope timestamp",
+                            "code": e.code,
+                            "message": e.message,
+                            "details": e.details,
+                        },
+                        request_id=ctx.request_id,
+                    )
+                    self._log_response_debug(err_resp)
+                    return err_resp
 
-            # Validate envelope nonce if nonce store is available
-            try:
-                validate_envelope_nonce(envelope, self.nonce_store)
-            except InvalidNonceError as e:
-                # Sanitize nonce in logs to prevent full value exposure
-                nonce_sanitized = sanitize_nonce(e.nonce)
-                error_msg = e.message if is_debug_mode() else "Duplicate nonce detected"
-                logger.warning(
-                    "asap.request.invalid_nonce",
+                # Validate envelope nonce if nonce store is available
+                try:
+                    validate_envelope_nonce(envelope, self.nonce_store)
+                except InvalidNonceError as e:
+                    # Sanitize nonce in logs to prevent full value exposure
+                    nonce_sanitized = sanitize_nonce(e.nonce)
+                    error_msg = e.message if is_debug_mode() else "Duplicate nonce detected"
+                    logger.warning(
+                        "asap.request.invalid_nonce",
+                        envelope_id=envelope.id,
+                        nonce=nonce_sanitized,
+                        error=error_msg,
+                    )
+                    duration_seconds = time.perf_counter() - ctx.start_time
+                    self.record_error_metrics(
+                        ctx.metrics, payload_type, "invalid_nonce", duration_seconds
+                    )
+                    err_resp = self.build_error_response(
+                        INVALID_PARAMS,
+                        data={
+                            "error": "Invalid envelope nonce",
+                            "code": e.code,
+                            "message": e.message,
+                            "details": e.details,
+                        },
+                        request_id=ctx.request_id,
+                    )
+                    self._log_response_debug(err_resp)
+                    return err_resp
+
+                # Log request received
+                logger.info(
+                    "asap.request.received",
                     envelope_id=envelope.id,
-                    nonce=nonce_sanitized,
-                    error=error_msg,
+                    trace_id=envelope.trace_id,
+                    payload_type=envelope.payload_type,
+                    sender=envelope.sender,
+                    recipient=envelope.recipient,
+                    authenticated=authenticated_agent_id is not None,
                 )
-                duration_seconds = time.perf_counter() - ctx.start_time
-                self.record_error_metrics(
-                    ctx.metrics, payload_type, "invalid_nonce", duration_seconds
-                )
-                err_resp = self.build_error_response(
-                    INVALID_PARAMS,
-                    data={
-                        "error": "Invalid envelope nonce",
-                        "code": e.code,
-                        "message": e.message,
-                        "details": e.details,
-                    },
-                    request_id=ctx.request_id,
-                )
-                self._log_response_debug(err_resp)
-                return err_resp
 
-            # Log request received
-            logger.info(
-                "asap.request.received",
-                envelope_id=envelope.id,
-                trace_id=envelope.trace_id,
-                payload_type=envelope.payload_type,
-                sender=envelope.sender,
-                recipient=envelope.recipient,
-                authenticated=authenticated_agent_id is not None,
-            )
+                # Dispatch to handler
+                dispatch_result = await self._dispatch_to_handler(envelope, ctx)
+                response_or_none, result = dispatch_result
+                if response_or_none is None:
+                    # result is JSONResponse when response is None
+                    self._log_response_debug(result)  # type: ignore[arg-type]
+                    return result  # type: ignore[return-value]
+                response_envelope = response_or_none
+                # result is payload_type (str) when response is not None
+                payload_type = result  # type: ignore[assignment]
 
-            # Dispatch to handler
-            dispatch_result = await self._dispatch_to_handler(envelope, ctx)
-            response_or_none, result = dispatch_result
-            if response_or_none is None:
-                # result is JSONResponse when response is None
-                self._log_response_debug(result)  # type: ignore[arg-type]
-                return result  # type: ignore[return-value]
-            response_envelope = response_or_none
-            # result is payload_type (str) when response is not None
-            payload_type = result  # type: ignore[assignment]
-
-            # Build and return success response
-            success_resp = self._build_success_response(response_envelope, ctx, payload_type)
-            self._log_response_debug(success_resp)
-            return success_resp
+                # Build and return success response
+                success_resp = self._build_success_response(response_envelope, ctx, payload_type)
+                self._log_response_debug(success_resp)
+                return success_resp
+            finally:
+                if trace_token is not None:
+                    context.detach(trace_token)
 
         except Exception as e:
             # Create minimal context for error handling if we don't have rpc_request yet
@@ -1445,8 +1474,11 @@ def create_app(
         metrics = get_metrics()
         return PlainTextResponse(
             content=metrics.export_prometheus(),
-            media_type="text/plain; version=0.0.4; charset=utf-8",
+            media_type="application/openmetrics-text; version=1.0.0; charset=utf-8",
         )
+
+    # OpenTelemetry tracing (zero-config via OTEL_* env vars)
+    configure_tracing(service_name=manifest.id, app=app)
 
     @app.post("/asap")
     @limiter.limit(rate_limit_str)  # slowapi uses app.state.limiter at runtime

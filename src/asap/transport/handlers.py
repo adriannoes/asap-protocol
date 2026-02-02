@@ -40,7 +40,8 @@ from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
 from asap.models.ids import generate_id
 from asap.models.payloads import TaskRequest, TaskResponse
-from asap.observability import get_logger
+from asap.observability import get_logger, get_metrics
+from asap.observability.tracing import handler_span_context
 
 # Module logger
 logger = get_logger(__name__)
@@ -379,48 +380,67 @@ class HandlerRegistry:
             handler_name=handler.__name__ if hasattr(handler, "__name__") else str(handler),
         )
 
-        # Execute handler outside the lock to allow concurrent dispatches
-        try:
-            # Support both sync and async handlers
-            response: Envelope
-            if inspect.iscoroutinefunction(handler):
-                # Async handler - await it directly
-                response = await handler(envelope, manifest)
-            else:
-                # Sync handler - run in thread pool to avoid blocking event loop
-                # Also handle async callable objects that return awaitables
-                loop = asyncio.get_running_loop()
-                # Use bounded executor if provided, otherwise use default (unbounded)
-                executor = self._executor if self._executor is not None else None
-                result: object = await loop.run_in_executor(executor, handler, envelope, manifest)
-                # Check if result is awaitable (handles async __call__ methods)
-                if inspect.isawaitable(result):
-                    response = await result
+        # Execute handler outside the lock to allow concurrent dispatches (with OTel span)
+        agent_urn = manifest.id
+        with handler_span_context(
+            payload_type=payload_type,
+            agent_urn=agent_urn,
+            envelope_id=envelope.id,
+        ):
+            try:
+                # Support both sync and async handlers
+                response: Envelope
+                if inspect.iscoroutinefunction(handler):
+                    # Async handler - await it directly
+                    response = await handler(envelope, manifest)
                 else:
-                    # Type narrowing: result is Envelope for sync handlers
-                    # After checking it's not awaitable, we know it's Envelope
-                    response = cast(Envelope, result)
+                    # Sync handler - run in thread pool to avoid blocking event loop
+                    # Also handle async callable objects that return awaitables
+                    loop = asyncio.get_running_loop()
+                    # Use bounded executor if provided, otherwise use default (unbounded)
+                    executor = self._executor if self._executor is not None else None
+                    result: object = await loop.run_in_executor(
+                        executor, handler, envelope, manifest
+                    )
+                    # Check if result is awaitable (handles async __call__ methods)
+                    if inspect.isawaitable(result):
+                        response = await result
+                    else:
+                        # Type narrowing: result is Envelope for sync handlers
+                        # After checking it's not awaitable, we know it's Envelope
+                        response = cast(Envelope, result)
 
-            duration_ms = (time.perf_counter() - start_time) * 1000
-            logger.debug(
-                "asap.handler.completed",
-                payload_type=payload_type,
-                envelope_id=envelope.id,
-                response_id=response.id,
-                duration_ms=round(duration_ms, 2),
-            )
-            return response
-        except Exception as e:
-            duration_ms = (time.perf_counter() - start_time) * 1000
-            logger.exception(
-                "asap.handler.error",
-                payload_type=payload_type,
-                envelope_id=envelope.id,
-                error=str(e),
-                error_type=type(e).__name__,
-                duration_ms=round(duration_ms, 2),
-            )
-            raise
+                duration_ms = (time.perf_counter() - start_time) * 1000
+                duration_seconds = duration_ms / 1000.0
+                logger.debug(
+                    "asap.handler.completed",
+                    payload_type=payload_type,
+                    envelope_id=envelope.id,
+                    response_id=response.id,
+                    duration_ms=round(duration_ms, 2),
+                )
+                metrics = get_metrics()
+                metrics.increment_counter(
+                    "asap_handler_executions_total",
+                    {"payload_type": payload_type},
+                )
+                metrics.observe_histogram(
+                    "asap_handler_duration_seconds",
+                    duration_seconds,
+                    {"payload_type": payload_type},
+                )
+                return response
+            except Exception as e:
+                duration_ms = (time.perf_counter() - start_time) * 1000
+                logger.exception(
+                    "asap.handler.error",
+                    payload_type=payload_type,
+                    envelope_id=envelope.id,
+                    error=str(e),
+                    error_type=type(e).__name__,
+                    duration_ms=round(duration_ms, 2),
+                )
+                raise
 
     def list_handlers(self) -> list[str]:
         """List all registered payload types.
