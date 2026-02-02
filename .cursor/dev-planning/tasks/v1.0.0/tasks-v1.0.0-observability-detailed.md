@@ -68,7 +68,7 @@
   - File: Update `docs/observability.md`
   - Show: Environment variables for auto-config
 
-- [ ] 11.2.6 Commit
+- [x] 11.2.6 Commit
   - Command: `git commit -m "feat(observability): add OpenTelemetry tracing integration"` (at end of sprint)
 
 **Acceptance**: Tracing works, Jaeger tested, zero-config for dev
@@ -89,7 +89,7 @@
   - Send: Requests and verify metrics increment
   - Check: Prometheus scrape works
 
-- [ ] 11.3.4 Commit
+- [x] 11.3.4 Commit
   - Command: `git commit -m "feat(observability): add OpenTelemetry metrics"` (at end of sprint)
 
 **Acceptance**: 20+ metrics, Prometheus export works

@@ -307,9 +307,9 @@
   - Details: [Observability Detailed - Task 11.3](./tasks-v1.0.0-observability-detailed.md#task-113-implement-structured-metrics)
 
 ### Definition of Done
-- [ ] OpenTelemetry tracing working
-- [ ] 20+ metrics instrumented
-- [ ] Prometheus export enhanced
+- [x] OpenTelemetry tracing working
+- [x] 20+ metrics instrumented
+- [x] Prometheus export enhanced
 
 ---
 
