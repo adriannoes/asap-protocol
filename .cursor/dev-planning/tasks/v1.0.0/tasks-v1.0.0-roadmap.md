@@ -294,22 +294,22 @@
 
 ### Tasks
 
-- [ ] 11.1 Add OpenTelemetry dependencies
+- [x] 11.1 Add OpenTelemetry dependencies
   - Goal: Install OTel packages
   - Details: [Observability Detailed - Task 11.1](./tasks-v1.0.0-observability-detailed.md#task-111-add-opentelemetry-dependencies)
 
-- [ ] 11.2 Implement tracing integration
+- [x] 11.2 Implement tracing integration
   - Goal: Zero-config tracing for development
   - Details: [Observability Detailed - Task 11.2](./tasks-v1.0.0-observability-detailed.md#task-112-implement-tracing-integration)
 
-- [ ] 11.3 Implement structured metrics
+- [x] 11.3 Implement structured metrics
   - Goal: 20+ metrics, Prometheus export
   - Details: [Observability Detailed - Task 11.3](./tasks-v1.0.0-observability-detailed.md#task-113-implement-structured-metrics)
 
 ### Definition of Done
-- [ ] OpenTelemetry tracing working
-- [ ] 20+ metrics instrumented
-- [ ] Prometheus export enhanced
+- [x] OpenTelemetry tracing working
+- [x] 20+ metrics instrumented
+- [x] Prometheus export enhanced
 
 ---
 
@@ -341,7 +341,7 @@
 ### Tasks
 
 - [ ] 13.1 Run comprehensive testing
-  - Goal: 900+ tests pass, benchmarks meet targets
+  - Goal: 1000+ tests pass + CI pipeline, benchmarks meet targets
   - Details: [Release Detailed - Task 13.1](./tasks-v1.0.0-release-detailed.md#task-131-comprehensive-testing)
 
 - [ ] 13.2 Review all documentation

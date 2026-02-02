@@ -51,3 +51,45 @@ clear_context()
 The transport layer emits structured logs around request handling, handler
 dispatch, and client send/response events. Use these logs to troubleshoot
 end-to-end flows and latency.
+
+## OpenTelemetry Tracing
+
+ASAP supports distributed tracing via OpenTelemetry. When the server starts,
+tracing is configured automatically; FastAPI and httpx are instrumented so
+HTTP requests and handler execution appear as spans. Trace context is
+propagated in envelope `trace_id` and `extensions.trace_id` / `extensions.span_id`
+(W3C Trace Context).
+
+### Zero-config (environment variables)
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OTEL_SERVICE_NAME` | Service name in traces | `asap-server` |
+| `OTEL_TRACES_EXPORTER` | `none`, `otlp`, or `console` | `none` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP endpoint (e.g. Jaeger) | — |
+
+- **`OTEL_TRACES_EXPORTER=none`**: Tracing is configured but no spans are
+  exported (default; no collector required).
+- **`OTEL_TRACES_EXPORTER=otlp`**: Export spans to an OTLP endpoint. Set
+  `OTEL_EXPORTER_OTLP_ENDPOINT` (e.g. `http://localhost:4317` for Jaeger).
+- **`OTEL_TRACES_EXPORTER=console`**: Log spans to stdout (debugging).
+
+### Testing with Jaeger
+
+1. Run Jaeger (e.g. Docker: `docker run -d -p 16686:16686 -p 4317:4317 jaegertracing/all-in-one:1.53`).
+2. Start the ASAP server with:
+   - `OTEL_TRACES_EXPORTER=otlp`
+   - `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317`
+3. Send requests to `/asap`; open Jaeger UI at http://localhost:16686 and
+   select the service name (`OTEL_SERVICE_NAME` or manifest id).
+
+An integration test verifies end-to-end: `pytest tests/observability/test_jaeger_tracing.py -v`.
+It starts Jaeger in Docker, runs the ASAP server with OTLP, sends a request, and asserts
+traces appear in Jaeger (skips if Docker is not available).
+
+### Custom spans
+
+Handler execution and state machine transitions are recorded as spans with
+attributes (`asap.payload_type`, `asap.agent.urn`, `asap.envelope.id`,
+`asap.state.from`, `asap.state.to`, `asap.task.id`). Use `asap.observability.tracing.get_tracer()`
+to add custom spans in your code.

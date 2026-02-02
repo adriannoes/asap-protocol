@@ -14,6 +14,8 @@ from datetime import datetime, timezone
 from asap.errors import InvalidTransitionError
 from asap.models.entities import Task
 from asap.models.enums import TaskStatus
+from asap.observability import get_metrics
+from asap.observability.tracing import state_transition_span_context
 
 __all__ = ["TaskStatus", "can_transition", "transition", "VALID_TRANSITIONS"]
 
@@ -83,5 +85,16 @@ def transition(task: Task, new_status: TaskStatus) -> Task:
             from_state=task.status.value, to_state=new_status.value, details={"task_id": task.id}
         )
 
-    # Create new task instance with updated status and timestamp (immutable approach)
-    return task.model_copy(update={"status": new_status, "updated_at": datetime.now(timezone.utc)})
+    with state_transition_span_context(
+        from_status=task.status.value,
+        to_status=new_status.value,
+        task_id=task.id,
+    ):
+        get_metrics().increment_counter(
+            "asap_state_transitions_total",
+            {"from_status": task.status.value, "to_status": new_status.value},
+        )
+        # Create new task instance with updated status and timestamp (immutable approach)
+        return task.model_copy(
+            update={"status": new_status, "updated_at": datetime.now(timezone.utc)}
+        )
