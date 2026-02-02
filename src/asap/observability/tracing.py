@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from fastapi import FastAPI
 
 from asap.models.envelope import Envelope
+from asap.observability.logging import get_logger
 
 # Environment variables for zero-config (OpenTelemetry convention)
 _ENV_OTEL_SERVICE_NAME = "OTEL_SERVICE_NAME"
@@ -39,8 +40,10 @@ _ENV_OTEL_EXPORTER_OTLP_ENDPOINT = "OTEL_EXPORTER_OTLP_ENDPOINT"
 EXTENSION_TRACE_ID = "trace_id"
 EXTENSION_SPAN_ID = "span_id"
 
+logger = get_logger(__name__)
+
 _tracer_provider: TracerProvider | None = None
-_tracer = None
+_tracer: trace.Tracer | None = None
 
 
 def configure_tracing(
@@ -95,22 +98,21 @@ def _add_otlp_processor() -> None:
     if not endpoint:
         return
     try:
-        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # type: ignore[import-not-found]
-            OTLPSpanExporter,
-        )
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
         exporter: SpanExporter = OTLPSpanExporter(endpoint=endpoint, insecure=True)
         _tracer_provider.add_span_processor(BatchSpanProcessor(exporter))
-    except ImportError:
+    except ImportError as e:
+        logger.debug("OTLP gRPC exporter not available: %s", e)
         try:
             from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # type: ignore[import-not-found]
-                OTLPSpanExporter,
+                OTLPSpanExporter as OTLPSpanExporterHttp,
             )
 
-            exporter = OTLPSpanExporter(endpoint=endpoint)
+            exporter = OTLPSpanExporterHttp(endpoint=endpoint)
             _tracer_provider.add_span_processor(BatchSpanProcessor(exporter))
-        except ImportError:
-            pass
+        except ImportError as e2:
+            logger.debug("OTLP HTTP exporter not available: %s", e2)
 
 
 def _add_console_processor() -> None:
@@ -122,8 +124,8 @@ def _add_console_processor() -> None:
         from opentelemetry.sdk.trace.export import ConsoleSpanExporter
 
         _tracer_provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
-    except ImportError:
-        pass
+    except ImportError as e:
+        logger.debug("Console span exporter not available: %s", e)
 
 
 def _instrument_app(app: FastAPI) -> None:
@@ -132,14 +134,25 @@ def _instrument_app(app: FastAPI) -> None:
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
         FastAPIInstrumentor.instrument_app(app)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Failed to instrument FastAPI: %s", e)
     try:
         from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 
         HTTPXClientInstrumentor().instrument()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Failed to instrument httpx: %s", e)
+
+
+def reset_tracing() -> None:
+    """Reset global tracer state (for test teardown).
+
+    Clears the module-level tracer provider and tracer so that subsequent
+    tests or configure_tracing() calls start from a clean state.
+    """
+    global _tracer_provider, _tracer
+    _tracer_provider = None
+    _tracer = None
 
 
 def get_tracer(name: str | None = None) -> trace.Tracer:

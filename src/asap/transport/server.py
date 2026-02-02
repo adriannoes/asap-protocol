@@ -53,6 +53,7 @@ from typing import Any, Callable, TypeVar
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
+from opentelemetry import context
 from pydantic import ValidationError
 from slowapi.errors import RateLimitExceeded
 
@@ -73,7 +74,6 @@ from asap.observability.tracing import (
     inject_envelope_trace_context,
 )
 from asap.utils.sanitization import sanitize_nonce
-from opentelemetry import context
 from asap.transport.middleware import (
     AuthenticationMiddleware,
     BearerTokenValidator,
