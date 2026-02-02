@@ -11,10 +11,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci:
-    name: Lint, types, tests, security
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
-    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -26,16 +25,33 @@ jobs:
           uv run ruff check . --output-format=github
           uv run ruff format --check .
 
+  typecheck:
+    name: Type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python
+
       - name: Type check
         run: uv run mypy src/
 
+  test:
+    name: Tests with coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python
+
       - name: Tests with coverage
+        timeout-minutes: 18
         env:
           PYTHONPATH: src
         run: uv run pytest --tb=short --cov=src --cov-report=xml
-
-      - name: Security audit
-        run: uv run pip-audit
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -44,3 +60,15 @@ jobs:
           fail_ci_if_error: false
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  security:
+    name: Security audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python
+
+      - name: Security audit
+        run: uv run pip-audit
