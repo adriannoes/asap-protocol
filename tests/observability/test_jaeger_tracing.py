@@ -150,6 +150,17 @@ def _query_jaeger_traces(service: str) -> list[dict]:
         return []
 
 
+def _wait_for_jaeger_traces(service: str, timeout_seconds: int = 15) -> list[dict]:
+    """Poll Jaeger API until at least one trace appears or timeout. Return list of traces."""
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        traces = _query_jaeger_traces(service)
+        if len(traces) >= 1:
+            return traces
+        time.sleep(1.0)
+    return []
+
+
 def _stop_jaeger() -> None:
     """Stop and remove the test Jaeger container."""
     try:
@@ -207,19 +218,20 @@ def test_jaeger_receives_asap_traces() -> None:
         if not _send_asap_request():
             pytest.skip("ASAP request failed")
 
-        # OTLP uses batch export; wait for spans to be sent
-        time.sleep(5)
-
-        traces = _query_jaeger_traces(DEFAULT_SERVICE_NAME)
+        # OTLP uses batch export; poll until traces appear or timeout
+        traces = _wait_for_jaeger_traces(DEFAULT_SERVICE_NAME, timeout_seconds=15)
         assert len(traces) >= 1, (
             f"Expected at least one trace for service {DEFAULT_SERVICE_NAME} in Jaeger; "
             f"got {len(traces)}. Check Jaeger UI at http://localhost:{JAEGER_UI_PORT}"
         )
-        # Optionally assert span names (e.g. asap.handler.execute, HTTP POST)
         first_trace = traces[0]
         spans = first_trace.get("spans") or []
         span_names = {s.get("operationName") for s in spans}
         assert len(span_names) >= 1, "Trace should contain at least one span"
+        # Verify expected ASAP custom span name (handler execution)
+        assert "asap.handler.execute" in span_names, (
+            f"Expected span asap.handler.execute in trace; got {span_names}"
+        )
     finally:
         proc.terminate()
         try:
