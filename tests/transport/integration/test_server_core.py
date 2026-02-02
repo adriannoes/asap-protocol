@@ -446,11 +446,12 @@ class TestMetricsEndpoint(NoRateLimitTestBase):
         assert "/asap/metrics" in routes
 
     def test_metrics_endpoint_returns_prometheus_format(self, client: TestClient) -> None:
-        """Test that metrics endpoint returns Prometheus text format."""
+        """Test that metrics endpoint returns Prometheus/OpenMetrics text format."""
         response = client.get("/asap/metrics")
 
         assert response.status_code == 200
-        assert "text/plain" in response.headers["content-type"]
+        content_type = response.headers.get("content-type", "")
+        assert "text/plain" in content_type or "openmetrics-text" in content_type
 
         # Check Prometheus format markers
         content = response.text
@@ -494,13 +495,23 @@ class TestMetricsEndpoint(NoRateLimitTestBase):
 
         client.post("/asap", json=rpc_request.model_dump())
 
-        # Check metrics
+        # Check metrics (request and handler metrics)
         metrics = get_metrics()
         success_count = metrics.get_counter(
             "asap_requests_success_total",
             {"payload_type": "task.request"},
         )
         assert success_count >= 1.0
+        handler_count = metrics.get_counter(
+            "asap_handler_executions_total",
+            {"payload_type": "task.request"},
+        )
+        assert handler_count >= 1.0
+        handler_duration_count = metrics.get_histogram_count(
+            "asap_handler_duration_seconds",
+            {"payload_type": "task.request"},
+        )
+        assert handler_duration_count >= 1.0
 
     def test_metrics_updated_on_error_request(self, sample_manifest: Manifest) -> None:
         """Test that error metrics are updated on failed request."""

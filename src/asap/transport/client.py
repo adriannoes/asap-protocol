@@ -47,7 +47,7 @@ from asap.models.constants import (
 from asap.models.entities import Manifest
 from asap.models.envelope import Envelope
 from asap.models.ids import generate_id
-from asap.observability import get_logger
+from asap.observability import get_logger, get_metrics
 from asap.transport.cache import ManifestCache
 from asap.transport.circuit_breaker import CircuitBreaker, CircuitState, get_registry
 from asap.transport.compression import (
@@ -75,6 +75,22 @@ DEFAULT_POOL_MAXSIZE = 100
 DEFAULT_POOL_TIMEOUT = 5.0
 # Maximum time to wait for manifest retrieval
 MANIFEST_REQUEST_TIMEOUT = 10.0
+
+
+def _record_send_error_metrics(start_time: float, error: BaseException) -> None:
+    """Record transport send error metrics (status=error, duration, reason)."""
+    duration_seconds = time.perf_counter() - start_time
+    metrics = get_metrics()
+    metrics.increment_counter("asap_transport_send_total", {"status": "error"})
+    metrics.increment_counter(
+        "asap_transport_send_errors_total",
+        {"reason": type(error).__name__},
+    )
+    metrics.observe_histogram(
+        "asap_transport_send_duration_seconds",
+        duration_seconds,
+        {"status": "error"},
+    )
 
 
 @dataclass
@@ -715,6 +731,8 @@ class ASAPClient:
         # Attempt with retries
         last_exception: Exception | None = None
         for attempt in range(self.max_retries):
+            if attempt > 0:
+                get_metrics().increment_counter("asap_transport_retries_total")
             try:
                 # Build headers
                 headers = {
@@ -948,7 +966,8 @@ class ASAPClient:
                         )
 
                 # Calculate duration and log success
-                duration_ms = (time.perf_counter() - start_time) * 1000
+                duration_seconds = time.perf_counter() - start_time
+                duration_ms = duration_seconds * 1000
                 logger.info(
                     "asap.client.response",
                     target_url=sanitize_url(self.base_url),
@@ -958,7 +977,13 @@ class ASAPClient:
                     duration_ms=round(duration_ms, 2),
                     attempts=attempt + 1,
                 )
-
+                metrics = get_metrics()
+                metrics.increment_counter("asap_transport_send_total", {"status": "success"})
+                metrics.observe_histogram(
+                    "asap_transport_send_duration_seconds",
+                    duration_seconds,
+                    {"status": "success"},
+                )
                 return response_envelope
 
             except (httpx.ConnectError, httpx.TimeoutException) as e:
@@ -1064,6 +1089,7 @@ class ASAPClient:
                     error_type=type(e).__name__,
                     duration_ms=round(duration_ms, 2),
                 )
+                _record_send_error_metrics(start_time, e)
                 # Wrap unexpected errors
                 raise ASAPConnectionError(
                     f"Unexpected error connecting to {self.base_url}: {e}. "
@@ -1076,6 +1102,7 @@ class ASAPClient:
         # always either returns successfully or raises an exception.
         # Kept as a safety net for future code changes.
         if last_exception:  # pragma: no cover
+            _record_send_error_metrics(start_time, last_exception)
             raise last_exception
         raise ASAPConnectionError(
             f"Max retries ({self.max_retries}) exceeded for {self.base_url}. "
