@@ -432,6 +432,10 @@ class HandlerRegistry:
                 return response
             except Exception as e:
                 duration_ms = (time.perf_counter() - start_time) * 1000
+                get_metrics().increment_counter(
+                    "asap_handler_errors_total",
+                    {"payload_type": payload_type},
+                )
                 logger.exception(
                     "asap.handler.error",
                     payload_type=payload_type,

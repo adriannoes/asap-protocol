@@ -157,6 +157,7 @@ class MetricsCollector:
         "asap_requests_error_total": "Total number of failed ASAP requests",
         "asap_thread_pool_exhausted_total": "Total number of thread pool exhaustion events",
         "asap_handler_executions_total": "Total number of handler executions",
+        "asap_handler_errors_total": "Total number of handler execution failures",
         "asap_state_transitions_total": "Total number of state machine transitions",
         "asap_transport_send_total": "Total number of transport send attempts",
         "asap_transport_send_errors_total": "Total number of transport send errors",
