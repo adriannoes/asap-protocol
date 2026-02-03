@@ -96,7 +96,7 @@ jobs:
       - name: Run tests with coverage
         env:
           PYTHONPATH: src
-        run: uv run pytest --tb=short --cov=src --cov-report=xml
+        run: uv run pytest --tb=short --cov=src --cov-report=xml --cov-fail-under=85
         timeout-minutes: 15
 
       - name: Upload coverage to Codecov
