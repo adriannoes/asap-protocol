@@ -298,3 +298,177 @@ class TestASAPClientCoverageGaps:
 
             # Should fall back to 0.1s backoff (base_delay)
             mock_sleep.assert_called_once_with(0.1)
+
+
+class TestASAPClientManifestCache:
+    """Tests for get_manifest cache behavior."""
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_cache_hit(self) -> None:
+        """get_manifest returns cached manifest without HTTP call if cache hit."""
+        from asap.models.entities import Manifest
+
+        manifest_data = {
+            "id": "urn:asap:agent:testagent",
+            "name": "Test Agent",
+            "version": "1.0.0",
+            "description": "Test agent",
+            "capabilities": {
+                "asap_version": "0.1",
+                "skills": [{"id": "test", "description": "Test skill"}],
+                "state_persistence": False,
+            },
+            "endpoints": {"asap": "http://localhost:8000/asap"},
+        }
+        expected_manifest = Manifest(**manifest_data)
+
+        call_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            return httpx.Response(status_code=200, json=manifest_data)
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            client._manifest_cache.set(
+                "https://example.com/.well-known/asap/manifest.json", expected_manifest
+            )
+            result = await client.get_manifest()
+
+        assert call_count == 0
+        assert result.id == expected_manifest.id
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_cache_miss_then_set(self) -> None:
+        """get_manifest fetches from HTTP on cache miss and caches the result."""
+        manifest_data = {
+            "id": "urn:asap:agent:testagent",
+            "name": "Test Agent",
+            "version": "1.0.0",
+            "description": "Test agent",
+            "capabilities": {
+                "asap_version": "0.1",
+                "skills": [{"id": "test", "description": "Test skill"}],
+                "state_persistence": False,
+            },
+            "endpoints": {"asap": "http://localhost:8000/asap"},
+        }
+
+        call_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            return httpx.Response(status_code=200, json=manifest_data)
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            assert client._manifest_cache.size() == 0
+            result = await client.get_manifest()
+            assert call_count == 1
+            assert result.id == "urn:asap:agent:testagent"
+            assert client._manifest_cache.size() == 1
+            cached = client._manifest_cache.get(
+                "https://example.com/.well-known/asap/manifest.json"
+            )
+            assert cached is not None
+            assert cached.id == "urn:asap:agent:testagent"
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_cache_invalidate_on_http_error(self) -> None:
+        """get_manifest invalidates cache entry on HTTP error."""
+        from asap.models.entities import Manifest
+
+        manifest_data = {
+            "id": "urn:asap:agent:testagent",
+            "name": "Test Agent",
+            "version": "1.0.0",
+            "description": "Test agent",
+            "capabilities": {
+                "asap_version": "0.1",
+                "skills": [{"id": "test", "description": "Test skill"}],
+                "state_persistence": False,
+            },
+            "endpoints": {"asap": "http://localhost:8000/asap"},
+        }
+        stale_manifest = Manifest(**manifest_data)
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=500, content=b"Internal Server Error")
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            url = "https://example.com/.well-known/asap/manifest.json"
+            client._manifest_cache.set(url, stale_manifest)
+            assert client._manifest_cache.size() == 1
+            client._manifest_cache.invalidate(url)
+            assert client._manifest_cache.size() == 0
+
+            with pytest.raises(ASAPConnectionError, match="500"):
+                await client.get_manifest()
+
+            assert client._manifest_cache.size() == 0
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_cache_invalidate_on_invalid_json(self) -> None:
+        """get_manifest invalidates cache entry on invalid JSON response."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, content=b"not valid json")
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            with pytest.raises(ValueError, match="Invalid JSON"):
+                await client.get_manifest()
+
+            assert client._manifest_cache.size() == 0
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_cache_invalidate_on_invalid_manifest(self) -> None:
+        """get_manifest invalidates cache entry on invalid manifest format."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, json={"foo": "bar"})
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            with pytest.raises(ValueError, match="Invalid manifest"):
+                await client.get_manifest()
+
+            assert client._manifest_cache.size() == 0
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_cache_invalidate_on_timeout(self) -> None:
+        """get_manifest invalidates cache entry on timeout."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            raise httpx.TimeoutException("Timeout fetching manifest")
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            with pytest.raises(ASAPTimeoutError):
+                await client.get_manifest()
+
+            assert client._manifest_cache.size() == 0
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_cache_invalidate_on_connect_error(self) -> None:
+        """get_manifest invalidates cache entry on connection error."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            raise httpx.ConnectError("Connection refused")
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            with pytest.raises(ASAPConnectionError):
+                await client.get_manifest()
+
+            assert client._manifest_cache.size() == 0
