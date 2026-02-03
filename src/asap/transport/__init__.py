@@ -41,6 +41,11 @@ Example:
     >>> app = create_app(manifest)
 """
 
+from asap.transport.cache import (
+    DEFAULT_MAX_SIZE,
+    DEFAULT_TTL,
+    ManifestCache,
+)
 from asap.transport.client import (
     ASAPClient,
     ASAPConnectionError,
@@ -94,6 +99,10 @@ __all__ = [
     "ASAPTimeoutError",
     "ASAPRemoteError",
     "RetryConfig",
+    # Cache
+    "ManifestCache",
+    "DEFAULT_TTL",
+    "DEFAULT_MAX_SIZE",
     # Compression
     "COMPRESSION_THRESHOLD",
     "CompressionAlgorithm",

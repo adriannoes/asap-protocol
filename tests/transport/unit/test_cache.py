@@ -10,6 +10,7 @@ import pytest
 
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.transport.cache import (
+    DEFAULT_MAX_SIZE,
     DEFAULT_TTL,
     CacheEntry,
     ManifestCache,
@@ -105,6 +106,21 @@ class TestManifestCacheInit:
         """ManifestCache accepts custom default_ttl."""
         cache = ManifestCache(default_ttl=120.0)
         assert cache._default_ttl == 120.0
+
+    def test_default_max_size_is_default(self) -> None:
+        """ManifestCache uses DEFAULT_MAX_SIZE when no max_size is provided."""
+        cache = ManifestCache()
+        assert cache.max_size == DEFAULT_MAX_SIZE
+
+    def test_custom_max_size(self) -> None:
+        """ManifestCache accepts custom max_size."""
+        cache = ManifestCache(max_size=100)
+        assert cache.max_size == 100
+
+    def test_max_size_zero_means_unlimited(self) -> None:
+        """ManifestCache with max_size=0 has no size limit."""
+        cache = ManifestCache(max_size=0)
+        assert cache.max_size == 0
 
     def test_initial_size_is_zero(self) -> None:
         """New ManifestCache has size() == 0."""
@@ -323,3 +339,144 @@ class TestManifestCacheThreadSafety:
         for t in threads:
             t.join()
         assert cache.size() >= 0
+
+
+class TestManifestCacheLRU:
+    """Tests for LRU eviction behavior in ManifestCache."""
+
+    def test_evicts_lru_entry_when_max_size_reached(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """When max_size is reached, the least recently used entry is evicted."""
+        from asap.transport import cache as cache_module
+
+        mock_time = MockTime(1000.0)
+        monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        cache = ManifestCache(max_size=3)
+
+        # Add 3 entries (fills the cache)
+        cache.set("http://a.example.com/m.json", _make_manifest("urn:asap:agent:a"))
+        cache.set("http://b.example.com/m.json", _make_manifest("urn:asap:agent:b"))
+        cache.set("http://c.example.com/m.json", _make_manifest("urn:asap:agent:c"))
+        assert cache.size() == 3
+
+        # Add 4th entry - should evict 'a' (oldest)
+        cache.set("http://d.example.com/m.json", _make_manifest("urn:asap:agent:d"))
+        assert cache.size() == 3
+        assert cache.get("http://a.example.com/m.json") is None
+        assert cache.get("http://b.example.com/m.json") is not None
+        assert cache.get("http://c.example.com/m.json") is not None
+        assert cache.get("http://d.example.com/m.json") is not None
+
+    def test_get_updates_lru_order(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Accessing an entry with get() moves it to most recently used position."""
+        from asap.transport import cache as cache_module
+
+        mock_time = MockTime(1000.0)
+        monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        cache = ManifestCache(max_size=3)
+
+        # Add 3 entries: a, b, c (a is oldest)
+        cache.set("http://a.example.com/m.json", _make_manifest("urn:asap:agent:a"))
+        cache.set("http://b.example.com/m.json", _make_manifest("urn:asap:agent:b"))
+        cache.set("http://c.example.com/m.json", _make_manifest("urn:asap:agent:c"))
+
+        # Access 'a' - now 'b' is oldest
+        cache.get("http://a.example.com/m.json")
+
+        # Add 'd' - should evict 'b' (now oldest)
+        cache.set("http://d.example.com/m.json", _make_manifest("urn:asap:agent:d"))
+        assert cache.size() == 3
+        assert cache.get("http://a.example.com/m.json") is not None
+        assert cache.get("http://b.example.com/m.json") is None  # Evicted
+        assert cache.get("http://c.example.com/m.json") is not None
+        assert cache.get("http://d.example.com/m.json") is not None
+
+    def test_set_existing_key_updates_lru_order(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Setting an existing key moves it to most recently used position."""
+        from asap.transport import cache as cache_module
+
+        mock_time = MockTime(1000.0)
+        monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        cache = ManifestCache(max_size=3)
+
+        # Add 3 entries: a, b, c
+        cache.set("http://a.example.com/m.json", _make_manifest("urn:asap:agent:a"))
+        cache.set("http://b.example.com/m.json", _make_manifest("urn:asap:agent:b"))
+        cache.set("http://c.example.com/m.json", _make_manifest("urn:asap:agent:c"))
+
+        # Update 'a' - now 'b' is oldest
+        cache.set("http://a.example.com/m.json", _make_manifest("urn:asap:agent:a-v2"))
+
+        # Add 'd' - should evict 'b' (now oldest)
+        cache.set("http://d.example.com/m.json", _make_manifest("urn:asap:agent:d"))
+        assert cache.size() == 3
+        assert cache.get("http://a.example.com/m.json") is not None
+        assert cache.get("http://b.example.com/m.json") is None  # Evicted
+        assert cache.get("http://c.example.com/m.json") is not None
+        assert cache.get("http://d.example.com/m.json") is not None
+
+    def test_max_size_zero_allows_unlimited_entries(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """max_size=0 allows unlimited entries (no eviction)."""
+        from asap.transport import cache as cache_module
+
+        mock_time = MockTime(1000.0)
+        monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        cache = ManifestCache(max_size=0)
+
+        # Add many entries
+        for i in range(100):
+            cache.set(
+                f"http://test{i}.example.com/m.json",
+                _make_manifest(f"urn:asap:agent:agent{i}"),
+            )
+
+        # All should be present
+        assert cache.size() == 100
+        for i in range(100):
+            assert cache.get(f"http://test{i}.example.com/m.json") is not None
+
+    def test_max_size_one_evicts_immediately(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """max_size=1 keeps only the most recently added entry."""
+        from asap.transport import cache as cache_module
+
+        mock_time = MockTime(1000.0)
+        monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        cache = ManifestCache(max_size=1)
+
+        cache.set("http://a.example.com/m.json", _make_manifest("urn:asap:agent:a"))
+        assert cache.size() == 1
+        assert cache.get("http://a.example.com/m.json") is not None
+
+        cache.set("http://b.example.com/m.json", _make_manifest("urn:asap:agent:b"))
+        assert cache.size() == 1
+        assert cache.get("http://a.example.com/m.json") is None
+        assert cache.get("http://b.example.com/m.json") is not None
+
+    def test_concurrent_access_with_lru(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Concurrent access with LRU eviction does not raise errors."""
+        import threading
+
+        from asap.transport import cache as cache_module
+
+        mock_time = MockTime(1000.0)
+        monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        cache = ManifestCache(max_size=10)
+        manifest = _make_manifest("urn:asap:agent:testagent")
+        errors: list[Exception] = []
+
+        def worker(n: int) -> None:
+            try:
+                for i in range(50):
+                    url = f"http://test{n}x{i}.example.com/manifest.json"
+                    cache.set(url, manifest)
+                    cache.get(url)
+            except Exception as e:
+                errors.append(e)
+
+        threads = [threading.Thread(target=worker, args=(n,)) for n in range(5)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert len(errors) == 0
+        assert cache.size() <= 10
