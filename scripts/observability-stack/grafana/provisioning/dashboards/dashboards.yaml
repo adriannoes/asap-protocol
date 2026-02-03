@@ -1,0 +1,11 @@
+# Provision ASAP dashboards from the repo.
+apiVersion: 1
+providers:
+  - name: ASAP
+    orgId: 1
+    folder: ASAP
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/provisioning/dashboards/asap

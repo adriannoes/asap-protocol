@@ -1,0 +1,13 @@
+# Prometheus config for ASAP metrics.
+# Scrapes ASAP server at host:8000 (run server on host and use host.docker.internal).
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: asap
+    static_configs:
+      # Host machine (run ASAP server on port 8000)
+      - targets: ["host.docker.internal:8000"]
+    metrics_path: /asap/metrics
+    scrape_interval: 10s

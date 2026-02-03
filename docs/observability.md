@@ -93,3 +93,35 @@ Handler execution and state machine transitions are recorded as spans with
 attributes (`asap.payload_type`, `asap.agent.urn`, `asap.envelope.id`,
 `asap.state.from`, `asap.state.to`, `asap.task.id`). Use `asap.observability.tracing.get_tracer()`
 to add custom spans in your code.
+
+## Metrics and Grafana
+
+Metrics are exposed at `/asap/metrics` in Prometheus text format. Pre-built Grafana
+dashboards are in `src/asap/observability/dashboards/`:
+
+- **ASAP RED** (`asap-red.json`): Request rate, error rate, latency (p95, p99).
+- **ASAP Detailed** (`asap-detailed.json`): Handler executions, state machine
+  transitions, circuit breaker status.
+
+### Loading the dashboards
+
+1. Configure a Prometheus datasource in Grafana that scrapes your ASAP server
+   (e.g. `http://<host>:<port>/asap/metrics`).
+2. Import: Dashboards → Import → Upload the JSON file, or use provisioning (see
+   below).
+3. Set the datasource to your Prometheus instance (default UID `prometheus` if
+   you added it with that name).
+
+### Optional: run Prometheus + Grafana locally
+
+From the repo root, run the observability stack (Prometheus + Grafana) and
+provision the ASAP dashboards:
+
+```bash
+cd scripts/observability-stack && docker compose up -d
+```
+
+Then start your ASAP server (so Prometheus can scrape it), open Grafana at
+http://localhost:3000 (default login `admin` / `admin`), and open the ASAP RED
+or ASAP Detailed dashboard. Dashboards are auto-loaded from
+`src/asap/observability/dashboards/`.
