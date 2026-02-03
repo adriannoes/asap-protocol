@@ -14,11 +14,14 @@ import sys
 from collections.abc import Callable
 from typing import Any, cast
 
+import jsonschema
+
 from asap.mcp.protocol import (
     INVALID_PARAMS,
     INTERNAL_ERROR,
     METHOD_NOT_FOUND,
     MCP_PROTOCOL_VERSION,
+    PARSE_ERROR,
     CallToolRequestParams,
     CallToolResult,
     Implementation,
@@ -32,9 +35,11 @@ from asap.mcp.protocol import (
     TextContent,
     Tool,
 )
-from asap.observability import get_logger
+from asap.observability import get_logger, is_debug_mode
 
 logger = get_logger(__name__)
+
+_INTERNAL_TOOL_ERROR_MESSAGE = "Internal tool error"
 
 EMPTY_INPUT_SCHEMA: dict[str, Any] = {"type": "object", "additionalProperties": False}
 
@@ -42,7 +47,7 @@ EMPTY_INPUT_SCHEMA: dict[str, Any] = {"type": "object", "additionalProperties": 
 class MCPServer:
     """MCP server with stdio transport and tools support.
 
-    Register tools with register_tool(), then run with run_stdio().
+    Register tools with register_tool(), then run with serve_stdio().
     Supports initialize, tools/list, and tools/call per MCP 2025-11-25.
     """
 
@@ -155,7 +160,12 @@ class MCPServer:
                 isError=True,
             ).model_dump(by_alias=True, exclude_none=True)
 
-        func, _schema, _desc, _title = self._tools[parsed.name]
+        func, input_schema, _desc, _title = self._tools[parsed.name]
+        try:
+            jsonschema.validate(instance=parsed.arguments, schema=input_schema)
+        except jsonschema.ValidationError as e:
+            raise ValueError(f"Invalid arguments: {e.message}") from e
+
         try:
             if inspect.iscoroutinefunction(func):
                 out = await func(**parsed.arguments)
@@ -166,8 +176,9 @@ class MCPServer:
             raise ValueError(f"Tool argument mismatch: {e}") from e
         except Exception as e:
             logger.exception("mcp.tool.error", tool=parsed.name, error=str(e))
+            message = str(e) if is_debug_mode() else _INTERNAL_TOOL_ERROR_MESSAGE
             return CallToolResult(
-                content=[TextContent(text=str(e)).model_dump(by_alias=True)],
+                content=[TextContent(text=message).model_dump(by_alias=True)],
                 isError=True,
             ).model_dump(by_alias=True, exclude_none=True)
 
@@ -227,7 +238,7 @@ class MCPServer:
         else:
             logger.debug("mcp.notification", method=notif.method, params=notif.params)
 
-    async def run_stdio(
+    async def serve_stdio(
         self,
         stdin: io.TextIOBase | None = None,
         stdout: io.TextIOBase | None = None,
@@ -250,7 +261,8 @@ class MCPServer:
         def read_stdin() -> dict[str, Any] | None:
             try:
                 line = _stdin.readline()
-            except (EOFError, OSError):
+            except (EOFError, OSError) as e:
+                logger.debug("mcp.transport.closed", reason=str(e))
                 return None
             if not line:
                 return None
@@ -260,10 +272,18 @@ class MCPServer:
             try:
                 data = json.loads(line)
                 if not isinstance(data, dict):
-                    return None
+                    return {
+                        "jsonrpc": "2.0",
+                        "id": None,
+                        "error": {"code": PARSE_ERROR, "message": "Parse error"},
+                    }
                 return cast("dict[str, Any]", data)
             except json.JSONDecodeError:
-                return None
+                return {
+                    "jsonrpc": "2.0",
+                    "id": None,
+                    "error": {"code": PARSE_ERROR, "message": "Parse error"},
+                }
 
         async def producer() -> None:
             while True:
@@ -277,6 +297,14 @@ class MCPServer:
                 raw = await queue.get()
                 if raw is None:
                     break
+                if (
+                    isinstance(raw, dict)
+                    and "method" not in raw
+                    and raw.get("error", {}).get("code") == PARSE_ERROR
+                ):
+                    _stdout.write(json.dumps(raw) + "\n")
+                    _stdout.flush()
+                    continue
                 if "id" in raw and raw.get("method"):
                     try:
                         req = JSONRPCRequest(**raw)
@@ -301,3 +329,5 @@ class MCPServer:
                         logger.debug("mcp.notification_error", error=str(e))
 
         await asyncio.gather(producer(), consumer())
+
+    run_stdio = serve_stdio
