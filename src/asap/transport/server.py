@@ -1039,10 +1039,10 @@ class ASAPRequestHandler:
             envelope_result = self._validate_envelope(ctx)
             envelope_or_none, result = envelope_result
             if envelope_or_none is None:
-                self._log_response_debug(result)  # type: ignore[arg-type]
-                return result  # type: ignore[return-value]
+                self._log_response_debug(result)
+                return result
             envelope = envelope_or_none
-            payload_type = result  # type: ignore[assignment]
+            payload_type = result
 
             trace_token = extract_and_activate_envelope_trace_context(envelope)
             try:
@@ -1126,10 +1126,10 @@ class ASAPRequestHandler:
                 dispatch_result = await self._dispatch_to_handler(envelope, ctx)
                 response_or_none, result = dispatch_result
                 if response_or_none is None:
-                    self._log_response_debug(result)  # type: ignore[arg-type]
-                    return result  # type: ignore[return-value]
+                    self._log_response_debug(result)
+                    return result
                 response_envelope = response_or_none
-                payload_type = result  # type: ignore[assignment]
+                payload_type = result
 
                 success_resp = self._build_success_response(response_envelope, ctx, payload_type)
                 self._log_response_debug(success_resp)

@@ -49,6 +49,7 @@ dev = [
     "pytest-benchmark>=5.1",
     "pytest-xdist>=3.5.0",
     "mypy>=1.19.1",
+    "types-jsonschema>=4.0.0",
     "ruff>=0.14.14",
     "pip-audit>=2.7",
 ]
@@ -123,6 +124,32 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
 plugins = ["pydantic.mypy"]
+# Third-party packages without stubs (fastapi, typer, opentelemetry, etc.).
+# Trade-off: typos in import names and imports of removed packages are not reported.
+# To tighten: set to false and add per-module override ignore_missing_imports = true
+# only for modules that import from untyped packages.
+ignore_missing_imports = true
+# disable_error_code only where third-party libs are untyped (see overrides below)
+
+[[tool.mypy.overrides]]
+module = "asap.models.ids"
+disable_error_code = ["no-any-return"]
+# ULID.datetime is typed as Any in python-ulid
+
+[[tool.mypy.overrides]]
+module = "asap.observability.tracing"
+disable_error_code = ["no-any-return"]
+# tracer.start_as_current_span returns Any (OpenTelemetry SDK)
+
+[[tool.mypy.overrides]]
+module = ["asap.cli", "asap.observability.trace_ui", "asap.transport.server"]
+disable_error_code = ["misc"]
+# Untyped decorators: Typer @app.command, FastAPI @app.get/@app.post
+
+[[tool.mypy.overrides]]
+module = "asap.transport.middleware"
+disable_error_code = ["misc"]
+# BaseHTTPMiddleware (Starlette) has type Any when ignore_missing_imports=true
 
 [tool.pydantic-mypy]
 init_forbid_extra = true

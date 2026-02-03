@@ -105,7 +105,7 @@ def _add_otlp_processor() -> None:
     except ImportError as e:
         logger.debug("OTLP gRPC exporter not available: %s", e)
         try:
-            from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # type: ignore[import-not-found]
+            from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
                 OTLPSpanExporter as OTLPSpanExporterHttp,
             )
 
