@@ -21,6 +21,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "jsonschema>=4.23.0",
     "pydantic>=2.12.5",
     "fastapi>=0.128.0",
     "httpx[http2]>=0.28.1",
@@ -129,7 +130,7 @@ init_typed = true
 warn_required_dynamic_aliases = true
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]  # Ensure src is in PYTHONPATH for pytest
+pythonpath = ["src", "."]  # src for asap; . for tests
 minversion = "8.0"
 addopts = [
     "--strict-markers",
