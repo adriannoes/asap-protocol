@@ -344,6 +344,11 @@
 
 ### Tasks
 
+- [x] 13.0 Pre-release technical audit ✅
+  - Goal: Verify P1-P12 claims, hunt bugs, address findings
+  - Branch: `pre-release-audit-fixes`
+  - Details: [Release Detailed - Task 13.0](./tasks-v1.0.0-release-detailed.md#task-130-pre-release-technical-audit-)
+
 - [ ] 13.1 Run comprehensive testing
   - Goal: 1000+ tests pass + CI pipeline, benchmarks meet targets
   - Details: [Release Detailed - Task 13.1](./tasks-v1.0.0-release-detailed.md#task-131-comprehensive-testing)
@@ -393,9 +398,9 @@
 | P10 | 2 | Docs (deployment & troubleshooting) | 4-5 |
 | P11 | 3 | Observability (tracing & metrics) | 5-7 |
 | P12 | 2 | Observability (dashboards & MCP) | 4-5 |
-| P13 | 6 | Release prep + Final PRD Review | 5-7 |
+| P13 | 7 | Release prep + Final PRD Review | 5-7 |
 
-**Total**: 38 high-level tasks across 13 sprints
+**Total**: 39 high-level tasks across 13 sprints
 
 **PRD Review Checkpoints**: 7 (P1, P3, P5, P6, P7, P9, P13)
 
@@ -403,7 +408,7 @@
 
 ## Progress Tracking
 
-**Overall Progress**: 32/38 tasks completed (84%)
+**Overall Progress**: 33/39 tasks completed (85%)
 
 **Sprint Status**:
 - ✅ P1: 3/3 tasks (100%) - **Includes PRD review**
@@ -418,7 +423,7 @@
 - ✅ P10: 2/2 tasks (100%)
 - ✅ P11: 3/3 tasks (100%)
 - ✅ P12: 2/2 tasks (100%)
-- ⏳ P13: 0/6 tasks (0%) - **Includes final PRD review**
+- ⏳ P13: 1/7 tasks (14%) - **Includes final PRD review**
 
 **PRD Maintenance Schedule**:
 - P1: Review security decisions (HMAC signing) ✅
@@ -429,7 +434,7 @@
 - P9: Decide i18n scope (DD-011)
 - P13: Final review + retrospective
 
-**Last Updated**: 2026-02-02
+**Last Updated**: 2026-02-03
 
 **Prerequisites**: v0.5.0 must be released before starting Sprint P1
 
