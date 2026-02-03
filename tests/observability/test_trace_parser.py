@@ -65,6 +65,28 @@ class TestFilterRecordsByTraceId:
         records = filter_records_by_trace_id(lines, "t1")
         assert len(records) == 1
 
+    def test_skips_parsed_record_when_trace_id_mismatch(self) -> None:
+        """Lines that contain trace_id in body but parsed trace_id differs are skipped."""
+        lines = [
+            '{"event": "asap.request.received", "trace_id": "t2", "envelope_id": "e1"}',
+        ]
+        records = filter_records_by_trace_id(lines, "t1")
+        assert len(records) == 0
+
+
+class TestTraceHopFormatHop:
+    """Tests for TraceHop.format_hop."""
+
+    def test_format_hop_short_urns(self) -> None:
+        """format_hop with short_urns=True shortens URNs to last segment."""
+        hop = TraceHop("urn:asap:agent:a", "urn:asap:agent:b", 10.0)
+        assert hop.format_hop(short_urns=True) == "a -> b (10ms)"
+
+    def test_format_hop_full_urns(self) -> None:
+        """format_hop with short_urns=False keeps full URNs."""
+        hop = TraceHop("urn:asap:agent:a", "urn:asap:agent:b", None)
+        assert hop.format_hop(short_urns=False) == "urn:asap:agent:a -> urn:asap:agent:b (?)"
+
 
 class TestBuildHops:
     """Tests for build_hops."""
@@ -144,6 +166,27 @@ class TestBuildHops:
         assert len(hops) == 1
         assert hops[0].duration_ms is None
 
+    def test_skips_record_with_non_string_envelope_id(self) -> None:
+        """Records with non-string envelope_id are skipped in build_hops."""
+        records = [
+            {
+                "event": EVENT_RECEIVED,
+                "envelope_id": 123,
+                "trace_id": "t1",
+                "sender": "a",
+                "recipient": "b",
+            },
+        ]
+        assert build_hops(records) == []
+
+    def test_skips_record_without_sender_or_recipient(self) -> None:
+        """Records missing sender or recipient are skipped."""
+        records = [
+            {"event": EVENT_RECEIVED, "envelope_id": "e1", "trace_id": "t1", "recipient": "b"},
+            {"event": EVENT_RECEIVED, "envelope_id": "e2", "trace_id": "t1", "sender": "a"},
+        ]
+        assert build_hops(records) == []
+
 
 class TestFormatAsciiDiagram:
     """Tests for format_ascii_diagram."""
@@ -161,6 +204,17 @@ class TestFormatAsciiDiagram:
 
     def test_empty_hops(self) -> None:
         assert format_ascii_diagram([]) == ""
+
+    def test_two_hops_short_urns_false(self) -> None:
+        """format_ascii_diagram with short_urns=False keeps full URNs."""
+        hops = [
+            TraceHop("urn:asap:agent:a", "urn:asap:agent:b", 15.0),
+            TraceHop("urn:asap:agent:b", "urn:asap:agent:c", 23.0),
+        ]
+        out = format_ascii_diagram(hops, short_urns=False)
+        assert "urn:asap:agent:a" in out
+        assert "urn:asap:agent:b" in out
+        assert "urn:asap:agent:c" in out
 
 
 class TestTraceToJsonExport:
@@ -243,3 +297,70 @@ class TestParseTraceFromLines:
         hops, diagram = parse_trace_from_lines(lines, "missing")
         assert len(hops) == 0
         assert diagram == ""
+
+
+class TestTraceParserEdgeCases:
+    """Edge cases for trace parser helpers and extract_trace_ids."""
+
+    def test_shorten_urn_without_colon(self) -> None:
+        """_shorten_urn returns urn unchanged when no colon present."""
+        from asap.observability.trace_parser import _shorten_urn
+
+        assert _shorten_urn("nocolon") == "nocolon"
+
+    def test_timestamp_to_sort_key_invalid(self) -> None:
+        """_timestamp_to_sort_key returns 0.0 on invalid timestamp."""
+        from asap.observability.trace_parser import _timestamp_to_sort_key
+
+        assert _timestamp_to_sort_key("invalid") == 0.0
+        assert _timestamp_to_sort_key("") == 0.0
+
+    def test_format_ascii_diagram_long_urns(self) -> None:
+        """format_ascii_diagram with short_urns=False uses full URNs."""
+        hops = [
+            TraceHop(
+                sender="urn:asap:agent:client",
+                recipient="urn:asap:agent:echo",
+                duration_ms=15.0,
+            )
+        ]
+        diagram = format_ascii_diagram(hops, short_urns=False)
+        assert "urn:asap:agent:client" in diagram
+        assert "urn:asap:agent:echo" in diagram
+        assert "15ms" in diagram
+
+    def test_extract_trace_ids_with_invalid_json(self) -> None:
+        """extract_trace_ids skips invalid JSON lines."""
+        lines = [
+            "not valid json",
+            '{"event": "asap.request.received", "trace_id": "t1"}',
+        ]
+        result = extract_trace_ids(lines)
+        assert result == ["t1"]
+
+    def test_extract_trace_ids_with_wrong_event(self) -> None:
+        """extract_trace_ids skips non-asap events."""
+        lines = [
+            '{"event": "wrong.event", "trace_id": "t1"}',
+            '{"event": "asap.request.received", "trace_id": "t2"}',
+        ]
+        result = extract_trace_ids(lines)
+        assert result == ["t2"]
+
+    def test_extract_trace_ids_with_empty_trace_id(self) -> None:
+        """extract_trace_ids skips empty trace_id."""
+        lines = [
+            '{"event": "asap.request.received", "trace_id": ""}',
+            '{"event": "asap.request.received", "trace_id": "valid"}',
+        ]
+        result = extract_trace_ids(lines)
+        assert result == ["valid"]
+
+    def test_extract_trace_ids_with_non_string_trace_id(self) -> None:
+        """extract_trace_ids skips non-string trace_id."""
+        lines = [
+            '{"event": "asap.request.received", "trace_id": 123}',
+            '{"event": "asap.request.received", "trace_id": "valid"}',
+        ]
+        result = extract_trace_ids(lines)
+        assert result == ["valid"]

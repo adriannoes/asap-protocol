@@ -58,11 +58,9 @@ class TestTaskStatus:
             TaskStatus.INPUT_REQUIRED,
         }
 
-        # Check that terminal states are correctly identified
         for state in terminal_states:
             assert state.is_terminal()
 
-        # Check that non-terminal states are not terminal
         for state in non_terminal_states:
             assert not state.is_terminal()
 

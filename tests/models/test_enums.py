@@ -242,10 +242,6 @@ class TestEnumIntegration:
 
         schema = TaskResponse.model_json_schema()
 
-        # Status should be in the schema
         assert "status" in schema["properties"]
-
-        # Check that it references the enum definition
         status_schema = schema["properties"]["status"]
-        # The status should reference TaskStatus enum
         assert "$ref" in status_schema or "enum" in status_schema or "allOf" in status_schema

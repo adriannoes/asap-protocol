@@ -1,7 +1,6 @@
 """Tests for ASAP observability metrics module."""
 
 import threading
-import time
 
 import pytest
 
@@ -102,12 +101,9 @@ class TestMetricsCollector:
         """Test collector initializes with default metrics."""
         collector = MetricsCollector()
 
-        # Check default counters exist
         assert "asap_requests_total" in collector._counters
         assert "asap_requests_success_total" in collector._counters
         assert "asap_requests_error_total" in collector._counters
-
-        # Check default histogram exists
         assert "asap_request_duration_seconds" in collector._histograms
 
     def test_collector_increment_counter(self) -> None:
@@ -167,7 +163,6 @@ class TestMetricsCollector:
 
         output = collector.export_prometheus()
 
-        # Check format
         assert "# HELP asap_requests_total" in output
         assert "# TYPE asap_requests_total counter" in output
         assert 'asap_requests_total{payload_type="task.request",status="success"} 1' in output
@@ -177,8 +172,6 @@ class TestMetricsCollector:
         assert "asap_request_duration_seconds_bucket" in output
         assert "asap_request_duration_seconds_sum" in output
         assert "asap_request_duration_seconds_count" in output
-
-        # Check uptime gauge
         assert "asap_process_uptime_seconds" in output
 
     def test_collector_export_empty_metrics(self) -> None:
@@ -186,7 +179,6 @@ class TestMetricsCollector:
         collector = MetricsCollector()
         output = collector.export_prometheus()
 
-        # Should still have metric definitions
         assert "# HELP asap_requests_total" in output
         assert "asap_requests_total 0" in output
 
@@ -265,19 +257,19 @@ class TestPrometheusFormat:
 
         output = collector.export_prometheus()
 
-        # Check bucket format with le label
         assert 'le="0.005"' in output
         assert 'le="0.01"' in output
         assert 'le="+Inf"' in output
 
-    def test_uptime_is_positive(self) -> None:
+    def test_uptime_is_positive(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test uptime metric shows positive value."""
-        collector = MetricsCollector()
-        time.sleep(0.01)  # Small delay to ensure positive uptime
+        from asap.observability import metrics as metrics_module
 
+        times = iter([100.0, 101.0])
+        monkeypatch.setattr(metrics_module.time, "time", lambda: next(times, 102.0))
+        collector = MetricsCollector()
         output = collector.export_prometheus()
 
-        # Find uptime line and verify it's positive
         for line in output.split("\n"):
             if line.startswith("asap_process_uptime_seconds"):
                 value = float(line.split()[-1])
@@ -418,8 +410,6 @@ class TestMetricsEdgeCases:
         output1 = collector.export_prometheus()
         output2 = collector.export_prometheus()
 
-        # Outputs should be identical (except possibly timestamp in uptime)
-        # Just check that key metrics are present in both
         assert "asap_requests_total" in output1
         assert "asap_requests_total" in output2
         assert "asap_request_duration_seconds" in output1
@@ -485,5 +475,4 @@ class TestMetricsEdgeCases:
         # Verify both are escaped: backslash as \\ and quote as \"
         # The output should have \\\\ for the backslash and \" for the quote
         assert 'payload_type="test' in output
-        # Check that escaping is present (exact format depends on Prometheus spec)
         assert "\\" in output or '"' in output

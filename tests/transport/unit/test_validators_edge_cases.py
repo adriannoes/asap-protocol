@@ -1,9 +1,4 @@
-"""Tests for validators module edge cases to improve coverage.
-
-These tests cover:
-- Line 61: Envelope with None timestamp
-- Line 72: Timezone conversion for naive timestamps
-"""
+"""Tests for validators module edge cases (timestamp, nonce)."""
 
 from datetime import datetime, timezone
 
@@ -22,8 +17,7 @@ class TestTimestampValidationEdgeCases:
     """Tests for timestamp validation edge cases."""
 
     def test_envelope_without_timestamp_raises_error(self) -> None:
-        """Line 61: None timestamp should raise InvalidTimestampError."""
-        # Create envelope and manually set timestamp to None
+        """None timestamp raises InvalidTimestampError."""
         envelope = Envelope(
             asap_version="0.1",
             sender="urn:asap:agent:test",
@@ -31,7 +25,6 @@ class TestTimestampValidationEdgeCases:
             payload_type="TaskRequest",
             payload={"skill_id": "test", "conversation_id": "conv_1", "input": {}},
         )
-        # Force timestamp to None (normally auto-generated)
         object.__setattr__(envelope, "timestamp", None)
 
         with pytest.raises(InvalidTimestampError) as exc_info:
@@ -40,9 +33,7 @@ class TestTimestampValidationEdgeCases:
         assert "timestamp is required" in str(exc_info.value).lower()
 
     def test_naive_timestamp_treated_as_utc(self) -> None:
-        """Line 72: Naive timestamps should be treated as UTC."""
-        # Create envelope with naive (no timezone) timestamp that's recent in UTC
-        # We create a naive timestamp by removing tzinfo from a UTC datetime
+        """Naive timestamps are treated as UTC."""
         naive_timestamp = datetime.now(timezone.utc).replace(tzinfo=None)
         envelope = Envelope(
             asap_version="0.1",

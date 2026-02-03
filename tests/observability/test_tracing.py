@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import sys
 from typing import Any
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -67,7 +69,6 @@ class TestConfigureAndGetTracer:
         """reset_tracing clears global tracer so get_tracer uses fallback."""
         configure_tracing(service_name="test-service")
         reset_tracing()
-        # After reset, get_tracer still returns a tracer (creates default provider)
         tracer = get_tracer(__name__)
         assert tracer is not None
 
@@ -213,3 +214,151 @@ class TestStateTransitionSpanContext:
             task_id=None,
         ) as span:
             assert span.is_recording()
+
+
+class TestConfigureTracingExporters:
+    """Tests for configure_tracing with OTLP/console exporters (env-driven)."""
+
+    def test_configure_tracing_with_otlp_env_adds_processor(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """With OTEL_TRACES_EXPORTER=otlp and endpoint set, OTLP processor is attempted."""
+        monkeypatch.setenv("OTEL_TRACES_EXPORTER", "otlp")
+        monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+        configure_tracing(service_name="test-otlp")
+        tracer = get_tracer(__name__)
+        assert tracer is not None
+        reset_tracing()
+
+    def test_configure_tracing_with_console_env_adds_processor(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """With OTEL_TRACES_EXPORTER=console, console processor is attempted."""
+        monkeypatch.setenv("OTEL_TRACES_EXPORTER", "console")
+        configure_tracing(service_name="test-console")
+        tracer = get_tracer(__name__)
+        assert tracer is not None
+        reset_tracing()
+
+    def test_configure_tracing_with_app_instruments_fastapi(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When app is passed, _instrument_app is called (FastAPI/httpx instrumentation attempted)."""
+        mock_app = MagicMock()
+        monkeypatch.setenv("OTEL_TRACES_EXPORTER", "none")
+        configure_tracing(service_name="test-app", app=mock_app)
+        tracer = get_tracer(__name__)
+        assert tracer is not None
+        reset_tracing()
+
+    def test_configure_tracing_otlp_without_endpoint_does_not_add_processor(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """With OTEL_TRACES_EXPORTER=otlp and no endpoint, _add_otlp_processor returns early."""
+        monkeypatch.setenv("OTEL_TRACES_EXPORTER", "otlp")
+        monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
+        configure_tracing(service_name="test-otlp-no-endpoint")
+        tracer = get_tracer(__name__)
+        assert tracer is not None
+        reset_tracing()
+
+
+class TestTracingImportErrorBranches:
+    """Tests for import-failure branches in _add_otlp_processor and _add_console_processor."""
+
+    def test_otlp_grpc_import_error_falls_back_to_http(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When gRPC OTLP exporter import fails, HTTP fallback is attempted."""
+        monkeypatch.setenv("OTEL_TRACES_EXPORTER", "otlp")
+        monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+
+        class FakeGrpcModule:
+            def __getattr__(self, name: str) -> None:
+                raise ImportError("grpc not available")
+
+        with patch.dict(
+            sys.modules,
+            {"opentelemetry.exporter.otlp.proto.grpc.trace_exporter": FakeGrpcModule()},
+        ):
+            configure_tracing(service_name="test-otlp-fallback")
+        tracer = get_tracer(__name__)
+        assert tracer is not None
+        reset_tracing()
+
+    def test_otlp_grpc_and_http_import_error_logs_and_continues(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When both gRPC and HTTP OTLP exporters fail to import, configure_tracing still sets tracer."""
+        monkeypatch.setenv("OTEL_TRACES_EXPORTER", "otlp")
+        monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+
+        class FakeModule:
+            def __getattr__(self, name: str) -> None:
+                raise ImportError("not available")
+
+        with patch.dict(
+            sys.modules,
+            {
+                "opentelemetry.exporter.otlp.proto.grpc.trace_exporter": FakeModule(),
+                "opentelemetry.exporter.otlp.proto.http.trace_exporter": FakeModule(),
+            },
+        ):
+            configure_tracing(service_name="test-otlp-both-fail")
+        tracer = get_tracer(__name__)
+        assert tracer is not None
+        reset_tracing()
+
+    def test_console_span_exporter_import_error_logs_and_continues(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When ConsoleSpanExporter() raises ImportError, configure_tracing still sets tracer."""
+
+        def raise_import_error() -> None:
+            raise ImportError("console exporter not available")
+
+        monkeypatch.setenv("OTEL_TRACES_EXPORTER", "console")
+        export_mod = sys.modules["opentelemetry.sdk.trace.export"]
+        monkeypatch.setattr(export_mod, "ConsoleSpanExporter", raise_import_error, raising=False)
+        configure_tracing(service_name="test-console-fail")
+        tracer = get_tracer(__name__)
+        assert tracer is not None
+        reset_tracing()
+
+
+class TestInstrumentAppFailureBranches:
+    """Tests for _instrument_app when FastAPI/httpx instrumentation raises."""
+
+    def test_fastapi_instrumentation_failure_does_not_propagate(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When FastAPIInstrumentor.instrument_app raises, configure_tracing does not propagate."""
+        monkeypatch.setenv("OTEL_TRACES_EXPORTER", "none")
+        mock_app = MagicMock()
+        with patch(
+            "opentelemetry.instrumentation.fastapi.FastAPIInstrumentor",
+            MagicMock(instrument_app=MagicMock(side_effect=RuntimeError("instrumentation failed"))),
+        ):
+            configure_tracing(service_name="test", app=mock_app)
+        tracer = get_tracer(__name__)
+        assert tracer is not None
+        reset_tracing()
+
+    def test_httpx_instrumentation_failure_does_not_propagate(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When HTTPXClientInstrumentor().instrument() raises, configure_tracing does not propagate."""
+        monkeypatch.setenv("OTEL_TRACES_EXPORTER", "none")
+        mock_app = MagicMock()
+        with patch(
+            "opentelemetry.instrumentation.httpx.HTTPXClientInstrumentor",
+            MagicMock(
+                return_value=MagicMock(
+                    instrument=MagicMock(side_effect=RuntimeError("httpx failed"))
+                )
+            ),
+        ):
+            configure_tracing(service_name="test", app=mock_app)
+        tracer = get_tracer(__name__)
+        assert tracer is not None
+        reset_tracing()

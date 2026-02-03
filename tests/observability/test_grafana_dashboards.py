@@ -10,7 +10,9 @@ from pathlib import Path
 import pytest
 
 # Directory containing dashboard JSON (from repo root)
-DASHBOARDS_DIR = Path(__file__).resolve().parent.parent.parent / "src" / "asap" / "observability" / "dashboards"
+DASHBOARDS_DIR = (
+    Path(__file__).resolve().parent.parent.parent / "src" / "asap" / "observability" / "dashboards"
+)
 
 
 def _dashboard_files() -> list[Path]:
@@ -48,7 +50,9 @@ def test_dashboard_panels_have_targets(path: Path) -> None:
         if not targets:
             continue
         has_expr = any(isinstance(t, dict) and t.get("expr") for t in targets)
-        assert has_expr, f"{path.name} panel[{i}] ({panel.get('title', '')}) has targets but no expr"
+        assert has_expr, (
+            f"{path.name} panel[{i}] ({panel.get('title', '')}) has targets but no expr"
+        )
 
 
 def test_red_dashboard_has_red_panels() -> None:
@@ -71,4 +75,6 @@ def test_detailed_dashboard_has_state_panels() -> None:
     data = json.loads(detailed_path.read_text())
     titles = [p.get("title", "") for p in data.get("panels", []) if isinstance(p.get("title"), str)]
     assert any("tate" in t for t in titles), "Detailed dashboard should have state-related panel(s)"
-    assert any("andler" in t or "ircuit" in t for t in titles), "Detailed dashboard should have handler or circuit panel"
+    assert any("andler" in t or "ircuit" in t for t in titles), (
+        "Detailed dashboard should have handler or circuit panel"
+    )

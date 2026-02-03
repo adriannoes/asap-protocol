@@ -64,7 +64,6 @@ class TestInvalidTransitionError:
         assert error.to_state == "working"
         assert error.details["task_id"] == "task-123"
         assert error.details["reason"] == "business_logic"
-        # Check that from_state and to_state are included in details
         assert error.details["from_state"] == "completed"
         assert error.details["to_state"] == "working"
 
@@ -275,7 +274,6 @@ class TestThreadPoolExhaustedError:
         assert error.active_threads == 18
         assert error.details["queue_size"] == 100
         assert error.details["rejected_requests"] == 5
-        # Check that max_threads and active_threads are included in details
         assert error.details["max_threads"] == 20
         assert error.details["active_threads"] == 18
 

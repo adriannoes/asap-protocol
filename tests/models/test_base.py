@@ -79,19 +79,16 @@ class TestASAPBaseModel:
         """Test that JSON Schema is generated correctly."""
         schema = SampleModel.model_json_schema()
 
-        # Check basic schema structure
         assert schema["type"] == "object"
         assert "properties" in schema
         assert "name" in schema["properties"]
         assert "count" in schema["properties"]
         assert "optional_field" in schema["properties"]
 
-        # Check required fields
         assert "required" in schema
         assert "name" in schema["required"]
         assert "count" not in schema["required"]  # has default
 
-        # Check additionalProperties is false (from config)
         assert schema.get("additionalProperties") is False
 
     def test_model_equality(self):
