@@ -289,11 +289,8 @@ class HandlerRegistry:
                     envelope_id=envelope.id,
                 )
                 raise HandlerNotFoundError(payload_type)
-            # Copy handler reference under lock so execution uses a stable snapshot
-            # (safe if another thread replaces the handler before we invoke)
             handler = self._handlers[payload_type]
 
-        # Log dispatch start
         logger.debug(
             "asap.handler.dispatch",
             payload_type=payload_type,
@@ -301,13 +298,8 @@ class HandlerRegistry:
             handler_name=handler.__name__ if hasattr(handler, "__name__") else str(handler),
         )
 
-        # Execute handler outside the lock to allow concurrent dispatches
         try:
-            # Note: dispatch() only works with sync handlers that return Envelope directly
-            # For async handlers, use dispatch_async() instead
-            # Type narrowing: we expect sync handlers here
             result = handler(envelope, manifest)
-            # For sync handlers, result is Envelope directly
             if inspect.isawaitable(result):
                 raise TypeError(
                     f"Handler {handler} returned awaitable in sync dispatch(). "
@@ -368,11 +360,8 @@ class HandlerRegistry:
                     envelope_id=envelope.id,
                 )
                 raise HandlerNotFoundError(payload_type)
-            # Copy handler reference under lock so execution uses a stable snapshot
-            # (safe if another thread replaces the handler before we invoke)
             handler = self._handlers[payload_type]
 
-        # Log dispatch start
         logger.debug(
             "asap.handler.dispatch",
             payload_type=payload_type,
@@ -380,7 +369,6 @@ class HandlerRegistry:
             handler_name=handler.__name__ if hasattr(handler, "__name__") else str(handler),
         )
 
-        # Execute handler outside the lock to allow concurrent dispatches (with OTel span)
         agent_urn = manifest.id
         with handler_span_context(
             payload_type=payload_type,
@@ -388,26 +376,18 @@ class HandlerRegistry:
             envelope_id=envelope.id,
         ):
             try:
-                # Support both sync and async handlers
                 response: Envelope
                 if inspect.iscoroutinefunction(handler):
-                    # Async handler - await it directly
                     response = await handler(envelope, manifest)
                 else:
-                    # Sync handler - run in thread pool to avoid blocking event loop
-                    # Also handle async callable objects that return awaitables
                     loop = asyncio.get_running_loop()
-                    # Use bounded executor if provided, otherwise use default (unbounded)
                     executor = self._executor if self._executor is not None else None
                     result: object = await loop.run_in_executor(
                         executor, handler, envelope, manifest
                     )
-                    # Check if result is awaitable (handles async __call__ methods)
                     if inspect.isawaitable(result):
                         response = await result
                     else:
-                        # Type narrowing: result is Envelope for sync handlers
-                        # After checking it's not awaitable, we know it's Envelope
                         response = cast(Envelope, result)
 
                 duration_ms = (time.perf_counter() - start_time) * 1000

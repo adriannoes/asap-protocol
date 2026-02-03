@@ -154,14 +154,10 @@ class InMemorySnapshotStore:
         with self._lock:
             task_id = snapshot.task_id
 
-            # Initialize storage for this task if needed
             if task_id not in self._snapshots:
                 self._snapshots[task_id] = {}
 
-            # Store the snapshot
             self._snapshots[task_id][snapshot.version] = snapshot
-
-            # Update latest version
             self._latest_versions[task_id] = max(
                 self._latest_versions.get(task_id, 0), snapshot.version
             )
@@ -186,13 +182,11 @@ class InMemorySnapshotStore:
                 return None
 
             if version is None:
-                # Return latest version
                 latest_version = self._latest_versions.get(task_id)
                 if latest_version is None:
                     return None
                 return self._snapshots[task_id].get(latest_version)
 
-            # Return specific version
             return self._snapshots[task_id].get(version)
 
     def list_versions(self, task_id: TaskID) -> list[int]:
@@ -243,18 +237,15 @@ class InMemorySnapshotStore:
                     return True
                 return False
 
-            # Delete specific version
             if version in self._snapshots[task_id]:
                 del self._snapshots[task_id][version]
 
-                # Update latest version if needed
                 if self._latest_versions.get(task_id) == version:
                     if self._snapshots[task_id]:
                         self._latest_versions[task_id] = max(self._snapshots[task_id].keys())
                     else:
                         del self._latest_versions[task_id]
 
-                # Clean up empty task dict
                 if not self._snapshots[task_id]:
                     del self._snapshots[task_id]
                     if task_id in self._latest_versions:

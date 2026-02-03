@@ -34,20 +34,16 @@ class TestSnapshotStoreInterface:
         """Test that SnapshotStore is a Protocol."""
         from typing import runtime_checkable
 
-        # Protocol should be runtime checkable
         assert hasattr(SnapshotStore, "__protocol_attrs__") or runtime_checkable(SnapshotStore)
 
     def test_protocol_methods_defined(self) -> None:
         """Test that protocol methods are properly defined."""
-        # Check that the protocol methods exist
         assert hasattr(SnapshotStore, "save")
         assert hasattr(SnapshotStore, "get")
         assert hasattr(SnapshotStore, "list_versions")
         assert hasattr(SnapshotStore, "delete")
 
-        # Check that concrete implementation implements protocol
-        store = InMemorySnapshotStore()  # Use concrete implementation
-        # These should work on concrete implementation
+        store = InMemorySnapshotStore()
         assert callable(store.save)
         assert callable(store.get)
         assert callable(store.list_versions)
@@ -56,7 +52,6 @@ class TestSnapshotStoreInterface:
     def test_in_memory_store_implements_protocol(self) -> None:
         """Test that InMemorySnapshotStore implements SnapshotStore protocol."""
         store = InMemorySnapshotStore()
-        # Runtime check should pass
         assert isinstance(store, SnapshotStore)
 
 
@@ -402,6 +397,63 @@ class TestInMemorySnapshotStore:
 
         # Original snapshot should still exist
         assert snapshot_store.get(sample_snapshot.task_id) is not None
+
+    def test_delete_latest_version_updates_latest(
+        self, snapshot_store: InMemorySnapshotStore
+    ) -> None:
+        """Test delete() of latest version updates _latest_versions to next max."""
+        task_id = "task_01HX5K4N000000000000000000"
+        now = datetime.now(timezone.utc)
+
+        for v in [1, 2, 3]:
+            snapshot = StateSnapshot(
+                id=f"snap_v{v}",
+                task_id=task_id,
+                version=v,
+                data={"v": v},
+                created_at=now,
+            )
+            snapshot_store.save(snapshot)
+
+        assert snapshot_store._latest_versions[task_id] == 3
+        assert snapshot_store.get(task_id).version == 3
+
+        result = snapshot_store.delete(task_id, version=3)
+        assert result is True
+
+        assert snapshot_store._latest_versions[task_id] == 2
+        assert snapshot_store.get(task_id).version == 2
+
+        assert snapshot_store.get(task_id, version=3) is None
+        assert snapshot_store.get(task_id, version=1) is not None
+        assert snapshot_store.get(task_id, version=2) is not None
+
+    def test_delete_last_version_cleans_up_task(
+        self, snapshot_store: InMemorySnapshotStore
+    ) -> None:
+        """Test delete() of the last remaining version cleans up task entirely."""
+        task_id = "task_01HX5K4N000000000000000000"
+        now = datetime.now(timezone.utc)
+
+        snapshot = StateSnapshot(
+            id="snap_only",
+            task_id=task_id,
+            version=1,
+            data={"only": True},
+            created_at=now,
+        )
+        snapshot_store.save(snapshot)
+
+        assert task_id in snapshot_store._snapshots
+        assert task_id in snapshot_store._latest_versions
+
+        result = snapshot_store.delete(task_id, version=1)
+        assert result is True
+
+        assert task_id not in snapshot_store._snapshots
+        assert task_id not in snapshot_store._latest_versions
+        assert snapshot_store.get(task_id) is None
+        assert snapshot_store.list_versions(task_id) == []
 
     def test_delete_preserves_other_tasks(self, snapshot_store: InMemorySnapshotStore) -> None:
         """Test delete() only affects the specified task."""

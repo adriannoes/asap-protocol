@@ -263,7 +263,6 @@ class TestNonceValidation:
     def test_is_used_returns_false_for_nonexistent_nonce(self) -> None:
         """Test that is_used returns False when nonce is not in store."""
         store = InMemoryNonceStore()
-        # Check nonce that was never added
         assert store.is_used("nonexistent-nonce") is False
 
     def test_nonce_ttl_uses_configured_constant(self) -> None:
@@ -286,10 +285,8 @@ class TestNonceValidation:
             extensions={"nonce": "ttl-test-nonce"},
         )
 
-        # Verify TTL constant is 2x envelope age
         assert NONCE_TTL_SECONDS == MAX_ENVELOPE_AGE_SECONDS * 2
 
-        # Validate nonce (this should mark it with the configured TTL)
         validate_envelope_nonce(envelope, store)
 
         # Verify nonce is stored with correct TTL by checking expiration time

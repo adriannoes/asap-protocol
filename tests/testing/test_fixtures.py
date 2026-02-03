@@ -83,3 +83,19 @@ class TestTestClientContextManager:
         async with client_context(DEFAULT_TEST_BASE_URL) as client:
             assert isinstance(client, ASAPClient)
             # Client is open; we don't call send() to avoid needing a server
+
+
+class TestMockClientFixture:
+    """Tests for mock_client async pytest fixture (lines 59-60 in fixtures.py)."""
+
+    @pytest.mark.asyncio
+    async def test_mock_client_fixture_yields_entered_client(
+        self,
+        mock_client,  # noqa: ANN001 (fixture from asap.testing.fixtures)
+    ) -> None:
+        """mock_client fixture yields an ASAPClient already entered."""
+        from asap.transport.client import ASAPClient
+
+        assert isinstance(mock_client, ASAPClient)
+        assert mock_client._client is not None
+        assert mock_client.base_url == DEFAULT_TEST_BASE_URL

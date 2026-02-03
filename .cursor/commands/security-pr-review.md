@@ -1,8 +1,4 @@
----
-description: 
-globs: 
-alwaysApply: false
----
+# Security PR Review
 
 You are a senior security engineer conducting a focused security review of the changes on this branch.
 

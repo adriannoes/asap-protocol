@@ -212,7 +212,6 @@ def run_demo() -> None:
         snapshot_id=restore_envelope.payload.get("snapshot_id"),
     )
 
-    # Verify target has the state
     restored = target_store.get(migrated.task_id, version=migrated.version)
     assert restored is not None
     assert restored.data == snapshot.data

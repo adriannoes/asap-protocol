@@ -380,7 +380,6 @@ class ASAPClient:
                 if circuit_breaker_timeout is not None
                 else DEFAULT_CIRCUIT_BREAKER_TIMEOUT
             )
-        # Validate URL format and scheme
         from urllib.parse import urlparse
 
         parsed = urlparse(base_url)
@@ -396,7 +395,6 @@ class ASAPClient:
                 f"Received: {base_url}"
             )
 
-        # Validate HTTPS requirement
         is_https = parsed.scheme.lower() == "https"
         is_local = self._is_localhost(parsed)
 
@@ -498,9 +496,6 @@ class ASAPClient:
         # Cap at max_delay
         delay = min(delay, self.max_delay)
 
-        # Add jitter if enabled (random value between 0 and 10% of delay)
-        # Note: random.uniform is appropriate here - jitter for retry backoff
-        # does not require cryptographic security, only statistical distribution
         if self.jitter:
             jitter_amount: float = random.uniform(0, delay * 0.1)  # nosec B311
             delay += jitter_amount
@@ -663,7 +658,6 @@ class ASAPClient:
                 url=sanitize_url(self.base_url),
             )
 
-        # Check circuit breaker state before attempting request
         if self._circuit_breaker is not None and not self._circuit_breaker.can_attempt():
             consecutive_failures = self._circuit_breaker.get_consecutive_failures()
             raise CircuitOpenError(
@@ -759,7 +753,6 @@ class ASAPClient:
                         message=f"HTTP/2 requested but used {response.http_version}",
                     )
 
-                # Check HTTP status
                 if response.status_code >= 500:
                     # Server errors (5xx) are retriable
                     error_msg = (
@@ -805,9 +798,7 @@ class ASAPClient:
                             )
                     raise ASAPConnectionError(error_msg, url=self.base_url)
                 if response.status_code == 429:
-                    # Rate limit (429) is retriable, respect Retry-After header
                     if attempt < self.max_retries - 1:
-                        # Check for Retry-After header
                         retry_after = response.headers.get("Retry-After")
                         if retry_after:
                             retry_delay: Optional[float] = None
@@ -930,10 +921,7 @@ class ASAPClient:
                 except Exception as e:
                     raise ASAPRemoteError(-32700, f"Invalid JSON response: {e}") from e
 
-                # Check for JSON-RPC error
                 if "error" in json_response:
-                    # Record success pattern (service is reachable)
-                    # A valid JSON-RPC error means the connection and transport are healthy
                     if self._circuit_breaker is not None:
                         self._circuit_breaker.record_success()
 
@@ -1098,9 +1086,6 @@ class ASAPClient:
                     url=sanitize_url(self.base_url),
                 ) from e
 
-        # Defensive code: This should never be reached because the loop above
-        # always either returns successfully or raises an exception.
-        # Kept as a safety net for future code changes.
         if last_exception:  # pragma: no cover
             _record_send_error_metrics(start_time, last_exception)
             raise last_exception
@@ -1142,7 +1127,6 @@ class ASAPClient:
                 url=sanitize_url(url),
             )
 
-        # Check cache first
         cached = self._manifest_cache.get(url)
         if cached is not None:
             logger.debug(

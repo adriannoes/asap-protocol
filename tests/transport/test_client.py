@@ -221,8 +221,6 @@ class TestASAPClientContextManager:
         """Test client rejects URLs with invalid schemes."""
         from asap.transport.client import ASAPClient
 
-        # Test various invalid schemes
-        # Note: file:// URLs may fail format validation first, so test with valid format
         invalid_urls = [
             ("ftp://example.com", "Invalid URL scheme"),
             ("javascript://example.com", "Invalid URL scheme"),
@@ -233,7 +231,6 @@ class TestASAPClientContextManager:
             with pytest.raises(ValueError, match=expected_match):
                 ASAPClient(url)
 
-        # file:// URLs may fail format validation, so test separately
         with pytest.raises(ValueError):
             ASAPClient("file:///path/to/file")
 
@@ -1126,7 +1123,6 @@ class TestASAPClientSendBatch:
             results = await client.send_batch(multiple_request_envelopes, return_exceptions=True)
 
         assert len(results) == 5
-        # Check that most results are Envelopes
         successful = [r for r in results if isinstance(r, Envelope)]
         failed = [r for r in results if isinstance(r, BaseException)]
 

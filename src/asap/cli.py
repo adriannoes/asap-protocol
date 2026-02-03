@@ -185,7 +185,6 @@ def validate_schema(
     message_send, state_query, state_restore, artifact_notify, mcp_tool_call,
     mcp_tool_result, mcp_resource_fetch, mcp_resource_data, envelope.
     """
-    # Check file exists
     if not file.exists():
         raise typer.BadParameter(f"File not found: {file}")
 

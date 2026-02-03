@@ -42,11 +42,8 @@ class ASAPBaseModel(BaseModel):
         # Allow populating fields by both name and alias
         populate_by_name=True,
         # JSON Schema configuration
-        # Use enum values (not names) in schema
         use_enum_values=False,
-        # Validate default values
         validate_default=True,
-        # Validate assignments (only relevant if frozen=False)
         validate_assignment=True,
         # JSON Schema extras for better documentation
         json_schema_extra={

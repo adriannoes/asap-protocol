@@ -68,7 +68,6 @@ def validate_envelope_timestamp(envelope: Envelope) -> None:
     now = datetime.now(timezone.utc)
     timestamp = envelope.timestamp
 
-    # Ensure timestamp is timezone-aware (should be UTC)
     if timestamp.tzinfo is None:
         timestamp = timestamp.replace(tzinfo=timezone.utc)
     else:
@@ -78,7 +77,6 @@ def validate_envelope_timestamp(envelope: Envelope) -> None:
     # Calculate age in seconds
     age_seconds = (now - timestamp).total_seconds()
 
-    # Check if envelope is too old
     if age_seconds > MAX_ENVELOPE_AGE_SECONDS:
         raise InvalidTimestampError(
             timestamp=timestamp.isoformat(),
@@ -93,7 +91,6 @@ def validate_envelope_timestamp(envelope: Envelope) -> None:
             },
         )
 
-    # Check if envelope timestamp is too far in the future
     future_offset_seconds = (timestamp - now).total_seconds()
     if future_offset_seconds > MAX_FUTURE_TOLERANCE_SECONDS:
         raise InvalidTimestampError(
@@ -296,7 +293,6 @@ def validate_envelope_nonce(envelope: Envelope, nonce_store: NonceStore | None) 
 
     nonce = envelope.extensions["nonce"]
 
-    # Validate nonce is a non-empty string
     if not isinstance(nonce, str) or not nonce:
         raise InvalidNonceError(
             nonce=str(nonce),

@@ -96,7 +96,7 @@ jobs:
       - name: Run tests with coverage
         env:
           PYTHONPATH: src
-        run: uv run pytest --tb=short --cov=src --cov-report=xml
+        run: uv run pytest --tb=short --cov=src --cov-report=xml --cov-fail-under=85
         timeout-minutes: 15
 
       - name: Upload coverage to Codecov
@@ -117,6 +117,9 @@ jobs:
 
       - name: Setup Python
         uses: ./.github/actions/setup-python
+
+      - name: Upgrade pip (fix CVE-2026-1703)
+        run: uv pip install --upgrade "pip>=26.0"
 
       - name: Scan for vulnerabilities
         run: uv run pip-audit

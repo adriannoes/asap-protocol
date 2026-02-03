@@ -1,9 +1,4 @@
----
-description: 
-globs: 
-alwaysApply: false
----
-# Rule: Generating a Task List from a PRD
+# Generating a Task List from a PRD
 
 ## Goal
 

@@ -256,7 +256,6 @@ class TestASAPRequestHandlerHelpers:
         assert isinstance(error_response, JSONResponse)
         assert error_response.status_code == 200
 
-        # Check error content
         content = bytes(error_response.body).decode()
         error_data = json.loads(content)
         assert error_data["error"]["code"] == INVALID_PARAMS
@@ -535,10 +534,6 @@ class TestASAPRequestHandlerHelpers:
 
         assert result is None
 
-    # Note: test_parse_and_validate_request_success is covered by integration tests
-    # Testing this helper directly requires complex Request mocking that's not worth it
-    # The functionality is well-covered by the endpoint tests in TestAsapEndpoint
-
     @pytest.mark.asyncio
     async def test_parse_and_validate_request_invalid_json(
         self, handler: ASAPRequestHandler, metrics: MetricsCollector
@@ -722,16 +717,9 @@ class TestASAPRequestHandlerHelpers:
             }
         )
 
-        # Should not raise ValueError, should handle gracefully
-        # The ValueError is caught and handled internally (line 683-685)
-        # This test verifies the exception handler exists and works
-        # We can access the private method for testing coverage
         try:
             handler._validate_request_size(request, max_size=1024)
-            # If no exception, test passed - ValueError was caught internally
-            assert True
         except ValueError:
-            # This should not happen as ValueError is caught internally
             pytest.fail("ValueError should be caught internally in _validate_request_size")
 
     def test_validate_request_size_raises_httpexception_for_large_content(
@@ -790,7 +778,6 @@ class TestDebugLogMode:
 
         # Create app - it will use the monkeypatched limiter
         app = create_app(sample_manifest, rate_limit="999999/minute")
-        # Ensure app.state.limiter also uses our isolated instance
         app.state.limiter = isolated_limiter
         client = TestClient(app)
 

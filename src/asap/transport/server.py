@@ -356,7 +356,6 @@ class ASAPRequestHandler:
             Tuple of (Envelope, payload_type) if valid, or (None, error_response) if invalid
         """
         rpc_request = ctx.rpc_request
-        # Validate params is a dict before accessing
         if not isinstance(rpc_request.params, dict):
             logger.warning(
                 "asap.request.invalid_params_type",
@@ -395,7 +394,6 @@ class ASAPRequestHandler:
             )
             return None, error_response
 
-        # Validate envelope structure
         try:
             envelope = Envelope(**envelope_data)
             payload_type = envelope.payload_type
@@ -758,7 +756,6 @@ class ASAPRequestHandler:
             self.record_error_metrics(temp_metrics, "unknown", "parse_error", 0.0)
             return None, error_response
 
-        # Validate body is a dict (JSON-RPC requires object at root)
         if not isinstance(body, dict):
             error_response = self.build_error_response(
                 INVALID_REQUEST,
@@ -772,17 +769,13 @@ class ASAPRequestHandler:
             self.record_error_metrics(temp_metrics, "unknown", "invalid_request", 0.0)
             return None, error_response
 
-        # Validate JSON-RPC request structure and method
         rpc_request, validation_error = self.validate_jsonrpc_request(body)
         if validation_error is not None:
             temp_metrics = get_metrics()
             self.record_error_metrics(temp_metrics, "unknown", "invalid_request", 0.0)
             return None, validation_error
 
-        # Type narrowing: rpc_request is not None here
         if rpc_request is None:
-            # This should not happen if validate_jsonrpc_request is correct
-            # but guard against it for robustness
             error_response = self.build_error_response(
                 INTERNAL_ERROR,
                 data={"error": "Internal validation error"},
@@ -809,7 +802,6 @@ class ASAPRequestHandler:
         Raises:
             HTTPException: If request size exceeds maximum (413 Payload Too Large)
         """
-        # Check Content-Length header first
         content_length = request.headers.get("content-length")
         if content_length:
             try:
@@ -825,7 +817,6 @@ class ASAPRequestHandler:
                         detail=f"Request size ({size} bytes) exceeds maximum ({max_size} bytes)",
                     )
             except ValueError:
-                # Invalid Content-Length header, will check body size instead
                 pass
 
     async def parse_json_body(self, request: Request) -> dict[str, Any]:
@@ -846,10 +837,7 @@ class ASAPRequestHandler:
             HTTPException: If Content-Encoding is unsupported (415)
             ValueError: If JSON is invalid
         """
-        # Check Content-Encoding header for compressed requests
         content_encoding = request.headers.get("content-encoding", "").lower().strip()
-
-        # Validate encoding is supported before reading body
         supported_encodings = get_supported_encodings() + ["identity", ""]
         if content_encoding and content_encoding not in supported_encodings:
             logger.warning(
@@ -862,14 +850,10 @@ class ASAPRequestHandler:
                 detail=f"Unsupported Content-Encoding: {content_encoding}. Supported: {', '.join(get_supported_encodings())}",
             )
 
-        # Read body in chunks and validate size incrementally to prevent OOM attacks
-        # Note: Content-Length header validation is handled by SizeLimitMiddleware
-        # This validates actual body size during streaming to prevent OOM attacks
         try:
             body_bytes = bytearray()
             async for chunk in request.stream():
                 body_bytes.extend(chunk)
-                # Validate size after each chunk to abort early if limit exceeded
                 if len(body_bytes) > self.max_request_size:
                     logger.warning(
                         "asap.request.size_exceeded",
@@ -895,7 +879,6 @@ class ASAPRequestHandler:
                         decompressed_size=decompressed_size,
                     )
 
-                    # Validate decompressed size to prevent decompression bombs
                     if decompressed_size > self.max_request_size:
                         compression_ratio = (
                             decompressed_size / compressed_size if compressed_size > 0 else 0
@@ -955,11 +938,9 @@ class ASAPRequestHandler:
         Returns:
             Tuple of (JsonRpcRequest, None) if valid, or (None, error_response) if invalid
         """
-        # Validate JSON-RPC structure
         try:
             rpc_request = JsonRpcRequest(**body)
         except (ValidationError, TypeError) as e:
-            # Check if error is specifically about params type
             error_code = INVALID_REQUEST
             error_message = "Invalid JSON-RPC structure"
             if isinstance(e, ValidationError):
@@ -997,7 +978,6 @@ class ASAPRequestHandler:
             )
             return None, error_response
 
-        # Check method
         if rpc_request.method != ASAP_METHOD:
             logger.warning("asap.request.unknown_method", method=rpc_request.method)
             error_response = self.build_error_response(
@@ -1033,21 +1013,16 @@ class ASAPRequestHandler:
         payload_type = "unknown"
 
         try:
-            # Parse and validate JSON-RPC request
             parse_result = await self._parse_and_validate_request(request)
             rpc_request, parse_error = parse_result
             if parse_error is not None:
                 self._log_response_debug(parse_error)
                 return parse_error
-            # Type narrowing: rpc_request is not None here
-            # Use explicit check instead of assert to avoid removal in optimized builds
             if rpc_request is None:
                 raise RuntimeError("Internal error: rpc_request is None after validation")
 
-            # Log full request when ASAP_DEBUG_LOG is enabled
             self._log_request_debug(rpc_request)
 
-            # Create request context
             ctx = RequestContext(
                 request_id=rpc_request.id,
                 start_time=start_time,
@@ -1055,27 +1030,22 @@ class ASAPRequestHandler:
                 rpc_request=rpc_request,
             )
 
-            # Authenticate request if enabled
             auth_result = await self._authenticate_request(request, ctx)
             authenticated_agent_id, auth_error = auth_result
             if auth_error is not None:
                 self._log_response_debug(auth_error)
                 return auth_error
 
-            # Validate and extract envelope
             envelope_result = self._validate_envelope(ctx)
             envelope_or_none, result = envelope_result
             if envelope_or_none is None:
-                # result is JSONResponse when envelope is None
                 self._log_response_debug(result)  # type: ignore[arg-type]
                 return result  # type: ignore[return-value]
             envelope = envelope_or_none
-            # result is payload_type (str) when envelope is not None
             payload_type = result  # type: ignore[assignment]
 
             trace_token = extract_and_activate_envelope_trace_context(envelope)
             try:
-                # Verify sender matches authenticated identity
                 sender_error = self._verify_sender_matches_auth(
                     authenticated_agent_id,
                     envelope,
@@ -1086,7 +1056,6 @@ class ASAPRequestHandler:
                     self._log_response_debug(sender_error)
                     return sender_error
 
-                # Validate envelope timestamp to prevent replay attacks
                 try:
                     validate_envelope_timestamp(envelope)
                 except InvalidTimestampError as e:
@@ -1115,7 +1084,6 @@ class ASAPRequestHandler:
                     self._log_response_debug(err_resp)
                     return err_resp
 
-                # Validate envelope nonce if nonce store is available
                 try:
                     validate_envelope_nonce(envelope, self.nonce_store)
                 except InvalidNonceError as e:
@@ -1145,7 +1113,6 @@ class ASAPRequestHandler:
                     self._log_response_debug(err_resp)
                     return err_resp
 
-                # Log request received
                 logger.info(
                     "asap.request.received",
                     envelope_id=envelope.id,
@@ -1156,18 +1123,14 @@ class ASAPRequestHandler:
                     authenticated=authenticated_agent_id is not None,
                 )
 
-                # Dispatch to handler
                 dispatch_result = await self._dispatch_to_handler(envelope, ctx)
                 response_or_none, result = dispatch_result
                 if response_or_none is None:
-                    # result is JSONResponse when response is None
                     self._log_response_debug(result)  # type: ignore[arg-type]
                     return result  # type: ignore[return-value]
                 response_envelope = response_or_none
-                # result is payload_type (str) when response is not None
                 payload_type = result  # type: ignore[assignment]
 
-                # Build and return success response
                 success_resp = self._build_success_response(response_envelope, ctx, payload_type)
                 self._log_response_debug(success_resp)
                 return success_resp

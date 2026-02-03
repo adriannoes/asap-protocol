@@ -778,8 +778,7 @@ class TestSizeLimitMiddleware:
         validator = BearerTokenValidator(lambda t: "urn:asap:agent:test" if t == "valid" else None)
         middleware = AuthenticationMiddleware(manifest_with_bearer_auth, validator=validator)
 
-        # Force validator to None to test defensive check (simulating edge case)
-        middleware.validator = None
+        middleware.validator = None  # Test guard when validator is None
 
         mock_request = MagicMock(spec=Request)
         mock_credentials = HTTPAuthorizationCredentials(scheme="bearer", credentials="test-token")

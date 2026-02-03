@@ -84,9 +84,7 @@ def _get_sender_from_envelope(request: Request) -> str:
         >>> sender = _get_sender_from_envelope(request)
         >>> # Returns "192.168.1.1" (IP address, not sender URN)
     """
-    # Try to extract sender from envelope if already parsed (early returns reduce complexity)
     try:
-        # Check if envelope is stored in request state (after parsing)
         if hasattr(request.state, "envelope") and request.state.envelope:
             envelope = request.state.envelope
             if hasattr(envelope, "sender") and isinstance(envelope.sender, str):
@@ -109,17 +107,12 @@ def _get_sender_from_envelope(request: Request) -> str:
         # Envelope not available, fall back to IP
         pass
 
-    # Fallback to client IP address
     remote_addr = get_remote_address(request)
-    # Type narrowing: get_remote_address returns str, but mypy may see it as Any
     if isinstance(remote_addr, str):
         return remote_addr
     return str(remote_addr)
 
 
-# Create rate limiter instance with IP-based key function
-# Note: The key function attempts to extract sender but always falls back to IP
-# because rate limiting executes before request body parsing
 limiter = Limiter(
     key_func=_get_sender_from_envelope,
     default_limits=[DEFAULT_RATE_LIMIT],
@@ -214,7 +207,6 @@ def rate_limit_handler(request: Request, exc: Exception) -> JSONResponse:
         >>> response = rate_limit_handler(request, exc)
         >>> # Returns JSONResponse with status_code=429 and JSON-RPC error
     """
-    # Type narrowing: FastAPI passes RateLimitExceeded but handler signature uses Exception
     if not isinstance(exc, RateLimitExceeded):
         # Fallback for unexpected exception types
         logger.warning("asap.rate_limit.unexpected_exception", exc_type=type(exc).__name__)
@@ -417,7 +409,6 @@ class AuthenticationMiddleware:
         self.validator = validator
         self.security = HTTPBearer(auto_error=False)
 
-        # Validate configuration
         if self._is_auth_required() and validator is None:
             raise ValueError(
                 "Token validator required when authentication is configured in manifest"
@@ -490,7 +481,6 @@ class AuthenticationMiddleware:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Validate Authorization scheme (case-insensitive)
         if credentials.scheme.lower() != AUTH_SCHEME_BEARER:
             logger.warning(
                 "asap.auth.invalid_scheme",
@@ -504,7 +494,6 @@ class AuthenticationMiddleware:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Validate Bearer token support in manifest
         if not self._supports_bearer_auth():
             logger.warning(
                 "asap.auth.scheme_not_supported",
@@ -517,16 +506,12 @@ class AuthenticationMiddleware:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Validate token and get agent ID
         token = credentials.credentials
-        # Type narrowing: validator is not None when auth is required (validated in __init__)
         if self.validator is None:
             raise RuntimeError(
                 "Token validator is None but authentication is required. "
                 "This should not happen if middleware was initialized correctly."
             )
-        # Run async validators in main loop; run sync validators in thread pool
-        # to avoid blocking (e.g., DB/Redis lookups in sync validators)
         if inspect.iscoroutinefunction(self.validator.__call__):
             result = self.validator(token)
             agent_id = await cast(Awaitable[str | None], result)
@@ -656,7 +641,6 @@ class SizeLimitMiddleware(BaseHTTPMiddleware):
         Returns:
             Response from next handler or error response if size exceeded
         """
-        # Check Content-Length header if present
         content_length = request.headers.get("content-length")
         if content_length:
             try:
@@ -675,7 +659,6 @@ class SizeLimitMiddleware(BaseHTTPMiddleware):
                         },
                     )
             except ValueError:
-                # Invalid Content-Length header, let route handler validate actual body size
                 pass
 
         # Continue to next middleware or route handler

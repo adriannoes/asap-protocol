@@ -404,9 +404,6 @@ class TestHandlerRegistry:
         with pytest.raises(RuntimeError):
             registry.dispatch(envelope, sample_manifest)
 
-        # Check that error was logged (structlog may not appear in caplog)
-        # The exception is re-raised, which is the important behavior
-
     def test_dispatch_raises_when_sync_handler_returns_awaitable(
         self, sample_task_request_envelope: Envelope, sample_manifest: Manifest
     ) -> None:

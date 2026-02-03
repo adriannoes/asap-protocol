@@ -218,19 +218,23 @@ def test_jaeger_receives_asap_traces() -> None:
         if not _send_asap_request():
             pytest.skip("ASAP request failed")
 
-        # OTLP uses batch export; poll until traces appear or timeout
+        # OTLP uses batch export; poll until traces appear or timeout.
+        # Multiple traces may exist (e.g. health check). Find one with ASAP handler span.
         traces = _wait_for_jaeger_traces(DEFAULT_SERVICE_NAME, timeout_seconds=15)
         assert len(traces) >= 1, (
             f"Expected at least one trace for service {DEFAULT_SERVICE_NAME} in Jaeger; "
             f"got {len(traces)}. Check Jaeger UI at http://localhost:{JAEGER_UI_PORT}"
         )
-        first_trace = traces[0]
-        spans = first_trace.get("spans") or []
-        span_names = {s.get("operationName") for s in spans}
-        assert len(span_names) >= 1, "Trace should contain at least one span"
-        # Verify expected ASAP custom span name (handler execution)
-        assert "asap.handler.execute" in span_names, (
-            f"Expected span asap.handler.execute in trace; got {span_names}"
+        handler_trace = None
+        for trace in traces:
+            spans = trace.get("spans") or []
+            span_names = {s.get("operationName") for s in spans}
+            if "asap.handler.execute" in span_names:
+                handler_trace = trace
+                break
+        assert handler_trace is not None, (
+            f"Expected at least one trace with span asap.handler.execute; "
+            f"got traces with span sets: {[{s.get('operationName') for s in (t.get('spans') or [])} for t in traces]}"
         )
     finally:
         proc.terminate()

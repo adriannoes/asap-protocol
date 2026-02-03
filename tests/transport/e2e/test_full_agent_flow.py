@@ -167,6 +167,27 @@ class TestFullRoundTrip(NoRateLimitTestBase):
 class TestManifestDiscovery(NoRateLimitTestBase):
     """Tests for manifest discovery endpoint."""
 
+    @pytest.mark.asyncio
+    async def test_asap_client_get_manifest_against_app_and_cache(
+        self, test_manifest: Manifest
+    ) -> None:
+        """ASAPClient.get_manifest() fetches from app and caches on second call."""
+        app = create_app(test_manifest, rate_limit="100000/minute")
+        transport = httpx.ASGITransport(app=app)
+        async with ASAPClient(
+            "http://testserver",
+            transport=transport,
+            require_https=False,
+        ) as client:
+            manifest1 = await client.get_manifest()
+            assert manifest1.id == test_manifest.id
+            assert manifest1.name == test_manifest.name
+            assert client._manifest_cache.size() == 1
+
+            manifest2 = await client.get_manifest()
+            assert manifest2.id == test_manifest.id
+            assert client._manifest_cache.size() == 1
+
     def test_manifest_accessible_via_well_known(self, test_app: TestClient) -> None:
         """Test manifest is accessible at .well-known endpoint."""
         response = test_app.get("/.well-known/asap/manifest.json")

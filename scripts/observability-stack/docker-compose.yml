@@ -1,0 +1,35 @@
+# Optional local stack for testing ASAP Grafana dashboards.
+# Run from repo root: docker compose -f scripts/observability-stack/docker-compose.yml up -d
+# Ensure ASAP server is exposing /asap/metrics (e.g. on host port 8000).
+# Grafana: http://localhost:3000 (admin/admin). Add Prometheus datasource if not provisioned.
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    ports:
+      - "9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+
+  grafana:
+    image: grafana/grafana:10.2.0
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_HTTP_PORT=3000
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+    volumes:
+      - ./grafana/provisioning/dashboards/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml:ro
+      - ../../src/asap/observability/dashboards:/etc/grafana/provisioning/dashboards/asap:ro
+      - ./grafana/provisioning/datasources/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+    depends_on:
+      - prometheus

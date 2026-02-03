@@ -93,18 +93,14 @@ class CircuitBreaker:
             True if request can be attempted, False if circuit is open
         """
         with self._lock:
-            # Check if we should transition from OPEN to HALF_OPEN
             if self._state == CircuitState.OPEN:
                 if self._last_failure_time is not None:
                     elapsed = time.time() - self._last_failure_time
                     if elapsed >= self.timeout:
-                        # Transition to HALF_OPEN to test recovery
                         self._state = CircuitState.HALF_OPEN
                         return True
-                # Still in OPEN state, reject request
                 return False
 
-            # CLOSED or HALF_OPEN: allow request
             return True
 
     def get_state(self) -> CircuitState:

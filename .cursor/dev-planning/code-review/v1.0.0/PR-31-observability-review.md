@@ -2,7 +2,7 @@
 
 > **PR**: [feat(observability): Sprint P11 – OpenTelemetry tracing and structured metrics](https://github.com/adriannoes/asap-protocol/pull/31)
 > **Branch**: `feat/observability-sprint-p11` → `main`
-> **Reviewers**: Code Analysis by Claude
+> **Reviewers**: Code Analysis by Claude Opus 4.5 + Gemini 3.0 Pro
 
 ---
 

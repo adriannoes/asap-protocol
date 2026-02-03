@@ -114,7 +114,6 @@ class TestAsapEndpoint(NoRateLimitTestBase):
                 f"Data: {error_response.error.data}"
             )
 
-        # Validate it's a valid JSON-RPC response
         rpc_response = JsonRpcResponse(**response_data)
         assert rpc_response.id == "test-req-2"
         assert "envelope" in rpc_response.result
@@ -153,7 +152,6 @@ class TestAsapEndpoint(NoRateLimitTestBase):
             headers={"content-type": "application/json"},
         )
 
-        # Server catches the exception and returns JSON-RPC parse error
         assert response.status_code == 200
         data = response.json()
         assert "error" in data
@@ -175,7 +173,6 @@ class TestAsapEndpoint(NoRateLimitTestBase):
         assert response.status_code in [200, 422]  # 200 with error or 422
 
         if response.status_code == 200:
-            # Check if it's a JSON-RPC error response
             data = response.json()
             assert "error" in data or "result" in data
 
@@ -453,7 +450,6 @@ class TestMetricsEndpoint(NoRateLimitTestBase):
         content_type = response.headers.get("content-type", "")
         assert "text/plain" in content_type or "openmetrics-text" in content_type
 
-        # Check Prometheus format markers
         content = response.text
         assert "# HELP" in content
         assert "# TYPE" in content
@@ -465,7 +461,6 @@ class TestMetricsEndpoint(NoRateLimitTestBase):
         assert response.status_code == 200
         content = response.text
 
-        # Check for expected metric names
         assert "asap_requests_total" in content
         assert "asap_requests_success_total" in content
         assert "asap_requests_error_total" in content
@@ -495,7 +490,6 @@ class TestMetricsEndpoint(NoRateLimitTestBase):
 
         client.post("/asap", json=rpc_request.model_dump())
 
-        # Check metrics (request and handler metrics)
         metrics = get_metrics()
         success_count = metrics.get_counter(
             "asap_requests_success_total",
@@ -540,9 +534,6 @@ class TestMetricsEndpoint(NoRateLimitTestBase):
 
         client.post("/asap", json=rpc_request.model_dump())
 
-        # Check error metrics
-        # Note: payload_type is normalized to "other" when no handler is registered
-        # (see _normalize_payload_type_for_metrics in server.py)
         metrics = get_metrics()
         error_count = metrics.get_counter(
             "asap_requests_error_total",
@@ -573,7 +564,6 @@ class TestMetricsEndpoint(NoRateLimitTestBase):
 
         client.post("/asap", json=rpc_request.model_dump())
 
-        # Check histogram count
         metrics = get_metrics()
         hist_count = metrics.get_histogram_count(
             "asap_request_duration_seconds",
