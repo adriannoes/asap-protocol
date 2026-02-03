@@ -49,7 +49,7 @@ import time
 import traceback
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, TypeVar, cast
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
@@ -1039,10 +1039,11 @@ class ASAPRequestHandler:
             envelope_result = self._validate_envelope(ctx)
             envelope_or_none, result = envelope_result
             if envelope_or_none is None:
-                self._log_response_debug(result)
-                return result
+                error_resp = cast(JSONResponse, result)
+                self._log_response_debug(error_resp)
+                return error_resp
             envelope = envelope_or_none
-            payload_type = result
+            payload_type = cast(str, result)
 
             trace_token = extract_and_activate_envelope_trace_context(envelope)
             try:
@@ -1126,10 +1127,11 @@ class ASAPRequestHandler:
                 dispatch_result = await self._dispatch_to_handler(envelope, ctx)
                 response_or_none, result = dispatch_result
                 if response_or_none is None:
-                    self._log_response_debug(result)
-                    return result
+                    error_resp = cast(JSONResponse, result)
+                    self._log_response_debug(error_resp)
+                    return error_resp
                 response_envelope = response_or_none
-                payload_type = result
+                payload_type = cast(str, result)
 
                 success_resp = self._build_success_response(response_envelope, ctx, payload_type)
                 self._log_response_debug(success_resp)
