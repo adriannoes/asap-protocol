@@ -82,7 +82,7 @@ class ManifestCache:
             default_ttl: Default TTL in seconds for cache entries (default: 300.0)
             max_size: Maximum number of cache entries. When exceeded, the least
                 recently used entry is evicted. Set to 0 for unlimited size.
-                Default: 1000.
+                Default: 1000. Very large values may increase cleanup_expired() latency.
         """
         self._cache: OrderedDict[str, CacheEntry] = OrderedDict()
         self._lock = Lock()
@@ -166,6 +166,9 @@ class ManifestCache:
 
     def cleanup_expired(self) -> int:
         """Remove all expired entries from cache.
+
+        Holds the lock for O(N). For very large max_size, prefer lazy eviction
+        in get() or call less frequently.
 
         Returns:
             Number of expired entries removed
