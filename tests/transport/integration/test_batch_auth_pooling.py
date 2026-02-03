@@ -148,7 +148,6 @@ class TestBatchWithAuthentication(NoRateLimitTestBase):
             require_https=False,
             transport=transport,
         ) as client:
-            # Set auth header for all requests
             client._client.headers["Authorization"] = "Bearer valid-token"  # type: ignore[union-attr]
 
             envelopes = [
@@ -177,7 +176,6 @@ class TestBatchWithAuthentication(NoRateLimitTestBase):
             require_https=False,
             transport=transport,
         ) as client:
-            # Set invalid auth header
             client._client.headers["Authorization"] = "Bearer invalid-token"  # type: ignore[union-attr]
 
             envelopes = [
@@ -203,8 +201,6 @@ class TestBatchWithAuthentication(NoRateLimitTestBase):
             require_https=False,
             transport=transport,
         ) as client:
-            # No auth header set
-
             envelopes = [_create_envelope(message="no-auth")]
 
             results = await client.send_batch(envelopes, return_exceptions=True)
@@ -269,7 +265,6 @@ class TestBatchWithPooling(NoRateLimitTestBase):
             pool_connections=2,
             pool_maxsize=5,
         ) as client:
-            # Create more requests than pool_connections
             envelopes = [
                 _create_envelope(
                     recipient="urn:asap:agent:slow-server",
@@ -281,7 +276,6 @@ class TestBatchWithPooling(NoRateLimitTestBase):
 
             results = await client.send_batch(envelopes)
 
-            # All should succeed despite pool pressure
             assert len(results) == 10
             for result in results:
                 assert isinstance(result, Envelope)
@@ -394,12 +388,9 @@ class TestBatchPartialFailures(NoRateLimitTestBase):
             results = await client.send_batch(envelopes, return_exceptions=True)
 
             assert len(results) == 3
-            # First should succeed
             assert isinstance(results[0], Envelope)
             assert results[0].payload_type == "task.response"
-            # Second should fail
             assert isinstance(results[1], Exception)
-            # Third should succeed
             assert isinstance(results[2], Envelope)
             assert results[2].payload_type == "task.response"
 
@@ -494,13 +485,10 @@ class TestBatchWithCircuitBreaker(NoRateLimitTestBase):
 
             results = await client.send_batch(envelopes, return_exceptions=True)
 
-            # All should be exceptions (ASAPRemoteError from JSON-RPC errors)
             assert len(results) == 5
             for result in results:
                 assert isinstance(result, Exception)
 
-            # Circuit breaker should NOT have recorded failures
-            # because HTTP responses were 200 OK
             if client._circuit_breaker:
                 assert client._circuit_breaker._consecutive_failures == 0
 
@@ -511,7 +499,6 @@ class TestBatchWithCircuitBreaker(NoRateLimitTestBase):
     ) -> None:
         """Verify circuit breaker is properly initialized for batch operations."""
         transport = ASGITransport(app=error_app)
-        # Use unique URL to avoid registry conflicts with other tests
         async with ASAPClient(
             "http://localhost:9999",
             require_https=False,
@@ -519,7 +506,6 @@ class TestBatchWithCircuitBreaker(NoRateLimitTestBase):
             circuit_breaker_enabled=True,
             circuit_breaker_threshold=5,
         ) as client:
-            # Circuit breaker should be initialized
             assert client._circuit_breaker is not None
             assert client._circuit_breaker.threshold == 5
 
@@ -597,5 +583,4 @@ class TestBatchAuthPoolingCombined(NoRateLimitTestBase):
             results = await client.send_batch(envelopes)
 
             assert len(results) == 5
-            # Each request should trigger validation
             assert call_count["count"] == 5

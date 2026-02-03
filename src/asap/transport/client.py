@@ -453,10 +453,7 @@ class ASAPClient:
         else:
             self._circuit_breaker = None
 
-        # Initialize manifest cache (per-client instance, not shared across clients)
-        # Unlike CircuitBreakerRegistry which shares state globally, each client
-        # has its own cache for isolation. For multi-client scenarios needing
-        # shared caching, consider using a shared ManifestCache instance.
+        # Per-client manifest cache (not shared like circuit breaker).
         self._manifest_cache = ManifestCache()
 
     @staticmethod
@@ -764,7 +761,6 @@ class ASAPClient:
                     )
                     if attempt < self.max_retries - 1:
                         delay = self._calculate_backoff(attempt)
-                        # Consolidated retry log: combines server_error + retry info
                         logger.warning(
                             "asap.client.retry_server_error",
                             status_code=response.status_code,

@@ -106,10 +106,8 @@ class ManifestCache:
             if entry is None:
                 return None
             if entry.is_expired():
-                # Remove expired entry
                 del self._cache[url]
                 return None
-            # Move to end (most recently used) for LRU ordering
             self._cache.move_to_end(url)
             return entry.manifest
 
@@ -127,15 +125,11 @@ class ManifestCache:
         if ttl is None:
             ttl = self._default_ttl
         with self._lock:
-            # If URL already exists, remove it first (will be re-added at end)
             if url in self._cache:
                 del self._cache[url]
-            # Evict LRU entries if max_size is set and cache is at capacity
             elif self._max_size > 0:
                 while len(self._cache) >= self._max_size:
-                    # Remove oldest entry (first in OrderedDict)
                     self._cache.popitem(last=False)
-            # Add new entry at end (most recently used)
             self._cache[url] = CacheEntry(manifest, ttl)
 
     def invalidate(self, url: str) -> None:

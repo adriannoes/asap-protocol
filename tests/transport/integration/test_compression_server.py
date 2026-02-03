@@ -377,12 +377,10 @@ class TestCompressionThresholdBoundary(NoRateLimitTestBase):
 
     def test_payload_exactly_at_threshold_is_compressed(self) -> None:
         """Payload exactly at threshold IS compressed (threshold is exclusive)."""
-        # Create payload exactly at threshold size
         data = b"x" * COMPRESSION_THRESHOLD
 
         compressed, algorithm = compress_payload(data)
 
-        # Threshold check is "< threshold", so exactly at threshold IS compressed
         assert algorithm in (CompressionAlgorithm.GZIP, CompressionAlgorithm.BROTLI)
         assert len(compressed) < len(data)
 
@@ -397,12 +395,10 @@ class TestCompressionThresholdBoundary(NoRateLimitTestBase):
 
     def test_payload_one_byte_above_threshold_compressed(self) -> None:
         """Payload one byte above threshold should be compressed."""
-        # Create compressible payload just above threshold
         data = b"x" * (COMPRESSION_THRESHOLD + 1)
 
         compressed, algorithm = compress_payload(data)
 
-        # Should be compressed (gzip or brotli depending on availability)
         assert algorithm in (CompressionAlgorithm.GZIP, CompressionAlgorithm.BROTLI)
         assert len(compressed) < len(data)
 
@@ -412,7 +408,6 @@ class TestCompressionThresholdBoundary(NoRateLimitTestBase):
         no_auth_manifest: Manifest,
     ) -> None:
         """Server should handle payload exactly at threshold boundary."""
-        # Create minimal envelope that's just at the boundary
         envelope = Envelope(
             asap_version="0.1",
             sender="urn:asap:agent:client",
@@ -432,14 +427,11 @@ class TestCompressionThresholdBoundary(NoRateLimitTestBase):
             "id": "boundary-test",
         }
 
-        # Send as both compressed and uncompressed
         body_json = json.dumps(request).encode("utf-8")
 
-        # Uncompressed
         response1 = test_app.post("/asap", content=body_json)
         assert response1.status_code == 200
 
-        # Compressed (even small payload)
         compressed_body = gzip.compress(body_json)
         response2 = test_app.post(
             "/asap",
@@ -457,7 +449,6 @@ class TestDecompressionFailureRecovery(NoRateLimitTestBase):
 
     def test_decompress_corrupted_gzip_raises(self) -> None:
         """decompress_payload should raise on corrupted gzip data."""
-        # Corrupt gzip data by modifying bytes
         valid_data = b'{"test": "data"}'
         compressed = gzip.compress(valid_data)
         corrupted = bytes([b ^ 0xFF for b in compressed[10:20]]) + compressed[20:]
@@ -468,7 +459,6 @@ class TestDecompressionFailureRecovery(NoRateLimitTestBase):
 
     def test_decompress_wrong_encoding_raises(self) -> None:
         """decompress_payload with wrong encoding should raise."""
-        # Gzip compressed data claimed as brotli
         data = b'{"test": "data"}'
         compressed = gzip.compress(data)
 
@@ -489,7 +479,6 @@ class TestDecompressionFailureRecovery(NoRateLimitTestBase):
         test_app: TestClient,
     ) -> None:
         """Server should return proper error on corrupt compressed data."""
-        # Create partially valid gzip header followed by garbage
         fake_gzip = bytes([0x1F, 0x8B, 0x08, 0x00]) + b"garbage data here"
 
         response = test_app.post(
@@ -501,11 +490,8 @@ class TestDecompressionFailureRecovery(NoRateLimitTestBase):
             },
         )
 
-        # Server returns 200 with JSON-RPC error for decompression failures
-        # that are caught by error handling middleware, or 400 for direct HTTP error
         assert response.status_code in (200, 400)
         json_response = response.json()
-        # Either HTTP error detail or JSON-RPC error
         assert "detail" in json_response or "error" in json_response
 
 
@@ -516,36 +502,26 @@ class TestCompressionIneffective(NoRateLimitTestBase):
         """Random/already-compressed data may increase in size after compression."""
         import os
 
-        # Random data is generally incompressible
         random_data = os.urandom(2048)
 
         compressed, algorithm = compress_payload(random_data)
 
-        # The function should return original data if compression increases size
-        # or return the compressed data (implementation may vary)
         if algorithm == CompressionAlgorithm.IDENTITY:
             assert compressed == random_data
         else:
-            # If it did compress, verify it didn't grow significantly
-            # Allow up to 10% growth for header overhead
             assert len(compressed) <= len(random_data) * 1.1
 
     def test_already_compressed_data_not_recompressed_effectively(self) -> None:
         """Already compressed data should not benefit from recompression."""
-        # First compression
         original = b'{"data": "' + b"test " * 500 + b'"}'
         first_compressed, _ = compress_payload(
             original, preferred_algorithm=CompressionAlgorithm.GZIP
         )
 
-        # Try to compress again - should use identity or minimal benefit
         second_compressed, algorithm = compress_payload(first_compressed)
 
-        # Should either return identity or not reduce size significantly
         if algorithm != CompressionAlgorithm.IDENTITY:
-            # Second compression shouldn't help much
             compression_ratio = len(second_compressed) / len(first_compressed)
-            # Allow only minimal additional compression
             assert compression_ratio > 0.9
 
 
@@ -558,7 +534,6 @@ class TestMixedCompressionScenarios(NoRateLimitTestBase):
         no_auth_manifest: Manifest,
     ) -> None:
         """Multiple payloads with different sizes should all be handled."""
-        # Small payload (below threshold)
         small_envelope = Envelope(
             asap_version="0.1",
             sender="urn:asap:agent:client",
@@ -571,7 +546,6 @@ class TestMixedCompressionScenarios(NoRateLimitTestBase):
             },
         )
 
-        # Large payload (above threshold)
         large_envelope = Envelope(
             asap_version="0.1",
             sender="urn:asap:agent:client",
@@ -584,7 +558,6 @@ class TestMixedCompressionScenarios(NoRateLimitTestBase):
             },
         )
 
-        # Send small uncompressed
         small_request = {
             "jsonrpc": "2.0",
             "method": "asap.send",
@@ -594,7 +567,6 @@ class TestMixedCompressionScenarios(NoRateLimitTestBase):
         response1 = test_app.post("/asap", json=small_request)
         assert response1.status_code == 200
 
-        # Send large compressed
         large_request = {
             "jsonrpc": "2.0",
             "method": "asap.send",

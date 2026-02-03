@@ -81,12 +81,10 @@ class TestMCPToolsInvokingASAP:
     @pytest.mark.asyncio
     async def test_mcp_tool_can_call_asap_client(self) -> None:
         """MCP tool should be able to invoke ASAP client and return result."""
-        # Create ASAP server
         manifest = _create_test_manifest()
         asap_app = _create_asap_app(manifest)
         transport = ASGITransport(app=asap_app)
 
-        # Create MCP server with a tool that uses ASAP client
         mcp_server = MCPServer(name="asap-bridge", version="1.0.0")
 
         async def send_message_tool(message: str) -> dict[str, Any]:
@@ -125,7 +123,6 @@ class TestMCPToolsInvokingASAP:
             description="Send a message via ASAP protocol",
         )
 
-        # Invoke the tool via MCP
         result = await mcp_server._handle_tools_call(
             {
                 "name": "send_asap_message",
@@ -143,7 +140,6 @@ class TestMCPToolsInvokingASAP:
     @pytest.mark.asyncio
     async def test_mcp_tool_handles_asap_errors(self) -> None:
         """MCP tool should properly handle ASAP client errors."""
-        # Create ASAP server that fails
         manifest = _create_test_manifest()
         registry = HandlerRegistry()
 
@@ -174,7 +170,6 @@ class TestMCPToolsInvokingASAP:
                         input={"message": message},
                     ).model_dump(),
                 )
-                # This will raise ASAPRemoteError
                 await client.send(envelope)
 
         mcp_server.register_tool(
@@ -188,7 +183,6 @@ class TestMCPToolsInvokingASAP:
             description="Send a message via ASAP protocol",
         )
 
-        # Tool should return isError=True when ASAP fails
         result = await mcp_server._handle_tools_call(
             {
                 "name": "send_asap_message",
@@ -197,7 +191,6 @@ class TestMCPToolsInvokingASAP:
         )
 
         assert result["isError"] is True
-        # Error should be captured in content
         content_text = result["content"][0]["text"]
         assert "error" in content_text.lower() or "Error" in content_text
 
@@ -218,7 +211,6 @@ class TestMCPExposingASAPPrimitives:
             description="MCP server exposing ASAP primitives",
         )
 
-        # Store transport in closure for tools to use
         _transport = transport
 
         async def discover_agent(url: str) -> dict[str, Any]:
@@ -346,7 +338,6 @@ class TestASAPErrorPropagationToMCP:
 
         async def connect_to_invalid(url: str) -> dict[str, Any]:
             """Tool that tries to connect to invalid ASAP endpoint."""
-            # Use a URL that will fail connection
             async with ASAPClient(
                 url,
                 require_https=False,
@@ -377,7 +368,6 @@ class TestASAPErrorPropagationToMCP:
             description="Connect to potentially invalid URL",
         )
 
-        # Use a URL that won't connect
         result = await mcp_server._handle_tools_call(
             {
                 "name": "connect_invalid",
@@ -385,10 +375,8 @@ class TestASAPErrorPropagationToMCP:
             }
         )
 
-        # Should return error
         assert result["isError"] is True
         content_text = result["content"][0]["text"]
-        # Error message should indicate connection issue
         assert "error" in content_text.lower() or "connect" in content_text.lower()
 
     @pytest.mark.asyncio
@@ -407,7 +395,6 @@ class TestASAPErrorPropagationToMCP:
                 require_https=False,
                 transport=transport,
             ) as client:
-                # Create envelope with invalid payload_type
                 envelope = Envelope(
                     asap_version="0.1",
                     sender="urn:asap:agent:mcp-client",
@@ -432,7 +419,6 @@ class TestASAPErrorPropagationToMCP:
             }
         )
 
-        # Should return error for unhandled payload type
         assert result["isError"] is True
 
 
@@ -481,7 +467,6 @@ class TestMCPDispatchWithASAPTools:
             description="Echo via ASAP protocol",
         )
 
-        # Simulate full JSON-RPC dispatch
         request = JSONRPCRequest(
             id=1,
             method="tools/call",
@@ -553,7 +538,6 @@ class TestMCPDispatchWithASAPTools:
             description="Echo via ASAP with optional delay",
         )
 
-        # Run multiple tool calls concurrently
         tasks = [
             mcp_server._handle_tools_call(
                 {
@@ -566,7 +550,6 @@ class TestMCPDispatchWithASAPTools:
 
         results = await asyncio.gather(*tasks)
 
-        # All should succeed
         assert len(results) == 5
         for result in results:
             assert result["isError"] is False
