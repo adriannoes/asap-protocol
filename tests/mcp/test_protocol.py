@@ -6,6 +6,7 @@ from asap.mcp.protocol import (
     CallToolResult,
     Implementation,
     InitializeResult,
+    JSONRPCRequest,
     ListToolsResult,
     TextContent,
     Tool,
@@ -106,3 +107,13 @@ def test_initialize_result_parses_from_camelcase() -> None:
     assert result.server_info.name == "test-server"
     assert result.server_info.version == "1.0.0"
     assert result.capabilities.get("tools", {}).get("listChanged") is True
+
+
+def test_jsonrpc_request_accepts_string_id() -> None:
+    """JSONRPCRequest accepts string id per JSON-RPC 2.0 / MCP spec (id is str | int)."""
+    req = JSONRPCRequest(id="req-1", method="ping")
+    assert req.id == "req-1"
+    assert req.method == "ping"
+    d = req.model_dump(by_alias=True)
+    assert d["id"] == "req-1"
+    assert d["method"] == "ping"

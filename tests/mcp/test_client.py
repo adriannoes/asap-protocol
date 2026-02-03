@@ -58,10 +58,18 @@ async def test_client_call_tool_without_connect_raises() -> None:
 
 @pytest.mark.asyncio
 async def test_client_next_id_increments() -> None:
-    """_next_id returns incrementing request ids."""
+    """_next_id returns incrementing request ids (default int)."""
     client = MCPClient(["true"])
     assert client._next_id() == 1
     assert client._next_id() == 2
+
+
+@pytest.mark.asyncio
+async def test_client_next_id_str_type() -> None:
+    """_next_id returns string ids when request_id_type is 'str'."""
+    client = MCPClient(["true"], request_id_type="str")
+    assert client._next_id() == "1"
+    assert client._next_id() == "2"
 
 
 @pytest.mark.asyncio
@@ -223,6 +231,21 @@ async def test_client_receive_json_decode_error_returns_none() -> None:
 
     async def readline() -> bytes:
         return b"not valid json\n"
+
+    client._process.stdout.readline = readline
+    result = await client._receive()
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_client_receive_json_array_returns_none() -> None:
+    """_receive returns None when server sends JSON array (non-dict)."""
+    client = MCPClient(["true"], receive_timeout=1.0)
+    client._process = MagicMock()
+    client._process.stdout = MagicMock()
+
+    async def readline() -> bytes:
+        return b"[1, 2, 3]\n"
 
     client._process.stdout.readline = readline
     result = await client._receive()

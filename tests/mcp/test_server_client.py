@@ -113,6 +113,31 @@ async def test_mcp_server_dispatch_tools_call_invalid_params_returns_jsonrpc_err
 
 
 @pytest.mark.asyncio
+async def test_mcp_server_tools_call_argument_mismatch_returns_invalid_params() -> None:
+    """When tool is called with wrong/missing kwargs (TypeError), server returns -32602 INVALID_PARAMS."""
+    server = MCPServer(name="t", version="0.1.0")
+    server.register_tool(
+        "add",
+        lambda a, b: a + b,
+        {
+            "type": "object",
+            "properties": {"a": {"type": "number"}, "b": {"type": "number"}},
+            "required": ["a", "b"],
+        },
+        description="Add two numbers",
+    )
+    from asap.mcp.protocol import JSONRPCRequest
+
+    req = JSONRPCRequest(id=1, method="tools/call", params={"name": "add", "arguments": {"x": 1}})
+    response_line = await server._dispatch_request(req)
+    assert response_line is not None
+    data = json.loads(response_line)
+    assert "error" in data
+    assert data["error"]["code"] == -32602
+    assert "Tool argument mismatch" in data["error"]["message"]
+
+
+@pytest.mark.asyncio
 async def test_mcp_server_dispatch_ping_returns_empty_result() -> None:
     """Ping method returns JSON-RPC result with empty object."""
     from asap.mcp.protocol import JSONRPCRequest
