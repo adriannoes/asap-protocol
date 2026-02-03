@@ -6,7 +6,13 @@ without requiring live servers (mocks or in-process demos only).
 
 from __future__ import annotations
 
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
 from asap.examples import auth_patterns
+from asap.models.envelope import Envelope
 from asap.testing import assert_envelope_valid
 from asap.examples import error_recovery
 from asap.examples import long_running
@@ -55,6 +61,212 @@ class TestOrchestrationExample:
         assert d["conversation_id"] == "c1"
         assert d["step"] == "completed"
         assert d["completed"] is True
+
+    def test_build_orchestrator_manifest_with_custom_endpoint(self) -> None:
+        """build_orchestrator_manifest accepts custom asap_endpoint."""
+        manifest = orchestration.build_orchestrator_manifest(
+            asap_endpoint="http://localhost:9000/asap"
+        )
+        assert manifest.endpoints.asap == "http://localhost:9000/asap"
+
+    @pytest.mark.asyncio
+    async def test_run_orchestration_success(self) -> None:
+        """run_orchestration completes when both workers respond."""
+        env_a = Envelope(
+            asap_version="0.1",
+            sender=orchestration.SUB_AGENT_A_ID,
+            recipient=orchestration.ORCHESTRATOR_ID,
+            payload_type="task.response",
+            payload={"result": "from_a"},
+        )
+        env_b = Envelope(
+            asap_version="0.1",
+            sender=orchestration.SUB_AGENT_B_ID,
+            recipient=orchestration.ORCHESTRATOR_ID,
+            payload_type="task.response",
+            payload={"result": "from_b"},
+        )
+        mock_client = MagicMock()
+        mock_client.send = AsyncMock(side_effect=[env_a, env_b])
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        with patch(
+            "asap.examples.orchestration.ASAPClient",
+            return_value=mock_client,
+        ):
+            state = await orchestration.run_orchestration(
+                worker_a_url="http://127.0.0.1:8001",
+                worker_b_url="http://127.0.0.1:8002",
+            )
+        assert state.completed is True
+        assert state.step == "completed"
+        assert state.result_a == {"result": "from_a"}
+        assert state.result_b == {"result": "from_b"}
+        assert state.error is None
+
+    @pytest.mark.asyncio
+    async def test_run_orchestration_fails_at_a(self) -> None:
+        """run_orchestration returns state with error when worker A raises."""
+        mock_client = MagicMock()
+        mock_client.send = AsyncMock(side_effect=RuntimeError("worker_a down"))
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        with patch(
+            "asap.examples.orchestration.ASAPClient",
+            return_value=mock_client,
+        ):
+            state = await orchestration.run_orchestration(
+                worker_a_url="http://127.0.0.1:8001",
+                worker_b_url="http://127.0.0.1:8002",
+            )
+        assert state.completed is False
+        assert state.step == "failed_at_a"
+        assert state.error is not None and "worker_a" in state.error
+        assert state.result_a is None
+        assert state.result_b is None
+
+    @pytest.mark.asyncio
+    async def test_run_orchestration_fails_at_b(self) -> None:
+        """run_orchestration returns state with error when worker B raises."""
+        env_a = Envelope(
+            asap_version="0.1",
+            sender=orchestration.SUB_AGENT_A_ID,
+            recipient=orchestration.ORCHESTRATOR_ID,
+            payload_type="task.response",
+            payload={"result": "from_a"},
+        )
+        mock_client = MagicMock()
+        mock_client.send = AsyncMock(side_effect=[env_a, RuntimeError("worker_b down")])
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        with patch(
+            "asap.examples.orchestration.ASAPClient",
+            return_value=mock_client,
+        ):
+            state = await orchestration.run_orchestration(
+                worker_a_url="http://127.0.0.1:8001",
+                worker_b_url="http://127.0.0.1:8002",
+            )
+        assert state.completed is False
+        assert state.step == "failed_at_b"
+        assert state.error is not None and "worker_b" in state.error
+        assert state.result_a == {"result": "from_a"}
+        assert state.result_b is None
+
+    @pytest.mark.asyncio
+    async def test_run_orchestration_custom_inputs(self) -> None:
+        """run_orchestration uses custom input_a and input_b when provided."""
+        env_a = Envelope(
+            asap_version="0.1",
+            sender=orchestration.SUB_AGENT_A_ID,
+            recipient=orchestration.ORCHESTRATOR_ID,
+            payload_type="task.response",
+            payload={"echo": "custom_a"},
+        )
+        env_b = Envelope(
+            asap_version="0.1",
+            sender=orchestration.SUB_AGENT_B_ID,
+            recipient=orchestration.ORCHESTRATOR_ID,
+            payload_type="task.response",
+            payload={"echo": "custom_b"},
+        )
+        mock_client = MagicMock()
+        mock_client.send = AsyncMock(side_effect=[env_a, env_b])
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        with patch(
+            "asap.examples.orchestration.ASAPClient",
+            return_value=mock_client,
+        ):
+            state = await orchestration.run_orchestration(
+                worker_a_url="http://127.0.0.1:8001",
+                worker_b_url="http://127.0.0.1:8002",
+                input_a={"x": 1},
+                input_b={"y": 2},
+            )
+        assert state.completed is True
+        assert state.result_a == {"echo": "custom_a"}
+        assert state.result_b == {"echo": "custom_b"}
+
+    @pytest.mark.asyncio
+    async def test_send_to_sub_agent_returns_response(self) -> None:
+        """send_to_sub_agent sends envelope and returns response from client."""
+        req = orchestration.build_task_envelope(
+            recipient_id=orchestration.SUB_AGENT_A_ID,
+            skill_id="echo",
+            input_payload={"msg": "hi"},
+            conversation_id="c1",
+            trace_id="t1",
+        )
+        resp = Envelope(
+            asap_version="0.1",
+            sender=orchestration.SUB_AGENT_A_ID,
+            recipient=orchestration.ORCHESTRATOR_ID,
+            payload_type="task.response",
+            payload={"result": "ok"},
+        )
+        mock_client = MagicMock()
+        mock_client.send = AsyncMock(return_value=resp)
+        out = await orchestration.send_to_sub_agent(mock_client, req)
+        assert out.payload == {"result": "ok"}
+        mock_client.send.assert_called_once_with(req)
+
+    def test_orchestration_parse_args(self) -> None:
+        """parse_args returns worker URLs from argv."""
+        args = orchestration.parse_args(
+            ["--worker-a-url", "http://a:8001", "--worker-b-url", "http://b:8002"]
+        )
+        assert args.worker_a_url == "http://a:8001"
+        assert args.worker_b_url == "http://b:8002"
+
+    def test_orchestration_parse_args_defaults(self) -> None:
+        """parse_args uses default worker URLs when no argv."""
+        args = orchestration.parse_args([])
+        assert args.worker_a_url == orchestration.DEFAULT_WORKER_A_URL
+        assert args.worker_b_url == orchestration.DEFAULT_WORKER_B_URL
+
+    def test_orchestration_main_exits_one_on_error(self) -> None:
+        """main raises SystemExit(1) when run_orchestration returns state with error."""
+        with (
+            patch("asap.examples.orchestration.asyncio.run") as mock_run,
+            patch("asap.examples.orchestration.logger"),
+        ):
+            state = orchestration.OrchestrationState(
+                conversation_id="c1",
+                trace_id="t1",
+                error="worker failed",
+            )
+            mock_run.return_value = state
+            with pytest.raises(SystemExit, match="1"):
+                orchestration.main([])
+
+    def test_orchestration_main_success_no_exit(self) -> None:
+        """main does not raise when run_orchestration completes without error."""
+        state = orchestration.OrchestrationState(
+            conversation_id="c1",
+            trace_id="t1",
+            step="completed",
+            completed=True,
+        )
+
+        async def fake_run_orchestration(
+            *args: object, **kwargs: object
+        ) -> orchestration.OrchestrationState:
+            return state
+
+        real_run = asyncio.run
+        with (
+            patch(
+                "asap.examples.orchestration.run_orchestration",
+                side_effect=fake_run_orchestration,
+            ),
+            patch(
+                "asap.examples.orchestration.asyncio.run",
+                side_effect=lambda coro: real_run(coro),
+            ),
+            patch("asap.examples.orchestration.logger"),
+        ):
+            orchestration.main([])
 
 
 class TestLongRunningExample:
@@ -151,6 +363,107 @@ class TestMcpIntegrationExample:
         assert env.payload_type == "mcp_tool_result"
         assert env.payload.get("success") is True
         assert env.correlation_id == "corr-1"
+
+    @pytest.mark.asyncio
+    async def test_send_mcp_tool_call_returns_response(self) -> None:
+        """send_mcp_tool_call sends envelope and returns response from agent."""
+        response_env = Envelope(
+            asap_version="0.1",
+            sender=mcp_integration.DEFAULT_AGENT_ID,
+            recipient=mcp_integration.DEFAULT_SENDER_ID,
+            payload_type="mcp_tool_result",
+            payload={"request_id": "r1", "success": True, "result": {"data": "ok"}},
+        )
+        mock_client = MagicMock()
+        mock_client.send = AsyncMock(return_value=response_env)
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        with patch(
+            "asap.examples.mcp_integration.ASAPClient",
+            return_value=mock_client,
+        ):
+            response = await mcp_integration.send_mcp_tool_call(
+                base_url="http://127.0.0.1:8000",
+                tool_name="echo",
+                arguments={"message": "hi"},
+            )
+        assert response.payload_type == "mcp_tool_result"
+        assert response.payload.get("success") is True
+        mock_client.send.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_run_demo_remote_success(self) -> None:
+        """run_demo_remote logs and returns when send_mcp_tool_call succeeds."""
+        response_env = Envelope(
+            asap_version="0.1",
+            sender=mcp_integration.DEFAULT_AGENT_ID,
+            recipient=mcp_integration.DEFAULT_SENDER_ID,
+            payload_type="mcp_tool_result",
+            payload={"request_id": "r1", "success": True, "result": {}},
+        )
+        with (
+            patch(
+                "asap.examples.mcp_integration.send_mcp_tool_call",
+                new_callable=AsyncMock,
+                return_value=response_env,
+            ),
+            patch("asap.examples.mcp_integration.logger"),
+        ):
+            await mcp_integration.run_demo_remote("http://127.0.0.1:8000")
+
+    @pytest.mark.asyncio
+    async def test_run_demo_remote_raises_on_failure(self) -> None:
+        """run_demo_remote logs warning and re-raises when send_mcp_tool_call fails."""
+        with (
+            patch(
+                "asap.examples.mcp_integration.send_mcp_tool_call",
+                new_callable=AsyncMock,
+                side_effect=RuntimeError("connection refused"),
+            ),
+            patch("asap.examples.mcp_integration.logger") as mock_logger,
+        ):
+            with pytest.raises(RuntimeError, match="connection refused"):
+                await mcp_integration.run_demo_remote("http://127.0.0.1:8000")
+            mock_logger.warning.assert_called_once()
+
+    def test_mcp_integration_parse_args(self) -> None:
+        """parse_args returns agent_url when provided."""
+        args = mcp_integration.parse_args(["--agent-url", "http://agent:8000"])
+        assert args.agent_url == "http://agent:8000"
+
+    def test_mcp_integration_parse_args_no_agent_url(self) -> None:
+        """parse_args returns None agent_url when omitted."""
+        args = mcp_integration.parse_args([])
+        assert args.agent_url is None
+
+    def test_mcp_integration_main_with_agent_url_calls_remote(self) -> None:
+        """main calls run_demo_remote when --agent-url is provided."""
+        real_run = asyncio.run
+        mock_remote = AsyncMock()
+        with (
+            patch("asap.examples.mcp_integration.run_demo_local") as mock_local,
+            patch(
+                "asap.examples.mcp_integration.asyncio.run",
+                side_effect=lambda coro: real_run(coro),
+            ),
+            patch(
+                "asap.examples.mcp_integration.run_demo_remote",
+                side_effect=mock_remote,
+            ),
+        ):
+            mcp_integration.main(["--agent-url", "http://127.0.0.1:8000"])
+            mock_local.assert_called_once()
+            mock_remote.assert_called_once_with("http://127.0.0.1:8000")
+
+    def test_mcp_integration_main_without_agent_url_local_only(self) -> None:
+        """main only runs run_demo_local when --agent-url is omitted."""
+        with (
+            patch("asap.examples.mcp_integration.run_demo_local") as mock_local,
+            patch("asap.examples.mcp_integration.asyncio.run") as mock_run,
+        ):
+            mcp_integration.main([])
+            mock_local.assert_called_once()
+            mock_run.assert_not_called()
 
 
 class TestStateMigrationExample:
