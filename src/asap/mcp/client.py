@@ -39,7 +39,7 @@ class MCPClient:
         name: str = "asap-mcp-client",
         version: str = "1.0.0",
         receive_timeout: float | None = 60.0,
-        request_id_type: Literal["int", "str"] = "int",
+        request_id_type: Literal["int", "str"] = "str",
     ) -> None:
         """Initialize the client.
 
@@ -48,7 +48,7 @@ class MCPClient:
             name: Client name for initialize.
             version: Client version for initialize.
             receive_timeout: Seconds to wait for a response (None = no timeout).
-            request_id_type: Request id type for JSON-RPC id field ("int" or "str"); use "str" for broader interoperability.
+            request_id_type: Request id type for JSON-RPC id field ("int" or "str").
         """
         self._server_command = server_command
         self._client_info = Implementation(name=name, version=version)
