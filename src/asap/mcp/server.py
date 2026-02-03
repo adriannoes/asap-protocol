@@ -1,0 +1,293 @@
+"""MCP server implementation (spec 2025-11-25).
+
+Runs over stdio: reads JSON-RPC messages (one per line) from stdin,
+dispatches to handlers, writes responses to stdout.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import io
+import inspect
+import json
+import sys
+from collections.abc import Callable
+from typing import Any, cast
+
+from asap.mcp.protocol import (
+    INVALID_PARAMS,
+    INTERNAL_ERROR,
+    METHOD_NOT_FOUND,
+    MCP_PROTOCOL_VERSION,
+    CallToolRequestParams,
+    CallToolResult,
+    Implementation,
+    InitializeResult,
+    JSONRPCError,
+    JSONRPCErrorResponse,
+    JSONRPCNotification,
+    JSONRPCRequest,
+    JSONRPCResponse,
+    ListToolsResult,
+    TextContent,
+    Tool,
+)
+from asap.observability import get_logger
+
+logger = get_logger(__name__)
+
+# Default input schema for tools with no parameters (per spec)
+EMPTY_INPUT_SCHEMA: dict[str, Any] = {"type": "object", "additionalProperties": False}
+
+
+class MCPServer:
+    """MCP server with stdio transport and tools support.
+
+    Register tools with register_tool(), then run with run_stdio().
+    Supports initialize, tools/list, and tools/call per MCP 2025-11-25.
+    """
+
+    def __init__(
+        self,
+        name: str = "asap-mcp-server",
+        version: str = "1.0.0",
+        title: str | None = None,
+        description: str | None = None,
+        instructions: str | None = None,
+    ) -> None:
+        """Initialize the MCP server.
+
+        Args:
+            name: Server programmatic name.
+            version: Server version string.
+            title: Optional human-readable title.
+            description: Optional description.
+            instructions: Optional instructions for the client/LLM.
+        """
+        self._server_info = Implementation(
+            name=name,
+            version=version,
+            title=title or name,
+            description=description,
+        )
+        self._instructions = instructions
+        self._tools: dict[str, tuple[Callable[..., Any], dict[str, Any], str, str | None]] = {}
+        self._request_id_counter = 0
+
+    def register_tool(
+        self,
+        name: str,
+        func: Callable[..., Any],
+        schema: dict[str, Any],
+        *,
+        description: str = "",
+        title: str | None = None,
+    ) -> None:
+        """Register a tool that can be invoked via tools/call.
+
+        Args:
+            name: Unique tool name (e.g. "echo", "get_weather").
+            func: Callable that receives keyword arguments from the client.
+                  May be sync or async; return value is converted to text for
+                  the result content.
+            schema: JSON Schema for the tool's parameters (inputSchema).
+                    Use EMPTY_INPUT_SCHEMA for no parameters.
+            description: Human-readable description (required by spec).
+            title: Optional display title.
+        """
+        input_schema = schema if schema else EMPTY_INPUT_SCHEMA
+        self._tools[name] = (
+            func,
+            input_schema,
+            description or f"Tool {name}",
+            title,
+        )
+
+    def _get_capabilities(self) -> dict[str, Any]:
+        """Server capabilities for initialize result."""
+        caps: dict[str, Any] = {}
+        if self._tools:
+            caps["tools"] = {"listChanged": True}
+        return caps
+
+    def _handle_initialize(self, params: dict[str, Any] | None) -> dict[str, Any]:
+        """Handle initialize request; return InitializeResult as dict."""
+        result = InitializeResult(
+            protocolVersion=MCP_PROTOCOL_VERSION,
+            capabilities=self._get_capabilities(),
+            serverInfo=self._server_info,
+            instructions=self._instructions,
+        )
+        return result.model_dump(by_alias=True, exclude_none=True)
+
+    def _handle_tools_list(self, params: dict[str, Any] | None) -> dict[str, Any]:
+        """Handle tools/list; return ListToolsResult as dict."""
+        tools_list: list[Tool] = []
+        for name, (_, input_schema, description, title) in self._tools.items():
+            tools_list.append(
+                Tool(
+                    name=name,
+                    description=description,
+                    inputSchema=input_schema,
+                    title=title,
+                )
+            )
+        result = ListToolsResult(tools=tools_list)
+        return result.model_dump(by_alias=True, exclude_none=True)
+
+    async def _handle_tools_call(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Handle tools/call; execute tool and return CallToolResult as dict.
+
+        Raises:
+            ValueError: With code INVALID_PARAMS for malformed params (protocol error).
+        """
+        try:
+            parsed = CallToolRequestParams(**params)
+        except Exception as e:
+            raise ValueError(f"Invalid params: {e}") from e
+
+        if parsed.name not in self._tools:
+            return CallToolResult(
+                content=[
+                    TextContent(text=f"Unknown tool: {parsed.name}").model_dump(by_alias=True)
+                ],
+                isError=True,
+            ).model_dump(by_alias=True, exclude_none=True)
+
+        func, _schema, _desc, _title = self._tools[parsed.name]
+        try:
+            if inspect.iscoroutinefunction(func):
+                out = await func(**parsed.arguments)
+            else:
+                loop = asyncio.get_running_loop()
+                out = await loop.run_in_executor(None, lambda: func(**parsed.arguments))
+        except Exception as e:
+            logger.exception("mcp.tool.error", tool=parsed.name, error=str(e))
+            return CallToolResult(
+                content=[TextContent(text=str(e)).model_dump(by_alias=True)],
+                isError=True,
+            ).model_dump(by_alias=True, exclude_none=True)
+
+        if isinstance(out, str):
+            text = out
+        elif isinstance(out, dict):
+            text = json.dumps(out)
+        else:
+            text = str(out)
+        return CallToolResult(
+            content=[TextContent(text=text).model_dump(by_alias=True)],
+            isError=False,
+        ).model_dump(by_alias=True, exclude_none=True)
+
+    async def _dispatch_request(self, req: JSONRPCRequest) -> str | None:
+        """Dispatch a JSON-RPC request; return response line or None for notification."""
+        method = req.method
+        params = req.params or {}
+        rid = req.id
+
+        if method == "initialize":
+            result = self._handle_initialize(params)
+            return json.dumps(JSONRPCResponse(id=rid, result=result).model_dump(by_alias=True))
+
+        if method == "tools/list":
+            result = self._handle_tools_list(params)
+            return json.dumps(JSONRPCResponse(id=rid, result=result).model_dump(by_alias=True))
+
+        if method == "tools/call":
+            try:
+                result = await self._handle_tools_call(params)
+            except ValueError as e:
+                return json.dumps(
+                    JSONRPCErrorResponse(
+                        id=rid,
+                        error=JSONRPCError(code=INVALID_PARAMS, message=str(e)),
+                    ).model_dump(by_alias=True)
+                )
+            return json.dumps(JSONRPCResponse(id=rid, result=result).model_dump(by_alias=True))
+
+        if method == "ping":
+            return json.dumps(JSONRPCResponse(id=rid, result={}).model_dump(by_alias=True))
+
+        return json.dumps(
+            JSONRPCErrorResponse(
+                id=rid,
+                error=JSONRPCError(code=METHOD_NOT_FOUND, message=f"Method not found: {method}"),
+            ).model_dump(by_alias=True)
+        )
+
+    def _dispatch_notification(self, notif: JSONRPCNotification) -> None:
+        """Handle notification (no response)."""
+        if notif.method == "notifications/initialized":
+            logger.debug("mcp.initialized", message="Client sent initialized")
+        elif notif.method == "notifications/cancelled":
+            logger.debug("mcp.cancelled", params=notif.params)
+        else:
+            logger.debug("mcp.notification", method=notif.method, params=notif.params)
+
+    async def run_stdio(
+        self,
+        stdin: io.TextIOBase | None = None,
+        stdout: io.TextIOBase | None = None,
+    ) -> None:
+        """Run the server over stdio (stdin/stdout). Blocks until stdin closes.
+
+        Args:
+            stdin: Optional input stream (default: sys.stdin).
+            stdout: Optional output stream (default: sys.stdout).
+        """
+        _stdin = stdin if stdin is not None else sys.stdin
+        _stdout = stdout if stdout is not None else sys.stdout
+        loop = asyncio.get_running_loop()
+        queue: asyncio.Queue[dict[str, Any] | None] = asyncio.Queue(maxsize=128)
+
+        def read_stdin() -> dict[str, Any] | None:
+            try:
+                line = _stdin.readline()
+            except (EOFError, OSError):
+                return None
+            if not line:
+                return None
+            line = line.rstrip("\n\r")
+            if not line:
+                return None
+            try:
+                return cast("dict[str, Any]", json.loads(line))
+            except json.JSONDecodeError:
+                return None
+
+        async def producer() -> None:
+            while True:
+                raw = await loop.run_in_executor(None, read_stdin)
+                await queue.put(raw)
+                if raw is None:
+                    break
+
+        async def consumer() -> None:
+            while True:
+                raw = await queue.get()
+                if raw is None:
+                    break
+                if "id" in raw and raw.get("method"):
+                    try:
+                        req = JSONRPCRequest(**raw)
+                        response_line = await self._dispatch_request(req)
+                        if response_line:
+                            _stdout.write(response_line + "\n")
+                            _stdout.flush()
+                    except Exception as e:
+                        logger.exception("mcp.request_error", error=str(e))
+                        rid = raw.get("id")
+                        err = JSONRPCErrorResponse(
+                            id=rid,
+                            error=JSONRPCError(code=INTERNAL_ERROR, message=str(e)),
+                        )
+                        _stdout.write(json.dumps(err.model_dump(by_alias=True)) + "\n")
+                        _stdout.flush()
+                else:
+                    try:
+                        notif = JSONRPCNotification(**raw)
+                        self._dispatch_notification(notif)
+                    except Exception as e:
+                        logger.debug("mcp.notification_error", error=str(e))
+
+        await asyncio.gather(producer(), consumer())
