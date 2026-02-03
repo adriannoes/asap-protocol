@@ -114,7 +114,7 @@ async def test_mcp_server_dispatch_tools_call_invalid_params_returns_jsonrpc_err
 
 @pytest.mark.asyncio
 async def test_mcp_server_tools_call_argument_mismatch_returns_invalid_params() -> None:
-    """When tool is called with wrong/missing kwargs (TypeError), server returns -32602 INVALID_PARAMS."""
+    """When tool is called with args that pass schema but mismatch function (TypeError), server returns -32602."""
     server = MCPServer(name="t", version="0.1.0")
     server.register_tool(
         "add",
@@ -122,19 +122,73 @@ async def test_mcp_server_tools_call_argument_mismatch_returns_invalid_params() 
         {
             "type": "object",
             "properties": {"a": {"type": "number"}, "b": {"type": "number"}},
-            "required": ["a", "b"],
+            "required": ["a"],
         },
         description="Add two numbers",
     )
     from asap.mcp.protocol import JSONRPCRequest
 
-    req = JSONRPCRequest(id=1, method="tools/call", params={"name": "add", "arguments": {"x": 1}})
+    req = JSONRPCRequest(id=1, method="tools/call", params={"name": "add", "arguments": {"a": 1}})
     response_line = await server._dispatch_request(req)
     assert response_line is not None
     data = json.loads(response_line)
     assert "error" in data
     assert data["error"]["code"] == -32602
     assert "Tool argument mismatch" in data["error"]["message"]
+
+
+@pytest.mark.asyncio
+async def test_mcp_server_tools_call_schema_validation_rejects_invalid_types() -> None:
+    """When tool is called with arguments that fail inputSchema validation, server returns -32602 without invoking the tool."""
+    invoked: list[object] = []
+
+    def track_invoked(age: int) -> str:
+        invoked.append(1)
+        return str(age)
+
+    server = MCPServer(name="t", version="0.1.0")
+    server.register_tool(
+        "age_tool",
+        track_invoked,
+        {
+            "type": "object",
+            "properties": {"age": {"type": "integer"}},
+            "required": ["age"],
+        },
+        description="Accepts age (int)",
+    )
+    with pytest.raises(ValueError, match="Invalid arguments"):
+        await server._handle_tools_call({"name": "age_tool", "arguments": {"age": "failed"}})
+    assert len(invoked) == 0
+
+
+@pytest.mark.asyncio
+async def test_mcp_server_dispatch_tools_call_schema_violation_returns_32602() -> None:
+    """Full dispatch: tools/call with schema-violating args returns JSON-RPC -32602 without calling tool."""
+    invoked: list[object] = []
+
+    def only_if_invoked(x: int) -> int:
+        invoked.append(1)
+        return x
+
+    server = MCPServer(name="t", version="0.1.0")
+    server.register_tool(
+        "only_int",
+        only_if_invoked,
+        {"type": "object", "properties": {"x": {"type": "integer"}}, "required": ["x"]},
+        description="Accepts int",
+    )
+    from asap.mcp.protocol import JSONRPCRequest
+
+    req = JSONRPCRequest(
+        id=1, method="tools/call", params={"name": "only_int", "arguments": {"x": "not_an_int"}}
+    )
+    response_line = await server._dispatch_request(req)
+    assert response_line is not None
+    data = json.loads(response_line)
+    assert "error" in data
+    assert data["error"]["code"] == -32602
+    assert len(invoked) == 0
 
 
 @pytest.mark.asyncio
@@ -216,7 +270,7 @@ async def test_mcp_server_handle_tools_call_returns_dict_as_json_text() -> None:
 
 @pytest.mark.asyncio
 async def test_mcp_server_handle_tools_call_tool_raises_returns_is_error() -> None:
-    """Tool that raises returns isError true with error message in content."""
+    """Tool that raises returns isError true; message is sanitized unless ASAP_DEBUG."""
     server = MCPServer(name="t", version="0.1.0")
     server.register_tool(
         "raises",
@@ -226,10 +280,8 @@ async def test_mcp_server_handle_tools_call_tool_raises_returns_is_error() -> No
     )
     result = await server._handle_tools_call({"name": "raises", "arguments": {}})
     assert result["isError"] is True
-    assert any(
-        "division" in c.get("text", "").lower() or "zero" in c.get("text", "").lower()
-        for c in result["content"]
-    )
+    text = result["content"][0].get("text", "") if result["content"] else ""
+    assert text == "Internal tool error" or "division" in text.lower() or "zero" in text.lower()
 
 
 @pytest.mark.asyncio

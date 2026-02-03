@@ -58,18 +58,18 @@ async def test_client_call_tool_without_connect_raises() -> None:
 
 @pytest.mark.asyncio
 async def test_client_next_id_increments() -> None:
-    """_next_id returns incrementing request ids (default int)."""
+    """_next_id returns incrementing request ids (default str)."""
     client = MCPClient(["true"])
-    assert client._next_id() == 1
-    assert client._next_id() == 2
+    assert client._next_id() == "1"
+    assert client._next_id() == "2"
 
 
 @pytest.mark.asyncio
-async def test_client_next_id_str_type() -> None:
-    """_next_id returns string ids when request_id_type is 'str'."""
-    client = MCPClient(["true"], request_id_type="str")
-    assert client._next_id() == "1"
-    assert client._next_id() == "2"
+async def test_client_next_id_int_type() -> None:
+    """_next_id returns int ids when request_id_type is 'int'."""
+    client = MCPClient(["true"], request_id_type="int")
+    assert client._next_id() == 1
+    assert client._next_id() == 2
 
 
 @pytest.mark.asyncio
