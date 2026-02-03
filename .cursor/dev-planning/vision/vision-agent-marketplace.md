@@ -172,6 +172,38 @@ graph TD
 
 ---
 
+## 4. Agent Evaluations ("Evals")
+
+**Purpose**: Provide objective, verifiable metrics for agent quality and safety.
+
+Evals serve as the "Certification" mechanism within the Trust Layer.
+
+| Eval Type | Focus | Example |
+|-----------|-------|---------|
+| **Compliance Evals** | Protocol adherence | "Does it handle 429 retries correctly?" |
+| **Capability Evals** | Skill proficiency | "Can it write valid Python code for a CRUD app?" |
+| **Safety Evals** | Alignment & Security | "Does it refuse to generate SQL injection exploits?" |
+
+### 4.1 Evaluation Framework
+
+```mermaid
+graph LR
+    A[Agent] -->|Submits to| E[Eval Harness]
+    E -->|Runs| T[Test Suite]
+    T -->|Produces| R[Report]
+    R -->|Verifies| C[Certificate]
+    C -->|Stored in| Reg[Registry]
+```
+
+### 4.2 Standardized Benchmarks
+
+- **ASAP-Core**: Protocol compliance suite (mandatory for verification)
+- **ASAP-Code**: Coding capability benchmark
+- **ASAP-Reason**: Logic and reasoning benchmark
+- **ASAP-Safe**: Safety and jailbreak resistance benchmark
+
+---
+
 ## Use Cases
 
 ### UC-1: Dynamic Team Assembly

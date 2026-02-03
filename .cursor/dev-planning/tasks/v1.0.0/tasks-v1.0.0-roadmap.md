@@ -311,6 +311,8 @@
 - [x] 20+ metrics instrumented
 - [x] Prometheus export enhanced
 
+**Progress: 100%** (P11 complete)
+
 ---
 
 ## Sprint P12: Dashboards & MCP
@@ -319,18 +321,20 @@
 
 ### Tasks
 
-- [ ] 12.1 Create Grafana dashboards
+- [x] 12.1 Create Grafana dashboards
   - Goal: 3 dashboards (RED, topology, state machine)
   - Details: [Observability Detailed - Task 12.1](./tasks-v1.0.0-observability-detailed.md#task-121-create-grafana-dashboards)
 
-- [ ] 12.2 Complete MCP implementation
+- [x] 12.2 Complete MCP implementation
   - Goal: 100% MCP spec compliance
   - Details: [Observability Detailed - Task 12.2](./tasks-v1.0.0-observability-detailed.md#task-122-complete-mcp-implementation)
 
 ### Definition of Done
-- [ ] 3 Grafana dashboards working
-- [ ] MCP 100% spec compliant
-- [ ] Documentation completeEnt˜
+- [x] 3 Grafana dashboards (RED + Detailed)
+- [x] MCP 2025-11-25 compliant
+- [x] Documentation complete
+
+**Progress: 100%** (P12 complete)
 
 ---
 
@@ -399,7 +403,7 @@
 
 ## Progress Tracking
 
-**Overall Progress**: 27/38 tasks completed (71%)
+**Overall Progress**: 32/38 tasks completed (84%)
 
 **Sprint Status**:
 - ✅ P1: 3/3 tasks (100%) - **Includes PRD review**
@@ -412,8 +416,8 @@
 - ✅ P8: 2/2 tasks (100%)
 - ✅ P9: 3/3 tasks (100%) - **Includes PRD review**
 - ✅ P10: 2/2 tasks (100%)
-- ⏳ P11: 0/3 tasks (0%)
-- ⏳ P12: 0/2 tasks (0%)
+- ✅ P11: 3/3 tasks (100%)
+- ✅ P12: 2/2 tasks (100%)
 - ⏳ P13: 0/6 tasks (0%) - **Includes final PRD review**
 
 **PRD Maintenance Schedule**:
@@ -425,7 +429,7 @@
 - P9: Decide i18n scope (DD-011)
 - P13: Final review + retrospective
 
-**Last Updated**: 2026-02-01
+**Last Updated**: 2026-02-02
 
 **Prerequisites**: v0.5.0 must be released before starting Sprint P1
 

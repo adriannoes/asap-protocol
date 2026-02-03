@@ -90,6 +90,7 @@ src/asap/
 |---------|----------|------------------------|
 | Signed manifests | P1 | Verifiable agent identity |
 | Registry API | P1 | Centralized discovery |
+| Eval Framework | P1 | Objective quality verification |
 | mTLS support | P2 | Transport-level trust |
 | DNS-SD discovery | P3 | Local network discovery |
 
