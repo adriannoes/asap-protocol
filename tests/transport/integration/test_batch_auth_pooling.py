@@ -19,59 +19,19 @@ import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport
 
-from asap.models.entities import AuthScheme, Capability, Endpoint, Manifest, Skill
+from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
-from asap.models.payloads import TaskRequest, TaskResponse
+from asap.models.payloads import TaskResponse
 from asap.transport.client import ASAPClient, ASAPRemoteError
 from asap.transport.handlers import HandlerRegistry
 from asap.transport.server import create_app
 
+from tests.factories import create_auth_manifest, create_envelope
 from ..conftest import NoRateLimitTestBase
 
 if TYPE_CHECKING:
     pass
-
-
-def _create_auth_manifest(agent_id: str = "urn:asap:agent:auth-server") -> Manifest:
-    """Create a manifest with bearer authentication enabled."""
-    return Manifest(
-        id=agent_id,
-        name="Auth Test Server",
-        version="1.0.0",
-        description="Test server with authentication",
-        capabilities=Capability(
-            asap_version="0.1",
-            skills=[
-                Skill(id="echo", description="Echo skill"),
-                Skill(id="slow", description="Slow skill for pooling tests"),
-            ],
-            state_persistence=False,
-        ),
-        endpoints=Endpoint(asap="http://localhost:8000/asap"),
-        auth=AuthScheme(schemes=["bearer"]),
-    )
-
-
-def _create_envelope(
-    sender: str = "urn:asap:agent:client",
-    recipient: str = "urn:asap:agent:auth-server",
-    skill_id: str = "echo",
-    message: str = "test",
-    conversation_id: str = "conv-123",
-) -> Envelope:
-    """Create a test envelope with TaskRequest payload."""
-    return Envelope(
-        asap_version="0.1",
-        sender=sender,
-        recipient=recipient,
-        payload_type="task.request",
-        payload=TaskRequest(
-            conversation_id=conversation_id,
-            skill_id=skill_id,
-            input={"message": message},
-        ).model_dump(),
-    )
 
 
 def _create_app_with_auth(
@@ -114,7 +74,7 @@ class TestBatchWithAuthentication(NoRateLimitTestBase):
     @pytest.fixture
     def auth_manifest(self) -> Manifest:
         """Create manifest with authentication."""
-        return _create_auth_manifest()
+        return create_auth_manifest()
 
     @pytest.fixture
     def token_validator(self) -> Callable[[str], str | None]:
@@ -151,8 +111,7 @@ class TestBatchWithAuthentication(NoRateLimitTestBase):
             client._client.headers["Authorization"] = "Bearer valid-token"  # type: ignore[union-attr]
 
             envelopes = [
-                _create_envelope(message=f"batch-{i}", conversation_id=f"conv-{i}")
-                for i in range(5)
+                create_envelope(message=f"batch-{i}", conversation_id=f"conv-{i}") for i in range(5)
             ]
 
             results = await client.send_batch(envelopes)
@@ -179,8 +138,7 @@ class TestBatchWithAuthentication(NoRateLimitTestBase):
             client._client.headers["Authorization"] = "Bearer invalid-token"  # type: ignore[union-attr]
 
             envelopes = [
-                _create_envelope(message=f"batch-{i}", conversation_id=f"conv-{i}")
-                for i in range(3)
+                create_envelope(message=f"batch-{i}", conversation_id=f"conv-{i}") for i in range(3)
             ]
 
             results = await client.send_batch(envelopes, return_exceptions=True)
@@ -201,7 +159,7 @@ class TestBatchWithAuthentication(NoRateLimitTestBase):
             require_https=False,
             transport=transport,
         ) as client:
-            envelopes = [_create_envelope(message="no-auth")]
+            envelopes = [create_envelope(message="no-auth")]
 
             results = await client.send_batch(envelopes, return_exceptions=True)
 
@@ -266,7 +224,7 @@ class TestBatchWithPooling(NoRateLimitTestBase):
             pool_maxsize=5,
         ) as client:
             envelopes = [
-                _create_envelope(
+                create_envelope(
                     recipient="urn:asap:agent:slow-server",
                     message=f"pool-{i}",
                     conversation_id=f"conv-{i}",
@@ -296,7 +254,7 @@ class TestBatchWithPooling(NoRateLimitTestBase):
             transport=transport,
         ) as client:
             envelopes = [
-                _create_envelope(
+                create_envelope(
                     recipient="urn:asap:agent:slow-server",
                     message=f"concurrent-{i}",
                     conversation_id=f"conv-{i}",
@@ -368,17 +326,17 @@ class TestBatchPartialFailures(NoRateLimitTestBase):
             transport=transport,
         ) as client:
             envelopes = [
-                _create_envelope(
+                create_envelope(
                     recipient="urn:asap:agent:mixed-server",
                     message="success-1",
                     conversation_id="conv-1",
                 ),
-                _create_envelope(
+                create_envelope(
                     recipient="urn:asap:agent:mixed-server",
                     message="fail-2",
                     conversation_id="conv-2",
                 ),
-                _create_envelope(
+                create_envelope(
                     recipient="urn:asap:agent:mixed-server",
                     message="success-3",
                     conversation_id="conv-3",
@@ -407,12 +365,12 @@ class TestBatchPartialFailures(NoRateLimitTestBase):
             transport=transport,
         ) as client:
             envelopes = [
-                _create_envelope(
+                create_envelope(
                     recipient="urn:asap:agent:mixed-server",
                     message="fail-first",
                     conversation_id="conv-1",
                 ),
-                _create_envelope(
+                create_envelope(
                     recipient="urn:asap:agent:mixed-server",
                     message="success-second",
                     conversation_id="conv-2",
@@ -475,7 +433,7 @@ class TestBatchWithCircuitBreaker(NoRateLimitTestBase):
             circuit_breaker_threshold=3,
         ) as client:
             envelopes = [
-                _create_envelope(
+                create_envelope(
                     recipient="urn:asap:agent:error-server",
                     message=f"error-{i}",
                     conversation_id=f"conv-{i}",
@@ -516,7 +474,7 @@ class TestBatchAuthPoolingCombined(NoRateLimitTestBase):
     @pytest.mark.asyncio
     async def test_batch_auth_pooling_combined_success(self) -> None:
         """Test batch with auth and pooling all working together."""
-        manifest = _create_auth_manifest()
+        manifest = create_auth_manifest()
 
         def token_validator(token: str) -> str | None:
             if token == "valid-token":
@@ -536,7 +494,7 @@ class TestBatchAuthPoolingCombined(NoRateLimitTestBase):
             client._client.headers["Authorization"] = "Bearer valid-token"  # type: ignore[union-attr]
 
             envelopes = [
-                _create_envelope(
+                create_envelope(
                     message=f"combined-{i}",
                     conversation_id=f"conv-{i}",
                 )
@@ -553,11 +511,12 @@ class TestBatchAuthPoolingCombined(NoRateLimitTestBase):
     @pytest.mark.asyncio
     async def test_batch_auth_pooling_with_token_refresh_scenario(self) -> None:
         """Test batch behavior when token validation varies per request."""
-        manifest = _create_auth_manifest()
-        call_count = {"count": 0}
+        manifest = create_auth_manifest()
+        call_count = 0
 
         def counting_validator(token: str) -> str | None:
-            call_count["count"] += 1
+            nonlocal call_count
+            call_count += 1
             if token == "valid-token":
                 return "urn:asap:agent:client"
             return None
@@ -573,7 +532,7 @@ class TestBatchAuthPoolingCombined(NoRateLimitTestBase):
             client._client.headers["Authorization"] = "Bearer valid-token"  # type: ignore[union-attr]
 
             envelopes = [
-                _create_envelope(
+                create_envelope(
                     message=f"validate-{i}",
                     conversation_id=f"conv-{i}",
                 )
@@ -583,4 +542,4 @@ class TestBatchAuthPoolingCombined(NoRateLimitTestBase):
             results = await client.send_batch(envelopes)
 
             assert len(results) == 5
-            assert call_count["count"] == 5
+            assert call_count == 5

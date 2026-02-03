@@ -21,7 +21,7 @@ from httpx import ASGITransport
 
 from asap.mcp.protocol import JSONRPCRequest
 from asap.mcp.server import MCPServer
-from asap.models.entities import Capability, Endpoint, Manifest, Skill
+from asap.models.entities import Manifest
 from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest, TaskResponse
@@ -29,27 +29,10 @@ from asap.transport.client import ASAPClient
 from asap.transport.handlers import HandlerRegistry
 from asap.transport.server import create_app
 
+from tests.factories import create_test_manifest
+
 if TYPE_CHECKING:
     pass
-
-
-def _create_test_manifest(agent_id: str = "urn:asap:agent:test-server") -> Manifest:
-    """Create a test manifest for ASAP server."""
-    return Manifest(
-        id=agent_id,
-        name="Test ASAP Server",
-        version="1.0.0",
-        description="Test server for MCP integration",
-        capabilities=Capability(
-            asap_version="0.1",
-            skills=[
-                Skill(id="echo", description="Echo skill"),
-                Skill(id="uppercase", description="Convert to uppercase"),
-            ],
-            state_persistence=False,
-        ),
-        endpoints=Endpoint(asap="http://localhost:8000/asap"),
-    )
 
 
 def _create_asap_app(manifest: Manifest) -> FastAPI:
@@ -81,7 +64,7 @@ class TestMCPToolsInvokingASAP:
     @pytest.mark.asyncio
     async def test_mcp_tool_can_call_asap_client(self) -> None:
         """MCP tool should be able to invoke ASAP client and return result."""
-        manifest = _create_test_manifest()
+        manifest = create_test_manifest()
         asap_app = _create_asap_app(manifest)
         transport = ASGITransport(app=asap_app)
 
@@ -140,7 +123,7 @@ class TestMCPToolsInvokingASAP:
     @pytest.mark.asyncio
     async def test_mcp_tool_handles_asap_errors(self) -> None:
         """MCP tool should properly handle ASAP client errors."""
-        manifest = _create_test_manifest()
+        manifest = create_test_manifest()
         registry = HandlerRegistry()
 
         def failing_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
@@ -201,7 +184,7 @@ class TestMCPExposingASAPPrimitives:
     @pytest.fixture
     def asap_bridge_server(self) -> tuple[MCPServer, FastAPI, ASGITransport]:
         """Create MCP server with ASAP primitive tools."""
-        manifest = _create_test_manifest()
+        manifest = create_test_manifest()
         asap_app = _create_asap_app(manifest)
         transport = ASGITransport(app=asap_app)
 
@@ -382,7 +365,7 @@ class TestASAPErrorPropagationToMCP:
     @pytest.mark.asyncio
     async def test_asap_validation_error_propagates_to_mcp(self) -> None:
         """ASAP validation errors should be properly reported in MCP tool result."""
-        manifest = _create_test_manifest()
+        manifest = create_test_manifest()
         asap_app = _create_asap_app(manifest)
         transport = ASGITransport(app=asap_app)
 
@@ -428,7 +411,7 @@ class TestMCPDispatchWithASAPTools:
     @pytest.mark.asyncio
     async def test_full_jsonrpc_flow_with_asap_tool(self) -> None:
         """Test complete JSON-RPC request/response flow for ASAP tool."""
-        manifest = _create_test_manifest()
+        manifest = create_test_manifest()
         asap_app = _create_asap_app(manifest)
         transport = ASGITransport(app=asap_app)
 
@@ -491,7 +474,7 @@ class TestMCPDispatchWithASAPTools:
     @pytest.mark.asyncio
     async def test_concurrent_asap_tool_calls(self) -> None:
         """Test that multiple concurrent MCP tool calls to ASAP work correctly."""
-        manifest = _create_test_manifest()
+        manifest = create_test_manifest()
         asap_app = _create_asap_app(manifest)
         transport = ASGITransport(app=asap_app)
 
