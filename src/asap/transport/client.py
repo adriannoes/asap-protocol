@@ -453,7 +453,10 @@ class ASAPClient:
         else:
             self._circuit_breaker = None
 
-        # Initialize manifest cache (shared across client instances for efficiency)
+        # Initialize manifest cache (per-client instance, not shared across clients)
+        # Unlike CircuitBreakerRegistry which shares state globally, each client
+        # has its own cache for isolation. For multi-client scenarios needing
+        # shared caching, consider using a shared ManifestCache instance.
         self._manifest_cache = ManifestCache()
 
     @staticmethod
@@ -761,22 +764,20 @@ class ASAPClient:
                     )
                     if attempt < self.max_retries - 1:
                         delay = self._calculate_backoff(attempt)
+                        # Consolidated retry log: combines server_error + retry info
                         logger.warning(
-                            "asap.client.server_error",
+                            "asap.client.retry_server_error",
                             status_code=response.status_code,
                             attempt=attempt + 1,
                             max_retries=self.max_retries,
                             delay_seconds=round(delay, 2),
                             target_url=sanitize_url(self.base_url),
-                            message=f"Server error {response.status_code}, retrying in {delay:.2f}s (attempt {attempt + 1}/{self.max_retries})",
-                        )
-                        logger.info(
-                            "asap.client.retry",
-                            target_url=sanitize_url(self.base_url),
                             envelope_id=envelope.id,
-                            attempt=attempt + 1,
-                            max_retries=self.max_retries,
-                            delay_seconds=round(delay, 2),
+                            message=(
+                                f"Server error {response.status_code}, "
+                                f"retrying in {delay:.2f}s "
+                                f"(attempt {attempt + 1}/{self.max_retries})"
+                            ),
                         )
                         await asyncio.sleep(delay)
                         last_exception = ASAPConnectionError(error_msg, url=self.base_url)
