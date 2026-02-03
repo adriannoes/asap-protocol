@@ -3,11 +3,13 @@
 This module provides caching for agent manifests to reduce HTTP requests
 and improve performance when discovering agent capabilities.
 
-The cache uses a simple in-memory dictionary with TTL (Time To Live)
-expiration. Entries expire after the configured TTL (default: 5 minutes).
+The cache uses an OrderedDict with TTL (Time To Live) expiration and LRU
+eviction when max_size is reached. Entries expire after the configured
+TTL (default: 5 minutes).
 """
 
 import time
+from collections import OrderedDict
 from threading import Lock
 from typing import Optional
 
@@ -16,6 +18,9 @@ from asap.models.entities import Manifest
 
 # Default TTL in seconds (5 minutes)
 DEFAULT_TTL = 300.0
+
+# Default max cache size (number of entries)
+DEFAULT_MAX_SIZE = 1000
 
 
 class CacheEntry:
@@ -46,38 +51,49 @@ class CacheEntry:
 
 
 class ManifestCache:
-    """Thread-safe in-memory cache for agent manifests.
+    """Thread-safe in-memory LRU cache for agent manifests.
 
-    Provides TTL-based expiration and methods for cache management.
-    Thread-safe for concurrent access from multiple async tasks.
+    Provides TTL-based expiration, LRU eviction when max_size is reached,
+    and methods for cache management. Thread-safe for concurrent access
+    from multiple async tasks.
 
     Attributes:
-        _cache: Dictionary mapping URL to CacheEntry
+        _cache: OrderedDict mapping URL to CacheEntry (maintains LRU order)
         _lock: Lock for thread-safe access
         _default_ttl: Default TTL in seconds
+        _max_size: Maximum number of entries (0 for unlimited)
 
     Example:
-        >>> cache = ManifestCache(default_ttl=300.0)
+        >>> cache = ManifestCache(default_ttl=300.0, max_size=100)
         >>> cache.set("http://agent.example.com/manifest.json", manifest, ttl=300.0)
         >>> cached = cache.get("http://agent.example.com/manifest.json")
         >>> if cached:
         ...     print(cached.id)
     """
 
-    def __init__(self, default_ttl: float = DEFAULT_TTL) -> None:
+    def __init__(
+        self,
+        default_ttl: float = DEFAULT_TTL,
+        max_size: int = DEFAULT_MAX_SIZE,
+    ) -> None:
         """Initialize manifest cache.
 
         Args:
             default_ttl: Default TTL in seconds for cache entries (default: 300.0)
+            max_size: Maximum number of cache entries. When exceeded, the least
+                recently used entry is evicted. Set to 0 for unlimited size.
+                Default: 1000. Very large values may increase cleanup_expired() latency.
         """
-        self._cache: dict[str, CacheEntry] = {}
-        # TODO: Add max_size limit to prevent memory exhaustion (Review 4.6)
-        # Suggestion: Use LRU or simple max limit with random eviction
+        self._cache: OrderedDict[str, CacheEntry] = OrderedDict()
         self._lock = Lock()
         self._default_ttl = default_ttl
+        self._max_size = max_size
 
     def get(self, url: str) -> Optional[Manifest]:
         """Get manifest from cache if present and not expired.
+
+        Accessing an entry moves it to the end of the LRU queue,
+        marking it as most recently used.
 
         Args:
             url: Manifest URL
@@ -90,13 +106,16 @@ class ManifestCache:
             if entry is None:
                 return None
             if entry.is_expired():
-                # Remove expired entry
                 del self._cache[url]
                 return None
+            self._cache.move_to_end(url)
             return entry.manifest
 
     def set(self, url: str, manifest: Manifest, ttl: Optional[float] = None) -> None:
         """Store manifest in cache with TTL.
+
+        If max_size is set and the cache is full, the least recently used
+        entry is evicted before adding the new entry.
 
         Args:
             url: Manifest URL (cache key)
@@ -106,6 +125,11 @@ class ManifestCache:
         if ttl is None:
             ttl = self._default_ttl
         with self._lock:
+            if url in self._cache:
+                del self._cache[url]
+            elif self._max_size > 0:
+                while len(self._cache) >= self._max_size:
+                    self._cache.popitem(last=False)
             self._cache[url] = CacheEntry(manifest, ttl)
 
     def invalidate(self, url: str) -> None:
@@ -131,8 +155,20 @@ class ManifestCache:
         with self._lock:
             return len(self._cache)
 
+    @property
+    def max_size(self) -> int:
+        """Get the configured maximum cache size.
+
+        Returns:
+            Maximum number of entries (0 for unlimited)
+        """
+        return self._max_size
+
     def cleanup_expired(self) -> int:
         """Remove all expired entries from cache.
+
+        Holds the lock for O(N). For very large max_size, prefer lazy eviction
+        in get() or call less frequently.
 
         Returns:
             Number of expired entries removed

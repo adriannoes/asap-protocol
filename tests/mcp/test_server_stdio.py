@@ -63,23 +63,45 @@ async def test_run_stdio_blank_line_stops_producer() -> None:
 
 
 @pytest.mark.asyncio
-async def test_run_stdio_invalid_json_line_skipped() -> None:
-    """run_stdio with invalid JSON line puts None in queue and exits."""
+async def test_run_stdio_invalid_json_returns_parse_error_and_stays_alive() -> None:
+    """run_stdio with invalid JSON line returns -32700 Parse error and does not exit."""
     server = MCPServer(name="t", version="0.1.0")
     stdin = io.StringIO("not json\n")
     stdout = io.StringIO()
     await server.run_stdio(stdin=stdin, stdout=stdout)
-    assert stdout.getvalue() == ""
+    out = stdout.getvalue().strip()
+    assert out
+    data = json.loads(out)
+    assert data.get("error", {}).get("code") == -32700
+    assert data.get("error", {}).get("message") == "Parse error"
 
 
 @pytest.mark.asyncio
-async def test_run_stdio_json_array_line_skipped() -> None:
-    """run_stdio with JSON array (non-dict) line is skipped."""
+async def test_run_stdio_json_array_returns_parse_error() -> None:
+    """run_stdio with JSON array (non-dict) returns -32700 Parse error."""
     server = MCPServer(name="t", version="0.1.0")
     stdin = io.StringIO("[1, 2, 3]\n")
     stdout = io.StringIO()
     await server.run_stdio(stdin=stdin, stdout=stdout)
-    assert stdout.getvalue() == ""
+    out = stdout.getvalue().strip()
+    assert out
+    data = json.loads(out)
+    assert data.get("error", {}).get("code") == -32700
+
+
+@pytest.mark.asyncio
+async def test_run_stdio_after_parse_error_processes_next_request() -> None:
+    """After invalid JSON server responds with Parse error then still handles next request."""
+    server = MCPServer(name="t", version="0.1.0")
+    stdin = io.StringIO('not json\n{"jsonrpc":"2.0","id":1,"method":"ping"}\n\n')
+    stdout = io.StringIO()
+    await server.run_stdio(stdin=stdin, stdout=stdout)
+    lines = [ln.strip() for ln in stdout.getvalue().strip().split("\n") if ln.strip()]
+    assert len(lines) >= 2
+    first = json.loads(lines[0])
+    assert first.get("error", {}).get("code") == -32700
+    second = json.loads(lines[1])
+    assert "result" in second and second.get("result") == {}
 
 
 @pytest.mark.asyncio

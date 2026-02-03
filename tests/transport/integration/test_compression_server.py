@@ -6,6 +6,7 @@ Tests cover:
 - Error handling for invalid compressed data
 - Error handling for unsupported encodings
 - Decompression bomb prevention
+- Edge cases: threshold boundary, decompression failure recovery
 """
 
 import gzip
@@ -17,7 +18,13 @@ from fastapi.testclient import TestClient
 
 from asap.models.entities import Manifest
 from asap.models.envelope import Envelope
-from asap.transport.compression import is_brotli_available
+from asap.transport.compression import (
+    COMPRESSION_THRESHOLD,
+    CompressionAlgorithm,
+    compress_payload,
+    decompress_payload,
+    is_brotli_available,
+)
 from asap.transport.handlers import HandlerRegistry, create_echo_handler
 from asap.transport.server import create_app
 
@@ -363,3 +370,265 @@ class TestCompressionRoundTrip(NoRateLimitTestBase):
         json_response = response.json()
         assert "result" in json_response
         assert "envelope" in json_response["result"]
+
+
+class TestCompressionThresholdBoundary(NoRateLimitTestBase):
+    """Tests for payload size exactly at compression threshold boundary."""
+
+    def test_payload_exactly_at_threshold_is_compressed(self) -> None:
+        """Payload exactly at threshold IS compressed (threshold is exclusive)."""
+        data = b"x" * COMPRESSION_THRESHOLD
+
+        compressed, algorithm = compress_payload(data)
+
+        assert algorithm in (CompressionAlgorithm.GZIP, CompressionAlgorithm.BROTLI)
+        assert len(compressed) < len(data)
+
+    def test_payload_one_byte_below_threshold_not_compressed(self) -> None:
+        """Payload one byte below threshold should NOT be compressed."""
+        data = b"x" * (COMPRESSION_THRESHOLD - 1)
+
+        compressed, algorithm = compress_payload(data)
+
+        assert algorithm == CompressionAlgorithm.IDENTITY
+        assert compressed == data
+
+    def test_payload_one_byte_above_threshold_compressed(self) -> None:
+        """Payload one byte above threshold should be compressed."""
+        data = b"x" * (COMPRESSION_THRESHOLD + 1)
+
+        compressed, algorithm = compress_payload(data)
+
+        assert algorithm in (CompressionAlgorithm.GZIP, CompressionAlgorithm.BROTLI)
+        assert len(compressed) < len(data)
+
+    def test_server_handles_threshold_boundary_payload(
+        self,
+        test_app: TestClient,
+        no_auth_manifest: Manifest,
+    ) -> None:
+        """Server should handle payload exactly at threshold boundary."""
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient=no_auth_manifest.id,
+            payload_type="task.request",
+            payload={
+                "conversation_id": "conv_boundary",
+                "skill_id": "echo",
+                "input": {"msg": "x"},
+            },
+        )
+
+        request = {
+            "jsonrpc": "2.0",
+            "method": "asap.send",
+            "params": {"envelope": envelope.model_dump(mode="json")},
+            "id": "boundary-test",
+        }
+
+        body_json = json.dumps(request).encode("utf-8")
+
+        response1 = test_app.post("/asap", content=body_json)
+        assert response1.status_code == 200
+
+        compressed_body = gzip.compress(body_json)
+        response2 = test_app.post(
+            "/asap",
+            content=compressed_body,
+            headers={
+                "Content-Type": "application/json",
+                "Content-Encoding": "gzip",
+            },
+        )
+        assert response2.status_code == 200
+
+
+class TestDecompressionFailureRecovery(NoRateLimitTestBase):
+    """Tests for decompression failure recovery scenarios."""
+
+    def test_decompress_corrupted_gzip_raises(self) -> None:
+        """decompress_payload should raise on corrupted gzip data."""
+        valid_data = b'{"test": "data"}'
+        compressed = gzip.compress(valid_data)
+        corrupted = bytes([b ^ 0xFF for b in compressed[10:20]]) + compressed[20:]
+        corrupted = compressed[:10] + corrupted
+
+        with pytest.raises(Exception):  # noqa: B017
+            decompress_payload(corrupted, "gzip")
+
+    def test_decompress_wrong_encoding_raises(self) -> None:
+        """decompress_payload with wrong encoding should raise."""
+        data = b'{"test": "data"}'
+        compressed = gzip.compress(data)
+
+        # Should fail if trying to decompress as brotli
+        if is_brotli_available():
+            with pytest.raises(Exception):  # noqa: B017
+                decompress_payload(compressed, "br")
+
+    def test_decompress_empty_data_handling(self) -> None:
+        """decompress_payload should handle empty or minimal data."""
+        # Empty gzip stream
+        empty_gzip = gzip.compress(b"")
+        result = decompress_payload(empty_gzip, "gzip")
+        assert result == b""
+
+    def test_server_graceful_degradation_on_corrupt_data(
+        self,
+        test_app: TestClient,
+    ) -> None:
+        """Server should return proper error on corrupt compressed data."""
+        fake_gzip = bytes([0x1F, 0x8B, 0x08, 0x00]) + b"garbage data here"
+
+        response = test_app.post(
+            "/asap",
+            content=fake_gzip,
+            headers={
+                "Content-Type": "application/json",
+                "Content-Encoding": "gzip",
+            },
+        )
+
+        assert response.status_code in (200, 400)
+        json_response = response.json()
+        assert "detail" in json_response or "error" in json_response
+
+
+class TestCompressionIneffective(NoRateLimitTestBase):
+    """Tests for when compression is ineffective (incompressible data)."""
+
+    def test_random_data_compression_may_increase_size(self) -> None:
+        """Random/already-compressed data may increase in size after compression."""
+        import os
+
+        random_data = os.urandom(2048)
+
+        compressed, algorithm = compress_payload(random_data)
+
+        if algorithm == CompressionAlgorithm.IDENTITY:
+            assert compressed == random_data
+        else:
+            assert len(compressed) <= len(random_data) * 1.1
+
+    def test_already_compressed_data_not_recompressed_effectively(self) -> None:
+        """Already compressed data should not benefit from recompression."""
+        original = b'{"data": "' + b"test " * 500 + b'"}'
+        first_compressed, _ = compress_payload(
+            original, preferred_algorithm=CompressionAlgorithm.GZIP
+        )
+
+        second_compressed, algorithm = compress_payload(first_compressed)
+
+        if algorithm != CompressionAlgorithm.IDENTITY:
+            compression_ratio = len(second_compressed) / len(first_compressed)
+            assert compression_ratio > 0.9
+
+
+class TestMixedCompressionScenarios(NoRateLimitTestBase):
+    """Tests for mixed compression scenarios in batch-like operations."""
+
+    def test_multiple_payloads_different_sizes(
+        self,
+        test_app: TestClient,
+        no_auth_manifest: Manifest,
+    ) -> None:
+        """Multiple payloads with different sizes should all be handled."""
+        small_envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient=no_auth_manifest.id,
+            payload_type="task.request",
+            payload={
+                "conversation_id": "small",
+                "skill_id": "echo",
+                "input": {"x": 1},
+            },
+        )
+
+        large_envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient=no_auth_manifest.id,
+            payload_type="task.request",
+            payload={
+                "conversation_id": "large",
+                "skill_id": "echo",
+                "input": {"data": "x" * 2000},
+            },
+        )
+
+        small_request = {
+            "jsonrpc": "2.0",
+            "method": "asap.send",
+            "params": {"envelope": small_envelope.model_dump(mode="json")},
+            "id": "small-1",
+        }
+        response1 = test_app.post("/asap", json=small_request)
+        assert response1.status_code == 200
+
+        large_request = {
+            "jsonrpc": "2.0",
+            "method": "asap.send",
+            "params": {"envelope": large_envelope.model_dump(mode="json")},
+            "id": "large-1",
+        }
+        body_json = json.dumps(large_request).encode("utf-8")
+        compressed_body = gzip.compress(body_json)
+        response2 = test_app.post(
+            "/asap",
+            content=compressed_body,
+            headers={
+                "Content-Type": "application/json",
+                "Content-Encoding": "gzip",
+            },
+        )
+        assert response2.status_code == 200
+
+    def test_compression_with_various_json_structures(
+        self,
+        test_app: TestClient,
+        no_auth_manifest: Manifest,
+    ) -> None:
+        """Different JSON structures should compress and decompress correctly."""
+        test_inputs = [
+            {"simple": "string"},
+            {"nested": {"deep": {"structure": [1, 2, 3]}}},
+            {"array": [{"id": i} for i in range(100)]},
+            {"unicode": "\u4e2d\u6587\u6587\u672c" * 100},  # Chinese text
+            {"mixed": ["a", 1, True, None, {"key": "value"}]},
+        ]
+
+        for i, input_data in enumerate(test_inputs):
+            envelope = Envelope(
+                asap_version="0.1",
+                sender="urn:asap:agent:client",
+                recipient=no_auth_manifest.id,
+                payload_type="task.request",
+                payload={
+                    "conversation_id": f"structure-{i}",
+                    "skill_id": "echo",
+                    "input": input_data,
+                },
+            )
+
+            request = {
+                "jsonrpc": "2.0",
+                "method": "asap.send",
+                "params": {"envelope": envelope.model_dump(mode="json")},
+                "id": f"structure-test-{i}",
+            }
+
+            body_json = json.dumps(request).encode("utf-8")
+            compressed_body = gzip.compress(body_json)
+
+            response = test_app.post(
+                "/asap",
+                content=compressed_body,
+                headers={
+                    "Content-Type": "application/json",
+                    "Content-Encoding": "gzip",
+                },
+            )
+
+            assert response.status_code == 200, f"Failed for input {i}: {input_data}"

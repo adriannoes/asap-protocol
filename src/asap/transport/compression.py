@@ -56,7 +56,7 @@ def is_brotli_available() -> bool:
         True if brotli package is installed, False otherwise
     """
     try:
-        import brotli  # type: ignore[import-untyped]  # noqa: F401
+        import brotli  # noqa: F401
 
         return True
     except ImportError:

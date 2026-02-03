@@ -48,7 +48,7 @@ from asap.models.entities import Manifest
 from asap.models.envelope import Envelope
 from asap.models.ids import generate_id
 from asap.observability import get_logger, get_metrics
-from asap.transport.cache import ManifestCache
+from asap.transport.cache import DEFAULT_MAX_SIZE, ManifestCache
 from asap.transport.circuit_breaker import CircuitBreaker, CircuitState, get_registry
 from asap.transport.compression import (
     COMPRESSION_THRESHOLD,
@@ -288,6 +288,7 @@ class ASAPClient:
         circuit_breaker_enabled: bool | None = None,
         circuit_breaker_threshold: int | None = None,
         circuit_breaker_timeout: float | None = None,
+        manifest_cache_size: int | None = None,
     ) -> None:
         """Initialize ASAP client.
 
@@ -335,6 +336,9 @@ class ASAPClient:
                 Ignored if retry_config is provided.
             circuit_breaker_timeout: Seconds before transitioning OPEN -> HALF_OPEN (default: 60.0).
                 Ignored if retry_config is provided.
+            manifest_cache_size: Maximum number of manifests to cache (default: 1000).
+                Increase for high-cardinality environments (e.g. thousands of agents).
+                Set to 0 for unlimited. See ManifestCache for cleanup latency notes.
 
         Raises:
             ValueError: If URL format is invalid, scheme is not HTTP/HTTPS, or HTTPS is
@@ -453,8 +457,9 @@ class ASAPClient:
         else:
             self._circuit_breaker = None
 
-        # Initialize manifest cache (shared across client instances for efficiency)
-        self._manifest_cache = ManifestCache()
+        # Per-client manifest cache (not shared like circuit breaker).
+        cache_max = manifest_cache_size if manifest_cache_size is not None else DEFAULT_MAX_SIZE
+        self._manifest_cache = ManifestCache(max_size=cache_max)
 
     @staticmethod
     def _is_localhost(parsed_url: ParseResult) -> bool:
@@ -762,21 +767,18 @@ class ASAPClient:
                     if attempt < self.max_retries - 1:
                         delay = self._calculate_backoff(attempt)
                         logger.warning(
-                            "asap.client.server_error",
+                            "asap.client.retry_server_error",
                             status_code=response.status_code,
                             attempt=attempt + 1,
                             max_retries=self.max_retries,
                             delay_seconds=round(delay, 2),
                             target_url=sanitize_url(self.base_url),
-                            message=f"Server error {response.status_code}, retrying in {delay:.2f}s (attempt {attempt + 1}/{self.max_retries})",
-                        )
-                        logger.info(
-                            "asap.client.retry",
-                            target_url=sanitize_url(self.base_url),
                             envelope_id=envelope.id,
-                            attempt=attempt + 1,
-                            max_retries=self.max_retries,
-                            delay_seconds=round(delay, 2),
+                            message=(
+                                f"Server error {response.status_code}, "
+                                f"retrying in {delay:.2f}s "
+                                f"(attempt {attempt + 1}/{self.max_retries})"
+                            ),
                         )
                         await asyncio.sleep(delay)
                         last_exception = ASAPConnectionError(error_msg, url=self.base_url)
