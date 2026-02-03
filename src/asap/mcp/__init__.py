@@ -7,7 +7,7 @@ Example:
     >>> from asap.mcp import MCPServer
     >>> server = MCPServer(name="my-server", version="1.0.0")
     >>> server.register_tool("echo", lambda message: message, {"type": "object", "properties": {"message": {"type": "string"}}})
-    >>> # asyncio.run(server.run_stdio())  # Run in subprocess
+    >>> # asyncio.run(server.run_stdio())
 """
 
 from asap.mcp.client import MCPClient

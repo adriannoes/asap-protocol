@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 from asap.mcp.protocol import (
     MCP_PROTOCOL_VERSION,
@@ -39,6 +39,7 @@ class MCPClient:
         name: str = "asap-mcp-client",
         version: str = "1.0.0",
         receive_timeout: float | None = 60.0,
+        request_id_type: Literal["int", "str"] = "int",
     ) -> None:
         """Initialize the client.
 
@@ -47,6 +48,7 @@ class MCPClient:
             name: Client name for initialize.
             version: Client version for initialize.
             receive_timeout: Seconds to wait for a response (None = no timeout).
+            request_id_type: Request id type for JSON-RPC id field ("int" or "str"); use "str" for broader interoperability.
         """
         self._server_command = server_command
         self._client_info = Implementation(name=name, version=version)
@@ -54,11 +56,12 @@ class MCPClient:
         self._process: asyncio.subprocess.Process | None = None
         self._initialized = False
         self._request_id = 0
+        self._use_str_ids = request_id_type == "str"
         self._init_result: InitializeResult | None = None
 
-    def _next_id(self) -> int:
+    def _next_id(self) -> str | int:
         self._request_id += 1
-        return self._request_id
+        return str(self._request_id) if self._use_str_ids else self._request_id
 
     async def _send(self, payload: dict[str, Any]) -> None:
         """Send one JSON-RPC message (request or notification) to server stdin."""
@@ -86,7 +89,10 @@ class MCPClient:
         if not line:
             return None
         try:
-            return cast("dict[str, Any]", json.loads(line))
+            data = json.loads(line)
+            if not isinstance(data, dict):
+                return None
+            return cast("dict[str, Any]", data)
         except json.JSONDecodeError as e:
             logger.warning("mcp.client.parse_error", error=str(e))
             return None

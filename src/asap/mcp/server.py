@@ -36,7 +36,6 @@ from asap.observability import get_logger
 
 logger = get_logger(__name__)
 
-# Default input schema for tools with no parameters (per spec)
 EMPTY_INPUT_SCHEMA: dict[str, Any] = {"type": "object", "additionalProperties": False}
 
 
@@ -89,7 +88,8 @@ class MCPServer:
             name: Unique tool name (e.g. "echo", "get_weather").
             func: Callable that receives keyword arguments from the client.
                   May be sync or async; return value is converted to text for
-                  the result content.
+                  the result content. The framework passes raw arguments as
+                  keyword dict; each tool must validate its own inputs.
             schema: JSON Schema for the tool's parameters (inputSchema).
                     Use EMPTY_INPUT_SCHEMA for no parameters.
             description: Human-readable description (required by spec).
@@ -139,7 +139,8 @@ class MCPServer:
         """Handle tools/call; execute tool and return CallToolResult as dict.
 
         Raises:
-            ValueError: With code INVALID_PARAMS for malformed params (protocol error).
+            ValueError: With code INVALID_PARAMS for malformed params or tool
+                argument mismatch (e.g. missing or invalid keyword arguments).
         """
         try:
             parsed = CallToolRequestParams(**params)
@@ -161,6 +162,8 @@ class MCPServer:
             else:
                 loop = asyncio.get_running_loop()
                 out = await loop.run_in_executor(None, lambda: func(**parsed.arguments))
+        except TypeError as e:
+            raise ValueError(f"Tool argument mismatch: {e}") from e
         except Exception as e:
             logger.exception("mcp.tool.error", tool=parsed.name, error=str(e))
             return CallToolResult(
@@ -231,6 +234,10 @@ class MCPServer:
     ) -> None:
         """Run the server over stdio (stdin/stdout). Blocks until stdin closes.
 
+        Requests are processed sequentially: one request is handled at a time.
+        Long-running tool calls will block other requests (e.g. ping, cancel)
+        until they complete.
+
         Args:
             stdin: Optional input stream (default: sys.stdin).
             stdout: Optional output stream (default: sys.stdout).
@@ -251,7 +258,10 @@ class MCPServer:
             if not line:
                 return None
             try:
-                return cast("dict[str, Any]", json.loads(line))
+                data = json.loads(line)
+                if not isinstance(data, dict):
+                    return None
+                return cast("dict[str, Any]", data)
             except json.JSONDecodeError:
                 return None
 
