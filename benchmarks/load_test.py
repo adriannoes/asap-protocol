@@ -126,11 +126,8 @@ class ASAPLoadTestUser(HttpUser):
         recipient: Recipient agent URN
     """
 
-    # Wait time between requests (0.1-0.5s gives ~2-10 RPS per user)
-    # With 100 users and 0.1-0.5s wait: ~200-1000 RPS
-    wait_time = between(0.01, 0.05)  # 20-100 RPS per user
+    wait_time = between(0.01, 0.05)
 
-    # Agent identifiers
     sender = "urn:asap:agent:loadtest-client"
     recipient = "urn:asap:agent:default-server"
 
@@ -161,7 +158,6 @@ class ASAPLoadTestUser(HttpUser):
             if response.status_code == 200:
                 try:
                     data = response.json()
-                    # Check for JSON-RPC success response
                     if "result" in data:
                         response.success()
                     elif "error" in data:
@@ -172,7 +168,6 @@ class ASAPLoadTestUser(HttpUser):
                 except Exception as e:
                     response.failure(f"Failed to parse response: {e}")
             elif response.status_code == 429:
-                # Rate limited - mark as failure but log separately
                 response.failure("Rate limited (429)")
             else:
                 response.failure(f"HTTP {response.status_code}")
@@ -232,8 +227,7 @@ class ASAPSustainedLoadUser(HttpUser):
             --class-picker ASAPSustainedLoadUser
     """
 
-    # Minimal wait for maximum throughput
-    wait_time = between(0.001, 0.01)  # 100-1000 RPS per user
+    wait_time = between(0.001, 0.01)
 
     sender = "urn:asap:agent:sustained-client"
     recipient = "urn:asap:agent:default-server"

@@ -93,16 +93,13 @@ def run_demo() -> WorkflowState:
     """Run a demo workflow: fetch -> transform -> summarize."""
 
     def fetch(data: dict[str, Any]) -> dict[str, Any]:
-        # Simulate fetching raw data
         return {"raw": ["item1", "item2", "item3"], "count": 3}
 
     def transform(data: dict[str, Any]) -> dict[str, Any]:
-        # Simulate transforming data
         raw = data.get("raw", [])
         return {"transformed": [x.upper() for x in raw], "count": len(raw)}
 
     def summarize(data: dict[str, Any]) -> dict[str, Any]:
-        # Simulate summarizing
         transformed = data.get("transformed", [])
         return {"summary": f"Processed {len(transformed)} items", "items": transformed}
 

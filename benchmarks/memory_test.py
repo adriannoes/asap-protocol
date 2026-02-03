@@ -285,17 +285,14 @@ async def run_memory_test(
         print("-" * 46)
 
         while time.time() < end_time:
-            # Send request
             try:
                 envelope = create_test_envelope()
                 await client.send(envelope)
                 requests_sent += 1
             except Exception as e:
-                # Log but continue
                 if requests_sent % 1000 == 0:
                     print(f"Error at request {requests_sent}: {e}")
 
-            # Sample memory periodically
             now = time.time()
             if now - last_sample_time >= sample_interval:
                 gc_count = gc.get_count()
@@ -318,10 +315,8 @@ async def run_memory_test(
 
                 last_sample_time = now
 
-            # Rate limiting delay
             await asyncio.sleep(delay)
 
-        # Final sample
         gc.collect()
         profile.samples.append(
             MemorySample(

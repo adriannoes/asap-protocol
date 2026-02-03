@@ -109,12 +109,9 @@ def sanitize_url(url: str) -> str:
     try:
         parsed = urlparse(url)
         if (parsed.username or parsed.password) and parsed.password:
-            # Mask password if present
-            # Reconstruct netloc with masked password
             netloc = f"{parsed.username}:***@{parsed.hostname}"
             if parsed.port:
                 netloc = f"{netloc}:{parsed.port}"
-            # Reconstruct URL with sanitized netloc
             return urlunparse(
                 (
                     parsed.scheme,
@@ -127,8 +124,6 @@ def sanitize_url(url: str) -> str:
             )
         return url
     except Exception:
-        # If URL parsing fails, return a safe fallback
-        # Remove any obvious credential patterns
         return re.sub(r"://[^:]+:[^@]+@", r"://***:***@", url)
 
 

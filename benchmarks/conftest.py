@@ -77,7 +77,6 @@ def benchmark_app(sample_manifest: Manifest, handler_registry: HandlerRegistry) 
     """
     from asap.transport.middleware import limiter
 
-    # helper to disable limiter
     original_enabled = limiter.enabled
     limiter.enabled = False
 

@@ -266,7 +266,6 @@ def get_logger(name: str) -> structlog.stdlib.BoundLogger:
         >>> logger = logger.bind(trace_id="trace_123")
         >>> logger.info("request.processed")  # trace_id automatically included
     """
-    # Ensure logging is configured
     if not _logging_configured:
         configure_logging()
 

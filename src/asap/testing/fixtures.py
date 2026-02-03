@@ -22,7 +22,6 @@ from asap.state.snapshot import InMemorySnapshotStore
 from asap.testing.mocks import MockAgent
 from asap.transport.client import ASAPClient
 
-# Default base URL for mock_client and test_client when no server URL is set.
 DEFAULT_TEST_BASE_URL = "http://localhost:9999"
 
 

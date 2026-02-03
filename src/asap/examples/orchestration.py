@@ -190,10 +190,7 @@ async def run_orchestration(
 
     bind_context(trace_id=trace_id, correlation_id=conversation_id)
     try:
-        # One ASAPClient per worker for the full run: reuses HTTP session/connection pool
-        # instead of creating a new client per request (efficiency).
         async with ASAPClient(worker_a_url) as client_a, ASAPClient(worker_b_url) as client_b:
-            # Step 1: send to sub-agent A (reuse client_a)
             state.step = "sent_to_a"
             envelope_a = build_task_envelope(
                 recipient_id=SUB_AGENT_A_ID,
@@ -217,7 +214,6 @@ async def run_orchestration(
                 clear_context()
                 return state
 
-            # Step 2: send to sub-agent B (reuse client_b; B runs after A)
             state.step = "sent_to_b"
             envelope_b = build_task_envelope(
                 recipient_id=SUB_AGENT_B_ID,

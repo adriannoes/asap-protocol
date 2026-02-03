@@ -36,7 +36,6 @@ def create_secure_handler() -> Handler:
     """
 
     def secure_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
-        # 1. Validate payload with Pydantic model
         try:
             task_request = TaskRequest(**envelope.payload)
         except ValidationError as e:
@@ -45,14 +44,12 @@ def create_secure_handler() -> Handler:
                 details={"validation_errors": e.errors()},
             ) from e
 
-        # 2. Sanitize before logging (never log raw payload in production)
         logger.debug(
             "secure_handler.request",
             payload_type=envelope.payload_type,
             payload=sanitize_for_logging(envelope.payload),
         )
 
-        # 3. Validate file parts so URIs are checked (path traversal, file:// rejected)
         validated_uris: list[str] = []
         input_data = task_request.input or {}
         parts = input_data.get("parts") or []
@@ -67,7 +64,6 @@ def create_secure_handler() -> Handler:
                         details={"validation_errors": e.errors()},
                     ) from e
 
-        # 4. Build response (echo input and list of validated file URIs)
         result = {"echoed": task_request.input, "validated_file_uris": validated_uris}
         response_payload = TaskResponse(
             task_id=f"task_{generate_id()}",

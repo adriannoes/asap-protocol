@@ -120,7 +120,6 @@ def run_steps(
     last_snapshot: StateSnapshot | None = None
 
     for step in range(1, num_steps + 1):
-        # Simulate work (e.g. API call, computation)
         progress_pct = (step * 100) // num_steps
         partial_result["items"].append(f"result_step_{step}")
         partial_result["last_step"] = step
@@ -237,10 +236,8 @@ def run_demo(
     store: InMemorySnapshotStore = InMemorySnapshotStore()
     task_id = generate_id()
 
-    # Phase 1: run until "crash"
     run_steps(store, task_id, num_steps, crash_after_step=crash_after_step)
 
-    # Phase 2: resume from last checkpoint and complete
     final = resume_from_store(store, task_id, num_steps)
     if final is None:
         raise SystemExit(1)

@@ -93,12 +93,10 @@ def main() -> None:
     signal.signal(signal.SIGTERM, handle_signal)
 
     try:
-        # Start echo agent server
         echo_process = start_process(echo_command)
         wait_for_ready(ECHO_MANIFEST_URL, READY_TIMEOUT_SECONDS)
         logger.info("asap.demo.echo_ready", url=ECHO_MANIFEST_URL)
 
-        # Demonstrate communication using coordinator dispatch logic
         logger.info("asap.demo.starting_communication")
         try:
             response = asyncio.run(

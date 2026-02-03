@@ -145,11 +145,7 @@ class MockAgent:
         self._failure = None
 
     def reset(self) -> None:
-        """Reset internal state (registry, metrics, requests). Use for test isolation.
-
-        Equivalent to clear(); provided so tests can explicitly reset state
-        between scenarios without relying on clear() naming.
-        """
+        """Reset internal state. Equivalent to clear()."""
         self.clear()
 
 

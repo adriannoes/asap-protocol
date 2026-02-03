@@ -251,8 +251,7 @@ class StressTestUser(HttpUser):
     breaking point. Minimal wait time between requests.
     """
 
-    # Minimal wait for maximum stress
-    wait_time = between(0.001, 0.005)  # 200-1000 RPS per user
+    wait_time = between(0.001, 0.005)
 
     sender = "urn:asap:agent:stress-client"
     recipient = "urn:asap:agent:default-server"
@@ -303,7 +302,7 @@ class BurstTestUser(HttpUser):
     Useful for testing auto-scaling and recovery behavior.
     """
 
-    wait_time = between(0.0, 0.001)  # Maximum burst rate
+    wait_time = between(0.0, 0.001)
 
     sender = "urn:asap:agent:burst-client"
     recipient = "urn:asap:agent:default-server"
@@ -312,8 +311,8 @@ class BurstTestUser(HttpUser):
         """Initialize burst state."""
         self.request_count = 0
         self.burst_start = time.time()
-        self.burst_duration = 5.0  # 5 second bursts
-        self.rest_duration = 2.0  # 2 second rest
+        self.burst_duration = 5.0
+        self.rest_duration = 2.0
         self.in_burst = True
 
     @task
@@ -322,7 +321,6 @@ class BurstTestUser(HttpUser):
         now = time.time()
         elapsed = now - self.burst_start
 
-        # Toggle burst/rest state
         if self.in_burst and elapsed > self.burst_duration:
             self.in_burst = False
             self.burst_start = now

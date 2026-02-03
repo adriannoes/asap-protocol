@@ -94,7 +94,6 @@ def transition(task: Task, new_status: TaskStatus) -> Task:
             "asap_state_transitions_total",
             {"from_status": task.status.value, "to_status": new_status.value},
         )
-        # Create new task instance with updated status and timestamp (immutable approach)
         return task.model_copy(
             update={"status": new_status, "updated_at": datetime.now(timezone.utc)}
         )

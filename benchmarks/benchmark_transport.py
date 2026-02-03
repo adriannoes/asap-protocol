@@ -320,8 +320,6 @@ class TestManifestCaching:
         base_url = "http://testserver"
         manifest_url = f"{base_url}/.well-known/asap/manifest.json"
         total_requests = 100
-
-        # Track cache state before each request
         cache_hits = 0
         cache_misses = 0
 
@@ -331,28 +329,20 @@ class TestManifestCaching:
             require_https=False,
         ) as client:
             for i in range(total_requests):
-                # Check if manifest is in cache before request
                 cached_before = client._manifest_cache.get(manifest_url)
                 manifest = await client.get_manifest(manifest_url)
-                # Check if manifest is in cache after request
                 cached_after = client._manifest_cache.get(manifest_url)
 
-                # If cached before request, it was a cache hit
                 if cached_before is not None:
                     cache_hits += 1
                 else:
                     cache_misses += 1
 
-                # Verify manifest is correct
                 assert manifest.id == sample_manifest.id
-                # Verify manifest is cached after first request
                 if i == 0:
                     assert cached_after is not None, "First request should cache manifest"
 
-        # Calculate hit rate
         hit_rate = cache_hits / total_requests if total_requests > 0 else 0.0
-        # Target: >90% hit rate (first request is miss, rest should be hits)
-        # With 100 requests: 1 miss + 99 hits = 99% hit rate
         assert hit_rate >= 0.90, (
             f"Cache hit rate {hit_rate:.2%} ({cache_hits}/{total_requests}) below target 90%"
         )
@@ -381,7 +371,6 @@ class TestBatchOperations:
 
         batch_size = BATCH_SIZE_BENCHMARK
 
-        # Create mock transport that returns valid responses
         def mock_handler(request: httpx.Request) -> httpx.Response:
             import json
 
@@ -406,7 +395,6 @@ class TestBatchOperations:
 
         transport = httpx.MockTransport(mock_handler)
 
-        # Create batch of envelopes
         envelopes = [
             Envelope(
                 asap_version="0.1",
@@ -427,7 +415,6 @@ class TestBatchOperations:
             transport=transport,
             require_https=False,
         ) as client:
-            # Measure sequential sends
             start_sequential = time.perf_counter()
             sequential_results = []
             for envelope in envelopes:
@@ -436,13 +423,11 @@ class TestBatchOperations:
             end_sequential = time.perf_counter()
             sequential_time_ms = (end_sequential - start_sequential) * 1000
 
-            # Measure batch send
             start_batch = time.perf_counter()
             batch_results = await client.send_batch(envelopes)
             end_batch = time.perf_counter()
             batch_time_ms = (end_batch - start_batch) * 1000
 
-        # Verify all requests succeeded
         assert len(sequential_results) == batch_size
         assert len(batch_results) == batch_size
         for result in sequential_results:
@@ -450,10 +435,8 @@ class TestBatchOperations:
         for result in batch_results:
             assert isinstance(result, Envelope)
 
-        # Calculate speedup (may be ~1x with MockTransport, but ~10x with real HTTP/2)
         speedup = sequential_time_ms / batch_time_ms if batch_time_ms > 0 else 1.0
 
-        # Log results for visibility
         print("\n=== Batch Operations Benchmark ===")
         print(f"Batch size: {batch_size}")
         print(f"Sequential time: {sequential_time_ms:.2f}ms")
@@ -461,7 +444,6 @@ class TestBatchOperations:
         print(f"Speedup: {speedup:.2f}x")
         print("Note: Real HTTP/2 provides ~10x speedup with network latency")
 
-        # Both should complete successfully
         assert batch_time_ms > 0, "Batch should complete"
         assert sequential_time_ms > 0, "Sequential should complete"
 
@@ -476,7 +458,6 @@ class TestBatchOperations:
         """
         import json
 
-        # Create mock transport that returns valid responses
         def mock_handler(request: httpx.Request) -> httpx.Response:
             body = json.loads(request.content)
             envelope_data = body["params"]["envelope"]
@@ -499,7 +480,6 @@ class TestBatchOperations:
 
         transport = httpx.MockTransport(mock_handler)
 
-        # Create batch of envelopes
         envelopes = [
             Envelope(
                 asap_version="0.1",
@@ -520,10 +500,8 @@ class TestBatchOperations:
             transport=transport,
             require_https=False,
         ) as client:
-            # Send batch with return_exceptions=True
             results = await client.send_batch(envelopes, return_exceptions=True)
 
-        # All should succeed in this test (no failures injected)
         assert len(results) == 10
         success_count = sum(1 for r in results if isinstance(r, Envelope))
         assert success_count == 10, f"Expected 10 successes, got {success_count}"
