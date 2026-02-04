@@ -323,6 +323,45 @@ class TestCircuitBreakerIntegration:
             assert client._circuit_breaker.get_state() == CircuitState.CLOSED
             assert client._circuit_breaker.get_consecutive_failures() == 0
 
+    async def test_circuit_breaker_reopens_after_failure_in_half_open(
+        self, sample_request_envelope: Envelope
+    ) -> None:
+        """Test circuit breaker reopens after failure when in HALF_OPEN state."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=503, content=b"Service Unavailable")
+
+        async with ASAPClient(
+            "http://localhost:8000",
+            transport=httpx.MockTransport(mock_transport),
+            circuit_breaker_enabled=True,
+            circuit_breaker_threshold=5,
+            circuit_breaker_timeout=0.1,  # Short timeout for testing
+            max_retries=1,  # Single attempt per request
+        ) as client:
+            # Make 5 requests that fail to open circuit
+            for _ in range(5):
+                with pytest.raises(ASAPConnectionError):
+                    await client.send(sample_request_envelope)
+
+            # Circuit should be open
+            assert client._circuit_breaker is not None
+            assert client._circuit_breaker.get_state() == CircuitState.OPEN
+
+            # Wait for timeout to transition to HALF_OPEN
+            await asyncio.sleep(0.2)
+
+            # Verify circuit is in HALF_OPEN (can_attempt should return True)
+            assert client._circuit_breaker.can_attempt() is True
+
+            # Next request fails -> circuit should reopen
+            with pytest.raises(ASAPConnectionError):
+                await client.send(sample_request_envelope)
+
+            # Circuit should be OPEN again after failure in HALF_OPEN
+            assert client._circuit_breaker.get_state() == CircuitState.OPEN
+            assert client._circuit_breaker.get_consecutive_failures() >= 1
+
 
 class TestCircuitBreakerThreadSafety:
     """Tests for circuit breaker thread-safety."""
