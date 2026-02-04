@@ -350,7 +350,7 @@
   - Details: [Release Detailed - Task 13.0](./tasks-v1.0.0-release-detailed.md#task-130-pre-release-technical-audit-)
 
 - [ ] 13.1 Run comprehensive testing
-  - Goal: 1000+ tests pass + CI pipeline, benchmarks meet targets
+  - Goal: 1300+ tests pass + CI pipeline, benchmarks meet targets
   - Details: [Release Detailed - Task 13.1](./tasks-v1.0.0-release-detailed.md#task-131-comprehensive-testing)
 
 - [ ] 13.2 Review all documentation
