@@ -84,8 +84,8 @@ def build_manifest_oauth2_concept(asap_endpoint: str = DEFAULT_ASAP_ENDPOINT) ->
         auth=AuthScheme(
             schemes=["bearer"],
             oauth2={
-                "authorization_url": "https://auth.example.com/authorize",
-                "token_url": "https://auth.example.com/token",
+                "authorization_url": "https://auth.example.com/authorize",  # nosec B105
+                "token_url": "https://auth.example.com/token",  # nosec B105
                 "scopes": ["asap:execute", "asap:read"],
             },
         ),
@@ -154,15 +154,15 @@ def run_demo() -> None:
     agent_id = bearer_validator("demo-token-123")
     logger.info(
         "asap.auth_patterns.static_validator",
-        token_preview="demo-token-***",
+        token_preview="demo-token-***",  # nosec B106
         agent_id=agent_id,
     )
-    assert agent_id == "urn:asap:agent:client-a"
-    assert bearer_validator("invalid") is None
+    assert agent_id == "urn:asap:agent:client-a"  # nosec B101
+    assert bearer_validator("invalid") is None  # nosec B101
 
     # Custom validator: env-based (no env set -> invalid)
     validator_env = env_based_validator(env_var="ASAP_DEMO_TOKEN")
-    assert validator_env("any") is None
+    assert validator_env("any") is None  # nosec B101
     logger.info(
         "asap.auth_patterns.env_validator",
         message="Use ASAP_DEMO_TOKEN to test env-based validator",
@@ -191,7 +191,7 @@ def run_demo() -> None:
         supported_schemes=list(SUPPORTED_AUTH_SCHEMES),
     )
     # Reference app so it's not garbage-collected if someone holds the result
-    assert app is not None
+    assert app is not None  # nosec B101
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:

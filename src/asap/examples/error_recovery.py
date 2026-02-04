@@ -70,7 +70,7 @@ def retry_with_backoff(
                 raise
             delay = min(base_delay * (2**attempt), max_delay)
             if jitter:
-                delay = delay * (0.5 + random.random())
+                delay = delay * (0.5 + random.random())  # nosec B311
             logger.info(
                 "asap.error_recovery.retry",
                 attempt=attempt + 1,
@@ -147,8 +147,8 @@ def demo_circuit_breaker(
     # CLOSED -> record failures until OPEN
     for _ in range(threshold):
         breaker.record_failure()
-    assert breaker.get_state() == CircuitState.OPEN
-    assert breaker.can_attempt() is False
+    assert breaker.get_state() == CircuitState.OPEN  # nosec B101
+    assert breaker.can_attempt() is False  # nosec B101
     logger.info(
         "asap.error_recovery.circuit_open",
         state=breaker.get_state().value,
@@ -157,8 +157,8 @@ def demo_circuit_breaker(
 
     # Wait for timeout -> HALF_OPEN
     time.sleep(timeout + 0.05)
-    assert breaker.can_attempt() is True
-    assert breaker.get_state() == CircuitState.HALF_OPEN
+    assert breaker.can_attempt() is True  # nosec B101
+    assert breaker.get_state() == CircuitState.HALF_OPEN  # nosec B101
     logger.info(
         "asap.error_recovery.circuit_half_open",
         state=breaker.get_state().value,
@@ -166,7 +166,7 @@ def demo_circuit_breaker(
 
     # Success -> CLOSED
     breaker.record_success()
-    assert breaker.get_state() == CircuitState.CLOSED
+    assert breaker.get_state() == CircuitState.CLOSED  # nosec B101
     logger.info(
         "asap.error_recovery.circuit_closed",
         state=breaker.get_state().value,
