@@ -9,7 +9,6 @@ Tests cover:
 """
 
 import gzip
-from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
@@ -26,9 +25,6 @@ from asap.transport.compression import (
     is_brotli_available,
     select_best_encoding,
 )
-
-if TYPE_CHECKING:
-    pass
 
 
 class TestCompressionAlgorithm:
@@ -198,7 +194,11 @@ class TestCompressPayload:
         assert algorithm in (CompressionAlgorithm.IDENTITY, CompressionAlgorithm.GZIP)
 
     def test_compression_failure_returns_original(self) -> None:
-        """When compression raises a generic Exception, return original and IDENTITY."""
+        """When compression raises a generic Exception, return original and IDENTITY.
+
+        Note: In production, gzip.compress may raise OSError on large inputs or
+        memory issues. This test uses RuntimeError to simulate any compression failure.
+        """
         large_data = b'{"data": "' + b"x" * 2000 + b'"}'  # > 1KB
         with patch(
             "asap.transport.compression.compress_gzip",

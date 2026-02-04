@@ -124,6 +124,14 @@ class TestASAPClientCoverageGaps:
             await client._validate_connection()
 
     @pytest.mark.asyncio
+    async def test_validate_connection_raises_when_client_is_none(self) -> None:
+        """_validate_connection raises ASAPConnectionError when _client attribute is None."""
+        client = ASAPClient("https://example.com")
+        client._client = None  # Force None state (different from not entering context)
+        with pytest.raises(ASAPConnectionError, match="not connected"):
+            await client._validate_connection()
+
+    @pytest.mark.asyncio
     async def test_validate_connection_success(self) -> None:
         """Test _validate_connection helper method success case."""
 
