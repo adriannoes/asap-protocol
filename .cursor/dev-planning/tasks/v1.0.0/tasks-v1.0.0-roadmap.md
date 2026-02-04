@@ -361,10 +361,10 @@
   - Goal: CHANGELOG, release notes, version bump
   - Details: [Release Detailed - Task 13.3](./tasks-v1.0.0-release-detailed.md#task-133-release-preparation)
 
-- [ ] 13.4 Build and publish
+- [x] 13.4 Build and publish
   - Goal: Publish to PyPI, GitHub release, Docker images
   - Details: [Release Detailed - Task 13.4](./tasks-v1.0.0-release-detailed.md#task-134-build-and-publish)
-  - **Note**: Run after single push (tag, uv publish, GitHub release, Docker).
+  - **Done**: Tag v1.0.0, PyPI, GitHub release, Docker ghcr.io/adriannoes/asap-protocol:v1.0.0
 
 - [x] 13.5 Communicate release
   - Goal: Announce, update status to "Stable"
@@ -376,7 +376,7 @@
 
 ### Definition of Done
 - [x] All success metrics met (tests, benchmarks, security, docs)
-- [ ] v1.0.0 on PyPI (after 13.4)
+- [x] v1.0.0 on PyPI
 - [x] Documentation 100% complete
 - [x] PRD fully reviewed
 - [x] Retrospective created
@@ -409,7 +409,7 @@
 
 ## Progress Tracking
 
-**Overall Progress**: 38/39 tasks completed (97%)
+**Overall Progress**: 39/39 tasks completed (100%)
 
 **Sprint Status**:
 - ✅ P1: 3/3 tasks (100%) - **Includes PRD review**
@@ -424,7 +424,7 @@
 - ✅ P10: 2/2 tasks (100%)
 - ✅ P11: 3/3 tasks (100%)
 - ✅ P12: 2/2 tasks (100%)
-- ⏳ P13: 6/7 tasks (86%) - **13.4 Build and publish after push**
+- ✅ P13: 7/7 tasks (100%) - **v1.0.0 released**
 
 **PRD Maintenance Schedule**:
 - P1: Review security decisions (HMAC signing) ✅

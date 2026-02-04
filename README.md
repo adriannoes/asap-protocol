@@ -7,8 +7,6 @@
 
 **Quick Info**: `v1.0.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/1.0.0/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
 
-**Stable** — ASAP Protocol v1.0.0 is production-ready. We welcome feedback and contributions. See our [Contributing](https://github.com/adriannoes/asap-protocol#contributing) section to get involved!
-
 ## Why ASAP?
 
 Building multi-agent systems today suffers from three core technical challenges that existing protocols like A2A don't fully address:
@@ -16,7 +14,7 @@ Building multi-agent systems today suffers from three core technical challenges 
 2. **State Drift**: Lack of native persistence makes it impossible to reliably resume long-running agentic workflows.
 3. **Fragmentation**: No unified way to handle task delegation, artifact exchange, and tool execution (MCP) in a single envelope.
 
-**ASAP** provides a production-ready communication layer that simplifies these complexities. It introduces a standardized, stateful orchestration framework that ensures your agents can coordinate reliably across distributed environments. → [Spec](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/v0-original-specs.md)
+**ASAP** provides a production-ready communication layer that simplifies these complexities. It introduces a standardized, stateful orchestration framework that ensures your agents can coordinate reliably across distributed environments. See the [spec](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/v0-original-specs.md) for details.
 
 ### Key Features
 
@@ -41,9 +39,7 @@ Or with pip:
 pip install asap-protocol
 ```
 
-📦 **Available on [PyPI](https://pypi.org/project/asap-protocol/1.0.0/)**
-
-For reproducible environments, prefer `uv` when possible.
+📦 **Available on [PyPI](https://pypi.org/project/asap-protocol/1.0.0/)**. For reproducible environments, prefer `uv` when possible.
 
 ## Requirements
 
@@ -126,7 +122,7 @@ uv run python -m asap.examples.run_demo
 uv run python -m asap.examples.<module_name> [options]
 ```
 
-→ Full list: [Examples README](https://github.com/adriannoes/asap-protocol/blob/main/src/asap/examples/README.md)
+Full list: [Examples README](https://github.com/adriannoes/asap-protocol/blob/main/src/asap/examples/README.md)
 
 | Category | Examples |
 |----------|----------|
@@ -150,18 +146,17 @@ With coverage:
 uv run pytest --cov=src --cov-report=term-missing
 ```
 
-→ [Testing Guide](https://github.com/adriannoes/asap-protocol/blob/main/docs/testing.md) — structure, fixtures, property/load/chaos tests
-→ [Contributing](https://github.com/adriannoes/asap-protocol/blob/main/CONTRIBUTING.md) — dev setup, CI
+[Testing Guide](https://github.com/adriannoes/asap-protocol/blob/main/docs/testing.md) (structure, fixtures, property/load/chaos tests). [Contributing](https://github.com/adriannoes/asap-protocol/blob/main/CONTRIBUTING.md) (dev setup, CI).
 
 ## Benchmarks
 
-→ [Benchmark Results](https://github.com/adriannoes/asap-protocol/blob/main/benchmarks/RESULTS.md) — Load (1,500+ RPS), stress, memory
+[Benchmark Results](https://github.com/adriannoes/asap-protocol/blob/main/benchmarks/RESULTS.md): load (1,500+ RPS), stress, memory.
 
 ## API Overview
 
-Core models: `Envelope`, `TaskRequest`/`TaskResponse`/`TaskUpdate`/`TaskCancel`, `MessageSend`, `ArtifactNotify`, `StateQuery`/`StateRestore`, `McpToolCall`/`McpToolResult`/`McpResourceFetch`/`McpResourceData`. → [API Reference](https://github.com/adriannoes/asap-protocol/blob/main/docs/api-reference.md)
+Core models: `Envelope`, `TaskRequest`/`TaskResponse`/`TaskUpdate`/`TaskCancel`, `MessageSend`, `ArtifactNotify`, `StateQuery`/`StateRestore`, `McpToolCall`/`McpToolResult`/`McpResourceFetch`/`McpResourceData`. See [API Reference](https://github.com/adriannoes/asap-protocol/blob/main/docs/api-reference.md).
 
-Transport: `create_app`, `HandlerRegistry`, `ASAPClient`. → [Transport](https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md)
+Transport: `create_app`, `HandlerRegistry`, `ASAPClient`. See [Transport](https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md).
 
 ## When to Use ASAP?
 
@@ -177,15 +172,15 @@ If you're building simple point-to-point agent communication, a basic HTTP API m
 
 **Learn**
 - [Docs](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [API Reference](https://github.com/adriannoes/asap-protocol/blob/main/docs/api-reference.md)
-- [Tutorials](https://github.com/adriannoes/asap-protocol/tree/main/docs/tutorials) — First agent → production checklist
+- [Tutorials](https://github.com/adriannoes/asap-protocol/tree/main/docs/tutorials) — First agent to production checklist
 - [Migration from A2A/MCP](https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md)
 
-**Deep dive**
+**Deep Dive**
 - [State Management](https://github.com/adriannoes/asap-protocol/blob/main/docs/state-management.md) | [Error Handling](https://github.com/adriannoes/asap-protocol/blob/main/docs/error-handling.md)
 - [Transport](https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md) | [Security](https://github.com/adriannoes/asap-protocol/blob/main/docs/security.md)
 - [Observability](https://github.com/adriannoes/asap-protocol/blob/main/docs/observability.md) | [Testing](https://github.com/adriannoes/asap-protocol/blob/main/docs/testing.md)
 
-**Decisions & ops**
+**Decisions & Operations**
 - [ADRs](https://github.com/adriannoes/asap-protocol/tree/main/docs/adr) — 17 Architecture Decision Records
 - [Deployment](https://github.com/adriannoes/asap-protocol/blob/main/docs/deployment/kubernetes.md) | [Troubleshooting](https://github.com/adriannoes/asap-protocol/blob/main/docs/troubleshooting.md)
 
@@ -194,7 +189,7 @@ If you're building simple point-to-point agent communication, a basic HTTP API m
 
 ## CLI
 
-`asap --version` | `asap export-schemas` | `asap list-schemas` | `asap show-schema` — [CLI docs](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#cli) or `asap --help`
+`asap --version`, `asap export-schemas`, `asap list-schemas`, `asap show-schema`. [CLI docs](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#cli) or run `asap --help`.
 
 ## Contributing
 
