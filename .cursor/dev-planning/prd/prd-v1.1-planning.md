@@ -13,7 +13,7 @@
 
 ### 1.1 Purpose
 
-This PRD documents features deferred from v1.0.0 and planned for the v1.1.x release series. Features were identified through gap analysis comparing the v1.0.0 roadmap against the original protocol specification (`general-specs.md`).
+This PRD documents features deferred from v1.0.0 and planned for the v1.1.x release series. Features were identified through gap analysis comparing the v1.0.0 roadmap against the original protocol specification (`v0-original-specs.md`).
 
 ### 1.2 Goals
 
@@ -27,10 +27,10 @@ This PRD documents features deferred from v1.0.0 and planned for the v1.1.x rele
 
 - gRPC transport binding (v1.2+)
 - Federated identity/cross-domain trust (v1.2+)
-- Agent marketplace infrastructure (v2.0+) — see [vision-agent-marketplace.md](../vision/vision-agent-marketplace.md)
+- Agent marketplace infrastructure (v2.0+) — see [vision-agent-marketplace.md](../product-specs/vision-agent-marketplace.md)
 
 > [!NOTE]
-> **End Goal**: The Agent Marketplace (v2.0) is the ultimate vision for ASAP. v1.1 features (OAuth2, WebSocket) are foundational building blocks. See [roadmap-to-marketplace.md](../vision/roadmap-to-marketplace.md) for the full evolution path.
+> **End Goal**: The Agent Marketplace (v2.0) is the ultimate vision for ASAP. v1.1 features (OAuth2, WebSocket) are foundational building blocks. See [roadmap-to-marketplace.md](../product-specs/roadmap-to-marketplace.md) for the full evolution path.
 
 ---
 
@@ -258,7 +258,7 @@ class StateStorage(ABC):
 
 - **Tasks**: [v1.1-planned-features.md](../tasks/v1.1-planned-features.md)
 - **v1.0.0 PRD**: [prd-v1-roadmap.md](./prd-v1-roadmap.md)
-- **Original Spec**: [general-specs.md](../../docs/general-specs.md)
+- **Original Spec**: [v0-original-specs.md](../../product-specs/v0-original-specs.md)
 
 ---
 

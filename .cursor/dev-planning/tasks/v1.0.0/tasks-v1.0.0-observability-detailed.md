@@ -135,7 +135,7 @@
 
 ### Task 12.2: Complete MCP Implementation
 
-**Spec**: Use **MCP 2025-11-25** (current). Reference: [mcp-specs-2025-11-25.md](../../../docs/mcp-specs-2025-11-25.md).
+**Spec**: Use **MCP 2025-11-25** (current). Reference: [mcp-specs.md](../../references/mcp-specs.md).
 
 - [x] 12.2.1 Implement MCP Protocol Models
   - File: `src/asap/mcp/protocol.py`
