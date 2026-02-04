@@ -7,8 +7,9 @@ import pytest
 from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest, TaskResponse
+from asap.errors import CircuitOpenError
 from asap.transport.client import ASAPClient, RetryConfig, ASAPConnectionError, ASAPTimeoutError
-from asap.transport.circuit_breaker import get_registry
+from asap.transport.circuit_breaker import CircuitState, get_registry
 
 
 @pytest.fixture(autouse=True)
@@ -116,6 +117,21 @@ class TestASAPClientCoverageGaps:
             assert 9.0 <= args[0] <= 11.0
 
     @pytest.mark.asyncio
+    async def test_validate_connection_raises_when_not_connected(self) -> None:
+        """_validate_connection raises ASAPConnectionError when used outside async with."""
+        client = ASAPClient("https://example.com")
+        with pytest.raises(ASAPConnectionError, match="not connected"):
+            await client._validate_connection()
+
+    @pytest.mark.asyncio
+    async def test_validate_connection_raises_when_client_is_none(self) -> None:
+        """_validate_connection raises ASAPConnectionError when _client attribute is None."""
+        client = ASAPClient("https://example.com")
+        client._client = None  # Force None state (different from not entering context)
+        with pytest.raises(ASAPConnectionError, match="not connected"):
+            await client._validate_connection()
+
+    @pytest.mark.asyncio
     async def test_validate_connection_success(self) -> None:
         """Test _validate_connection helper method success case."""
 
@@ -142,6 +158,90 @@ class TestASAPClientCoverageGaps:
         ) as client:
             result = await client._validate_connection()
             assert result is False
+
+    @pytest.mark.asyncio
+    async def test_validate_connection_connect_error_returns_false(self) -> None:
+        """_validate_connection returns False on ConnectError."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            raise httpx.ConnectError("Connection refused")
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            result = await client._validate_connection()
+            assert result is False
+
+    @pytest.mark.asyncio
+    async def test_validate_connection_timeout_returns_false(self) -> None:
+        """_validate_connection returns False on TimeoutException."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            raise httpx.TimeoutException("Timeout")
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            result = await client._validate_connection()
+            assert result is False
+
+    @pytest.mark.asyncio
+    async def test_validate_connection_generic_exception_returns_false(self) -> None:
+        """_validate_connection returns False on generic Exception."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            raise RuntimeError("Unexpected error")
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            result = await client._validate_connection()
+            assert result is False
+
+    @pytest.mark.asyncio
+    async def test_send_5xx_retry_then_circuit_opens(self) -> None:
+        """Send with 503 triggers retry logging and delay, then circuit opens."""
+        call_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            return httpx.Response(status_code=503, content=b"Service Unavailable")
+
+        large_envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv_123",
+                skill_id="echo",
+                input={"message": "x" * 200},
+            ).model_dump(),
+        )
+
+        async with ASAPClient(
+            "https://example.com",
+            transport=httpx.MockTransport(mock_transport),
+            compression=True,
+            compression_threshold=50,
+            circuit_breaker_enabled=True,
+            circuit_breaker_threshold=2,
+            max_retries=2,
+        ) as client:
+            with pytest.raises(ASAPConnectionError, match="503"):
+                await client.send(large_envelope)
+            assert call_count == 2
+
+            with pytest.raises(ASAPConnectionError, match="503"):
+                await client.send(large_envelope)
+            assert call_count == 4
+            assert client._circuit_breaker is not None
+            assert client._circuit_breaker.get_state() == CircuitState.OPEN
+
+            with pytest.raises(CircuitOpenError):
+                await client.send(large_envelope)
+            assert call_count == 4
 
     @pytest.mark.asyncio
     async def test_circuit_breaker_records_failure_on_exhausted_5xx(
@@ -263,6 +363,13 @@ class TestASAPClientCoverageGaps:
         assert client._is_localhost(urlparse("http://[::1]")) is True
         assert client._is_localhost(urlparse("http://example.com")) is False
         assert client._is_localhost(urlparse("http://192.168.1.1")) is False
+
+    def test_is_localhost_no_hostname_returns_false(self) -> None:
+        """_is_localhost returns False when URL has no hostname (e.g. file or opaque)."""
+        client = ASAPClient("https://example.com")
+        from urllib.parse import urlparse
+
+        assert client._is_localhost(urlparse("file:///tmp/foo")) is False
 
     @pytest.mark.asyncio
     async def test_retry_after_invalid_date_format(self, sample_request_envelope: Envelope) -> None:

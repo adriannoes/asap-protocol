@@ -169,7 +169,5 @@ cython_debug/
 
 # Project specific (Cursor: keep .cursor/ tracked; ignore local-only paths)
 !/.cursor/
-.cursor/docs/design-decisions.md
-.cursor/docs/wiki
 node_modules/
-.cursor/vision/
+.github/wiki

@@ -206,6 +206,78 @@ Security-hardened release with comprehensive authentication, DoS protection, rep
 ### Added
 - Future changes will be documented here
 
-## [1.2025.01-draft] - 2025-01-15
+---
 
-- Initial draft specification
+## [1.0.0] - 2026-02-03
+
+Production-ready release. All features from v0.5.0 preserved with backward compatibility (see contract tests: v0.1.0 → v1.0.0, v0.5.0 ↔ v1.0.0).
+
+### Added
+
+#### Security & Validation (P1–P2)
+- **Log sanitization**: Credential and token patterns in logs; `ASAP_DEBUG` env var for controlled verbose output
+- **Handler security**: `FilePart` URI validation, path traversal detection; `docs/security.md` updated
+- **Thread safety**: Thread-safe `HandlerRegistry` for concurrent handler registration and execution
+- **URN validation**: Max 256-character URNs, task depth limits, enhanced input validation
+- **`ManifestCache` LRU eviction**: `max_size` limit with LRU eviction to prevent unbounded cache growth
+
+#### Performance (P3–P4)
+- **Connection pooling**: Configurable `ASAPClient` connection pooling; supports 1000+ concurrent connections
+- **Manifest caching**: TTL-based manifest cache; `manifest_cache_size` parameter for LRU-bounded cache
+- **Batch operations**: `send_batch` with HTTP/2 multiplexing for higher throughput
+- **Compression**: Gzip and Brotli support; `Accept-Encoding` negotiation; ~70% bandwidth reduction for JSON
+
+#### Developer Experience (P5–P6)
+- **Examples**: 10+ real-world examples (auth patterns, rate limiting, state migration, streaming, multi-step workflow, MCP integration, error recovery, long-running, orchestration)
+- **Testing utilities**: `asap.testing` fixtures, factories, and helpers; reduced test boilerplate
+- **Trace visualization**: `asap trace` CLI command; optional Web UI for trace parsing
+- **Dev server**: Hot reload, debug logging, REPL mode for local development
+- **CLI**: `trace`, `repl`, `export-schemas`, `list-schemas`, `show-schema`, `validate-schema` commands
+
+#### Testing (P7–P8)
+- **Property-based tests**: Hypothesis-based tests for models, IDs, and edge cases
+- **Load testing**: Locust-based load tests; RPS and latency benchmarks
+- **Chaos tests**: Failure injection, message reliability under faults
+- **Contract tests**: v0.1.0 → v1.0.0 and v0.5.0 ↔ v1.0.0 upgrade paths; schema evolution and rollback coverage
+- **Integration tests**: Batch + auth + pooling; MCP server + ASAP protocol; compression edge cases
+
+#### Documentation (P9–P10)
+- **Tutorials**: 5 step-by-step tutorials (beginner → advanced → DevOps)
+- **ADRs**: 17 Architecture Decision Records (ULID, async-first, JSON-RPC, Pydantic, state machine, security, FastAPI, httpx, snapshot, Python 3.13, rate limiting, error taxonomy, MCP, testing, observability, versioning, failure injection)
+- **Deployment**: Docker image, Kubernetes manifests, Helm chart, health probes
+- **Troubleshooting**: Guide covering common issues and diagnostics
+
+#### Observability (P11–P12)
+- **OpenTelemetry**: Tracing integration with OTLP export; zero-config for development
+- **Metrics**: Structured metrics (counters, histograms); Prometheus export; `asap_handler_errors_total` and transport client metrics
+- **Dashboards**: Grafana dashboards (RED, detailed) for ASAP agents
+- **Jaeger**: Integration test and trace export to Jaeger
+
+#### MCP (P12)
+- **MCP implementation**: Full MCP server/client; `serve_stdio`; tool call/result, resource fetch/data payloads
+- **Validation**: Parse error handling, tool args validation, sanitized error responses
+- **Interop**: Default `request_id_type=str` for interoperability
+
+### Changed
+
+- **MCP**: `request_id_type` defaults to `str` for better interoperability
+- **CI**: Parallel jobs (lint, types, tests, security); path filters; coverage thresholds
+- **Build**: Per-module mypy overrides; `jsonschema` dependency; pytest `pythonpath` for tests
+
+### Fixed
+
+- **Transport**: Narrow `JSONResponse | str` with cast for mypy in `handle_message`
+- **MCP**: Parse errors, tool args validation, error sanitization; `serve_stdio` support
+- **Observability**: Server import order, tracing type hints, debug logging, `reset_tracing`
+- **Tests**: Jaeger handler trace detection among multiple traces; rate limiter isolation; flaky ULID sortable test
+- **Handlers**: Use `get_running_loop` instead of deprecated `get_event_loop`
+- **Utils**: `sanitize_url` exception fallback coverage
+
+### Technical Details
+
+- **Python**: 3.13+
+- **Tests**: 1379+ passing; property, load, chaos, and contract test suites
+- **Coverage**: ~95% (target met)
+- **Linting**: Ruff (check + format), mypy strict
+- **Security**: `pip-audit` clean; bandit (Low findings limited to examples and test helpers)
+

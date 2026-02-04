@@ -14,7 +14,6 @@ This module defines the fundamental entities used in agent-to-agent communicatio
 - AuthScheme: Authentication configuration for agent access
 """
 
-import re
 from datetime import datetime
 from typing import Any
 
@@ -24,12 +23,11 @@ from pydantic import Field, field_validator, model_validator
 from asap.errors import UnsupportedAuthSchemeError
 from asap.models.base import ASAPBaseModel
 from asap.models.constants import (
-    AGENT_URN_PATTERN,
     ASAP_PROTOCOL_VERSION,
     MAX_TASK_DEPTH,
-    MAX_URN_LENGTH,
     SUPPORTED_AUTH_SCHEMES,
 )
+from asap.models.validators import validate_agent_urn
 from asap.models.enums import MessageRole, TaskStatus
 from asap.models.types import (
     AgentURN,
@@ -62,28 +60,6 @@ def _validate_auth_scheme(auth: "AuthScheme") -> None:
                 scheme=scheme,
                 supported_schemes=SUPPORTED_AUTH_SCHEMES,
             )
-
-
-def _validate_agent_urn(v: str) -> str:
-    """Validate agent URN format and length.
-
-    Ensures URN matches AGENT_URN_PATTERN (urn:asap:agent:name or
-    urn:asap:agent:name:sub) and does not exceed MAX_URN_LENGTH.
-
-    Args:
-        v: URN string to validate
-
-    Returns:
-        The same string if valid
-
-    Raises:
-        ValueError: If format is invalid or length exceeds MAX_URN_LENGTH
-    """
-    if len(v) > MAX_URN_LENGTH:
-        raise ValueError(f"Agent URN must be at most {MAX_URN_LENGTH} characters, got {len(v)}")
-    if not re.match(AGENT_URN_PATTERN, v):
-        raise ValueError(f"Agent ID must follow URN format 'urn:asap:agent:{{name}}', got: {v}")
-    return v
 
 
 class Skill(ASAPBaseModel):
@@ -223,7 +199,7 @@ class Agent(ASAPBaseModel):
     @classmethod
     def validate_urn_format(cls, v: str) -> str:
         """Validate agent ID URN format and length."""
-        return _validate_agent_urn(v)
+        return validate_agent_urn(v)
 
 
 class Manifest(ASAPBaseModel):
@@ -273,7 +249,7 @@ class Manifest(ASAPBaseModel):
     @classmethod
     def validate_urn_format(cls, v: str) -> str:
         """Validate that agent ID follows URN format and length limits."""
-        return _validate_agent_urn(v)
+        return validate_agent_urn(v)
 
     @field_validator("version")
     @classmethod

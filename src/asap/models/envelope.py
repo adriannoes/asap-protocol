@@ -12,6 +12,7 @@ from pydantic import Field, field_validator, model_validator
 from asap.models.base import ASAPBaseModel
 from asap.models.ids import generate_id
 from asap.models.types import AgentURN
+from asap.models.validators import validate_agent_urn
 
 
 class Envelope(ASAPBaseModel):
@@ -89,6 +90,12 @@ class Envelope(ASAPBaseModel):
         if v is None:
             return datetime.now(timezone.utc)
         return v
+
+    @field_validator("sender", "recipient")
+    @classmethod
+    def validate_sender_recipient_urn(cls, v: str) -> str:
+        """Validate sender/recipient URN format and length."""
+        return validate_agent_urn(v)
 
     @model_validator(mode="after")
     def validate_response_correlation(self) -> "Envelope":

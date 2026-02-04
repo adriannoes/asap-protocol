@@ -21,6 +21,19 @@ from asap.observability.trace_parser import (
     parse_trace_from_lines,
 )
 
+MAX_LOG_LINES_LENGTH = 2 * 1024 * 1024
+
+
+def _parse_log_lines(raw: str, max_length: int = MAX_LOG_LINES_LENGTH) -> list[str]:
+    """Parse raw log lines into non-empty stripped lines; raise 413 if over max_length."""
+    if len(raw) > max_length:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Log lines payload too large (max {max_length} bytes)",
+        )
+    return [s.strip() for s in raw.strip().splitlines() if s.strip()]
+
+
 app = FastAPI(
     title="ASAP Trace UI",
     description="Browse and visualize ASAP request traces from JSON log lines.",
@@ -58,7 +71,7 @@ def index() -> HTMLResponse:
 @app.post("/api/traces/list")
 def list_traces(body: LogLinesBody) -> dict[str, Any]:
     """Extract unique trace IDs from pasted log lines."""
-    lines = [s.strip() for s in body.log_lines.strip().splitlines() if s.strip()]
+    lines = _parse_log_lines(body.log_lines)
     trace_ids = extract_trace_ids(lines)
     return {"trace_ids": trace_ids}
 
@@ -66,7 +79,7 @@ def list_traces(body: LogLinesBody) -> dict[str, Any]:
 @app.post("/api/traces/visualize")
 def visualize_trace(body: VisualizeBody) -> dict[str, Any]:
     """Parse logs and return hops + ASCII diagram for the given trace_id."""
-    lines = [s.strip() for s in body.log_lines.strip().splitlines() if s.strip()]
+    lines = _parse_log_lines(body.log_lines)
     hops, diagram = parse_trace_from_lines(lines, body.trace_id.strip())
     if not diagram:
         raise HTTPException(status_code=404, detail=f"No trace found for: {body.trace_id}")
@@ -117,47 +130,86 @@ _INDEX_HTML = """
   <div id="vizResult" class="result" style="display:none;"></div>
 
   <script>
+    function escapeHtml(s) {
+      if (typeof s !== 'string') return '';
+      const m = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+      return s.replace(/[&<>"']/g, function(c) { return m[c] || c; });
+    }
+    function errorMessage(e) {
+      return e instanceof Error ? e.message : String(e);
+    }
+    function showError(el, msg) {
+      el.textContent = 'Error: ' + msg;
+      el.classList.add('error');
+      el.style.display = 'block';
+    }
+    function renderTraceList(data, listResult, traceIdEl) {
+      if (data.trace_ids && data.trace_ids.length) {
+        const safe = data.trace_ids.map(function(t) {
+          return '<li data-trace="' + escapeHtml(t) + '">' + escapeHtml(t) + '</li>';
+        });
+        listResult.innerHTML = 'Trace IDs: <ul>' + safe.join('') + '</ul>';
+        listResult.querySelectorAll('li').forEach(function(li) {
+          li.onclick = function() { traceIdEl.value = li.dataset.trace || ''; };
+        });
+      } else {
+        listResult.textContent = 'No trace IDs found in log lines.';
+      }
+      listResult.classList.remove('error');
+      listResult.style.display = 'block';
+    }
+
     const logsEl = document.getElementById('logs');
     const traceIdEl = document.getElementById('traceId');
     const listResult = document.getElementById('listResult');
     const vizResult = document.getElementById('vizResult');
 
-    document.getElementById('btnList').onclick = async () => {
+    document.getElementById('btnList').onclick = async function() {
       listResult.style.display = 'none';
       const logLines = logsEl.value.trim();
-      if (!logLines) { listResult.textContent = 'Paste log lines first.'; listResult.style.display = 'block'; return; }
+      if (!logLines) {
+        listResult.textContent = 'Paste log lines first.';
+        listResult.style.display = 'block';
+        return;
+      }
       try {
-        const r = await fetch('/api/traces/list', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ log_lines: logLines }) });
+        const r = await fetch('/api/traces/list', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ log_lines: logLines }),
+        });
         const data = await r.json();
-        if (data.trace_ids && data.trace_ids.length) {
-          listResult.innerHTML = 'Trace IDs: <ul>' + data.trace_ids.map(t => '<li data-trace="' + t + '">' + t + '</li>').join('') + '</ul>';
-          listResult.querySelectorAll('li').forEach(li => { li.onclick = () => { traceIdEl.value = li.dataset.trace; }; });
-        } else listResult.textContent = 'No trace IDs found in log lines.';
-        listResult.classList.remove('error');
-        listResult.style.display = 'block';
+        renderTraceList(data, listResult, traceIdEl);
       } catch (e) {
-        listResult.textContent = 'Error: ' + e.message;
-        listResult.classList.add('error');
-        listResult.style.display = 'block';
+        showError(listResult, errorMessage(e));
       }
     };
 
-    document.getElementById('btnViz').onclick = async () => {
+    document.getElementById('btnViz').onclick = async function() {
       vizResult.style.display = 'none';
       const logLines = logsEl.value.trim();
       const traceId = traceIdEl.value.trim();
-      if (!logLines || !traceId) { vizResult.textContent = 'Paste log lines and enter a trace ID.'; vizResult.style.display = 'block'; return; }
+      if (!logLines || !traceId) {
+        vizResult.textContent = 'Paste log lines and enter a trace ID.';
+        vizResult.style.display = 'block';
+        return;
+      }
       try {
-        const r = await fetch('/api/traces/visualize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ log_lines: logLines, trace_id: traceId }) });
-        if (!r.ok) { const e = await r.json(); throw new Error(e.detail || r.statusText); }
+        const r = await fetch('/api/traces/visualize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ log_lines: logLines, trace_id: traceId }),
+        });
+        if (!r.ok) {
+          const err = await r.json();
+          throw new Error(err.detail || r.statusText);
+        }
         const data = await r.json();
         vizResult.textContent = data.diagram || JSON.stringify(data, null, 2);
         vizResult.classList.remove('error');
         vizResult.style.display = 'block';
       } catch (e) {
-        vizResult.textContent = 'Error: ' + e.message;
-        vizResult.classList.add('error');
-        vizResult.style.display = 'block';
+        showError(vizResult, errorMessage(e));
       }
     };
   </script>

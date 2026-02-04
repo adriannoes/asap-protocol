@@ -9,7 +9,7 @@ Tests cover:
 """
 
 import gzip
-from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 import pytest
 
@@ -25,9 +25,6 @@ from asap.transport.compression import (
     is_brotli_available,
     select_best_encoding,
 )
-
-if TYPE_CHECKING:
-    pass
 
 
 class TestCompressionAlgorithm:
@@ -53,6 +50,21 @@ class TestBrotliAvailability:
         result = is_brotli_available()
         assert isinstance(result, bool)
 
+    def test_brotli_availability_returns_false_on_import_error(self) -> None:
+        """When brotli import fails, is_brotli_available returns False."""
+        import builtins
+
+        real_import = builtins.__import__
+
+        def import_side_effect(name: str, *args: object, **kwargs: object):  # noqa: ANN401
+            if name == "brotli":
+                raise ImportError("No module named 'brotli'")
+            return real_import(name, *args, **kwargs)
+
+        with patch("builtins.__import__", side_effect=import_side_effect):
+            result = is_brotli_available()
+        assert result is False
+
 
 class TestSupportedEncodings:
     """Tests for supported encodings list."""
@@ -67,6 +79,13 @@ class TestSupportedEncodings:
         encodings = get_supported_encodings()
         assert isinstance(encodings, list)
         assert all(isinstance(enc, str) for enc in encodings)
+
+    def test_get_supported_encodings_without_brotli(self) -> None:
+        """When brotli is unavailable, get_supported_encodings returns only gzip."""
+        with patch("asap.transport.compression.is_brotli_available", return_value=False):
+            encodings = get_supported_encodings()
+        assert encodings == ["gzip"]
+        assert "br" not in encodings
 
 
 class TestAcceptEncodingHeader:
@@ -135,6 +154,14 @@ class TestCompressPayload:
         assert len(result) < len(large_data)
         assert algorithm == CompressionAlgorithm.GZIP
 
+    def test_compress_uses_gzip_when_brotli_unavailable(self) -> None:
+        """When brotli is unavailable, compress_payload uses GZIP."""
+        large_data = b'{"data": "' + b"x" * 2000 + b'"}'  # > 1KB
+        with patch("asap.transport.compression.is_brotli_available", return_value=False):
+            result, algorithm = compress_payload(large_data)
+        assert algorithm == CompressionAlgorithm.GZIP
+        assert len(result) < len(large_data)
+
     def test_custom_threshold(self) -> None:
         """Verify custom threshold works."""
         data = b"x" * 500  # 500 bytes
@@ -165,6 +192,21 @@ class TestCompressPayload:
         result, algorithm = compress_payload(random_data)
         # If compression was ineffective, should return IDENTITY
         assert algorithm in (CompressionAlgorithm.IDENTITY, CompressionAlgorithm.GZIP)
+
+    def test_compression_failure_returns_original(self) -> None:
+        """When compression raises a generic Exception, return original and IDENTITY.
+
+        Note: In production, gzip.compress may raise OSError on large inputs or
+        memory issues. This test uses RuntimeError to simulate any compression failure.
+        """
+        large_data = b'{"data": "' + b"x" * 2000 + b'"}'  # > 1KB
+        with patch(
+            "asap.transport.compression.compress_gzip",
+            side_effect=RuntimeError("mock compression failure"),
+        ):
+            result, algorithm = compress_payload(large_data, CompressionAlgorithm.GZIP)
+        assert result == large_data
+        assert algorithm == CompressionAlgorithm.IDENTITY
 
     def test_default_threshold_constant(self) -> None:
         """Verify default threshold is 1KB."""
@@ -255,6 +297,21 @@ class TestSelectBestEncoding:
         result = select_best_encoding("gzip;q=invalid")
         assert result == CompressionAlgorithm.GZIP
 
+    def test_unsupported_only_returns_identity(self) -> None:
+        """When Accept-Encoding contains only unsupported encodings, returns IDENTITY."""
+        result = select_best_encoding("deflate, xz, zstd")
+        assert result == CompressionAlgorithm.IDENTITY
+
+    def test_empty_parts_skipped(self) -> None:
+        """Whitespace-only or empty parts in Accept-Encoding are skipped."""
+        result = select_best_encoding("  , gzip ,  ")
+        assert result == CompressionAlgorithm.GZIP
+
+    def test_part_with_q_but_empty_encoding_skipped(self) -> None:
+        """Part with ;q= but empty encoding after strip is skipped."""
+        result = select_best_encoding("   ;q=0.5, gzip")
+        assert result == CompressionAlgorithm.GZIP
+
 
 class TestBrotliCompression:
     """Tests for brotli compression (if available)."""
@@ -309,6 +366,27 @@ class TestBrotliCompression:
         """Verify error when trying to decompress brotli without package."""
         with pytest.raises(ValueError, match="brotli package is not installed"):
             decompress_payload(b"fake brotli data", "br")
+
+    @pytest.mark.skipif(is_brotli_available(), reason="brotli is installed")
+    def test_compress_payload_brotli_fallback_to_gzip(self) -> None:
+        """When BROTLI is requested but brotli is not installed, fallback to gzip."""
+        large_data = b'{"data": "' + b"x" * 2000 + b'"}'  # > 1KB
+        result, algorithm = compress_payload(large_data, CompressionAlgorithm.BROTLI)
+        # Should fallback to gzip and return compressed data
+        assert algorithm == CompressionAlgorithm.GZIP
+        assert len(result) < len(large_data)
+
+    @pytest.mark.skipif(not is_brotli_available(), reason="brotli required")
+    def test_compress_payload_brotli_import_error_fallback_to_gzip(self) -> None:
+        """When BROTLI is requested and compress_brotli raises ImportError, fallback to gzip."""
+        large_data = b'{"data": "' + b"x" * 2000 + b'"}'  # > 1KB
+        with patch(
+            "asap.transport.compression.compress_brotli",
+            side_effect=ImportError("brotli not available"),
+        ):
+            result, algorithm = compress_payload(large_data, CompressionAlgorithm.BROTLI)
+        assert algorithm == CompressionAlgorithm.GZIP
+        assert len(result) < len(large_data)
 
 
 class TestCompressionIntegration:

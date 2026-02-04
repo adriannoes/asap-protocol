@@ -73,6 +73,16 @@ class TestFilterRecordsByTraceId:
         records = filter_records_by_trace_id(lines, "t1")
         assert len(records) == 0
 
+    def test_skips_line_when_trace_id_in_body_but_parsed_trace_id_differs(self) -> None:
+        """When line contains filter trace_id as substring but parsed trace_id differs, skip."""
+        lines = [
+            '{"event": "asap.request.received", "trace_id": "t2", "comment": "t1"}',
+            '{"event": "asap.request.received", "trace_id": "t1", "envelope_id": "e1"}',
+        ]
+        records = filter_records_by_trace_id(lines, "t1")
+        assert len(records) == 1
+        assert records[0]["trace_id"] == "t1"
+
 
 class TestTraceHopFormatHop:
     """Tests for TraceHop.format_hop."""
@@ -187,6 +197,39 @@ class TestBuildHops:
         ]
         assert build_hops(records) == []
 
+    def test_skips_record_with_non_string_sender_or_recipient(self) -> None:
+        """Records with non-string sender or recipient are skipped in build_hops."""
+        records = [
+            {
+                "event": EVENT_RECEIVED,
+                "envelope_id": "e1",
+                "trace_id": "t1",
+                "sender": 123,
+                "recipient": "b",
+            },
+            {
+                "event": EVENT_RECEIVED,
+                "envelope_id": "e2",
+                "trace_id": "t1",
+                "sender": "a",
+                "recipient": None,
+            },
+        ]
+        assert build_hops(records) == []
+
+    def test_skips_record_with_other_event_type(self) -> None:
+        """Records with event other than received/processed are skipped."""
+        records = [
+            {
+                "event": "asap.request.sent",
+                "envelope_id": "e1",
+                "trace_id": "t1",
+                "sender": "a",
+                "recipient": "b",
+            },
+        ]
+        assert build_hops(records) == []
+
 
 class TestFormatAsciiDiagram:
     """Tests for format_ascii_diagram."""
@@ -215,6 +258,21 @@ class TestFormatAsciiDiagram:
         assert "urn:asap:agent:a" in out
         assert "urn:asap:agent:b" in out
         assert "urn:asap:agent:c" in out
+
+    def test_hop_without_duration_shows_question_mark(self) -> None:
+        """format_ascii_diagram shows (?) when duration_ms is None."""
+        hops = [TraceHop("urn:asap:agent:a", "urn:asap:agent:b", None)]
+        assert format_ascii_diagram(hops) == "a -> b (?)"
+
+    def test_multiple_hops_one_without_duration(self) -> None:
+        """format_ascii_diagram mixes hops with and without duration."""
+        hops = [
+            TraceHop("urn:asap:agent:a", "urn:asap:agent:b", 10.0),
+            TraceHop("urn:asap:agent:b", "urn:asap:agent:c", None),
+        ]
+        out = format_ascii_diagram(hops)
+        assert "a -> b (10ms)" in out
+        assert "c (?)" in out
 
 
 class TestTraceToJsonExport:
@@ -315,6 +373,13 @@ class TestTraceParserEdgeCases:
         assert _timestamp_to_sort_key("invalid") == 0.0
         assert _timestamp_to_sort_key("") == 0.0
 
+    def test_timestamp_to_sort_key_bad_format_returns_zero(self) -> None:
+        """_timestamp_to_sort_key returns 0.0 for bad date format (ValueError path)."""
+        from asap.observability.trace_parser import _timestamp_to_sort_key
+
+        assert _timestamp_to_sort_key("not-a-date") == 0.0
+        assert _timestamp_to_sort_key("2020-13-45") == 0.0
+
     def test_format_ascii_diagram_long_urns(self) -> None:
         """format_ascii_diagram with short_urns=False uses full URNs."""
         hops = [
@@ -364,3 +429,13 @@ class TestTraceParserEdgeCases:
         ]
         result = extract_trace_ids(lines)
         assert result == ["valid"]
+
+    def test_extract_trace_ids_skips_other_event_types(self) -> None:
+        """extract_trace_ids skips lines whose parsed event is not received/processed."""
+        lines = [
+            '{"event": "asap.request.received", "trace_id": "t1"}',
+            '{"event": "asap.request.received.extra", "trace_id": "t2"}',
+            '{"event": "asap.request.processed", "trace_id": "t1"}',
+        ]
+        result = extract_trace_ids(lines)
+        assert result == ["t1"]

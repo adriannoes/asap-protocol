@@ -11,7 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 if TYPE_CHECKING:
-    pass
+    from slowapi import Limiter
 
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.enums import TaskStatus
@@ -51,12 +51,13 @@ def test_manifest() -> Manifest:
 
 
 @pytest.fixture
-def test_app(test_manifest: Manifest) -> TestClient:
-    """Create a test client with the ASAP app.
-
-    Rate limiting is automatically disabled via NoRateLimitTestBase.
-    """
+def test_app(
+    test_manifest: Manifest,
+    disable_rate_limiting: "Limiter",
+) -> TestClient:
+    """Create a test client with the ASAP app (rate limiting disabled via NoRateLimitTestBase)."""
     app = create_app(test_manifest, rate_limit="100000/minute")
+    app.state.limiter = disable_rate_limiting
     return TestClient(app)
 
 

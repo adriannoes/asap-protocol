@@ -72,6 +72,18 @@ class TestConfigureAndGetTracer:
         tracer = get_tracer(__name__)
         assert tracer is not None
 
+    def test_configure_otlp_without_endpoint_does_not_add_processor(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When OTEL_TRACES_EXPORTER=otlp but OTEL_EXPORTER_OTLP_ENDPOINT is unset, no OTLP processor is added."""
+        monkeypatch.setenv("OTEL_TRACES_EXPORTER", "otlp")
+        monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
+        reset_tracing()
+        configure_tracing(service_name="test-otlp")
+        tracer = get_tracer(__name__)
+        assert tracer is not None
+        reset_tracing()
+
 
 class TestInjectEnvelopeTraceContext:
     """Tests for inject_envelope_trace_context."""

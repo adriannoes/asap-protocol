@@ -5,9 +5,9 @@
 
 > A streamlined, scalable, asynchronous protocol for agent-to-agent communication and task coordination. Built as a simpler, more powerful alternative to A2A with native MCP integration and stateful orchestration.
 
-**Quick Info**: `v0.5.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://asap-protocol.org) | [PyPI](https://pypi.org/project/asap-protocol/0.5.0/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
+**Quick Info**: `v1.0.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/1.0.0/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
 
-⚠️ **Alpha Release**: ASAP Protocol is currently in **alpha** (v0.5.0). We're actively developing and improving the protocol based on real-world usage. Your feedback, contributions, and suggestions are essential to help us evolve and make ASAP better for the entire community. See our [Contributing](https://github.com/adriannoes/asap-protocol#contributing) section to get involved!
+**Stable** — ASAP Protocol v1.0.0 is production-ready. We welcome feedback and contributions. See our [Contributing](https://github.com/adriannoes/asap-protocol#contributing) section to get involved!
 
 ## Why ASAP?
 
@@ -16,7 +16,7 @@ Building multi-agent systems today suffers from three core technical challenges 
 2. **State Drift**: Lack of native persistence makes it impossible to reliably resume long-running agentic workflows.
 3. **Fragmentation**: No unified way to handle task delegation, artifact exchange, and tool execution (MCP) in a single envelope.
 
-**ASAP** provides a production-ready communication layer that simplifies these complexities. It introduces a standardized, stateful orchestration framework that ensures your agents can coordinate reliably across distributed environments.
+**ASAP** provides a production-ready communication layer that simplifies these complexities. It introduces a standardized, stateful orchestration framework that ensures your agents can coordinate reliably across distributed environments. → [Spec](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/v0-original-specs.md)
 
 ### Key Features
 
@@ -25,7 +25,7 @@ Building multi-agent systems today suffers from three core technical challenges 
 - **Async-native** — `asyncio` + `httpx`; sync and async handlers supported.
 - **MCP integration** — Tool execution and coordination in a single envelope.
 - **Observable** — `trace_id` and `correlation_id` for debugging.
-- **Security (v0.5.0)** — Bearer auth, replay prevention, HTTPS, rate limiting (100 req/min). Opt-in.
+- **Security (v1.0.0)** — Bearer auth, replay prevention, HTTPS, rate limiting (100 req/min). Opt-in.
 
 ## Installation
 
@@ -41,7 +41,7 @@ Or with pip:
 pip install asap-protocol
 ```
 
-📦 **Available on [PyPI](https://pypi.org/project/asap-protocol/0.5.0/)**
+📦 **Available on [PyPI](https://pypi.org/project/asap-protocol/1.0.0/)**
 
 For reproducible environments, prefer `uv` when possible.
 
@@ -63,7 +63,7 @@ from asap.transport.server import create_app
 manifest = Manifest(
     id="urn:asap:agent:echo-agent",
     name="Echo Agent",
-    version="0.5.0",
+    version="1.0.0",
     description="Echoes task input as output",
     capabilities=Capability(
         asap_version="0.1",
@@ -112,73 +112,21 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-## API Overview
+## Try it
 
-Core models:
-
-- `Envelope`: protocol wrapper with routing and tracing metadata
-- `TaskRequest`, `TaskResponse`, `TaskUpdate`, `TaskCancel`: task lifecycle payloads
-- `MessageSend`, `ArtifactNotify`: messaging and artifacts
-- `StateQuery`, `StateRestore`: snapshot state operations
-- `McpToolCall`, `McpToolResult`, `McpResourceFetch`, `McpResourceData`: MCP integration
-
-Transport:
-
-- `create_app`: FastAPI application factory
-- `HandlerRegistry`: payload dispatch registry (supports both sync and async handlers)
-- `ASAPClient`: async HTTP client with automatic retry for server errors (5xx)
-
-### Development: Handler hot reload (`ASAP_HOT_RELOAD`)
-
-**Development only** — Do not enable `ASAP_HOT_RELOAD` in production. It is intended for local development so that changes to the handlers module are picked up without restarting the process.
-
-- Set the environment variable `ASAP_HOT_RELOAD=1` (or `true` / `yes`) before starting the server.
-- The implementation uses a **background thread** that watches the handlers file and reloads the registry when it changes. The server continues serving requests while the watcher runs.
-- Hot reload is only active when using the default registry (e.g. `create_app(..., use_default_registry=True)`). If `watchfiles` is not installed, hot reload is skipped and a warning is logged; install it with `pip install watchfiles` to use this feature.
-
-**Example:**
-
-```bash
-ASAP_HOT_RELOAD=1 uv run uvicorn asap.transport.server:app --factory ...
-```
-
-## Documentation
-
-- [Docs](https://asap-protocol.org) | [API Reference](https://asap-protocol.org)
-- [Tutorials](docs/tutorials/) — Step-by-step guides from first agent to production checklist
-- [Architecture Decision Records](docs/adr/) — Key design decisions (ULID, async-first, JSON-RPC, etc.)
-- [Spec](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/docs/general-specs.md) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md) | [PyPI Package](https://pypi.org/project/asap-protocol/0.5.0/)
-
-## When to Use ASAP?
-
-ASAP is ideal for:
-- **Multi-agent orchestration**: Coordinate tasks across multiple AI agents
-- **Stateful workflows**: Long-running tasks that need persistence and resumability
-- **MCP integration**: Agents that need to execute tools via Model Context Protocol
-- **Production systems**: High-performance, type-safe agent communication
-
-If you're building simple point-to-point agent communication, a basic HTTP API might suffice. ASAP shines when you need orchestration, state management and multi-agent coordination.
-
-## Advanced Topics
-
-Explore these guides for detailed information on specific features:
-
-- **[State Management](https://github.com/adriannoes/asap-protocol/blob/main/docs/state-management.md)**: Task lifecycle, state machine, and snapshot persistence for resumable workflows.
-- **[Error Handling](https://github.com/adriannoes/asap-protocol/blob/main/docs/error-handling.md)**: Structured error taxonomy and recovery patterns for robust agent communication.
-- **[Transport Layer](https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md)**: HTTP/JSON-RPC binding details, async handlers, and server configuration.
-- **[Security](https://github.com/adriannoes/asap-protocol/blob/main/docs/security.md)**: Production security practices, rate limiting, DoS protection, and authentication.
-- **[Observability](https://github.com/adriannoes/asap-protocol/blob/main/docs/observability.md)**: Tracing, metrics, and logging for debugging multi-agent systems.
-- **[Testing](https://github.com/adriannoes/asap-protocol/blob/main/docs/testing.md)**: Testing strategies and utilities for ASAP-based agents.
-
-### Advanced Examples
-
-Run the built-in multi-agent demo to see ASAP in action:
+**Run the multi-agent demo** (echo agent + coordinator, one round-trip):
 
 ```bash
 uv run python -m asap.examples.run_demo
 ```
 
-The package includes **14+ real-world examples** in [`src/asap/examples/`](https://github.com/adriannoes/asap-protocol/tree/main/src/asap/examples). Full list and usage: [Examples README](src/asap/examples/README.md).
+**Run any of 14+ examples** (auth, MCP, state migration, etc.):
+
+```bash
+uv run python -m asap.examples.<module_name> [options]
+```
+
+→ Full list: [Examples README](https://github.com/adriannoes/asap-protocol/blob/main/src/asap/examples/README.md)
 
 | Category | Examples |
 |----------|----------|
@@ -190,17 +138,69 @@ The package includes **14+ real-world examples** in [`src/asap/examples/`](https
 | **Auth & limits** | `auth_patterns` (Bearer, validators, OAuth2 concept), `rate_limiting` (per-sender, per-endpoint) |
 | **Concepts** | `websocket_concept` (WebSocket design), `streaming_response` (TaskUpdate streaming), `multi_step_workflow` (pipeline) |
 
-Run any example: `uv run python -m asap.examples.<module_name> [options]`
+## Testing
 
-### CLI Tools
+```bash
+uv run pytest -n auto --tb=short
+```
 
-The ASAP CLI provides utilities for schema management. See [CLI documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#cli) or run `asap --help` for available commands.
+With coverage:
+
+```bash
+uv run pytest --cov=src --cov-report=term-missing
+```
+
+→ [Testing Guide](https://github.com/adriannoes/asap-protocol/blob/main/docs/testing.md) — structure, fixtures, property/load/chaos tests
+→ [Contributing](https://github.com/adriannoes/asap-protocol/blob/main/CONTRIBUTING.md) — dev setup, CI
+
+## Benchmarks
+
+→ [Benchmark Results](https://github.com/adriannoes/asap-protocol/blob/main/benchmarks/RESULTS.md) — Load (1,500+ RPS), stress, memory
+
+## API Overview
+
+Core models: `Envelope`, `TaskRequest`/`TaskResponse`/`TaskUpdate`/`TaskCancel`, `MessageSend`, `ArtifactNotify`, `StateQuery`/`StateRestore`, `McpToolCall`/`McpToolResult`/`McpResourceFetch`/`McpResourceData`. → [API Reference](https://github.com/adriannoes/asap-protocol/blob/main/docs/api-reference.md)
+
+Transport: `create_app`, `HandlerRegistry`, `ASAPClient`. → [Transport](https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md)
+
+## When to Use ASAP?
+
+ASAP is ideal for:
+- **Multi-agent orchestration**: Coordinate tasks across multiple AI agents
+- **Stateful workflows**: Long-running tasks that need persistence and resumability
+- **MCP integration**: Agents that need to execute tools via Model Context Protocol
+- **Production systems**: High-performance, type-safe agent communication
+
+If you're building simple point-to-point agent communication, a basic HTTP API might suffice. ASAP shines when you need orchestration, state management and multi-agent coordination.
+
+## Documentation
+
+**Learn**
+- [Docs](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [API Reference](https://github.com/adriannoes/asap-protocol/blob/main/docs/api-reference.md)
+- [Tutorials](https://github.com/adriannoes/asap-protocol/tree/main/docs/tutorials) — First agent → production checklist
+- [Migration from A2A/MCP](https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md)
+
+**Deep dive**
+- [State Management](https://github.com/adriannoes/asap-protocol/blob/main/docs/state-management.md) | [Error Handling](https://github.com/adriannoes/asap-protocol/blob/main/docs/error-handling.md)
+- [Transport](https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md) | [Security](https://github.com/adriannoes/asap-protocol/blob/main/docs/security.md)
+- [Observability](https://github.com/adriannoes/asap-protocol/blob/main/docs/observability.md) | [Testing](https://github.com/adriannoes/asap-protocol/blob/main/docs/testing.md)
+
+**Decisions & ops**
+- [ADRs](https://github.com/adriannoes/asap-protocol/tree/main/docs/adr) — 17 Architecture Decision Records
+- [Deployment](https://github.com/adriannoes/asap-protocol/blob/main/docs/deployment/kubernetes.md) | [Troubleshooting](https://github.com/adriannoes/asap-protocol/blob/main/docs/troubleshooting.md)
+
+**Release**
+- [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md) | [PyPI](https://pypi.org/project/asap-protocol/1.0.0/)
+
+## CLI
+
+`asap --version` | `asap export-schemas` | `asap list-schemas` | `asap show-schema` — [CLI docs](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#cli) or `asap --help`
 
 ## Contributing
 
 We love contributions! Whether it's fixing a bug, improving documentation or proposing a new feature.. your help is welcome.
 
-**As an alpha release, community feedback and contributions are essential** for ASAP Protocol's evolution. We're actively working on improvements and your input helps shape the future of the protocol. Every contribution, from bug reports to feature suggestions, documentation improvements and code contributions, makes a real difference.
+**Community feedback and contributions are essential** for ASAP Protocol's evolution. We're actively working on improvements and your input helps shape the future of the protocol. Every contribution, from bug reports to feature suggestions, documentation improvements and code contributions, makes a real difference.
 
 Check out our [Contributing Guidelines](https://github.com/adriannoes/asap-protocol/blob/main/CONTRIBUTING.md) to get started. It's easier than you think! 🚀
 

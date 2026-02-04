@@ -349,6 +349,26 @@ Use the **decision tree** and **critical rules** in `.cursor/rules/testing-rate-
 
 ---
 
+## Audit: Codebase Compliance (2026-02-04)
+
+Applied `.cursor/rules/testing-rate-limiting.mdc` and verified rate limit handling:
+
+| Area | Status | Notes |
+|------|--------|--------|
+| **tests/conftest.py** | ✅ | `_isolate_rate_limiter` (autouse) patches both modules; limit aligned to `999999/minute`. |
+| **tests/transport/conftest.py** | ✅ | `isolated_limiter_factory`, `replace_global_limiter`, `NoRateLimitTestBase`, `create_isolated_app` follow the rule. |
+| **tests/transport/integration/test_rate_limiting.py** | ✅ | Aggressive monkeypatch + moderate limits; dedicated file. |
+| **tests/transport/integration/test_server_core.py** | ✅ | All test classes use `NoRateLimitTestBase`. |
+| **tests/transport/test_server.py** | ✅ | `app`/`client` fixtures rely on global isolation; `TestDebugLogMode` uses full pattern + `app.state.limiter`. |
+| **tests/transport/e2e/test_full_agent_flow.py** | ✅ | `NoRateLimitTestBase` + high-limit app. |
+| **tests/contract/conftest.py** | ✅ | `disable_rate_limiting_for_contract_tests` patches both modules (no-limit). |
+| **tests/test_docs_troubleshooting_smoke.py** | ✅ | Uses `default_app`; decorator uses module-level limiter patched by autouse fixture. |
+| **benchmarks/conftest.py** | ✅ Fixed | Switched from `limiter.enabled = False` to aggressive monkeypatch + isolated limiter. |
+
+**Optional improvement**: Fixtures that create an app (e.g. `test_server.app`) could set `app.state.limiter` to the same limiter used in the patch for full runtime consistency; the module-level patch is sufficient to avoid HTTP 429.
+
+---
+
 ## References
 
 ### Sprint Context

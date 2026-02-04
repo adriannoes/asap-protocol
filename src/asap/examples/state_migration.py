@@ -213,8 +213,8 @@ def run_demo() -> None:
     )
 
     restored = target_store.get(migrated.task_id, version=migrated.version)
-    assert restored is not None
-    assert restored.data == snapshot.data
+    assert restored is not None  # nosec B101
+    assert restored.data == snapshot.data  # nosec B101
     logger.info(
         "asap.state_migration.demo_complete",
         task_id=task_id,

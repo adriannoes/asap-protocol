@@ -331,7 +331,7 @@ Auto-failover based on health checks
 
 - **Roadmap**: [roadmap-to-marketplace.md](./roadmap-to-marketplace.md)
 - **v1.1 Planning**: [prd-v1.1-planning.md](../prd/prd-v1.1-planning.md)
-- **Original Spec**: [general-specs.md](../../docs/general-specs.md)
+- **Original Spec**: [v0-original-specs.md](./v0-original-specs.md)
 
 ---
 
