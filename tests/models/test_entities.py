@@ -109,6 +109,21 @@ class TestAgent:
                 capabilities=["task.execute"],
             )
 
+    def test_agent_urn_unicode_characters_rejected(self) -> None:
+        """Test that Agent rejects URN with unicode characters (i18n edge case)."""
+        with pytest.raises(ValidationError):
+            Agent(
+                id="urn:asap:agent:研究エージェント",
+                manifest_uri="https://example.com/manifest.json",
+                capabilities=["task.execute"],
+            )
+        with pytest.raises(ValidationError):
+            Agent(
+                id="urn:asap:agent:agënt-tëst",
+                manifest_uri="https://example.com/manifest.json",
+                capabilities=["task.execute"],
+            )
+
     def test_agent_urn_valid_at_max_length(self) -> None:
         """Test that Agent accepts URN at exactly MAX_URN_LENGTH characters."""
         from asap.models.constants import MAX_URN_LENGTH
