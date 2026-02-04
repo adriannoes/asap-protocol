@@ -93,4 +93,4 @@ The demo uses `MCPClient` to start `asap.mcp.server_runner` as a subprocess, per
 
 ## Protocol version
 
-This implementation follows **MCP 2025-11-25**. For a short reference of the types and messages used, see [mcp-specs-2025-11-25.md](../.cursor/docs/mcp-specs-2025-11-25.md) in the repo.
+This implementation follows **MCP 2025-11-25**. For a short reference of the types and messages used, see [mcp-specs.md](../.cursor/dev-planning/references/mcp-specs.md) in the repo.
