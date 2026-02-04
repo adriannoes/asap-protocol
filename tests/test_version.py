@@ -3,4 +3,4 @@ from asap import __version__
 
 def test_version():
     """Test that the package version is exposed correctly."""
-    assert __version__ == "0.5.0"
+    assert __version__ == "1.0.0"
