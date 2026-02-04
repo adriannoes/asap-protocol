@@ -88,9 +88,7 @@ def benchmark_app(
     monkeypatch.setattr(middleware_module, "limiter", isolated_limiter)
     monkeypatch.setattr(server_module, "limiter", isolated_limiter)
 
-    app = create_app(
-        sample_manifest, handler_registry, rate_limit="999999/minute"
-    )
+    app = create_app(sample_manifest, handler_registry, rate_limit="999999/minute")
     app.state.limiter = isolated_limiter
 
     return TestClient(app)

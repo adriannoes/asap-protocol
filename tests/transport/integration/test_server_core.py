@@ -39,9 +39,7 @@ def app(
     disable_rate_limiting: "Limiter",
 ) -> FastAPI:
     """Create FastAPI app for testing (rate limiting disabled via NoRateLimitTestBase)."""
-    app_instance = create_app(
-        sample_manifest, rate_limit=TEST_RATE_LIMIT_DEFAULT
-    )
+    app_instance = create_app(sample_manifest, rate_limit=TEST_RATE_LIMIT_DEFAULT)
     app_instance.state.limiter = disable_rate_limiting
     return app_instance  # type: ignore[no-any-return]
 

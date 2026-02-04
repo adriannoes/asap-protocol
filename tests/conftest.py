@@ -24,9 +24,7 @@ pytest_plugins = ["asap.testing.fixtures"]
 
 
 @pytest.fixture(autouse=True)
-def _isolate_rate_limiter(
-    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def _isolate_rate_limiter(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
     """Isolate rate limiter for all tests (very high limits, both modules patched).
 
     Skipped for tests/transport/integration/test_rate_limiting.py (they use their own).
