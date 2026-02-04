@@ -2,7 +2,7 @@
 
 from fastapi.testclient import TestClient
 
-from asap.observability.trace_ui import app
+from asap.observability.trace_ui import MAX_LOG_LINES_LENGTH, app
 
 client = TestClient(app)
 
@@ -35,6 +35,25 @@ def test_list_traces_empty_returns_empty_list() -> None:
     response = client.post("/api/traces/list", json={"log_lines": "{}"})
     assert response.status_code == 200
     assert response.json()["trace_ids"] == []
+
+
+def test_list_traces_payload_too_large_returns_413() -> None:
+    """POST /api/traces/list with payload over MAX_LOG_LINES_LENGTH returns 413."""
+    large = "x" * (MAX_LOG_LINES_LENGTH + 1)
+    response = client.post("/api/traces/list", json={"log_lines": large})
+    assert response.status_code == 413
+    assert "too large" in response.json()["detail"].lower()
+
+
+def test_visualize_payload_too_large_returns_413() -> None:
+    """POST /api/traces/visualize with payload over MAX_LOG_LINES_LENGTH returns 413."""
+    large = "x" * (MAX_LOG_LINES_LENGTH + 1)
+    response = client.post(
+        "/api/traces/visualize",
+        json={"log_lines": large, "trace_id": "t1"},
+    )
+    assert response.status_code == 413
+    assert "too large" in response.json()["detail"].lower()
 
 
 def test_visualize_returns_diagram() -> None:
