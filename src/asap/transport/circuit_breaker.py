@@ -77,13 +77,17 @@ class CircuitBreaker:
     def record_failure(self) -> None:
         """Record a failed request.
 
-        Increments failure count and opens circuit if threshold is reached.
+        Increments failure count and opens circuit if threshold is reached
+        or if the circuit was in HALF_OPEN state.
         """
         with self._lock:
             self._consecutive_failures += 1
             self._last_failure_time = time.time()
 
-            if self._consecutive_failures >= self.threshold and self._state == CircuitState.CLOSED:
+            if (
+                self._state == CircuitState.HALF_OPEN
+                or (self._consecutive_failures >= self.threshold and self._state == CircuitState.CLOSED)
+            ):
                 self._state = CircuitState.OPEN
 
     def can_attempt(self) -> bool:
