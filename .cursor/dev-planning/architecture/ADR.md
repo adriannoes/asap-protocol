@@ -2,6 +2,21 @@
 
 > Expert self-review identifying unclear points, analyzing trade-offs, and documenting decisions.
 
+## Table of Contents
+
+- [Analysis Methodology](#analysis-methodology)
+- [Question 1: Is Event-Sourced State Necessary for MVP?](#question-1-is-event-sourced-state-necessary-for-mvp)
+- [Question 2: Why JSON-RPC Over REST for Primary Binding?](#question-2-why-json-rpc-over-rest-for-primary-binding)
+- [Question 3: Is Peer-to-Peer Default Practical?](#question-3-is-peer-to-peer-default-practical)
+- [Question 4: What Consistency Model for Shared State?](#question-4-what-consistency-model-for-shared-state)
+- [Question 5: Is MCP Envelope Approach Optimal?](#question-5-is-mcp-envelope-approach-optimal)
+- [Question 6: Is CalVer Appropriate for Protocol Versioning?](#question-6-is-calver-appropriate-for-protocol-versioning)
+- [Question 7: Is Error Model Complete?](#question-7-is-error-model-complete)
+- [Question 8: Is MVP Security Sufficient?](#question-8-is-mvp-security-sufficient)
+- [Question 9: Should Any Module Use C or Rust?](#question-9-should-any-module-use-c-or-rust)
+- [Summary of Amendments](#summary-of-amendments)
+- [Next Steps](#next-steps)
+
 ---
 
 ## Analysis Methodology
