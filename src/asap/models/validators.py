@@ -14,4 +14,3 @@ def validate_agent_urn(v: str) -> str:
     if not _AGENT_URN_RE.match(v):
         raise ValueError(f"Agent ID must follow URN format 'urn:asap:agent:{{name}}', got: {v}")
     return v
-

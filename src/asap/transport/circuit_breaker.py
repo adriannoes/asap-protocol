@@ -84,10 +84,11 @@ class CircuitBreaker:
             self._consecutive_failures += 1
             self._last_failure_time = time.time()
 
-            if (
-                self._state == CircuitState.HALF_OPEN
-                or (self._consecutive_failures >= self.threshold and self._state == CircuitState.CLOSED)
-            ):
+            threshold_reached = (
+                self._consecutive_failures >= self.threshold and self._state == CircuitState.CLOSED
+            )
+
+            if self._state == CircuitState.HALF_OPEN or threshold_reached:
                 self._state = CircuitState.OPEN
 
     def can_attempt(self) -> bool:
