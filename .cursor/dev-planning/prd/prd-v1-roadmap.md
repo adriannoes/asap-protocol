@@ -1318,6 +1318,7 @@ Based on load testing results:
 | 2026-01-30 | 1.4 | Sprint P1 Checkpoint: Confirmed Q3/DD-008 (HMAC defer to v1.1.0+) | ASAP Team |
 | 2026-01-31 | 1.5 | Sprint P6 Checkpoint: DD-011 Trace JSON export; Q5 resolved | ASAP Team |
 | 2026-02-01 | 1.6 | Sprint P9 Checkpoint: DD-013 i18n scope (English-only v1.0.0); Q8 resolved | ASAP Team |
+| 2026-02-04 | 1.7 | v1.0.0 final PRD review: Q1–Q12 confirmed resolved/deferred; retrospective created | ASAP Team |
 
 ---
 

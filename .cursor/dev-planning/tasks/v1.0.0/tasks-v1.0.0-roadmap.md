@@ -349,36 +349,37 @@
   - Branch: `pre-release-audit-fixes`
   - Details: [Release Detailed - Task 13.0](./tasks-v1.0.0-release-detailed.md#task-130-pre-release-technical-audit-)
 
-- [ ] 13.1 Run comprehensive testing
+- [x] 13.1 Run comprehensive testing
   - Goal: 1300+ tests pass + CI pipeline, benchmarks meet targets
   - Details: [Release Detailed - Task 13.1](./tasks-v1.0.0-release-detailed.md#task-131-comprehensive-testing)
 
-- [ ] 13.2 Review all documentation
+- [x] 13.2 Review all documentation
   - Goal: All docs accurate, examples work, upgrades smooth
   - Details: [Release Detailed - Task 13.2](./tasks-v1.0.0-release-detailed.md#task-132-documentation-review)
 
-- [ ] 13.3 Prepare release materials
+- [x] 13.3 Prepare release materials
   - Goal: CHANGELOG, release notes, version bump
   - Details: [Release Detailed - Task 13.3](./tasks-v1.0.0-release-detailed.md#task-133-release-preparation)
 
 - [ ] 13.4 Build and publish
   - Goal: Publish to PyPI, GitHub release, Docker images
   - Details: [Release Detailed - Task 13.4](./tasks-v1.0.0-release-detailed.md#task-134-build-and-publish)
+  - **Note**: Run after single push (tag, uv publish, GitHub release, Docker).
 
-- [ ] 13.5 Communicate release
+- [x] 13.5 Communicate release
   - Goal: Announce, update status to "Stable"
   - Details: [Release Detailed - Task 13.5](./tasks-v1.0.0-release-detailed.md#task-135-communication)
 
-- [ ] 13.6 Final PRD review & retrospective
+- [x] 13.6 Final PRD review & retrospective
   - Goal: Complete PRD review, create retrospective, schedule post-release review
   - Details: [Release Detailed - Task 13.6](./tasks-v1.0.0-release-detailed.md#task-136-final-prd-review--retrospective)
 
 ### Definition of Done
-- [ ] All success metrics met
-- [ ] v1.0.0 on PyPI
-- [ ] Documentation 100% complete
-- [ ] PRD fully reviewed
-- [ ] Retrospective created
+- [x] All success metrics met (tests, benchmarks, security, docs)
+- [ ] v1.0.0 on PyPI (after 13.4)
+- [x] Documentation 100% complete
+- [x] PRD fully reviewed
+- [x] Retrospective created
 
 ---
 
@@ -408,7 +409,7 @@
 
 ## Progress Tracking
 
-**Overall Progress**: 33/39 tasks completed (85%)
+**Overall Progress**: 38/39 tasks completed (97%)
 
 **Sprint Status**:
 - ✅ P1: 3/3 tasks (100%) - **Includes PRD review**
@@ -423,18 +424,18 @@
 - ✅ P10: 2/2 tasks (100%)
 - ✅ P11: 3/3 tasks (100%)
 - ✅ P12: 2/2 tasks (100%)
-- ⏳ P13: 1/7 tasks (14%) - **Includes final PRD review**
+- ⏳ P13: 6/7 tasks (86%) - **13.4 Build and publish after push**
 
 **PRD Maintenance Schedule**:
 - P1: Review security decisions (HMAC signing) ✅
 - P3: Document connection pool size (DD-009) ✅
-- P5: Decide auth scheme for examples (DD-010)
-- P6: Decide trace JSON export
-- P7: Decide adaptive rate limiting
-- P9: Decide i18n scope (DD-011)
-- P13: Final review + retrospective
+- P5: Decide auth scheme for examples (DD-010) ✅
+- P6: Decide trace JSON export (DD-011) ✅
+- P7: Decide adaptive rate limiting (DD-012) ✅
+- P9: Decide i18n scope (DD-013) ✅
+- P13: Final review + retrospective ✅
 
-**Last Updated**: 2026-02-03
+**Last Updated**: 2026-02-04
 
 **Prerequisites**: v0.5.0 must be released before starting Sprint P1
 
