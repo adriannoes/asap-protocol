@@ -214,6 +214,32 @@ class TestSanitizeForLogging:
         assert result["Token"] == REDACTED_PLACEHOLDER
         assert result["Authorization"] == REDACTED_PLACEHOLDER
 
+    def test_deeply_nested_dicts_sanitized(self) -> None:
+        """Test that deeply nested dicts (>5 levels) are recursively sanitized."""
+        # Create a 7-level deep structure with a secret at the bottom
+        data = {
+            "level1": {
+                "level2": {
+                    "level3": {
+                        "level4": {
+                            "level5": {
+                                "level6": {
+                                    "level7": {
+                                        "api_key": "secret_deep_value",
+                                        "safe_data": "visible",
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        result = sanitize_for_logging(data)
+        deep_level = result["level1"]["level2"]["level3"]["level4"]["level5"]["level6"]["level7"]
+        assert deep_level["api_key"] == REDACTED_PLACEHOLDER
+        assert deep_level["safe_data"] == "visible"
+
 
 class TestIsDebugMode:
     """Tests for ASAP_DEBUG environment variable (is_debug_mode)."""
