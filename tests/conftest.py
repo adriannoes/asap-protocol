@@ -4,10 +4,16 @@ This module provides common fixtures used across multiple test modules,
 reducing duplication and ensuring consistency in test data.
 """
 
+from __future__ import annotations
+
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 import pytest
+
+if TYPE_CHECKING:
+    from slowapi import Limiter
 
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.envelope import Envelope
@@ -18,15 +24,12 @@ pytest_plugins = ["asap.testing.fixtures"]
 
 
 @pytest.fixture(autouse=True)
-def _isolate_rate_limiter(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Automatically isolate rate limiter for all tests.
+def _isolate_rate_limiter(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Isolate rate limiter for all tests (very high limits, both modules patched).
 
-    This fixture runs before every test and replaces the global rate limiter
-    with an isolated instance that has very high limits. This prevents rate
-    limiting interference between tests, especially when running with pytest-xdist.
-
-    Tests in tests/transport/integration/test_rate_limiting.py can override this
-    by using their own fixtures with specific rate limits.
+    Skipped for tests/transport/integration/test_rate_limiting.py (they use their own).
     """
     # Skip isolation for rate limiting integration tests (they manage their own limiter)
     if "test_rate_limiting" in str(request.fspath):
@@ -35,11 +38,10 @@ def _isolate_rate_limiter(request: pytest.FixtureRequest, monkeypatch: pytest.Mo
     from slowapi import Limiter
     from slowapi.util import get_remote_address
 
-    # Create isolated limiter with very high limits
     isolated_limiter = Limiter(
         key_func=get_remote_address,
         storage_uri=f"memory://isolated-{uuid.uuid4().hex}",
-        default_limits=["100000/minute"],
+        default_limits=["999999/minute"],
     )
 
     # Replace globally in both modules
@@ -48,6 +50,17 @@ def _isolate_rate_limiter(request: pytest.FixtureRequest, monkeypatch: pytest.Mo
 
     monkeypatch.setattr(middleware_module, "limiter", isolated_limiter)
     monkeypatch.setattr(server_module, "limiter", isolated_limiter)
+
+    request.node._isolated_limiter = isolated_limiter  # type: ignore[attr-defined]
+
+
+@pytest.fixture
+def isolated_rate_limiter(
+    request: pytest.FixtureRequest,
+    _isolate_rate_limiter: None,
+) -> Limiter | None:
+    """Return the isolated rate limiter from _isolate_rate_limiter, or None if skipped."""
+    return getattr(request.node, "_isolated_limiter", None)
 
 
 @pytest.fixture

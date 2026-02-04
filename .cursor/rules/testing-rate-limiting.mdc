@@ -1,6 +1,13 @@
+---
+description: How to test FastAPI endpoints that use slowapi rate limiting without flaky HTTP 429s. Use the aggressive monkeypatch pattern (replace limiter in both middleware and server modules before creating the app, set app.state.limiter) or NoRateLimitTestBase / isolated_rate_limiter fixtures. Apply when writing or reviewing transport/server tests that hit /asap or other rate-limited routes.
+alwaysApply: false
+---
+
 # Rate Limiting Testing Pattern
 
-> Quick reference for testing with slowapi rate limiting. Full documentation: `.cursor/docs/rate-limiting-testing-patterns.md`
+> Quick reference for testing with slowapi rate limiting. Full documentation: `.cursor/dev-planning/architecture/patterns/rate-limiting.md`
+...
+1. Read the full documentation: `.cursor/dev-planning/architecture/patterns/rate-limiting.md`
 
 ## Problem
 
@@ -136,12 +143,15 @@ pytest -n 0
 
 ## When in Doubt
 
-1. Read the full documentation: `.cursor/docs/rate-limiting-testing-patterns.md`
+1. Read the full documentation: `.cursor/dev-planning/architecture/patterns/rate-limiting.md`
 2. Check existing examples: `tests/transport/test_server.py::TestDebugLogMode`
-3. Check v0.5.0 fixtures: `tests/transport/conftest.py`
+3. Check transport fixtures: `tests/transport/conftest.py` (NoRateLimitTestBase, isolated_limiter_factory, replace_global_limiter)
+4. Check global isolation: `tests/conftest.py` (`_isolate_rate_limiter`, `isolated_rate_limiter` for app fixtures)
 
 ## History
 
 - **v0.5.0 Sprint S2.5**: Resolved Issue #17 (33 failing tests due to rate limit interference)
-- **v1.0.0 Sprint P5-P6**: Applied pattern, prevented regressions in debug log tests
-- **See also**: `.cursor/dev-planning/tasks/v1.0.0/upstream-slowapi-deprecation.md`
+- **v1.0.0 Sprint P5–P6**: Applied pattern, prevented regressions in debug log tests
+- **v1.0.0 Sprint P7–P8**: Contract tests use `disable_rate_limiting_for_contract_tests`; integration/e2e use NoRateLimitTestBase
+- **v1.0.0 (2026-02-04)**: Audit; benchmarks use aggressive monkeypatch; global conftest uses `999999/minute`; app fixtures set `app.state.limiter` for runtime consistency
+- **See also**: `.cursor/dev-planning/tasks/v1.0.0/upstream-slowapi-deprecation.md`, `.cursor/dev-planning/tasks/v1.0.0/tasks-v1.0.0-roadmap.md`

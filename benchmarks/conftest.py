@@ -1,8 +1,6 @@
-"""Benchmark fixtures and configuration.
+"""Benchmark fixtures and configuration."""
 
-Provides shared fixtures for ASAP performance benchmarks.
-"""
-
+import uuid
 from typing import Any
 
 import pytest
@@ -69,19 +67,30 @@ def handler_registry() -> HandlerRegistry:
 
 
 @pytest.fixture
-def benchmark_app(sample_manifest: Manifest, handler_registry: HandlerRegistry) -> TestClient:
-    """Create a test client for HTTP benchmarks.
+def benchmark_app(
+    sample_manifest: Manifest,
+    handler_registry: HandlerRegistry,
+    monkeypatch: pytest.MonkeyPatch,
+) -> TestClient:
+    """Create a test client for HTTP benchmarks (isolated rate limiter)."""
+    from slowapi import Limiter
+    from slowapi.util import get_remote_address
 
-    Disables effective rate limiting (10000/s) to ensure benchmarks measure
-    code performance, not rate limiter.
-    """
-    from asap.transport.middleware import limiter
+    isolated_limiter = Limiter(
+        key_func=get_remote_address,
+        default_limits=["999999/minute"],
+        storage_uri=f"memory://{uuid.uuid4()}",
+    )
 
-    original_enabled = limiter.enabled
-    limiter.enabled = False
+    import asap.transport.middleware as middleware_module
+    import asap.transport.server as server_module
 
-    app = create_app(sample_manifest, handler_registry, rate_limit="100000/minute")
-    try:
-        yield TestClient(app)
-    finally:
-        limiter.enabled = original_enabled
+    monkeypatch.setattr(middleware_module, "limiter", isolated_limiter)
+    monkeypatch.setattr(server_module, "limiter", isolated_limiter)
+
+    app = create_app(
+        sample_manifest, handler_registry, rate_limit="999999/minute"
+    )
+    app.state.limiter = isolated_limiter
+
+    return TestClient(app)

@@ -11,10 +11,13 @@ Tests cover:
 
 import gzip
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from fastapi.testclient import TestClient
+
+if TYPE_CHECKING:
+    from slowapi import Limiter
 
 from asap.models.entities import Manifest
 from asap.models.envelope import Envelope
@@ -40,9 +43,14 @@ def test_registry() -> HandlerRegistry:
 
 
 @pytest.fixture
-def test_app(no_auth_manifest: Manifest, test_registry: HandlerRegistry) -> TestClient:
+def test_app(
+    no_auth_manifest: Manifest,
+    test_registry: HandlerRegistry,
+    disable_rate_limiting: "Limiter",
+) -> TestClient:
     """Create a test client for the ASAP server."""
     app = create_app(no_auth_manifest, test_registry)
+    app.state.limiter = disable_rate_limiting
     return TestClient(app)
 
 

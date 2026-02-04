@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 if TYPE_CHECKING:
-    pass
+    from slowapi import Limiter
 
 from asap.models.entities import AuthScheme, Capability, Endpoint, Manifest, Skill
 from asap.models.enums import TaskStatus
@@ -34,12 +34,16 @@ from ..conftest import NoRateLimitTestBase, TEST_RATE_LIMIT_DEFAULT
 
 
 @pytest.fixture
-def app(sample_manifest: Manifest) -> FastAPI:
-    """Create FastAPI app for testing.
-
-    Rate limiting is automatically disabled via NoRateLimitTestBase.
-    """
-    return create_app(sample_manifest, rate_limit=TEST_RATE_LIMIT_DEFAULT)  # type: ignore[no-any-return]
+def app(
+    sample_manifest: Manifest,
+    disable_rate_limiting: "Limiter",
+) -> FastAPI:
+    """Create FastAPI app for testing (rate limiting disabled via NoRateLimitTestBase)."""
+    app_instance = create_app(
+        sample_manifest, rate_limit=TEST_RATE_LIMIT_DEFAULT
+    )
+    app_instance.state.limiter = disable_rate_limiting
+    return app_instance  # type: ignore[no-any-return]
 
 
 @pytest.fixture

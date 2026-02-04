@@ -23,7 +23,8 @@ import pytest
 from fastapi import FastAPI
 
 if TYPE_CHECKING:
-    pass
+    from slowapi import Limiter
+
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
@@ -46,13 +47,15 @@ from asap.transport.server import ASAPRequestHandler, RegistryHolder, RequestCon
 
 
 @pytest.fixture
-def app(sample_manifest: Manifest) -> FastAPI:
-    """Create FastAPI app for testing.
-
-    Rate limiting is set to very high limits to avoid interference in tests.
-    """
-    # Create app with very high rate limit
-    return create_app(sample_manifest, rate_limit="100000/minute")  # type: ignore[no-any-return]
+def app(
+    sample_manifest: Manifest,
+    isolated_rate_limiter: "Limiter | None",
+) -> FastAPI:
+    """Create FastAPI app for testing (very high rate limit, isolated limiter)."""
+    app_instance = create_app(sample_manifest, rate_limit="999999/minute")
+    if isolated_rate_limiter is not None:
+        app_instance.state.limiter = isolated_rate_limiter
+    return app_instance  # type: ignore[no-any-return]
 
 
 @pytest.fixture
