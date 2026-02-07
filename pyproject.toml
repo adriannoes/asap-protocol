@@ -25,6 +25,8 @@ dependencies = [
     "pydantic>=2.12.5",
     "fastapi>=0.128.0",
     "httpx[http2]>=0.28.1",
+    "authlib>=1.3",
+    "joserfc>=1.0",
     "uvicorn>=0.34",
     "python-ulid>=3.0",
     "packaging>=25.0",
@@ -106,6 +108,7 @@ ignore = [
 "scripts/**" = ["T201"]
 "src/asap/examples/**" = ["T201"]
 "benchmarks/**" = ["T201"]
+"tests/**" = ["B008"]
 
 [tool.ruff.format]
 quote-style = "double"
