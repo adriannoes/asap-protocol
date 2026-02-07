@@ -154,6 +154,11 @@ module = "asap.transport.middleware"
 disable_error_code = ["misc"]
 # BaseHTTPMiddleware (Starlette) has type Any when ignore_missing_imports=true
 
+[[tool.mypy.overrides]]
+module = "asap.auth.middleware"
+disable_error_code = ["misc"]
+# OAuth2Middleware subclasses BaseHTTPMiddleware (Starlette); same untyped base in CI
+
 [tool.pydantic-mypy]
 init_forbid_extra = true
 init_typed = true

@@ -98,7 +98,7 @@ async def _fetch_jwks(
     return jwk.KeySet.import_key_set(data)
 
 
-class OAuth2Middleware(BaseHTTPMiddleware):  # type: ignore[misc]
+class OAuth2Middleware(BaseHTTPMiddleware):
     """Middleware that validates JWT Bearer tokens using JWKS.
 
     Extracts Authorization: Bearer <token>, validates the JWT signature
