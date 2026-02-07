@@ -18,10 +18,19 @@
 ## Strategic Context
 
 v1.3.0 is the **final infrastructure release** before v2.0 Marketplace:
-- **Metering**: Foundation for pay-per-use billing
+- **Metering**: Foundation for pay-per-use billing — uses `MeteringStore` interface from v1.1 (SD-9, ADR-13)
 - **Delegation**: Trust chains for enterprise hierarchies
-- **SLA**: Service guarantees that consumers can rely on
+- **SLA**: Service guarantees — uses health endpoint from v1.1 for availability monitoring (SD-10, ADR-14)
 - **Audit**: Compliance and dispute resolution
+
+### Prerequisites from v1.1.0
+
+| v1.1 Deliverable | v1.3 Usage |
+|-------------------|------------|
+| `MeteringStore` Protocol | Usage metering storage backend (Sprint E1) |
+| `SnapshotStore` + SQLite impl | Base pattern for `AuditStore` (Sprint E4) |
+| Health endpoint (`/.well-known/asap/health`) | SLA uptime/availability monitoring (Sprint E3) |
+| `ttl_seconds` in Manifest | SLA availability measurement (Sprint E3) |
 
 ---
 

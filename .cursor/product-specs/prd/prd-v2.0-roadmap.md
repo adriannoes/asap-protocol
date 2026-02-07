@@ -193,13 +193,30 @@ v2.0 integrates everything into a cohesive marketplace product.
                             │
                             ▼
 ┌───────────────────────────────────────────────────────────────────┐
-│                       DATA LAYER                                   │
+│                    STORAGE LAYER (SD-9)                             │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐               │
+│  │SnapshotStore│  │MeteringStore│  │  AuditStore │               │
+│  │ (interface) │  │ (interface) │  │ (interface) │               │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘               │
+│         └────────────────┼────────────────┘                       │
+│                          ▼                                         │
+│               Agent's choice of backend                            │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐               │
+│  │   SQLite    │  │   Redis     │  │  Postgres   │               │
+│  └─────────────┘  └─────────────┘  └─────────────┘               │
+└───────────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌───────────────────────────────────────────────────────────────────┐
+│                    MARKETPLACE DATA (centrally managed)             │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐               │
 │  │  PostgreSQL │  │   Stripe    │  │   Metrics   │               │
-│  │             │  │   (SaaS)    │  │ (Prometheus)│               │
+│  │ (registry)  │  │   (SaaS)    │  │ (Prometheus)│               │
 │  └─────────────┘  └─────────────┘  └─────────────┘               │
 └───────────────────────────────────────────────────────────────────┘
 ```
+
+> **Note (SD-9)**: Agent task state uses the `SnapshotStore`/`MeteringStore` interfaces (defined in v1.1) — agents choose their own backend. Marketplace metadata (registry, trust scores, SLA compliance) is stored centrally in PostgreSQL. **ASAP Cloud** (post-v2.0) may offer managed storage as a premium feature ("Vercel for Agents").
 
 ### 6.3 Repository Structure
 
@@ -265,3 +282,4 @@ Before announcing v2.0.0:
 | Date | Version | Change |
 |------|---------|--------|
 | 2026-02-06 | 1.0.0 | Initial PRD for v2.0.0 |
+| 2026-02-07 | 1.1.0 | Updated architecture diagram with Storage Layer (SD-9), ASAP Cloud reference |

@@ -167,7 +167,7 @@ v1.3.0 is the final step before the v2.0 Marketplace. See [roadmap-to-marketplac
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| None required | — | Uses existing crypto + storage |
+| None required | — | Uses `MeteringStore` and `SnapshotStore` interfaces from v1.1.0 (SD-9) |
 
 ### 6.2 Code Structure
 
@@ -175,17 +175,22 @@ v1.3.0 is the final step before the v2.0 Marketplace. See [roadmap-to-marketplac
 src/asap/
 ├── economics/
 │   ├── __init__.py
-│   ├── metering.py       # Usage tracking
+│   ├── metering.py       # Usage tracking logic (uses MeteringStore from state/)
 │   ├── delegation.py     # Delegation tokens
-│   ├── sla.py            # SLA framework
+│   ├── sla.py            # SLA framework (uses health endpoint from v1.1)
 │   └── audit.py          # Audit logging
 └── ...
 ```
 
 ### 6.3 Storage
 
-- Metering: Time-series optimized (SQLite for dev, optional TimescaleDB for prod)
-- Audit: Append-only log with hash chain for integrity
+**Foundation**: v1.1.0 (SD-9, ADR-13) defined the `MeteringStore` Protocol and SQLite reference implementation. v1.3 builds on this:
+
+- **Metering**: Uses `MeteringStore` interface (defined in v1.1.0) with SQLite backend for dev, PostgreSQL for production
+- **Audit**: Append-only log with hash chain for integrity, using `SnapshotStore`-derived `AuditStore` interface
+- **SLA monitoring**: Leverages health endpoint (`/.well-known/asap/health`) from v1.1.0 (SD-10, ADR-14)
+
+> **Note**: Storage interfaces were intentionally defined in v1.1.0 to avoid duplicating storage plumbing in v1.3. This sprint focuses on **economics logic**, not storage infrastructure.
 
 ---
 
@@ -200,11 +205,26 @@ src/asap/
 
 ---
 
-## 8. Related Documents
+## 8. Prerequisites from v1.1.0
+
+v1.3 depends on interfaces and infrastructure from v1.1.0:
+
+| v1.1 Deliverable | v1.3 Usage | Reference |
+|-------------------|------------|-----------|
+| `MeteringStore` Protocol | Usage metering storage backend | SD-9, ADR-13 |
+| `SnapshotStore` + SQLite impl | Base for AuditStore pattern | SD-9, ADR-13 |
+| Health endpoint (`/.well-known/asap/health`) | SLA uptime monitoring | SD-10, ADR-14 |
+| `ttl_seconds` in Manifest | SLA availability measurement | SD-10, ADR-14 |
+
+---
+
+## 9. Related Documents
 
 - **Tasks**: [tasks-v1.3.0-roadmap.md](../../dev-planning/tasks/v1.3.0/tasks-v1.3.0-roadmap.md)
 - **Roadmap**: [roadmap-to-marketplace.md](../roadmap-to-marketplace.md)
 - **Vision**: [vision-agent-marketplace.md](../vision-agent-marketplace.md)
+- **State Management Decision**: [ADR-13](../ADR.md#question-13-state-management-strategy-for-marketplace)
+- **Liveness Decision**: [ADR-14](../ADR.md#question-14-agent-liveness--health-protocol)
 
 ---
 
@@ -213,3 +233,4 @@ src/asap/
 | Date | Version | Change |
 |------|---------|--------|
 | 2026-02-06 | 1.0.0 | Initial PRD |
+| 2026-02-07 | 1.1.0 | Updated storage section to reference v1.1 interfaces (SD-9), added prerequisites section |

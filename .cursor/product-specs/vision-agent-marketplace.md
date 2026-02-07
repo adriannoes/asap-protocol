@@ -279,14 +279,15 @@ Auto-failover based on health checks
 |---------|-----------|---------|
 | v1.0 | Core Protocol | Stable foundation |
 | v1.1 | OAuth2/OIDC | Identity infrastructure |
+| v1.1 | Well-known URI + Health | Basic discovery + agent liveness (SD-10) |
+| v1.1 | State Storage Interface + SQLite | Persistent state foundation (SD-9) |
 | v1.1 | WebSocket | Real-time comms |
-| v1.1 | Well-known URI | Basic discovery |
 | v1.2 | Signed Manifests (Ed25519) | Verifiable identity |
 | v1.2 | Registry API | Centralized discovery |
 | v1.2 | mTLS (optional) | Enterprise transport security |
 | v1.3 | Delegation Tokens | Trust chains |
-| v1.3 | Usage Metering | Billing foundation |
-| v2.0 | Marketplace Core | Registry + Economy |
+| v1.3 | Usage Metering | Billing foundation (uses MeteringStore from v1.1) |
+| v2.0 | Marketplace Core | Registry + Economy + Web App |
 
 ### Architecture Layers
 
@@ -301,10 +302,29 @@ Auto-failover based on health checks
 │                    PROTOCOL LAYER                            │
 │  (ASAP v2.0 with extensions)                                 │
 ├─────────────────────────────────────────────────────────────┤
+│                    STORAGE LAYER (SD-9)                       │
+│  (SnapshotStore, MeteringStore — Agent's choice of backend)  │
+├─────────────────────────────────────────────────────────────┤
 │                    TRANSPORT LAYER                           │
 │  (HTTP, WebSocket, Broker)                                   │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+### State Management Strategy (SD-9)
+
+ASAP follows a **Hybrid strategy** for state management, balancing developer experience with ecosystem independence:
+
+| Layer | Data | Owner | Storage |
+|-------|------|-------|---------|
+| **Protocol Interface** | `SnapshotStore`, `MeteringStore` | ASAP SDK (open source) | Agent's choice |
+| **Reference Impls** | SQLite, Redis, PostgreSQL adapters | Separate packages | Agent's infra |
+| **Marketplace Metadata** | Manifests, trust scores, SLA metrics | ASAP centrally | PostgreSQL (v2.0) |
+| **Agent Task State** | Snapshots, event history, artifacts | Agent developer | Agent's choice |
+| **ASAP Cloud** (future) | Managed storage, backups | ASAP premium | Managed infra |
+
+**Key principle**: ASAP is the "protocol + marketplace", not the "database". Agents own their data. ASAP provides interfaces and reference implementations to reduce friction, and the marketplace stores only ecosystem metadata (who is registered, trust scores, SLA compliance).
+
+**Reference**: [ADR-13](./ADR.md#question-13-state-management-strategy-for-marketplace)
 
 ---
 
@@ -424,3 +444,4 @@ Monetization model (Subscription, % of transactions, or Hybrid) will be decided 
 |------|--------|
 | 2026-01-30 | Initial vision document |
 | 2026-02-05 | Added ICP, pricing strategy (Freemium + $49 Verified), updated building blocks |
+| 2026-02-07 | Strategic review: added State Management strategy (SD-9), Storage Layer, updated building blocks with liveness (SD-10) |

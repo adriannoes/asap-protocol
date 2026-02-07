@@ -1,5 +1,20 @@
 # ASAP Protocol v1.1 - Planned Features
 
+> **Status**: ⚠️ **DEPRECATED** — This document was the original backlog from the v1.0.0 gap analysis.
+> It has been superseded by the structured sprint planning in:
+> - **PRD**: [prd-v1.1-roadmap.md](../../../product-specs/prd/prd-v1.1-roadmap.md)
+> - **Tasks**: [tasks-v1.1.0-roadmap.md](./tasks-v1.1.0-roadmap.md)
+> - **Sprints**: S1 (OAuth2), S2 (Discovery + Liveness), S2.5 (State Storage), S3 (WebSocket), S4 (Webhooks + Release)
+>
+> **Kept for historical reference only.** Do not use this document for planning.
+>
+> **Key changes from this backlog** (2026-02-07 strategic review):
+> - Item 4 (State Storage Interface) → Promoted to Sprint S2.5 with full SQLite implementation (SD-9, ADR-13)
+> - Item 1 (SSRF prevention) → Included in Sprint S4 (Webhooks)
+> - Item 5 (Message Broker) → Deferred to v2.0+ per SD-3
+> - Item 6 (DNS-SD) → Deferred to v1.1.1+ (P3)
+> - Timeline estimates below are **outdated** — see tasks-v1.1.0-roadmap.md for current estimates
+>
 > **Scope**: Post-v1.0.0 enhancements
 > **Parent PRD**: [prd-v1.1-roadmap.md](../../../product-specs/prd/prd-v1.1-roadmap.md)
 

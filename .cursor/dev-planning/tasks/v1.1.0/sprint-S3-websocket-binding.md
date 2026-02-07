@@ -1,7 +1,7 @@
 # Sprint S3: WebSocket Binding
 
 > **Goal**: Real-time bidirectional communication for ASAP agents
-> **Prerequisites**: Sprints S1-S2 completed
+> **Prerequisites**: Sprints S1, S2, S2.5 completed
 > **Parent Roadmap**: [tasks-v1.1.0-roadmap.md](./tasks-v1.1.0-roadmap.md)
 
 ---
@@ -14,6 +14,8 @@
 - `src/asap/transport/client.py` - ASAPClient WebSocket transport
 - `tests/transport/test_websocket.py` - WebSocket unit tests
 - `tests/integration/test_websocket_e2e.py` - E2E WebSocket tests
+- `tests/transport/test_message_ack.py` - MessageAck unit tests (ADR-16)
+- `tests/transport/test_ack_aware_client.py` - AckAwareClient tests (ADR-16)
 
 ---
 
@@ -29,7 +31,7 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
 
 **Context**: Enable ASAP servers to accept WebSocket connections for real-time bidirectional communication.
 
-**Prerequisites**: Sprints S1-S2 completed
+**Prerequisites**: Sprints S1, S2, S2.5 completed
 
 ### Sub-tasks
 
@@ -196,12 +198,189 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
 
 ---
 
+## Task 3.4: Message Acknowledgment (ADR-16)
+
+**Goal**: Implement selective message acknowledgment for reliable WebSocket delivery.
+
+**Context**: WebSocket is fire-and-forget at the transport level. State-changing messages (`TaskRequest`, `TaskCancel`, `StateRestore`, `MessageSend`) MUST be acknowledged to prevent task state machine inconsistencies. Streaming updates and heartbeats do NOT need acks. See [ADR-16](../../../product-specs/ADR.md#question-16-websocket-message-acknowledgment).
+
+**Prerequisites**: Tasks 3.1-3.3 completed (WebSocket server, client, connection management)
+
+### Sub-tasks
+
+- [ ] 3.4.1 Define MessageAck payload
+  - **File**: `src/asap/models/payloads.py` (modify existing)
+  - **What**: Add `MessageAck` payload type:
+    - `original_envelope_id: str` — the envelope being acknowledged
+    - `status: Literal["received", "processed", "rejected"]`
+    - `error: str | None = None` — reason if rejected
+  - **Why**: Application-level ack for WebSocket messages
+  - **Pattern**: Follow existing payload types (TaskRequest, TaskCancel, etc.)
+  - **Verify**: `MessageAck` serializes and deserializes correctly
+
+- [ ] 3.4.2 Add `requires_ack` field to Envelope
+  - **File**: `src/asap/models/envelope.py` (modify existing)
+  - **What**: Add field:
+    - `requires_ack: bool = False`
+    - Document which payloads auto-set this to `True` over WebSocket
+  - **Why**: Opt-in ack behavior — only state-changing messages need it
+  - **Verify**: Envelope with `requires_ack=True` serializes correctly
+
+- [ ] 3.4.3 Auto-set `requires_ack` for critical payloads
+  - **File**: `src/asap/transport/websocket.py` (modify)
+  - **What**: When sending over WebSocket:
+    - Auto-set `requires_ack=True` for: `TaskRequest`, `TaskCancel`, `StateRestore`, `MessageSend`
+    - Leave `requires_ack=False` for: `TaskUpdate` (progress), heartbeats, streaming
+    - HTTP transport: no change (response is implicit ack)
+  - **Why**: Ensures critical messages are always acknowledged without manual opt-in
+  - **Verify**: Critical payloads have `requires_ack=True` over WebSocket
+
+- [ ] 3.4.4 Implement server-side ack response
+  - **File**: `src/asap/transport/websocket.py` (modify)
+  - **What**: When receiving a message with `requires_ack=True`:
+    - Immediately send `MessageAck(status="received")` back
+    - After processing: optionally send `MessageAck(status="processed")`
+    - On error: send `MessageAck(status="rejected", error="reason")`
+  - **Why**: Sender needs to know message was received and processed
+  - **Verify**: Server sends ack for critical messages
+
+- [ ] 3.4.5 Write tests for MessageAck
+  - **File**: `tests/transport/test_message_ack.py` (create new)
+  - **What**: Test scenarios:
+    - TaskRequest over WebSocket → receives MessageAck
+    - TaskUpdate (progress) over WebSocket → no ack sent
+    - Same message over HTTP → no MessageAck (response is ack)
+    - Rejected message → ack with error reason
+  - **Verify**: `pytest tests/transport/test_message_ack.py -v` all pass
+
+- [ ] 3.4.6 Commit milestone
+  - **Command**: `git commit -m "feat(transport): add MessageAck for WebSocket reliability (ADR-16)"`
+  - **Scope**: payloads.py, envelope.py, websocket.py, test_message_ack.py
+  - **Verify**: `git log -1` shows correct message
+
+**Acceptance Criteria**:
+- [ ] MessageAck payload defined and functional
+- [ ] Critical payloads auto-set `requires_ack=True` over WebSocket
+- [ ] Server sends ack for critical messages
+- [ ] HTTP transport unchanged (implicit ack via response)
+- [ ] Test coverage >95%
+
+---
+
+## Task 3.5: AckAwareClient (ADR-16)
+
+**Goal**: Implement client-side ack tracking with timeout/retry logic.
+
+**Context**: The `MessageAck` payload (Task 3.4) is useless without a client that acts on it. The `AckAwareClient` manages pending acks, retransmits on timeout, and integrates with the circuit breaker. Without this, the ack protocol defines behavior but nothing enforces it. See [ADR-16](../../../product-specs/ADR.md#question-16-websocket-message-acknowledgment).
+
+**Prerequisites**: Task 3.4 completed (MessageAck payload exists)
+
+### Sub-tasks
+
+- [ ] 3.5.1 Implement pending ack tracker
+  - **File**: `src/asap/transport/websocket.py` (modify)
+  - **What**: Add to WebSocket client:
+    - `_pending_acks: dict[str, PendingAck]` — tracks sent messages awaiting ack
+    - `PendingAck` dataclass: `envelope_id`, `sent_at`, `retries`, `original_envelope`
+    - Register sent messages with `requires_ack=True`
+    - Remove from pending on `MessageAck` receipt
+  - **Why**: Tracks which messages need ack responses
+  - **Verify**: Pending ack tracker works correctly
+
+- [ ] 3.5.2 Implement ack timeout detection
+  - **File**: `src/asap/transport/websocket.py` (modify)
+  - **What**: Background task that:
+    - Checks pending acks every 5 seconds
+    - If `sent_at + ack_timeout` exceeded (default: 30s), trigger retransmission
+    - Configurable timeout via `ack_timeout_seconds` parameter
+  - **Why**: Detects lost messages and triggers retry
+  - **Verify**: Timeout detected after configured period
+
+- [ ] 3.5.3 Implement retransmission logic
+  - **File**: `src/asap/transport/websocket.py` (modify)
+  - **What**: On ack timeout:
+    - Retransmit the original envelope (same `id` for idempotency)
+    - Increment retry counter
+    - Apply exponential backoff between retries (1s, 2s, 4s...)
+    - After `max_retries` (default: 3): mark as failed, trigger circuit breaker
+  - **Why**: Recovers from transient failures (network glitch, agent restart)
+  - **Pattern**: Idempotency keys make retransmission safe — receiver deduplicates by envelope `id`
+  - **Verify**: Retransmission occurs on timeout, stops after max retries
+
+- [ ] 3.5.4 Integrate with circuit breaker
+  - **File**: `src/asap/transport/websocket.py` (modify)
+  - **What**: When max retries exhausted:
+    - Record failure in circuit breaker
+    - If circuit open: don't attempt WebSocket, suggest HTTP fallback
+    - Log error with diagnostic info
+  - **Why**: Prevents infinite retry loops, enables graceful degradation
+  - **Verify**: Circuit breaker trips after max retries
+
+- [ ] 3.5.5 Write comprehensive tests
+  - **File**: `tests/transport/test_ack_aware_client.py` (create new)
+  - **What**: Test scenarios:
+    - Normal flow: send → receive ack → pending cleared
+    - Timeout: send → no ack → retransmit → ack received
+    - Max retries: send → no ack → 3 retransmits → circuit breaker
+    - Idempotency: retransmitted message has same `id`
+    - Non-critical message: no pending ack registered
+    - Concurrent messages: multiple pending acks tracked independently
+  - **Verify**: `pytest tests/transport/test_ack_aware_client.py -v` all pass
+
+- [ ] 3.5.6 Commit milestone
+  - **Command**: `git commit -m "feat(transport): add AckAwareClient with timeout/retry (ADR-16)"`
+  - **Scope**: websocket.py, test_ack_aware_client.py
+  - **Verify**: `git log -1` shows correct message
+
+**Acceptance Criteria**:
+- [ ] Pending ack tracker works correctly
+- [ ] Timeout detection triggers retransmission
+- [ ] Retransmission uses same envelope `id` (idempotency)
+- [ ] Max retries triggers circuit breaker
+- [ ] Test coverage >95%
+
+---
+
+## Task 3.6: WebSocket Rate Limiting (Roadmap Alignment)
+
+**Goal**: Prevent abuse of long-lived WebSocket connections.
+
+**Context**: HTTP rate limiting (middleware) doesn't apply to WebSocket messages once the connection is established. We need per-connection message rate limiting. See Roadmap Risk 472.
+
+### Sub-tasks
+
+- [ ] 3.6.1 Implement Token Bucket for WebSocket
+  - **File**: `src/asap/transport/rate_limit.py` (modify)
+  - **What**: Adapt existing `TokenBucket` for persistent connections
+  - **Logic**: Refill tokens per second, deduct per message
+
+- [ ] 3.6.2 Enforce limits in WebSocket handler
+  - **File**: `src/asap/transport/websocket.py` (modify)
+  - **What**: Check bucket before processing frame
+  - **Limit**: Default 10 messages/sec per connection
+  - **Action**: Send error frame and disconnect if abused
+
+- [ ] 3.6.3 Write tests
+  - **File**: `tests/transport/test_websocket_rate_limit.py`
+  - **Verify**: Spammers get disconnected
+
+- [ ] 3.6.4 Commit
+  - **Command**: `git commit -m "feat(transport): add WebSocket message rate limiting"`
+
+**Acceptance Criteria**:
+- [ ] Message flooding triggers disconnect
+- [ ] Normal traffic unaffected
+
+---
+
 ## Sprint S3 Definition of Done
 
 - [ ] WebSocket server accepting connections
 - [ ] WebSocket client working
 - [ ] Connection management robust
 - [ ] Heartbeat and reconnection functional
+- [ ] MessageAck payload for state-changing messages (ADR-16)
+- [ ] AckAwareClient with timeout/retry/circuit breaker (ADR-16)
 - [ ] Test coverage >95%
 
-**Total Sub-tasks**: ~18
+**Total Sub-tasks**: ~30

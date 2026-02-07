@@ -256,12 +256,66 @@ v1.1.0 establishes the Identity Layer for ASAP. OAuth2/OIDC provides enterprise-
 
 ---
 
+## Task 1.4: Custom Claims Identity Binding
+
+**Goal**: Validate JWT custom claims to map IdP identity to ASAP agent identity.
+
+**Context**: IdP-generated `sub` claims (`google-oauth2|12345`) don't match ASAP `agent_id` values (`urn:asap:agent:bot`). Custom Claims provide a portable, standards-based solution. See [ADR-17](../../../product-specs/ADR.md#question-17-trust-model-and-identity-binding-in-v11).
+
+**Prerequisites**: Task 1.2 completed (middleware exists)
+
+### Sub-tasks
+
+- [ ] 1.4.1 Add custom claim extraction to middleware
+  - **File**: `src/asap/auth/middleware.py` (modify)
+  - **What**: After JWT validation, extract custom claim:
+    - **Config**: `ASAP_AUTH_CUSTOM_CLAIM` env var (default: `https://github.com/adriannoes/asap-protocol/agent_id`)
+    - If claim exists: validate it matches the agent's manifest `id`
+    - If claim missing: check allowlist fallback
+    - If neither: log warning (authentication succeeds, but identity not verified)
+  - **Why**: Maps IdP identity to ASAP agent identity. Env var allows future domain change without code changes.
+  - **Pattern**: Standard JWT custom claims (RFC 7519 private claims with namespace prefix)
+  - **Verify**: Middleware correctly extracts and validates custom claim
+
+- [ ] 1.4.2 Implement allowlist fallback
+  - **File**: `src/asap/auth/middleware.py` (modify)
+  - **What**: Add allowlist configuration:
+    - Read `ASAP_AUTH_SUBJECT_MAP` env var (JSON dict: `{"urn:asap:agent:bot": "auth0|abc123"}`)
+    - If custom claim missing, check if `sub` is mapped in allowlist
+    - Log warning when using allowlist (encourage migration to custom claims)
+  - **Why**: Fallback for environments where custom claims aren't configurable
+  - **Verify**: Allowlist mapping works, warning logged
+
+- [ ] 1.4.3 Write tests for identity binding
+  - **File**: `tests/auth/test_identity_binding.py` (create new)
+  - **What**: Test scenarios:
+    - Custom claim present and matches manifest → success
+    - Custom claim present but mismatches → reject
+    - Custom claim missing, allowlist hit → success with warning
+    - Custom claim missing, allowlist miss → authentication succeeds, identity unverified
+    - Malformed ASAP_AUTH_SUBJECT_MAP → clear error
+  - **Verify**: `pytest tests/auth/test_identity_binding.py -v` all pass
+
+- [ ] 1.4.4 Commit milestone
+  - **Command**: `git commit -m "feat(auth): add Custom Claims identity binding (ADR-17)"`
+  - **Scope**: middleware.py, test_identity_binding.py
+  - **Verify**: `git log -1` shows correct message
+
+**Acceptance Criteria**:
+- [ ] Custom Claims extracted and validated from JWT
+- [ ] Allowlist fallback works for non-custom-claims environments
+- [ ] Warning logged when identity not verified
+- [ ] Test coverage >95% for identity binding
+
+---
+
 ## Sprint S1 Definition of Done
 
 - [x] OAuth2 client_credentials flow working
 - [x] Token validation middleware functional
 - [x] OIDC auto-discovery working
+- [ ] Custom Claims identity binding functional (ADR-17)
 - [x] Test coverage >95%
 - [x] Progress tracked in roadmap
 
-**Total Sub-tasks**: ~25
+**Total Sub-tasks**: ~30

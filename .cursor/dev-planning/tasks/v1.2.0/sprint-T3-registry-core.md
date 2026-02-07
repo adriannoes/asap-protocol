@@ -163,6 +163,34 @@ The Registry is the centralized discovery service for ASAP agents. It stores sig
 
 ---
 
+## Task 3.4: Bootstrap from Lite Registry (SD-11)
+
+**Goal**: Seed the Registry with agents from v1.1 `registry.json`.
+
+**Context**: v1.1 used a static file on GitHub Pages. v1.2 must import these agents so they don't lose visibility.
+
+### Sub-tasks
+
+- [ ] 3.4.1 Implement import script
+  - **Input**: URL to `registry.json`
+  - **Action**: Fetch, parse, and validate each agent
+  - **Storage**: Save valid agents to Registry DB
+  - **Status**: Mark imported agents as "Verified" (if valid) or "Pending"
+
+- [ ] 3.4.2 Auto-run on first deployment
+  - **Goal**: Registry is not empty on launch
+  - **Verify**: `registry.json` agents appear in GET /registry/agents
+
+- [ ] 3.4.3 Commit
+  - **Command**: `git commit -m "feat(registry): add bootstrap from v1.1 lite registry"`
+
+**Acceptance Criteria**:
+- [ ] v1.1 agents are present in v1.2 Registry
+- [ ] Import handles duplicates gracefully
+
+
+---
+
 ## Sprint T3 Definition of Done
 
 - [ ] Registry API functional

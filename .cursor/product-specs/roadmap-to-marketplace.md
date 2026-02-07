@@ -135,12 +135,84 @@ Key architectural and business decisions made during planning. Each decision inc
 
 ---
 
+### SD-8: Documentation Architecture — Separated Docs
+
+**Decision**: Keep documentation (MkDocs) separate from the Web App (Next.js).
+
+| Option | Considered | Rationale |
+|--------|------------|-----------|
+| Docs inside Web App | Rejected | Mixing concerns, slower iteration on docs vs product |
+| **Separated (MkDocs + Web App)** | ✅ Selected | Independent deploy cycles, docs can ship faster |
+| Docs in GitHub Wiki | Rejected | Poor DX, no custom styling, limited search |
+
+**Why this matters**: Documentation needs to ship independently of the marketplace. API docs, guides, and examples should be deployable without a full Web App release. MkDocs provides a fast, markdown-first authoring experience while the Web App focuses on interactive marketplace features.
+
+---
+
+### SD-9: State Management — Hybrid Strategy
+
+**Decision**: ASAP defines storage interfaces and provides reference implementations. Agent task state is the agent's responsibility. Marketplace metadata is managed centrally.
+
+| Layer | Data | Owner |
+|-------|------|-------|
+| **Protocol Interface** | `SnapshotStore`, `MeteringStore` | ASAP SDK (open source) |
+| **Reference Impls** | SQLite, Redis adapters | Separate packages |
+| **Marketplace Metadata** | Manifests, trust scores, SLA | ASAP centrally (v2.0) |
+| **Agent Task State** | Snapshots, artifacts | Agent developer's choice |
+| **ASAP Cloud** (future) | Managed storage | Premium feature |
+
+| Option | Considered | Rationale |
+|--------|------------|-----------|
+| State-as-a-Service | Rejected | Data sovereignty burden, massive infra cost, contradicts adoption-first |
+| Communication only | Rejected | v1.3 Economics impossible without storage interfaces, poor DX |
+| **Hybrid** | ✅ Selected | Extends existing `SnapshotStore` pattern, no lock-in, enables ASAP Cloud monetization |
+
+**Why this matters**: Without defined storage interfaces, v1.3 (metering, audit logging) and v2.0 (reputation, SLA tracking) become impossible. The hybrid approach keeps ASAP lightweight while enabling the full marketplace vision.
+
+**Reference**: [ADR-13](./ADR.md#question-13-state-management-strategy-for-marketplace)
+
+---
+
+### SD-10: Agent Liveness — Health Protocol in v1.1
+
+**Decision**: Agents SHOULD expose `GET /.well-known/asap/health` with TTL field in manifest.
+
+| Option | Considered | Rationale |
+|--------|------------|-----------|
+| No health protocol | Rejected | Registry shows stale agents, SLA unverifiable |
+| Full health framework | Rejected | Over-engineering for current stage |
+| **Simple health endpoint + TTL** | ✅ Selected | Low cost, high value, Kubernetes-aligned |
+
+**Why this matters**: Without liveness, the Registry (v1.2) becomes a graveyard of dead agents. The Reputation System (v2.0) cannot calculate uptime, and SLA monitoring (v1.3) has no measurement mechanism.
+
+**Reference**: [ADR-14](./ADR.md#question-14-agent-liveness--health-protocol)
+
+---
+
+### SD-11: Lite Registry — Bridging the Discovery Abyss
+
+**Decision**: Bridge the gap between v1.1 (Identity + Direct Discovery) and v1.2 (Registry API) with a static `registry.json` file hosted on GitHub Pages. Agents are listed via PR.
+
+| Option | Considered | Rationale |
+|--------|------------|-----------|
+| **Static JSON on GitHub Pages** | ✅ Selected | Zero infrastructure, PR-based social proof, machine-readable |
+| DNS-based discovery | Rejected | Complex for developers, no browsing/search |
+| Do nothing (accept gap) | Rejected | Kills early adoption momentum, network effect is zero |
+
+**Why this matters**: In v1.1, agents have identity (OAuth2) and serve manifests (well-known), but no one can find them unless they already know the URL. The Lite Registry provides immediate discoverability with zero infrastructure cost. The v1.2 Registry API can seed itself from this file.
+
+**Key design**: Schema uses `endpoints` dict (not single `url`) to support HTTP + WebSocket transports introduced in v1.1.
+
+**Reference**: [ADR-15](./ADR.md#question-15-lite-registry-for-v11-discovery-gap)
+
+---
+
 ## Release Timeline
 
 | Version | Codename | Focus | Key Deliverables |
 |---------|----------|-------|------------------|
 | **v1.0.0** | Foundation | Stable protocol | ✅ Released |
-| **v1.1.0** | Identity | Auth + Discovery + Real-time | OAuth2, WebSocket, Well-known URI |
+| **v1.1.0** | Identity | Auth + Discovery + Real-time | OAuth2, WebSocket, Well-known URI, Lite Registry, MessageAck |
 | **v1.2.0** | Trust | Verification + Registry | Ed25519 signing, Registry API, Evals |
 | **v1.3.0** | Economics | Metering + SLAs | Usage tracking, delegation |
 | **v2.0.0** | Marketplace | Full launch | Registry service, Dashboard |
@@ -149,23 +221,29 @@ Key architectural and business decisions made during planning. Each decision inc
 
 ## v1.1.0 "Identity" — Foundation for Trust
 
-**Goal**: Establish identity, discovery, and real-time communication.
+**Goal**: Establish identity, discovery, state persistence, and real-time communication.
 
 ### Features
 
 | Feature | Priority | Purpose |
 |---------|----------|---------|
-| OAuth2/OIDC | P1 | Agent identity verification |
-| WebSocket binding | P1 | Real-time agent-to-agent comms |
+| OAuth2/OIDC + Custom Claims binding | P1 | Agent identity verification + identity mapping (ADR-17) |
 | Well-known URI discovery | P1 | Basic agent discovery |
+| Lite Registry (GitHub Pages) | P1 | Bridge discovery gap before v1.2 Registry (SD-11) |
+| Agent health/liveness | P1 | Prevent stale agent entries (SD-10) |
+| State Storage Interface + SQLite | P1 | Persistent state foundation (SD-9) |
+| WebSocket binding + MessageAck | P1 | Real-time comms + reliable delivery for critical messages (ADR-16) |
 | Webhook callbacks | P2 | Event-driven notifications |
-| DNS-SD discovery | P3 | Local network discovery |
+| DNS-SD discovery | P3 | Local network discovery (defer to v1.1.1+) |
 
 ### Why This Matters
 
-- OAuth2 enables enterprise agent identity
-- WebSocket provides low-latency comms (Decision SD-3)
+- OAuth2 enables enterprise agent identity; Custom Claims binding maps IdP subjects to agent IDs (ADR-17)
 - Well-known URI allows agents to discover each other before Registry exists (Decision SD-7)
+- Lite Registry provides early discoverability via GitHub Pages (Decision SD-11)
+- Health/liveness prevents Registry from listing dead agents (Decision SD-10)
+- State Storage Interface is foundational for v1.3 metering and v2.0 marketplace (Decision SD-9)
+- WebSocket provides low-latency comms (Decision SD-3); MessageAck ensures reliable delivery for critical messages (ADR-16)
 
 ### Deliverables
 
@@ -174,11 +252,18 @@ src/asap/
 ├── auth/
 │   ├── oauth2.py         # OAuth2 client & server
 │   └── oidc.py           # OIDC discovery
+├── state/
+│   ├── snapshot.py        # SnapshotStore interface (exists) + SQLite impl
+│   └── stores/
+│       ├── sqlite.py      # SQLite reference implementation
+│       └── memory.py      # InMemorySnapshotStore (moved)
 ├── transport/
 │   ├── websocket.py      # WebSocket binding
 │   └── webhook.py        # Webhook delivery
 └── discovery/
-    └── wellknown.py      # /.well-known/asap/manifest.json
+    ├── wellknown.py      # /.well-known/asap/manifest.json
+    ├── health.py         # /.well-known/asap/health
+    └── registry.py       # Lite Registry client (SD-11)
 ```
 
 ---
@@ -352,10 +437,10 @@ Human interface for marketplace interactions:
 
 | Version | Action Required |
 |---------|-----------------|
-| v1.0 → v1.1 | Add OAuth2 config, expose well-known endpoint |
-| v1.1 → v1.2 | Sign manifest with Ed25519 |
-| v1.2 → v1.3 | Define SLAs, add metering hooks |
-| v1.3 → v2.0 | Register in marketplace |
+| v1.0 → v1.1 | Add OAuth2 config (with Custom Claims), expose well-known + health endpoints, choose storage backend, register in Lite Registry |
+| v1.1 → v1.2 | Sign manifest with Ed25519, register in Registry |
+| v1.2 → v1.3 | Define SLAs, add metering hooks (using `MeteringStore` interface) |
+| v1.3 → v2.0 | Register in marketplace, consider ASAP Cloud for managed storage |
 
 ### Backward Compatibility
 
@@ -365,25 +450,56 @@ Human interface for marketplace interactions:
 
 ---
 
+## Risks & Blind Spots
+
+Strategic risks identified during the v1.1.0 planning review (2026-02-07):
+
+| Risk | Severity | Mitigation | Status |
+|------|----------|------------|--------|
+| **State persistence gap** | Critical | SD-9 Hybrid strategy, SQLite impl in v1.1 | ✅ Addressed |
+| **Stale agents in Registry** | High | SD-10 Liveness protocol in v1.1 | ✅ Addressed |
+| **Multi-agent workflow orchestration** | Medium | Saga/choreography patterns needed. Define in v1.2+ | ⏳ Tracked |
+| **Agent capability versioning** | Medium | Define version negotiation for skills. Target v1.2 | ⏳ Tracked |
+| **Storage backend alignment** | Medium | v1.1 defines interfaces; v1.2/v1.3/v2.0 reuse them | ✅ Addressed |
+| **p95 latency (17-21ms vs 5ms target)** | Low | Documented in v1.0 retro. Horizontal scaling recommended. | ⏳ Tracked |
+
+### Blind Spots to Monitor
+
+| Area | Concern | When to Address |
+|------|---------|-----------------|
+| **Data residency** | Enterprise customers may require regional storage | v2.0 if enterprise traction |
+| **Agent migration** | What happens when an agent moves to a different host? | v1.2 (Registry should handle re-registration) |
+| **Rate limiting across transports** | HTTP has rate limiting, WebSocket does not | v1.1 Sprint S3 |
+| **Conflict resolution** | Multi-agent parallel work on same task | v1.2+ (define in orchestration patterns) |
+
+---
+
 ## Resolved Questions
+
+> **Note**: These are strategic roadmap questions (SQ). Architecture decisions are tracked separately in [ADR.md](./ADR.md) with their own numbering (Q1-Q14).
 
 | ID | Question | Decision | Reference |
 |----|----------|----------|-----------|
-| Q1 | Centralized vs federated registry? | Centralized first | SD-1 |
-| Q2 | Signing algorithm? | Ed25519 | SD-4 |
-| Q3 | mTLS required? | Optional only | SD-6 |
-| Q4 | Discovery before Registry? | Yes, v1.1 | SD-7 |
-| Q5 | Pricing model? | Freemium first | SD-2 |
-| Q6 | WebSocket vs Broker? | WebSocket v1.x, Broker v2.0+ | SD-3 |
-| Q7 | Docs inside Web App? | Separated (MkDocs + Web App) | SD-8 |
+| SQ-1 | Centralized vs federated registry? | Centralized first | SD-1 |
+| SQ-2 | Signing algorithm? | Ed25519 | SD-4 |
+| SQ-3 | mTLS required? | Optional only | SD-6 |
+| SQ-4 | Discovery before Registry? | Yes, v1.1 | SD-7 |
+| SQ-5 | Pricing model? | Freemium first | SD-2 |
+| SQ-6 | WebSocket vs Broker? | WebSocket v1.x, Broker v2.0+ | SD-3 |
+| SQ-7 | Docs inside Web App? | Separated (MkDocs + Web App) | SD-8 |
+| SQ-8 | State management strategy? | Hybrid: Interface + Ref Impls + Managed | SD-9 |
+| SQ-9 | Agent liveness protocol? | Health endpoint + TTL in manifest | SD-10 |
+| SQ-10 | Discovery gap between v1.1 and v1.2? | Lite Registry on GitHub Pages | SD-11 |
+| SQ-11 | WebSocket message reliability? | Selective ack for state-changing messages + AckAwareClient | ADR-16 |
+| SQ-12 | Identity mapping (IdP sub → agent_id)? | Custom Claims + allowlist fallback | ADR-17 |
 
 ## Open Questions
 
 | ID | Question | Decide By |
 |----|----------|-----------|
-| Q8 | Monetization model post-adoption? | After traction data |
-| Q9 | Federation protocol spec? | v2.x if needed |
-| Q10 | Marketplace product name? | Before v2.0 launch |
+| SQ-13 | Monetization model post-adoption? | After traction data |
+| SQ-14 | Federation protocol spec? | v2.x if needed |
+| SQ-15 | Marketplace product name? | Before v2.0 launch |
 
 ---
 
@@ -417,3 +533,7 @@ Human interface for marketplace interactions:
 | 2026-01-30 | Initial roadmap document |
 | 2026-02-05 | Added strategic decisions (SD-1 to SD-7) with rationale |
 | 2026-02-05 | Added Web App to v2.0, SD-8 (docs architecture) |
+| 2026-02-07 | Strategic review: added SD-9 (State Management Hybrid), SD-10 (Agent Liveness) |
+| 2026-02-07 | Added Risks & Blind Spots section, updated v1.1 features |
+| 2026-02-07 | Resolved Q8 (state management) and Q9 (liveness), renumbered open questions |
+| 2026-02-07 | Added SD-11 (Lite Registry), resolved SQ-10/11/12, updated v1.1 features |

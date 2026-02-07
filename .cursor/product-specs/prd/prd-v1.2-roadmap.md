@@ -285,7 +285,20 @@ asap-compliance/          # Separate package
 
 ---
 
-## 10. Related Documents
+## 10. Prerequisites from v1.1.0
+
+v1.2 builds on interfaces and infrastructure delivered in v1.1.0:
+
+| v1.1 Deliverable | v1.2 Usage | Reference |
+|-------------------|------------|-----------|
+| Health endpoint (`/.well-known/asap/health`) | Registry uses health check to verify agent liveness before listing | SD-10, ADR-14 |
+| `ttl_seconds` in Manifest | Registry tracks agent freshness and marks stale agents | SD-10, ADR-14 |
+| `SnapshotStore` interface + SQLite impl | Registry storage follows same interface pattern | SD-9, ADR-13 |
+| Well-known discovery | Registry extends (not replaces) well-known discovery | SD-7 |
+
+---
+
+## 11. Related Documents
 
 - **Tasks**: [tasks-v1.2.0-roadmap.md](../../dev-planning/tasks/v1.2.0/tasks-v1.2.0-roadmap.md)
 - **PKI Details**: [Sprint T1](../../dev-planning/tasks/v1.2.0/sprint-T1-ed25519-pki.md), [Sprint T2](../../dev-planning/tasks/v1.2.0/sprint-T2-trust-levels-mtls.md)
@@ -293,6 +306,8 @@ asap-compliance/          # Separate package
 - **Evals Details**: [Sprint T5](../../dev-planning/tasks/v1.2.0/sprint-T5-compliance-harness.md), [Sprint T6](../../dev-planning/tasks/v1.2.0/sprint-T6-deepeval-release.md)
 - **Roadmap**: [roadmap-to-marketplace.md](../roadmap-to-marketplace.md)
 - **Vision**: [vision-agent-marketplace.md](../vision-agent-marketplace.md)
+- **State Management Decision**: [ADR-13](../ADR.md#question-13-state-management-strategy-for-marketplace)
+- **Liveness Decision**: [ADR-14](../ADR.md#question-14-agent-liveness--health-protocol)
 
 ---
 
@@ -301,3 +316,4 @@ asap-compliance/          # Separate package
 | Date | Version | Change |
 |------|---------|--------|
 | 2026-02-05 | 1.0.0 | Initial PRD aligned with strategic decisions |
+| 2026-02-07 | 1.1.0 | Added prerequisites section referencing v1.1 deliverables (SD-9, SD-10) |

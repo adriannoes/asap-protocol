@@ -1,6 +1,6 @@
 # ASAP: Async Simple Agent Protocol
 
-*From **agents**, for **agents**. Delivering reliability, **as soon as possible.***
+*✨ From **agents**, for **agents**. Delivering reliability, **as soon as possible.***
 
 ![ASAP Protocol Banner](https://raw.githubusercontent.com/adriannoes/asap-protocol/main/.github/assets/asap-protocol-banner.png)
 
@@ -161,7 +161,7 @@ Core models: `Envelope`, `TaskRequest`/`TaskResponse`/`TaskUpdate`/`TaskCancel`,
 
 Transport: `create_app`, `HandlerRegistry`, `ASAPClient`. See [Transport](https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md).
 
-## When to Use ASAP?
+## When to use ASAP?
 
 ASAP is ideal for:
 - **Multi-agent orchestration**: Coordinate tasks across multiple AI agents
@@ -201,7 +201,7 @@ asap export-schemas     # Export JSON schemas to file
 
 See [CLI docs](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#cli) or run `asap --help`.
 
-## What's Next?
+## What's Next? 🔭
 
 ASAP is evolving toward an **Agent Marketplace** — an open ecosystem where AI agents discover, trust and collaborate autonomously:
 

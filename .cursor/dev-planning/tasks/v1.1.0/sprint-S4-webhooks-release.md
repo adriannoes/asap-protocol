@@ -1,7 +1,7 @@
 # Sprint S4: Webhooks & Release
 
 > **Goal**: Webhook delivery, release preparation, and v1.1.0 publication
-> **Prerequisites**: Sprints S1-S3 completed
+> **Prerequisites**: Sprints S1, S2, S2.5, S3 completed
 > **Parent Roadmap**: [tasks-v1.1.0-roadmap.md](./tasks-v1.1.0-roadmap.md)
 
 ---
@@ -139,7 +139,7 @@ Sprint S4 wraps up v1.1.0 with webhook support for event-driven callbacks, addre
 
 ---
 
-## Task 4.2.5: Migrate from slowapi (Tech Debt)
+## Task 4.3: Migrate from slowapi (Tech Debt)
 
 **Goal**: Replace slowapi with custom rate limiter to fix deprecation warnings
 
@@ -147,13 +147,13 @@ Sprint S4 wraps up v1.1.0 with webhook support for event-driven callbacks, addre
 
 ### Sub-tasks
 
-- [ ] 4.2.5.1 Evaluate alternatives
+- [ ] 4.3.1 Evaluate alternatives
   - **Options**:
     - A: Use `limits` package directly (slowapi's backend)
     - B: Custom middleware using `limits` + in-memory storage
   - **Decision**: Choose based on simplicity and testability
 
-- [ ] 4.2.5.2 Implement custom rate limiter
+- [ ] 4.3.2 Implement custom rate limiter
   - **File**: `src/asap/transport/rate_limit.py` (new)
   - **What**:
     - Use `limits` package directly
@@ -161,27 +161,27 @@ Sprint S4 wraps up v1.1.0 with webhook support for event-driven callbacks, addre
     - Keep `memory://` storage, document Redis option
   - **Verify**: Rate limiting still works
 
-- [ ] 4.2.5.3 Update middleware.py
+- [ ] 4.3.3 Update middleware.py
   - **File**: `src/asap/transport/middleware.py`
   - **What**:
     - Remove slowapi imports
     - Use new `rate_limit.py` module
     - Keep backward compatibility
 
-- [ ] 4.2.5.4 Update pyproject.toml
+- [ ] 4.3.4 Update pyproject.toml
   - **What**:
     - Remove: `slowapi>=0.1.9`
     - Add: `limits>=3.0` (if not already transitive dep)
 
-- [ ] 4.2.5.5 Verify deprecation warnings gone
+- [ ] 4.3.5 Verify deprecation warnings gone
   - **Command**: `uv run pytest --tb=short 2>&1 | grep -i deprecat`
   - **Target**: No asyncio deprecation warnings
 
-- [ ] 4.2.5.6 Run rate limiting tests
+- [ ] 4.3.6 Run rate limiting tests
   - **Command**: `uv run pytest tests/transport/test_rate_limiting.py -v`
   - **Verify**: All tests pass
 
-- [ ] 4.2.5.7 Commit
+- [ ] 4.3.7 Commit
   - **Command**: `git commit -m "refactor(transport): migrate from slowapi to custom rate limiter"`
 
 **Acceptance Criteria**:
@@ -190,7 +190,7 @@ Sprint S4 wraps up v1.1.0 with webhook support for event-driven callbacks, addre
 
 ---
 
-## Task 4.3: Comprehensive Testing
+## Task 4.4: Comprehensive Testing
 
 **Goal**: Validate v1.1.0 features
 
@@ -198,22 +198,24 @@ Sprint S4 wraps up v1.1.0 with webhook support for event-driven callbacks, addre
 
 ### Sub-tasks
 
-- [ ] 4.3.1 Run all unit tests
+- [ ] 4.4.1 Run all unit tests
   - **Command**: `uv run pytest tests/ -v`
   - **Target**: 100% pass, >95% coverage
 
-- [ ] 4.3.2 Run integration tests
+- [ ] 4.4.2 Run integration tests
   - **What**:
     - WebSocket + OAuth2 flow
     - Discovery + Task execution
+    - State Storage: SQLite persistence across restarts
+    - Health endpoint + discovery flow
 
-- [ ] 4.3.3 Run property tests
+- [ ] 4.4.3 Run property tests
   - **What**: Add properties for new models
 
-- [ ] 4.3.4 Update documentation
+- [ ] 4.4.4 Update documentation
   - **What**:
     - API reference for new features
-    - Examples for OAuth2, WebSocket, Webhooks
+    - Examples for OAuth2, WebSocket, Webhooks, State Storage, Health
 
 **Acceptance Criteria**:
 - [ ] All tests pass
@@ -221,66 +223,131 @@ Sprint S4 wraps up v1.1.0 with webhook support for event-driven callbacks, addre
 
 ---
 
-## Task 4.4: Release Preparation
+## Task 4.5: Security Model Documentation (ADR-17)
+
+**Goal**: Create comprehensive security model documentation for v1.1.
+
+**Context**: v1.1 provides authentication (OAuth2) and authorization (scopes), but NOT identity verification (that comes in v1.2 with Ed25519 signed manifests). This must be documented explicitly to prevent false security expectations. Developers need clear guidance on Custom Claims configuration for identity binding. See [ADR-17](../../../product-specs/ADR.md#question-17-trust-model-and-identity-binding-in-v11).
+
+**Prerequisites**: All feature sprints (S1-S3) completed
+
+### Sub-tasks
+
+- [ ] 4.5.1 Create Security Model document
+  - **File**: `docs/security/v1.1-security-model.md` (create new)
+  - **What**: Comprehensive document covering:
+    - **v1.1 Trust Model**: What OAuth2 provides (authentication, authorization) and what it does NOT provide (identity verification)
+    - **Threat Model**: Known limitations, attack vectors, and mitigations
+    - **Configuring Custom Claims**: Using `ASAP_AUTH_CUSTOM_CLAIM` (default: `https://github.com/adriannoes/asap-protocol/agent_id`)
+    - **Custom Claims Guide**: Step-by-step for Auth0, Keycloak, Azure AD
+    - **Allowlist Configuration**: How to use `ASAP_AUTH_SUBJECT_MAP`
+    - **Migration Path**: How v1.2 (Ed25519) strengthens the trust model
+    - **Comparison**: Stripe API (API keys, then KYC) as analogy
+  - **Why**: Transparent documentation prevents false security expectations
+  - **Verify**: Document is clear, actionable, and links to provider docs
+
+- [ ] 4.5.2 Add Custom Claims examples
+  - **File**: `docs/security/v1.1-security-model.md` (modify)
+  - **What**: Provider-specific guides:
+    - **Auth0**: Rules → Add `https://asap.ai/agent_id` to `idToken`/`accessToken`
+    - **Keycloak**: Client Scopes → Add custom claim mapper
+    - **Azure AD**: App Roles or optional claims
+  - **Why**: Developers need concrete steps, not abstract instructions
+  - **Verify**: Examples work with each provider
+
+- [ ] 4.5.3 Commit milestone
+  - **Command**: `git commit -m "docs(security): add v1.1 Security Model and Custom Claims guide (ADR-17)"`
+  - **Scope**: security model doc
+  - **Verify**: `git log -1` shows correct message
+
+**Acceptance Criteria**:
+- [ ] Security Model document clearly explains v1.1 trust limitations
+- [ ] Custom Claims guide covers Auth0, Keycloak, and Azure AD
+- [ ] Migration path to v1.2 is documented
+- [ ] Document is discoverable (linked from README, AGENTS.md, and PRD)
+
+---
+
+## Task 4.6: Release Preparation
 
 **Goal**: Prepare v1.1.0 release materials
 
 ### Sub-tasks
 
-- [ ] 4.4.1 Update CHANGELOG.md
+- [ ] 4.6.1 Update CHANGELOG.md
   - **Section**: [1.1.0] - YYYY-MM-DD
-  - **List**: All new features
+  - **List**: All new features (including Lite Registry, MessageAck, Custom Claims, Best Practices)
 
-- [ ] 4.4.2 Bump version
+- [ ] 4.6.2 Bump version
   - **File**: `pyproject.toml`
   - **Value**: `1.1.0`
 
-- [ ] 4.4.3 Update README
-  - **Add**: OAuth2 quick start
-  - **Add**: WebSocket example
+- [ ] 4.6.3 Update README
+  - **Add**: OAuth2 quick start (with Custom Claims guide)
+  - **Add**: WebSocket example (with MessageAck behavior)
+  - **Add**: Lite Registry — how to discover and register agents
+  - **Add**: State Storage configuration (ASAP_STORAGE_BACKEND env var)
+  - **Add**: Health/liveness endpoint usage
+  - **Add**: Link to Security Model document
 
-- [ ] 4.4.4 Update AGENTS.md
+- [ ] 4.6.4 Update AGENTS.md
   - **Add**: OAuth2 setup commands and environment variables
-  - **Add**: WebSocket patterns and connection management
-  - **Update**: Security considerations with auth info
+  - **Add**: Custom Claims identity binding (ADR-17)
+  - **Add**: WebSocket patterns, MessageAck, and AckAwareClient (ADR-16)
+  - **Add**: Lite Registry discovery (SD-11, ADR-15)
+  - **Add**: State Storage Interface and SQLite backend (SD-9)
+  - **Add**: Health endpoint for agent liveness (SD-10)
+  - **Add**: Best Practices: Agent Failover & Migration
+  - **Update**: Security considerations with auth info + trust model limitations
+  - **Update**: Project Structure with new modules (state/stores/, discovery/health.py, discovery/registry.py)
 
-- [ ] 4.4.5 Review all docs
+- [ ] 4.6.5 Review all docs
   - **Verify**: Examples work
   - **Verify**: Links valid
+  - **Verify**: Security Model document accurate
 
-- [ ] 4.4.6 Complete checkpoint CP-1
+- [ ] 4.6.6 Complete checkpoint CP-1
   - **File**: [checkpoints.md](../../checkpoints.md#cp-1-post-v110-release)
   - **Review**: Learnings and update velocity tracking
 
+- [ ] 4.6.7 Create `examples/secure_agent.py`
+  - **File**: `examples/secure_agent.py` (new)
+  - **What**: "Copy-paste" ready example showing:
+    - `ASAPServer` with `OAuth2Config`
+    - `OAuth2Middleware` setup
+    - Environment variables: `ASAP_AUTH_CUSTOM_CLAIM`, `ASAP_AUTH_ISSUER`, `ASAP_AUTH_AUDIENCE`
+    - Client usage with `OAuth2ClientCredentials`
+  - **Why**: Documentation alone is insufficient; users need working code to copy.
+
 **Acceptance Criteria**:
 - [ ] Release materials ready
-- [ ] Documentation complete
+- [ ] Documentation complete (including Security Model, Lite Registry, Best Practices)
 
 ---
 
-## Task 4.5: Build and Publish
+## Task 4.7: Build and Publish
 
 **Goal**: Publish v1.1.0
 
 ### Sub-tasks
 
-- [ ] 4.5.1 Create release branch
+- [ ] 4.7.1 Create release branch
   - **Branch**: `release/v1.1.0`
 
-- [ ] 4.5.2 Run CI pipeline
+- [ ] 4.7.2 Run CI pipeline
   - **Verify**: All checks pass
 
-- [ ] 4.5.3 Tag release
+- [ ] 4.7.3 Tag release
   - **Command**: `git tag v1.1.0`
 
-- [ ] 4.5.4 Publish to PyPI
+- [ ] 4.7.4 Publish to PyPI
   - **Command**: `uv publish`
 
-- [ ] 4.5.5 Create GitHub release
+- [ ] 4.7.5 Create GitHub release
   - **Tag**: v1.1.0
   - **Notes**: From CHANGELOG
 
-- [ ] 4.5.6 Update Docker images
+- [ ] 4.7.6 Update Docker images
   - **Push**: `ghcr.io/adriannoes/asap-protocol:v1.1.0`
 
 **Acceptance Criteria**:
@@ -289,15 +356,15 @@ Sprint S4 wraps up v1.1.0 with webhook support for event-driven callbacks, addre
 
 ---
 
-## Task 4.6: Mark Sprint S4 Complete
+## Task 4.8: Mark Sprint S4 Complete
 
 ### Sub-tasks
 
-- [ ] 4.6.1 Update roadmap progress
+- [ ] 4.8.1 Update roadmap progress
   - Mark all S4 tasks complete
   - Update progress to 100%
 
-- [ ] 4.6.2 Verify release
+- [ ] 4.8.2 Verify release
   - **Confirm**: PyPI package installable
   - **Confirm**: Docker image runnable
 
@@ -312,8 +379,9 @@ Sprint S4 wraps up v1.1.0 with webhook support for event-driven callbacks, addre
 - [ ] Webhooks deliver with SSRF protection
 - [ ] Retry logic functional
 - [ ] slowapi migration complete (no deprecation warnings)
+- [ ] Security Model document published (ADR-17)
 - [ ] All tests pass
 - [ ] v1.1.0 on PyPI
 - [ ] Docker image published
 
-**Total Sub-tasks**: ~35
+**Total Sub-tasks**: ~38

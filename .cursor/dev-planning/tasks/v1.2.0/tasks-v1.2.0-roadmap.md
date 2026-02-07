@@ -21,9 +21,18 @@
 
 v1.2.0 establishes the Trust Layer for the marketplace:
 - **Signed Manifests**: Verifiable agent identity using Ed25519 (per SD-4)
-- **Registry API**: Centralized discovery service (per SD-1)
+- **Registry API**: Centralized discovery service (per SD-1), uses health endpoint from v1.1 (SD-10) for agent liveness
 - **Evals Framework**: Protocol compliance testing (Shell) + Intelligence (Brain)
 - **mTLS**: Optional transport security (per SD-6)
+
+### Prerequisites from v1.1.0
+
+| v1.1 Deliverable | v1.2 Usage |
+|-------------------|------------|
+| Health endpoint (`/.well-known/asap/health`) | Registry verifies agent liveness before listing (SD-10) |
+| `ttl_seconds` in Manifest | Registry marks agents stale after TTL expires |
+| `SnapshotStore` interface + SQLite | Registry storage follows same interface pattern (SD-9) |
+| Well-known discovery | Registry extends (not replaces) well-known discovery |
 
 ---
 

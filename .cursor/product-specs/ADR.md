@@ -17,6 +17,11 @@
 - [Question 10: Build vs Buy for Agent Evals?](#question-10-build-vs-buy-for-agent-evals)
 - [Question 11: What Tech Stack for v2.0 Web Marketplace?](#question-11-what-tech-stack-for-v20-web-marketplace)
 - [Question 12: Authlib vs httpx-oauth for OAuth2/OIDC](#question-12-authlib-vs-httpx-oauth-for-oauth2oidc)
+- [Question 13: State Management Strategy for Marketplace](#question-13-state-management-strategy-for-marketplace)
+- [Question 14: Agent Liveness & Health Protocol](#question-14-agent-liveness--health-protocol)
+- [Question 15: Lite Registry for v1.1 Discovery Gap](#question-15-lite-registry-for-v11-discovery-gap)
+- [Question 16: WebSocket Message Acknowledgment](#question-16-websocket-message-acknowledgment)
+- [Question 17: Trust Model and Identity Binding in v1.1](#question-17-trust-model-and-identity-binding-in-v11)
 - [Summary of Amendments](#summary-of-amendments)
 - [Next Steps](#next-steps)
 
@@ -557,6 +562,267 @@ Replace `httpx-oauth` with `authlib` as the OAuth2/OIDC dependency. Additionally
 
 ---
 
+## Question 13: State Management Strategy for Marketplace
+
+### The Question
+The v0 spec lists "First-class persistent state with snapshots" as a key design goal. The `SnapshotStore` Protocol and `InMemorySnapshotStore` exist in v1.0, but no persistent implementation or storage interface specification exists. As we build toward the Marketplace (v2.0), what is ASAP's responsibility regarding agent state persistence?
+
+### Analysis
+
+**Three scenarios evaluated**:
+
+| Scenario | Description | Scalability | Lock-in | Engineering Cost |
+|----------|-------------|-------------|---------|-----------------|
+| **A: State-as-a-Service** | ASAP stores all agent state centrally | Poor (storage grows with adoption) | Maximum | Massive (distributed DB, multi-tenant) |
+| **B: Communication Only** | ASAP is "just the pipe", agents own state | Excellent | Minimal | Low |
+| **C: Hybrid** | ASAP defines interface + reference impls; Marketplace stores metadata only | Good | Low (portable interfaces) | Moderate |
+
+**Scenario A risks**:
+- Single point of failure for the entire ecosystem
+- Data sovereignty/compliance burden (GDPR, HIPAA) — ASAP becomes data processor
+- Contradicts "adoption first" strategy (high infrastructure cost)
+- Incompatible with solo/small team execution
+
+**Scenario B risks**:
+- v1.3 Economics Layer (metering, audit) becomes unfunded mandate
+- Reputation scores are shallow without historical data
+- Usage metering relies on agent self-reporting (gameable)
+- Each agent reinvents storage — poor DX
+
+**Scenario C advantages**:
+- `SnapshotStore` Protocol already exists in codebase — extend, don't rebuild
+- Reference implementations (SQLite, Redis) reduce adoption friction
+- Marketplace stores only metadata (manifests, trust scores, SLA metrics)
+- ASAP Cloud (v2.0+ monetization) offers managed storage as premium upsell
+- Agents choose their storage backend — no lock-in
+
+### Expert Assessment
+
+Scenario C aligns with the project's DNA: the `SnapshotStore` Protocol pattern in `src/asap/state/snapshot.py` already defines the abstract interface. What's missing is:
+1. **Persistent reference implementations** (SQLite for dev, Redis/Postgres for prod)
+2. **A `MeteringStore` interface** for v1.3 usage tracking
+3. **Clear documentation** of what ASAP stores centrally vs what agents own
+
+The v0 spec Section 13.2 recommended "Option 2 (interface) for interoperability" — this decision formalizes that recommendation.
+
+### Recommendation: **HYBRID (Scenario C)**
+
+Adopt a layered storage strategy:
+
+| Layer | Data | Owner | Storage |
+|-------|------|-------|---------|
+| **Protocol Interface** | `SnapshotStore`, `MeteringStore` | ASAP SDK (open source) | Agent's choice |
+| **Reference Impls** | SQLite, Redis, PostgreSQL adapters | Separate packages | Agent's infra |
+| **Marketplace Metadata** | Manifests, trust scores, SLA metrics | ASAP centrally | PostgreSQL (v2.0) |
+| **Agent Task State** | Snapshots, event history, artifacts | Agent developer | Agent's choice |
+| **ASAP Cloud** (future) | Managed storage, backups | ASAP premium | Managed infra |
+
+### Decision
+
+> [!IMPORTANT]
+> **ADR-13**: State Management follows a **Hybrid strategy (Scenario C)**. ASAP defines storage interfaces (`SnapshotStore`, `MeteringStore`) and provides reference implementations as separate packages. Agent task state is the agent developer's responsibility. Marketplace metadata (registry, trust, SLA) is managed centrally by ASAP. ASAP Cloud (v2.0+) may offer managed storage as a premium feature.
+>
+> **Rationale**: Balances developer experience (reference impls reduce friction) with adoption strategy (no lock-in, no data sovereignty burden). Extends the existing `SnapshotStore` Protocol pattern already in v1.0 codebase.
+>
+> **Impact**: v1.1.0 adds SQLite reference implementation and defines `MeteringStore` interface. v1.3.0 Economics Layer references these interfaces. v2.0 ASAP Cloud may offer managed storage.
+>
+> **Date**: 2026-02-07
+
+---
+
+## Question 14: Agent Liveness & Health Protocol
+
+### The Question
+The vision document describes "Availability Check: Real-time capacity and queue status" in the Discovery Service. No version in the roadmap defines a health/liveness protocol for agents. Without it, the Registry (v1.2) will show stale/dead agents.
+
+### Analysis
+
+**The problem without liveness**:
+- Discovery (v1.1) returns manifests from well-known URIs, but cannot tell if the agent is alive
+- Registry (v1.2) lists agents that may have crashed, creating a "graveyard" of stale entries
+- Reputation System (v2.0) calculates uptime without a measurement mechanism
+- SLA Framework (v1.3) defines `availability: "99.5%"` without a way to verify
+
+**Industry patterns**:
+- Kubernetes: `/healthz` (liveness), `/readyz` (readiness)
+- A2A: No standard health check
+- MCP: No health protocol
+
+**Proposed approach**:
+- `GET /.well-known/asap/health` — simple JSON response with status and capabilities
+- `ttl` field in manifest — how long to consider the agent "alive" without re-check
+- Minimal: no heavy health framework, just HTTP endpoint + TTL
+
+### Recommendation: **ADD to v1.1.0**
+
+Add as part of Sprint S2 (Discovery), since it's a natural extension of the well-known endpoint.
+
+### Decision
+
+> [!IMPORTANT]
+> **ADR-14**: Agents SHOULD expose a `GET /.well-known/asap/health` endpoint returning a simple JSON status. Manifests SHOULD include a `ttl_seconds` field (default: 300) indicating how long the agent can be considered alive without re-checking. This is foundational for Registry liveness (v1.2) and SLA monitoring (v1.3).
+>
+> **Rationale**: Without liveness, the Registry becomes a graveyard of stale agents. A simple health endpoint is low-cost to implement and provides high value for the discovery and trust layers.
+>
+> **Impact**: Added to Sprint S2 (Well-Known Discovery) in v1.1.0.
+>
+> **Date**: 2026-02-07
+
+---
+
+## Question 15: Lite Registry for v1.1 Discovery Gap
+
+### The Question
+v1.1 introduces agent identity (OAuth2) and direct discovery (`.well-known`), but defers the Registry API to v1.2. This creates a "Discovery Abyss" — agents have identity but no one can find them unless they already know the URL. How do we bridge this gap without building the full Registry early?
+
+### Analysis
+
+**The problem**: In v1.1, the network effect is zero. A developer can build and authenticate an agent, but there's no central place to list or discover agents. The "Marketplace" story feels hollow until v1.2.
+
+**Options evaluated**:
+
+| Option | Considered | Rationale |
+|--------|------------|-----------|
+| **Static JSON on GitHub Pages** | ✅ Selected | Zero infrastructure, PR-based social proof, machine-readable |
+| DNS-based discovery | Rejected | Complex for developers, no browsing/search capability |
+| Do nothing | Rejected | Kills early adoption momentum |
+
+### Expert Assessment
+
+A static `registry.json` hosted on GitHub Pages mirrors patterns that worked well in the Go ecosystem (before `proxy.golang.org`) and `awesome-*` lists. Developers submit agents via PR, creating community engagement and quality control through code review. The v1.2 Registry API can seed itself from this file.
+
+**Critical refinement**: Since v1.1 introduces WebSocket alongside HTTP, agents may have multiple endpoints. The schema must support a `endpoints` dict (not a single `url` string).
+
+### Decision
+
+> [!IMPORTANT]
+> **ADR-15**: Bridge the v1.1 "Discovery Abyss" with a **Static Lite Registry** — a `registry.json` file hosted on GitHub Pages. Agents are listed via PR. The SDK provides a `discover_from_registry(registry_url)` method.
+>
+> **Schema** (multi-endpoint):
+> ```json
+> {
+>   "version": "1.0",
+>   "updated_at": "2026-02-07T00:00:00Z",
+>   "agents": [
+>     {
+>       "id": "urn:asap:agent:example",
+>       "name": "Example Agent",
+>       "description": "Code review and summarization agent",
+>       "endpoints": {
+>         "http": "https://agent.example.com/asap",
+>         "ws": "wss://agent.example.com/asap/ws",
+>         "manifest": "https://agent.example.com/.well-known/asap/manifest.json"
+>       },
+>       "skills": ["code_review", "summarization"],
+>       "asap_version": "1.1.0"
+>     }
+>   ]
+> }
+> ```
+>
+> **Rationale**: Zero-cost infrastructure, creates early community engagement, and provides a migration path to the v1.2 Registry API. Multi-endpoint schema supports HTTP + WebSocket transports introduced in v1.1.
+>
+> **Impact**: Added as Task in Sprint S2 (Well-Known Discovery). SDK method added to `ASAPClient`.
+>
+> **Date**: 2026-02-07
+
+---
+
+## Question 16: WebSocket Message Acknowledgment
+
+### The Question
+WebSocket is fire-and-forget at the transport level. HTTP has implicit acks (response = received), but WebSocket does not. If an agent crashes mid-message, the sender never knows. How do we ensure reliable delivery for state-changing messages over WebSocket?
+
+### Analysis
+
+**The problem**: Without application-level acknowledgment, WebSocket provides "at-most-once" delivery. For state-changing messages (`TaskRequest`, `TaskCancel`, `StateRestore`), this is insufficient — a lost message could leave the task state machine in an inconsistent state.
+
+**Options evaluated**:
+
+| Option | Considered | Rationale |
+|--------|------------|-----------|
+| Full ack for all messages | Rejected | Doubles traffic, overkill for streaming/progress |
+| Auto-ack for all WebSocket messages | Rejected | Same traffic doubling issue |
+| **Ack only for state-changing messages** | ✅ Selected | Balanced: critical messages reliable, streaming fast |
+| Defer to v1.2 | Rejected | May disappoint enterprise users expecting reliability |
+
+### Expert Assessment
+
+State-changing messages (`TaskRequest`, `TaskCancel`, `StateRestore`, `MessageSend`) MUST be acknowledged — they affect the task state machine. Streaming updates (`TaskUpdate` with `progress`) and heartbeats do NOT need acks — they're ephemeral. This aligns with existing `correlation_id` field in Envelope.
+
+**Critical addition**: The `MessageAck` payload is useless without an `AckAwareClient` that manages the timeout/retry loop. The client must track pending acks, retransmit on timeout (using same `id` for idempotency), and integrate with the circuit breaker for max retries.
+
+### Decision
+
+> [!IMPORTANT]
+> **ADR-16**: Add **selective message acknowledgment** for WebSocket transport. State-changing payloads automatically set `requires_ack=True`. Receiver responds with `MessageAck` payload referencing the original `envelope_id`.
+>
+> **Components**:
+> 1. `MessageAck` payload type with `original_envelope_id` and `status` fields
+> 2. `requires_ack: bool = False` field on Envelope (auto-set for state-changing payloads over WebSocket)
+> 3. `AckAwareClient` that manages timeout/retry loop:
+>    - Tracks pending acks with configurable timeout (default: 30s)
+>    - On timeout: retransmits same message with same `id` (idempotency key ensures safety)
+>    - Configurable max retries before circuit breaker trips
+> 4. HTTP transport continues to use synchronous response as implicit ack
+>
+> **Payloads requiring ack**: `TaskRequest`, `TaskCancel`, `StateRestore`, `MessageSend`
+> **Payloads NOT requiring ack**: `TaskUpdate` (progress), heartbeats, streaming
+>
+> **Rationale**: Balances reliability for critical messages with performance for streaming. Idempotency keys make retransmission safe. The `AckAwareClient` is essential — without it, the ack protocol defines behavior but nothing enforces it.
+>
+> **Impact**: Added as Tasks in Sprint S3 (WebSocket Binding).
+>
+> **Date**: 2026-02-07
+
+---
+
+## Question 17: Trust Model and Identity Binding in v1.1
+
+### The Question
+OAuth2 (v1.1) proves "I have valid credentials from an IdP", but NOT "I am the agent I claim to be". Without signed manifests (v1.2), how do we prevent agent impersonation? And how do we bind JWT identity to ASAP agent identity given that IdP subject IDs (`google-oauth2|12345`) don't match agent IDs (`urn:asap:agent:bot`)?
+
+### Analysis
+
+**The trust gap**: v1.1 OAuth2 provides authentication and authorization (scopes), but not identity verification. This is the SAME trust model as every web API today — OAuth2 is equivalent to API keys with scopes. The real identity verification comes in v1.2 with Ed25519 signed manifests.
+
+**The identity mapping problem**: IdP-generated `sub` claims (e.g., `google-oauth2|12345`, `auth0|abc123`) will never match ASAP `agent_id` values (e.g., `urn:asap:agent:research-v1`). A strict `sub == agent_id` binding is impossible in practice.
+
+**Options evaluated**:
+
+| Option | Considered | Rationale |
+|--------|------------|-----------|
+| Accept and document explicitly | ✅ Selected (part 1) | Honest, sets expectations, no false security |
+| **Custom Claims binding** | ✅ Selected (part 2) | Flexible, portable, standard JWT practice |
+| Strict sub == agent_id | Rejected | Impossible with standard IdPs |
+| Accelerate Ed25519 to v1.1 | Rejected | Scope creep, v1.1 already has 5 sprints |
+
+### Expert Assessment
+
+**Custom Claims** is the most flexible solution: agents configure their IdP to include `https://asap.ai/agent_id` as a custom claim in the JWT. The ASAP server validates this claim matches the requesting agent's manifest `id`. For environments where custom claims aren't possible, a configurable allowlist mapping (`ASAP_AUTH_SUBJECT_MAP`) provides a fallback.
+
+### Decision
+
+> [!IMPORTANT]
+> **ADR-17**: v1.1 Trust Model uses **Custom Claims binding** for identity mapping, with explicit documentation of security limitations.
+>
+> **Identity Binding** (two approaches, both supported):
+> 1. **Custom Claims** (recommended): Agent configures IdP to include `https://asap.ai/agent_id: urn:asap:agent:bot` in JWT. Server validates claim matches manifest `id`.
+> 2. **Allowlist fallback**: `ASAP_AUTH_SUBJECT_MAP = {"urn:asap:agent:bot": "auth0|abc123"}` for environments without custom claims support.
+>
+> **Security Model documentation**:
+> - v1.1 provides authentication (valid credentials) and authorization (scopes), but NOT identity verification
+> - For agent identity verification, use v1.2 signed manifests (Ed25519)
+> - This mirrors industry practice: OAuth2 for auth, PKI for identity, incrementally layered
+>
+> **Rationale**: Custom Claims are portable (work across IdPs), standards-based (RFC 7519 allows private claims), and more flexible than hardcoded config. The allowlist fallback covers edge cases. Explicit security documentation prevents false expectations.
+>
+> **Impact**: Custom Claims validation added as sub-task in Sprint S1. Security Model documentation added to Sprint S4 release materials.
+>
+> **Date**: 2026-02-07
+
+---
+
 ## Summary of Amendments
 
 | Question | Decision | Change Type |
@@ -573,12 +839,17 @@ Replace `httpx-oauth` with `authlib` as the OAuth2/OIDC dependency. Additionally
 | Q10: Agent Evals | Hybrid: Native Compliance + DeepEval | **Added** |
 | Q11: Web Stack | Next.js, Tailwind, Shadcn | **Added** |
 | Q12: OAuth2 Lib | Replace httpx-oauth with Authlib + joserfc | **Replaced** |
+| Q13: State Management | Hybrid: Interface + Reference Impls + Managed | **Added** |
+| Q14: Agent Liveness | Health endpoint + TTL in manifest | **Added** |
+| Q15: Lite Registry | Static JSON on GitHub Pages, multi-endpoint schema | **Added** |
+| Q16: WebSocket Acks | Selective ack for state-changing messages + AckAwareClient | **Added** |
+| Q17: Trust Model | Custom Claims binding + allowlist fallback + security docs | **Added** |
 
 ---
 
 ## Next Steps
 
-1. ✅ Questions analyzed
+1. ✅ Questions analyzed (Q1-Q17)
 2. ✅ Decisions documented
 3. ⏳ Apply amendments to main specification
 4. ⏳ Request user review of changes

@@ -25,10 +25,18 @@ As a solo developer, it's easy to lose context between sprints. These checkpoint
 - [ ] OAuth2 implementation complexity — update v1.2 estimates?
 - [ ] WebSocket lessons learned
 - [ ] Discovery patterns that worked
+- [ ] State Storage Interface (SD-9): Did SQLite impl meet needs? Is `MeteringStore` interface sufficient for v1.3?
+- [ ] Agent Liveness (SD-10): Is the health endpoint effective? Is `ttl_seconds` default (300s) appropriate?
+- [ ] `SnapshotStore` sync vs async: Should we evolve to async Protocol? (Breaking change analysis)
+- [ ] Lite Registry (SD-11, ADR-15): Is GitHub Pages adequate? Is the multi-endpoint schema flexible enough?
+- [ ] WebSocket MessageAck (ADR-16): Is `AckAwareClient` timeout (30s default) appropriate? Retransmission working correctly?
+- [ ] Custom Claims binding (ADR-17): Are Custom Claims practical with all IdPs? Is the allowlist fallback needed often?
+- [ ] Best Practices Failover doc: Is the `StateQuery`/`StateRestore` pattern sufficient without formal `TaskHandover` payload?
 - [ ] Time taken vs estimated
 
 **Update**:
-- [ ] `prd-v1.2-roadmap.md` — refine based on auth learnings
+- [ ] `prd-v1.2-roadmap.md` — refine based on auth + storage learnings
+- [ ] `prd-v1.3-roadmap.md` — confirm `MeteringStore` interface meets v1.3 needs
 - [ ] `tasks-v1.2.0-roadmap.md` — adjust estimates
 - [ ] `lessons-learned/v1.1.0-retro.md` — create retrospective
 
@@ -133,7 +141,7 @@ Track actual vs estimated to improve future planning:
 
 | Version | Estimated Days | Actual Days | Velocity |
 |---------|----------------|-------------|----------|
-| v1.1.0 | 18-26 | — | — |
+| v1.1.0 | 31-41 | — | — |
 | v1.2.0 | 28-40 | — | — |
 | v1.3.0 | 18-26 | — | — |
 | v2.0.0 | 38-53 | — | — |
