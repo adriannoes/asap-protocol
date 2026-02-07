@@ -3,6 +3,8 @@
 
 > A streamlined, scalable, asynchronous protocol for agent-to-agent communication and task coordination, inspired by A2A but simpler and more powerful, with MCP compatibility.
 
+> **Historical document** — This spec reflects the initial v0.1 design. The protocol reached **v1.0.0** (stable) and evolution is driven by the [Roadmap to Marketplace](roadmap-to-marketplace.md) and [ADR](ADR.md). For current scope and future plans (v1.1 Identity, v1.2 Trust, v2.0 Marketplace), see the roadmap and [Agent Marketplace Vision](vision-agent-marketplace.md).
+
 ---
 
 ## Table of Contents
@@ -1018,9 +1020,7 @@ sequenceDiagram
 
 ## 13. Open Decisions
 
-> [!IMPORTANT]
-> The following decisions require further analysis or stakeholder input before finalization.
-> Detailed analysis of these trade-offs is documented in [ADR.md](./ADR.md).
+> **Historical context** — Many of the questions below were resolved post–v0.1. See [ADR](ADR.md) for analysis and [Roadmap → Strategic Decisions](roadmap-to-marketplace.md#strategic-decisions) for the current stance (e.g. SD-1 Registry, SD-3 WebSocket for v1.x, SD-7 Discovery in v1.1, SD-9 State interfaces, SD-11 Lite Registry). The following text is preserved as originally written.
 
 ### 13.1 Transport Binding Priority
 
@@ -1105,16 +1105,19 @@ sequenceDiagram
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+**Note**: The MVP above was delivered in **v1.0.0**. Several "deferred" items are now planned (e.g. WebSocket, OAuth2, well-known discovery in v1.1; signed manifests, Registry in v1.2). See [Roadmap to Marketplace](roadmap-to-marketplace.md#release-timeline).
+
 ### 14.2 Future Roadmap
+
+The following table reflects the original v0.1 vision; the **current** evolution path is defined in [Roadmap to Marketplace](roadmap-to-marketplace.md). The end-state vision (Discovery, Trust, Economy) is described in [Agent Marketplace Vision](vision-agent-marketplace.md).
 
 | Version | Focus Area | Key Additions |
 |---------|------------|---------------|
-| v0.2 | Transport | WebSocket binding, gRPC binding |
-| v0.3 | Security | Signed manifests, mTLS option |
-| v0.4 | Discovery | Registry API, DNS-SD |
-| v1.0 | Stability | Frozen spec, conformance tests |
-| v1.1 | Enterprise | OAuth2 flows, audit logging |
-| v2.0 | Federation | Cross-domain trust, delegation |
+| v1.0 | Foundation | ✅ Released — Stable protocol, HTTP binding, task lifecycle |
+| v1.1 | Identity | OAuth2/OIDC, Well-known URI, Lite Registry, WebSocket + MessageAck, state storage — see [roadmap § v1.1.0](roadmap-to-marketplace.md#v110-identity--foundation-for-trust) |
+| v1.2 | Trust | Signed manifests (Ed25519), Registry API, mTLS optional — see [roadmap § v1.2.0](roadmap-to-marketplace.md#v120-trust--verified-identity) |
+| v1.3 | Economics | Metering, SLAs, delegation — see [roadmap § v1.3.0](roadmap-to-marketplace.md#v130-economics--value-exchange) |
+| v2.0 | Marketplace | Registry service, Discovery/Trust/Economy layers — see [roadmap § v2.0.0](roadmap-to-marketplace.md#v200-marketplace--the-end-goal) and [vision](vision-agent-marketplace.md) |
 
 ---
 
@@ -1178,15 +1181,23 @@ Since this is a **design-only phase** (no code implementation), verification is 
 3. ✅ **MCP compatibility**: Validated via non-invasive envelope approach in Section 8
 4. ✅ **Version evolution**: Validated via negotiation protocol in Section 9.4
 
-### Manual Review Checklist
+### Manual Review Checklist (v0.1 → v1.0)
 
-- [ ] Core concepts are clearly defined
-- [ ] Message types cover essential workflows
-- [ ] State model supports failure recovery
-- [ ] MCP integration is non-invasive
-- [ ] Extensibility doesn't require breaking changes
-- [ ] Security upgrade path is clear
-- [ ] Open decisions are explicitly documented
+| Criterion | Status | Notes |
+|-----------|--------|--------|
+| Core concepts clearly defined | ✅ | Agent, Manifest, Task, Conversation, StateSnapshot — adopted in v1.0 |
+| Message types cover essential workflows | ✅ | TaskRequest/Response, TaskUpdate, Envelope — see [ADR](ADR.md) for binding choices |
+| State model supports failure recovery | ✅ | Snapshot + optional event-sourced (ADR-1); [roadmap](roadmap-to-marketplace.md#sd-9-state-management--hybrid-strategy) defines storage strategy |
+| MCP integration non-invasive | ✅ | MCP envelope approach kept; see [ADR-5](ADR.md#question-5-is-mcp-envelope-approach-optimal) |
+| Extensibility without breaking changes | ✅ | Version negotiation, namespaced extensions; [roadmap](roadmap-to-marketplace.md) drives additive evolution |
+| Security upgrade path clear | ✅ | Bearer/API key in v1.0 → OAuth2 in v1.1 → Signed manifests/mTLS in v1.2; [ADR-8](ADR.md#question-8-is-mvp-security-sufficient), [ADR-17](ADR.md#question-17-trust-model-and-identity-binding-in-v11) |
+| Open decisions explicitly documented | ✅ | Section 13; many resolved in [ADR](ADR.md) and [Strategic Decisions](roadmap-to-marketplace.md#strategic-decisions) |
+
+**Where we're building next**
+
+- **v1.1 (Identity)** — [Roadmap § v1.1.0](roadmap-to-marketplace.md#v110-identity--foundation-for-trust): OAuth2, discovery, Lite Registry, WebSocket + acks.
+- **v1.2 (Trust)** — [Roadmap § v1.2.0](roadmap-to-marketplace.md#v120-trust--verified-identity): Ed25519 signing, Registry API.
+- **v2.0 (Marketplace)** — [Agent Marketplace Vision](vision-agent-marketplace.md): Discovery, Trust layer, Economy layer.
 
 ---
 
@@ -1195,3 +1206,4 @@ Since this is a **design-only phase** (no code implementation), verification is 
 | Date | Version | Change |
 |------|---------|--------|
 | 2025-01-15 | 0.1-draft | Initial specification |
+| 2026-02-07 | 0.1-draft (historical) | Document marked as historical; added links to [Roadmap to Marketplace](roadmap-to-marketplace.md) and [Agent Marketplace Vision](vision-agent-marketplace.md). Manual Review Checklist updated with v1.0 validation status and pointers to ADR/roadmap. Section 14.2 aligned with current release timeline (v1.0 released, v1.1–v2.0 as in roadmap). Living roadmap and ADR are the source of truth for decisions and future scope. |
