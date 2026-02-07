@@ -8,7 +8,7 @@ This module provides OAuth2/OIDC authentication for agent-to-agent communication
 Public exports:
     Token: OAuth2 access token model
     OAuth2ClientCredentials: Client for client_credentials grant
-    OAuth2AuthorizationCode: Stub for authorization_code grant (v1.1.1+)
+    OAuth2ClientCredentials: Client for client_credentials grant
     OAuth2Middleware: JWT validation middleware (JWKS)
     OAuth2Config: Config for enabling OAuth2 on the server (create_app)
     OAuth2Claims: JWT claims (sub, scope, exp)
@@ -25,11 +25,10 @@ from asap.auth.introspection import TokenInfo, TokenIntrospector
 from asap.auth.jwks import JWKSValidator, Claims, fetch_keys, validate_jwt
 from asap.auth.oidc import OIDCConfig, OIDCDiscovery
 from asap.auth.middleware import OAuth2Claims, OAuth2Config, OAuth2Middleware
-from asap.auth.oauth2 import OAuth2AuthorizationCode, OAuth2ClientCredentials, Token
+from asap.auth.oauth2 import OAuth2ClientCredentials, Token
 from asap.auth.scopes import SCOPE_ADMIN, SCOPE_EXECUTE, SCOPE_READ, require_scope
 
 __all__ = [
-    "OAuth2AuthorizationCode",
     "OAuth2Claims",
     "OAuth2ClientCredentials",
     "OAuth2Config",

@@ -181,6 +181,3 @@ class OAuth2ClientCredentials:
             expires_in=expires_in,
         )
         return token
-
-
-

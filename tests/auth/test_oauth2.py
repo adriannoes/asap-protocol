@@ -12,7 +12,6 @@ from authlib.integrations.base_client.errors import OAuthError
 
 from asap.auth.oauth2 import (
     DEFAULT_TOKEN_LIFETIME_SECONDS,
-    OAuth2AuthorizationCode,
     OAuth2ClientCredentials,
     TOKEN_REFRESH_BUFFER_SECONDS,
     Token,
@@ -135,19 +134,7 @@ async def test_token_is_expired_with_buffer() -> None:
     assert token_fresh.is_expired(buffer_seconds=TOKEN_REFRESH_BUFFER_SECONDS) is False
 
 
-def test_oauth2_authorization_code_stub_importable() -> None:
-    """Verify OAuth2AuthorizationCode stub exists and is importable."""
-    client = OAuth2AuthorizationCode(
-        client_id="cid",
-        client_secret="secret",
-        authorization_url="https://auth.example.com/authorize",
-        token_url="https://auth.example.com/token",
-        redirect_uri="https://app.example.com/callback",
-    )
-    assert client._client_id == "cid"
-    assert client._authorization_url == "https://auth.example.com/authorize"
-    assert client._token_url == "https://auth.example.com/token"
-    assert client._redirect_uri == "https://app.example.com/callback"
+
 
 
 async def test_get_access_token_raises_on_invalid_credentials() -> None:
