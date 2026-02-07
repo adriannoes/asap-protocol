@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import time
+from typing import Any
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from joserfc import jwk, jwt as jose_jwt
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.testclient import TestClient
 
 from asap.auth.middleware import OAuth2Claims, OAuth2Middleware
@@ -83,3 +85,39 @@ def test_require_scope_allows_request_with_required_scope() -> None:
 
     assert response.status_code == 200
     assert response.json() == {"sub": "urn:asap:agent:runner"}
+
+
+def test_require_scope_returns_401_when_no_oauth2_claims() -> None:
+    """require_scope raises 401 when request.state.oauth2_claims is not set (e.g. route not behind middleware)."""
+    app = FastAPI()
+
+    @app.get("/protected", dependencies=[Depends(require_scope(SCOPE_EXECUTE))])
+    async def protected() -> dict[str, str]:
+        return {"status": "ok"}
+
+    with TestClient(app) as client:
+        response = client.get("/protected")
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Authentication required"
+    assert "WWW-Authenticate" in response.headers
+
+
+def test_require_scope_returns_401_when_oauth2_claims_wrong_type() -> None:
+    """require_scope raises 401 when request.state.oauth2_claims is set but not OAuth2Claims."""
+    app = FastAPI()
+
+    class FakeStateMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request: Request, call_next: Any) -> Any:
+            request.state.oauth2_claims = "not_oauth2_claims"
+            return await call_next(request)
+
+    app.add_middleware(FakeStateMiddleware)
+
+    @app.get("/protected", dependencies=[Depends(require_scope(SCOPE_EXECUTE))])
+    async def protected() -> dict[str, str]:
+        return {"status": "ok"}
+
+    with TestClient(app) as client:
+        response = client.get("/protected")
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Authentication required"
