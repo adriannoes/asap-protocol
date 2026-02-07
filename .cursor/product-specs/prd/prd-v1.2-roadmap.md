@@ -288,9 +288,9 @@ asap-compliance/          # Separate package
 ## 10. Related Documents
 
 - **Tasks**: [tasks-v1.2.0-roadmap.md](../../dev-planning/tasks/v1.2.0/tasks-v1.2.0-roadmap.md)
-- **PKI Details**: [tasks-v1.2.0-pki-detailed.md](../../dev-planning/tasks/v1.2.0/tasks-v1.2.0-pki-detailed.md)
-- **Registry Details**: [tasks-v1.2.0-registry-detailed.md](../../dev-planning/tasks/v1.2.0/tasks-v1.2.0-registry-detailed.md)
-- **Evals Details**: [tasks-v1.2.0-evals-detailed.md](../../dev-planning/tasks/v1.2.0/tasks-v1.2.0-evals-detailed.md)
+- **PKI Details**: [Sprint T1](../../dev-planning/tasks/v1.2.0/sprint-T1-ed25519-pki.md), [Sprint T2](../../dev-planning/tasks/v1.2.0/sprint-T2-trust-levels-mtls.md)
+- **Registry Details**: [Sprint T3](../../dev-planning/tasks/v1.2.0/sprint-T3-registry-core.md), [Sprint T4](../../dev-planning/tasks/v1.2.0/sprint-T4-registry-features.md)
+- **Evals Details**: [Sprint T5](../../dev-planning/tasks/v1.2.0/sprint-T5-compliance-harness.md), [Sprint T6](../../dev-planning/tasks/v1.2.0/sprint-T6-deepeval-release.md)
 - **Roadmap**: [roadmap-to-marketplace.md](../roadmap-to-marketplace.md)
 - **Vision**: [vision-agent-marketplace.md](../vision-agent-marketplace.md)
 

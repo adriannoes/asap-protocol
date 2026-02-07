@@ -16,6 +16,7 @@
 - [Question 9: Should Any Module Use C or Rust?](#question-9-should-any-module-use-c-or-rust)
 - [Question 10: Build vs Buy for Agent Evals?](#question-10-build-vs-buy-for-agent-evals)
 - [Question 11: What Tech Stack for v2.0 Web Marketplace?](#question-11-what-tech-stack-for-v20-web-marketplace)
+- [Question 12: Authlib vs httpx-oauth for OAuth2/OIDC](#question-12-authlib-vs-httpx-oauth-for-oauth2oidc)
 - [Summary of Amendments](#summary-of-amendments)
 - [Next Steps](#next-steps)
 
@@ -492,6 +493,70 @@ Use **DeepEval** (Open Source) as the standard library for Intelligence Evals. B
 
 ---
 
+## Question 12: Authlib vs httpx-oauth for OAuth2/OIDC
+
+### The Question
+The initial v1.1.0 plan specified `httpx-oauth` as the OAuth2 dependency. During implementation, we discovered it does **not** support the `client_credentials` grant (the primary flow for agent-to-agent auth). Should we keep httpx-oauth, use raw httpx, or switch to a more comprehensive library?
+
+### Analysis
+
+**Libraries Evaluated** (February 2026):
+
+| Library | client_credentials | JWKS/JWT | OIDC Discovery | Async httpx | Downloads/mo | Status |
+|---------|-------------------|----------|----------------|------------|-------------|--------|
+| **Authlib** | Native | Via `joserfc` (same author) | Native | `AsyncOAuth2Client` | ~45M | Active (v1.6.6, v1.7 in dev) |
+| **httpx-oauth** | **Not supported** | No | Partial (OpenID client) | Yes | Lower | Focused on authorization_code |
+| **joserfc** | N/A (JOSE only) | **Complete** (JWS, JWE, JWK) | N/A | N/A | Growing | Active (v1.6.1, Dec 2025) |
+| **PyJWT** | N/A (JWT only) | Partial | No | N/A | ~200M+ | Active |
+| **Raw httpx** | Manual | Manual | Manual | Yes | — | We maintain |
+
+**httpx-oauth limitations discovered**:
+1. No `client_credentials` grant — only `authorization_code` flow
+2. No JWT validation or JWKS fetching
+3. No OIDC discovery
+4. Would require manual implementation for all three Sprint S1 tasks
+
+**Authlib advantages**:
+1. **Single dependency** covers Tasks 1.1, 1.2, and 1.3 entirely
+2. `AsyncOAuth2Client` with native `client_credentials` support
+3. `joserfc` (same author, same org) provides modern JWS/JWE/JWK/JWT
+4. Built-in OIDC discovery from `.well-known/openid-configuration`
+5. FastAPI/Starlette integration available
+6. 45M downloads/month, BSD-3-Clause license (compatible with Apache-2.0)
+7. Active maintenance: v1.7 in development, last updated Jan 2026
+
+**Risk assessment**:
+- Authlib is a broader library than needed, but unused features have zero runtime cost
+- `joserfc` replaces abandoned `python-jose` as the modern JOSE standard
+- httpx integration note says "alpha" (legacy doc label, library is stable in practice)
+
+### Expert Assessment
+
+The original plan chose httpx-oauth based on its httpx alignment. In practice, it only solves authorization_code flows for web apps (Google, GitHub, etc.), not machine-to-machine auth. Keeping it would mean:
+- Building client_credentials manually (done partially in Task 1.1.3)
+- Building JWKS validation manually (Task 1.3.2)
+- Building OIDC discovery manually (Task 1.3.1)
+- Maintaining ~500+ lines of security-critical code ourselves
+
+Authlib eliminates all three while providing a battle-tested, widely-adopted foundation.
+
+### Recommendation: **REPLACE**
+
+Replace `httpx-oauth` with `authlib` as the OAuth2/OIDC dependency. Additionally, add `joserfc` for JWT/JWKS validation (Tasks 1.2, 1.3).
+
+### Decision
+
+> [!IMPORTANT]
+> **ADR-12**: Replaced `httpx-oauth>=0.13` with `authlib>=1.3` and `joserfc>=1.0` in v1.1.0 dependencies.
+>
+> **Rationale**: httpx-oauth does not support `client_credentials` (the primary agent-to-agent flow). Authlib provides native support for all three Sprint S1 requirements (OAuth2 client, token validation, OIDC discovery) as a single, well-maintained dependency. `joserfc` (same author) provides modern JOSE/JWT support, replacing the abandoned `python-jose`.
+>
+> **Impact**: Tasks 1.1, 1.2, and 1.3 updated to use Authlib's `AsyncOAuth2Client` and joserfc for JWT operations. The ASAP-specific `Token` model and `OAuth2ClientCredentials` wrapper remain as our public API, with Authlib as the internal engine.
+>
+> **Date**: 2026-02-07
+
+---
+
 ## Summary of Amendments
 
 | Question | Decision | Change Type |
@@ -507,6 +572,7 @@ Use **DeepEval** (Open Source) as the standard library for Intelligence Evals. B
 | Q9: Python vs C/Rust | Keep pure Python, use Rust deps | **Documented** |
 | Q10: Agent Evals | Hybrid: Native Compliance + DeepEval | **Added** |
 | Q11: Web Stack | Next.js, Tailwind, Shadcn | **Added** |
+| Q12: OAuth2 Lib | Replace httpx-oauth with Authlib + joserfc | **Replaced** |
 
 ---
 

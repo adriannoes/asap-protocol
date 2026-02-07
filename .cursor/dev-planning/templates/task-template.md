@@ -7,7 +7,7 @@
 
 ## Template Structure
 
-When creating a detailed task file (e.g., `tasks-v1.1.0-auth-detailed.md`), follow this structure:
+When creating a detailed task file (e.g., `sprint-S1-oauth2-foundation.md`), follow this structure:
 
 ### Header Section
 
@@ -152,7 +152,7 @@ Define clear commit boundaries:
     - `async get_access_token() -> Token`
     - `async refresh_token() -> Token`
   - **Why**: Needed for agent-to-agent auth using client_credentials grant
-  - **Pattern**: Follow httpx-oauth's OAuth2Client pattern
+  - **Pattern**: Use Authlib's AsyncOAuth2Client internally, expose ASAP-specific models (see ADR-12)
   - **Reference**: https://www.oauth.com/oauth2-servers/access-tokens/client-credentials/
   - **Verify**: Unit test can obtain mock token
 ```

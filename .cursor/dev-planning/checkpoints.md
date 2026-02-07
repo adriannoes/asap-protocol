@@ -79,7 +79,7 @@ As a solo developer, it's easy to lose context between sprints. These checkpoint
 - [ ] Performance characteristics
 
 **Update**:
-- [ ] `tasks-v2.0.0-webapp-detailed.md` — adjust Web App estimates
+- [ ] `sprint-M3-webapp-foundation.md` and `sprint-M4-webapp-features.md` — adjust Web App estimates
 - [ ] Infrastructure decisions for Web App
 - [ ] Document production patterns
 
@@ -95,7 +95,7 @@ As a solo developer, it's easy to lose context between sprints. These checkpoint
 - [ ] Performance on real users
 
 **Update**:
-- [ ] `tasks-v2.0.0-launch-detailed.md` — adjust launch estimates
+- [ ] `sprint-M5-verified-payments.md` and `sprint-M6-launch-prep.md` — adjust launch estimates
 - [ ] Prioritize M5-M6 based on feedback
 
 ---

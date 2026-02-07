@@ -8,9 +8,12 @@
 > **Focus**: Marketplace Core, Web App, Verified Badge, Infrastructure
 >
 > 💡 **For detailed step-by-step instructions**, see sprint files:
-> - [M1-M2: Marketplace Core](./tasks-v2.0.0-marketplace-detailed.md)
-> - [M3-M4: Web App](./tasks-v2.0.0-webapp-detailed.md)
-> - [M5-M6: Launch Prep](./tasks-v2.0.0-launch-detailed.md)
+> - [M1: Production Registry](./sprint-M1-production-registry.md)
+> - [M2: Service Integration](./sprint-M2-service-integration.md)
+> - [M3: Web App Foundation](./sprint-M3-webapp-foundation.md)
+> - [M4: Web App Features](./sprint-M4-webapp-features.md)
+> - [M5: Verified Badge & Payments](./sprint-M5-verified-payments.md)
+> - [M6: Launch Preparation](./sprint-M6-launch-prep.md)
 
 ---
 
