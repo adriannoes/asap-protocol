@@ -134,9 +134,6 @@ async def test_token_is_expired_with_buffer() -> None:
     assert token_fresh.is_expired(buffer_seconds=TOKEN_REFRESH_BUFFER_SECONDS) is False
 
 
-
-
-
 async def test_get_access_token_raises_on_invalid_credentials() -> None:
     """Verify get_access_token raises when token endpoint returns 401 (Authlib raises OAuthError)."""
 
