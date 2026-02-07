@@ -2,11 +2,14 @@
 
 Validates JWT Bearer tokens using JWKS (via joserfc), extracts claims
 (sub, scope, exp), and returns 401 when invalid or 403 when scope is insufficient.
+Supports Custom Claims identity binding (ADR-17).
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
+import os
 import time
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable
@@ -29,6 +32,27 @@ HTTP_FORBIDDEN = 403
 ERROR_AUTH_REQUIRED = "Authentication required"
 ERROR_INVALID_TOKEN = "Invalid authentication token"
 ERROR_INSUFFICIENT_SCOPE = "Insufficient scope"
+ERROR_IDENTITY_MISMATCH = "Identity mismatch: custom claim does not match agent manifest"
+
+DEFAULT_CUSTOM_CLAIM = "https://github.com/adriannoes/asap-protocol/agent_id"
+ENV_SUBJECT_MAP = "ASAP_AUTH_SUBJECT_MAP"
+
+
+def _parse_subject_map() -> dict[str, str | list[str]]:
+    """Parse ASAP_AUTH_SUBJECT_MAP env var (JSON dict: agent_id -> sub or list of subs).
+
+    Returns empty dict on parse error or when env is unset.
+    """
+    raw = os.environ.get(ENV_SUBJECT_MAP)
+    if not raw or not raw.strip():
+        return {}
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {str(k): v for k, v in data.items() if isinstance(v, (str, list))}
 
 
 @dataclass
@@ -37,19 +61,27 @@ class OAuth2Config:
 
     When passed to create_app(oauth2_config=...), OAuth2Middleware is applied
     to all requests under path_prefix (default /asap), validating Bearer JWTs
-    using the provider's JWKS endpoint.
+    using the provider's JWKS endpoint. Supports Custom Claims identity binding
+    (ADR-17) when manifest_id is provided.
 
     Attributes:
         jwks_uri: URL of the JWKS endpoint (e.g. from OIDC discovery).
         required_scope: Optional scope that tokens must contain (e.g. "asap:execute").
         path_prefix: Path prefix to protect; default "/asap".
         jwks_fetcher: Optional async (uri) -> KeySet for tests; default fetches via httpx.
+        manifest_id: Optional agent manifest id for identity binding; when set,
+            validates custom claim or allowlist fallback. If None, identity binding
+            is disabled.
+        custom_claim: Optional JWT claim key for agent_id; when None, uses
+            ASAP_AUTH_CUSTOM_CLAIM env var (default: DEFAULT_CUSTOM_CLAIM).
     """
 
     jwks_uri: str
     required_scope: str | None = None
     path_prefix: str = "/asap"
     jwks_fetcher: Callable[[str], Awaitable[jwk.KeySet]] | None = None
+    manifest_id: str | None = None
+    custom_claim: str | None = None
 
 
 @dataclass
@@ -109,6 +141,8 @@ class OAuth2Middleware(BaseHTTPMiddleware):
         required_scope: str | None = None,
         path_prefix: str | None = "/asap",
         jwks_fetcher: Callable[[str], Awaitable[jwk.KeySet]] | None = None,
+        manifest_id: str | None = None,
+        custom_claim: str | None = None,
     ) -> None:
         """Initialize OAuth2 middleware.
 
@@ -118,12 +152,18 @@ class OAuth2Middleware(BaseHTTPMiddleware):
             required_scope: If set, token must contain this scope or 403 is returned.
             path_prefix: If set, only requests under this path are validated; others pass through.
             jwks_fetcher: Optional async (uri) -> KeySet for tests; default fetches via httpx.
+            manifest_id: Optional agent manifest id for identity binding (ADR-17). If set,
+                validates custom claim or allowlist fallback.
+            custom_claim: Optional JWT claim key for agent_id; when None, uses
+                ASAP_AUTH_CUSTOM_CLAIM env var.
         """
         super().__init__(app)
         self._jwks_uri = jwks_uri
         self._required_scope = required_scope
         self._path_prefix = path_prefix
         self._jwks_fetcher = jwks_fetcher or _fetch_jwks
+        self._manifest_id = manifest_id
+        self._custom_claim = custom_claim
         self._jwks_cache: jwk.KeySet | None = None
         self._jwks_cache_time: float = 0.0
         self._jwks_cache_ttl = 3600.0  # 1 hour
@@ -160,6 +200,39 @@ class OAuth2Middleware(BaseHTTPMiddleware):
         if self._required_scope is None:
             return True
         return self._required_scope in scope_list
+
+    def _validate_identity_binding(
+        self, claims: dict[str, Any], sub: str
+    ) -> tuple[bool, str | None, bool, bool]:
+        """Validate JWT identity binding via custom claim or allowlist (ADR-17)."""
+        if self._manifest_id is None:
+            return True, None, False, False
+
+        claim_key = self._custom_claim or os.environ.get(
+            "ASAP_AUTH_CUSTOM_CLAIM", DEFAULT_CUSTOM_CLAIM
+        )
+        claim_value = claims.get(claim_key)
+
+        if claim_value is not None:
+            agent_id = str(claim_value).strip()
+            if agent_id != self._manifest_id:
+                return (
+                    False,
+                    f"Custom claim {claim_key!r} has {agent_id!r}, expected {self._manifest_id!r}",
+                    False,
+                    False,
+                )
+            return True, None, False, False
+
+        subject_map = _parse_subject_map()
+        allowed = subject_map.get(self._manifest_id)
+        if allowed is not None:
+            if isinstance(allowed, str) and allowed == sub:
+                return True, None, False, True
+            if isinstance(allowed, list) and sub in allowed:
+                return True, None, False, True
+
+        return True, None, True, False
 
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
@@ -249,6 +322,33 @@ class OAuth2Middleware(BaseHTTPMiddleware):
             return JSONResponse(
                 status_code=HTTP_FORBIDDEN,
                 content={"detail": ERROR_INSUFFICIENT_SCOPE},
+            )
+
+        success, err_detail, claim_missing, use_allowlist = self._validate_identity_binding(
+            claims, sub
+        )
+        if not success:
+            logger.warning(
+                "asap.oauth2.identity_mismatch",
+                path=request.url.path,
+                detail=err_detail,
+            )
+            return JSONResponse(
+                status_code=HTTP_FORBIDDEN,
+                content={"detail": ERROR_IDENTITY_MISMATCH},
+            )
+        if use_allowlist:
+            logger.warning(
+                "asap.oauth2.identity_via_allowlist",
+                path=request.url.path,
+                manifest_id=self._manifest_id,
+                sub=sub,
+            )
+        elif claim_missing:
+            logger.warning(
+                "asap.oauth2.identity_unverified",
+                path=request.url.path,
+                manifest_id=self._manifest_id,
             )
 
         request.state.oauth2_claims = OAuth2Claims(sub=sub, scope=scope_list, exp=exp_ts)

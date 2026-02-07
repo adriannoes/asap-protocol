@@ -24,6 +24,7 @@
 - `tests/auth/test_middleware.py` - Middleware tests
 - `tests/auth/test_scopes.py` - Scope dependency tests
 - `tests/auth/test_server_oauth2_integration.py` - create_app with/without oauth2_config
+- `tests/auth/test_identity_binding.py` - Custom Claims + allowlist tests (Task 1.4.3)
 
 ---
 
@@ -266,7 +267,7 @@ v1.1.0 establishes the Identity Layer for ASAP. OAuth2/OIDC provides enterprise-
 
 ### Sub-tasks
 
-- [ ] 1.4.1 Add custom claim extraction to middleware
+- [x] 1.4.1 Add custom claim extraction to middleware
   - **File**: `src/asap/auth/middleware.py` (modify)
   - **What**: After JWT validation, extract custom claim:
     - **Config**: `ASAP_AUTH_CUSTOM_CLAIM` env var (default: `https://github.com/adriannoes/asap-protocol/agent_id`)
@@ -277,7 +278,7 @@ v1.1.0 establishes the Identity Layer for ASAP. OAuth2/OIDC provides enterprise-
   - **Pattern**: Standard JWT custom claims (RFC 7519 private claims with namespace prefix)
   - **Verify**: Middleware correctly extracts and validates custom claim
 
-- [ ] 1.4.2 Implement allowlist fallback
+- [x] 1.4.2 Implement allowlist fallback
   - **File**: `src/asap/auth/middleware.py` (modify)
   - **What**: Add allowlist configuration:
     - Read `ASAP_AUTH_SUBJECT_MAP` env var (JSON dict: `{"urn:asap:agent:bot": "auth0|abc123"}`)
@@ -286,7 +287,7 @@ v1.1.0 establishes the Identity Layer for ASAP. OAuth2/OIDC provides enterprise-
   - **Why**: Fallback for environments where custom claims aren't configurable
   - **Verify**: Allowlist mapping works, warning logged
 
-- [ ] 1.4.3 Write tests for identity binding
+- [x] 1.4.3 Write tests for identity binding
   - **File**: `tests/auth/test_identity_binding.py` (create new)
   - **What**: Test scenarios:
     - Custom claim present and matches manifest → success
@@ -296,16 +297,16 @@ v1.1.0 establishes the Identity Layer for ASAP. OAuth2/OIDC provides enterprise-
     - Malformed ASAP_AUTH_SUBJECT_MAP → clear error
   - **Verify**: `pytest tests/auth/test_identity_binding.py -v` all pass
 
-- [ ] 1.4.4 Commit milestone
+- [x] 1.4.4 Commit milestone
   - **Command**: `git commit -m "feat(auth): add Custom Claims identity binding (ADR-17)"`
   - **Scope**: middleware.py, test_identity_binding.py
   - **Verify**: `git log -1` shows correct message
 
 **Acceptance Criteria**:
-- [ ] Custom Claims extracted and validated from JWT
-- [ ] Allowlist fallback works for non-custom-claims environments
-- [ ] Warning logged when identity not verified
-- [ ] Test coverage >95% for identity binding
+- [x] Custom Claims extracted and validated from JWT
+- [x] Allowlist fallback works for non-custom-claims environments
+- [x] Warning logged when identity not verified
+- [x] Test coverage >95% for identity binding
 
 ---
 
@@ -314,7 +315,7 @@ v1.1.0 establishes the Identity Layer for ASAP. OAuth2/OIDC provides enterprise-
 - [x] OAuth2 client_credentials flow working
 - [x] Token validation middleware functional
 - [x] OIDC auto-discovery working
-- [ ] Custom Claims identity binding functional (ADR-17)
+- [x] Custom Claims identity binding functional (ADR-17)
 - [x] Test coverage >95%
 - [x] Progress tracked in roadmap
 

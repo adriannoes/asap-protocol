@@ -1363,6 +1363,8 @@ def create_app(
             "jwks_uri": oauth2_config.jwks_uri,
             "required_scope": oauth2_config.required_scope,
             "path_prefix": oauth2_config.path_prefix,
+            "manifest_id": manifest.id,
+            "custom_claim": oauth2_config.custom_claim,
         }
         if oauth2_config.jwks_fetcher is not None:
             middleware_kwargs["jwks_fetcher"] = oauth2_config.jwks_fetcher
