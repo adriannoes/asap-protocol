@@ -183,46 +183,4 @@ class OAuth2ClientCredentials:
         return token
 
 
-class OAuth2AuthorizationCode:
-    """OAuth2 client for authorization_code grant (stub).
 
-    Placeholder for human-in-the-loop authentication. Use when a user
-    authorizes the agent via a browser (e.g. redirect to IdP, callback with code).
-    Implementation deferred to v1.1.1+.
-
-    TODO(v1.1.1): Implement authorization URL generation.
-    TODO(v1.1.1): Implement code exchange for token.
-    TODO(v1.1.1): Implement refresh_token handling and get_valid_token().
-    """
-
-    def __init__(
-        self,
-        client_id: str,
-        client_secret: str,
-        authorization_url: str,
-        token_url: str,
-        redirect_uri: str,
-        *,
-        scope: Optional[str] = None,
-    ) -> None:
-        """Initialize the authorization_code client (stub).
-
-        Args:
-            client_id: OAuth2 client ID.
-            client_secret: OAuth2 client secret.
-            authorization_url: Provider authorization endpoint URL.
-            token_url: Provider token endpoint URL.
-            redirect_uri: Redirect URI registered with the provider.
-            scope: Optional space-separated scopes.
-        """
-        self._client_id = client_id
-        self._client_secret = client_secret
-        self._authorization_url = authorization_url
-        self._token_url = token_url
-        self._redirect_uri = redirect_uri
-        self._scope = scope
-        # TODO(v1.1.1): Add token cache and refresh logic.
-
-    def get_authorization_url(self) -> str:
-        """Build authorization URL for user redirect (stub)."""
-        raise NotImplementedError("OAuth2 authorization_code flow deferred to v1.1.1")

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Any, Awaitable, Callable
 
 import httpx
-from fastapi import Request
+from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from joserfc import jwt as jose_jwt
 from joserfc import jwk
@@ -162,8 +162,8 @@ class OAuth2Middleware(BaseHTTPMiddleware):
         return self._required_scope in scope_list
 
     async def dispatch(
-        self, request: Request, call_next: Callable[[Request], Awaitable[Any]]
-    ) -> Any:
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         """Validate JWT and optionally scope; return 401/403 or pass to next."""
         if not self._should_validate(request.url.path):
             return await call_next(request)
