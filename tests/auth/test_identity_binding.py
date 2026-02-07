@@ -203,6 +203,54 @@ def test_custom_claim_missing_allowlist_list_value_succeeds(
     assert response.status_code == 200
 
 
+def test_asap_auth_subject_map_non_dict_json_treated_as_empty(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ASAP_AUTH_SUBJECT_MAP with valid JSON but non-dict (e.g. []) → allowlist empty."""
+    monkeypatch.setenv("ASAP_AUTH_SUBJECT_MAP", "[]")
+
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    key_set = jwk.KeySet.import_key_set({"keys": [key.as_dict(private=False)]})
+
+    async def jwks(_: str) -> jwk.KeySet:
+        return key_set
+
+    app = _minimal_app(manifest_id="urn:asap:agent:bot", jwks_fetcher=jwks)
+    token = _make_token(key, sub="auth0|abc123")
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/asap",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert response.status_code == 200
+
+
+def test_asap_auth_subject_map_invalid_value_type_filtered(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ASAP_AUTH_SUBJECT_MAP with non-str/list value → filtered out, identity unverified."""
+    monkeypatch.setenv("ASAP_AUTH_SUBJECT_MAP", '{"urn:asap:agent:bot": 123}')
+
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    key_set = jwk.KeySet.import_key_set({"keys": [key.as_dict(private=False)]})
+
+    async def jwks(_: str) -> jwk.KeySet:
+        return key_set
+
+    app = _minimal_app(manifest_id="urn:asap:agent:bot", jwks_fetcher=jwks)
+    token = _make_token(key, sub="auth0|abc123")
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/asap",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert response.status_code == 200
+
+
 def test_malformed_asap_auth_subject_map_does_not_crash(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
