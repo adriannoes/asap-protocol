@@ -12,9 +12,13 @@ from threading import Lock
 from typing import Any, Optional
 
 import httpx
-from joserfc import jwt as jose_jwt
 from joserfc import jwk
+from joserfc import jwt as jose_jwt
 from joserfc.errors import JoseError
+
+from asap.observability import get_logger
+
+logger = get_logger(__name__)
 
 JWKS_CACHE_TTL_SECONDS = 86400.0
 
@@ -51,7 +55,7 @@ async def fetch_keys(
     Raises:
         httpx.HTTPError: On network or protocol errors.
     """
-    kwargs: dict[str, Any] = {}
+    kwargs: dict[str, Any] = {"timeout": httpx.Timeout(10.0)}
     if transport is not None:
         kwargs["transport"] = transport
 
@@ -60,7 +64,9 @@ async def fetch_keys(
         resp.raise_for_status()
         data = resp.json()
 
-    return jwk.KeySet.import_key_set(data)
+    key_set = jwk.KeySet.import_key_set(data)
+    logger.info("asap.jwks.fetched", uri=jwks_uri, key_count=len(key_set.keys))
+    return key_set
 
 
 def validate_jwt(token: str, key_set: jwk.KeySet) -> Claims:

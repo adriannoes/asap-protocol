@@ -16,6 +16,9 @@ from authlib.oidc.discovery import get_well_known_url
 from pydantic import Field
 
 from asap.models.base import ASAPBaseModel
+from asap.observability import get_logger
+
+logger = get_logger(__name__)
 
 DISCOVERY_CACHE_TTL_SECONDS = 3600.0
 
@@ -116,7 +119,7 @@ class OIDCDiscovery:
         """Perform HTTP fetch and parse discovery document (no cache)."""
         url = get_well_known_url(self._issuer_url, external=True)
 
-        kwargs: dict[str, Any] = {}
+        kwargs: dict[str, Any] = {"timeout": httpx.Timeout(10.0)}
         if self._transport is not None:
             kwargs["transport"] = self._transport
 
@@ -139,9 +142,11 @@ class OIDCDiscovery:
         scopes = data.get("scopes_supported")
         scopes_list = [str(s) for s in scopes] if isinstance(scopes, list) else []
 
-        return OIDCConfig(
+        config = OIDCConfig(
             issuer=issuer,
             token_endpoint=token_endpoint,
             jwks_uri=jwks_uri,
             scopes_supported=scopes_list,
         )
+        logger.info("asap.oidc.discovered", issuer=config.issuer)
+        return config

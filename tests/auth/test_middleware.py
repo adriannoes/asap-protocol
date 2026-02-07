@@ -32,11 +32,17 @@ def _minimal_app() -> FastAPI:
     return app
 
 
+_cached_mock_jwks: jwk.KeySet | None = None
+
+
 async def _mock_jwks_fetcher(_uri: str) -> jwk.KeySet:
-    """Return a minimal RSA key set for testing (used to validate signed JWTs)."""
-    # Single RSA public key for verification (tests will sign with matching key)
+    """Return a minimal RSA key set for testing. Cached to avoid per-request key generation."""
+    global _cached_mock_jwks
+    if _cached_mock_jwks is not None:
+        return _cached_mock_jwks
     key = jwk.RSAKey.generate_key(2048, private=True)
-    return jwk.KeySet.import_key_set({"keys": [key.as_dict(private=False)]})
+    _cached_mock_jwks = jwk.KeySet.import_key_set({"keys": [key.as_dict(private=False)]})
+    return _cached_mock_jwks
 
 
 def test_oauth2_middleware_rejects_request_without_bearer_token() -> None:

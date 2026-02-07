@@ -15,6 +15,9 @@ from authlib.integrations.httpx_client import AsyncOAuth2Client
 from pydantic import Field
 
 from asap.models.base import ASAPBaseModel
+from asap.observability import get_logger
+
+logger = get_logger(__name__)
 
 TOKEN_REFRESH_BUFFER_SECONDS = 30
 DEFAULT_TOKEN_LIFETIME_SECONDS = 3600
@@ -155,7 +158,7 @@ class OAuth2ClientCredentials:
         """
         requested_scope = scope or self._scope
 
-        kwargs: dict[str, Any] = {}
+        kwargs: dict[str, Any] = {"timeout": httpx.Timeout(10.0)}
         if self._transport is not None:
             kwargs["transport"] = self._transport
 
@@ -170,7 +173,14 @@ class OAuth2ClientCredentials:
                 grant_type="client_credentials",
             )
 
-        return _parse_token_response(raw_token)
+        token = _parse_token_response(raw_token)
+        expires_in = token.expires_at - int(time.time())
+        logger.info(
+            "asap.oauth2.token_acquired",
+            token_endpoint=self._token_url,
+            expires_in=expires_in,
+        )
+        return token
 
 
 class OAuth2AuthorizationCode:
@@ -212,3 +222,7 @@ class OAuth2AuthorizationCode:
         self._redirect_uri = redirect_uri
         self._scope = scope
         # TODO(v1.1.1): Add token cache and refresh logic.
+
+    def get_authorization_url(self) -> str:
+        """Build authorization URL for user redirect (stub)."""
+        raise NotImplementedError("OAuth2 authorization_code flow deferred to v1.1.1")

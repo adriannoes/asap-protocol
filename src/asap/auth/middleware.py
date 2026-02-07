@@ -6,6 +6,7 @@ Validates JWT Bearer tokens using JWKS (via joserfc), extracts claims
 
 from __future__ import annotations
 
+import asyncio
 import time
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable
@@ -15,9 +16,10 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from joserfc import jwt as jose_jwt
 from joserfc import jwk
-from joserfc.errors import InvalidTokenError
+from joserfc.errors import JoseError
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from asap.auth.utils import parse_scope
 from asap.observability import get_logger
 
 logger = get_logger(__name__)
@@ -65,20 +67,6 @@ class OAuth2Claims:
     exp: int
 
 
-def _parse_scope(claim: Any) -> list[str]:
-    """Normalize scope claim to a list of strings.
-
-    JWT scope can be a space-separated string or a list.
-    """
-    if claim is None:
-        return []
-    if isinstance(claim, list):
-        return [str(s) for s in claim]
-    if isinstance(claim, str):
-        return [s.strip() for s in claim.split() if s.strip()]
-    return []
-
-
 def _get_bearer_token(request: Request) -> str | None:
     """Extract Bearer token from Authorization header."""
     auth = request.headers.get("Authorization")
@@ -87,11 +75,16 @@ def _get_bearer_token(request: Request) -> str | None:
     return auth[7:].strip() or None
 
 
+DEFAULT_HTTP_TIMEOUT = 10.0
+
+
 async def _fetch_jwks(
     jwks_uri: str, transport: httpx.AsyncBaseTransport | None = None
 ) -> jwk.KeySet:
     """Fetch JWKS from URI and return a joserfc KeySet."""
-    async with httpx.AsyncClient(transport=transport) as client:
+    async with httpx.AsyncClient(
+        transport=transport, timeout=httpx.Timeout(DEFAULT_HTTP_TIMEOUT)
+    ) as client:
         resp = await client.get(jwks_uri)
         resp.raise_for_status()
         data = resp.json()
@@ -134,6 +127,7 @@ class OAuth2Middleware(BaseHTTPMiddleware):
         self._jwks_cache: jwk.KeySet | None = None
         self._jwks_cache_time: float = 0.0
         self._jwks_cache_ttl = 3600.0  # 1 hour
+        self._jwks_lock = asyncio.Lock()
 
     def _should_validate(self, path: str) -> bool:
         """Return True if this request path should be validated."""
@@ -143,13 +137,23 @@ class OAuth2Middleware(BaseHTTPMiddleware):
 
     async def _get_key_set(self) -> jwk.KeySet:
         """Return JWKS, from cache or by fetching."""
-        now = time.time()
-        if self._jwks_cache is not None and (now - self._jwks_cache_time) < self._jwks_cache_ttl:
-            return self._jwks_cache
-        key_set = await self._jwks_fetcher(self._jwks_uri)
-        self._jwks_cache = key_set
-        self._jwks_cache_time = now
-        return key_set
+        async with self._jwks_lock:
+            now = time.time()
+            if (
+                self._jwks_cache is not None
+                and (now - self._jwks_cache_time) < self._jwks_cache_ttl
+            ):
+                return self._jwks_cache
+            key_set = await self._jwks_fetcher(self._jwks_uri)
+            self._jwks_cache = key_set
+            self._jwks_cache_time = now
+            return key_set
+
+    async def _invalidate_jwks_cache(self) -> None:
+        """Clear JWKS cache."""
+        async with self._jwks_lock:
+            self._jwks_cache = None
+            self._jwks_cache_time = 0.0
 
     def _validate_scope(self, scope_list: list[str]) -> bool:
         """Check if required_scope is present in scope list."""
@@ -176,23 +180,35 @@ class OAuth2Middleware(BaseHTTPMiddleware):
         try:
             key_set = await self._get_key_set()
             token_obj = jose_jwt.decode(token, key_set)
-        except InvalidTokenError as e:
-            logger.warning("asap.oauth2.invalid_token", path=request.url.path, error=str(e))
-            return JSONResponse(
-                status_code=HTTP_UNAUTHORIZED,
-                content={"detail": ERROR_INVALID_TOKEN},
-                headers={"WWW-Authenticate": "Bearer"},
+        except httpx.HTTPError as e:
+            logger.error(
+                "asap.oauth2.jwks_fetch_failed",
+                path=request.url.path,
+                jwks_uri=self._jwks_uri,
+                error=str(e),
             )
-
-        claims = token_obj.claims
-        exp = claims.get("exp")
-        if exp is not None:
+            return JSONResponse(
+                status_code=503,
+                content={"detail": "Authentication service unavailable"},
+            )
+        except JoseError:
+            await self._invalidate_jwks_cache()
             try:
-                exp_ts = int(exp) if isinstance(exp, (int, float)) else 0
-            except (TypeError, ValueError):
-                exp_ts = 0
-            if exp_ts < time.time():
-                logger.warning("asap.oauth2.expired_token", path=request.url.path)
+                key_set = await self._get_key_set()
+                token_obj = jose_jwt.decode(token, key_set)
+            except httpx.HTTPError as e2:
+                logger.error(
+                    "asap.oauth2.jwks_fetch_failed",
+                    path=request.url.path,
+                    jwks_uri=self._jwks_uri,
+                    error=str(e2),
+                )
+                return JSONResponse(
+                    status_code=503,
+                    content={"detail": "Authentication service unavailable"},
+                )
+            except JoseError as e2:
+                logger.warning("asap.oauth2.invalid_token", path=request.url.path, error=str(e2))
                 return JSONResponse(
                     status_code=HTTP_UNAUTHORIZED,
                     content={"detail": ERROR_INVALID_TOKEN},
@@ -200,6 +216,19 @@ class OAuth2Middleware(BaseHTTPMiddleware):
                 )
 
         claims = token_obj.claims
+        exp = claims.get("exp")
+        try:
+            exp_ts = int(exp) if isinstance(exp, (int, float)) else 0
+        except (TypeError, ValueError):
+            exp_ts = 0
+        if exp is not None and exp_ts > 0 and exp_ts < time.time():
+            logger.warning("asap.oauth2.expired_token", path=request.url.path)
+            return JSONResponse(
+                status_code=HTTP_UNAUTHORIZED,
+                content={"detail": ERROR_INVALID_TOKEN},
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
         sub = claims.get("sub")
         if not sub or not isinstance(sub, str):
             logger.warning("asap.oauth2.missing_sub", path=request.url.path)
@@ -209,7 +238,7 @@ class OAuth2Middleware(BaseHTTPMiddleware):
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        scope_list = _parse_scope(claims.get("scope"))
+        scope_list = parse_scope(claims.get("scope"))
         if not self._validate_scope(scope_list):
             logger.warning(
                 "asap.oauth2.insufficient_scope",
@@ -222,8 +251,5 @@ class OAuth2Middleware(BaseHTTPMiddleware):
                 content={"detail": ERROR_INSUFFICIENT_SCOPE},
             )
 
-        exp = claims.get("exp")
-        exp_int = int(exp) if isinstance(exp, (int, float)) else 0
-
-        request.state.oauth2_claims = OAuth2Claims(sub=sub, scope=scope_list, exp=exp_int)
+        request.state.oauth2_claims = OAuth2Claims(sub=sub, scope=scope_list, exp=exp_ts)
         return await call_next(request)

@@ -15,6 +15,7 @@ from typing import Any, Optional
 import httpx
 from pydantic import Field
 
+from asap.auth.utils import parse_scope
 from asap.models.base import ASAPBaseModel
 
 # Default TTL for inactive token cache entries (reduce introspection endpoint load)
@@ -25,20 +26,6 @@ MAX_ACTIVE_CACHE_TTL_SECONDS = 3600.0
 
 # Buffer before expiry to consider token near-expired (seconds)
 EXPIRY_BUFFER_SECONDS = 30
-
-
-def _parse_scope(claim: Any) -> list[str]:
-    """Normalize scope claim to a list of strings.
-
-    RFC 7662: scope is a space-separated string. Some providers may return a list.
-    """
-    if claim is None:
-        return []
-    if isinstance(claim, list):
-        return [str(s) for s in claim]
-    if isinstance(claim, str):
-        return [s.strip() for s in claim.split() if s.strip()]
-    return []
 
 
 class TokenInfo(ASAPBaseModel):
@@ -173,7 +160,7 @@ class TokenIntrospector:
         auth = (self._client_id, self._client_secret)
         data = {"token": token, "token_type_hint": "access_token"}
 
-        kwargs: dict[str, Any] = {}
+        kwargs: dict[str, Any] = {"timeout": httpx.Timeout(10.0)}
         if self._transport is not None:
             kwargs["transport"] = self._transport
 
@@ -194,7 +181,7 @@ class TokenIntrospector:
         sub = body.get("sub")
         sub_str = str(sub) if sub is not None else None
 
-        scope_list = _parse_scope(body.get("scope"))
+        scope_list = parse_scope(body.get("scope"))
 
         exp = body.get("exp")
         if exp is not None:
