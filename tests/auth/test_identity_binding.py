@@ -113,7 +113,9 @@ def test_custom_claim_present_but_mismatches_returns_403() -> None:
         )
 
     assert response.status_code == 403
-    assert response.json()["detail"] == "Identity mismatch: custom claim does not match agent manifest"
+    assert (
+        response.json()["detail"] == "Identity mismatch: custom claim does not match agent manifest"
+    )
 
 
 def test_custom_claim_missing_allowlist_hit_succeeds(
@@ -135,12 +137,11 @@ def test_custom_claim_missing_allowlist_hit_succeeds(
     app = _minimal_app(manifest_id="urn:asap:agent:bot", jwks_fetcher=jwks)
     token = _make_token(key, sub="auth0|abc123")
 
-    with caplog.at_level("WARNING"):
-        with TestClient(app) as client:
-            response = client.get(
-                "/asap",
-                headers={"Authorization": f"Bearer {token}"},
-            )
+    with caplog.at_level("WARNING"), TestClient(app) as client:
+        response = client.get(
+            "/asap",
+            headers={"Authorization": f"Bearer {token}"},
+        )
 
     assert response.status_code == 200
     assert "identity_via_allowlist" in caplog.text or "allowlist" in caplog.text.lower()
@@ -165,12 +166,11 @@ def test_custom_claim_missing_allowlist_miss_succeeds_identity_unverified(
     app = _minimal_app(manifest_id="urn:asap:agent:bot", jwks_fetcher=jwks)
     token = _make_token(key, sub="auth0|abc123")
 
-    with caplog.at_level("WARNING"):
-        with TestClient(app) as client:
-            response = client.get(
-                "/asap",
-                headers={"Authorization": f"Bearer {token}"},
-            )
+    with caplog.at_level("WARNING"), TestClient(app) as client:
+        response = client.get(
+            "/asap",
+            headers={"Authorization": f"Bearer {token}"},
+        )
 
     assert response.status_code == 200
     assert "identity_unverified" in caplog.text or "identity not verified" in caplog.text
