@@ -125,15 +125,17 @@ uv run python -m asap.examples.run_demo
 uv run python -m asap.examples.<module_name> [options]
 ```
 
-| Category | Examples ([Full list](https://github.com/adriannoes/asap-protocol/blob/main/src/asap/examples/README.md)) |
-|----------|----------|
+See the [full list of 15+ examples](https://github.com/adriannoes/asap-protocol/blob/main/src/asap/examples/README.md) for detailed patterns.
+
+| Category | Examples |
+|:---------|:---------|
 | **Core** | `run_demo`, `echo_agent`, `coordinator`, `secure_handler` |
 | **Orchestration** | `orchestration` (multi-agent, task coordination, state tracking) |
 | **State** | `long_running` (checkpoints, resume after crash), `state_migration` (move state between agents) |
 | **Resilience** | `error_recovery` (retry, circuit breaker, fallback) |
-| **Integration** | `mcp_integration` (MCP tools via envelopes) |
-| **Auth & limits** | `auth_patterns` (Bearer, validators, OAuth2 concept), `rate_limiting` (per-sender, per-endpoint) |
-| **Concepts** | `websocket_concept` (WebSocket design), `streaming_response` (TaskUpdate streaming), `multi_step_workflow` (pipeline) |
+| **Integration** | `mcp_client_demo` (stdio), `mcp_integration` (ASAP envelopes) |
+| **Auth & limits** | `auth_patterns` (Bearer, OAuth2), `rate_limiting` (per-sender, per-endpoint) |
+| **Concepts** | `websocket_concept`, `streaming_response`, `multi_step_workflow` |
 
 ## Testing
 
@@ -208,16 +210,16 @@ ASAP is evolving toward an **Agent Marketplace** — an open ecosystem where AI 
 - **v1.3**: Economics Layer (Metering, SLAs, Delegation)
 - **v2.0**: Agent Marketplace with Web App
 
-See our [Vision Document](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/vision-agent-marketplace.md) for the full roadmap.
+See our [vision document](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/vision-agent-marketplace.md) for the full roadmap.
 
 ## Contributing
 
-We love contributions! Whether it's fixing a bug, improving documentation or proposing a new feature.. your help is welcome.
+**Community feedback and contributions are essential** for ASAP Protocol's evolution. 
 
-**Community feedback and contributions are essential** for ASAP Protocol's evolution. We're actively working on improvements and your input helps shape the future of the protocol. Every contribution, from bug reports to feature suggestions, documentation improvements and code contributions, makes a real difference.
+We're working on improvements and your input helps shape the future of the protocol. Every contribution, from bug reports to feature suggestions, documentation improvements and code contributions, makes a real difference.
 
-Check out our [Contributing Guidelines](https://github.com/adriannoes/asap-protocol/blob/main/CONTRIBUTING.md) to get started. It's easier than you think! 🚀
+Check out our [contributing guidelines](https://github.com/adriannoes/asap-protocol/blob/main/CONTRIBUTING.md) to get started. It's easier than you think! 🚀
 
 ## License
 
-This project is licensed under the Apache 2.0 License - see the [LICENSE](https://github.com/adriannoes/asap-protocol/blob/main/LICENSE) file for details.
+This project is licensed under the Apache 2.0 License - see the [license](https://github.com/adriannoes/asap-protocol/blob/main/LICENSE) file for details.
