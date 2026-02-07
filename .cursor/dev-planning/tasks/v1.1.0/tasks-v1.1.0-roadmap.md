@@ -8,8 +8,10 @@
 > **Focus**: Identity (OAuth2), Discovery (Well-known URI), Real-time (WebSocket)
 >
 > 💡 **For detailed step-by-step instructions**, see sprint files:
-> - [S1-S2: OAuth2 & Discovery](./tasks-v1.1.0-auth-detailed.md)
-> - [S3-S4: WebSocket & Webhooks](./tasks-v1.1.0-transport-detailed.md)
+> - [S1: OAuth2 Foundation](./sprint-S1-oauth2-foundation.md)
+> - [S2: Well-Known Discovery](./sprint-S2-wellknown-discovery.md)
+> - [S3: WebSocket Binding](./sprint-S3-websocket-binding.md)
+> - [S4: Webhooks & Release](./sprint-S4-webhooks-release.md)
 
 ---
 
@@ -33,17 +35,17 @@ See [SD-3 (WebSocket)](../../product-specs/roadmap-to-marketplace.md) and [SD-7 
 - [ ] 1.1 Implement OAuth2 client
   - Goal: Support `client_credentials` and `authorization_code` flows
   - Deliverable: `src/asap/auth/oauth2.py`
-  - Details: [Auth Detailed - Task 1.1](./tasks-v1.1.0-auth-detailed.md#task-11-oauth2-client)
+  - Details: [Auth Detailed - Task 1.1](./sprint-S1-oauth2-foundation.md#task-11-oauth2-client)
 
 - [ ] 1.2 Implement OAuth2 server integration
   - Goal: Protect ASAP endpoints with OAuth2 tokens
   - Deliverable: Middleware for token validation
-  - Details: [Auth Detailed - Task 1.2](./tasks-v1.1.0-auth-detailed.md#task-12-oauth2-server)
+  - Details: [Auth Detailed - Task 1.2](./sprint-S1-oauth2-foundation.md#task-12-oauth2-server)
 
 - [ ] 1.3 Add OIDC discovery
   - Goal: Auto-discover OAuth2 endpoints from `.well-known/openid-configuration`
   - Deliverable: `src/asap/auth/oidc.py`
-  - Details: [Auth Detailed - Task 1.3](./tasks-v1.1.0-auth-detailed.md#task-13-oidc-discovery)
+  - Details: [Auth Detailed - Task 1.3](./sprint-S1-oauth2-foundation.md#task-13-oidc-discovery)
 
 ### Definition of Done
 - [ ] OAuth2 client credentials flow working
@@ -62,17 +64,17 @@ See [SD-3 (WebSocket)](../../product-specs/roadmap-to-marketplace.md) and [SD-7 
 - [ ] 2.1 Implement well-known endpoint
   - Goal: Serve `/.well-known/asap/manifest.json`
   - Deliverable: `src/asap/discovery/wellknown.py`
-  - Details: [Auth Detailed - Task 2.1](./tasks-v1.1.0-auth-detailed.md#task-21-well-known-endpoint)
+  - Details: [Auth Detailed - Task 2.1](./sprint-S2-wellknown-discovery.md#task-21-well-known-endpoint)
 
 - [ ] 2.2 Implement manifest fetching
   - Goal: Client-side discovery from well-known URI
   - Deliverable: `ASAPClient.discover(base_url)` method
-  - Details: [Auth Detailed - Task 2.2](./tasks-v1.1.0-auth-detailed.md#task-22-manifest-discovery)
+  - Details: [Auth Detailed - Task 2.2](./sprint-S2-wellknown-discovery.md#task-22-manifest-discovery)
 
 - [ ] 2.3 Add DNS-SD support (optional)
   - Goal: Local network discovery via mDNS
   - Priority: P3 (nice-to-have)
-  - Details: [Auth Detailed - Task 2.3](./tasks-v1.1.0-auth-detailed.md#task-23-dns-sd-support)
+  - Details: [Auth Detailed - Task 2.3](./sprint-S2-wellknown-discovery.md#task-23-dns-sd-support)
 
 ### Definition of Done
 - [ ] Well-known endpoint serves manifest
@@ -91,16 +93,16 @@ See [SD-3 (WebSocket)](../../product-specs/roadmap-to-marketplace.md) and [SD-7 
 - [ ] 3.1 Implement WebSocket server
   - Goal: Accept WebSocket connections for ASAP messages
   - Deliverable: `src/asap/transport/websocket.py`
-  - Details: [Transport Detailed - Task 3.1](./tasks-v1.1.0-transport-detailed.md#task-31-websocket-server)
+  - Details: [Transport Detailed - Task 3.1](./sprint-S3-websocket-binding.md#task-31-websocket-server)
 
 - [ ] 3.2 Implement WebSocket client
   - Goal: Connect to agents via WebSocket
   - Deliverable: `ASAPClient.connect_ws()` method
-  - Details: [Transport Detailed - Task 3.2](./tasks-v1.1.0-transport-detailed.md#task-32-websocket-client)
+  - Details: [Transport Detailed - Task 3.2](./sprint-S3-websocket-binding.md#task-32-websocket-client)
 
 - [ ] 3.3 Add connection management
   - Goal: Heartbeat, reconnection, connection pooling
-  - Details: [Transport Detailed - Task 3.3](./tasks-v1.1.0-transport-detailed.md#task-33-connection-management)
+  - Details: [Transport Detailed - Task 3.3](./sprint-S3-websocket-binding.md#task-33-connection-management)
 
 ### Definition of Done
 - [ ] WebSocket server accepts connections
@@ -121,23 +123,23 @@ See [SD-3 (WebSocket)](../../product-specs/roadmap-to-marketplace.md) and [SD-7 
   - Goal: POST callbacks to registered URLs
   - Security: Validate callback URLs (prevent SSRF per backlog)
   - Deliverable: `src/asap/transport/webhook.py`
-  - Details: [Transport Detailed - Task 4.1](./tasks-v1.1.0-transport-detailed.md#task-41-webhook-delivery)
+  - Details: [Transport Detailed - Task 4.1](./sprint-S4-webhooks-release.md#task-41-webhook-delivery)
 
 - [ ] 4.2 Add callback retry logic
   - Goal: Retry failed deliveries with exponential backoff
-  - Details: [Transport Detailed - Task 4.2](./tasks-v1.1.0-transport-detailed.md#task-42-callback-retry)
+  - Details: [Transport Detailed - Task 4.2](./sprint-S4-webhooks-release.md#task-42-callback-retry)
 
 - [ ] 4.3 Run comprehensive testing
   - Goal: All tests pass, benchmarks meet targets
-  - Details: [Transport Detailed - Task 4.3](./tasks-v1.1.0-transport-detailed.md#task-43-comprehensive-testing)
+  - Details: [Transport Detailed - Task 4.3](./sprint-S4-webhooks-release.md#task-43-comprehensive-testing)
 
 - [ ] 4.4 Prepare release materials
   - Goal: CHANGELOG, docs, version bump
-  - Details: [Transport Detailed - Task 4.4](./tasks-v1.1.0-transport-detailed.md#task-44-release-preparation)
+  - Details: [Transport Detailed - Task 4.4](./sprint-S4-webhooks-release.md#task-44-release-preparation)
 
 - [ ] 4.5 Build and publish
   - Goal: PyPI, GitHub release, Docker
-  - Details: [Transport Detailed - Task 4.5](./tasks-v1.1.0-transport-detailed.md#task-45-build-and-publish)
+  - Details: [Transport Detailed - Task 4.5](./sprint-S4-webhooks-release.md#task-45-build-and-publish)
 
 ### Definition of Done
 - [ ] Webhooks deliver reliably

@@ -74,6 +74,7 @@ from asap.observability.tracing import (
     inject_envelope_trace_context,
 )
 from asap.utils.sanitization import sanitize_nonce
+from asap.auth import OAuth2Config, OAuth2Middleware
 from asap.transport.middleware import (
     AuthenticationMiddleware,
     BearerTokenValidator,
@@ -1164,6 +1165,7 @@ def create_app(
     manifest: Manifest,
     registry: HandlerRegistry | None = None,
     token_validator: Callable[[str], str | None] | None = None,
+    oauth2_config: OAuth2Config | None = None,
     rate_limit: str | None = None,
     max_request_size: int | None = None,
     max_threads: int | None = None,
@@ -1188,6 +1190,9 @@ def create_app(
         token_validator: Optional function to validate Bearer tokens.
             Required if manifest.auth is configured. Should return agent ID
             if token is valid, None otherwise.
+        oauth2_config: Optional OAuth2 config. When provided, OAuth2Middleware
+            is applied to all /asap/* routes (JWT validation via JWKS). If not
+            provided, /asap remains unauthenticated unless manifest.auth is used.
         rate_limit: Optional rate limit string (e.g., "10/second;100/minute").
             Rate limiting is IP-based (per client IP address) to prevent DoS attacks.
             Uses token bucket pattern: burst limit + sustained limit.
@@ -1352,6 +1357,22 @@ def create_app(
 
     # Add size limit middleware (runs before routing)
     app.add_middleware(SizeLimitMiddleware, max_size=max_request_size)
+
+    if oauth2_config is not None:
+        middleware_kwargs: dict[str, Any] = {
+            "jwks_uri": oauth2_config.jwks_uri,
+            "required_scope": oauth2_config.required_scope,
+            "path_prefix": oauth2_config.path_prefix,
+        }
+        if oauth2_config.jwks_fetcher is not None:
+            middleware_kwargs["jwks_fetcher"] = oauth2_config.jwks_fetcher
+        app.add_middleware(OAuth2Middleware, **middleware_kwargs)
+        logger.info(
+            "asap.server.oauth2_enabled",
+            manifest_id=manifest.id,
+            jwks_uri=oauth2_config.jwks_uri,
+            path_prefix=oauth2_config.path_prefix,
+        )
 
     # Configure rate limiting
     if rate_limit is None:

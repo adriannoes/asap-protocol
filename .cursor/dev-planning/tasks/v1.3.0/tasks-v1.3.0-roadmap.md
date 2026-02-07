@@ -8,8 +8,10 @@
 > **Focus**: Usage Metering, Delegation Tokens, SLA Framework, Audit Logging
 >
 > 💡 **For detailed step-by-step instructions**, see sprint files:
-> - [E1-E2: Metering & Delegation](./tasks-v1.3.0-economics-detailed.md)
-> - [E3-E4: SLA & Release](./tasks-v1.3.0-sla-detailed.md)
+> - [E1: Usage Metering](./sprint-E1-usage-metering.md)
+> - [E2: Delegation Tokens](./sprint-E2-delegation-tokens.md)
+> - [E3: SLA Framework](./sprint-E3-sla-framework.md)
+> - [E4: Audit Logging & Release](./sprint-E4-audit-release.md)
 
 ---
 

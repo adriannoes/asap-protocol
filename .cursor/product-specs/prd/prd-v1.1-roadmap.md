@@ -169,7 +169,8 @@ v1.1.0 is the first step toward the Agent Marketplace (v2.0). See [roadmap-to-ma
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| httpx-oauth | ≥0.13 | OAuth2 flows |
+| authlib | ≥1.3 | OAuth2 client, OIDC discovery, FastAPI integration (ADR-12) |
+| joserfc | ≥1.0 | JWT/JWKS validation, modern JOSE support (ADR-12) |
 | websockets | ≥12.0 | WebSocket transport |
 | zeroconf | ≥0.80 (optional) | DNS-SD discovery |
 
@@ -235,8 +236,8 @@ src/asap/
 ## 10. Related Documents
 
 - **Tasks**: [tasks-v1.1.0-roadmap.md](../../dev-planning/tasks/v1.1.0/tasks-v1.1.0-roadmap.md)
-- **Detailed Auth**: [tasks-v1.1.0-auth-detailed.md](../../dev-planning/tasks/v1.1.0/tasks-v1.1.0-auth-detailed.md)
-- **Detailed Transport**: [tasks-v1.1.0-transport-detailed.md](../../dev-planning/tasks/v1.1.0/tasks-v1.1.0-transport-detailed.md)
+- **Detailed Auth**: [Sprint S1](../../dev-planning/tasks/v1.1.0/sprint-S1-oauth2-foundation.md), [Sprint S2](../../dev-planning/tasks/v1.1.0/sprint-S2-wellknown-discovery.md)
+- **Detailed Transport**: [Sprint S3](../../dev-planning/tasks/v1.1.0/sprint-S3-websocket-binding.md), [Sprint S4](../../dev-planning/tasks/v1.1.0/sprint-S4-webhooks-release.md)
 - **Roadmap**: [roadmap-to-marketplace.md](../roadmap-to-marketplace.md)
 - **Vision**: [vision-agent-marketplace.md](../vision-agent-marketplace.md)
 
@@ -248,3 +249,4 @@ src/asap/
 |------|---------|--------|
 | 2026-01-30 | 0.1.0 | Initial draft from gap analysis |
 | 2026-02-05 | 1.0.0 | Aligned with strategic decisions, added sprints |
+| 2026-02-07 | 1.0.1 | Replaced httpx-oauth with authlib + joserfc (ADR-12) |

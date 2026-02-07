@@ -8,9 +8,12 @@
 > **Focus**: Signed Manifests (Ed25519), Registry API, Evals, mTLS (optional)
 >
 > 💡 **For detailed step-by-step instructions**, see sprint files:
-> - [T1-T2: PKI & Manifest Signing](./tasks-v1.2.0-pki-detailed.md)
-> - [T3-T4: Registry API](./tasks-v1.2.0-registry-detailed.md)
-> - [T5-T6: Evals & Release](./tasks-v1.2.0-evals-detailed.md)
+> - [T1: Ed25519 PKI Foundation](./sprint-T1-ed25519-pki.md)
+> - [T2: Trust Levels & mTLS](./sprint-T2-trust-levels-mtls.md)
+> - [T3: Registry API Core](./sprint-T3-registry-core.md)
+> - [T4: Registry Features](./sprint-T4-registry-features.md)
+> - [T5: Compliance Harness](./sprint-T5-compliance-harness.md)
+> - [T6: DeepEval & Release](./sprint-T6-deepeval-release.md)
 
 ---
 
@@ -33,17 +36,17 @@ v1.2.0 establishes the Trust Layer for the marketplace:
 - [ ] 1.1 Implement key generation and management
   - Goal: Ed25519 keypair generation, storage, rotation
   - Deliverable: `src/asap/crypto/keys.py`
-  - Details: [PKI Detailed - Task 1.1](./tasks-v1.2.0-pki-detailed.md#task-11-key-management)
+  - Details: [PKI Detailed - Task 1.1](./sprint-T1-ed25519-pki.md#task-11-key-management)
 
 - [ ] 1.2 Implement manifest signing
   - Goal: Sign manifests with Ed25519
   - Deliverable: `src/asap/crypto/signing.py`
-  - Details: [PKI Detailed - Task 1.2](./tasks-v1.2.0-pki-detailed.md#task-12-manifest-signing)
+  - Details: [PKI Detailed - Task 1.2](./sprint-T1-ed25519-pki.md#task-12-manifest-signing)
 
 - [ ] 1.3 Implement signature verification
   - Goal: Verify signed manifests
   - Deliverable: Verification in client
-  - Details: [PKI Detailed - Task 1.3](./tasks-v1.2.0-pki-detailed.md#task-13-signature-verification)
+  - Details: [PKI Detailed - Task 1.3](./sprint-T1-ed25519-pki.md#task-13-signature-verification)
 
 ### Definition of Done
 - [ ] Ed25519 key generation working
@@ -62,17 +65,17 @@ v1.2.0 establishes the Trust Layer for the marketplace:
 - [ ] 2.1 Implement trust level model
   - Goal: Self-signed, Verified ($49/mo), Enterprise levels
   - Deliverable: Trust level enum and validation
-  - Details: [PKI Detailed - Task 2.1](./tasks-v1.2.0-pki-detailed.md#task-21-trust-levels)
+  - Details: [PKI Detailed - Task 2.1](./sprint-T2-trust-levels-mtls.md#task-21-trust-levels)
 
 - [ ] 2.2 Add Verified badge simulation
   - Goal: ASAP-signed manifests for "Verified" agents
   - Note: Actual verification service is v2.0
-  - Details: [PKI Detailed - Task 2.2](./tasks-v1.2.0-pki-detailed.md#task-22-verified-badge)
+  - Details: [PKI Detailed - Task 2.2](./sprint-T2-trust-levels-mtls.md#task-22-verified-badge)
 
 - [ ] 2.3 Implement optional mTLS
   - Goal: Mutual TLS for transport security
   - Constraint: Optional, never required (SD-6)
-  - Details: [PKI Detailed - Task 2.3](./tasks-v1.2.0-pki-detailed.md#task-23-mtls-support)
+  - Details: [PKI Detailed - Task 2.3](./sprint-T2-trust-levels-mtls.md#task-23-mtls-support)
 
 ### Definition of Done
 - [ ] Trust levels displayed in manifest
@@ -90,17 +93,17 @@ v1.2.0 establishes the Trust Layer for the marketplace:
 - [ ] 3.1 Implement registry data model
   - Goal: Agent registration storage
   - Deliverable: `src/asap/registry/models.py`
-  - Details: [Registry Detailed - Task 3.1](./tasks-v1.2.0-registry-detailed.md#task-31-data-model)
+  - Details: [Registry Detailed - Task 3.1](./sprint-T3-registry-core.md#task-31-data-model)
 
 - [ ] 3.2 Implement registry CRUD endpoints
   - Goal: Register, update, delete, get agents
   - Deliverable: RESTful API
-  - Details: [Registry Detailed - Task 3.2](./tasks-v1.2.0-registry-detailed.md#task-32-crud-endpoints)
+  - Details: [Registry Detailed - Task 3.2](./sprint-T3-registry-core.md#task-32-crud-endpoints)
 
 - [ ] 3.3 Implement search and filtering
   - Goal: Search by skill, capability, trust level
   - Deliverable: Query API
-  - Details: [Registry Detailed - Task 3.3](./tasks-v1.2.0-registry-detailed.md#task-33-search-api)
+  - Details: [Registry Detailed - Task 3.3](./sprint-T3-registry-core.md#task-33-search-api)
 
 ### Definition of Done
 - [ ] Agents can register with signed manifests
@@ -118,17 +121,17 @@ v1.2.0 establishes the Trust Layer for the marketplace:
 - [ ] 4.1 Implement basic reputation
   - Goal: Store and retrieve reputation scores
   - Deliverable: Reputation endpoint
-  - Details: [Registry Detailed - Task 4.1](./tasks-v1.2.0-registry-detailed.md#task-41-reputation-system)
+  - Details: [Registry Detailed - Task 4.1](./sprint-T4-registry-features.md#task-41-reputation-system)
 
 - [ ] 4.2 Add registry client SDK
   - Goal: Python SDK for registry operations
   - Deliverable: `src/asap/registry/client.py`
-  - Details: [Registry Detailed - Task 4.2](./tasks-v1.2.0-registry-detailed.md#task-42-registry-client)
+  - Details: [Registry Detailed - Task 4.2](./sprint-T4-registry-features.md#task-42-registry-client)
 
 - [ ] 4.3 Integrate discovery with registry
   - Goal: Client.discover() uses registry if available
   - Fallback: Well-known URI (v1.1)
-  - Details: [Registry Detailed - Task 4.3](./tasks-v1.2.0-registry-detailed.md#task-43-discovery-integration)
+  - Details: [Registry Detailed - Task 4.3](./sprint-T4-registry-features.md#task-43-discovery-integration)
 
 ### Definition of Done
 - [ ] Reputation queryable
@@ -146,19 +149,19 @@ v1.2.0 establishes the Trust Layer for the marketplace:
 - [ ] 5.1 Create compliance test suite
   - Goal: Pytest-based compliance tests
   - Deliverable: `asap-compliance/` package
-  - Details: [Evals Detailed - Task 5.1](./tasks-v1.2.0-evals-detailed.md#task-51-compliance-suite)
+  - Details: [Evals Detailed - Task 5.1](./sprint-T5-compliance-harness.md#task-51-compliance-suite)
 
 - [ ] 5.2 Implement handshake validation
   - Goal: Validate agent handshake correctness
-  - Details: [Evals Detailed - Task 5.2](./tasks-v1.2.0-evals-detailed.md#task-52-handshake-validation)
+  - Details: [Evals Detailed - Task 5.2](./sprint-T5-compliance-harness.md#task-52-handshake-validation)
 
 - [ ] 5.3 Implement schema validation
   - Goal: Verify Pydantic schema compliance
-  - Details: [Evals Detailed - Task 5.3](./tasks-v1.2.0-evals-detailed.md#task-53-schema-validation)
+  - Details: [Evals Detailed - Task 5.3](./sprint-T5-compliance-harness.md#task-53-schema-validation)
 
 - [ ] 5.4 Implement state machine validation
   - Goal: Verify correct state transitions
-  - Details: [Evals Detailed - Task 5.4](./tasks-v1.2.0-evals-detailed.md#task-54-state-machine-validation)
+  - Details: [Evals Detailed - Task 5.4](./sprint-T5-compliance-harness.md#task-54-state-machine-validation)
 
 ### Definition of Done
 - [ ] Compliance harness runnable against any agent
@@ -176,19 +179,19 @@ v1.2.0 establishes the Trust Layer for the marketplace:
 - [ ] 6.1 Integrate DeepEval (optional)
   - Goal: Intelligence metrics for Brain evaluation
   - Deliverable: DeepEval adapter
-  - Details: [Evals Detailed - Task 6.1](./tasks-v1.2.0-evals-detailed.md#task-61-deepeval-integration)
+  - Details: [Evals Detailed - Task 6.1](./sprint-T6-deepeval-release.md#task-61-deepeval-integration)
 
 - [ ] 6.2 Run comprehensive testing
   - Goal: All tests pass
-  - Details: [Evals Detailed - Task 6.2](./tasks-v1.2.0-evals-detailed.md#task-62-comprehensive-testing)
+  - Details: [Evals Detailed - Task 6.2](./sprint-T6-deepeval-release.md#task-62-comprehensive-testing)
 
 - [ ] 6.3 Prepare release materials
   - Goal: CHANGELOG, docs, version bump
-  - Details: [Evals Detailed - Task 6.3](./tasks-v1.2.0-evals-detailed.md#task-63-release-preparation)
+  - Details: [Evals Detailed - Task 6.3](./sprint-T6-deepeval-release.md#task-63-release-preparation)
 
 - [ ] 6.4 Build and publish
   - Goal: PyPI, GitHub, Docker
-  - Details: [Evals Detailed - Task 6.4](./tasks-v1.2.0-evals-detailed.md#task-64-build-and-publish)
+  - Details: [Evals Detailed - Task 6.4](./sprint-T6-deepeval-release.md#task-64-build-and-publish)
 
 ### Definition of Done
 - [ ] Compliance harness published

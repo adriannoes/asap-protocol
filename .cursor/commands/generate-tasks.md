@@ -72,7 +72,7 @@ When generating tasks that will be executed by less capable AI models, use this 
   - **File**: `src/asap/auth/oauth2.py` (create new)
   - **What**: Create `OAuth2ClientCredentials` class with `get_access_token()` and `refresh_token()` methods
   - **Why**: Enables agent-to-agent authentication using client_credentials grant
-  - **Pattern**: Follow httpx-oauth's OAuth2Client pattern
+  - **Pattern**: Use Authlib's AsyncOAuth2Client internally, expose ASAP-specific models (see ADR-12)
   - **Verify**: `pytest tests/auth/test_oauth2.py -k "test_get_token"` passes
 ```
 
