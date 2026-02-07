@@ -1,8 +1,9 @@
 """Integration tests for OAuth2 token validation middleware.
 
 Covers: missing token (401), expired token (401), insufficient scope (403),
-valid token with correct scope (200). Uses joserfc for JWT signing and
-jwks_fetcher for JWKS mocking.
+valid token with correct scope (200), JWKS unavailable (503), invalid token
+after refetch (401), missing/invalid sub (401). Uses joserfc for JWT signing
+and jwks_fetcher for JWKS mocking.
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
+import httpx
 from fastapi import FastAPI, Request
 from joserfc import jwk, jwt as jose_jwt
 from starlette.testclient import TestClient
@@ -203,3 +205,155 @@ def test_oauth2_middleware_returns_403_when_scope_insufficient() -> None:
 
     assert response.status_code == 403
     assert response.json() == {"detail": "Insufficient scope"}
+
+
+async def test_oauth2_middleware_returns_503_when_jwks_fetch_fails() -> None:
+    """When JWKS fetcher raises HTTPError, middleware returns 503."""
+
+    async def jwks_fetcher_fail(_uri: str) -> jwk.KeySet:
+        raise httpx.ConnectError("JWKS endpoint unreachable")
+
+    app = _minimal_app()
+    app.add_middleware(
+        OAuth2Middleware,
+        jwks_uri="https://auth.example.com/jwks.json",
+        path_prefix="/asap",
+        jwks_fetcher=jwks_fetcher_fail,
+    )
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/asap",
+            headers={"Authorization": "Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ0ZXN0In0.x"},
+        )
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Authentication service unavailable"}
+
+
+async def test_oauth2_middleware_returns_503_when_jwks_refetch_fails_after_invalid_token() -> None:
+    """First decode raises JoseError; refetch JWKS raises HTTPError -> 503."""
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    key_set = jwk.KeySet.import_key_set({"keys": [key.as_dict(private=False)]})
+    call_count = 0
+
+    async def jwks_fetcher_first_ok_then_fail(_uri: str) -> jwk.KeySet:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return key_set
+        raise httpx.ConnectError("JWKS unreachable on refetch")
+
+    app = _minimal_app()
+    app.add_middleware(
+        OAuth2Middleware,
+        jwks_uri="https://auth.example.com/jwks.json",
+        path_prefix="/asap",
+        jwks_fetcher=jwks_fetcher_first_ok_then_fail,
+    )
+
+    other_key = jwk.RSAKey.generate_key(2048, private=True)
+    now = int(time.time())
+    token = jose_jwt.encode(
+        {"alg": "RS256", "typ": "JWT"},
+        {"sub": "test", "exp": now + 3600},
+        other_key,
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/asap", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Authentication service unavailable"}
+
+
+async def test_oauth2_middleware_returns_401_when_token_invalid_after_refetch() -> None:
+    """First decode raises JoseError; refetch succeeds but decode still fails -> 401."""
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    key_set = jwk.KeySet.import_key_set({"keys": [key.as_dict(private=False)]})
+    other_key = jwk.RSAKey.generate_key(2048, private=True)
+
+    async def jwks_fetcher_always_return_wrong_key(_uri: str) -> jwk.KeySet:
+        return key_set
+
+    app = _minimal_app()
+    app.add_middleware(
+        OAuth2Middleware,
+        jwks_uri="https://auth.example.com/jwks.json",
+        path_prefix="/asap",
+        jwks_fetcher=jwks_fetcher_always_return_wrong_key,
+    )
+
+    now = int(time.time())
+    token = jose_jwt.encode(
+        {"alg": "RS256", "typ": "JWT"},
+        {"sub": "test", "exp": now + 3600},
+        other_key,
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/asap", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Invalid authentication token"}
+    assert "WWW-Authenticate" in response.headers
+
+
+def test_oauth2_middleware_returns_401_when_sub_missing() -> None:
+    """JWT without 'sub' claim is rejected with 401."""
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    key_set = jwk.KeySet.import_key_set({"keys": [key.as_dict(private=False)]})
+
+    async def jwks_fetcher(_uri: str) -> jwk.KeySet:
+        return key_set
+
+    app = _minimal_app()
+    app.add_middleware(
+        OAuth2Middleware,
+        jwks_uri="https://auth.example.com/jwks.json",
+        path_prefix="/asap",
+        jwks_fetcher=jwks_fetcher,
+    )
+
+    now = int(time.time())
+    token = jose_jwt.encode(
+        {"alg": "RS256", "typ": "JWT"},
+        {"exp": now + 3600, "scope": "asap:execute"},
+        key,
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/asap", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Invalid authentication token"}
+
+
+def test_oauth2_middleware_returns_401_when_sub_not_string() -> None:
+    """JWT with non-string 'sub' (e.g. number) is rejected with 401."""
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    key_set = jwk.KeySet.import_key_set({"keys": [key.as_dict(private=False)]})
+
+    async def jwks_fetcher(_uri: str) -> jwk.KeySet:
+        return key_set
+
+    app = _minimal_app()
+    app.add_middleware(
+        OAuth2Middleware,
+        jwks_uri="https://auth.example.com/jwks.json",
+        path_prefix="/asap",
+        jwks_fetcher=jwks_fetcher,
+    )
+
+    now = int(time.time())
+    token = jose_jwt.encode(
+        {"alg": "RS256", "typ": "JWT"},
+        {"sub": 12345, "exp": now + 3600, "scope": "asap:execute"},
+        key,
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/asap", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Invalid authentication token"}
