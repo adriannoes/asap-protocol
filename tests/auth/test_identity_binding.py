@@ -113,8 +113,8 @@ def test_custom_claim_present_but_mismatches_returns_403() -> None:
         )
 
     assert response.status_code == 403
-    assert (
-        response.json()["detail"] == "Identity mismatch: custom claim does not match agent manifest"
+    assert response.json()["detail"] == (
+        "Identity mismatch: custom claim does not match agent manifest (expected: urn:asap:agent:bot)"
     )
 
 

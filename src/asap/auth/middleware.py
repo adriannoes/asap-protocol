@@ -164,6 +164,10 @@ class OAuth2Middleware(BaseHTTPMiddleware):
         self._jwks_fetcher = jwks_fetcher or _fetch_jwks
         self._manifest_id = manifest_id
         self._custom_claim = custom_claim
+        self._custom_claim_key = self._custom_claim or os.environ.get(
+            "ASAP_AUTH_CUSTOM_CLAIM", DEFAULT_CUSTOM_CLAIM
+        )
+        self._subject_map = _parse_subject_map()
         self._jwks_cache: jwk.KeySet | None = None
         self._jwks_cache_time: float = 0.0
         self._jwks_cache_ttl = 3600.0  # 1 hour
@@ -208,9 +212,7 @@ class OAuth2Middleware(BaseHTTPMiddleware):
         if self._manifest_id is None:
             return True, None, False, False
 
-        claim_key = self._custom_claim or os.environ.get(
-            "ASAP_AUTH_CUSTOM_CLAIM", DEFAULT_CUSTOM_CLAIM
-        )
+        claim_key = self._custom_claim_key
         claim_value = claims.get(claim_key)
 
         if claim_value is not None:
@@ -224,8 +226,7 @@ class OAuth2Middleware(BaseHTTPMiddleware):
                 )
             return True, None, False, False
 
-        subject_map = _parse_subject_map()
-        allowed = subject_map.get(self._manifest_id)
+        allowed = self._subject_map.get(self._manifest_id)
         if allowed is not None:
             if isinstance(allowed, str) and allowed == sub:
                 return True, None, False, True
@@ -333,9 +334,14 @@ class OAuth2Middleware(BaseHTTPMiddleware):
                 path=request.url.path,
                 detail=err_detail,
             )
+            detail_msg = (
+                f"{ERROR_IDENTITY_MISMATCH} (expected: {self._manifest_id})"
+                if self._manifest_id
+                else ERROR_IDENTITY_MISMATCH
+            )
             return JSONResponse(
                 status_code=HTTP_FORBIDDEN,
-                content={"detail": ERROR_IDENTITY_MISMATCH},
+                content={"detail": detail_msg},
             )
         if use_allowlist:
             logger.warning(
