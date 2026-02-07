@@ -1,0 +1,56 @@
+---
+description: "Standards for modern Frontend development using Next.js 15 (App Router), React 19, Tailwind CSS v4, and Shadcn/UI. Apply when working on `apps/web` or `packages/ui`."
+globs:
+  - "apps/web/**/*.ts"
+  - "apps/web/**/*.tsx"
+  - "packages/ui/**/*.tsx"
+alwaysApply: false
+---
+
+# Frontend Best Practices (Next.js 15 + Tailwind)
+
+## 1. Core Stack
+- **Framework**: Next.js 15 (App Router). Do NOT use `pages/`.
+- **Language**: TypeScript (Strict).
+- **Styling**: Tailwind CSS v4. No CSS-in-JS.
+- **Components**: Shadcn/UI (Radix Primitives).
+- **Icons**: Lucide React.
+
+## 2. Server Components (RSC) First
+- **Default to Server**: All components are Server Components by default.
+- **Use Client sparingly**: Only add `"use client"` when you need:
+  - Event listeners (`onClick`, `onChange`).
+  - React Hooks (`useState`, `useEffect`).
+  - Browser-only APIs.
+- **Pattern**: Push client logic down the tree. Keep the page layout server-side.
+
+## 3. Data Fetching
+- **Server Actions**: Use Server Actions for mutations (`<form action={...}>`).
+- **Fetch**: Use standard `fetch` in RSCs for data loading.
+- **No useEffect for data**: Avoid fetching data in `useEffect`. Use Server Components or React Query (if absolutely necessary for client-side polling).
+
+## 4. Styling (Tailwind v4)
+- **Utility First**: Use utility classes directly.
+- **CN Helper**: ALWAYS use `cntl` or `cn` (clsx + tailwind-merge) for conditional classes.
+  ```tsx
+  <div className={cn("p-4", isActive && "bg-blue-500")}>
+  ```
+- **No arbitrary values**: Avoid `w-[123px]`. Use theme tokens (e.g., `w-32`).
+
+## 5. Component Architecture
+- **Shadcn**: Use `packages/ui` components (e.g., `<Button>`, `<Card>`) instead of HTML tags.
+- **Composition**: Build complex UIs by composing small, single-responsibility components.
+- **Accessibility**: Use semantic HTML (`<main>`, `<article>`, `<button>`) and ARIA roles where Shadcn doesn't cover it.
+
+## 6. Project Structure `apps/web`
+- `app/`: Routes and layouts.
+- `components/`: Feature-specific components.
+- `lib/`: Utilities and generic helpers.
+- `actions/`: Server Actions.
+- `hooks/`: Custom React hooks.
+
+## 7. State Management
+1. **URL State**: Query params (`?search=foo`) for shareable state.
+2. **Server State**: RSC + Cache.
+3. **Local State**: `useState` / `useReducer`.
+4. **Global State**: Minimal usage (Zustand) if props drilling becomes unmanageable.

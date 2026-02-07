@@ -228,7 +228,7 @@ Production-ready release. All features from v0.5.0 preserved with backward compa
 - **Compression**: Gzip and Brotli support; `Accept-Encoding` negotiation; ~70% bandwidth reduction for JSON
 
 #### Developer Experience (P5–P6)
-- **Examples**: 10+ real-world examples (auth patterns, rate limiting, state migration, streaming, multi-step workflow, MCP integration, error recovery, long-running, orchestration)
+- **Examples**: 15+ real-world examples (auth patterns, rate limiting, state migration, streaming, multi-step workflow, MCP integration, MCP client, error recovery, long-running, orchestration)
 - **Testing utilities**: `asap.testing` fixtures, factories, and helpers; reduced test boilerplate
 - **Trace visualization**: `asap trace` CLI command; optional Web UI for trace parsing
 - **Dev server**: Hot reload, debug logging, REPL mode for local development

@@ -1,9 +1,7 @@
 # ASAP Protocol v1.1 - Planned Features
 
 > **Scope**: Post-v1.0.0 enhancements
->
-> **Status**: DRAFT - Planning Phase
-> **Parent PRD**: [prd-v1.1-planning.md](../../prd/prd-v1.1-planning.md)
+> **Parent PRD**: [prd-v1.1-roadmap.md](../../../product-specs/prd/prd-v1.1-roadmap.md)
 
 ---
 
@@ -14,18 +12,20 @@ This document tracks features explicitly deferred from v1.0.0 based on gap analy
 All items below are **planned but not committed** to v1.1.0.
 
 ---
+### 1. Core Reliability & Compliance (Priority: Critical)
 
-[ ] Retry logic for failed deliveries
-[ ] Callback event filtering
-[ ] Security: validate callback URLs
-[ ] Rate limiting for callback endpoints
-```
+> **Strategic Alignment**: This section adheres to the "Compliance First" pillar, prioritizing security and resilience.
+
+- [ ] **[P0]** Security: validate callback URLs (Prevent SSRF)
+- [ ] **[P1]** Rate limiting for callback endpoints (DoS protection)
+- [ ] **[P1]** Retry logic for failed deliveries (Resilience)
+- [ ] **[P2]** Callback event filtering
 
 ---
 
 ### 4. State Storage Interface
 
-**Source**: [v0-original-specs.md §13.2](../../../product-specs/v0-original-specs.md)
+**Source**: [v0-original-specs.md §13.2](../../../product-specs/prd/v0-original-specs.md)
 
 **Current State**:
 - Spec lists this as **open decision**
@@ -51,7 +51,7 @@ All items below are **planned but not committed** to v1.1.0.
 
 ### 5. Message Broker Integration (NATS/Pub-Sub)
 
-**Source**: [v0-original-specs.md §6.3, §7.4](../../../product-specs/v0-original-specs.md)
+**Source**: [v0-original-specs.md §6.3, §7.4](../../../product-specs/prd/v0-original-specs.md)
 
 **Current State**:
 - Explicitly excluded from v1.0.0 PRD
@@ -74,7 +74,7 @@ All items below are **planned but not committed** to v1.1.0.
 
 ### 6. DNS-SD Discovery
 
-**Source**: [v0-original-specs.md §7.4](../../../product-specs/v0-original-specs.md)
+**Source**: [v0-original-specs.md §7.4](../../../product-specs/prd/v0-original-specs.md)
 
 **Current State**:
 - Spec mentions `_asap._tcp.example.com`
@@ -112,7 +112,7 @@ All items below are **planned but not committed** to v1.1.0.
 
 - **Original Spec**: [v0-original-specs.md](../../../product-specs/v0-original-specs.md)
 - **v1.0.0 Roadmap**: [tasks-v1.0.0-roadmap.md](./v1.0.0/tasks-v1.0.0-roadmap.md)
-- **PRD**: [prd-v1.1-planning.md](../prd/prd-v1.1-planning.md)
+- **PRD**: [prd-v1.1-roadmap.md](../../../product-specs/prd/prd-v1.1-roadmap.md)
 - **Gap Analysis**: Conversation 2026-01-30
 
 ---

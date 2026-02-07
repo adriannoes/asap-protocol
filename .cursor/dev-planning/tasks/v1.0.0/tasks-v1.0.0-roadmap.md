@@ -2,7 +2,7 @@
 
 > **High-level task overview** for v1.0.0 milestone (Production-Ready Release)
 >
-> **Parent PRD**: [prd-v1-roadmap.md](../../prd/prd-v1-roadmap.md)
+> **Parent PRD**: [prd-v1-roadmap.md](../../../product-specs/prd/prd-v1-roadmap.md)
 > **Prerequisite**: v0.5.0 released
 > **Target Version**: v1.0.0
 > **Focus**: Complete security + performance + DX + production tooling
@@ -444,7 +444,7 @@
 ## Related Documents
 
 - **Detailed Tasks**: See sprint group files listed at top
-- **Parent PRD**: [prd-v1-roadmap.md](../../prd/prd-v1-roadmap.md)
-- **PRD Review Schedule**: [prd-review-schedule.md](../../prd/prd-review-schedule.md)
+- **Parent PRD**: [prd-v1-roadmap.md](../../../product-specs/prd/prd-v1-roadmap.md)
+- **PRD Review Schedule**: [prd-review-schedule.md](../../../product-specs/prd/prd-review-schedule.md)
 - **v0.5.0 Tasks**: [tasks-v0.5.0-roadmap.md](../v0.5.0/tasks-v0.5.0-roadmap.md)
 - **GitHub Issues**: [Issue Tracker](https://github.com/adriannoes/asap-protocol/issues)

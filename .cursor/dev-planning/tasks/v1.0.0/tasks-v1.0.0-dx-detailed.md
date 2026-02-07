@@ -34,8 +34,8 @@
 - `src/asap/transport/server.py` - Hot reload, debug logging mode (extend)
 
 ### Task 5.3: PRD Review Checkpoint
-- `.cursor/dev-planning/prd/prd-v1-roadmap.md` - DD-010 (auth scheme), Q4 resolved, Q6 resolved (defer plugin)
-- `.cursor/dev-planning/prd/prd-review-schedule.md` - Q4/Q6 status updated
+- `.cursor/product-specs/prd/prd-v1-roadmap.md` - DD-010 (auth scheme), Q4 resolved, Q6 resolved (defer plugin)
+- `.cursor/product-specs/prd/prd-review-schedule.md` - Q4/Q6 status updated
 
 ### Task 6.1: Trace Visualization
 - `src/asap/observability/trace_parser.py` - Parse JSON logs, filter by trace_id, extract_trace_ids, build hops, format ASCII, trace_to_json_export
@@ -46,8 +46,8 @@
 - `tests/test_cli.py` - TestCliTrace tests for trace command (incl. --format json)
 
 ### Task 6.3: PRD Review Checkpoint
-- `.cursor/dev-planning/prd/prd-v1-roadmap.md` - DD-011 (trace JSON export), Q5 resolved
-- `.cursor/dev-planning/prd/prd-review-schedule.md` - Q5 status updated
+- `.cursor/product-specs/prd/prd-v1-roadmap.md` - DD-011 (trace JSON export), Q5 resolved
+- `.cursor/product-specs/prd/prd-review-schedule.md` - Q5 status updated
 
 ### Task 6.4: Mark Sprints P5-P6 Complete
 - `.cursor/dev-planning/tasks/v1.0.0/tasks-v1.0.0-roadmap.md` - P5/P6 tasks and DoD marked complete, progress 100%

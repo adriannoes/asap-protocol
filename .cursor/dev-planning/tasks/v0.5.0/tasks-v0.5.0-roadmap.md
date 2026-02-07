@@ -2,7 +2,7 @@
 
 > **High-level task overview** for v0.5.0 milestone (Security-Hardened Release)
 >
-> **Parent PRD**: [prd-v1-roadmap.md](../../prd/prd-v1-roadmap.md)
+> **Parent PRD**: [prd-v1-roadmap.md](../../../product-specs/prd/prd-v1-roadmap.md)
 > **Target Version**: v0.5.0
 > **Focus**: CRITICAL + HIGH priority security issues
 

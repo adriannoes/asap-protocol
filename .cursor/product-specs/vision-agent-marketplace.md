@@ -22,6 +22,15 @@ This transforms ASAP from a *communication protocol* into an *agent economy prot
 
 ---
 
+## Strategic Pillars
+
+To achieve this vision while serving Enterprise needs, ASAP prioritizes:
+1.  **Compliance First (Shell vs Brain)**: We prioritize Protocol Compliance (Security, Schema, SLAs) over "Intelligence". The protocol is the secure "Shell"; the agent's logic is the "Brain".
+2.  **Enterprise Readiness**: Zero-trust architecture (mTLS, Signed Manifests) is not an afterthought. We build for regulated industries (Finance, Health).
+3.  **Neutrality**: The marketplace is unbiased. Reputation is mathematical, not curated.
+
+---
+
 ## The Vision
 
 ```
@@ -176,31 +185,47 @@ graph TD
 
 **Purpose**: Provide objective, verifiable metrics for agent quality and safety.
 
-Evals serve as the "Certification" mechanism within the Trust Layer.
+Evals serve as the "Certification" mechanism within the Trust Layer. We adopt a **Hybrid Strategy** combining native protocol compliance with specialized "Intelligence" evaluations.
 
-| Eval Type | Focus | Example |
-|-----------|-------|---------|
-| **Compliance Evals** | Protocol adherence | "Does it handle 429 retries correctly?" |
-| **Capability Evals** | Skill proficiency | "Can it write valid Python code for a CRUD app?" |
-| **Safety Evals** | Alignment & Security | "Does it refuse to generate SQL injection exploits?" |
+### 4.1 The Hybrid Strategy: "Shell vs. Brain"
 
-### 4.1 Evaluation Framework
+| Layer | Focus | Tooling | Example Metric |
+|-------|-------|---------|----------------|
+| **1. Compliance (Shell)** | Protocol Adherence | **ASAP Native** (pytest) | "Handles 429 backoff correctly" |
+| **2. Intelligence (Brain)** | Reasoning & Safety | **DeepEval** | "Response is faithful to context" |
+
+#### Layer 1: Protocol Compliance (The Shell)
+Built directly into the ASAP SDK test suite. Verifies that the agent is a "good citizen" of the network.
+*   **Connectivity**: Handshake success, Heartbeat.
+*   **Schema**: Pydantic validation of all payloads.
+*   **Resilience**: Proper error handling and retries.
+*   **Performance**: SLA adherence (latency, throughput).
+
+#### Layer 2: Cognitive Intelligence (The Brain)
+Delegated to **DeepEval**, integrating their metrics into the ASAP harness.
+*   **Logic**: G-Eval for custom logic assessment.
+*   **Safety**: Hallucination, Bias, and Toxicity detection.
+*   **Action**: Tool Correctness (did it call the right tool with right args?).
+
+### 4.2 Why DeepEval?
+
+After strategic analysis, **DeepEval** was selected as the reference implementation for the Intelligence Layer because:
+1.  **Pytest Native**: Approaches evals as "Unit Tests for LLMs", aligning perfectly with ASAP's engineering rigor.
+2.  **Agentic Specificity**: Native support for multi-step reasoning and tool usage metrics.
+3.  **Pydantic Integration**: Seamlessly validates structured outputs.
+4.  **Open Source Core**: Matches our ethos.
+
+### 4.3 Evaluation Workflow
 
 ```mermaid
-graph LR
-    A[Agent] -->|Submits to| E[Eval Harness]
-    E -->|Runs| T[Test Suite]
-    T -->|Produces| R[Report]
-    R -->|Verifies| C[Certificate]
-    C -->|Stored in| Reg[Registry]
+graph TD
+    A[Agent Submission] --> B{ASAP Compliance Harness}
+    B -->|Fail| R[Reject: Protocol Error]
+    B -->|Pass| C{DeepEval Intelligence Suite}
+    C -->|Score < 0.8| F[Reject: Low Quality]
+    C -->|Score > 0.8| D[Certified]
+    D --> E[Marketplace Registry]
 ```
-
-### 4.2 Standardized Benchmarks
-
-- **ASAP-Core**: Protocol compliance suite (mandatory for verification)
-- **ASAP-Code**: Coding capability benchmark
-- **ASAP-Reason**: Logic and reasoning benchmark
-- **ASAP-Safe**: Safety and jailbreak resistance benchmark
 
 ---
 
@@ -255,8 +280,10 @@ Auto-failover based on health checks
 | v1.0 | Core Protocol | Stable foundation |
 | v1.1 | OAuth2/OIDC | Identity infrastructure |
 | v1.1 | WebSocket | Real-time comms |
-| v1.2 | Signed Manifests | Verifiable identity |
+| v1.1 | Well-known URI | Basic discovery |
+| v1.2 | Signed Manifests (Ed25519) | Verifiable identity |
 | v1.2 | Registry API | Centralized discovery |
+| v1.2 | mTLS (optional) | Enterprise transport security |
 | v1.3 | Delegation Tokens | Trust chains |
 | v1.3 | Usage Metering | Billing foundation |
 | v2.0 | Marketplace Core | Registry + Economy |
@@ -327,11 +354,67 @@ Auto-failover based on health checks
 
 ---
 
+## 5. Sustainability & Commercial Strategy
+
+We adopt an **Open Core** model (similar to LangChain/LangSmith). The Goal: ubiquity for the protocol, profitability for the ecosystem.
+
+**Strategic Priority**: Adoption first, monetization later.
+
+### 5.1 Target Audience (ICP)
+
+| Priority | Segment | Why |
+|----------|---------|-----|
+| 1 | AI Startups | Build products for enterprise using ASAP |
+| 2 | Individual Developers | Experiment, prototype, contribute |
+| Future | Enterprise Direct | After protocol adoption is proven |
+
+### 5.2 The Open Source Core (Free forever)
+
+*   **The Standard**: Protocol specs, SDKs (Python/Node), CLI tools.
+*   **The "Shell"**: ASAP Compliance Harness (pytest-based testing).
+*   **License**: Permissive (MIT/Apache) to maximize adoption.
+
+### 5.3 Pricing Strategy
+
+**Phase 1: Freemium (v2.0 launch)**
+
+| Tier | Price | Includes |
+|------|-------|----------|
+| **Free** | $0 | List agents, basic features, self-signed manifests |
+| **Verified** | $49/month | Manual review, Verified badge, ASAP-signed manifest |
+
+**Phase 2: TBD (after traction)**
+
+Monetization model (Subscription, % of transactions, or Hybrid) will be decided based on adoption data. Options under consideration:
+
+| Model | When to consider |
+|-------|------------------|
+| Subscription tiers | If enterprise features dominate demand |
+| % of transactions | If Clearing House has volume |
+| Hybrid | If both patterns emerge |
+
+### 5.4 Monetization Areas
+
+1.  **ASAP Cloud (Managed Infrastructure)**:
+    *   "Vercel for Agents". Deploy ASAP-compliant agents with one command.
+    *   Includes mTLS, key rotation, liveness checks.
+    *   Optional Message Broker for scale (v2.0+).
+
+2.  **The Registry (Marketplace & Trust)**:
+    *   **Verified badge**: $49/month (manual review, ASAP-signed manifest).
+    *   **Clearing House**: Potential % fee on transactions (Phase 2).
+
+3.  **Enterprise Observability (Future)**:
+    *   Analytics on agent interactions, costs, content safety.
+
+---
+
 ## Related Documents
 
 - **Roadmap**: [roadmap-to-marketplace.md](./roadmap-to-marketplace.md)
-- **v1.1 Planning**: [prd-v1.1-planning.md](../prd/prd-v1.1-planning.md)
+- **v1.1 PRD**: [prd-v1.1-roadmap.md](./prd/prd-v1.1-roadmap.md)
 - **Original Spec**: [v0-original-specs.md](./v0-original-specs.md)
+- **Design Decisions**: [ADR.md](./ADR.md)
 
 ---
 
@@ -340,3 +423,4 @@ Auto-failover based on health checks
 | Date | Change |
 |------|--------|
 | 2026-01-30 | Initial vision document |
+| 2026-02-05 | Added ICP, pricing strategy (Freemium + $49 Verified), updated building blocks |

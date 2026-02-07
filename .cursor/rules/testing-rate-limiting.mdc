@@ -5,9 +5,9 @@ alwaysApply: false
 
 # Rate Limiting Testing Pattern
 
-> Quick reference for testing with slowapi rate limiting. Full documentation: `.cursor/dev-planning/architecture/patterns/rate-limiting.md`
+> Quick reference for testing with slowapi rate limiting. Full documentation: `.cursor/dev-planning/architecture/rate-limiting.md`
 ...
-1. Read the full documentation: `.cursor/dev-planning/architecture/patterns/rate-limiting.md`
+1. Read the full documentation: `.cursor/dev-planning/architecture/rate-limiting.md`
 
 ## Problem
 
@@ -143,7 +143,7 @@ pytest -n 0
 
 ## When in Doubt
 
-1. Read the full documentation: `.cursor/dev-planning/architecture/patterns/rate-limiting.md`
+1. Read the full documentation: `.cursor/dev-planning/architecture/rate-limiting.md`
 2. Check existing examples: `tests/transport/test_server.py::TestDebugLogMode`
 3. Check transport fixtures: `tests/transport/conftest.py` (NoRateLimitTestBase, isolated_limiter_factory, replace_global_limiter)
 4. Check global isolation: `tests/conftest.py` (`_isolate_rate_limiter`, `isolated_rate_limiter` for app fixtures)

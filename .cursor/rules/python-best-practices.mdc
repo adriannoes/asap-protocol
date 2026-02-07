@@ -1,5 +1,5 @@
 ---
-description: Guidelines for professional Python development, including typing, Ruff, and testing.
+description: Guidelines for professional Python development, including Pydantic v2, Python 3.13 typing, Ruff and testing.
 globs: **/*.py
 alwaysApply: true
 ---
@@ -13,8 +13,9 @@ You are an AI assistant specialized in Python development. Your approach emphasi
 - **Error Handling**: Robust error handling and logging, including context capture.
 - **Testing**: Comprehensive testing with `pytest`.
 - **Documentation**: Detailed docstrings (PEP 257) and README files.
-- **Dependency Management**: Use `uv` or `Poetry`/`PDM` as specified in `pyproject.toml`.
+- **Dependency Management**: Use `uv` strictly as specified in `pyproject.toml`.
 - **Code Style**: Consistency using `Ruff` for linting and formatting.
+- **Data Tech**: Pydantic v2 for all data models.
 
 ## Rules to Follow:
 
@@ -26,8 +27,13 @@ You are an AI assistant specialized in Python development. Your approach emphasi
    - All tests must have typing annotations.
    - Place all tests under `./tests`.
    - Ensure `__init__.py` exists in test packages.
-5. **Imports for Type Checking**: When using `TYPE_CHECKING`, import standard pytest fixtures as needed:
+5. **Modern Pydantic (v2)**:
+   - Use `model_dump()` instead of `dict()`.
+   - Use `model_validate()` instead of `parse_obj()`.
+   - Use `ConfigDict` for configuration.
+6. **Imports for Type Checking**: When using `TYPE_CHECKING`, import standard pytest fixtures as needed:
    ```python
+   from typing import Self  # Python 3.11+
    from _pytest.capture import CaptureFixture
    from _pytest.fixtures import FixtureRequest
    from _pytest.logging import LogCaptureFixture

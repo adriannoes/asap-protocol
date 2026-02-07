@@ -12,7 +12,7 @@
 - `.github/release-notes-v1.0.0.md` - Comprehensive release notes (13.3.2 ✅)
 - `README.md` - Update to "Stable" status
 - `pyproject.toml` - Update version and classifiers
-- `.cursor/dev-planning/retrospectives/v1.0.0-retro.md` - Retrospective (13.6.2 ✅)
+- `.cursor/dev-planning/lessons-learned/v1.0.0-retro.md` - Retrospective (13.6.2 ✅)
 - All docs/ - Final review
 - `tests/observability/test_trace_parser.py` - Coverage: format_ascii duration None, build_hops non-str sender/recipient, extract_trace_ids event filter, _timestamp_to_sort_key
 - `tests/observability/test_tracing.py` - Coverage: configure_tracing otlp without endpoint
@@ -198,7 +198,7 @@
   - **Result**: PRD Section 11 already has Q1-Q12 resolved or deferred; Section 10 has DD-009–DD-013. Changelog entry added for v1.0.0 final review.
 
 - [x] 13.6.2 Create retrospective
-  - File: `.cursor/dev-planning/retrospectives/v1.0.0-retro.md`
+  - File: `.cursor/dev-planning/lessons-learned/v1.0.0-retro.md`
   - Content:
     - What went well
     - What could improve

@@ -120,7 +120,7 @@ Each checkpoint has corresponding tasks in the roadmap files:
 
 ### v0.5.0 Checkpoints
 
-**Sprint S3, Section 3.6** ([tasks-v0.5.0-roadmap.md](../tasks/tasks-v0.5.0-roadmap.md)):
+**Sprint S3, Section 3.6** ([tasks-v0.5.0-roadmap.md](../../dev-planning/tasks/tasks-v0.5.0-roadmap.md)):
 - [ ] 3.6.1 Review PRD Open Questions
 - [ ] 3.6.2 Document learnings from security implementation
 
@@ -142,7 +142,7 @@ Each checkpoint has corresponding tasks in the roadmap files:
 
 ### Create Retrospective Document
 
-**File**: `.cursor/dev-planning/retrospectives/v1.0.0-retro.md`
+**File**: `.cursor/dev-planning/lessons-learned/v1.0.0-retro.md`
 
 **Template**:
 ```markdown

@@ -14,6 +14,8 @@
 - [Question 7: Is Error Model Complete?](#question-7-is-error-model-complete)
 - [Question 8: Is MVP Security Sufficient?](#question-8-is-mvp-security-sufficient)
 - [Question 9: Should Any Module Use C or Rust?](#question-9-should-any-module-use-c-or-rust)
+- [Question 10: Build vs Buy for Agent Evals?](#question-10-build-vs-buy-for-agent-evals)
+- [Question 11: What Tech Stack for v2.0 Web Marketplace?](#question-11-what-tech-stack-for-v20-web-marketplace)
 - [Summary of Amendments](#summary-of-amendments)
 - [Next Steps](#next-steps)
 
@@ -461,6 +463,35 @@ Leverage Rust-based dependencies; avoid custom native extensions for MVP.
 
 ---
 
+## Question 10: Build vs Buy for Agent Evals?
+
+### The Question
+Should ASAP build a custom native evaluation framework or integrate with existing market solutions (DeepEval, Ragas, Arize)?
+
+### Analysis
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **Build (Native)** | Total control, strict protocol alignment | High effort, reinventing LLM metrics wheel |
+| **Buy/Integrate** | Immediate SOTA metrics, community maintenance | Dependency risk, "black box" logic |
+
+### Expert Assessment
+
+**Hybrid Strategy ("Shell vs Brain")**:
+- **Protocol Compliance (Shell)**: MUST be native. We cannot rely on third parties to validate our specific binary formats, state transitions, or schemas.
+- **Intelligence (Brain)**: SHOULD be delegated. Metrics like "Hallucination" or "Coherence" are commoditized and complex to maintain.
+
+### Recommendation: **HYBRID**
+
+Use **DeepEval** (Open Source) as the standard library for Intelligence Evals. Build a lightweight **ASAP Compliance Harness** using `pytest` for Protocol Evals.
+
+### Spec Amendment
+
+> [!NOTE]
+> Added to Vision (Section 4): Adopted Hybrid Evaluation Strategy. Protocol Compliance is internal (Shell); Intelligence Evaluation is external via DeepEval (Brain).
+
+---
+
 ## Summary of Amendments
 
 | Question | Decision | Change Type |
@@ -474,6 +505,8 @@ Leverage Rust-based dependencies; avoid custom native extensions for MVP.
 | Q7: Error model | Add complete error taxonomy | **Added** |
 | Q8: MVP security | Add optional request signing | **Enhanced** |
 | Q9: Python vs C/Rust | Keep pure Python, use Rust deps | **Documented** |
+| Q10: Agent Evals | Hybrid: Native Compliance + DeepEval | **Added** |
+| Q11: Web Stack | Next.js, Tailwind, Shadcn | **Added** |
 
 ---
 

@@ -27,8 +27,7 @@ share/python-wheels/
 MANIFEST
 
 # PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so may be deleted later.
+#  Usually these files are written by a python script from a template before PyInstaller builds the exe, so may be deleted later.
 *.manifest
 *.spec
 
@@ -167,7 +166,11 @@ cython_debug/
 *.temp
 *.bak
 
-# Project specific (Cursor: keep .cursor/ tracked; ignore local-only paths)
+# Project specific
 !/.cursor/
 node_modules/
-.github/wiki
+.github/wiki/
+
+# Benchmark and cache artifacts
+.benchmarks/
+.uv-cache/

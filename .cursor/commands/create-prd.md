@@ -9,7 +9,7 @@ To guide an AI assistant in creating a detailed Product Requirements Document (P
 1.  **Receive Initial Prompt:** The user provides a brief description or request for a new feature or functionality.
 2.  **Ask Clarifying Questions:** Before writing the PRD, the AI *must* ask clarifying questions to gather sufficient detail. The goal is to understand the "what" and "why" of the feature, not necessarily the "how" (which the developer will figure out).
 3.  **Generate PRD:** Based on the initial prompt and the user's answers to the clarifying questions, generate a PRD using the structure outlined below.
-4.  **Save PRD:** Save the generated document as `prd-[feature-name].md` inside the `/.cursor/dev-planning/prd` directory.
+4.  **Save PRD:** Save the generated document as `prd-[feature-name].md` inside the `/.cursor/product-specs/prd` directory.
 
 ## Clarifying Questions (Examples)
 
@@ -24,6 +24,7 @@ The AI should adapt its questions based on the prompt, but here are some common 
 *   **Data Requirements:** "What kind of data does this feature need to display or manipulate?"
 *   **Design/UI:** "Are there any existing design mockups or UI guidelines to follow?" or "Can you describe the desired look and feel?"
 *   **Edge Cases:** "Are there any potential edge cases or error conditions we should consider?"
+*   **Tech Stack:** "Does this feature require specific Frontend (e.g., Shadcn component) or Backend (e.g., Worker task) implementation?"
 
 ## PRD Structure
 
@@ -35,7 +36,10 @@ The generated PRD should include the following sections:
 4.  **Functional Requirements:** List the specific functionalities the feature must have. Use clear, concise language (e.g., "The system must allow users to upload a profile picture."). Number these requirements.
 5.  **Non-Goals (Out of Scope):** Clearly state what this feature will *not* include to manage scope.
 6.  **Design Considerations (Optional):** Link to mockups, describe UI/UX requirements, or mention relevant components/styles if applicable.
-7.  **Technical Considerations (Optional):** Mention any known technical constraints, dependencies, or suggestions (e.g., "Should integrate with the existing Auth module").
+7.  **Technical Considerations (Optional):**
+    *   Mention any known technical constraints, dependencies, or suggestions.
+    *   **Consult**: `.cursor/dev-planning/architecture/tech-stack-decisions.md` for approved stack choices (e.g., Next.js 15, Pydantic v2).
+    *   **Consult**: `.cursor/rules/frontend-best-practices.mdc` if UI is involved.
 8.  **Success Metrics:** How will the success of this feature be measured? (e.g., "Increase user engagement by 10%", "Reduce support tickets related to X").
 9.  **Open Questions:** List any remaining questions or areas needing further clarification.
 
@@ -46,7 +50,7 @@ Assume the primary reader of the PRD is a **junior developer**. Therefore, requi
 ## Output
 
 *   **Format:** Markdown (`.md`)
-*   **Location:** `/.cursor/dev-planning/prd/`
+*   **Location:** `/.cursor/product-specs/prd/`
 *   **Filename:** `prd-[feature-name].md`
 
 ## Final instructions

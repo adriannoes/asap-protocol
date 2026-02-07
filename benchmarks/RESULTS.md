@@ -1,7 +1,7 @@
 # ASAP Protocol Benchmark Results
 
-> **Last Updated**: 2026-01-31
-> **Version**: 0.5.0
+> **Last Updated**: 2026-02-03
+> **Version**: 1.0.0
 > **Environment**: macOS, Python 3.13, uvicorn
 
 This document contains the results of load, stress, and memory tests for the ASAP protocol server.

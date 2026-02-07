@@ -1,10 +1,11 @@
-"""MCP client demo: connect to MCP server, list tools, call echo.
+"""MCP client demo: connect to MCP server via stdio, list tools, call echo.
 
-Starts the server as a subprocess (asap.mcp.server_runner), connects the client,
-lists tools, calls the "echo" tool with a message, and verifies the result.
+Starts the MCP server as a subprocess (asap.mcp.server_runner), connects
+the client via stdio, lists available tools, calls the "echo" tool with
+a message, and verifies the result.
 
-Run from repo root:
-    PYTHONPATH=src uv run python examples/mcp_demo.py
+Run:
+    uv run python -m asap.examples.mcp_client_demo
 """
 
 from __future__ import annotations
@@ -12,12 +13,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import sys
-from pathlib import Path
-
-if __name__ == "__main__":
-    src = Path(__file__).resolve().parent.parent / "src"
-    if str(src) not in sys.path:
-        sys.path.insert(0, str(src))
 
 from asap.mcp.client import MCPClient
 

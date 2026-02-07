@@ -1020,6 +1020,7 @@ sequenceDiagram
 
 > [!IMPORTANT]
 > The following decisions require further analysis or stakeholder input before finalization.
+> Detailed analysis of these trade-offs is documented in [ADR.md](./ADR.md).
 
 ### 13.1 Transport Binding Priority
 

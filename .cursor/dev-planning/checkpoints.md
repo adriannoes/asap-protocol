@@ -1,0 +1,146 @@
+# Documentation Checkpoints
+
+> **Purpose**: Formal review points to update documentation with learnings
+> **Created**: 2026-02-06
+
+---
+
+## Why Checkpoints?
+
+As a solo developer, it's easy to lose context between sprints. These checkpoints ensure:
+1. **Lessons captured**: What worked, what didn't
+2. **Docs updated**: Next version PRDs refined with learnings  
+3. **Estimates adjusted**: Realistic planning based on actual velocity
+4. **Context preserved**: Knowledge carries forward to v2.0.0
+
+---
+
+## Checkpoint Schedule
+
+### CP-1: Post v1.1.0 Release
+
+**When**: After v1.1.0 ships
+
+**Review**:
+- [ ] OAuth2 implementation complexity — update v1.2 estimates?
+- [ ] WebSocket lessons learned
+- [ ] Discovery patterns that worked
+- [ ] Time taken vs estimated
+
+**Update**:
+- [ ] `prd-v1.2-roadmap.md` — refine based on auth learnings
+- [ ] `tasks-v1.2.0-roadmap.md` — adjust estimates
+- [ ] `lessons-learned/v1.1.0-retro.md` — create retrospective
+
+---
+
+### CP-2: Post v1.2.0 Release
+
+**When**: After v1.2.0 ships
+
+**Review**:
+- [ ] Ed25519 PKI complexity
+- [ ] Registry API patterns
+- [ ] Compliance harness effectiveness
+- [ ] Time taken vs estimated
+
+**Update**:
+- [ ] `prd-v1.3-roadmap.md` — refine economics based on PKI learnings
+- [ ] `tasks-v1.3.0-roadmap.md` — adjust estimates
+- [ ] `lessons-learned/v1.2.0-retro.md` — create retrospective
+
+---
+
+### CP-3: Post v1.3.0 Release
+
+**When**: After v1.3.0 ships
+
+**Review**:
+- [ ] Metering implementation lessons
+- [ ] Delegation token complexity
+- [ ] SLA framework effectiveness
+- [ ] Infrastructure patterns for v2.0
+
+**Update**:
+- [ ] `prd-v2.0-roadmap.md` — major update with all v1.x learnings
+- [ ] `tasks-v2.0.0-roadmap.md` — realistic estimates
+- [ ] `lessons-learned/v1.3.0-retro.md` — create retrospective
+- [ ] Tech stack decisions for Web App
+
+---
+
+### CP-4: Post v2.0.0 M2 (Marketplace Core)
+
+**When**: After completing sprints M1-M2
+
+**Review**:
+- [ ] Production deployment challenges
+- [ ] Integration complexity
+- [ ] Performance characteristics
+
+**Update**:
+- [ ] `tasks-v2.0.0-webapp-detailed.md` — adjust Web App estimates
+- [ ] Infrastructure decisions for Web App
+- [ ] Document production patterns
+
+---
+
+### CP-5: Post v2.0.0 M4 (Web App Core)
+
+**When**: After completing sprints M3-M4
+
+**Review**:
+- [ ] Frontend tech stack effectiveness
+- [ ] UX feedback from early testing
+- [ ] Performance on real users
+
+**Update**:
+- [ ] `tasks-v2.0.0-launch-detailed.md` — adjust launch estimates
+- [ ] Prioritize M5-M6 based on feedback
+
+---
+
+### CP-6: Post v2.0.0 Launch
+
+**When**: 2 weeks after launch
+
+**Review**:
+- [ ] Launch success metrics
+- [ ] User feedback
+- [ ] What to do next (v2.1?)
+
+**Create**:
+- [ ] `lessons-learned/v2.0.0-retro.md` — comprehensive retrospective
+- [ ] `vision-v2.1.md` — if continuing development
+
+---
+
+## Checkpoint Process
+
+For each checkpoint:
+
+1. **Take 30-60 minutes** to review honestly
+2. **Update documents** while context is fresh
+3. **Adjust estimates** based on actual velocity  
+4. **Capture patterns** that can be reused
+5. **Commit changes** with descriptive message
+
+---
+
+## Velocity Tracking
+
+Track actual vs estimated to improve future planning:
+
+| Version | Estimated Days | Actual Days | Velocity |
+|---------|----------------|-------------|----------|
+| v1.1.0 | 18-26 | — | — |
+| v1.2.0 | 28-40 | — | — |
+| v1.3.0 | 18-26 | — | — |
+| v2.0.0 | 38-53 | — | — |
+
+---
+
+## Related Documents
+
+- [roadmap-to-marketplace.md](../product-specs/roadmap-to-marketplace.md)
+- [lessons-learned/](./lessons-learned/)

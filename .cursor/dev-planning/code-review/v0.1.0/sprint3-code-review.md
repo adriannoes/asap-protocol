@@ -669,6 +669,6 @@ Esta PR está **pronta para merge** em `main`. Recomendo:
 
 ### Referências
 
-- **PRD**: [prd-asap-implementation.md](file:///Users/adrianno/GitHub/asap-protocol/.cursor/dev-planning/prd/prd-asap-implementation.md)
+- **PRD**: [prd-asap-implementation.md](file:///Users/adrianno/GitHub/asap-protocol/.cursor/product-specs/prd/prd-asap-implementation.md)
 - **Tasks**: [tasks-prd-asap-implementation.md](file:///Users/adrianno/GitHub/asap-protocol/.cursor/dev-planning/tasks/tasks-prd-asap-implementation.md#L475-L576)
 - **JSON-RPC 2.0 Spec**: https://www.jsonrpc.org/specification

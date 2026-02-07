@@ -65,6 +65,7 @@ Run agents individually:
 
 | Module | Description | Usage |
 |--------|-------------|--------|
+| **mcp_client_demo** | MCP client via stdio: start server subprocess, list tools, call echo | `uv run python -m asap.examples.mcp_client_demo` |
 | **mcp_integration** | Call MCP tools via ASAP envelopes (McpToolCall, McpToolResult) | `uv run python -m asap.examples.mcp_integration [--agent-url URL]` (local build only if no URL) |
 
 ### Authentication and rate limiting

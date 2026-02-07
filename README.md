@@ -1,9 +1,11 @@
 # ASAP: Async Simple Agent Protocol
 
+*From **agents**, for **agents**. Delivering reliability, **as soon as possible.***
+
 ![ASAP Protocol Banner](https://raw.githubusercontent.com/adriannoes/asap-protocol/main/.github/assets/asap-protocol-banner.png)
 
 
-> A streamlined, scalable, asynchronous protocol for agent-to-agent communication and task coordination. Built as a simpler, more powerful alternative to A2A with native MCP integration and stateful orchestration.
+> A production-ready protocol for agent-to-agent communication and task coordination.
 
 **Quick Info**: `v1.0.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/1.0.0/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
 
@@ -12,7 +14,7 @@
 Building multi-agent systems today suffers from three core technical challenges that existing protocols like A2A don't fully address:
 1. **$N^2$ Connection Complexity**: Most protocols assume static point-to-point HTTP connections that don't scale.
 2. **State Drift**: Lack of native persistence makes it impossible to reliably resume long-running agentic workflows.
-3. **Fragmentation**: No unified way to handle task delegation, artifact exchange, and tool execution (MCP) in a single envelope.
+3. **Fragmentation**: No unified way to handle task delegation, artifact exchange and tool execution (MCP) in a single envelope.
 
 **ASAP** provides a production-ready communication layer that simplifies these complexities. It introduces a standardized, stateful orchestration framework that ensures your agents can coordinate reliably across distributed environments. See the [spec](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/v0-original-specs.md) for details.
 
@@ -43,9 +45,10 @@ pip install asap-protocol
 
 ## Requirements
 
-- **Python**: 3.13 or higher
+- **Python**: 3.13+
 - **Dependencies**: Automatically installed via `uv` or `pip`
-- **Optional**: For development, see [Contributing](https://github.com/adriannoes/asap-protocol/blob/main/CONTRIBUTING.md).
+- **For development**: see [Contributing](https://github.com/adriannoes/asap-protocol/blob/main/CONTRIBUTING.md).
+- **For AI agents**: see [AGENTS.md](https://github.com/adriannoes/asap-protocol/blob/main/AGENTS.md) for project instructions.
 
 ## Quick Start
 
@@ -122,9 +125,7 @@ uv run python -m asap.examples.run_demo
 uv run python -m asap.examples.<module_name> [options]
 ```
 
-Full list: [Examples README](https://github.com/adriannoes/asap-protocol/blob/main/src/asap/examples/README.md)
-
-| Category | Examples |
+| Category | Examples ([Full list](https://github.com/adriannoes/asap-protocol/blob/main/src/asap/examples/README.md)) |
 |----------|----------|
 | **Core** | `run_demo`, `echo_agent`, `coordinator`, `secure_handler` |
 | **Orchestration** | `orchestration` (multi-agent, task coordination, state tracking) |
@@ -182,6 +183,7 @@ If you're building simple point-to-point agent communication, a basic HTTP API m
 
 **Decisions & Operations**
 - [ADRs](https://github.com/adriannoes/asap-protocol/tree/main/docs/adr) — 17 Architecture Decision Records
+- [Tech Stack](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/dev-planning/architecture/tech-stack-decisions.md) — Rationale for Python, Pydantic, Next.js choices
 - [Deployment](https://github.com/adriannoes/asap-protocol/blob/main/docs/deployment/kubernetes.md) | [Troubleshooting](https://github.com/adriannoes/asap-protocol/blob/main/docs/troubleshooting.md)
 
 **Release**
@@ -189,7 +191,24 @@ If you're building simple point-to-point agent communication, a basic HTTP API m
 
 ## CLI
 
-`asap --version`, `asap export-schemas`, `asap list-schemas`, `asap show-schema`. [CLI docs](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#cli) or run `asap --help`.
+```bash
+asap --version          # Show version
+asap list-schemas       # List all available schemas
+asap export-schemas     # Export JSON schemas to file
+```
+
+See [CLI docs](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#cli) or run `asap --help`.
+
+## What's Next?
+
+ASAP is evolving toward an **Agent Marketplace** — an open ecosystem where AI agents discover, trust and collaborate autonomously:
+
+- **v1.1**: Identity Layer (OAuth2, WebSocket, Discovery)
+- **v1.2**: Trust Layer (Signed Manifests, Registry API)
+- **v1.3**: Economics Layer (Metering, SLAs, Delegation)
+- **v2.0**: Agent Marketplace with Web App
+
+See our [Vision Document](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/vision-agent-marketplace.md) for the full roadmap.
 
 ## Contributing
 

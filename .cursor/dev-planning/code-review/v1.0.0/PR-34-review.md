@@ -198,7 +198,7 @@ Excellent edge case coverage for `_timestamp_to_sort_key`. The test for `"2020-1
 
 ---
 
-### `.cursor/dev-planning/architecture/ADR.md` (New File)
+### `.cursor/product-specs/ADR.md` (New File)
 
 The ADR document is comprehensive. Minor suggestion: add a table of contents at the top for easier navigation since it's 471 lines.
 
