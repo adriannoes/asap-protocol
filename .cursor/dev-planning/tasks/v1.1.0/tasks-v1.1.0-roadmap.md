@@ -33,31 +33,31 @@ See [SD-3 (WebSocket)](../../product-specs/roadmap-to-marketplace.md) and [SD-7 
 
 ### Tasks
 
-- [ ] 1.1 Implement OAuth2 client
+- [x] 1.1 Implement OAuth2 client
   - Goal: Support `client_credentials` and `authorization_code` flows
   - Deliverable: `src/asap/auth/oauth2.py`
   - Details: [Auth Detailed - Task 1.1](./sprint-S1-oauth2-foundation.md#task-11-oauth2-client)
 
-- [ ] 1.2 Implement OAuth2 server integration
+- [x] 1.2 Implement OAuth2 server integration
   - Goal: Protect ASAP endpoints with OAuth2 tokens
   - Deliverable: Middleware for token validation
   - Details: [Auth Detailed - Task 1.2](./sprint-S1-oauth2-foundation.md#task-12-oauth2-server)
 
-- [ ] 1.3 Add OIDC discovery
+- [x] 1.3 Add OIDC discovery
   - Goal: Auto-discover OAuth2 endpoints from `.well-known/openid-configuration`
   - Deliverable: `src/asap/auth/oidc.py`
   - Details: [Auth Detailed - Task 1.3](./sprint-S1-oauth2-foundation.md#task-13-oidc-discovery)
 
-- [ ] 1.4 Custom Claims identity binding (ADR-17)
+- [x] 1.4 Custom Claims identity binding (ADR-17)
   - Goal: Map IdP `sub` to ASAP `agent_id` via JWT Custom Claims + allowlist fallback
   - Deliverable: Middleware update + `ASAP_AUTH_SUBJECT_MAP` config
   - Details: [Auth Detailed - Task 1.4](./sprint-S1-oauth2-foundation.md#task-14-custom-claims-identity-binding)
 
 ### Definition of Done
-- [ ] OAuth2 client credentials flow working
-- [ ] Token validation middleware functional
-- [ ] OIDC discovery auto-configures endpoints
-- [ ] Custom Claims identity binding functional (ADR-17)
+- [x] OAuth2 client credentials flow working
+- [x] Token validation middleware functional
+- [x] OIDC discovery auto-configures endpoints
+- [x] Custom Claims identity binding functional (ADR-17)
 - [ ] Test coverage >95%
 
 ---
@@ -251,10 +251,10 @@ The v0 spec listed "First-class persistent state" as a key design goal. Currentl
 
 ## Progress Tracking
 
-**Overall Progress**: 0/26 tasks completed (0%)
+**Overall Progress**: 4/26 tasks completed (15%)
 
 **Sprint Status**:
-- ⬜ S1: 0/4 tasks (0%) — includes Custom Claims (ADR-17)
+- ⬜ S1: 4/4 tasks (100%) — includes Custom Claims (ADR-17)
 - ⬜ S2: 0/5 tasks (0%) — includes Lite Registry (SD-11, ADR-15)
 - ⬜ S2.5: 0/5 tasks (0%) — includes Best Practices Failover
 - ⬜ S3: 0/5 tasks (0%) — includes MessageAck + AckAwareClient (ADR-16)
