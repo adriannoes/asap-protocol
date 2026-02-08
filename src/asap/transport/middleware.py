@@ -7,6 +7,11 @@ This module provides middleware that:
 - Returns proper JSON-RPC error responses for auth failures
 - Implements IP-based rate limiting to prevent DoS attacks
 
+**Rate limit storage:** The default limiter uses in-memory storage (``memory://``).
+The configured limit is per-process; with multiple workers (e.g. Gunicorn), the
+effective limit is approximately limit × number of workers. Use Redis for
+shared limits in production (planned for v1.2.0).
+
 Example:
     >>> from asap.transport.middleware import AuthenticationMiddleware, BearerTokenValidator
     >>> from asap.models.entities import Manifest, AuthScheme
