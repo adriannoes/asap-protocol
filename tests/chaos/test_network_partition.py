@@ -248,16 +248,13 @@ class TestNetworkPartitionWithCircuitBreaker:
             assert client._circuit_breaker is not None
             assert client._circuit_breaker.get_state() == CircuitState.OPEN
 
-            # Wait for timeout to transition to HALF_OPEN (real sleep, not mocked)
+            # Wait so next can_attempt() will transition OPEN -> HALF_OPEN
             await asyncio.sleep(0.1)
-
-            # Verify circuit is in HALF_OPEN state (can_attempt returns True)
-            assert client._circuit_breaker.can_attempt() is True
 
             # Simulate network recovery
             network_up = True
 
-            # Next request should succeed and close circuit
+            # Next request gets single HALF_OPEN permit, succeeds, closes circuit
             response = await client.send(sample_request_envelope)
             assert response.payload_type == "task.response"
             assert client._circuit_breaker.get_state() == CircuitState.CLOSED
