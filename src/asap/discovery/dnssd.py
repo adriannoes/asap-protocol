@@ -2,6 +2,9 @@
 
 Enables agents to advertise themselves via mDNS (Bonjour) for LAN discovery
 without a registry. Requires the dns-sd optional extra: uv sync --extra dns-sd.
+
+**Network scope:** mDNS advertisement typically broadcasts on the local subnet only.
+Services are discoverable by other agents on the same LAN, not across the internet.
 """
 
 from __future__ import annotations
@@ -64,6 +67,9 @@ class DNSSDAdvertiser:
     version, capabilities, and manifest_url. Use start() to register and
     stop() to unregister.
 
+    **Network scope:** Advertisement is broadcast on the local subnet; other
+    agents on the same LAN can discover this service. Not visible across the internet.
+
     Example:
         >>> from asap.models.entities import Manifest, Capability, Endpoint
         >>> manifest = Manifest(
@@ -90,22 +96,25 @@ class DNSSDAdvertiser:
     ) -> None:
         """Initialize the advertiser.
 
+        Host resolution is deferred to start() when host is None to avoid
+        blocking the event loop in __init__ (socket.gethostbyname can block).
+
         Args:
             manifest: The agent's manifest (used for version and capabilities).
             manifest_url: Full URL to the manifest (e.g. well-known URI).
             port: TCP port the ASAP server listens on.
-            host: Optional host IP for the service. If None, uses the primary
-                local address from socket.gethostbyname(gethostname()).
+            host: Optional host IP for the service. If None, resolved at start()
+                time (may block briefly on first start).
         """
         self._manifest = manifest
         self._manifest_url = manifest_url
         self._port = port
-        self._host = host or self._get_default_host()
+        self._host: str | None = host
         self._zeroconf: Zeroconf | None = None
         self._service_info: ServiceInfo | None = None
 
     def _get_default_host(self) -> str:
-        """Return the primary local IP for advertisement."""
+        """Return the primary local IP for advertisement. May block on DNS."""
         try:
             return socket.gethostbyname(socket.gethostname())
         except OSError:
@@ -124,10 +133,12 @@ class DNSSDAdvertiser:
 
     def _create_service_info(self) -> ServiceInfo:
         """Create the ServiceInfo for registration."""
+        assert self._host is not None
+        host = self._host
         instance_name = _sanitize_instance_name(self._manifest.name)
         qualified_name = f"{instance_name}.{ASAP_SERVICE_TYPE}"
         server_name = socket.getfqdn()
-        addresses = [socket.inet_aton(self._host)]
+        addresses = [socket.inet_aton(host)]
 
         return ServiceInfo(
             ASAP_SERVICE_TYPE,
@@ -139,9 +150,14 @@ class DNSSDAdvertiser:
         )
 
     def start(self) -> None:
-        """Register the ASAP service via mDNS. Idempotent (no-op if already started)."""
+        """Register the ASAP service via mDNS. Idempotent (no-op if already started).
+
+        If host was not set at construction, resolves it here (may block briefly).
+        """
         if self._zeroconf is not None:
             return
+        if self._host is None:
+            self._host = self._get_default_host()
         self._service_info = self._create_service_info()
         self._zeroconf = Zeroconf(ip_version=IPVersion.V4Only)
         self._zeroconf.register_service(self._service_info)
