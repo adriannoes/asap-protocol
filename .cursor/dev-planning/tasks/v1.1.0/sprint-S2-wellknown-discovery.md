@@ -372,12 +372,12 @@ Well-known discovery enables agents to find each other without prior configurati
 
 ### Sub-tasks
 
-- [ ] 2.6.1 Update roadmap progress
+- [x] 2.6.1 Update roadmap progress
   - **File**: `tasks-v1.1.0-roadmap.md` (modify)
   - **What**: Mark S2 tasks as complete `[x]`, update progress percentage
   - **Verify**: Progress shows 100% for S2
 
-- [ ] 2.6.2 Verify all acceptance criteria met
+- [x] 2.6.2 Verify all acceptance criteria met
   - **What**: Manually verify:
     - Well-known endpoint serves manifest ✓
     - Client discovery works ✓
@@ -385,32 +385,32 @@ Well-known discovery enables agents to find each other without prior configurati
     - DNS-SD works (if implemented) ✓
   - **Verify**: All criteria checked off
 
-- [ ] 2.6.3 Run full test suite
+- [x] 2.6.3 Run full test suite
   - **Command**: `pytest tests/discovery -v --cov`
   - **What**: Verify all new tests pass with >95% coverage
   - **Verify**: No failures, coverage target met
 
-- [ ] 2.6.4 Commit checkpoint
+- [x] 2.6.4 Commit checkpoint
   - **Command**: `git commit -m "chore: mark v1.1.0 S2 complete"`
   - **Verify**: Clean commit with progress updates
 
 **Acceptance Criteria**:
-- [ ] All S2 tasks complete
-- [ ] Test suite passes
-- [ ] Progress tracked in roadmap
+- [x] All S2 tasks complete
+- [x] Test suite passes
+- [x] Progress tracked in roadmap
 
 ---
 
 ## Sprint S2 Definition of Done
 
-- [ ] Well-known endpoint serving manifest
-- [ ] Client discovery method working
-- [ ] Manifests cached with proper TTL
-- [ ] Lite Registry client functional (SD-11, ADR-15)
-- [ ] Health/liveness endpoint functional
-- [ ] Manifest includes ttl_seconds field
-- [ ] DNS-SD support (Optional — defer to v1.1.1+)
-- [ ] Test coverage >95%
-- [ ] Progress tracked in roadmap
+- [x] Well-known endpoint serving manifest
+- [x] Client discovery method working
+- [x] Manifests cached with proper TTL
+- [x] Lite Registry client functional (SD-11, ADR-15)
+- [x] Health/liveness endpoint functional
+- [x] Manifest includes ttl_seconds field
+- [x] DNS-SD support (Optional — defer to v1.1.1+)
+- [x] Test coverage >95%
+- [x] Progress tracked in roadmap
 
 **Total Sub-tasks**: ~32
