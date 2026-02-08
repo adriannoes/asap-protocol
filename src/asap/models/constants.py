@@ -6,6 +6,9 @@ This module defines protocol-wide constants used across the codebase.
 # Protocol version
 ASAP_PROTOCOL_VERSION = "0.1"
 
+DEFAULT_MANIFEST_TTL_SECONDS = 300
+"""Default TTL in seconds for agent liveness (5 minutes)."""
+
 # Default configuration values
 DEFAULT_TIMEOUT_SECONDS = 600
 MAX_TASK_DEPTH = 10  # Maximum nesting level for subtasks

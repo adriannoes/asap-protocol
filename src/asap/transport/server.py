@@ -57,6 +57,7 @@ from opentelemetry import context
 from pydantic import ValidationError
 from slowapi.errors import RateLimitExceeded
 
+from asap.discovery import health as discovery_health
 from asap.discovery import wellknown
 from asap.errors import InvalidNonceError, InvalidTimestampError, ThreadPoolExhaustedError
 from asap.models.constants import MAX_REQUEST_SIZE
@@ -1431,6 +1432,7 @@ def create_app(
         return JSONResponse(status_code=200, content={"status": "ok"})
 
     # Well-known discovery: only register when manifest is provided (skip for client-only)
+    server_started_at = time.time()
     if manifest is not None:
         @app.get(wellknown.WELLKNOWN_MANIFEST_PATH)
         async def get_manifest(request: Request) -> Response:
@@ -1438,9 +1440,15 @@ def create_app(
 
             This endpoint allows other agents to discover this agent's
             capabilities, skills, and communication endpoints.
-            Implemented by asap.discovery.wellknown (with caching and ETag).
             """
             return await wellknown.get_manifest_response(manifest, request)
+
+        @app.get(discovery_health.WELLKNOWN_HEALTH_PATH)
+        async def get_health() -> JSONResponse:
+            """Return agent health/liveness status (200 healthy, 503 unhealthy)."""
+            return await discovery_health.get_health_response_async(
+                manifest, server_started_at
+            )
 
     @app.get("/asap/metrics")
     async def get_metrics_endpoint() -> PlainTextResponse:

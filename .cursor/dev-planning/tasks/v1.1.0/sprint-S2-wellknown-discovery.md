@@ -11,6 +11,7 @@
 - `src/asap/discovery/__init__.py` - Discovery module init (created)
 - `src/asap/discovery/wellknown.py` - Well-known endpoint handler (created)
 - `src/asap/discovery/validation.py` - Manifest validation (created)
+- `src/asap/discovery/health.py` - Health endpoint handler (created)
 - `src/asap/discovery/dns_sd.py` - DNS-SD support (optional)
 - `src/asap/transport/client.py` - Client discover() method (added), get_manifest()
 - `src/asap/discovery/registry.py` - Lite Registry schema (RegistryEntry, LiteRegistry) and client (SD-11)
@@ -18,6 +19,7 @@
 - `tests/discovery/test_wellknown.py` - Well-known endpoint tests (created)
 - `tests/discovery/test_discovery_client.py` - Client discovery tests (created)
 - `tests/discovery/test_registry.py` - Lite Registry client tests (created)
+- `tests/discovery/test_health.py` - Health endpoint tests (created)
 - `tests/discovery/test_dnssd.py` - DNS-SD tests (optional)
 
 ---
@@ -297,7 +299,7 @@ Well-known discovery enables agents to find each other without prior configurati
 
 ### Sub-tasks
 
-- [ ] 2.5.1 Create health endpoint handler
+- [x] 2.5.1 Create health endpoint handler
   - **File**: `src/asap/discovery/health.py` (create new)
   - **What**: Create FastAPI route:
     - `GET /.well-known/asap/health`
@@ -308,7 +310,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Pattern**: Kubernetes `/healthz` pattern, simple and fast
   - **Verify**: Curl returns valid JSON health response
 
-- [ ] 2.5.2 Add ttl_seconds to Manifest model
+- [x] 2.5.2 Add ttl_seconds to Manifest model
   - **File**: `src/asap/models/entities.py` (modify existing)
   - **What**: Add optional field to Manifest:
     - `ttl_seconds: int = 300` — how long to consider agent "alive" without re-check
@@ -317,7 +319,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Why**: Without TTL, clients must poll health constantly
   - **Verify**: Manifest serializes with ttl_seconds field
 
-- [ ] 2.5.3 Integrate with ASAPServer
+- [x] 2.5.3 Integrate with ASAPServer
   - **File**: `src/asap/transport/server.py` (modify existing)
   - **What**: Auto-register health route alongside well-known:
     - If `ASAPServer(manifest=my_manifest)` → register both endpoints
@@ -327,7 +329,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Pattern**: Same integration as well-known endpoint (Task 2.1.3)
   - **Verify**: Server with manifest serves health endpoint
 
-- [ ] 2.5.4 Add health_check client method
+- [x] 2.5.4 Add health_check client method
   - **File**: `src/asap/transport/client.py` (modify existing)
   - **What**: Add method:
     - `async def health_check(base_url: str) -> HealthStatus`
@@ -337,7 +339,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Why**: Programmatic health checking for Registry and consumers
   - **Verify**: Client can check agent health
 
-- [ ] 2.5.5 Write tests
+- [x] 2.5.5 Write tests
   - **File**: `tests/discovery/test_health.py` (create new)
   - **What**: Test scenarios:
     - Healthy response with correct fields
@@ -353,10 +355,10 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Verify**: `git log -1` shows correct message
 
 **Acceptance Criteria**:
-- [ ] Health endpoint returns agent status
-- [ ] Manifest includes ttl_seconds field
-- [ ] Client can check agent health programmatically
-- [ ] Integration with ASAPServer is automatic
+- [x] Health endpoint returns agent status
+- [x] Manifest includes ttl_seconds field
+- [x] Client can check agent health programmatically
+- [x] Integration with ASAPServer is automatic
 
 ---
 

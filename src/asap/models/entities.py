@@ -24,6 +24,7 @@ from asap.errors import UnsupportedAuthSchemeError
 from asap.models.base import ASAPBaseModel
 from asap.models.constants import (
     ASAP_PROTOCOL_VERSION,
+    DEFAULT_MANIFEST_TTL_SECONDS,
     MAX_TASK_DEPTH,
     SUPPORTED_AUTH_SCHEMES,
 )
@@ -218,6 +219,7 @@ class Manifest(ASAPBaseModel):
         endpoints: Network endpoints for communication
         auth: Optional authentication configuration
         signature: Optional cryptographic signature for manifest verification
+        ttl_seconds: How long to consider agent alive without re-check (default 300)
 
     Example:
         >>> manifest = Manifest(
@@ -243,6 +245,11 @@ class Manifest(ASAPBaseModel):
     auth: AuthScheme | None = Field(default=None, description="Authentication configuration")
     signature: str | None = Field(
         default=None, description="Cryptographic signature for verification"
+    )
+    ttl_seconds: int = Field(
+        default=DEFAULT_MANIFEST_TTL_SECONDS,
+        ge=1,
+        description="How long to consider agent alive without re-check (seconds)",
     )
 
     @field_validator("id")

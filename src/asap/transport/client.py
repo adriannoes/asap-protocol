@@ -38,6 +38,7 @@ from urllib.parse import ParseResult
 
 import httpx
 
+from asap.discovery.health import HealthStatus, WELLKNOWN_HEALTH_PATH
 from asap.discovery.validation import ManifestValidationError, validate_manifest_schema
 from asap.discovery.wellknown import WELLKNOWN_MANIFEST_PATH
 from asap.errors import CircuitOpenError
@@ -96,11 +97,8 @@ def _parse_max_age_from_cache_control(cache_control: str | None) -> float | None
     match = re.search(r"max-age\s*=\s*(\d+)", cache_control, re.IGNORECASE)
     if not match:
         return None
-    try:
-        seconds = float(match.group(1))
-        return min(seconds, DISCOVER_CACHE_MAX_AGE_CAP) if seconds > 0 else None
-    except (ValueError, TypeError):
-        return None
+    seconds = int(match.group(1))
+    return min(seconds, DISCOVER_CACHE_MAX_AGE_CAP) if seconds > 0 else None
 
 
 def _record_send_error_metrics(start_time: float, error: BaseException) -> None:
@@ -1352,6 +1350,85 @@ class ASAPClient:
                 "Verify the agent is running and accessible.",
                 cause=e,
                 url=sanitize_url(manifest_url),
+            ) from e
+
+    async def health_check(self, base_url: str) -> HealthStatus:
+        """Check agent health/liveness at the given base URL.
+
+        Fetches GET {base_url}/.well-known/asap/health and parses the
+        response into a HealthStatus model.
+
+        Args:
+            base_url: Agent base URL (e.g. "https://agent.example.com").
+
+        Returns:
+            HealthStatus with status, agent_id, version, uptime_seconds, etc.
+
+        Raises:
+            ASAPConnectionError: If client not connected or HTTP request fails.
+            ASAPTimeoutError: If request times out.
+            ValueError: If health response is not valid JSON or schema invalid.
+
+        Example:
+            >>> async with ASAPClient("http://localhost:8000") as client:
+            ...     health = await client.health_check("https://other-agent.example.com")
+            ...     print(health.status, health.uptime_seconds)
+        """
+        health_url = base_url.rstrip("/") + WELLKNOWN_HEALTH_PATH
+        if not self._client:
+            raise ASAPConnectionError(
+                "Client not connected. Use 'async with' context.",
+                url=sanitize_url(health_url),
+            )
+
+        try:
+            response = await self._client.get(
+                health_url,
+                timeout=min(self.timeout, MANIFEST_REQUEST_TIMEOUT),
+            )
+
+            if response.status_code >= 400:
+                raise ASAPConnectionError(
+                    f"HTTP error {response.status_code} fetching health from {health_url}. "
+                    f"Server response: {response.text[:200]}",
+                    url=sanitize_url(health_url),
+                )
+
+            try:
+                data = response.json()
+            except Exception as e:
+                raise ValueError(f"Invalid JSON in health response: {e}") from e
+
+            try:
+                return HealthStatus.model_validate(data)
+            except Exception as e:
+                raise ValueError(f"Invalid health response schema: {e}") from e
+
+        except httpx.TimeoutException as e:
+            raise ASAPTimeoutError(
+                f"Health request timeout after {self.timeout}s", timeout=self.timeout
+            ) from e
+        except httpx.ConnectError as e:
+            raise ASAPConnectionError(
+                f"Connection error fetching health from {health_url}: {e}. "
+                "Verify the agent is running and accessible.",
+                cause=e,
+                url=sanitize_url(health_url),
+            ) from e
+        except (ASAPConnectionError, ASAPTimeoutError, ValueError):
+            raise
+        except Exception as e:
+            logger.exception(
+                "asap.client.health_check_error",
+                url=sanitize_url(health_url),
+                error=str(e),
+                error_type=type(e).__name__,
+            )
+            raise ASAPConnectionError(
+                f"Unexpected error checking health at {health_url}: {e}. "
+                "Verify the agent is running and accessible.",
+                cause=e,
+                url=sanitize_url(health_url),
             ) from e
 
     async def send_batch(
