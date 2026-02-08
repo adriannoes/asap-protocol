@@ -10,7 +10,15 @@ Example:
 """
 
 from .machine import can_transition, transition
-from .snapshot import InMemorySnapshotStore, SnapshotStore
+from .metering import (
+    InMemoryMeteringStore,
+    MeteringStore,
+    UsageAggregate,
+    UsageEvent,
+    UsageMetrics,
+)
+from .snapshot import SnapshotStore
+from .stores.memory import InMemorySnapshotStore
 from asap.models.enums import TaskStatus
 
 __all__ = [
@@ -19,4 +27,9 @@ __all__ = [
     "transition",
     "SnapshotStore",
     "InMemorySnapshotStore",
+    "MeteringStore",
+    "InMemoryMeteringStore",
+    "UsageEvent",
+    "UsageMetrics",
+    "UsageAggregate",
 ]
