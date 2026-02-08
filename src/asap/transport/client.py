@@ -29,6 +29,7 @@ import asyncio
 import itertools
 import json
 import random
+import re
 import time
 from dataclasses import dataclass
 from email.utils import parsedate_to_datetime
@@ -37,6 +38,8 @@ from urllib.parse import ParseResult
 
 import httpx
 
+from asap.discovery.validation import ManifestValidationError, validate_manifest_schema
+from asap.discovery.wellknown import WELLKNOWN_MANIFEST_PATH
 from asap.errors import CircuitOpenError
 from asap.models.constants import (
     DEFAULT_BASE_DELAY,
@@ -75,6 +78,29 @@ DEFAULT_POOL_MAXSIZE = 100
 DEFAULT_POOL_TIMEOUT = 5.0
 # Maximum time to wait for manifest retrieval
 MANIFEST_REQUEST_TIMEOUT = 10.0
+# Cap for Cache-Control max-age when caching manifests (1 day)
+DISCOVER_CACHE_MAX_AGE_CAP = 86400.0
+
+
+def _parse_max_age_from_cache_control(cache_control: str | None) -> float | None:
+    """Parse max-age value in seconds from Cache-Control header.
+
+    Args:
+        cache_control: Value of the Cache-Control response header.
+
+    Returns:
+        max-age in seconds, or None if missing or invalid.
+    """
+    if not cache_control:
+        return None
+    match = re.search(r"max-age\s*=\s*(\d+)", cache_control, re.IGNORECASE)
+    if not match:
+        return None
+    try:
+        seconds = float(match.group(1))
+        return min(seconds, DISCOVER_CACHE_MAX_AGE_CAP) if seconds > 0 else None
+    except (ValueError, TypeError):
+        return None
 
 
 def _record_send_error_metrics(start_time: float, error: BaseException) -> None:
@@ -1217,6 +1243,115 @@ class ASAPClient:
                 f"Verify the agent is running and accessible.",
                 cause=e,
                 url=sanitize_url(url),
+            ) from e
+
+    async def discover(self, base_url: str) -> Manifest:
+        """Discover agent manifest from its base URL (well-known URI).
+
+        Fetches GET {base_url}/.well-known/asap/manifest.json, parses the
+        response into a Manifest, and caches it by manifest URL. When the
+        manifest is already in cache and not expired, returns it without
+        making a new request. Respects Cache-Control max-age when provided
+        for cache TTL.
+
+        Args:
+            base_url: Agent base URL (e.g. "https://agent.example.com").
+
+        Returns:
+            Manifest for the agent at base_url.
+
+        Raises:
+            ASAPConnectionError: If client not connected or HTTP request fails.
+            ASAPTimeoutError: If request times out.
+            ValueError: If manifest response is not valid JSON.
+            ManifestValidationError: If manifest schema or required fields are invalid.
+
+        Example:
+            >>> async with ASAPClient("http://localhost:8000") as client:
+            ...     manifest = await client.discover("https://other-agent.example.com")
+            ...     print(manifest.id, manifest.capabilities.asap_version)
+        """
+        manifest_url = base_url.rstrip("/") + WELLKNOWN_MANIFEST_PATH
+        if not self._client:
+            raise ASAPConnectionError(
+                "Client not connected. Use 'async with' context.",
+                url=sanitize_url(manifest_url),
+            )
+
+        cached = self._manifest_cache.get(manifest_url)
+        if cached is not None:
+            logger.debug(
+                "asap.client.discover_cache_hit",
+                url=sanitize_url(manifest_url),
+                manifest_id=cached.id,
+                message=f"Discovery cache hit for {sanitize_url(manifest_url)}",
+            )
+            return cached
+
+        try:
+            response = await self._client.get(
+                manifest_url,
+                timeout=min(self.timeout, MANIFEST_REQUEST_TIMEOUT),
+            )
+
+            if response.status_code >= 400:
+                self._manifest_cache.invalidate(manifest_url)
+                raise ASAPConnectionError(
+                    f"HTTP error {response.status_code} fetching manifest from {manifest_url}. "
+                    f"Server response: {response.text[:200]}",
+                    url=sanitize_url(manifest_url),
+                )
+
+            try:
+                manifest_data = response.json()
+            except Exception as e:
+                self._manifest_cache.invalidate(manifest_url)
+                raise ValueError(f"Invalid JSON in manifest response: {e}") from e
+
+            try:
+                manifest = validate_manifest_schema(manifest_data)
+            except ManifestValidationError:
+                self._manifest_cache.invalidate(manifest_url)
+                raise
+
+            ttl = _parse_max_age_from_cache_control(response.headers.get("Cache-Control"))
+            self._manifest_cache.set(manifest_url, manifest, ttl=ttl)
+            logger.info(
+                "asap.client.discover",
+                url=sanitize_url(manifest_url),
+                manifest_id=manifest.id,
+                message=f"Discovered and cached manifest for {sanitize_url(manifest_url)}",
+            )
+            return manifest
+
+        except httpx.TimeoutException as e:
+            self._manifest_cache.invalidate(manifest_url)
+            raise ASAPTimeoutError(
+                f"Manifest request timeout after {self.timeout}s", timeout=self.timeout
+            ) from e
+        except httpx.ConnectError as e:
+            self._manifest_cache.invalidate(manifest_url)
+            raise ASAPConnectionError(
+                f"Connection error fetching manifest from {manifest_url}: {e}. "
+                "Verify the agent is running and accessible.",
+                cause=e,
+                url=sanitize_url(manifest_url),
+            ) from e
+        except (ASAPConnectionError, ASAPTimeoutError, ValueError, ManifestValidationError):
+            raise
+        except Exception as e:
+            self._manifest_cache.invalidate(manifest_url)
+            logger.exception(
+                "asap.client.discover_error",
+                url=sanitize_url(manifest_url),
+                error=str(e),
+                error_type=type(e).__name__,
+            )
+            raise ASAPConnectionError(
+                f"Unexpected error discovering manifest from {manifest_url}: {e}. "
+                "Verify the agent is running and accessible.",
+                cause=e,
+                url=sanitize_url(manifest_url),
             ) from e
 
     async def send_batch(
