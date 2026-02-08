@@ -211,6 +211,29 @@ snapshot = StateSnapshot(
 )
 ```
 
+### Storage Backend Configuration
+
+You can switch backends without code changes using environment variables or the factory:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `ASAP_STORAGE_BACKEND` | `memory` or `sqlite` | `memory` |
+| `ASAP_STORAGE_PATH` | Database file path when using `sqlite` | `asap_state.db` |
+
+```python
+from asap.state.stores import create_snapshot_store
+
+# Uses ASAP_STORAGE_BACKEND and ASAP_STORAGE_PATH
+store = create_snapshot_store()
+```
+
+- **memory**: In-memory store (default). Best for tests and single-process dev; state is lost on restart.
+- **sqlite**: File-based persistent store. Use for development or single-instance production; state survives restarts.
+
+When using `create_app()`, if you do not pass `snapshot_store`, the server uses `create_snapshot_store()` and attaches the store to `app.state.snapshot_store` for handlers to use.
+
+**Migration from InMemory to SQLite**: Set `ASAP_STORAGE_BACKEND=sqlite` and optionally `ASAP_STORAGE_PATH=/path/to/db`. No code change required; existing handlers that read `app.state.snapshot_store` will use the SQLite backend. Data in the previous in-memory store is not migrated; start with an empty DB or restore from backup if needed.
+
 ### Snapshot Store Interface
 
 The `SnapshotStore` protocol defines the storage interface:
@@ -535,3 +558,4 @@ async def cleanup_old_snapshots(task_id: str, store: SnapshotStore, keep_last: i
 - [Error Handling](error-handling.md) - `InvalidTransitionError` and other exceptions
 - [API Reference](api-reference.md) - Complete API documentation
 - [Testing](testing.md) - Testing state management
+- [Best Practices: Agent Failover & Migration](best-practices/agent-failover-migration.md) - State handover, failover, and migration patterns

@@ -61,6 +61,7 @@ tests/             # pytest tests mirroring src/ structure
 - **Tech Stack**: `.cursor/dev-planning/architecture/tech-stack-decisions.md` - Rationale for technology choices
 - **Vision**: `.cursor/product-specs/vision-agent-marketplace.md` - Future roadmap
 - **Roadmap**: `.cursor/product-specs/roadmap-to-marketplace.md` - v1.0 → v2.0 path
+- **Best Practices**: `docs/best-practices/agent-failover-migration.md` - Agent failover & state migration patterns
 
 ## Development Planning
 
