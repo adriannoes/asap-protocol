@@ -145,11 +145,14 @@ class RegistryHolder:
         self.registry = new_registry
 
 
+_HOT_RELOAD_RETRY_DELAY_SECONDS = 5.0
+
+
 def _run_handler_watcher(holder: RegistryHolder, handlers_path: str) -> None:
     """Background thread: watch handlers_path and reload registry on change.
 
-    Graceful degradation: if watchfiles is not installed, hot reload is skipped
-    and the server runs normally without file watching.
+    On filesystem/watch errors the loop retries after a delay so the thread
+    keeps running. If watchfiles is not installed, hot reload is skipped.
     """
     try:
         from watchfiles import watch
@@ -160,33 +163,36 @@ def _run_handler_watcher(holder: RegistryHolder, handlers_path: str) -> None:
             message="watchfiles not installed; hot reload disabled. Install with: pip install watchfiles",
         )
         return
-    try:
-        for changes in watch(handlers_path):
-            if not changes:
-                continue
-            try:
-                import asap.transport.handlers as handlers_module
+    while True:
+        try:
+            for changes in watch(handlers_path):
+                if not changes:
+                    continue
+                try:
+                    import asap.transport.handlers as handlers_module
 
-                importlib.reload(handlers_module)
-                new_registry = handlers_module.create_default_registry()
-                holder.replace_registry(new_registry)
-                logger.info(
-                    "asap.server.handlers_reloaded",
-                    path=handlers_path,
-                    handlers=new_registry.list_handlers(),
-                )
-            except Exception as e:
-                logger.warning(
-                    "asap.server.handlers_reload_failed",
-                    path=handlers_path,
-                    error=str(e),
-                )
-    except Exception as e:
-        logger.warning(
-            "asap.server.handler_watcher_stopped",
-            path=handlers_path,
-            error=str(e),
-        )
+                    importlib.reload(handlers_module)
+                    new_registry = handlers_module.create_default_registry()
+                    holder.replace_registry(new_registry)
+                    logger.info(
+                        "asap.server.handlers_reloaded",
+                        path=handlers_path,
+                        handlers=new_registry.list_handlers(),
+                    )
+                except Exception as e:
+                    logger.warning(
+                        "asap.server.handlers_reload_failed",
+                        path=handlers_path,
+                        error=str(e),
+                    )
+        except Exception as e:
+            logger.warning(
+                "asap.server.handler_watcher_retry",
+                path=handlers_path,
+                error=str(e),
+                retry_seconds=_HOT_RELOAD_RETRY_DELAY_SECONDS,
+            )
+            time.sleep(_HOT_RELOAD_RETRY_DELAY_SECONDS)
 
 
 @dataclass
