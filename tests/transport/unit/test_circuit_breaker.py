@@ -132,6 +132,21 @@ class TestCircuitBreakerTimeout:
         # Should now allow attempts (HALF_OPEN state)
         assert breaker.can_attempt() is True
 
+    def test_circuit_breaker_half_open_allows_only_one_attempt(self) -> None:
+        """In HALF_OPEN only the first can_attempt() returns True; rest get False."""
+        breaker = CircuitBreaker(threshold=2, timeout=0.05)
+        for _ in range(2):
+            breaker.record_failure()
+        assert breaker.get_state() == CircuitState.OPEN
+        time.sleep(0.1)
+        assert breaker.can_attempt() is True
+        assert breaker.get_state() == CircuitState.HALF_OPEN
+        assert breaker.can_attempt() is False
+        assert breaker.can_attempt() is False
+        breaker.record_success()
+        assert breaker.get_state() == CircuitState.CLOSED
+        assert breaker.can_attempt() is True
+
     def test_circuit_breaker_stays_open_before_timeout(self) -> None:
         """Test circuit breaker stays OPEN before timeout expires."""
         breaker = CircuitBreaker(threshold=5, timeout=60.0)
@@ -308,16 +323,13 @@ class TestCircuitBreakerIntegration:
             assert client._circuit_breaker is not None
             assert client._circuit_breaker.get_state() == CircuitState.OPEN
 
-            # Wait for timeout to transition to HALF_OPEN
+            # Wait for timeout so next can_attempt() will transition OPEN -> HALF_OPEN
             await asyncio.sleep(0.2)
-
-            # Verify circuit is in HALF_OPEN (can_attempt should return True)
-            assert client._circuit_breaker.can_attempt() is True
 
             # Enable success for next request
             should_succeed = True
 
-            # Next request should succeed and close circuit
+            # Next request gets the single HALF_OPEN permit, succeeds, closes circuit
             response = await client.send(sample_request_envelope)
             assert response.payload_type == "task.response"
             assert client._circuit_breaker.get_state() == CircuitState.CLOSED
@@ -348,13 +360,10 @@ class TestCircuitBreakerIntegration:
             assert client._circuit_breaker is not None
             assert client._circuit_breaker.get_state() == CircuitState.OPEN
 
-            # Wait for timeout to transition to HALF_OPEN
+            # Wait for timeout so next can_attempt() will transition OPEN -> HALF_OPEN
             await asyncio.sleep(0.2)
 
-            # Verify circuit is in HALF_OPEN (can_attempt should return True)
-            assert client._circuit_breaker.can_attempt() is True
-
-            # Next request fails -> circuit should reopen
+            # Next request gets the single HALF_OPEN permit, fails, reopens circuit
             with pytest.raises(ASAPConnectionError):
                 await client.send(sample_request_envelope)
 

@@ -68,38 +68,38 @@ See [SD-3 (WebSocket)](../../product-specs/roadmap-to-marketplace.md) and [SD-7 
 
 ### Tasks
 
-- [ ] 2.1 Implement well-known endpoint
+- [x] 2.1 Implement well-known endpoint
   - Goal: Serve `/.well-known/asap/manifest.json`
   - Deliverable: `src/asap/discovery/wellknown.py`
   - Details: [Auth Detailed - Task 2.1](./sprint-S2-wellknown-discovery.md#task-21-well-known-endpoint)
 
-- [ ] 2.2 Implement manifest fetching
+- [x] 2.2 Implement manifest fetching
   - Goal: Client-side discovery from well-known URI
   - Deliverable: `ASAPClient.discover(base_url)` method
   - Details: [Auth Detailed - Task 2.2](./sprint-S2-wellknown-discovery.md#task-22-manifest-discovery)
 
-- [ ] 2.3 Add DNS-SD support (optional)
+- [x] 2.3 Add DNS-SD support (optional)
   - Goal: Local network discovery via mDNS
   - Priority: P3 (defer to v1.1.1+)
   - Details: [Auth Detailed - Task 2.3](./sprint-S2-wellknown-discovery.md#task-23-dns-sd-support)
 
-- [ ] 2.4 Lite Registry client (SD-11, ADR-15)
+- [x] 2.4 Lite Registry client (SD-11, ADR-15)
   - Goal: SDK method to discover agents from static Lite Registry on GitHub Pages
   - Deliverable: `src/asap/discovery/registry.py` + `discover_from_registry()` method
   - Details: [Discovery Detailed - Task 2.4](./sprint-S2-wellknown-discovery.md#task-24-lite-registry-client-sd-11)
 
-- [ ] 2.5 Implement Agent Liveness/Health endpoint
+- [x] 2.5 Implement Agent Liveness/Health endpoint
   - Goal: `GET /.well-known/asap/health` + `ttl_seconds` in Manifest (per SD-10, ADR-14)
   - Deliverable: `src/asap/discovery/health.py`
   - Details: [Discovery Detailed - Task 2.5](./sprint-S2-wellknown-discovery.md#task-25-agent-liveness--health)
 
 ### Definition of Done
-- [ ] Well-known endpoint serves manifest
-- [ ] Client can discover agents from URL
-- [ ] Lite Registry client discovers agents from GitHub Pages
-- [ ] Health endpoint returns agent status
-- [ ] Manifest includes `ttl_seconds` field
-- [ ] Integration tests validate flow
+- [x] Well-known endpoint serves manifest
+- [x] Client can discover agents from URL
+- [x] Lite Registry client discovers agents from GitHub Pages
+- [x] Health endpoint returns agent status
+- [x] Manifest includes `ttl_seconds` field
+- [x] Integration tests validate flow
 - [ ] Docs updated
 
 ---
@@ -251,16 +251,16 @@ The v0 spec listed "First-class persistent state" as a key design goal. Currentl
 
 ## Progress Tracking
 
-**Overall Progress**: 4/26 tasks completed (15%)
+**Overall Progress**: 9/26 tasks completed (35%)
 
 **Sprint Status**:
 - ⬜ S1: 4/4 tasks (100%) — includes Custom Claims (ADR-17)
-- ⬜ S2: 0/5 tasks (0%) — includes Lite Registry (SD-11, ADR-15)
+- ⬜ S2: 5/5 tasks (100%) — Well-known Discovery + Lite Registry + Health (SD-11, ADR-15)
 - ⬜ S2.5: 0/5 tasks (0%) — includes Best Practices Failover
 - ⬜ S3: 0/5 tasks (0%) — includes MessageAck + AckAwareClient (ADR-16)
 - ⬜ S4: 0/7 tasks (0%) — includes slowapi migration + Security Model docs (ADR-17)
 
-**Last Updated**: 2026-02-07
+**Last Updated**: 2026-02-08
 
 ---
 

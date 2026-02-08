@@ -8,15 +8,18 @@
 
 ## Relevant Files
 
-- `src/asap/discovery/__init__.py` - Discovery module init
-- `src/asap/discovery/wellknown.py` - Well-known endpoint
-- `src/asap/discovery/validation.py` - Manifest validation
+- `src/asap/discovery/__init__.py` - Discovery module init (created)
+- `src/asap/discovery/wellknown.py` - Well-known endpoint handler (created)
+- `src/asap/discovery/validation.py` - Manifest validation (created)
+- `src/asap/discovery/health.py` - Health endpoint handler (created)
 - `src/asap/discovery/dns_sd.py` - DNS-SD support (optional)
-- `src/asap/transport/client.py` - Client discover() method
-- `src/asap/discovery/registry.py` - Lite Registry client (SD-11)
-- `tests/discovery/__init__.py` - Discovery test package
-- `tests/discovery/test_wellknown.py` - Well-known endpoint tests
-- `tests/discovery/test_discovery_client.py` - Client discovery tests
+- `src/asap/transport/client.py` - Client discover() method (added), get_manifest()
+- `src/asap/discovery/registry.py` - Lite Registry schema (RegistryEntry, LiteRegistry) and client (SD-11)
+- `tests/discovery/__init__.py` - Discovery test package (created)
+- `tests/discovery/test_wellknown.py` - Well-known endpoint tests (created)
+- `tests/discovery/test_discovery_client.py` - Client discovery tests (created)
+- `tests/discovery/test_registry.py` - Lite Registry client tests (created)
+- `tests/discovery/test_health.py` - Health endpoint tests (created)
 - `tests/discovery/test_dnssd.py` - DNS-SD tests (optional)
 
 ---
@@ -27,7 +30,7 @@ Well-known discovery enables agents to find each other without prior configurati
 
 ---
 
-## Task 2.1: Well-Known Endpoint
+## Task 2.1: Well-Known Endpoint ✅
 
 **Goal**: Serve agent manifest at standardized well-known URI.
 
@@ -37,7 +40,7 @@ Well-known discovery enables agents to find each other without prior configurati
 
 ### Sub-tasks
 
-- [ ] 2.1.1 Create discovery module
+- [x] 2.1.1 Create discovery module
   - **File**: `src/asap/discovery/__init__.py` (create new)
   - **File**: `src/asap/discovery/wellknown.py` (create new)
   - **What**: Create discovery module with wellknown endpoint handler
@@ -45,7 +48,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Pattern**: Follow `src/asap/auth/` module structure
   - **Verify**: `from asap.discovery import wellknown` imports
 
-- [ ] 2.1.2 Implement well-known route handler
+- [x] 2.1.2 Implement well-known route handler
   - **File**: `src/asap/discovery/wellknown.py` (modify)
   - **What**: Create FastAPI route:
     - `GET /.well-known/asap/manifest.json`
@@ -55,7 +58,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Reference**: RFC 8615 - Well-Known URIs
   - **Verify**: Curl returns valid JSON manifest
 
-- [ ] 2.1.3 Integrate with ASAPServer
+- [x] 2.1.3 Integrate with ASAPServer
   - **File**: `src/asap/transport/server.py` (modify existing)
   - **What**: Auto-register well-known route when manifest provided:
     - If `ASAPServer(manifest=my_manifest)` → register /.well-known/asap/manifest.json
@@ -64,7 +67,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Pattern**: Similar to how other routes are registered in `create_app()`
   - **Verify**: Server with manifest serves well-known endpoint
 
-- [ ] 2.1.4 Add HTTP caching headers
+- [x] 2.1.4 Add HTTP caching headers
   - **File**: `src/asap/discovery/wellknown.py` (modify)
   - **What**: Add response headers:
     - `Cache-Control: public, max-age=300` (5 minutes)
@@ -74,7 +77,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Pattern**: Standard HTTP caching patterns
   - **Verify**: Second request with ETag returns 304
 
-- [ ] 2.1.5 Write tests
+- [x] 2.1.5 Write tests
   - **File**: `tests/discovery/__init__.py` (create new)
   - **File**: `tests/discovery/test_wellknown.py` (create new)
   - **What**: Test scenarios:
@@ -85,15 +88,15 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Why**: Discovery is critical for agent ecosystem
   - **Verify**: `pytest tests/discovery/test_wellknown.py -v` all pass
 
-- [ ] 2.1.6 Commit milestone
+- [x] 2.1.6 Commit milestone
   - **Command**: `git commit -m "feat(discovery): add well-known manifest endpoint"`
   - **Scope**: discovery/, test_wellknown.py, server.py changes
   - **Verify**: `git log -1` shows correct message
 
 **Acceptance Criteria**:
-- [ ] Well-known endpoint serves manifest
-- [ ] Caching headers reduce repeated requests
-- [ ] Integration with ASAPServer is seamless
+- [x] Well-known endpoint serves manifest
+- [x] Caching headers reduce repeated requests
+- [x] Integration with ASAPServer is seamless
 
 ---
 
@@ -107,7 +110,7 @@ Well-known discovery enables agents to find each other without prior configurati
 
 ### Sub-tasks
 
-- [ ] 2.2.1 Add discover method to ASAPClient
+- [x] 2.2.1 Add discover method to ASAPClient
   - **File**: `src/asap/transport/client.py` (modify existing)
   - **What**: Add method:
     - `async def discover(base_url: str) -> Manifest`
@@ -118,7 +121,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Pattern**: Similar to existing `send()` method patterns
   - **Verify**: Client can discover manifest from test server
 
-- [ ] 2.2.2 Cache discovered manifests
+- [x] 2.2.2 Cache discovered manifests
   - **File**: `src/asap/transport/client.py` (modify)
   - **What**: Integrate with existing `ManifestCache`:
     - Store discovered manifests with TTL
@@ -128,7 +131,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Pattern**: Use existing `ManifestCache` from `src/asap/models/entities.py`
   - **Verify**: Second discover() call uses cached manifest
 
-- [ ] 2.2.3 Add manifest validation
+- [x] 2.2.3 Add manifest validation
   - **File**: `src/asap/discovery/validation.py` (create new)
   - **What**: Validate discovered manifests:
     - Schema validation (required fields present)
@@ -137,7 +140,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Why**: Prevent runtime errors from malformed manifests
   - **Verify**: Invalid manifest raises descriptive error
 
-- [ ] 2.2.4 Write integration tests
+- [x] 2.2.4 Write integration tests
   - **File**: `tests/discovery/test_discovery_client.py` (create new)
   - **What**: Test scenarios:
     - Client discovers manifest from running server
@@ -147,19 +150,19 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Why**: Discovery is foundational for agent interaction
   - **Verify**: `pytest tests/discovery/test_discovery_client.py -v` all pass
 
-- [ ] 2.2.5 Commit milestone
+- [x] 2.2.5 Commit milestone
   - **Command**: `git commit -m "feat(discovery): add client-side manifest discovery"`
   - **Scope**: client.py changes, validation.py, test_discovery_client.py
   - **Verify**: `git log -1` shows correct message
 
 **Acceptance Criteria**:
-- [ ] Client can discover agents from URL
-- [ ] Manifests are cached
-- [ ] Invalid manifests produce clear errors
+- [x] Client can discover agents from URL
+- [x] Manifests are cached
+- [x] Invalid manifests produce clear errors
 
 ---
 
-## Task 2.3: DNS-SD Support (Optional P3)
+## Task 2.3: DNS-SD Support
 
 **Goal**: Enable local network agent discovery via mDNS/DNS-SD.
 
@@ -169,14 +172,14 @@ Well-known discovery enables agents to find each other without prior configurati
 
 ### Sub-tasks
 
-- [ ] 2.3.1 Add zeroconf dependency
+- [x] 2.3.1 Add zeroconf dependency
   - **File**: `pyproject.toml` (modify)
   - **What**: Add to optional dependencies: `[project.optional-dependencies] dns-sd = ["zeroconf>=0.80"]`
   - **Why**: zeroconf is the Python library for mDNS/DNS-SD
   - **Command**: `uv add --optional "zeroconf>=0.80"`
   - **Verify**: `uv run python -c "import zeroconf"` with dns-sd extra
 
-- [ ] 2.3.2 Implement service registration
+- [x] 2.3.2 Implement service registration
   - **File**: `src/asap/discovery/dnssd.py` (create new)
   - **What**: Create `DNSSDAdvertiser` class:
     - Service type: `_asap._tcp.local.`
@@ -186,7 +189,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Reference**: https://www.dns-sd.org/
   - **Verify**: Service appears in Bonjour browser
 
-- [ ] 2.3.3 Implement service browser
+- [x] 2.3.3 Implement service browser
   - **File**: `src/asap/discovery/dnssd.py` (modify)
   - **What**: Create `DNSSDDiscovery` class:
     - `async def browse() -> List[AgentInfo]`
@@ -195,7 +198,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Why**: Complementary to advertiser - discover nearby agents
   - **Verify**: Browser finds advertised test agent
 
-- [ ] 2.3.4 Write tests (with mocking)
+- [x] 2.3.4 Write tests (with mocking)
   - **File**: `tests/discovery/test_dnssd.py` (create new)
   - **What**: Test with mocked zeroconf:
     - Service registration works
@@ -204,15 +207,15 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Note**: Network tests may need skip markers for CI
   - **Verify**: `pytest tests/discovery/test_dnssd.py -v` passes
 
-- [ ] 2.3.5 Commit milestone
+- [x] 2.3.5 Commit milestone
   - **Command**: `git commit -m "feat(discovery): add DNS-SD/mDNS support (optional)"`
   - **Scope**: dnssd.py, test_dnssd.py, pyproject.toml
   - **Verify**: `git log -1` shows correct message
 
 **Acceptance Criteria**:
-- [ ] Agents can advertise via DNS-SD
-- [ ] Agents can discover nearby agents
-- [ ] Works offline (no internet needed)
+- [x] Agents can advertise via DNS-SD
+- [x] Agents can discover nearby agents
+- [x] Works offline (no internet needed)
 
 ---
 
@@ -226,7 +229,7 @@ Well-known discovery enables agents to find each other without prior configurati
 
 ### Sub-tasks
 
-- [ ] 2.4.1 Define Lite Registry schema model
+- [x] 2.4.1 Define Lite Registry schema model
   - **File**: `src/asap/discovery/registry.py` (create new)
   - **What**: Pydantic v2 models:
     - `RegistryEntry`: id, name, description, endpoints (dict[str, str]), skills (list[str]), asap_version
@@ -235,7 +238,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Pattern**: Follow manifest model pattern in `models/entities.py`
   - **Verify**: Models validate with Pydantic, serialize to JSON
 
-- [ ] 2.4.2 Implement `discover_from_registry()` method
+- [x] 2.4.2 Implement `discover_from_registry()` method
   - **File**: `src/asap/discovery/registry.py` (modify)
   - **What**: Create function:
     - `async def discover_from_registry(registry_url: str = DEFAULT_REGISTRY_URL) -> LiteRegistry`
@@ -245,7 +248,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Why**: Programmatic discovery of listed agents
   - **Verify**: Method fetches and parses registry correctly
 
-- [ ] 2.4.3 Add filtering methods
+- [x] 2.4.3 Add filtering methods
   - **File**: `src/asap/discovery/registry.py` (modify)
   - **What**: Add convenience methods:
     - `find_by_skill(registry: LiteRegistry, skill: str) -> list[RegistryEntry]`
@@ -253,7 +256,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Why**: Enables agent discovery by capability
   - **Verify**: Filtering returns correct results
 
-- [ ] 2.4.4 Create registry entry template and validator
+- [x] 2.4.4 Create registry entry template and validator
   - **File**: `src/asap/discovery/registry.py` (modify)
   - **What**: Add:
     - `generate_registry_entry(manifest: Manifest, endpoints: dict[str, str]) -> RegistryEntry`
@@ -262,7 +265,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Why**: Makes it easy for developers to create their PR submission
   - **Verify**: Generated entry is valid JSON
 
-- [ ] 2.4.5 Write tests
+- [x] 2.4.5 Write tests
   - **File**: `tests/discovery/test_registry.py` (create new)
   - **What**: Test scenarios:
     - Schema validation (valid/invalid entries)
@@ -272,17 +275,17 @@ Well-known discovery enables agents to find each other without prior configurati
     - Network error handled gracefully
   - **Verify**: `pytest tests/discovery/test_registry.py -v` all pass
 
-- [ ] 2.4.6 Commit milestone
+- [x] 2.4.6 Commit milestone
   - **Command**: `git commit -m "feat(discovery): add Lite Registry client (SD-11, ADR-15)"`
   - **Scope**: registry.py, test_registry.py
   - **Verify**: `git log -1` shows correct message
 
 **Acceptance Criteria**:
-- [ ] Lite Registry schema validates with Pydantic
-- [ ] `discover_from_registry()` fetches and parses correctly
-- [ ] Filtering by skill works
-- [ ] Registry entry generation from manifest works
-- [ ] Test coverage >95%
+- [x] Lite Registry schema validates with Pydantic
+- [x] `discover_from_registry()` fetches and parses correctly
+- [x] Filtering by skill works
+- [x] Registry entry generation from manifest works
+- [x] Test coverage >95%
 
 ---
 
@@ -296,7 +299,7 @@ Well-known discovery enables agents to find each other without prior configurati
 
 ### Sub-tasks
 
-- [ ] 2.5.1 Create health endpoint handler
+- [x] 2.5.1 Create health endpoint handler
   - **File**: `src/asap/discovery/health.py` (create new)
   - **What**: Create FastAPI route:
     - `GET /.well-known/asap/health`
@@ -307,7 +310,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Pattern**: Kubernetes `/healthz` pattern, simple and fast
   - **Verify**: Curl returns valid JSON health response
 
-- [ ] 2.5.2 Add ttl_seconds to Manifest model
+- [x] 2.5.2 Add ttl_seconds to Manifest model
   - **File**: `src/asap/models/entities.py` (modify existing)
   - **What**: Add optional field to Manifest:
     - `ttl_seconds: int = 300` — how long to consider agent "alive" without re-check
@@ -316,7 +319,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Why**: Without TTL, clients must poll health constantly
   - **Verify**: Manifest serializes with ttl_seconds field
 
-- [ ] 2.5.3 Integrate with ASAPServer
+- [x] 2.5.3 Integrate with ASAPServer
   - **File**: `src/asap/transport/server.py` (modify existing)
   - **What**: Auto-register health route alongside well-known:
     - If `ASAPServer(manifest=my_manifest)` → register both endpoints
@@ -326,7 +329,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Pattern**: Same integration as well-known endpoint (Task 2.1.3)
   - **Verify**: Server with manifest serves health endpoint
 
-- [ ] 2.5.4 Add health_check client method
+- [x] 2.5.4 Add health_check client method
   - **File**: `src/asap/transport/client.py` (modify existing)
   - **What**: Add method:
     - `async def health_check(base_url: str) -> HealthStatus`
@@ -336,7 +339,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Why**: Programmatic health checking for Registry and consumers
   - **Verify**: Client can check agent health
 
-- [ ] 2.5.5 Write tests
+- [x] 2.5.5 Write tests
   - **File**: `tests/discovery/test_health.py` (create new)
   - **What**: Test scenarios:
     - Healthy response with correct fields
@@ -352,10 +355,10 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Verify**: `git log -1` shows correct message
 
 **Acceptance Criteria**:
-- [ ] Health endpoint returns agent status
-- [ ] Manifest includes ttl_seconds field
-- [ ] Client can check agent health programmatically
-- [ ] Integration with ASAPServer is automatic
+- [x] Health endpoint returns agent status
+- [x] Manifest includes ttl_seconds field
+- [x] Client can check agent health programmatically
+- [x] Integration with ASAPServer is automatic
 
 ---
 
@@ -369,12 +372,12 @@ Well-known discovery enables agents to find each other without prior configurati
 
 ### Sub-tasks
 
-- [ ] 2.6.1 Update roadmap progress
+- [x] 2.6.1 Update roadmap progress
   - **File**: `tasks-v1.1.0-roadmap.md` (modify)
   - **What**: Mark S2 tasks as complete `[x]`, update progress percentage
   - **Verify**: Progress shows 100% for S2
 
-- [ ] 2.6.2 Verify all acceptance criteria met
+- [x] 2.6.2 Verify all acceptance criteria met
   - **What**: Manually verify:
     - Well-known endpoint serves manifest ✓
     - Client discovery works ✓
@@ -382,32 +385,32 @@ Well-known discovery enables agents to find each other without prior configurati
     - DNS-SD works (if implemented) ✓
   - **Verify**: All criteria checked off
 
-- [ ] 2.6.3 Run full test suite
+- [x] 2.6.3 Run full test suite
   - **Command**: `pytest tests/discovery -v --cov`
   - **What**: Verify all new tests pass with >95% coverage
   - **Verify**: No failures, coverage target met
 
-- [ ] 2.6.4 Commit checkpoint
+- [x] 2.6.4 Commit checkpoint
   - **Command**: `git commit -m "chore: mark v1.1.0 S2 complete"`
   - **Verify**: Clean commit with progress updates
 
 **Acceptance Criteria**:
-- [ ] All S2 tasks complete
-- [ ] Test suite passes
-- [ ] Progress tracked in roadmap
+- [x] All S2 tasks complete
+- [x] Test suite passes
+- [x] Progress tracked in roadmap
 
 ---
 
 ## Sprint S2 Definition of Done
 
-- [ ] Well-known endpoint serving manifest
-- [ ] Client discovery method working
-- [ ] Manifests cached with proper TTL
-- [ ] Lite Registry client functional (SD-11, ADR-15)
-- [ ] Health/liveness endpoint functional
-- [ ] Manifest includes ttl_seconds field
-- [ ] DNS-SD support (Optional — defer to v1.1.1+)
-- [ ] Test coverage >95%
-- [ ] Progress tracked in roadmap
+- [x] Well-known endpoint serving manifest
+- [x] Client discovery method working
+- [x] Manifests cached with proper TTL
+- [x] Lite Registry client functional (SD-11, ADR-15)
+- [x] Health/liveness endpoint functional
+- [x] Manifest includes ttl_seconds field
+- [x] DNS-SD support (Optional — defer to v1.1.1+)
+- [x] Test coverage >95%
+- [x] Progress tracked in roadmap
 
 **Total Sub-tasks**: ~32

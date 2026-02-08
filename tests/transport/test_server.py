@@ -154,6 +154,29 @@ class TestManifestEndpoint:
         assert response2.status_code == 200
         assert response1.json() == response2.json()
 
+    def test_manifest_endpoint_returns_cache_headers(self, client: TestClient) -> None:
+        """Test that manifest endpoint returns Cache-Control and ETag."""
+        response = client.get("/.well-known/asap/manifest.json")
+        assert response.status_code == 200
+        assert "cache-control" in response.headers
+        assert "public" in response.headers["cache-control"]
+        assert "max-age=300" in response.headers["cache-control"]
+        assert "etag" in response.headers
+        assert response.headers["etag"].startswith('"') and response.headers["etag"].endswith('"')
+
+    def test_manifest_endpoint_returns_304_when_etag_matches(self, client: TestClient) -> None:
+        """Test that second request with If-None-Match returns 304 Not Modified."""
+        first = client.get("/.well-known/asap/manifest.json")
+        assert first.status_code == 200
+        etag = first.headers.get("etag")
+        assert etag is not None
+        second = client.get(
+            "/.well-known/asap/manifest.json",
+            headers={"If-None-Match": etag},
+        )
+        assert second.status_code == 304
+        assert second.content in (b"", b"None") or len(second.content) == 0
+
 
 class TestErrorHandling:
     """Tests for error handling and exception middleware."""

@@ -7,6 +7,7 @@ Provides token acquisition and refresh using:
 Uses Authlib's AsyncOAuth2Client internally (ADR-12).
 """
 
+import asyncio
 import time
 from typing import Any, Optional
 
@@ -118,13 +119,13 @@ class OAuth2ClientCredentials:
         self._scope = scope
         self._transport = transport
         self._cached_token: Optional[Token] = None
+        self._refresh_lock = asyncio.Lock()
 
     async def get_valid_token(self, scope: Optional[str] = None) -> Token:
         """Return a valid token, using cache if not expired or refreshing if near expiry.
 
         Reuses the cached token when it is still valid. Refreshes 30 seconds
         before actual expiry to prevent race conditions (see TOKEN_REFRESH_BUFFER_SECONDS).
-
         Args:
             scope: Optional scopes to request (overrides constructor scope).
 
@@ -139,9 +140,14 @@ class OAuth2ClientCredentials:
             buffer_seconds=TOKEN_REFRESH_BUFFER_SECONDS
         ):
             return self._cached_token
-        token = await self.get_access_token(scope=scope)
-        self._cached_token = token
-        return token
+        async with self._refresh_lock:
+            if self._cached_token is not None and not self._cached_token.is_expired(
+                buffer_seconds=TOKEN_REFRESH_BUFFER_SECONDS
+            ):
+                return self._cached_token
+            token = await self.get_access_token(scope=scope)
+            self._cached_token = token
+            return token
 
     async def get_access_token(self, scope: Optional[str] = None) -> Token:
         """Obtain a new access token from the token endpoint.

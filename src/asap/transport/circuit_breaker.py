@@ -61,6 +61,7 @@ class CircuitBreaker:
         self._state = CircuitState.CLOSED
         self._consecutive_failures = 0
         self._last_failure_time: float | None = None
+        self._half_open_permit = True
         self._lock = threading.RLock()
 
     def record_success(self) -> None:
@@ -94,8 +95,8 @@ class CircuitBreaker:
     def can_attempt(self) -> bool:
         """Check if a request can be attempted.
 
-        Returns:
-            True if request can be attempted, False if circuit is open
+        In HALF_OPEN only one request is allowed through (single permit);
+        subsequent callers get False until that request completes.
         """
         with self._lock:
             if self._state == CircuitState.OPEN:
@@ -103,9 +104,14 @@ class CircuitBreaker:
                     elapsed = time.time() - self._last_failure_time
                     if elapsed >= self.timeout:
                         self._state = CircuitState.HALF_OPEN
-                        return True
-                return False
-
+                        self._half_open_permit = True
+                if self._state != CircuitState.HALF_OPEN:
+                    return False
+            if self._state == CircuitState.HALF_OPEN:
+                if not self._half_open_permit:
+                    return False
+                self._half_open_permit = False
+                return True
             return True
 
     def get_state(self) -> CircuitState:

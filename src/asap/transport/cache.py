@@ -39,7 +39,7 @@ class CacheEntry:
             ttl: Time to live in seconds
         """
         self.manifest = manifest
-        self.expires_at = time.time() + ttl
+        self.expires_at = time.monotonic() + ttl
 
     def is_expired(self) -> bool:
         """Check if cache entry has expired.
@@ -47,7 +47,7 @@ class CacheEntry:
         Returns:
             True if entry has expired, False otherwise
         """
-        return time.time() >= self.expires_at
+        return time.monotonic() >= self.expires_at
 
 
 class ManifestCache:

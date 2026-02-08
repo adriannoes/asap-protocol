@@ -52,11 +52,13 @@ from pathlib import Path
 from typing import Any, Callable, TypeVar, cast
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from opentelemetry import context
 from pydantic import ValidationError
 from slowapi.errors import RateLimitExceeded
 
+from asap.discovery import health as discovery_health
+from asap.discovery import wellknown
 from asap.errors import InvalidNonceError, InvalidTimestampError, ThreadPoolExhaustedError
 from asap.models.constants import MAX_REQUEST_SIZE
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
@@ -143,11 +145,14 @@ class RegistryHolder:
         self.registry = new_registry
 
 
+_HOT_RELOAD_RETRY_DELAY_SECONDS = 5.0
+
+
 def _run_handler_watcher(holder: RegistryHolder, handlers_path: str) -> None:
     """Background thread: watch handlers_path and reload registry on change.
 
-    Graceful degradation: if watchfiles is not installed, hot reload is skipped
-    and the server runs normally without file watching.
+    On filesystem/watch errors the loop retries after a delay so the thread
+    keeps running. If watchfiles is not installed, hot reload is skipped.
     """
     try:
         from watchfiles import watch
@@ -158,33 +163,36 @@ def _run_handler_watcher(holder: RegistryHolder, handlers_path: str) -> None:
             message="watchfiles not installed; hot reload disabled. Install with: pip install watchfiles",
         )
         return
-    try:
-        for changes in watch(handlers_path):
-            if not changes:
-                continue
-            try:
-                import asap.transport.handlers as handlers_module
+    while True:
+        try:
+            for changes in watch(handlers_path):
+                if not changes:
+                    continue
+                try:
+                    import asap.transport.handlers as handlers_module
 
-                importlib.reload(handlers_module)
-                new_registry = handlers_module.create_default_registry()
-                holder.replace_registry(new_registry)
-                logger.info(
-                    "asap.server.handlers_reloaded",
-                    path=handlers_path,
-                    handlers=new_registry.list_handlers(),
-                )
-            except Exception as e:
-                logger.warning(
-                    "asap.server.handlers_reload_failed",
-                    path=handlers_path,
-                    error=str(e),
-                )
-    except Exception as e:
-        logger.warning(
-            "asap.server.handler_watcher_stopped",
-            path=handlers_path,
-            error=str(e),
-        )
+                    importlib.reload(handlers_module)
+                    new_registry = handlers_module.create_default_registry()
+                    holder.replace_registry(new_registry)
+                    logger.info(
+                        "asap.server.handlers_reloaded",
+                        path=handlers_path,
+                        handlers=new_registry.list_handlers(),
+                    )
+                except Exception as e:
+                    logger.warning(
+                        "asap.server.handlers_reload_failed",
+                        path=handlers_path,
+                        error=str(e),
+                    )
+        except Exception as e:
+            logger.warning(
+                "asap.server.handler_watcher_retry",
+                path=handlers_path,
+                error=str(e),
+                retry_seconds=_HOT_RELOAD_RETRY_DELAY_SECONDS,
+            )
+            time.sleep(_HOT_RELOAD_RETRY_DELAY_SECONDS)
 
 
 @dataclass
@@ -1429,22 +1437,22 @@ def create_app(
         """
         return JSONResponse(status_code=200, content={"status": "ok"})
 
-    @app.get("/.well-known/asap/manifest.json")
-    async def get_manifest() -> dict[str, Any]:
-        """Return the agent's manifest for discovery.
+    server_started_at = time.monotonic()
+    if manifest is not None:
 
-        This endpoint allows other agents to discover this agent's
-        capabilities, skills, and communication endpoints.
+        @app.get(wellknown.WELLKNOWN_MANIFEST_PATH)
+        async def get_manifest(request: Request) -> Response:
+            """Return the agent's manifest for discovery.
 
-        Returns:
-            Agent manifest as JSON dictionary
+            This endpoint allows other agents to discover this agent's
+            capabilities, skills, and communication endpoints.
+            """
+            return await wellknown.get_manifest_response(manifest, request)
 
-        Example:
-            >>> manifest = get_manifest()
-            >>> "id" in manifest
-            True
-        """
-        return manifest.model_dump()
+        @app.get(discovery_health.WELLKNOWN_HEALTH_PATH)
+        async def get_health() -> JSONResponse:
+            """Return agent health/liveness status (200 healthy, 503 unhealthy)."""
+            return await discovery_health.get_health_response_async(manifest, server_started_at)
 
     @app.get("/asap/metrics")
     async def get_metrics_endpoint() -> PlainTextResponse:

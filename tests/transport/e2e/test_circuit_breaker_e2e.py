@@ -135,14 +135,13 @@ class TestCircuitBreakerE2E:
             assert client._circuit_breaker.get_state() == CircuitState.OPEN
             initial_calls = call_count
 
-            # Phase 2: Wait for circuit to transition to HALF_OPEN
+            # Phase 2: Wait so next can_attempt() will transition OPEN -> HALF_OPEN
             await asyncio.sleep(0.15)
-            assert client._circuit_breaker.can_attempt() is True
 
             # Phase 3: Server comes back online
             server_healthy = True
 
-            # Phase 4: First successful request closes the circuit
+            # Phase 4: First request gets single HALF_OPEN permit, succeeds, closes circuit
             response = await client.send(sample_request_envelope)
 
             assert response.payload_type == "task.response"
@@ -176,11 +175,10 @@ class TestCircuitBreakerE2E:
             assert client._circuit_breaker is not None
             assert client._circuit_breaker.get_state() == CircuitState.OPEN
 
-            # Wait for HALF_OPEN
+            # Wait so next can_attempt() will transition OPEN -> HALF_OPEN
             await asyncio.sleep(0.15)
-            assert client._circuit_breaker.can_attempt() is True
 
-            # Recovery attempt fails -> circuit reopens
+            # Recovery attempt gets single HALF_OPEN permit, fails, reopens circuit
             with pytest.raises(ASAPConnectionError):
                 await client.send(sample_request_envelope)
 
