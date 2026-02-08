@@ -19,6 +19,7 @@ from .metering import (
 )
 from .snapshot import SnapshotStore
 from .stores.memory import InMemorySnapshotStore
+from .stores.sqlite import SQLiteMeteringStore, SQLiteSnapshotStore
 from asap.models.enums import TaskStatus
 
 __all__ = [
@@ -27,6 +28,8 @@ __all__ = [
     "transition",
     "SnapshotStore",
     "InMemorySnapshotStore",
+    "SQLiteSnapshotStore",
+    "SQLiteMeteringStore",
     "MeteringStore",
     "InMemoryMeteringStore",
     "UsageEvent",
