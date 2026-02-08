@@ -35,7 +35,8 @@ class TestHealthResponse:
 
     def test_healthy_response_has_required_fields(self, sample_manifest: Manifest) -> None:
         """Health response includes status, agent_id, version, asap_version, uptime_seconds."""
-        started_at = time.time() - 10.0
+        # started_at must be monotonic (health uses time.monotonic() for uptime)
+        started_at = time.monotonic() - 10.0
         health_status, status_code = health.get_health_response(sample_manifest, started_at)
         assert status_code == 200
         assert health_status.status == "healthy"
@@ -47,7 +48,7 @@ class TestHealthResponse:
 
     def test_unhealthy_returns_503(self, sample_manifest: Manifest) -> None:
         """When is_healthy=False, status_code is 503."""
-        started_at = time.time()
+        started_at = time.monotonic()
         health_status, status_code = health.get_health_response(
             sample_manifest, started_at, is_healthy=False
         )
@@ -58,7 +59,7 @@ class TestHealthResponse:
         """Health response can include load metrics."""
         load = health.HealthLoad(active_tasks=3, queue_depth=2)
         health_status, status_code = health.get_health_response(
-            sample_manifest, time.time(), load=load
+            sample_manifest, time.monotonic(), load=load
         )
         assert status_code == 200
         assert health_status.load is not None

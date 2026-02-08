@@ -56,15 +56,15 @@ class HealthStatus(BaseModel):
 
 
 def compute_uptime_seconds(started_at: float) -> float:
-    """Compute uptime in seconds from a start timestamp.
+    """Compute uptime in seconds from a monotonic start timestamp.
 
     Args:
-        started_at: Unix timestamp (from time.time()) when server started.
+        started_at: Value of time.monotonic() when server started.
 
     Returns:
         Uptime in seconds.
     """
-    return max(0.0, time.time() - started_at)
+    return max(0.0, time.monotonic() - started_at)
 
 
 def get_health_response(

@@ -1431,8 +1431,7 @@ def create_app(
         """
         return JSONResponse(status_code=200, content={"status": "ok"})
 
-    # Well-known discovery: only register when manifest is provided (skip for client-only)
-    server_started_at = time.time()
+    server_started_at = time.monotonic()
     if manifest is not None:
 
         @app.get(wellknown.WELLKNOWN_MANIFEST_PATH)
