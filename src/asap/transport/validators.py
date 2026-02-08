@@ -5,6 +5,7 @@ including timestamp validation for replay attack prevention and optional
 nonce validation for duplicate detection.
 """
 
+import random
 import threading
 import time
 from datetime import datetime, timezone
@@ -152,11 +153,13 @@ class NonceStore(Protocol):
         ...
 
 
+_CLEANUP_PROBABILITY = 0.01
+
+
 class InMemoryNonceStore:
     """In-memory nonce store with TTL-based expiration.
 
-    This implementation uses a dictionary to store nonces with their
-    expiration times. Expired nonces are lazily cleaned up on access.
+    Expired nonces are cleaned up probabilistically to avoid O(N) on every request.
 
     Attributes:
         _store: Dictionary mapping nonce to expiration timestamp
@@ -169,11 +172,9 @@ class InMemoryNonceStore:
         self._lock = threading.RLock()
 
     def _cleanup_expired(self) -> None:
-        """Remove expired nonces from the store.
-
-        This is called lazily during access operations to keep the store
-        from growing unbounded.
-        """
+        """Remove expired nonces; runs with _CLEANUP_PROBABILITY to bound cost."""
+        if random.random() >= _CLEANUP_PROBABILITY:
+            return
         now = time.time()
         expired = [nonce for nonce, expiry in self._store.items() if expiry < now]
         for nonce in expired:
