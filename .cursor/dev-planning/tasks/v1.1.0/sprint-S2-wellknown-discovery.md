@@ -10,13 +10,13 @@
 
 - `src/asap/discovery/__init__.py` - Discovery module init (created)
 - `src/asap/discovery/wellknown.py` - Well-known endpoint handler (created)
-- `src/asap/discovery/validation.py` - Manifest validation
+- `src/asap/discovery/validation.py` - Manifest validation (created)
 - `src/asap/discovery/dns_sd.py` - DNS-SD support (optional)
-- `src/asap/transport/client.py` - Client discover() method
+- `src/asap/transport/client.py` - Client discover() method (added), get_manifest()
 - `src/asap/discovery/registry.py` - Lite Registry client (SD-11)
 - `tests/discovery/__init__.py` - Discovery test package (created)
 - `tests/discovery/test_wellknown.py` - Well-known endpoint tests (created)
-- `tests/discovery/test_discovery_client.py` - Client discovery tests
+- `tests/discovery/test_discovery_client.py` - Client discovery tests (created)
 - `tests/discovery/test_dnssd.py` - DNS-SD tests (optional)
 
 ---
@@ -107,7 +107,7 @@ Well-known discovery enables agents to find each other without prior configurati
 
 ### Sub-tasks
 
-- [ ] 2.2.1 Add discover method to ASAPClient
+- [x] 2.2.1 Add discover method to ASAPClient
   - **File**: `src/asap/transport/client.py` (modify existing)
   - **What**: Add method:
     - `async def discover(base_url: str) -> Manifest`
@@ -118,7 +118,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Pattern**: Similar to existing `send()` method patterns
   - **Verify**: Client can discover manifest from test server
 
-- [ ] 2.2.2 Cache discovered manifests
+- [x] 2.2.2 Cache discovered manifests
   - **File**: `src/asap/transport/client.py` (modify)
   - **What**: Integrate with existing `ManifestCache`:
     - Store discovered manifests with TTL
@@ -128,7 +128,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Pattern**: Use existing `ManifestCache` from `src/asap/models/entities.py`
   - **Verify**: Second discover() call uses cached manifest
 
-- [ ] 2.2.3 Add manifest validation
+- [x] 2.2.3 Add manifest validation
   - **File**: `src/asap/discovery/validation.py` (create new)
   - **What**: Validate discovered manifests:
     - Schema validation (required fields present)
@@ -137,7 +137,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Why**: Prevent runtime errors from malformed manifests
   - **Verify**: Invalid manifest raises descriptive error
 
-- [ ] 2.2.4 Write integration tests
+- [x] 2.2.4 Write integration tests
   - **File**: `tests/discovery/test_discovery_client.py` (create new)
   - **What**: Test scenarios:
     - Client discovers manifest from running server
@@ -147,19 +147,19 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Why**: Discovery is foundational for agent interaction
   - **Verify**: `pytest tests/discovery/test_discovery_client.py -v` all pass
 
-- [ ] 2.2.5 Commit milestone
+- [x] 2.2.5 Commit milestone
   - **Command**: `git commit -m "feat(discovery): add client-side manifest discovery"`
   - **Scope**: client.py changes, validation.py, test_discovery_client.py
   - **Verify**: `git log -1` shows correct message
 
 **Acceptance Criteria**:
-- [ ] Client can discover agents from URL
-- [ ] Manifests are cached
-- [ ] Invalid manifests produce clear errors
+- [x] Client can discover agents from URL
+- [x] Manifests are cached
+- [x] Invalid manifests produce clear errors
 
 ---
 
-## Task 2.3: DNS-SD Support (Optional P3)
+## Task 2.3: DNS-SD Support
 
 **Goal**: Enable local network agent discovery via mDNS/DNS-SD.
 
@@ -169,14 +169,14 @@ Well-known discovery enables agents to find each other without prior configurati
 
 ### Sub-tasks
 
-- [ ] 2.3.1 Add zeroconf dependency
+- [x] 2.3.1 Add zeroconf dependency
   - **File**: `pyproject.toml` (modify)
   - **What**: Add to optional dependencies: `[project.optional-dependencies] dns-sd = ["zeroconf>=0.80"]`
   - **Why**: zeroconf is the Python library for mDNS/DNS-SD
   - **Command**: `uv add --optional "zeroconf>=0.80"`
   - **Verify**: `uv run python -c "import zeroconf"` with dns-sd extra
 
-- [ ] 2.3.2 Implement service registration
+- [x] 2.3.2 Implement service registration
   - **File**: `src/asap/discovery/dnssd.py` (create new)
   - **What**: Create `DNSSDAdvertiser` class:
     - Service type: `_asap._tcp.local.`
@@ -186,7 +186,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Reference**: https://www.dns-sd.org/
   - **Verify**: Service appears in Bonjour browser
 
-- [ ] 2.3.3 Implement service browser
+- [x] 2.3.3 Implement service browser
   - **File**: `src/asap/discovery/dnssd.py` (modify)
   - **What**: Create `DNSSDDiscovery` class:
     - `async def browse() -> List[AgentInfo]`
@@ -195,7 +195,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Why**: Complementary to advertiser - discover nearby agents
   - **Verify**: Browser finds advertised test agent
 
-- [ ] 2.3.4 Write tests (with mocking)
+- [x] 2.3.4 Write tests (with mocking)
   - **File**: `tests/discovery/test_dnssd.py` (create new)
   - **What**: Test with mocked zeroconf:
     - Service registration works
@@ -204,15 +204,15 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Note**: Network tests may need skip markers for CI
   - **Verify**: `pytest tests/discovery/test_dnssd.py -v` passes
 
-- [ ] 2.3.5 Commit milestone
+- [x] 2.3.5 Commit milestone
   - **Command**: `git commit -m "feat(discovery): add DNS-SD/mDNS support (optional)"`
   - **Scope**: dnssd.py, test_dnssd.py, pyproject.toml
   - **Verify**: `git log -1` shows correct message
 
 **Acceptance Criteria**:
-- [ ] Agents can advertise via DNS-SD
-- [ ] Agents can discover nearby agents
-- [ ] Works offline (no internet needed)
+- [x] Agents can advertise via DNS-SD
+- [x] Agents can discover nearby agents
+- [x] Works offline (no internet needed)
 
 ---
 
