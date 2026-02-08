@@ -40,9 +40,7 @@ class TestDiscoverFromServer:
         def mock_transport(request: httpx.Request) -> httpx.Response:
             nonlocal call_count
             call_count += 1
-            if request.method == "GET" and request.url.path.endswith(
-                WELLKNOWN_MANIFEST_PATH
-            ):
+            if request.method == "GET" and request.url.path.endswith(WELLKNOWN_MANIFEST_PATH):
                 return httpx.Response(status_code=200, json=VALID_MANIFEST_PAYLOAD)
             return httpx.Response(status_code=404, content=b"Not Found")
 
@@ -181,9 +179,7 @@ class TestDiscoverAgainstRealApp:
     """Integration: client discovers manifest from app via ASGITransport."""
 
     @pytest.mark.asyncio
-    async def test_discover_from_app_returns_manifest(
-        self, sample_manifest: "Manifest"
-    ) -> None:
+    async def test_discover_from_app_returns_manifest(self, sample_manifest: "Manifest") -> None:
         """ASAPClient.discover() against create_app() returns server manifest."""
         app = create_app(sample_manifest, rate_limit="999999/minute")
         transport = httpx.ASGITransport(app=app)
@@ -196,10 +192,5 @@ class TestDiscoverAgainstRealApp:
 
         assert manifest.id == sample_manifest.id
         assert manifest.name == sample_manifest.name
-        assert (
-            manifest.capabilities.asap_version
-            == sample_manifest.capabilities.asap_version
-        )
-        assert len(manifest.capabilities.skills) == len(
-            sample_manifest.capabilities.skills
-        )
+        assert manifest.capabilities.asap_version == sample_manifest.capabilities.asap_version
+        assert len(manifest.capabilities.skills) == len(sample_manifest.capabilities.skills)

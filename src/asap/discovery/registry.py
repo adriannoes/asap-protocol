@@ -7,6 +7,7 @@ listed agents.
 
 import time
 from datetime import datetime
+from typing import Any
 
 import httpx
 from pydantic import Field, field_validator
@@ -114,11 +115,11 @@ async def discover_from_registry(
             return registry
         _registry_cache.pop(registry_url, None)
 
-    kwargs: dict = {"timeout": httpx.Timeout(30.0)}
+    client_kwargs: dict[str, Any] = {"timeout": httpx.Timeout(30.0)}
     if transport is not None:
-        kwargs["transport"] = transport
+        client_kwargs["transport"] = transport
 
-    async with httpx.AsyncClient(**kwargs) as client:
+    async with httpx.AsyncClient(**client_kwargs) as client:
         response = await client.get(registry_url)
         response.raise_for_status()
         registry = LiteRegistry.model_validate_json(response.text)

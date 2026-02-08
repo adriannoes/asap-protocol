@@ -30,9 +30,7 @@ def client(app: "FastAPI") -> TestClient:
 class TestGetManifestJson:
     """Tests for get_manifest_json()."""
 
-    def test_returns_dict_equal_to_model_dump(
-        self, sample_manifest: Manifest
-    ) -> None:
+    def test_returns_dict_equal_to_model_dump(self, sample_manifest: Manifest) -> None:
         """Endpoint payload equals manifest.model_dump()."""
         result = wellknown.get_manifest_json(sample_manifest)
         assert result == sample_manifest.model_dump()
@@ -45,7 +43,6 @@ class TestGetManifestJson:
         import json
 
         result = wellknown.get_manifest_json(sample_manifest)
-        # Should not raise
         json.dumps(result)
 
 
@@ -60,13 +57,11 @@ class TestComputeManifestEtag:
 
     def test_deterministic_same_manifest(self, sample_manifest: Manifest) -> None:
         """Same manifest always yields same ETag."""
-        assert wellknown.compute_manifest_etag(
+        assert wellknown.compute_manifest_etag(sample_manifest) == wellknown.compute_manifest_etag(
             sample_manifest
-        ) == wellknown.compute_manifest_etag(sample_manifest)
+        )
 
-    def test_different_manifest_different_etag(
-        self, sample_manifest: Manifest
-    ) -> None:
+    def test_different_manifest_different_etag(self, sample_manifest: Manifest) -> None:
         """Different manifest yields different ETag."""
         other = Manifest(
             id="urn:asap:agent:other",
@@ -76,9 +71,9 @@ class TestComputeManifestEtag:
             capabilities=sample_manifest.capabilities,
             endpoints=sample_manifest.endpoints,
         )
-        assert wellknown.compute_manifest_etag(
-            sample_manifest
-        ) != wellknown.compute_manifest_etag(other)
+        assert wellknown.compute_manifest_etag(sample_manifest) != wellknown.compute_manifest_etag(
+            other
+        )
 
 
 class TestWellKnownEndpointViaApp:
@@ -113,9 +108,7 @@ class TestWellKnownEndpointViaApp:
         etag = response.headers["etag"]
         assert etag.startswith('"') and etag.endswith('"')
 
-    def test_etag_conditional_returns_304_when_matches(
-        self, client: TestClient
-    ) -> None:
+    def test_etag_conditional_returns_304_when_matches(self, client: TestClient) -> None:
         """If-None-Match with current ETag returns 304 Not Modified."""
         first = client.get(wellknown.WELLKNOWN_MANIFEST_PATH)
         assert first.status_code == 200
@@ -128,9 +121,7 @@ class TestWellKnownEndpointViaApp:
         assert second.status_code == 304
         assert len(second.content) == 0 or second.content in (b"", b"None")
 
-    def test_etag_conditional_returns_200_when_no_match(
-        self, client: TestClient
-    ) -> None:
+    def test_etag_conditional_returns_200_when_no_match(self, client: TestClient) -> None:
         """If-None-Match with wrong ETag returns 200 with body."""
         response = client.get(
             wellknown.WELLKNOWN_MANIFEST_PATH,

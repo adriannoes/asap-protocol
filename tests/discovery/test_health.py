@@ -33,14 +33,10 @@ def client(app: "FastAPI") -> TestClient:
 class TestHealthResponse:
     """Tests for get_health_response and build_health_json_response."""
 
-    def test_healthy_response_has_required_fields(
-        self, sample_manifest: Manifest
-    ) -> None:
+    def test_healthy_response_has_required_fields(self, sample_manifest: Manifest) -> None:
         """Health response includes status, agent_id, version, asap_version, uptime_seconds."""
         started_at = time.time() - 10.0
-        health_status, status_code = health.get_health_response(
-            sample_manifest, started_at
-        )
+        health_status, status_code = health.get_health_response(sample_manifest, started_at)
         assert status_code == 200
         assert health_status.status == "healthy"
         assert health_status.agent_id == sample_manifest.id
@@ -58,9 +54,7 @@ class TestHealthResponse:
         assert status_code == 503
         assert health_status.status == "unhealthy"
 
-    def test_health_response_includes_optional_load(
-        self, sample_manifest: Manifest
-    ) -> None:
+    def test_health_response_includes_optional_load(self, sample_manifest: Manifest) -> None:
         """Health response can include load metrics."""
         load = health.HealthLoad(active_tasks=3, queue_depth=2)
         health_status, status_code = health.get_health_response(
@@ -113,9 +107,7 @@ class TestClientHealthCheck:
     """Tests for ASAPClient.health_check()."""
 
     @pytest.mark.asyncio
-    async def test_health_check_parses_response(
-        self, sample_manifest: Manifest
-    ) -> None:
+    async def test_health_check_parses_response(self, sample_manifest: Manifest) -> None:
         """Client health_check parses response into HealthStatus."""
         app = create_app(sample_manifest, rate_limit="999999/minute")
         transport = httpx.ASGITransport(app=app)
@@ -132,9 +124,7 @@ class TestClientHealthCheck:
         assert status.uptime_seconds >= 0
 
     @pytest.mark.asyncio
-    async def test_health_check_http_error_raises(
-        self, sample_manifest: Manifest
-    ) -> None:
+    async def test_health_check_http_error_raises(self, sample_manifest: Manifest) -> None:
         """health_check raises ASAPConnectionError on HTTP 404."""
         from asap.transport.client import ASAPConnectionError
 

@@ -31,7 +31,7 @@ HEADER_IF_NONE_MATCH = "if-none-match"
 HEADER_CACHE_CONTROL = "cache-control"
 
 
-def get_manifest_json(manifest: Manifest) -> dict:
+def get_manifest_json(manifest: Manifest) -> dict[str, object]:
     """Return manifest as JSON-serializable dict for the well-known endpoint.
 
     Args:
@@ -83,9 +83,8 @@ async def get_manifest_response(manifest: Manifest, request: Request) -> Respons
     if_none_match = request.headers.get(HEADER_IF_NONE_MATCH)
 
     # RFC 7232: If-None-Match can be a single value or comma-separated list
-    match = (
-        if_none_match is not None
-        and any(part.strip() == etag_header for part in if_none_match.split(","))
+    match = if_none_match is not None and any(
+        part.strip() == etag_header for part in if_none_match.split(",")
     )
     if match:
         return Response(

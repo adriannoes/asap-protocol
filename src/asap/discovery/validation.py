@@ -33,7 +33,7 @@ class ManifestValidationError(Exception):
         self.field = field
 
 
-def validate_manifest_schema(data: dict) -> Manifest:
+def validate_manifest_schema(data: dict[str, object]) -> Manifest:
     """Validate raw manifest data and return a Manifest instance.
 
     Ensures required fields are present and types are correct.
@@ -53,14 +53,8 @@ def validate_manifest_schema(data: dict) -> Manifest:
     try:
         return Manifest.model_validate(data)
     except ValidationError as e:
-        msg = str(e)
-        if "Field required" in msg or "missing" in msg.lower():
-            raise ManifestValidationError(
-                f"Invalid manifest schema: required fields missing or invalid. {msg}",
-                field="schema",
-            ) from e
         raise ManifestValidationError(
-            f"Invalid manifest schema: {msg}",
+            f"Invalid manifest schema: {e!s}",
             field="schema",
         ) from e
 

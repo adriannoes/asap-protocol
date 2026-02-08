@@ -86,6 +86,7 @@ class TestDNSSDAdvertiser:
         assert service_info.type == ASAP_SERVICE_TYPE
         assert service_info.port == 8000
         props = service_info.properties or {}
+
         # zeroconf may use bytes or str keys
         def get_prop(key: str) -> str:
             for k, v in props.items():
@@ -93,6 +94,7 @@ class TestDNSSDAdvertiser:
                 if key_match and v is not None:
                     return v.decode() if isinstance(v, bytes) else str(v)
             return ""
+
         assert get_prop(TXT_KEY_VERSION) == "1.0.0"
         assert "echo" in get_prop(TXT_KEY_CAPABILITIES)  # sample_manifest has echo skill
         assert get_prop(TXT_KEY_MANIFEST_URL).startswith("https://")
@@ -208,9 +210,7 @@ class TestDNSSDDiscovery:
         assert agents[0].port == 8000
 
     @pytest.mark.asyncio
-    async def test_browse_invokes_on_service_added(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    async def test_browse_invokes_on_service_added(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """on_service_added callback is invoked when agent discovered."""
         added: list[AgentInfo] = []
         mock_zc = MagicMock()

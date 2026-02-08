@@ -106,6 +106,7 @@ class TestDiscoverFromRegistry:
     @pytest.mark.asyncio
     async def test_fetches_and_parses_from_mock_url(self) -> None:
         """discover_from_registry returns parsed LiteRegistry from mock URL."""
+
         def mock_transport(request: httpx.Request) -> httpx.Response:
             return httpx.Response(status_code=200, content=VALID_REGISTRY_JSON.encode())
 
@@ -129,8 +130,12 @@ class TestDiscoverFromRegistry:
             return httpx.Response(status_code=200, content=VALID_REGISTRY_JSON.encode())
 
         url = "https://cache-test.example/registry.json"
-        reg1 = await discover_from_registry(registry_url=url, transport=httpx.MockTransport(mock_transport))
-        reg2 = await discover_from_registry(registry_url=url, transport=httpx.MockTransport(mock_transport))
+        reg1 = await discover_from_registry(
+            registry_url=url, transport=httpx.MockTransport(mock_transport)
+        )
+        reg2 = await discover_from_registry(
+            registry_url=url, transport=httpx.MockTransport(mock_transport)
+        )
 
         assert call_count == 1
         assert reg1.version == reg2.version
@@ -139,6 +144,7 @@ class TestDiscoverFromRegistry:
     @pytest.mark.asyncio
     async def test_network_error_raised(self) -> None:
         """discover_from_registry raises on HTTP error (e.g. 500)."""
+
         def mock_transport(request: httpx.Request) -> httpx.Response:
             return httpx.Response(status_code=500, content=b"Internal Server Error")
 
@@ -151,6 +157,7 @@ class TestDiscoverFromRegistry:
     @pytest.mark.asyncio
     async def test_invalid_json_raises_validation_error(self) -> None:
         """Response that is not valid LiteRegistry JSON raises ValidationError."""
+
         def mock_transport(request: httpx.Request) -> httpx.Response:
             return httpx.Response(status_code=200, content=b'{"not": "a valid registry"}')
 

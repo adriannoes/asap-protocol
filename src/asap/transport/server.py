@@ -1434,6 +1434,7 @@ def create_app(
     # Well-known discovery: only register when manifest is provided (skip for client-only)
     server_started_at = time.time()
     if manifest is not None:
+
         @app.get(wellknown.WELLKNOWN_MANIFEST_PATH)
         async def get_manifest(request: Request) -> Response:
             """Return the agent's manifest for discovery.
@@ -1446,9 +1447,7 @@ def create_app(
         @app.get(discovery_health.WELLKNOWN_HEALTH_PATH)
         async def get_health() -> JSONResponse:
             """Return agent health/liveness status (200 healthy, 503 unhealthy)."""
-            return await discovery_health.get_health_response_async(
-                manifest, server_started_at
-            )
+            return await discovery_health.get_health_response_async(manifest, server_started_at)
 
     @app.get("/asap/metrics")
     async def get_metrics_endpoint() -> PlainTextResponse:
