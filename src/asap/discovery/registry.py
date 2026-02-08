@@ -5,6 +5,8 @@ typed Pydantic models for the registry schema and helpers to fetch, parse, and f
 listed agents.
 """
 
+import asyncio
+import threading
 import time
 from datetime import datetime
 from typing import Any
@@ -24,6 +26,8 @@ DEFAULT_REGISTRY_TTL_SECONDS: int = 900
 
 # Module-level cache: registry_url -> (expiry_monotonic, LiteRegistry).
 _registry_cache: dict[str, tuple[float, "LiteRegistry"]] = {}
+_registry_locks: dict[str, asyncio.Lock] = {}
+_registry_locks_guard = threading.Lock()
 
 
 class RegistryEntry(ASAPBaseModel):
@@ -107,25 +111,37 @@ async def discover_from_registry(
         httpx.HTTPError: On network or protocol errors.
         pydantic.ValidationError: If the response does not match LiteRegistry schema.
     """
-    now = time.monotonic()
-    cached = _registry_cache.get(registry_url)
-    if cached is not None:
-        expiry, registry = cached
-        if now < expiry:
-            return registry
-        _registry_cache.pop(registry_url, None)
+    with _registry_locks_guard:
+        if registry_url not in _registry_locks:
+            _registry_locks[registry_url] = asyncio.Lock()
+        url_lock = _registry_locks[registry_url]
+    async with url_lock:
+        now = time.monotonic()
+        cached = _registry_cache.get(registry_url)
+        if cached is not None:
+            expiry, registry = cached
+            if now < expiry:
+                return registry
+            _registry_cache.pop(registry_url, None)
 
-    client_kwargs: dict[str, Any] = {"timeout": httpx.Timeout(30.0)}
-    if transport is not None:
-        client_kwargs["transport"] = transport
+        client_kwargs: dict[str, Any] = {"timeout": httpx.Timeout(30.0)}
+        if transport is not None:
+            client_kwargs["transport"] = transport
 
-    async with httpx.AsyncClient(**client_kwargs) as client:
-        response = await client.get(registry_url)
-        response.raise_for_status()
-        registry = LiteRegistry.model_validate_json(response.text)
+        async with httpx.AsyncClient(**client_kwargs) as client:
+            response = await client.get(registry_url)
+            response.raise_for_status()
+            registry = LiteRegistry.model_validate_json(response.text)
 
-    _registry_cache[registry_url] = (now + ttl_seconds, registry)
-    return registry
+        _registry_cache[registry_url] = (now + ttl_seconds, registry)
+        return registry
+
+
+def reset_registry_cache() -> None:
+    """Clear the module-level registry cache and coalescing locks (for test isolation)."""
+    with _registry_locks_guard:
+        _registry_cache.clear()
+        _registry_locks.clear()
 
 
 def find_by_skill(registry: LiteRegistry, skill: str) -> list[RegistryEntry]:
