@@ -34,12 +34,18 @@ def _make_manifest(agent_id: str = "urn:asap:agent:testagent") -> Manifest:
 
 
 class MockTime:
-    """Mock time.time() with a controllable current time."""
+    """Mock time.time() and time.monotonic() with a controllable current time.
+
+    Cache uses time.monotonic() for TTL; tests patch both so expiry is deterministic.
+    """
 
     def __init__(self, initial: float = 1000.0) -> None:
         self.current = initial
 
     def time(self) -> float:
+        return self.current
+
+    def monotonic(self) -> float:
         return self.current
 
     def advance(self, seconds: float) -> None:
@@ -50,11 +56,12 @@ class TestCacheEntry:
     """Tests for CacheEntry class."""
 
     def test_init_stores_manifest_and_expires_at(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """CacheEntry stores manifest and calculates expires_at = time.time() + ttl."""
+        """CacheEntry stores manifest and calculates expires_at = time.monotonic() + ttl."""
         from asap.transport import cache as cache_module
 
         mock_time = MockTime(1000.0)
         monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        monkeypatch.setattr(cache_module.time, "monotonic", mock_time.monotonic)
         manifest = _make_manifest()
         entry = CacheEntry(manifest, ttl=60.0)
         assert entry.manifest is manifest
@@ -66,6 +73,7 @@ class TestCacheEntry:
 
         mock_time = MockTime(1000.0)
         monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        monkeypatch.setattr(cache_module.time, "monotonic", mock_time.monotonic)
         manifest = _make_manifest()
         entry = CacheEntry(manifest, ttl=60.0)
         mock_time.advance(59.9)
@@ -77,6 +85,7 @@ class TestCacheEntry:
 
         mock_time = MockTime(1000.0)
         monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        monkeypatch.setattr(cache_module.time, "monotonic", mock_time.monotonic)
         manifest = _make_manifest()
         entry = CacheEntry(manifest, ttl=60.0)
         mock_time.advance(60.0)
@@ -88,6 +97,7 @@ class TestCacheEntry:
 
         mock_time = MockTime(1000.0)
         monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        monkeypatch.setattr(cache_module.time, "monotonic", mock_time.monotonic)
         manifest = _make_manifest()
         entry = CacheEntry(manifest, ttl=60.0)
         mock_time.advance(1000.0)
@@ -142,6 +152,7 @@ class TestManifestCacheGetSet:
 
         mock_time = MockTime(1000.0)
         monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        monkeypatch.setattr(cache_module.time, "monotonic", mock_time.monotonic)
         cache = ManifestCache(default_ttl=60.0)
         manifest = _make_manifest()
         url = "http://test.example.com/manifest.json"
@@ -154,6 +165,7 @@ class TestManifestCacheGetSet:
 
         mock_time = MockTime(1000.0)
         monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        monkeypatch.setattr(cache_module.time, "monotonic", mock_time.monotonic)
         cache = ManifestCache(default_ttl=60.0)
         manifest = _make_manifest()
         url = "http://test.example.com/manifest.json"
@@ -169,6 +181,7 @@ class TestManifestCacheGetSet:
 
         mock_time = MockTime(1000.0)
         monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        monkeypatch.setattr(cache_module.time, "monotonic", mock_time.monotonic)
         cache = ManifestCache(default_ttl=60.0)
         manifest = _make_manifest()
         url = "http://test.example.com/manifest.json"
@@ -184,6 +197,7 @@ class TestManifestCacheGetSet:
 
         mock_time = MockTime(1000.0)
         monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        monkeypatch.setattr(cache_module.time, "monotonic", mock_time.monotonic)
         cache = ManifestCache(default_ttl=60.0)
         manifest = _make_manifest()
         url = "http://test.example.com/manifest.json"
@@ -203,6 +217,7 @@ class TestManifestCacheInvalidate:
 
         mock_time = MockTime(1000.0)
         monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        monkeypatch.setattr(cache_module.time, "monotonic", mock_time.monotonic)
         cache = ManifestCache()
         manifest = _make_manifest()
         url = "http://test.example.com/manifest.json"
@@ -228,6 +243,7 @@ class TestManifestCacheClearAll:
 
         mock_time = MockTime(1000.0)
         monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        monkeypatch.setattr(cache_module.time, "monotonic", mock_time.monotonic)
         cache = ManifestCache()
         for i in range(5):
             cache.set(
@@ -250,6 +266,7 @@ class TestManifestCacheSize:
 
         mock_time = MockTime(1000.0)
         monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        monkeypatch.setattr(cache_module.time, "monotonic", mock_time.monotonic)
         cache = ManifestCache()
         assert cache.size() == 0
         cache.set("http://a.example.com/manifest.json", _make_manifest("urn:asap:agent:agenta"))
@@ -269,6 +286,7 @@ class TestManifestCacheCleanupExpired:
 
         mock_time = MockTime(1000.0)
         monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        monkeypatch.setattr(cache_module.time, "monotonic", mock_time.monotonic)
         cache = ManifestCache()
         cache.set(
             "http://short.example.com/manifest.json",
@@ -300,6 +318,7 @@ class TestManifestCacheCleanupExpired:
 
         mock_time = MockTime(1000.0)
         monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        monkeypatch.setattr(cache_module.time, "monotonic", mock_time.monotonic)
         cache = ManifestCache()
         cache.set("http://test.example.com/manifest.json", _make_manifest(), ttl=60.0)
         removed = cache.cleanup_expired()
@@ -323,6 +342,7 @@ class TestManifestCacheThreadSafety:
 
         mock_time = MockTime(1000.0)
         monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        monkeypatch.setattr(cache_module.time, "monotonic", mock_time.monotonic)
         cache = ManifestCache()
         manifest = _make_manifest("urn:asap:agent:testagent")
 
@@ -350,6 +370,7 @@ class TestManifestCacheLRU:
 
         mock_time = MockTime(1000.0)
         monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        monkeypatch.setattr(cache_module.time, "monotonic", mock_time.monotonic)
         cache = ManifestCache(max_size=3)
 
         # Add 3 entries (fills the cache)
@@ -372,6 +393,7 @@ class TestManifestCacheLRU:
 
         mock_time = MockTime(1000.0)
         monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        monkeypatch.setattr(cache_module.time, "monotonic", mock_time.monotonic)
         cache = ManifestCache(max_size=3)
 
         # Add 3 entries: a, b, c (a is oldest)
@@ -396,6 +418,7 @@ class TestManifestCacheLRU:
 
         mock_time = MockTime(1000.0)
         monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        monkeypatch.setattr(cache_module.time, "monotonic", mock_time.monotonic)
         cache = ManifestCache(max_size=3)
 
         # Add 3 entries: a, b, c
@@ -420,6 +443,7 @@ class TestManifestCacheLRU:
 
         mock_time = MockTime(1000.0)
         monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        monkeypatch.setattr(cache_module.time, "monotonic", mock_time.monotonic)
         cache = ManifestCache(max_size=0)
 
         # Add many entries
@@ -440,6 +464,7 @@ class TestManifestCacheLRU:
 
         mock_time = MockTime(1000.0)
         monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        monkeypatch.setattr(cache_module.time, "monotonic", mock_time.monotonic)
         cache = ManifestCache(max_size=1)
 
         cache.set("http://a.example.com/m.json", _make_manifest("urn:asap:agent:a"))
@@ -459,6 +484,7 @@ class TestManifestCacheLRU:
 
         mock_time = MockTime(1000.0)
         monkeypatch.setattr(cache_module.time, "time", mock_time.time)
+        monkeypatch.setattr(cache_module.time, "monotonic", mock_time.monotonic)
         cache = ManifestCache(max_size=10)
         manifest = _make_manifest("urn:asap:agent:testagent")
         errors: list[Exception] = []
