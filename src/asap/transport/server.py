@@ -52,11 +52,12 @@ from pathlib import Path
 from typing import Any, Callable, TypeVar, cast
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from opentelemetry import context
 from pydantic import ValidationError
 from slowapi.errors import RateLimitExceeded
 
+from asap.discovery import wellknown
 from asap.errors import InvalidNonceError, InvalidTimestampError, ThreadPoolExhaustedError
 from asap.models.constants import MAX_REQUEST_SIZE
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
@@ -1429,22 +1430,17 @@ def create_app(
         """
         return JSONResponse(status_code=200, content={"status": "ok"})
 
-    @app.get("/.well-known/asap/manifest.json")
-    async def get_manifest() -> dict[str, Any]:
-        """Return the agent's manifest for discovery.
+    # Well-known discovery: only register when manifest is provided (skip for client-only)
+    if manifest is not None:
+        @app.get(wellknown.WELLKNOWN_MANIFEST_PATH)
+        async def get_manifest(request: Request) -> Response:
+            """Return the agent's manifest for discovery.
 
-        This endpoint allows other agents to discover this agent's
-        capabilities, skills, and communication endpoints.
-
-        Returns:
-            Agent manifest as JSON dictionary
-
-        Example:
-            >>> manifest = get_manifest()
-            >>> "id" in manifest
-            True
-        """
-        return manifest.model_dump()
+            This endpoint allows other agents to discover this agent's
+            capabilities, skills, and communication endpoints.
+            Implemented by asap.discovery.wellknown (with caching and ETag).
+            """
+            return await wellknown.get_manifest_response(manifest, request)
 
     @app.get("/asap/metrics")
     async def get_metrics_endpoint() -> PlainTextResponse:

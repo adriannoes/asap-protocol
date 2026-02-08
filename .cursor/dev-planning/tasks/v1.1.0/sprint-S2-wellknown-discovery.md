@@ -8,14 +8,14 @@
 
 ## Relevant Files
 
-- `src/asap/discovery/__init__.py` - Discovery module init
-- `src/asap/discovery/wellknown.py` - Well-known endpoint
+- `src/asap/discovery/__init__.py` - Discovery module init (created)
+- `src/asap/discovery/wellknown.py` - Well-known endpoint handler (created)
 - `src/asap/discovery/validation.py` - Manifest validation
 - `src/asap/discovery/dns_sd.py` - DNS-SD support (optional)
 - `src/asap/transport/client.py` - Client discover() method
 - `src/asap/discovery/registry.py` - Lite Registry client (SD-11)
-- `tests/discovery/__init__.py` - Discovery test package
-- `tests/discovery/test_wellknown.py` - Well-known endpoint tests
+- `tests/discovery/__init__.py` - Discovery test package (created)
+- `tests/discovery/test_wellknown.py` - Well-known endpoint tests (created)
 - `tests/discovery/test_discovery_client.py` - Client discovery tests
 - `tests/discovery/test_dnssd.py` - DNS-SD tests (optional)
 
@@ -27,7 +27,7 @@ Well-known discovery enables agents to find each other without prior configurati
 
 ---
 
-## Task 2.1: Well-Known Endpoint
+## Task 2.1: Well-Known Endpoint ✅
 
 **Goal**: Serve agent manifest at standardized well-known URI.
 
@@ -37,7 +37,7 @@ Well-known discovery enables agents to find each other without prior configurati
 
 ### Sub-tasks
 
-- [ ] 2.1.1 Create discovery module
+- [x] 2.1.1 Create discovery module
   - **File**: `src/asap/discovery/__init__.py` (create new)
   - **File**: `src/asap/discovery/wellknown.py` (create new)
   - **What**: Create discovery module with wellknown endpoint handler
@@ -45,7 +45,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Pattern**: Follow `src/asap/auth/` module structure
   - **Verify**: `from asap.discovery import wellknown` imports
 
-- [ ] 2.1.2 Implement well-known route handler
+- [x] 2.1.2 Implement well-known route handler
   - **File**: `src/asap/discovery/wellknown.py` (modify)
   - **What**: Create FastAPI route:
     - `GET /.well-known/asap/manifest.json`
@@ -55,7 +55,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Reference**: RFC 8615 - Well-Known URIs
   - **Verify**: Curl returns valid JSON manifest
 
-- [ ] 2.1.3 Integrate with ASAPServer
+- [x] 2.1.3 Integrate with ASAPServer
   - **File**: `src/asap/transport/server.py` (modify existing)
   - **What**: Auto-register well-known route when manifest provided:
     - If `ASAPServer(manifest=my_manifest)` → register /.well-known/asap/manifest.json
@@ -64,7 +64,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Pattern**: Similar to how other routes are registered in `create_app()`
   - **Verify**: Server with manifest serves well-known endpoint
 
-- [ ] 2.1.4 Add HTTP caching headers
+- [x] 2.1.4 Add HTTP caching headers
   - **File**: `src/asap/discovery/wellknown.py` (modify)
   - **What**: Add response headers:
     - `Cache-Control: public, max-age=300` (5 minutes)
@@ -74,7 +74,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Pattern**: Standard HTTP caching patterns
   - **Verify**: Second request with ETag returns 304
 
-- [ ] 2.1.5 Write tests
+- [x] 2.1.5 Write tests
   - **File**: `tests/discovery/__init__.py` (create new)
   - **File**: `tests/discovery/test_wellknown.py` (create new)
   - **What**: Test scenarios:
@@ -85,15 +85,15 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Why**: Discovery is critical for agent ecosystem
   - **Verify**: `pytest tests/discovery/test_wellknown.py -v` all pass
 
-- [ ] 2.1.6 Commit milestone
+- [x] 2.1.6 Commit milestone
   - **Command**: `git commit -m "feat(discovery): add well-known manifest endpoint"`
   - **Scope**: discovery/, test_wellknown.py, server.py changes
   - **Verify**: `git log -1` shows correct message
 
 **Acceptance Criteria**:
-- [ ] Well-known endpoint serves manifest
-- [ ] Caching headers reduce repeated requests
-- [ ] Integration with ASAPServer is seamless
+- [x] Well-known endpoint serves manifest
+- [x] Caching headers reduce repeated requests
+- [x] Integration with ASAPServer is seamless
 
 ---
 

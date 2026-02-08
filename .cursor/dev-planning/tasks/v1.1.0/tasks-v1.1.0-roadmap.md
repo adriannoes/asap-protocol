@@ -68,7 +68,7 @@ See [SD-3 (WebSocket)](../../product-specs/roadmap-to-marketplace.md) and [SD-7 
 
 ### Tasks
 
-- [ ] 2.1 Implement well-known endpoint
+- [x] 2.1 Implement well-known endpoint
   - Goal: Serve `/.well-known/asap/manifest.json`
   - Deliverable: `src/asap/discovery/wellknown.py`
   - Details: [Auth Detailed - Task 2.1](./sprint-S2-wellknown-discovery.md#task-21-well-known-endpoint)
