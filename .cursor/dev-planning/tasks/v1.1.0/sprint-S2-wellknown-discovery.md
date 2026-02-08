@@ -13,10 +13,11 @@
 - `src/asap/discovery/validation.py` - Manifest validation (created)
 - `src/asap/discovery/dns_sd.py` - DNS-SD support (optional)
 - `src/asap/transport/client.py` - Client discover() method (added), get_manifest()
-- `src/asap/discovery/registry.py` - Lite Registry client (SD-11)
+- `src/asap/discovery/registry.py` - Lite Registry schema (RegistryEntry, LiteRegistry) and client (SD-11)
 - `tests/discovery/__init__.py` - Discovery test package (created)
 - `tests/discovery/test_wellknown.py` - Well-known endpoint tests (created)
 - `tests/discovery/test_discovery_client.py` - Client discovery tests (created)
+- `tests/discovery/test_registry.py` - Lite Registry client tests (created)
 - `tests/discovery/test_dnssd.py` - DNS-SD tests (optional)
 
 ---
@@ -226,7 +227,7 @@ Well-known discovery enables agents to find each other without prior configurati
 
 ### Sub-tasks
 
-- [ ] 2.4.1 Define Lite Registry schema model
+- [x] 2.4.1 Define Lite Registry schema model
   - **File**: `src/asap/discovery/registry.py` (create new)
   - **What**: Pydantic v2 models:
     - `RegistryEntry`: id, name, description, endpoints (dict[str, str]), skills (list[str]), asap_version
@@ -235,7 +236,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Pattern**: Follow manifest model pattern in `models/entities.py`
   - **Verify**: Models validate with Pydantic, serialize to JSON
 
-- [ ] 2.4.2 Implement `discover_from_registry()` method
+- [x] 2.4.2 Implement `discover_from_registry()` method
   - **File**: `src/asap/discovery/registry.py` (modify)
   - **What**: Create function:
     - `async def discover_from_registry(registry_url: str = DEFAULT_REGISTRY_URL) -> LiteRegistry`
@@ -245,7 +246,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Why**: Programmatic discovery of listed agents
   - **Verify**: Method fetches and parses registry correctly
 
-- [ ] 2.4.3 Add filtering methods
+- [x] 2.4.3 Add filtering methods
   - **File**: `src/asap/discovery/registry.py` (modify)
   - **What**: Add convenience methods:
     - `find_by_skill(registry: LiteRegistry, skill: str) -> list[RegistryEntry]`
@@ -253,7 +254,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Why**: Enables agent discovery by capability
   - **Verify**: Filtering returns correct results
 
-- [ ] 2.4.4 Create registry entry template and validator
+- [x] 2.4.4 Create registry entry template and validator
   - **File**: `src/asap/discovery/registry.py` (modify)
   - **What**: Add:
     - `generate_registry_entry(manifest: Manifest, endpoints: dict[str, str]) -> RegistryEntry`
@@ -262,7 +263,7 @@ Well-known discovery enables agents to find each other without prior configurati
   - **Why**: Makes it easy for developers to create their PR submission
   - **Verify**: Generated entry is valid JSON
 
-- [ ] 2.4.5 Write tests
+- [x] 2.4.5 Write tests
   - **File**: `tests/discovery/test_registry.py` (create new)
   - **What**: Test scenarios:
     - Schema validation (valid/invalid entries)
@@ -272,17 +273,17 @@ Well-known discovery enables agents to find each other without prior configurati
     - Network error handled gracefully
   - **Verify**: `pytest tests/discovery/test_registry.py -v` all pass
 
-- [ ] 2.4.6 Commit milestone
+- [x] 2.4.6 Commit milestone
   - **Command**: `git commit -m "feat(discovery): add Lite Registry client (SD-11, ADR-15)"`
   - **Scope**: registry.py, test_registry.py
   - **Verify**: `git log -1` shows correct message
 
 **Acceptance Criteria**:
-- [ ] Lite Registry schema validates with Pydantic
-- [ ] `discover_from_registry()` fetches and parses correctly
-- [ ] Filtering by skill works
-- [ ] Registry entry generation from manifest works
-- [ ] Test coverage >95%
+- [x] Lite Registry schema validates with Pydantic
+- [x] `discover_from_registry()` fetches and parses correctly
+- [x] Filtering by skill works
+- [x] Registry entry generation from manifest works
+- [x] Test coverage >95%
 
 ---
 
