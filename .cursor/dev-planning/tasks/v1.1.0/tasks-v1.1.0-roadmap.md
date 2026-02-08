@@ -251,16 +251,16 @@ The v0 spec listed "First-class persistent state" as a key design goal. Currentl
 
 ## Progress Tracking
 
-**Overall Progress**: 4/26 tasks completed (15%)
+**Overall Progress**: 5/26 tasks completed (19%)
 
 **Sprint Status**:
 - ⬜ S1: 4/4 tasks (100%) — includes Custom Claims (ADR-17)
-- ⬜ S2: 0/5 tasks (0%) — includes Lite Registry (SD-11, ADR-15)
+- ⬜ S2: 1/5 tasks (20%) — includes Lite Registry (SD-11, ADR-15)
 - ⬜ S2.5: 0/5 tasks (0%) — includes Best Practices Failover
 - ⬜ S3: 0/5 tasks (0%) — includes MessageAck + AckAwareClient (ADR-16)
 - ⬜ S4: 0/7 tasks (0%) — includes slowapi migration + Security Model docs (ADR-17)
 
-**Last Updated**: 2026-02-07
+**Last Updated**: 2026-02-08
 
 ---
 
