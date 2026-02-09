@@ -4,29 +4,29 @@ It is the "brain" of the project's development process.
 
 ## Structure
 
-### 📂 `[commands/](./commands)`
+### 📂 [commands/](.cursor/commands)
 **Workflows & Automation**.
 Prompt templates and workflows for the AI to follow when executing complex tasks.
 - *Example*: "Conduct a Security Review", "Create a PRD", "Generate Tasks".
 
-### 📂 `[skills/](./skills)`
+### 📂 [skills/](.cursor/skills)
 **Agent Capabilities**.
 Advanced workflows that combine instructions with executable scripts (e.g., automated audits).
 - *Example*: `code-quality-review`, `security-review`.
 
-### 📂 `[rules/](./rules)`
+### 📂 [rules/](.cursor/rules)
 **Active Instructions**.
 Files ending in `.mdc` that are automatically indexed by Cursor. They define strict coding standards, architectural principles, and behavior rules.
 - *Example*: `architecture-principles.mdc`, `python-best-practices.mdc`.
 
-### 📂 `[product-specs/](./product-specs)`
+### 📂 [product-specs/](.cursor/product-specs)
 **The "What" and "Why"**.
 Contains the immutable truths of the product.
 - **PRDs**: Product Requirement Documents.
 - **ADRs**: Architectural Decision Records.
 - **Vision**: Long-term goals.
 
-### 📂 `[dev-planning/](./dev-planning)`
+### 📂 [dev-planning/](.cursor/dev-planning)
 **The "How" and "When"**.
 Contains the execution plans.
 - **Tasks**: Detailed checklists broken down by sprint/version.

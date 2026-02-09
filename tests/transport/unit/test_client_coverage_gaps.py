@@ -579,3 +579,41 @@ class TestASAPClientManifestCache:
                 await client.get_manifest()
 
             assert client._manifest_cache.size() == 0
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_concurrent_same_url_single_http_request(self) -> None:
+        """Concurrent get_manifest calls for same URL result in a single HTTP request (stampede protection)."""
+        import asyncio
+
+        manifest_data = {
+            "id": "urn:asap:agent:testagent",
+            "name": "Test Agent",
+            "version": "1.0.0",
+            "description": "Test agent",
+            "capabilities": {
+                "asap_version": "0.1",
+                "skills": [{"id": "test", "description": "Test skill"}],
+                "state_persistence": False,
+            },
+            "endpoints": {"asap": "http://localhost:8000/asap"},
+        }
+
+        manifest_get_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal manifest_get_count
+            manifest_get_count += 1
+            return httpx.Response(status_code=200, json=manifest_data)
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            results = await asyncio.gather(
+                *[client.get_manifest() for _ in range(10)],
+                return_exceptions=True,
+            )
+
+        assert manifest_get_count == 1
+        for r in results:
+            assert not isinstance(r, BaseException), r
+            assert r.id == "urn:asap:agent:testagent"

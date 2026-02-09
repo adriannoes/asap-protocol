@@ -108,6 +108,8 @@ from asap.transport.compression import (
     decompress_payload,
     get_supported_encodings,
 )
+from asap.state.snapshot import SnapshotStore
+from asap.state.stores import create_snapshot_store
 from asap.transport.validators import (
     InMemoryNonceStore,
     NonceStore,
@@ -399,6 +401,24 @@ class ASAPRequestHandler:
                 ctx.metrics,
                 "unknown",
                 "missing_envelope",
+                time.perf_counter() - ctx.start_time,
+            )
+            return None, error_response
+
+        if not isinstance(envelope_data, dict):
+            logger.warning(
+                "asap.request.invalid_envelope_type",
+                type=type(envelope_data).__name__,
+            )
+            error_response = self.build_error_response(
+                INVALID_PARAMS,
+                data={"error": "'envelope' must be a JSON object"},
+                request_id=ctx.request_id,
+            )
+            self.record_error_metrics(
+                ctx.metrics,
+                "unknown",
+                "invalid_envelope",
                 time.perf_counter() - ctx.start_time,
             )
             return None, error_response
@@ -1179,6 +1199,7 @@ def create_app(
     max_threads: int | None = None,
     require_nonce: bool = False,
     hot_reload: bool | None = None,
+    snapshot_store: SnapshotStore | None = None,
 ) -> FastAPI:
     """Create and configure a FastAPI application for ASAP protocol.
 
@@ -1219,6 +1240,9 @@ def create_app(
             Defaults to False (nonce validation is optional).
         hot_reload: If True, watch handlers.py and reload handler registry on file change
             (development only). Defaults to ASAP_HOT_RELOAD env or False.
+        snapshot_store: Optional SnapshotStore for state persistence. If None, uses
+            create_snapshot_store() (ASAP_STORAGE_BACKEND and ASAP_STORAGE_PATH).
+            Stored on app.state.snapshot_store for handlers.
 
     Returns:
         Configured FastAPI application ready to run
@@ -1321,6 +1345,15 @@ def create_app(
             manifest_id=manifest.id,
         )
 
+    # Resolve snapshot store (env-based when not provided)
+    if snapshot_store is None:
+        snapshot_store = create_snapshot_store()
+        logger.info(
+            "asap.server.snapshot_store_from_env",
+            manifest_id=manifest.id,
+            backend=os.environ.get("ASAP_STORAGE_BACKEND", "memory"),
+        )
+
     # Create request handler
     handler = ASAPRequestHandler(
         registry_holder, manifest, auth_middleware, max_request_size, nonce_store
@@ -1396,6 +1429,7 @@ def create_app(
     # Tests can override this via monkeypatch or direct assignment to app.state.limiter
     app.state.limiter = create_limiter([rate_limit_str])
     app.state.max_request_size = max_request_size
+    app.state.snapshot_store = snapshot_store
     app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
     logger.info(
         "asap.server.rate_limit_enabled",
@@ -1407,11 +1441,6 @@ def create_app(
         manifest_id=manifest.id,
         max_request_size=max_request_size,
     )
-
-    # Note: Request size limits should be configured at the ASGI server level
-    # (e.g., uvicorn --limit-max-body).
-    # For production, consider using a reverse proxy
-    # (nginx, traefik) to enforce request size limits (e.g., 10MB max).
 
     @app.get("/health")
     async def health() -> JSONResponse:

@@ -54,6 +54,7 @@ Run agents individually:
 |--------|-------------|--------|
 | **long_running** | Long-running task with checkpoints (StateSnapshot); save, “crash”, resume | `uv run python -m asap.examples.long_running [--num-steps N] [--crash-after N]` |
 | **state_migration** | Move task state between agents (StateQuery, StateRestore, SnapshotStore) | `uv run python -m asap.examples.state_migration` |
+| **agent_failover** | Failover demo: primary runs task, crashes; coordinator detects via health, sends StateRestore to backup | `uv run python -m asap.examples.agent_failover` |
 
 ### Error recovery and resilience
 

@@ -21,6 +21,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "aiosqlite>=0.20",
     "jsonschema>=4.23.0",
     "pydantic>=2.12.5",
     "fastapi>=0.128.0",

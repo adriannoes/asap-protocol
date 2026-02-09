@@ -114,36 +114,36 @@ The v0 spec listed "First-class persistent state" as a key design goal. Currentl
 
 ### Tasks
 
-- [ ] 2.5.1 Define MeteringStore Protocol
+- [x] 2.5.1 Define MeteringStore Protocol
   - Goal: Abstract interface for usage metering data (foundation for v1.3)
   - Deliverable: `src/asap/state/metering.py`
   - Details: [State Storage Detailed - Task 2.5.1](./sprint-S2.5-state-storage.md#task-251-meteringstoremeteringstore-protocol)
 
-- [ ] 2.5.2 Implement SQLiteSnapshotStore
+- [x] 2.5.2 Implement SQLiteSnapshotStore
   - Goal: Persistent `SnapshotStore` using SQLite via `aiosqlite`
   - Deliverable: `src/asap/state/stores/sqlite.py`
   - Details: [State Storage Detailed - Task 2.5.2](./sprint-S2.5-state-storage.md#task-252-sqlitesnapshotstore)
 
-- [ ] 2.5.3 Refactor InMemorySnapshotStore
+- [x] 2.5.3 Refactor InMemorySnapshotStore
   - Goal: Move to `src/asap/state/stores/memory.py`, maintain backward compat
   - Details: [State Storage Detailed - Task 2.5.3](./sprint-S2.5-state-storage.md#task-253-refactor-inmemorysnapshotstore)
 
-- [ ] 2.5.4 Storage configuration and auto-detection
+- [x] 2.5.4 Storage configuration and auto-detection
   - Goal: Environment-based storage backend selection
   - Details: [State Storage Detailed - Task 2.5.4](./sprint-S2.5-state-storage.md#task-254-storage-configuration)
 
-- [ ] 2.5.5 Best Practices: Agent Failover & Migration
+- [x] 2.5.5 Best Practices: Agent Failover & Migration
   - Goal: Formal documentation for state handover and failover patterns
   - Deliverable: `docs/best-practices/agent-failover-migration.md` + failover example
   - Details: [State Storage Detailed - Task 2.5.5](./sprint-S2.5-state-storage.md#task-255-best-practices--agent-failover--migration)
 
 ### Definition of Done
-- [ ] SQLite store passes all existing SnapshotStore tests
-- [ ] MeteringStore Protocol defined with in-memory + SQLite impls
-- [ ] Backward compatibility maintained (InMemorySnapshotStore still importable)
-- [ ] Best Practices: Failover & Migration documented
-- [ ] Test coverage >95%
-- [ ] Storage example added to examples/
+- [x] SQLite store passes all existing SnapshotStore tests
+- [x] MeteringStore Protocol defined with in-memory + SQLite impls
+- [x] Backward compatibility maintained (InMemorySnapshotStore still importable)
+- [x] Best Practices: Failover & Migration documented
+- [x] Test coverage >95%
+- [x] Storage example added to examples/
 
 ---
 
@@ -251,12 +251,12 @@ The v0 spec listed "First-class persistent state" as a key design goal. Currentl
 
 ## Progress Tracking
 
-**Overall Progress**: 9/26 tasks completed (35%)
+**Overall Progress**: 14/26 tasks completed (54%)
 
 **Sprint Status**:
-- ⬜ S1: 4/4 tasks (100%) — includes Custom Claims (ADR-17)
-- ⬜ S2: 5/5 tasks (100%) — Well-known Discovery + Lite Registry + Health (SD-11, ADR-15)
-- ⬜ S2.5: 0/5 tasks (0%) — includes Best Practices Failover
+- ✅ S1: 4/4 tasks (100%) — includes Custom Claims (ADR-17)
+- ✅ S2: 5/5 tasks (100%) — Well-known Discovery + Lite Registry + Health (SD-11, ADR-15)
+- ✅ S2.5: 5/5 tasks (100%) — State Storage + Best Practices Failover
 - ⬜ S3: 0/5 tasks (0%) — includes MessageAck + AckAwareClient (ADR-16)
 - ⬜ S4: 0/7 tasks (0%) — includes slowapi migration + Security Model docs (ADR-17)
 

@@ -314,6 +314,34 @@ class TestASAPRequestHandlerHelpers:
         assert error_data["error"]["code"] == INVALID_PARAMS
         assert "Missing 'envelope'" in error_data["error"]["data"]["error"]
 
+    def test_validate_envelope_with_envelope_not_dict(
+        self, handler: ASAPRequestHandler, metrics: MetricsCollector
+    ) -> None:
+        """Test _validate_envelope when envelope is not a dict (e.g. string) returns 400."""
+        rpc_request = JsonRpcRequest(
+            method="asap.send",
+            params={"envelope": "string_not_dict"},
+            id="test-3b",
+        )
+
+        start_time = time.perf_counter()
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
+        )
+        result = handler._validate_envelope(ctx)
+
+        envelope_result, error_response = result
+        assert envelope_result is None
+        assert isinstance(error_response, JSONResponse)
+
+        content = bytes(error_response.body).decode()
+        error_data = json.loads(content)
+        assert error_data["error"]["code"] == INVALID_PARAMS
+        assert "envelope" in error_data["error"]["data"]["error"].lower()
+
     def test_validate_envelope_with_invalid_envelope_structure(
         self, handler: ASAPRequestHandler, metrics: MetricsCollector
     ) -> None:

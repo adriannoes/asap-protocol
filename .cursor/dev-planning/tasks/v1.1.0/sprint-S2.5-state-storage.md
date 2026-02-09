@@ -11,13 +11,18 @@
 
 - `src/asap/state/__init__.py` - State module init (exists)
 - `src/asap/state/snapshot.py` - SnapshotStore Protocol + InMemorySnapshotStore (exists)
-- `src/asap/state/metering.py` - MeteringStore Protocol (new)
-- `src/asap/state/stores/__init__.py` - Storage backends package (new)
-- `src/asap/state/stores/memory.py` - InMemorySnapshotStore (refactored)
-- `src/asap/state/stores/sqlite.py` - SQLiteSnapshotStore (new)
+- `src/asap/state/metering.py` - MeteringStore Protocol, UsageEvent/UsageAggregate/InMemoryMeteringStore (new)
+- `src/asap/state/stores/__init__.py` - Storage backends package (new, exports SQLite stores)
+- `src/asap/state/stores/memory.py` - InMemorySnapshotStore (refactored, task 2.5.3)
+- `src/asap/state/stores/sqlite.py` - SQLiteSnapshotStore + SQLiteMeteringStore (new)
+- `src/asap/examples/storage_backends.py` - Example: memory vs sqlite via env
 - `tests/state/test_snapshot.py` - Existing snapshot tests
 - `tests/state/test_metering.py` - Metering store tests (new)
-- `tests/state/test_sqlite_store.py` - SQLite store tests (new)
+- `tests/state/test_sqlite_store.py` - SQLite store tests (new, task 2.5.2)
+- `tests/state/test_storage_factory.py` - Storage factory tests (task 2.5.4)
+- `docs/best-practices/agent-failover-migration.md` - Best Practices: Agent Failover & Migration (task 2.5.5.1)
+- `docs/state-management.md` - State management guide (links to best-practices)
+- `src/asap/examples/agent_failover.py` - Failover demo: primary crash, health detect, StateRestore to backup (task 2.5.5.2)
 
 ---
 
@@ -44,7 +49,7 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
 
 ### Sub-tasks
 
-- [ ] 2.5.1.1 Define MeteringStore Protocol
+- [x] 2.5.1.1 Define MeteringStore Protocol
   - **File**: `src/asap/state/metering.py` (create new)
   - **What**: Create `MeteringStore` Protocol with methods:
     - `record(event: UsageEvent) -> None` — Record a usage event
@@ -54,7 +59,7 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
   - **Pattern**: Follow `SnapshotStore` Protocol pattern in `snapshot.py`
   - **Verify**: `isinstance(InMemoryMeteringStore(), MeteringStore)` is True
 
-- [ ] 2.5.1.2 Define UsageEvent and UsageAggregate models
+- [x] 2.5.1.2 Define UsageEvent and UsageAggregate models
   - **File**: `src/asap/state/metering.py` (modify)
   - **What**: Pydantic v2 models:
     - `UsageEvent`: task_id, agent_id, consumer_id, metrics (tokens_in, tokens_out, duration_ms, api_calls), timestamp
@@ -63,15 +68,15 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
   - **Pattern**: Follow `StateSnapshot` model pattern in `models/entities.py`
   - **Verify**: Models validate with Pydantic, serialize to JSON
 
-- [ ] 2.5.1.3 Implement InMemoryMeteringStore
-  - **File**: `src/asap/state/stores/memory.py` (modify after 2.5.3)
+- [x] 2.5.1.3 Implement InMemoryMeteringStore
+  - **File**: `src/asap/state/metering.py` (stores/memory.py after 2.5.3)
   - **What**: In-memory implementation for testing:
     - Thread-safe with RLock (same pattern as InMemorySnapshotStore)
     - Simple dict-based storage
   - **Why**: Testing and development use case
   - **Verify**: All MeteringStore Protocol methods work
 
-- [ ] 2.5.1.4 Write tests
+- [x] 2.5.1.4 Write tests
   - **File**: `tests/state/test_metering.py` (create new)
   - **What**: Test scenarios:
     - Protocol compliance (isinstance check)
@@ -81,16 +86,16 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
     - Thread safety
   - **Verify**: `pytest tests/state/test_metering.py -v` all pass
 
-- [ ] 2.5.1.5 Commit milestone
+- [x] 2.5.1.5 Commit milestone
   - **Command**: `git commit -m "feat(state): add MeteringStore protocol and models"`
   - **Scope**: metering.py, test_metering.py
   - **Verify**: `git log -1` shows correct message
 
 **Acceptance Criteria**:
-- [ ] MeteringStore Protocol defined with type annotations
-- [ ] UsageEvent and UsageAggregate models validated by Pydantic
-- [ ] InMemoryMeteringStore passes all tests
-- [ ] Protocol is runtime_checkable
+- [x] MeteringStore Protocol defined with type annotations
+- [x] UsageEvent and UsageAggregate models validated by Pydantic
+- [x] InMemoryMeteringStore passes all tests
+- [x] Protocol is runtime_checkable
 
 ---
 
@@ -104,13 +109,13 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
 
 ### Sub-tasks
 
-- [ ] 2.5.2.1 Add aiosqlite dependency
+- [x] 2.5.2.1 Add aiosqlite dependency
   - **File**: `pyproject.toml` (modify)
   - **What**: Add to dependencies: `aiosqlite>=0.20`
   - **Command**: `uv add "aiosqlite>=0.20"`
   - **Verify**: `uv run python -c "import aiosqlite"` works
 
-- [ ] 2.5.2.2 Implement SQLiteSnapshotStore
+- [x] 2.5.2.2 Implement SQLiteSnapshotStore
   - **File**: `src/asap/state/stores/sqlite.py` (create new)
   - **What**: Async SQLite implementation:
     - `__init__(db_path: str | Path = "asap_state.db")` — configurable path
@@ -125,7 +130,7 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
   - **Note**: Since `SnapshotStore` Protocol uses sync methods, the SQLite impl wraps async calls. Consider making the Protocol async-aware (breaking change analysis needed).
   - **Verify**: Store survives process restart
 
-- [ ] 2.5.2.3 Implement SQLiteMeteringStore
+- [x] 2.5.2.3 Implement SQLiteMeteringStore
   - **File**: `src/asap/state/stores/sqlite.py` (modify)
   - **What**: SQLite implementation of MeteringStore:
     - Table: `usage_events(id TEXT PK, task_id TEXT, agent_id TEXT, consumer_id TEXT, metrics JSON, timestamp TEXT)`
@@ -134,7 +139,7 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
   - **Why**: Unified SQLite backend for both snapshot and metering storage
   - **Verify**: Record/query/aggregate operations work
 
-- [ ] 2.5.2.4 Write comprehensive tests
+- [x] 2.5.2.4 Write comprehensive tests
   - **File**: `tests/state/test_sqlite_store.py` (create new)
   - **What**: Test scenarios:
     - **CRUD**: Save, get, list, delete snapshots
@@ -145,7 +150,7 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
     - **Cleanup**: Use tmp_path fixture for isolated DB files
   - **Verify**: `pytest tests/state/test_sqlite_store.py -v` all pass
 
-- [ ] 2.5.2.5 Add storage example
+- [x] 2.5.2.5 Add storage example
   - **File**: `src/asap/examples/storage_backends.py` (create new)
   - **What**: Example showing:
     - InMemory store for testing
@@ -153,17 +158,17 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
     - How to switch backends via environment variable
   - **Verify**: Example runs successfully
 
-- [ ] 2.5.2.6 Commit milestone
+- [x] 2.5.2.6 Commit milestone
   - **Command**: `git commit -m "feat(state): add SQLite persistent storage backend"`
   - **Scope**: sqlite.py, test_sqlite_store.py, storage_backends.py, pyproject.toml
   - **Verify**: `git log -1` shows correct message
 
 **Acceptance Criteria**:
-- [ ] SQLite store passes all SnapshotStore tests
-- [ ] Data persists across process restarts
-- [ ] Metering store records and aggregates usage data
-- [ ] No data corruption under concurrent access
-- [ ] Example demonstrates backend switching
+- [x] SQLite store passes all SnapshotStore tests
+- [x] Data persists across process restarts
+- [x] Metering store records and aggregates usage data
+- [x] No data corruption under concurrent access
+- [x] Example demonstrates backend switching
 
 ---
 
@@ -177,16 +182,15 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
 
 ### Sub-tasks
 
-- [ ] 2.5.3.1 Create stores subpackage
-  - **File**: `src/asap/state/stores/__init__.py` (create new)
+- [x] 2.5.3.1 Create stores subpackage
+  - **File**: `src/asap/state/stores/__init__.py`, `stores/memory.py` (re-exports)
   - **What**: Create package with re-exports:
     - `from asap.state.stores.memory import InMemorySnapshotStore`
     - `from asap.state.stores.memory import InMemoryMeteringStore` (after 2.5.1)
   - **Verify**: `from asap.state.stores import InMemorySnapshotStore` works
 
-- [ ] 2.5.3.2 Move InMemorySnapshotStore
-  - **File**: `src/asap/state/stores/memory.py` (create new)
-  - **File**: `src/asap/state/snapshot.py` (modify)
+- [x] 2.5.3.2 Move InMemorySnapshotStore
+  - **File**: `src/asap/state/stores/memory.py`, `src/asap/state/snapshot.py` (modify)
   - **What**:
     - Move `InMemorySnapshotStore` class to `stores/memory.py`
     - Keep `SnapshotStore` Protocol in `snapshot.py`
@@ -194,7 +198,7 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
   - **Why**: Clean separation of interface (Protocol) from implementation (stores/)
   - **Verify**: All existing imports still work, no test failures
 
-- [ ] 2.5.3.3 Update state module __init__.py
+- [x] 2.5.3.3 Update state module __init__.py
   - **File**: `src/asap/state/__init__.py` (modify)
   - **What**: Update exports to include new package structure:
     - Export `SnapshotStore` from `snapshot.py`
@@ -202,7 +206,7 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
     - Export `SQLiteSnapshotStore` from `stores.sqlite` (after 2.5.2)
   - **Verify**: `from asap.state import SnapshotStore, InMemorySnapshotStore` works
 
-- [ ] 2.5.3.4 Verify backward compatibility
+- [x] 2.5.3.4 Verify backward compatibility
   - **Command**: `pytest tests/ -v`
   - **What**: Run full test suite to ensure no regressions:
     - All existing snapshot tests pass
@@ -210,16 +214,16 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
     - No deprecation warnings unless intentional
   - **Verify**: Zero test failures
 
-- [ ] 2.5.3.5 Commit milestone
+- [x] 2.5.3.5 Commit milestone
   - **Command**: `git commit -m "refactor(state): move InMemorySnapshotStore to stores/ subpackage"`
   - **Scope**: snapshot.py, stores/__init__.py, stores/memory.py, __init__.py
   - **Verify**: `git log -1` shows correct message
 
 **Acceptance Criteria**:
-- [ ] InMemorySnapshotStore lives in `stores/memory.py`
-- [ ] SnapshotStore Protocol stays in `snapshot.py`
-- [ ] All existing tests pass without modification
-- [ ] Backward-compatible imports maintained
+- [x] InMemorySnapshotStore lives in `stores/memory.py`
+- [x] SnapshotStore Protocol stays in `snapshot.py`
+- [x] All existing tests pass without modification
+- [x] Backward-compatible imports maintained
 
 ---
 
@@ -233,7 +237,7 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
 
 ### Sub-tasks
 
-- [ ] 2.5.4.1 Implement storage factory
+- [x] 2.5.4.1 Implement storage factory
   - **File**: `src/asap/state/stores/__init__.py` (modify)
   - **What**: Create `create_snapshot_store()` factory:
     - Reads `ASAP_STORAGE_BACKEND` env var (default: `"memory"`)
@@ -244,7 +248,7 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
   - **Pattern**: Factory pattern, similar to logging configuration
   - **Verify**: Setting env var changes storage backend
 
-- [ ] 2.5.4.2 Integrate with ASAPServer
+- [x] 2.5.4.2 Integrate with ASAPServer
   - **File**: `src/asap/transport/server.py` (modify)
   - **What**: If no explicit store provided, use `create_snapshot_store()`:
     - `ASAPServer(store=my_store)` → use provided store
@@ -252,14 +256,14 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
   - **Why**: Seamless integration with existing server setup
   - **Verify**: Server uses SQLite when env var set
 
-- [ ] 2.5.4.3 Update documentation
+- [x] 2.5.4.3 Update documentation
   - **What**: Add to README/docs:
     - Storage backend configuration guide
     - Environment variables reference
     - Migration from InMemory to SQLite
   - **Verify**: Documentation is clear and accurate
 
-- [ ] 2.5.4.4 Write tests
+- [x] 2.5.4.4 Write tests
   - **File**: `tests/state/test_storage_factory.py` (create new)
   - **What**: Test scenarios:
     - Default returns InMemorySnapshotStore
@@ -268,16 +272,16 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
     - Custom path via `ASAP_STORAGE_PATH`
   - **Verify**: `pytest tests/state/test_storage_factory.py -v` all pass
 
-- [ ] 2.5.4.5 Commit milestone
+- [x] 2.5.4.5 Commit milestone
   - **Command**: `git commit -m "feat(state): add storage backend configuration and factory"`
   - **Scope**: stores/__init__.py, server.py, tests
   - **Verify**: `git log -1` shows correct message
 
 **Acceptance Criteria**:
-- [ ] Storage backend selectable via environment variable
-- [ ] ASAPServer auto-detects storage backend
-- [ ] Documentation covers configuration
-- [ ] Factory handles errors gracefully
+- [x] Storage backend selectable via environment variable
+- [x] ASAPServer auto-detects storage backend
+- [x] Documentation covers configuration
+- [x] Factory handles errors gracefully
 
 ---
 
@@ -291,7 +295,7 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
 
 ### Sub-tasks
 
-- [ ] 2.5.5.1 Create Best Practices document
+- [x] 2.5.5.1 Create Best Practices document
   - **File**: `docs/best-practices/agent-failover-migration.md` (create new)
   - **What**: Formal pattern document covering:
     - **Context Handover Pattern**: Using `StateQuery` → `StateRestore` for transferring task state between agents
@@ -304,7 +308,7 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
   - **Pattern**: Similar to Kubernetes "Migration Guides" — prescriptive, not just descriptive
   - **Verify**: Document is clear, examples are runnable
 
-- [ ] 2.5.5.2 Add failover example to examples/
+- [x] 2.5.5.2 Add failover example to examples/
   - **File**: `src/asap/examples/agent_failover.py` (create new)
   - **What**: Working example demonstrating:
     - Agent A starts a task and saves snapshots
@@ -316,7 +320,7 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
   - **Why**: Executable documentation — proves the pattern works end-to-end
   - **Verify**: Example runs successfully
 
-- [ ] 2.5.5.3 Document artifact portability conventions
+- [x] 2.5.5.3 Document artifact portability conventions
   - **File**: `docs/best-practices/agent-failover-migration.md` (modify)
   - **What**: Add section on artifact URIs:
     - `https://` — portable across agents (S3 presigned URLs, CDN, etc.)
@@ -326,16 +330,16 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
   - **Why**: Clarifies what happens to artifacts during agent replacement
   - **Verify**: Conventions are clear and actionable
 
-- [ ] 2.5.5.4 Commit milestone
+- [x] 2.5.5.4 Commit milestone
   - **Command**: `git commit -m "docs(state): add Best Practices for Agent Failover & Migration"`
   - **Scope**: best-practices doc, failover example
   - **Verify**: `git log -1` shows correct message
 
 **Acceptance Criteria**:
-- [ ] Best Practices document covers all failover/migration scenarios
-- [ ] Working example demonstrates the pattern end-to-end
-- [ ] Artifact portability conventions are clearly documented
-- [ ] Document is discoverable (linked from README and AGENTS.md)
+- [x] Best Practices document covers all failover/migration scenarios
+- [x] Working example demonstrates the pattern end-to-end
+- [x] Artifact portability conventions are clearly documented
+- [x] Document is discoverable (linked from README and AGENTS.md)
 
 ---
 
@@ -349,38 +353,38 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
 
 ### Sub-tasks
 
-- [ ] 2.5.6.1 Update roadmap progress
+- [x] 2.5.6.1 Update roadmap progress
   - **File**: `tasks-v1.1.0-roadmap.md` (modify)
   - **What**: Mark S2.5 tasks as complete `[x]`, update progress percentage
   - **Verify**: Progress shows 100% for S2.5
 
-- [ ] 2.5.6.2 Run full test suite
+- [x] 2.5.6.2 Run full test suite
   - **Command**: `pytest tests/state -v --cov`
   - **What**: Verify all new tests pass with >95% coverage
   - **Verify**: No failures, coverage target met
 
-- [ ] 2.5.6.3 Commit checkpoint
+- [x] 2.5.6.3 Commit checkpoint (await user; commit at end of sprint)
   - **Command**: `git commit -m "chore: mark v1.1.0 S2.5 complete"`
   - **Verify**: Clean commit with progress updates
 
 **Acceptance Criteria**:
-- [ ] All S2.5 tasks complete
-- [ ] Test suite passes
-- [ ] Best Practices document complete and linked
-- [ ] Progress tracked in roadmap
+- [x] All S2.5 tasks complete
+- [x] Test suite passes
+- [x] Best Practices document complete and linked
+- [x] Progress tracked in roadmap
 
 ---
 
 ## Sprint S2.5 Definition of Done
 
-- [ ] MeteringStore Protocol defined
-- [ ] SQLiteSnapshotStore implemented and tested
-- [ ] InMemorySnapshotStore refactored to stores/ package
-- [ ] Storage backend configurable via environment
-- [ ] Best Practices: Agent Failover & Migration documented
-- [ ] Failover example runs end-to-end
-- [ ] Backward compatibility maintained
-- [ ] Test coverage >95%
-- [ ] Progress tracked in roadmap
+- [x] MeteringStore Protocol defined
+- [x] SQLiteSnapshotStore implemented and tested
+- [x] InMemorySnapshotStore refactored to stores/ package
+- [x] Storage backend configurable via environment
+- [x] Best Practices: Agent Failover & Migration documented
+- [x] Failover example runs end-to-end
+- [x] Backward compatibility maintained
+- [x] Test coverage >95%
+- [x] Progress tracked in roadmap
 
 **Total Sub-tasks**: ~26
