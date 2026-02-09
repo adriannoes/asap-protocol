@@ -1,6 +1,6 @@
 ---
-description: "Git workflow standards: Conventional Commits format for commit messages and pre-push CI verification commands. Apply when creating commits, pushing code, or working with git operations."
-alwaysApply: true
+description: 
+alwaysApply: false
 ---
 
 # Git Conventional Commits

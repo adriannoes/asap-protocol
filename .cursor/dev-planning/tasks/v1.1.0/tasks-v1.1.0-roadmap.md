@@ -153,37 +153,44 @@ The v0 spec listed "First-class persistent state" as a key design goal. Currentl
 
 ### Tasks
 
-- [ ] 3.1 Implement WebSocket server
+- [x] 3.1 Implement WebSocket server
   - Goal: Accept WebSocket connections for ASAP messages
   - Deliverable: `src/asap/transport/websocket.py`
   - Details: [Transport Detailed - Task 3.1](./sprint-S3-websocket-binding.md#task-31-websocket-server)
 
-- [ ] 3.2 Implement WebSocket client
+- [x] 3.2 Implement WebSocket client
   - Goal: Connect to agents via WebSocket
-  - Deliverable: `ASAPClient.connect_ws()` method
+  - Deliverable: `ASAPClient(transport_mode="websocket")` + `WebSocketTransport`
   - Details: [Transport Detailed - Task 3.2](./sprint-S3-websocket-binding.md#task-32-websocket-client)
 
-- [ ] 3.3 Add connection management
+- [x] 3.3 Add connection management
   - Goal: Heartbeat, reconnection, connection pooling
   - Details: [Transport Detailed - Task 3.3](./sprint-S3-websocket-binding.md#task-33-connection-management)
 
-- [ ] 3.4 MessageAck for WebSocket reliability (ADR-16)
+- [x] 3.4 MessageAck for WebSocket reliability (ADR-16)
   - Goal: Selective ack for state-changing messages + `requires_ack` field on Envelope
   - Deliverable: `MessageAck` payload, auto-ack for critical payloads
   - Details: [Transport Detailed - Task 3.4](./sprint-S3-websocket-binding.md#task-34-message-acknowledgment-adr-16)
 
-- [ ] 3.5 AckAwareClient with timeout/retry (ADR-16)
+- [x] 3.5 AckAwareClient with timeout/retry (ADR-16)
   - Goal: Client-side ack tracking, retransmission, circuit breaker integration
   - Deliverable: Pending ack tracker, timeout detection, retry with idempotency
   - Details: [Transport Detailed - Task 3.5](./sprint-S3-websocket-binding.md#task-35-ackAwareclient-adr-16)
 
+- [x] 3.6 WebSocket message rate limiting
+  - Goal: Per-connection message rate limit to prevent abuse
+  - Deliverable: WebSocketTokenBucket, enforce in handler, default 10 msg/s
+  - Details: [Transport Detailed - Task 3.6](./sprint-S3-websocket-binding.md#task-36-websocket-rate-limiting-roadmap-alignment)
+
 ### Definition of Done
-- [ ] WebSocket server accepts connections
-- [ ] Client can send/receive via WebSocket
-- [ ] Heartbeat keeps connections alive
-- [ ] Graceful reconnection on disconnect
-- [ ] MessageAck for state-changing messages (ADR-16)
-- [ ] AckAwareClient with timeout/retry/circuit breaker (ADR-16)
+- [x] WebSocket server accepts connections
+- [x] Client can send/receive via WebSocket
+- [x] Heartbeat keeps connections alive
+- [x] Graceful reconnection on disconnect
+- [x] Connection management (heartbeat, reconnect, pool, graceful shutdown)
+- [x] MessageAck for state-changing messages (ADR-16)
+- [x] AckAwareClient with timeout/retry/circuit breaker (ADR-16)
+- [x] WebSocket message rate limiting (Task 3.6)
 - [ ] Test coverage >95%
 
 ---
@@ -242,7 +249,7 @@ The v0 spec listed "First-class persistent state" as a key design goal. Currentl
 | S1 | 4 | OAuth2/OIDC + Custom Claims (ADR-17) | 6-8 |
 | S2 | 5 | Well-known Discovery + Lite Registry (SD-11) + Liveness | 6-8 |
 | S2.5 | 5 | State Storage + Best Practices Failover | 6-8 |
-| S3 | 5 | WebSocket + MessageAck + AckAwareClient (ADR-16) | 7-9 |
+| S3 | 6 | WebSocket + MessageAck + AckAwareClient + WS rate limiting (ADR-16) | 7-9 |
 | S4 | 7 | Webhooks + slowapi migration + Security Docs + Release | 6-8 |
 
 **Total**: 26 high-level tasks across 5 sprints
@@ -251,16 +258,16 @@ The v0 spec listed "First-class persistent state" as a key design goal. Currentl
 
 ## Progress Tracking
 
-**Overall Progress**: 14/26 tasks completed (54%)
+**Overall Progress**: 19/27 tasks completed (70%)
 
 **Sprint Status**:
 - ✅ S1: 4/4 tasks (100%) — includes Custom Claims (ADR-17)
 - ✅ S2: 5/5 tasks (100%) — Well-known Discovery + Lite Registry + Health (SD-11, ADR-15)
 - ✅ S2.5: 5/5 tasks (100%) — State Storage + Best Practices Failover
-- ⬜ S3: 0/5 tasks (0%) — includes MessageAck + AckAwareClient (ADR-16)
+- ✅ S3: 6/6 tasks (100%) — 3.1–3.6 done (WebSocket server, client, connection management, MessageAck, AckAwareClient, WS rate limiting)
 - ⬜ S4: 0/7 tasks (0%) — includes slowapi migration + Security Model docs (ADR-17)
 
-**Last Updated**: 2026-02-08
+**Last Updated**: 2026-02-09
 
 ---
 
