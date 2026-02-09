@@ -1559,9 +1559,7 @@ def create_app(
     @app.websocket("/asap/ws")
     async def websocket_asap(websocket: WebSocket) -> None:
         """ASAP JSON-RPC over WebSocket; same handlers as POST /asap."""
-        ws_rate_limit: float | None = getattr(
-            app.state, "websocket_message_rate_limit", 10.0
-        )
+        ws_rate_limit: float | None = getattr(app.state, "websocket_message_rate_limit", 10.0)
         await handle_websocket_connection(
             websocket,
             handler,

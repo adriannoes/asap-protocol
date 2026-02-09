@@ -16,7 +16,7 @@ import base64
 import itertools
 import json
 import time
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable, MutableMapping
 from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal, cast
@@ -696,7 +696,7 @@ async def _make_fake_request(body: str, websocket: WebSocket) -> Request:
             return {"type": "http.request", "body": body_bytes, "more_body": False}
         return {"type": "http.disconnect"}
 
-    async def send(_: dict[str, Any]) -> None:
+    async def send(_: MutableMapping[str, Any]) -> None:
         pass
 
     return Request(scope, receive, send)
