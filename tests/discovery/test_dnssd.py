@@ -6,6 +6,8 @@ Install zeroconf: uv sync --extra dns-sd
 
 from __future__ import annotations
 
+import socket
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -20,6 +22,11 @@ from asap.discovery.dnssd import (
     TXT_KEY_CAPABILITIES,
     TXT_KEY_MANIFEST_URL,
     TXT_KEY_VERSION,
+    _decode_txt_value,
+    _get_prop,
+    _sanitize_instance_name,
+    _service_info_to_agent_info,
+    _skill_ids_from_manifest,
 )
 from asap.models.entities import Manifest
 
@@ -151,6 +158,166 @@ class TestDNSSDAdvertiser:
         adv.stop()
         mock_zc.unregister_service.assert_called_once()
 
+    def test_start_resolves_host_when_none(
+        self, sample_manifest: Manifest, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """start() resolves host via _get_default_host when host is None."""
+        mock_zc = MagicMock()
+        monkeypatch.setattr("asap.discovery.dnssd.Zeroconf", MagicMock(return_value=mock_zc))
+        monkeypatch.setattr("asap.discovery.dnssd.socket.gethostbyname", lambda _: "10.0.0.42")
+        adv = DNSSDAdvertiser(
+            sample_manifest,
+            "https://localhost:8000/manifest.json",
+            8000,
+            # host intentionally omitted (None)
+        )
+        adv.start()
+        mock_zc.register_service.assert_called_once()
+        service_info = mock_zc.register_service.call_args[0][0]
+        assert service_info.port == 8000
+
+    def test_get_default_host_oserror_fallback(
+        self, sample_manifest: Manifest, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """_get_default_host returns 127.0.0.1 when socket raises OSError."""
+        monkeypatch.setattr(
+            "asap.discovery.dnssd.socket.gethostbyname",
+            MagicMock(side_effect=OSError("DNS failure")),
+        )
+        mock_zc = MagicMock()
+        monkeypatch.setattr("asap.discovery.dnssd.Zeroconf", MagicMock(return_value=mock_zc))
+        adv = DNSSDAdvertiser(
+            sample_manifest,
+            "https://localhost:8000/manifest.json",
+            8000,
+            # host intentionally omitted to trigger _get_default_host
+        )
+        adv.start()
+        mock_zc.register_service.assert_called_once()
+        service_info = mock_zc.register_service.call_args[0][0]
+        # Verify fallback address was used (127.0.0.1)
+        assert socket.inet_aton("127.0.0.1") in service_info.addresses
+
+
+class TestHelperFunctions:
+    """Tests for module-level helper functions."""
+
+    def test_sanitize_instance_name_replaces_invalid_chars(self) -> None:
+        """_sanitize_instance_name replaces spaces and special chars with hyphens."""
+        assert _sanitize_instance_name("My Agent @v1") == "My-Agent--v1"
+
+    def test_sanitize_instance_name_truncates_at_63(self) -> None:
+        """_sanitize_instance_name truncates long names to 63 chars."""
+        long_name = "a" * 100
+        assert len(_sanitize_instance_name(long_name)) == 63
+
+    def test_sanitize_instance_name_fallback(self) -> None:
+        """_sanitize_instance_name returns 'asap-agent' for all-invalid input."""
+        assert _sanitize_instance_name("---") == "asap-agent"
+
+    def test_skill_ids_from_manifest(self, sample_manifest: Manifest) -> None:
+        """_skill_ids_from_manifest extracts comma-separated skill IDs."""
+        result = _skill_ids_from_manifest(sample_manifest)
+        assert "echo" in result
+
+    def test_decode_txt_value_bytes(self) -> None:
+        """_decode_txt_value decodes bytes to string."""
+        assert _decode_txt_value(b"hello") == "hello"
+
+    def test_decode_txt_value_string(self) -> None:
+        """_decode_txt_value passes through string values."""
+        assert _decode_txt_value("already-str") == "already-str"
+
+    def test_get_prop_with_string_keys(self) -> None:
+        """_get_prop retrieves value from dict with string keys."""
+        props: dict[str, str | None] = {
+            "version": "2.0.0",
+            "capabilities": "search",
+            "manifest_url": "https://a/manifest.json",
+        }
+        assert _get_prop(props, "version") == "2.0.0"
+        assert _get_prop(props, "capabilities") == "search"
+
+    def test_get_prop_with_bytes_keys(self) -> None:
+        """_get_prop retrieves value from dict with bytes keys."""
+        props: dict[bytes, bytes | None] = {
+            b"version": b"1.0.0",
+            b"capabilities": b"x",
+        }
+        assert _get_prop(props, "version") == "1.0.0"
+
+    def test_get_prop_skips_none_values(self) -> None:
+        """_get_prop skips keys with None values and returns empty string."""
+        props: dict[str, str | None] = {
+            "version": None,
+            "capabilities": "x",
+        }
+        assert _get_prop(props, "version") == ""
+        assert _get_prop(props, "capabilities") == "x"
+
+    def test_get_prop_returns_empty_for_missing_key(self) -> None:
+        """_get_prop returns empty string when key is not found."""
+        props: dict[str, str | None] = {"version": "1.0.0"}
+        assert _get_prop(props, "missing") == ""
+
+    def test_service_info_to_agent_info_returns_none_for_no_info(self) -> None:
+        """_service_info_to_agent_info returns None when get_service_info is None."""
+        mock_zc = MagicMock()
+        mock_zc.get_service_info.return_value = None
+        result = _service_info_to_agent_info(mock_zc, ASAP_SERVICE_TYPE, "Test._asap._tcp.local.")
+        assert result is None
+
+    def test_service_info_to_agent_info_returns_none_without_manifest_url(self) -> None:
+        """_service_info_to_agent_info returns None when manifest_url is empty."""
+        mock_zc = MagicMock()
+        mock_info = MagicMock()
+        mock_info.properties = {b"version": b"1.0.0", b"capabilities": b"x", b"manifest_url": b""}
+        mock_zc.get_service_info.return_value = mock_info
+        result = _service_info_to_agent_info(mock_zc, ASAP_SERVICE_TYPE, "Test._asap._tcp.local.")
+        assert result is None
+
+    def test_service_info_to_agent_info_uses_server_fallback(self) -> None:
+        """_service_info_to_agent_info falls back to info.server when no addresses."""
+        mock_zc = MagicMock()
+        mock_info = MagicMock()
+        mock_info.properties = {
+            "version": "1.0.0",
+            "capabilities": "x",
+            "manifest_url": "https://a/manifest.json",
+        }
+        mock_info.parsed_scoped_addresses.return_value = []
+        mock_info.port = 9000
+        mock_info.server = "agent.local."
+        mock_zc.get_service_info.return_value = mock_info
+        result = _service_info_to_agent_info(
+            mock_zc, ASAP_SERVICE_TYPE, "TestAgent._asap._tcp.local."
+        )
+        assert result is not None
+        assert result.host == "agent.local."
+        assert result.name == "TestAgent"
+        assert result.port == 9000
+
+    def test_service_info_to_agent_info_with_string_properties(self) -> None:
+        """_service_info_to_agent_info handles string keys in TXT properties."""
+        mock_zc = MagicMock()
+        mock_info = MagicMock()
+        mock_info.properties = {
+            "version": "2.0.0",
+            "capabilities": "search,code",
+            "manifest_url": "https://example.com/manifest.json",
+        }
+        mock_info.parsed_scoped_addresses.return_value = ["192.168.1.5"]
+        mock_info.port = 8080
+        mock_info.server = "test.local."
+        mock_zc.get_service_info.return_value = mock_info
+        result = _service_info_to_agent_info(
+            mock_zc, ASAP_SERVICE_TYPE, "MyAgent._asap._tcp.local."
+        )
+        assert result is not None
+        assert result.version == "2.0.0"
+        assert result.capabilities == "search,code"
+        assert result.host == "192.168.1.5"
+
 
 class TestDNSSDDiscovery:
     """Tests for DNSSDDiscovery service browser."""
@@ -172,10 +339,10 @@ class TestDNSSDDiscovery:
         mock_info.server = "agent.local."
         mock_zc.get_service_info.return_value = mock_info
 
-        handlers_captured: list = []
+        handlers_captured: list[Any] = []
         original_browser = None
 
-        def mock_service_browser(zc: object, types: list[str], handlers: list) -> MagicMock:
+        def mock_service_browser(zc: object, types: list[str], handlers: list[Any]) -> MagicMock:
             nonlocal handlers_captured, original_browser
             handlers_captured = handlers
             original_browser = MagicMock()
@@ -224,9 +391,9 @@ class TestDNSSDDiscovery:
         mock_info.port = 9000
         mock_info.server = "srv.local."
         mock_zc.get_service_info.return_value = mock_info
-        handlers_captured: list = []
+        handlers_captured: list[Any] = []
 
-        def mock_service_browser(zc: object, types: list[str], handlers: list) -> MagicMock:
+        def mock_service_browser(zc: object, types: list[str], handlers: list[Any]) -> MagicMock:
             nonlocal handlers_captured
             handlers_captured = handlers
             return MagicMock(cancel=MagicMock())
@@ -270,9 +437,9 @@ class TestDNSSDDiscovery:
         mock_info.port = 80
         mock_info.server = "local."
         mock_zc.get_service_info.return_value = mock_info
-        handlers_captured: list = []
+        handlers_captured: list[Any] = []
 
-        def mock_service_browser(zc: object, types: list[str], handlers: list) -> MagicMock:
+        def mock_service_browser(zc: object, types: list[str], handlers: list[Any]) -> MagicMock:
             nonlocal handlers_captured
             handlers_captured = handlers
             return MagicMock(cancel=MagicMock())
@@ -297,3 +464,113 @@ class TestDNSSDDiscovery:
             discovery = DNSSDDiscovery()
             agents = await discovery.browse(wait_seconds=0.05)
         assert len(agents) == 0
+
+    @pytest.mark.asyncio
+    async def test_browse_invokes_on_service_removed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """on_service_removed callback is invoked when agent is removed after being added."""
+        added: list[AgentInfo] = []
+        removed: list[AgentInfo] = []
+        mock_zc = MagicMock()
+        mock_info = MagicMock()
+        mock_info.properties = {
+            b"version": b"1.0.0",
+            b"capabilities": b"echo",
+            b"manifest_url": b"https://a/manifest.json",
+        }
+        mock_info.parsed_scoped_addresses.return_value = ["10.0.0.1"]
+        mock_info.port = 8000
+        mock_info.server = "agent.local."
+        mock_zc.get_service_info.return_value = mock_info
+        handlers_captured: list[Any] = []
+        service_name = "RemovedAgent._asap._tcp.local."
+
+        def mock_service_browser(zc: object, types: list[str], handlers: list[Any]) -> MagicMock:
+            nonlocal handlers_captured
+            handlers_captured = handlers
+            return MagicMock(cancel=MagicMock())
+
+        def mock_sleep(seconds: float) -> None:
+            if handlers_captured:
+                from zeroconf import ServiceStateChange
+
+                for h in handlers_captured:
+                    # First add the service
+                    h(
+                        zeroconf=mock_zc,
+                        service_type=ASAP_SERVICE_TYPE,
+                        name=service_name,
+                        state_change=ServiceStateChange.Added,
+                    )
+                    # Then remove it
+                    h(
+                        zeroconf=mock_zc,
+                        service_type=ASAP_SERVICE_TYPE,
+                        name=service_name,
+                        state_change=ServiceStateChange.Removed,
+                    )
+
+        with (
+            patch("asap.discovery.dnssd.Zeroconf", return_value=mock_zc),
+            patch("asap.discovery.dnssd.ServiceBrowser", side_effect=mock_service_browser),
+            patch("asap.discovery.dnssd.time.sleep", side_effect=mock_sleep),
+        ):
+            discovery = DNSSDDiscovery(
+                on_service_added=lambda a: added.append(a),
+                on_service_removed=lambda a: removed.append(a),
+            )
+            agents = await discovery.browse(wait_seconds=0.05)
+        # Agent was added then removed
+        assert len(added) == 1
+        assert len(removed) == 1
+        assert removed[0].name == "RemovedAgent"
+        # Still in collected list since it was added
+        assert len(agents) == 1
+
+    @pytest.mark.asyncio
+    async def test_browse_removed_without_callback(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Removed event without on_service_removed callback does not raise."""
+        mock_zc = MagicMock()
+        mock_info = MagicMock()
+        mock_info.properties = {
+            b"version": b"1.0.0",
+            b"capabilities": b"x",
+            b"manifest_url": b"https://a/manifest.json",
+        }
+        mock_info.parsed_scoped_addresses.return_value = ["10.0.0.1"]
+        mock_info.port = 8000
+        mock_info.server = "agent.local."
+        mock_zc.get_service_info.return_value = mock_info
+        handlers_captured: list[Any] = []
+
+        def mock_service_browser(zc: object, types: list[str], handlers: list[Any]) -> MagicMock:
+            nonlocal handlers_captured
+            handlers_captured = handlers
+            return MagicMock(cancel=MagicMock())
+
+        def mock_sleep(seconds: float) -> None:
+            if handlers_captured:
+                from zeroconf import ServiceStateChange
+
+                for h in handlers_captured:
+                    h(
+                        zeroconf=mock_zc,
+                        service_type=ASAP_SERVICE_TYPE,
+                        name="NoCallback._asap._tcp.local.",
+                        state_change=ServiceStateChange.Added,
+                    )
+                    h(
+                        zeroconf=mock_zc,
+                        service_type=ASAP_SERVICE_TYPE,
+                        name="NoCallback._asap._tcp.local.",
+                        state_change=ServiceStateChange.Removed,
+                    )
+
+        with (
+            patch("asap.discovery.dnssd.Zeroconf", return_value=mock_zc),
+            patch("asap.discovery.dnssd.ServiceBrowser", side_effect=mock_service_browser),
+            patch("asap.discovery.dnssd.time.sleep", side_effect=mock_sleep),
+        ):
+            # No on_service_removed callback
+            discovery = DNSSDDiscovery()
+            agents = await discovery.browse(wait_seconds=0.05)
+        assert len(agents) == 1
