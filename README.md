@@ -223,3 +223,7 @@ Check out our [contributing guidelines](https://github.com/adriannoes/asap-proto
 ## License
 
 This project is licensed under the Apache 2.0 License - see the [license](https://github.com/adriannoes/asap-protocol/blob/main/LICENSE) file for details.
+
+---
+
+**Built with [Cursor](https://cursor.com/)** using Composer 1.5, Claude Sonnet/Opus 4.5/4.6, Gemini 3.0 Pro and Kimi K2.5.

@@ -82,9 +82,9 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
   - **Command**: `git commit -m "feat(transport): add WebSocket server binding"` (included in sprint commit)
 
 **Acceptance Criteria**:
-- [ ] Server accepts WebSocket connections
-- [ ] Messages routed to handlers
-- [ ] Errors handled gracefully
+- [x] Server accepts WebSocket connections
+- [x] Messages routed to handlers
+- [x] Errors handled gracefully
 
 ---
 
