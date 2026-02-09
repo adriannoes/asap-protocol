@@ -31,6 +31,10 @@ from asap.models.payloads import MessageAck
 from asap.observability import get_logger
 from asap.transport.circuit_breaker import CircuitBreaker
 from asap.transport.jsonrpc import ASAP_METHOD
+from asap.transport.rate_limit import (
+    DEFAULT_WS_MESSAGES_PER_SECOND,
+    WebSocketTokenBucket,
+)
 
 # JSON-RPC method for server push of MessageAck (ADR-16)
 ASAP_ACK_METHOD = "asap.ack"
@@ -121,6 +125,7 @@ __all__ = [
     "WebSocketRemoteError",
     "WebSocketTransport",
     "WS_CLOSE_GOING_AWAY",
+    "WS_CLOSE_POLICY_VIOLATION",
     "WS_CLOSE_REASON_SHUTDOWN",
     "decode_frame_to_json",
     "encode_envelope_frame",
@@ -762,10 +767,15 @@ async def _heartbeat_loop(
 WS_CLOSE_GOING_AWAY = 1001
 WS_CLOSE_REASON_SHUTDOWN = "Server shutting down"
 
+# Rate limit: close code when client exceeds message rate (RFC 6455 policy violation)
+WS_CLOSE_POLICY_VIOLATION = 1008
+
+
 async def handle_websocket_connection(
     websocket: WebSocket,
     request_handler: "ASAPRequestHandler",
     active_connections: set[WebSocket] | None = None,
+    ws_message_rate_limit: float | None = DEFAULT_WS_MESSAGES_PER_SECOND,
 ) -> None:
     await websocket.accept()
     if active_connections is not None:
@@ -773,6 +783,11 @@ async def handle_websocket_connection(
     logger.info("asap.websocket.connected", client=websocket.client)
     last_received: list[float] = [time.monotonic()]
     closed = asyncio.Event()
+    bucket: WebSocketTokenBucket | None = (
+        WebSocketTokenBucket(rate=ws_message_rate_limit)
+        if ws_message_rate_limit is not None and ws_message_rate_limit > 0
+        else None
+    )
     heartbeat_task: asyncio.Task[None] | None = None
     try:
         heartbeat_task = asyncio.create_task(
@@ -794,6 +809,25 @@ async def handle_websocket_connection(
                 data = {}
             if _is_heartbeat_pong(data):
                 continue
+            if bucket is not None and not bucket.consume(1):
+                logger.warning(
+                    "asap.websocket.rate_limit_exceeded",
+                    client=websocket.client,
+                    limit_per_sec=bucket.rate,
+                )
+                await websocket.send_text(
+                    json.dumps(
+                        {
+                            "jsonrpc": "2.0",
+                            "error": {
+                                "code": -32001,
+                                "message": "Rate limit exceeded; too many messages per second",
+                            },
+                            "id": data.get("id"),
+                        }
+                    )
+                )
+                break
             envelope_for_ack: Envelope | None = None
             requires_ack = False
             params = data.get("params")

@@ -1206,6 +1206,7 @@ def create_app(
     require_nonce: bool = False,
     hot_reload: bool | None = None,
     snapshot_store: SnapshotStore | None = None,
+    websocket_message_rate_limit: float | None = 10.0,
 ) -> FastAPI:
     """Create and configure a FastAPI application for ASAP protocol.
 
@@ -1250,6 +1251,10 @@ def create_app(
         snapshot_store: Optional SnapshotStore for state persistence. If None, uses
             create_snapshot_store() (ASAP_STORAGE_BACKEND and ASAP_STORAGE_PATH).
             Stored on app.state.snapshot_store for handlers.
+        websocket_message_rate_limit: Max messages per second per WebSocket connection.
+            When set (default 10.0), connections exceeding this are sent an error frame
+            and closed. Set to None to disable WebSocket message rate limiting.
+
     Returns:
         Configured FastAPI application ready to run
 
@@ -1416,6 +1421,7 @@ def create_app(
         lifespan=_lifespan,
     )
     app.state.websocket_connections = _active_websockets
+    app.state.websocket_message_rate_limit = websocket_message_rate_limit
 
     # Add size limit middleware (runs before routing)
     app.add_middleware(SizeLimitMiddleware, max_size=max_request_size)
@@ -1553,10 +1559,14 @@ def create_app(
     @app.websocket("/asap/ws")
     async def websocket_asap(websocket: WebSocket) -> None:
         """ASAP JSON-RPC over WebSocket; same handlers as POST /asap."""
+        ws_rate_limit: float | None = getattr(
+            app.state, "websocket_message_rate_limit", 10.0
+        )
         await handle_websocket_connection(
             websocket,
             handler,
             app.state.websocket_connections,
+            ws_message_rate_limit=ws_rate_limit,
         )
 
     return app
