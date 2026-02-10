@@ -16,7 +16,7 @@ from asap.transport.server import create_app
 from .conftest import NoRateLimitTestBase, TEST_RATE_LIMIT_DEFAULT
 
 if TYPE_CHECKING:
-    from slowapi import Limiter
+    from asap.transport.rate_limit import ASAPRateLimiter
 
 
 def _make_jsonrpc_body(envelope: Envelope, request_id: str | int = 1) -> str:
@@ -70,7 +70,7 @@ class TestWebSocketRateLimitHandler(NoRateLimitTestBase):
     def test_message_flooding_triggers_disconnect(
         self,
         sample_manifest: Manifest,
-        disable_rate_limiting: "Limiter",
+        disable_rate_limiting: "ASAPRateLimiter",
     ) -> None:
         app = create_app(
             sample_manifest,
@@ -111,7 +111,7 @@ class TestWebSocketRateLimitHandler(NoRateLimitTestBase):
     def test_normal_traffic_under_limit_unaffected(
         self,
         sample_manifest: Manifest,
-        disable_rate_limiting: "Limiter",
+        disable_rate_limiting: "ASAPRateLimiter",
     ) -> None:
         app = create_app(
             sample_manifest,
@@ -143,7 +143,7 @@ class TestWebSocketRateLimitHandler(NoRateLimitTestBase):
     def test_rate_limit_disabled_when_none(
         self,
         sample_manifest: Manifest,
-        disable_rate_limiting: "Limiter",
+        disable_rate_limiting: "ASAPRateLimiter",
     ) -> None:
         app = create_app(
             sample_manifest,

@@ -6,7 +6,6 @@ reducing duplication and ensuring consistency in test data.
 
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -14,7 +13,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 if TYPE_CHECKING:
-    from slowapi import Limiter
+    from asap.transport.rate_limit import ASAPRateLimiter
 
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.envelope import Envelope
@@ -35,7 +34,7 @@ ISOLATED_LIMITER_ATTR = "_isolated_limiter_state"
 class IsolatedLimiterState:
     """Holds the isolated rate limiter state for a test."""
 
-    limiter: Limiter | None = field(default=None)
+    limiter: ASAPRateLimiter | None = field(default=None)
 
 
 @pytest.fixture(autouse=True)
@@ -48,21 +47,14 @@ def _isolate_rate_limiter(request: pytest.FixtureRequest, monkeypatch: pytest.Mo
     if "test_rate_limiting" in str(request.fspath):
         return
 
-    from slowapi import Limiter
-    from slowapi.util import get_remote_address
+    from asap.transport.rate_limit import create_test_limiter, get_remote_address
 
-    isolated_limiter = Limiter(
-        key_func=get_remote_address,
-        storage_uri=f"{ISOLATED_STORAGE_PREFIX}{uuid.uuid4().hex}",
-        default_limits=[TEST_RATE_LIMIT],
-    )
+    isolated_limiter = create_test_limiter([TEST_RATE_LIMIT], key_func=get_remote_address)
 
-    # Replace globally in both modules
+    # Replace globally in middleware module
     import asap.transport.middleware as middleware_module
-    import asap.transport.server as server_module
 
     monkeypatch.setattr(middleware_module, "limiter", isolated_limiter)
-    monkeypatch.setattr(server_module, "limiter", isolated_limiter)
 
     setattr(request.node, ISOLATED_LIMITER_ATTR, IsolatedLimiterState(limiter=isolated_limiter))
 
@@ -71,12 +63,12 @@ def _isolate_rate_limiter(request: pytest.FixtureRequest, monkeypatch: pytest.Mo
 def isolated_rate_limiter(
     request: pytest.FixtureRequest,
     _isolate_rate_limiter: None,
-) -> Limiter | None:
+) -> ASAPRateLimiter | None:
     """Return the isolated rate limiter from _isolate_rate_limiter.
 
     Returns:
-        Limiter instance for most tests, or None if skipped for rate limiting tests
-        (tests in test_rate_limiting.py manage their own limiter).
+        ASAPRateLimiter instance for most tests, or None if skipped for rate limiting
+        tests (tests in test_rate_limiting.py manage their own limiter).
     """
     state: IsolatedLimiterState | None = getattr(request.node, ISOLATED_LIMITER_ATTR, None)
     return state.limiter if state else None

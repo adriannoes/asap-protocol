@@ -16,7 +16,7 @@ from asap.transport.server import create_app
 from ..conftest import NoRateLimitTestBase, TEST_RATE_LIMIT_DEFAULT
 
 if TYPE_CHECKING:
-    from slowapi import Limiter
+    from asap.transport.rate_limit import ASAPRateLimiter
 
 
 def _free_port() -> int:
@@ -33,17 +33,15 @@ class TestWebSocketClientE2E(NoRateLimitTestBase):
     async def test_client_websocket_send_receive(
         self,
         sample_manifest: Manifest,
-        disable_rate_limiting: "Limiter",
+        disable_rate_limiting: "ASAPRateLimiter",
     ) -> None:
         """ASAPClient(transport_mode=websocket) sends TaskRequest and receives TaskResponse."""
         import asyncio
 
         import uvicorn
-        from asap.transport import server as server_module
         from asap.transport import middleware as middleware_module
 
         middleware_module.limiter = disable_rate_limiting
-        server_module.limiter = disable_rate_limiting
 
         port = _free_port()
         app_instance = create_app(

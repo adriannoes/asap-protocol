@@ -19,7 +19,7 @@ from .conftest import NoRateLimitTestBase, TEST_RATE_LIMIT_DEFAULT
 if TYPE_CHECKING:
     from asap.models.entities import Manifest
     from fastapi import FastAPI
-    from slowapi import Limiter
+    from asap.transport.rate_limit import ASAPRateLimiter
 
 
 # --- Fixtures ---
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 @pytest.fixture
 def app(
     sample_manifest: "Manifest",
-    disable_rate_limiting: "Limiter",
+    disable_rate_limiting: "ASAPRateLimiter",
 ) -> "FastAPI":
     from asap.transport.server import create_app
 

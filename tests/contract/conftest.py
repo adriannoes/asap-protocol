@@ -8,19 +8,18 @@ Following testing-standards.mdc:
 - Rate limiting patterns from tests/transport/conftest.py are reused
 """
 
-import uuid
 from typing import TYPE_CHECKING
 
 import pytest
 
 if TYPE_CHECKING:
-    from slowapi import Limiter
+    from asap.transport.rate_limit import ASAPRateLimiter
 
 
 @pytest.fixture(autouse=True)
 def disable_rate_limiting_for_contract_tests(
     monkeypatch: pytest.MonkeyPatch,
-) -> "Limiter":
+) -> "ASAPRateLimiter":
     """Automatically disable rate limiting for all contract tests.
 
     This fixture runs automatically for every test in the contract package.
@@ -36,21 +35,14 @@ def disable_rate_limiting_for_contract_tests(
     Returns:
         The no-limit limiter instance
     """
-    from slowapi import Limiter
-    from slowapi.util import get_remote_address
+    from asap.transport.rate_limit import create_test_limiter
 
     # Create limiter with NO limits
-    no_limit_limiter = Limiter(
-        key_func=get_remote_address,
-        storage_uri=f"memory://contract-tests-{uuid.uuid4().hex}",
-        default_limits=[],  # Empty list = no limits
-    )
+    no_limit_limiter = create_test_limiter(limits=[])
 
-    # Replace globally in both modules
+    # Replace globally in middleware module (server reads from app.state.limiter)
     import asap.transport.middleware as middleware_module
-    import asap.transport.server as server_module
 
     monkeypatch.setattr(middleware_module, "limiter", no_limit_limiter)
-    monkeypatch.setattr(server_module, "limiter", no_limit_limiter)
 
     return no_limit_limiter
