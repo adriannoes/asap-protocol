@@ -139,6 +139,40 @@ class TestMakeFakeRequest:
         r2 = await request.receive()
         assert r2["type"] == "http.disconnect"
 
+    @pytest.mark.asyncio
+    async def test_make_fake_request_scope_has_required_asgi_fields(self) -> None:
+        """Fake request scope includes path, root_path, query_string, server for middleware compatibility."""
+
+        class FakeWs:
+            scope = {
+                "headers": [],
+                "path": "/asap/ws",
+                "server": ("localhost", 9000),
+            }
+
+        body = '{"jsonrpc":"2.0","method":"asap.send","params":{},"id":1}'
+        request = await _make_fake_request(body, FakeWs())
+        assert request.scope["path"] == "/asap/ws"
+        assert request.scope["root_path"] == ""
+        assert request.scope["query_string"] == b""
+        assert request.scope["server"] == ("localhost", 9000)
+
+    @pytest.mark.asyncio
+    async def test_make_fake_request_scope_defaults_when_missing_in_websocket_scope(
+        self,
+    ) -> None:
+        """When WebSocket scope has no path/server, fake request uses sensible defaults."""
+
+        class FakeWs:
+            scope = {"headers": []}
+
+        body = "{}"
+        request = await _make_fake_request(body, FakeWs())
+        assert request.scope["path"] == "/asap"
+        assert request.scope["root_path"] == ""
+        assert request.scope["query_string"] == b""
+        assert request.scope["server"] == ("localhost", 8000)
+
 
 class TestHeartbeatHelpers:
     def test_is_heartbeat_pong_true_when_type_pong_no_method(self) -> None:
@@ -219,16 +253,34 @@ class TestWebSocketMessageRouting(NoRateLimitTestBase):
 class TestWebSocketErrorHandling(NoRateLimitTestBase):
     """Tests for error handling (invalid JSON, invalid params, etc.)."""
 
-    def test_websocket_invalid_json_returns_error(self, client: TestClient) -> None:
-        """Invalid JSON frame receives JSON-RPC parse or invalid request error."""
+    def test_websocket_invalid_json_frame_skipped(self, client: TestClient) -> None:
+        """Invalid JSON frame is skipped (no response); connection stays open; valid request still works."""
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="c1",
+                skill_id="echo",
+                input={"msg": "after-invalid"},
+            ).model_dump(),
+        )
+        rpc = JsonRpcRequest(
+            method=ASAP_METHOD,
+            params={"envelope": envelope.model_dump(mode="json")},
+            id=1,
+        )
+        body_valid = json.dumps(rpc.model_dump())
         with client.websocket_connect("/asap/ws") as websocket:
             websocket.send_text("not valid json {{{")
+            websocket.send_text(body_valid)
             response_text = websocket.receive_text()
 
         data = json.loads(response_text)
         assert data.get("jsonrpc") == "2.0"
-        assert "error" in data
-        assert data["error"].get("code") in (-32700, -32600)
+        assert "result" in data
+        assert data["result"].get("envelope", {}).get("payload_type") == "task.response"
 
     def test_websocket_missing_envelope_returns_error(self, client: TestClient) -> None:
         """JSON-RPC without params.envelope receives invalid params error."""
