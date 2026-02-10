@@ -22,7 +22,7 @@ import socket
 import time
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import urlparse
 
 import httpx
@@ -54,10 +54,20 @@ def _is_ip_blocked(addr: str) -> bool:
     return ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved
 
 
-def _resolve_hostname(hostname: str) -> list[str]:
-    """Resolve hostname to deduplicated IP list via getaddrinfo. Raises WebhookURLValidationError on failure."""
+async def _resolve_hostname(hostname: str) -> list[str]:
+    """Resolve hostname to deduplicated IP list via async getaddrinfo.
+
+    Uses ``loop.getaddrinfo`` to avoid blocking the event loop during DNS
+    resolution. Raises ``WebhookURLValidationError`` on failure.
+    """
+    loop = asyncio.get_running_loop()
     try:
-        results = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        results = await loop.getaddrinfo(
+            hostname,
+            None,
+            family=socket.AF_UNSPEC,
+            type=socket.SOCK_STREAM,
+        )
     except socket.gaierror as exc:
         raise WebhookURLValidationError(
             url=hostname,
@@ -76,22 +86,12 @@ def _resolve_hostname(hostname: str) -> list[str]:
     return ips
 
 
-def validate_callback_url(url: str, *, require_https: bool = True) -> None:
-    """Validate a webhook callback URL to prevent SSRF attacks.
+async def validate_callback_url(url: str, *, require_https: bool = True) -> None:
+    """Validate a webhook callback URL against SSRF rules.
 
-    Checks performed (in order):
-        1. **Scheme** — must be ``https`` (strict) or ``http``/``https`` (relaxed).
-        2. **Hostname present** — URL must include a network location.
-        3. **IP literal check** — if the host is an IP literal, block private ranges.
-        4. **DNS resolution** — resolve hostname and block if *any* resolved IP
-           falls in a private, loopback, link-local, or reserved range.
-
-    Args:
-        url: The callback URL to validate.
-        require_https: When True, only ``https`` scheme is accepted.
-
-    Raises:
-        WebhookURLValidationError: When the URL fails any SSRF check.
+    Rejects non-HTTPS schemes (unless *require_https* is False), missing
+    hostnames, private/loopback/link-local IP literals, and hostnames that
+    resolve to any blocked IP range (anti DNS-rebinding).
     """
     parsed = urlparse(url)
 
@@ -122,7 +122,7 @@ def validate_callback_url(url: str, *, require_https: bool = True) -> None:
         )
 
     # --- DNS resolution check (anti DNS-rebinding) ---
-    resolved_ips = _resolve_hostname(hostname)
+    resolved_ips = await _resolve_hostname(hostname)
     for ip_str in resolved_ips:
         if _is_ip_blocked(ip_str):
             raise WebhookURLValidationError(
@@ -149,7 +149,7 @@ class WebhookResult:
     status_code: int
     success: bool
     elapsed_ms: float
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class WebhookDelivery:
@@ -171,31 +171,33 @@ class WebhookDelivery:
     def __init__(
         self,
         *,
-        secret: Optional[bytes] = None,
+        secret: bytes | None = None,
         timeout_seconds: float = DEFAULT_WEBHOOK_TIMEOUT,
         require_https: bool = True,
+        client: httpx.AsyncClient | None = None,
     ) -> None:
         self._secret = secret
         self._timeout_seconds = timeout_seconds
         self._require_https = require_https
+        self._external_client = client
 
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
-    def validate_url(self, url: str) -> None:
+    async def validate_url(self, url: str) -> None:
         """Validate url against SSRF rules and this instance's HTTPS policy."""
-        validate_callback_url(url, require_https=self._require_https)
+        await validate_callback_url(url, require_https=self._require_https)
 
     async def deliver(
         self,
         url: str,
         payload: dict[str, Any],
         *,
-        extra_headers: Optional[dict[str, str]] = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> WebhookResult:
         """Validate url, sign payload if secret set, POST JSON; return WebhookResult."""
-        self.validate_url(url)
+        await self.validate_url(url)
 
         body = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
 
@@ -207,8 +209,11 @@ class WebhookDelivery:
 
         start = time.monotonic()
         try:
-            async with httpx.AsyncClient(timeout=self._timeout_seconds) as client:
-                response = await client.post(url, content=body, headers=headers)
+            if self._external_client is not None:
+                response = await self._external_client.post(url, content=body, headers=headers)
+            else:
+                async with httpx.AsyncClient(timeout=self._timeout_seconds) as client:
+                    response = await client.post(url, content=body, headers=headers)
 
             elapsed_ms = (time.monotonic() - start) * 1000
             success = 200 <= response.status_code < 300
@@ -320,7 +325,7 @@ class DeadLetterEntry:
     payload: dict[str, Any]
     last_result: WebhookResult
     attempts: int
-    created_at: float = field(default_factory=time.monotonic)
+    created_at: float = field(default_factory=time.time)
 
 
 # ------------------------------------------------------------------
@@ -398,6 +403,7 @@ class WebhookRetryManager:
         self._on_dead_letter = on_dead_letter
         self._dead_letters: list[DeadLetterEntry] = []
         self._url_buckets: dict[str, _URLTokenBucket] = {}
+        self._max_buckets = 10_000
 
     # ------------------------------------------------------------------
     # Public API
@@ -468,6 +474,15 @@ class WebhookRetryManager:
     def _get_bucket(self, url: str) -> _URLTokenBucket:
         bucket = self._url_buckets.get(url)
         if bucket is None:
+            # Evict oldest entry if at capacity to prevent unbounded growth.
+            if len(self._url_buckets) >= self._max_buckets:
+                oldest_key = next(iter(self._url_buckets))
+                del self._url_buckets[oldest_key]
+                logger.debug(
+                    "webhook.bucket_evicted",
+                    evicted_url=oldest_key,
+                    capacity=self._max_buckets,
+                )
             bucket = _URLTokenBucket(rate=self._policy.rate_per_second)
             self._url_buckets[url] = bucket
         return bucket

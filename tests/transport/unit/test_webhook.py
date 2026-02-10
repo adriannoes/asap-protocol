@@ -29,40 +29,26 @@ from asap.transport.webhook import (
 # ---------------------------------------------------------------------------
 
 
-def _fake_getaddrinfo_public(
-    host: str,
-    port: Any,
-    family: int = 0,
-    type_: int = 0,
-    proto: int = 0,
-    flags: int = 0,
-) -> list[tuple[int, int, int, str, tuple[str, int]]]:
+def _public_addrinfo() -> list[tuple[int, int, int, str, tuple[str, int]]]:
     """Return a fake getaddrinfo result pointing to a public IP."""
     return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))]
 
 
-def _fake_getaddrinfo_private(
-    host: str,
-    port: Any,
-    family: int = 0,
-    type_: int = 0,
-    proto: int = 0,
-    flags: int = 0,
-) -> list[tuple[int, int, int, str, tuple[str, int]]]:
+def _private_addrinfo() -> list[tuple[int, int, int, str, tuple[str, int]]]:
     """Return a fake getaddrinfo result pointing to a private IP (DNS rebinding)."""
     return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("192.168.1.1", 0))]
 
 
-def _fake_getaddrinfo_failure(
-    host: str,
-    port: Any,
-    family: int = 0,
-    type_: int = 0,
-    proto: int = 0,
-    flags: int = 0,
-) -> list[tuple[int, int, int, str, tuple[str, int]]]:
-    """Simulate DNS resolution failure."""
-    raise socket.gaierror("[Errno 8] nodename nor servname provided, or not known")
+def _patch_async_getaddrinfo(
+    return_value: list | None = None, side_effect: Exception | None = None
+):
+    """Patch asyncio event loop getaddrinfo with AsyncMock."""
+    mock = AsyncMock()
+    if side_effect is not None:
+        mock.side_effect = side_effect
+    else:
+        mock.return_value = return_value or _public_addrinfo()
+    return patch("asyncio.get_running_loop", return_value=MagicMock(getaddrinfo=mock))
 
 
 # ---------------------------------------------------------------------------
@@ -71,27 +57,27 @@ def _fake_getaddrinfo_failure(
 
 
 class TestURLValidation:
-    @patch("asap.transport.webhook.socket.getaddrinfo", _fake_getaddrinfo_public)
-    def test_https_allowed_when_required(self) -> None:
-        validate_callback_url("https://example.com/webhook", require_https=True)
+    async def test_https_allowed_when_required(self) -> None:
+        with _patch_async_getaddrinfo(_public_addrinfo()):
+            await validate_callback_url("https://example.com/webhook", require_https=True)
 
-    @patch("asap.transport.webhook.socket.getaddrinfo", _fake_getaddrinfo_public)
-    def test_http_allowed_when_relaxed(self) -> None:
-        validate_callback_url("http://example.com/webhook", require_https=False)
+    async def test_http_allowed_when_relaxed(self) -> None:
+        with _patch_async_getaddrinfo(_public_addrinfo()):
+            await validate_callback_url("http://example.com/webhook", require_https=False)
 
-    def test_http_blocked_when_required(self) -> None:
+    async def test_http_blocked_when_required(self) -> None:
         with pytest.raises(WebhookURLValidationError, match="Scheme 'http' is not allowed"):
-            validate_callback_url("http://example.com/webhook", require_https=True)
+            await validate_callback_url("http://example.com/webhook", require_https=True)
 
-    def test_ftp_scheme_blocked(self) -> None:
+    async def test_ftp_scheme_blocked(self) -> None:
         with pytest.raises(WebhookURLValidationError, match="Scheme 'ftp' is not allowed"):
-            validate_callback_url("ftp://example.com/file", require_https=False)
+            await validate_callback_url("ftp://example.com/file", require_https=False)
 
     # -- Missing hostname --
 
-    def test_missing_hostname_blocked(self) -> None:
+    async def test_missing_hostname_blocked(self) -> None:
         with pytest.raises(WebhookURLValidationError, match="must include a hostname"):
-            validate_callback_url("https://", require_https=True)
+            await validate_callback_url("https://", require_https=True)
 
     # -- Private IP literal checks --
 
@@ -116,41 +102,45 @@ class TestURLValidation:
             "private-192-end",
         ],
     )
-    def test_private_ipv4_blocked(self, ip: str) -> None:
+    async def test_private_ipv4_blocked(self, ip: str) -> None:
         with pytest.raises(WebhookURLValidationError, match="blocked address range"):
-            validate_callback_url(f"https://{ip}/hook")
+            await validate_callback_url(f"https://{ip}/hook")
 
-    def test_link_local_ipv4_blocked(self) -> None:
+    async def test_link_local_ipv4_blocked(self) -> None:
         with pytest.raises(WebhookURLValidationError, match="blocked address range"):
-            validate_callback_url("https://169.254.1.1/hook")
+            await validate_callback_url("https://169.254.1.1/hook")
 
-    def test_ipv6_loopback_blocked(self) -> None:
+    async def test_ipv6_loopback_blocked(self) -> None:
         with pytest.raises(WebhookURLValidationError, match="blocked address range"):
-            validate_callback_url("https://[::1]/hook")
+            await validate_callback_url("https://[::1]/hook")
 
     # -- DNS rebinding --
 
-    @patch("asap.transport.webhook.socket.getaddrinfo", _fake_getaddrinfo_private)
-    def test_dns_rebinding_blocked(self) -> None:
-        with pytest.raises(WebhookURLValidationError, match="resolved to blocked IP"):
-            validate_callback_url("https://evil.example.com/hook")
+    async def test_dns_rebinding_blocked(self) -> None:
+        with (
+            _patch_async_getaddrinfo(_private_addrinfo()),
+            pytest.raises(WebhookURLValidationError, match="resolved to blocked IP"),
+        ):
+            await validate_callback_url("https://evil.example.com/hook")
 
-    @patch("asap.transport.webhook.socket.getaddrinfo", _fake_getaddrinfo_failure)
-    def test_dns_resolution_failure_raises(self) -> None:
-        with pytest.raises(WebhookURLValidationError, match="DNS resolution failed"):
-            validate_callback_url("https://nonexistent.invalid/hook")
+    async def test_dns_resolution_failure_raises(self) -> None:
+        with (
+            _patch_async_getaddrinfo(side_effect=socket.gaierror("DNS failed")),
+            pytest.raises(WebhookURLValidationError, match="DNS resolution failed"),
+        ):
+            await validate_callback_url("https://nonexistent.invalid/hook")
 
     # -- Public IP passes --
 
-    @patch("asap.transport.webhook.socket.getaddrinfo", _fake_getaddrinfo_public)
-    def test_public_ip_allowed(self) -> None:
-        validate_callback_url("https://93.184.216.34/hook")
+    async def test_public_ip_allowed(self) -> None:
+        with _patch_async_getaddrinfo(_public_addrinfo()):
+            await validate_callback_url("https://93.184.216.34/hook")
 
     # -- Error details --
 
-    def test_error_includes_url_and_reason(self) -> None:
+    async def test_error_includes_url_and_reason(self) -> None:
         with pytest.raises(WebhookURLValidationError) as exc_info:
-            validate_callback_url("http://example.com/hook", require_https=True)
+            await validate_callback_url("http://example.com/hook", require_https=True)
 
         err = exc_info.value
         assert err.url == "http://example.com/hook"
@@ -213,19 +203,16 @@ class TestWebhookDelivery:
     _PAYLOAD: dict[str, Any] = {"event": "task.completed", "task_id": "t-1"}
     _URL = "https://receiver.example.com/hook"
 
-    # -- Helpers --
-
-    def _mock_transport(self, status_code: int = 200) -> httpx.MockTransport:
-        def _handler(request: httpx.Request) -> httpx.Response:
-            return httpx.Response(status_code=status_code)
-
-        return httpx.MockTransport(_handler)
+    @pytest.fixture()
+    def _mock_dns(self):
+        """Fixture that patches async DNS resolution to return a public IP."""
+        with _patch_async_getaddrinfo(_public_addrinfo()):
+            yield
 
     # -- Success --
 
-    @patch("asap.transport.webhook.socket.getaddrinfo", _fake_getaddrinfo_public)
+    @pytest.mark.usefixtures("_mock_dns")
     async def test_deliver_success_200(self) -> None:
-        self._mock_transport(200)
         delivery = WebhookDelivery(secret=self._SECRET, require_https=True)
 
         with patch("asap.transport.webhook.httpx.AsyncClient") as mock_cls:
@@ -246,7 +233,7 @@ class TestWebhookDelivery:
 
     # -- HMAC header present --
 
-    @patch("asap.transport.webhook.socket.getaddrinfo", _fake_getaddrinfo_public)
+    @pytest.mark.usefixtures("_mock_dns")
     async def test_deliver_includes_hmac_header(self) -> None:
         delivery = WebhookDelivery(secret=self._SECRET, require_https=True)
 
@@ -267,7 +254,7 @@ class TestWebhookDelivery:
 
     # -- No HMAC when secret is None --
 
-    @patch("asap.transport.webhook.socket.getaddrinfo", _fake_getaddrinfo_public)
+    @pytest.mark.usefixtures("_mock_dns")
     async def test_deliver_no_hmac_without_secret(self) -> None:
         delivery = WebhookDelivery(secret=None, require_https=True)
 
@@ -286,7 +273,7 @@ class TestWebhookDelivery:
 
     # -- Extra headers --
 
-    @patch("asap.transport.webhook.socket.getaddrinfo", _fake_getaddrinfo_public)
+    @pytest.mark.usefixtures("_mock_dns")
     async def test_deliver_extra_headers_included(self) -> None:
         delivery = WebhookDelivery(secret=None, require_https=True)
         extra = {"X-Custom": "value"}
@@ -307,7 +294,7 @@ class TestWebhookDelivery:
     # -- 4xx / 5xx --
 
     @pytest.mark.parametrize("status", [400, 403, 404, 500, 502, 503])
-    @patch("asap.transport.webhook.socket.getaddrinfo", _fake_getaddrinfo_public)
+    @pytest.mark.usefixtures("_mock_dns")
     async def test_deliver_non_2xx_returns_failure(self, status: int) -> None:
         delivery = WebhookDelivery(secret=None, require_https=True)
 
@@ -325,7 +312,7 @@ class TestWebhookDelivery:
 
     # -- Timeout --
 
-    @patch("asap.transport.webhook.socket.getaddrinfo", _fake_getaddrinfo_public)
+    @pytest.mark.usefixtures("_mock_dns")
     async def test_deliver_timeout_returns_error_result(self) -> None:
         delivery = WebhookDelivery(secret=None, require_https=True, timeout_seconds=1.0)
 
@@ -345,7 +332,7 @@ class TestWebhookDelivery:
 
     # -- Network error --
 
-    @patch("asap.transport.webhook.socket.getaddrinfo", _fake_getaddrinfo_public)
+    @pytest.mark.usefixtures("_mock_dns")
     async def test_deliver_network_error_returns_error_result(self) -> None:
         delivery = WebhookDelivery(secret=None, require_https=True)
 
@@ -372,7 +359,7 @@ class TestWebhookDelivery:
 
     # -- Payload serialization is deterministic --
 
-    @patch("asap.transport.webhook.socket.getaddrinfo", _fake_getaddrinfo_public)
+    @pytest.mark.usefixtures("_mock_dns")
     async def test_deliver_payload_sorted_keys(self) -> None:
         delivery = WebhookDelivery(secret=self._SECRET, require_https=True)
         payload = {"z_last": 1, "a_first": 2}
@@ -394,17 +381,17 @@ class TestWebhookDelivery:
 
     # -- WebhookDelivery.validate_url delegates --
 
-    def test_validate_url_delegates_to_module_function(self) -> None:
+    async def test_validate_url_delegates_to_module_function(self) -> None:
         delivery_strict = WebhookDelivery(require_https=True)
         delivery_relaxed = WebhookDelivery(require_https=False)
 
         # Strict should block HTTP
         with pytest.raises(WebhookURLValidationError):
-            delivery_strict.validate_url("http://example.com/hook")
+            await delivery_strict.validate_url("http://example.com/hook")
 
         # Relaxed should allow HTTP (DNS is resolved — mock it)
-        with patch("asap.transport.webhook.socket.getaddrinfo", _fake_getaddrinfo_public):
-            delivery_relaxed.validate_url("http://example.com/hook")
+        with _patch_async_getaddrinfo(_public_addrinfo()):
+            await delivery_relaxed.validate_url("http://example.com/hook")
 
 
 # ---------------------------------------------------------------------------

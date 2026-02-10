@@ -88,16 +88,6 @@ class ASAPRateLimiter:
         limits: list[str] | None = None,
         storage_uri: str | None = None,
     ) -> None:
-        """Initialize the rate limiter.
-
-        Args:
-            key_func: Callable that extracts a rate-limit key from a ``Request``
-                (e.g. client IP address).
-            limits: List of rate limit strings (e.g. ``["10/second;100/minute"]``).
-                Defaults to ``DEFAULT_RATE_LIMIT``.
-            storage_uri: URI for the backing store. Defaults to a unique
-                ``memory://`` store per instance.
-        """
         self._key_func = key_func
 
         limit_strings = limits or [DEFAULT_RATE_LIMIT]
@@ -116,47 +106,31 @@ class ASAPRateLimiter:
     # ------------------------------------------------------------------
 
     def check(self, request: Request) -> None:
-        """Check whether *request* is within the configured rate limits.
+        """Raise ``RateLimitExceeded`` if *request* violates any configured limit.
 
-        Increments the hit counter for every configured limit. If **any**
-        limit is exceeded, raises ``RateLimitExceeded`` with ``retry_after``
-        set to the longest reset window among all exceeded limits.
-
-        Args:
-            request: The incoming FastAPI ``Request``.
-
-        Raises:
-            RateLimitExceeded: When at least one limit is exceeded.
+        Two-phase approach: test all limits (read-only) first, then hit all
+        counters only if every limit passes. Prevents double-counting drift.
         """
         key = self._key_func(request)
-        max_retry_after = 0
-        exceeded_limit: RateLimitItem | None = None
 
+        # Phase 1: Test all limits without consuming hits.
         for rate_limit in self._rate_limits:
-            if not self._strategy.hit(rate_limit, key):
+            if not self._strategy.test(rate_limit, key):
                 window_stats = self._strategy.get_window_stats(rate_limit, key)
                 # window_stats[0] is the reset timestamp (epoch seconds).
                 retry_seconds = max(1, int(window_stats[0] - time.time()))
-                if retry_seconds > max_retry_after:
-                    max_retry_after = retry_seconds
-                    exceeded_limit = rate_limit
+                raise RateLimitExceeded(
+                    detail=f"Rate limit exceeded: {rate_limit}",
+                    retry_after=retry_seconds,
+                    limit=str(rate_limit),
+                )
 
-        if exceeded_limit is not None:
-            raise RateLimitExceeded(
-                detail=f"Rate limit exceeded: {exceeded_limit}",
-                retry_after=max_retry_after,
-                limit=str(exceeded_limit),
-            )
+        # Phase 2: All limits pass — now increment all counters.
+        for rate_limit in self._rate_limits:
+            self._strategy.hit(rate_limit, key)
 
     def test(self, request: Request) -> bool:
-        """Test whether *request* would be allowed (does **not** consume a hit).
-
-        Args:
-            request: The incoming FastAPI ``Request``.
-
-        Returns:
-            True if the request would be allowed under all limits.
-        """
+        """Return True if *request* would pass all limits (no counter increment)."""
         key = self._key_func(request)
         return all(self._strategy.test(rate_limit, key) for rate_limit in self._rate_limits)
 
@@ -177,27 +151,10 @@ def create_limiter(
     key_func: Callable[[Request], str] | None = None,
     storage_uri: str | None = None,
 ) -> ASAPRateLimiter:
-    """Create a new rate limiter for production use.
+    """Create a production rate limiter.
 
-    Each call returns a fully independent instance with its own in-memory
-    storage (``memory://``). For shared limits across workers, pass a Redis URI.
-
-    **Multi-worker warning:** ``memory://`` storage is per-process. In
-    multi-worker deployments (e.g. Gunicorn with 4 workers), effective
-    rate = configured limit × workers. Use Redis for shared limits.
-
-    Args:
-        limits: Rate limit strings (e.g. ``["10/second;100/minute"]``).
-            Defaults to ``DEFAULT_RATE_LIMIT``.
-        key_func: Optional key extraction function. If ``None``, uses
-            :func:`get_remote_address` (client IP).
-        storage_uri: Optional storage URI. Defaults to unique ``memory://``.
-
-    Returns:
-        New ``ASAPRateLimiter`` instance.
-
-    Example:
-        >>> limiter = create_limiter(["100/minute"])
+    Returns a fully independent instance with its own storage.
+    ``memory://`` is per-process; use a Redis URI for shared limits across workers.
     """
     if key_func is None:
         key_func = get_remote_address
@@ -227,19 +184,7 @@ def create_test_limiter(
     *,
     key_func: Callable[[Request], str] | None = None,
 ) -> ASAPRateLimiter:
-    """Create a new rate limiter for testing with isolated storage.
-
-    Args:
-        limits: Rate limit strings. Defaults to very high limit (``100000/minute``).
-        key_func: Optional key extraction function. Defaults to
-            :func:`get_remote_address`.
-
-    Returns:
-        New ``ASAPRateLimiter`` instance with unique in-memory storage.
-
-    Example:
-        >>> test_limiter = create_test_limiter(["100000/minute"])
-    """
+    """Create a rate limiter for testing with isolated ``memory://`` storage."""
     if key_func is None:
         key_func = get_remote_address
 

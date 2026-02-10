@@ -116,7 +116,24 @@ def _get_sender_from_envelope(request: Request) -> str:
     return str(remote_addr)
 
 
-limiter = create_limiter(key_func=_get_sender_from_envelope)
+_limiter: ASAPRateLimiter | None = None
+
+
+def _get_default_limiter() -> ASAPRateLimiter:
+    """Lazy-initialize the default rate limiter on first use.
+
+    Avoids import-time side effects (memory storage warning, wasted allocation)
+    when the limiter is overridden by ``create_app()`` or test fixtures.
+    """
+    global _limiter  # noqa: PLW0603
+    if _limiter is None:
+        _limiter = create_limiter(key_func=_get_sender_from_envelope)
+    return _limiter
+
+
+# Backward-compatible alias used by middleware and test fixtures.
+# Tests and create_app() override this via monkeypatch or app.state.limiter.
+limiter: ASAPRateLimiter | None = None
 
 
 def rate_limit_handler(request: Request, exc: Exception) -> JSONResponse:
