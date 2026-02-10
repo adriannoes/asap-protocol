@@ -7,7 +7,7 @@
 
 > A production-ready protocol for agent-to-agent communication and task coordination.
 
-**Quick Info**: `v1.0.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/1.0.0/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
+**Quick Info**: `v1.1.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
 
 ## Why ASAP?
 
@@ -25,7 +25,7 @@ Building multi-agent systems today suffers from three core technical challenges 
 - **Async-native** — `asyncio` + `httpx`; sync and async handlers supported.
 - **MCP integration** — Tool execution and coordination in a single envelope.
 - **Observable** — `trace_id` and `correlation_id` for debugging.
-- **Security (v1.0.0)** — Bearer auth, replay prevention, HTTPS, rate limiting (100 req/min). Opt-in.
+- **Security** — Bearer auth, OAuth2/JWT (v1.1), replay prevention, HTTPS, rate limiting. [v1.1 Security Model](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/v1.1-security-model.md) (trust limits, Custom Claims).
 
 ## Installation
 
@@ -134,7 +134,7 @@ See the [full list of 15+ examples](https://github.com/adriannoes/asap-protocol/
 | **State** | `long_running` (checkpoints, resume after crash), `state_migration` (move state between agents) |
 | **Resilience** | `error_recovery` (retry, circuit breaker, fallback) |
 | **Integration** | `mcp_client_demo` (stdio), `mcp_integration` (ASAP envelopes) |
-| **Auth & limits** | `auth_patterns` (Bearer, OAuth2), `rate_limiting` (per-sender, per-endpoint) |
+| **Auth & limits** | `auth_patterns` (Bearer, OAuth2), `rate_limiting`, `secure_agent` (OAuth2 + Custom Claims) |
 | **Concepts** | `websocket_concept`, `streaming_response`, `multi_step_workflow` |
 
 ## Testing
@@ -157,9 +157,9 @@ uv run pytest --cov=src --cov-report=term-missing
 
 ## API Overview
 
-Core models: `Envelope`, `TaskRequest`/`TaskResponse`/`TaskUpdate`/`TaskCancel`, `MessageSend`, `ArtifactNotify`, `StateQuery`/`StateRestore`, `McpToolCall`/`McpToolResult`/`McpResourceFetch`/`McpResourceData`. See [API Reference](https://github.com/adriannoes/asap-protocol/blob/main/docs/api-reference.md).
+Core models: `Envelope`, `TaskRequest`/`TaskResponse`/`TaskUpdate`/`TaskCancel`, `MessageSend`, `ArtifactNotify`, `StateQuery`/`StateRestore`, `McpToolCall`/`McpToolResult`/`McpResourceFetch`/`McpResourceData`, `MessageAck` (WebSocket ack). See [API Reference](https://github.com/adriannoes/asap-protocol/blob/main/docs/api-reference.md).
 
-Transport: `create_app`, `HandlerRegistry`, `ASAPClient`. See [Transport](https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md).
+Transport: `create_app`, `HandlerRegistry`, `ASAPClient`, `WebhookDelivery`/`WebhookRetryManager`, WebSocket client/server. Discovery: well-known manifest, `GET /.well-known/asap/health`, Lite Registry. See [Transport](https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md) and [Docs index](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#v11-features-api-reference--guides).
 
 ## When to use ASAP?
 
@@ -180,7 +180,7 @@ If you're building simple point-to-point agent communication, a basic HTTP API m
 
 **Deep Dive**
 - [State Management](https://github.com/adriannoes/asap-protocol/blob/main/docs/state-management.md) | [Best Practices: Failover & Migration](https://github.com/adriannoes/asap-protocol/blob/main/docs/best-practices/agent-failover-migration.md) | [Error Handling](https://github.com/adriannoes/asap-protocol/blob/main/docs/error-handling.md)
-- [Transport](https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md) | [Security](https://github.com/adriannoes/asap-protocol/blob/main/docs/security.md)
+- [Transport](https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md) | [Security](https://github.com/adriannoes/asap-protocol/blob/main/docs/security.md) | [v1.1 Security Model](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/v1.1-security-model.md) (OAuth2 trust, Custom Claims, ADR-17)
 - [Observability](https://github.com/adriannoes/asap-protocol/blob/main/docs/observability.md) | [Testing](https://github.com/adriannoes/asap-protocol/blob/main/docs/testing.md)
 
 **Decisions & Operations**
@@ -200,6 +200,8 @@ asap export-schemas     # Export JSON schemas to file
 ```
 
 See [CLI docs](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#cli) or run `asap --help`.
+
+**v1.1** adds OAuth2, WebSocket, Discovery (well-known + Lite Registry), State Storage (SQLite), and Webhooks. See [docs index](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#v11-features-api-reference--guides) and [v1.1 Security Model](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/v1.1-security-model.md) for details.
 
 ## What's Next? 🔭
 

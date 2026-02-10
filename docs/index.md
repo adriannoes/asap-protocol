@@ -75,3 +75,15 @@ asap show-schema agent
 - [Observability](observability.md)
 - [Error Handling](error-handling.md)
 - [Testing](testing.md)
+- [v1.1 Security Model](security/v1.1-security-model.md) — OAuth2 trust limitations, Custom Claims, allowlist (ADR-17)
+
+### v1.1 features (API reference & guides)
+
+| Feature | Description | Where |
+|:--------|:-------------|:------|
+| **OAuth2 / Custom Claims** | Server and client auth; identity binding via JWT claims | [Transport](transport.md), [Security](security.md), examples: `auth_patterns` |
+| **WebSocket** | Real-time transport; MessageAck for reliability (ADR-16) | [Transport](transport.md), `asap.transport.websocket`, examples: `websocket_concept` |
+| **Webhooks** | Signed POST callbacks to URLs; SSRF checks, retry, DLQ | [API Reference](api-reference.md) (`asap.transport`), `WebhookDelivery`, `WebhookRetryManager` |
+| **Discovery** | Well-known manifest, Lite Registry, health endpoint | [Transport](transport.md), `asap.discovery` |
+| **State Storage** | SQLite backend, env-based backend selection | [State Management](state-management.md), [Best Practices: Failover](best-practices/agent-failover-migration.md), examples: `storage_backends`, `state_migration` |
+| **Health** | `GET /.well-known/asap/health` for liveness | [Transport](transport.md), `asap.discovery.health` |

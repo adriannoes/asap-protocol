@@ -48,12 +48,17 @@ uv run ruff format src/ tests/
 ```
 src/asap/
 ├── models/        # Pydantic models (Envelope, TaskRequest, etc.)
-├── transport/     # HTTP client, server, middleware
+├── auth/          # OAuth2 client/server, OIDC discovery, middleware (v1.1)
+├── discovery/     # Well-known manifest, health, Lite Registry (v1.1)
+├── state/         # SnapshotStore, MeteringStore; stores/ (memory, sqlite) (v1.1)
+├── transport/     # HTTP client, server, middleware, WebSocket, webhook
 ├── handlers/      # Task processing logic
 ├── observability/ # Logging, tracing, metrics
 └── cli.py         # CLI entry point
 tests/             # pytest tests mirroring src/ structure
 ```
+
+For v1.1 capabilities (OAuth2, WebSocket, Discovery, State Storage, Webhooks) see README and [docs index](docs/index.md).
 
 ## Architecture & Design Decisions
 
@@ -130,6 +135,7 @@ uv run pytest -n auto
 - Use environment variables for configuration
 - Rate limiting enabled by default
 - mTLS optional (planned for v1.2.0)
+- **v1.1 trust model**: OAuth2 provides authentication and authorization, not identity verification. See [v1.1 Security Model](docs/security/v1.1-security-model.md) (ADR-17) for Custom Claims, allowlist, and limitations.
 
 ## PR Guidelines
 

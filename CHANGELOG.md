@@ -281,3 +281,56 @@ Production-ready release. All features from v0.5.0 preserved with backward compa
 - **Linting**: Ruff (check + format), mypy strict
 - **Security**: `pip-audit` clean; bandit (Low findings limited to examples and test helpers)
 
+## [1.1.0] - 2026-02-10
+
+Identity layer: OAuth2/OIDC, discovery, WebSocket, state storage, and webhooks. Backward compatible with v1.0.0.
+
+### Added
+
+#### Identity & Auth (S1, ADR-17)
+- **OAuth2 server**: `OAuth2Config`, `OAuth2Middleware` — JWT validation via JWKS, optional scope, path prefix
+- **OAuth2 client**: `OAuth2ClientCredentials` for client_credentials grant; `Token` model with expiry
+- **OIDC discovery**: `OIDCDiscovery`, `OIDCConfig` — auto-config from `/.well-known/openid-configuration`
+- **Custom Claims identity binding**: JWT custom claim (e.g. `https://asap.ai/agent_id`) or `ASAP_AUTH_SUBJECT_MAP` allowlist; envelope sender must match authenticated agent
+- **v1.1 Security Model**: `docs/security/v1.1-security-model.md` — trust limitations, Custom Claims, Auth0/Keycloak/Azure AD guides
+
+#### Discovery (S2, SD-11, ADR-15)
+- **Well-known**: `GET /.well-known/asap/manifest.json`; `ASAPClient.discover(base_url)`
+- **Lite Registry**: `discover_from_registry()`, `LiteRegistry` — static JSON on GitHub Pages for agent discovery
+- **Health/liveness**: `GET /.well-known/asap/health` with `ttl_seconds` in manifest (SD-10, ADR-14); `HealthStatus` model
+
+#### State Storage (S2.5, SD-9, ADR-13)
+- **MeteringStore Protocol**: Interface for usage metering (v1.3 foundation)
+- **SQLiteSnapshotStore**: Persistent snapshot store via `aiosqlite`; `src/asap/state/stores/sqlite.py`
+- **Storage configuration**: `ASAP_STORAGE_BACKEND` env (e.g. `memory`, `sqlite`); `create_snapshot_store()`
+- **Best Practices**: `docs/best-practices/agent-failover-migration.md` — state handover, failover patterns
+
+#### WebSocket (S3, SD-3, ADR-16)
+- **WebSocket server**: ASAP messages over WebSocket; `websocket_asap` endpoint
+- **WebSocket client**: `ASAPClient(transport_mode="websocket")`, `WebSocketTransport`
+- **MessageAck**: Selective ack for state-changing messages; `requires_ack` on Envelope; `MessageAck` payload
+- **AckAwareClient**: Pending ack tracking, timeout/retry, circuit breaker integration
+- **WebSocket rate limiting**: Per-connection token bucket (default 10 msg/s)
+
+#### Webhooks (S4)
+- **WebhookDelivery**: POST callbacks to validated URLs; HMAC-SHA256 `X-ASAP-Signature`; SSRF checks (private IPs, localhost blocked; HTTPS in production)
+- **WebhookRetryManager**: Retry queue, exponential backoff (1s–16s, max 5 retries), dead-letter handling, per-URL rate limit
+- **`asap.transport.webhook`**: `WebhookDelivery`, `WebhookRetryManager`; `WebhookURLValidationError` in `asap.errors`
+
+#### Transport & Infra
+- **Custom rate limiter**: Migrated from slowapi to `ASAPRateLimiter` (using `limits` package); removes Python 3.12+ deprecation warnings
+- **Example**: `secure_agent.py` — OAuth2Config server + OAuth2ClientCredentials client with env-based config
+
+### Changed
+
+- **Rate limiting**: Replaced slowapi with `ASAPRateLimiter`; `rate_limit.py`; backward-compatible `create_limiter()` / `create_test_limiter()`
+- **Dependencies**: Removed `slowapi`; added `limits>=3.0`
+- **InMemorySnapshotStore**: Moved to `src/asap/state/stores/memory.py`; re-exported for backward compatibility
+
+### Technical Details
+
+- **Python**: 3.13+
+- **Tests**: 1800+ passing; property, integration, chaos, contract suites
+- **Coverage**: ~94.5% (examples/dnssd omitted); 95% target in backlog
+- **Docs**: v1.1 features table in `docs/index.md`; README/AGENTS.md updated; Security Model linked from README, AGENTS.md, docs
+
