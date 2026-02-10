@@ -317,6 +317,37 @@ class CircuitOpenError(ASAPError):
         self.consecutive_failures = consecutive_failures
 
 
+class WebhookURLValidationError(ASAPError):
+    """Raised when a webhook callback URL fails SSRF validation.
+
+    This error occurs when a callback URL resolves to a private, loopback,
+    or link-local address, or when HTTPS is required but the scheme is HTTP.
+
+    Attributes:
+        url: The rejected URL.
+        reason: Why the URL was rejected.
+    """
+
+    def __init__(
+        self,
+        url: str,
+        reason: str,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        message = f"Webhook URL rejected: {reason}"
+        super().__init__(
+            code="asap:transport/webhook_url_rejected",
+            message=message,
+            details={
+                "url": url,
+                "reason": reason,
+                **(details or {}),
+            },
+        )
+        self.url = url
+        self.reason = reason
+
+
 class UnsupportedAuthSchemeError(ASAPError):
     """Raised when an unsupported authentication scheme is specified.
 
