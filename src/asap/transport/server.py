@@ -47,11 +47,12 @@ import sys
 import threading
 import time
 import traceback
+from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, TypeVar, cast
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from opentelemetry import context
 from pydantic import ValidationError
@@ -115,6 +116,11 @@ from asap.transport.validators import (
     NonceStore,
     validate_envelope_nonce,
     validate_envelope_timestamp,
+)
+from asap.transport.websocket import (
+    WS_CLOSE_GOING_AWAY,
+    WS_CLOSE_REASON_SHUTDOWN,
+    handle_websocket_connection,
 )
 
 # Module logger
@@ -1200,11 +1206,13 @@ def create_app(
     require_nonce: bool = False,
     hot_reload: bool | None = None,
     snapshot_store: SnapshotStore | None = None,
+    websocket_message_rate_limit: float | None = 10.0,
 ) -> FastAPI:
     """Create and configure a FastAPI application for ASAP protocol.
 
     This factory function creates a FastAPI app with:
     - POST /asap endpoint for handling ASAP messages via JSON-RPC
+    - WebSocket /asap/ws for real-time JSON-RPC (same protocol as POST /asap)
     - GET /.well-known/asap/manifest.json for agent discovery
     - GET /asap/metrics for Prometheus-compatible metrics
     - Authentication middleware (if manifest.auth is configured)
@@ -1243,6 +1251,9 @@ def create_app(
         snapshot_store: Optional SnapshotStore for state persistence. If None, uses
             create_snapshot_store() (ASAP_STORAGE_BACKEND and ASAP_STORAGE_PATH).
             Stored on app.state.snapshot_store for handlers.
+        websocket_message_rate_limit: Max messages per second per WebSocket connection.
+            When set (default 10.0), connections exceeding this are sent an error frame
+            and closed. Set to None to disable WebSocket message rate limiting.
 
     Returns:
         Configured FastAPI application ready to run
@@ -1387,6 +1398,19 @@ def create_app(
     _redoc_url = "/redoc" if is_debug_mode() else None
     _openapi_url = "/openapi.json" if is_debug_mode() else None
 
+    # Track active WebSocket connections for graceful shutdown (close with reason)
+    _active_websockets: set[WebSocket] = set()
+
+    @asynccontextmanager
+    async def _lifespan(app: FastAPI) -> Any:
+        yield
+        for ws in list(_active_websockets):
+            with suppress(OSError):
+                await ws.close(
+                    code=WS_CLOSE_GOING_AWAY,
+                    reason=WS_CLOSE_REASON_SHUTDOWN,
+                )
+
     app = FastAPI(
         title="ASAP Protocol Server",
         description=f"ASAP server for {manifest.name}",
@@ -1394,7 +1418,10 @@ def create_app(
         docs_url=_docs_url,
         redoc_url=_redoc_url,
         openapi_url=_openapi_url,
+        lifespan=_lifespan,
     )
+    app.state.websocket_connections = _active_websockets
+    app.state.websocket_message_rate_limit = websocket_message_rate_limit
 
     # Add size limit middleware (runs before routing)
     app.add_middleware(SizeLimitMiddleware, max_size=max_request_size)
@@ -1528,6 +1555,17 @@ def create_app(
             >>> # See tests/transport/test_server.py for full request examples.
         """
         return await handler.handle_message(request)
+
+    @app.websocket("/asap/ws")
+    async def websocket_asap(websocket: WebSocket) -> None:
+        """ASAP JSON-RPC over WebSocket; same handlers as POST /asap."""
+        ws_rate_limit: float | None = getattr(app.state, "websocket_message_rate_limit", 10.0)
+        await handle_websocket_connection(
+            websocket,
+            handler,
+            app.state.websocket_connections,
+            ws_message_rate_limit=ws_rate_limit,
+        )
 
     return app
 

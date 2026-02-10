@@ -65,6 +65,14 @@ class Envelope(ASAPBaseModel):
     trace_id: str | None = Field(
         default=None, description="Optional trace ID for distributed tracing"
     )
+    requires_ack: bool = Field(
+        default=False,
+        description=(
+            "When True, receiver must send a MessageAck for this envelope (WebSocket). "
+            "Over WebSocket, auto-set for state-changing payloads: TaskRequest, "
+            "TaskCancel, StateRestore, MessageSend. HTTP transport uses response as implicit ack."
+        ),
+    )
     extensions: dict[str, Any] | None = Field(
         default=None,
         description=(

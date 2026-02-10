@@ -38,10 +38,18 @@ import threading
 import time
 from dataclasses import dataclass
 from email.utils import parsedate_to_datetime
-from typing import Any, Optional
-from urllib.parse import ParseResult
+from typing import Any, Literal, Optional
+from urllib.parse import ParseResult, urlparse, urlunparse
 
 import httpx
+
+from asap.transport.websocket import (
+    DEFAULT_ACK_TIMEOUT,
+    DEFAULT_MAX_ACK_RETRIES,
+    OnMessageCallback,
+    WebSocketRemoteError,
+    WebSocketTransport,
+)
 
 from asap.discovery.health import HealthStatus, WELLKNOWN_HEALTH_PATH
 from asap.discovery.validation import ManifestValidationError, validate_manifest_schema
@@ -251,7 +259,8 @@ class ASAPClient:
         - Connection pooling supporting 1000+ concurrent requests
         - Automatic retry with exponential backoff
         - Circuit breaker pattern for fault tolerance
-        - Batch operations via send_batch() method
+        - Batch operations via send_batch() method (HTTP only; WebSocket transport
+          raises NotImplementedError)
         - Compression support (gzip/brotli) for bandwidth reduction
 
     Attributes:
@@ -297,6 +306,7 @@ class ASAPClient:
         self,
         base_url: str,
         timeout: float = DEFAULT_TIMEOUT,
+        transport_mode: Literal["http", "websocket", "auto"] = "auto",
         transport: httpx.AsyncBaseTransport | None = None,
         require_https: bool = True,
         retry_config: Optional[RetryConfig] = None,
@@ -319,14 +329,18 @@ class ASAPClient:
         circuit_breaker_threshold: int | None = None,
         circuit_breaker_timeout: float | None = None,
         manifest_cache_size: int | None = None,
+        on_message: Optional[OnMessageCallback] = None,
     ) -> None:
         """Initialize ASAP client.
 
         Args:
-            base_url: Base URL of the remote agent (e.g., "http://localhost:8000")
+            base_url: Base URL of the remote agent (e.g., "http://localhost:8000" or "ws://localhost:8000")
             timeout: Request timeout in seconds (default: 60)
+            transport_mode: "http", "websocket", or "auto". If "auto", use WebSocket when base_url
+                scheme is ws/wss, else HTTP. When "websocket", base_url can be http(s) (converted to
+                ws(s)/asap/ws) or ws(s) (path /asap/ws added if missing). Default: "auto".
             transport: Optional custom async transport (for testing). Must be an instance
-                of httpx.AsyncBaseTransport (e.g., httpx.MockTransport).
+                of httpx.AsyncBaseTransport (e.g., httpx.MockTransport). Ignored when transport_mode is websocket.
             require_https: If True, enforces HTTPS for non-localhost connections (default: True).
             pool_connections: Max keep-alive connections in pool. Default: DEFAULT_POOL_CONNECTIONS (100).
                 Controls how many idle connections are kept open.
@@ -369,6 +383,8 @@ class ASAPClient:
             manifest_cache_size: Maximum number of manifests to cache (default: 1000).
                 Increase for high-cardinality environments (e.g. thousands of agents).
                 Set to 0 for unlimited. See ManifestCache for cleanup latency notes.
+            on_message: Optional callback for server-initiated (push) messages when using
+                WebSocket transport. Called with Envelope; may be sync or async. Ignored for HTTP.
 
         Raises:
             ValueError: If URL format is invalid, scheme is not HTTP/HTTPS, or HTTPS is
@@ -414,46 +430,75 @@ class ASAPClient:
                 if circuit_breaker_timeout is not None
                 else DEFAULT_CIRCUIT_BREAKER_TIMEOUT
             )
-        from urllib.parse import urlparse
-
         parsed = urlparse(base_url)
         if not parsed.scheme or not parsed.netloc:
             raise ValueError(
                 f"Invalid base_url format: {base_url}. Must be a valid URL (e.g., http://localhost:8000)"
             )
 
-        # Restrict to HTTP/HTTPS schemes only
-        if parsed.scheme.lower() not in ("http", "https"):
+        scheme_lower = parsed.scheme.lower()
+        allowed_schemes = (
+            ("http", "https", "ws", "wss")
+            if transport_mode in ("websocket", "auto")
+            else ("http", "https")
+        )
+        if scheme_lower not in allowed_schemes:
             raise ValueError(
-                f"Invalid URL scheme: {parsed.scheme}. Only 'http' and 'https' are allowed. "
+                f"Invalid URL scheme: {parsed.scheme}. Allowed: {', '.join(allowed_schemes)}. "
                 f"Received: {base_url}"
             )
 
-        is_https = parsed.scheme.lower() == "https"
+        use_websocket = transport_mode == "websocket" or (
+            transport_mode == "auto" and scheme_lower in ("ws", "wss")
+        )
+        if use_websocket:
+            ws_url = base_url.rstrip("/")
+            if scheme_lower in ("http", "https"):
+                ws_scheme = "wss" if scheme_lower == "https" else "ws"
+                ws_netloc = parsed.netloc
+                ws_path = (parsed.path or "/").rstrip("/") + "/asap/ws"
+                ws_url = urlunparse((ws_scheme, ws_netloc, ws_path, "", "", ""))
+            elif not ws_url.endswith("/asap/ws"):
+                ws_url = ws_url.rstrip("/") + "/asap/ws"
+        else:
+            ws_url = ""
+
+        is_https = scheme_lower in ("https", "wss")
         is_local = self._is_localhost(parsed)
 
         if require_https and not is_https:
             if is_local:
-                # Allow HTTP for localhost with warning
+                # Allow unencrypted transport for localhost with warning
                 logger.warning(
                     "asap.client.http_localhost",
                     url=base_url,
                     message=(
-                        "Using HTTP for localhost connection. "
+                        "Using unencrypted transport for localhost connection. "
                         "For production, use HTTPS. "
                         "To disable this warning, set require_https=False."
                     ),
                 )
             else:
-                # Reject HTTP for non-localhost
+                # Reject unencrypted transport for non-localhost
                 raise ValueError(
-                    f"HTTPS is required for non-localhost connections. "
-                    f"Received HTTP URL: {base_url}. "
-                    f"Please use HTTPS or set require_https=False to override "
+                    f"Encrypted transport (https/wss) is required for non-localhost connections. "
+                    f"Received: {base_url}. "
+                    f"Please use HTTPS/WSS or set require_https=False to override "
                     f"(not recommended for production)."
                 )
 
         self.base_url = base_url.rstrip("/")
+        self._use_websocket = use_websocket
+        self._ws_url = ws_url
+        if use_websocket:
+            if scheme_lower in ("ws", "wss"):
+                http_scheme = "https" if scheme_lower == "wss" else "http"
+                path = (parsed.path or "/").replace("/asap/ws", "").rstrip("/") or "/"
+                self._http_base_url = urlunparse((http_scheme, parsed.netloc, path, "", "", ""))
+            else:
+                self._http_base_url = self.base_url
+        else:
+            self._http_base_url = self.base_url
         self.timeout = timeout
         self._pool_connections = (
             pool_connections if pool_connections is not None else DEFAULT_POOL_CONNECTIONS
@@ -470,7 +515,9 @@ class ASAPClient:
         self._http2 = http2
         self._compression = compression
         self._compression_threshold = compression_threshold
+        self._on_message = on_message
         self._client: httpx.AsyncClient | None = None
+        self._ws_transport: WebSocketTransport | None = None
         # Thread-safe counter using itertools.count
         self._request_counter = itertools.count(1)
 
@@ -565,7 +612,7 @@ class ASAPClient:
             # Try to access a lightweight endpoint (manifest or health check)
             # Using HEAD request to minimize bandwidth
             response = await self._client.head(
-                f"{self.base_url}/.well-known/asap/manifest.json",
+                f"{self._http_base_url}/.well-known/asap/manifest.json",
                 timeout=min(self.timeout, 5.0),  # Shorter timeout for validation
             )
             # Any 2xx or 3xx response indicates the server is reachable
@@ -621,34 +668,41 @@ class ASAPClient:
     @property
     def is_connected(self) -> bool:
         """Check if client has an active connection."""
-        return self._client is not None
+        return self._client is not None or self._ws_transport is not None
 
     async def __aenter__(self) -> "ASAPClient":
-        """Enter async context and open connection.
-
-        Creates an httpx.AsyncClient with configured pool limits and HTTP/2 support.
-        HTTP/2 enables multiplexing for improved batch performance.
-        """
-        limits = httpx.Limits(
-            max_keepalive_connections=self._pool_connections,
-            max_connections=self._pool_maxsize,
-            keepalive_expiry=DEFAULT_POOL_TIMEOUT,
-        )
-        timeout_config = httpx.Timeout(self.timeout, pool=self._pool_timeout)
-        if self._transport:
-            # Custom transport (for testing) - http2 not applicable with mock transports
-            self._client = httpx.AsyncClient(
-                transport=self._transport,
-                timeout=timeout_config,
-                limits=limits,
+        if self._use_websocket:
+            self._ws_transport = WebSocketTransport(
+                receive_timeout=self.timeout,
+                on_message=self._on_message,
+                ack_timeout_seconds=DEFAULT_ACK_TIMEOUT,
+                max_ack_retries=DEFAULT_MAX_ACK_RETRIES,
+                circuit_breaker=self._circuit_breaker,
             )
+            await self._ws_transport.connect(self._ws_url)
+            # WebSocket mode still uses HTTP client for manifest fetches; small pool is enough.
+            limits = httpx.Limits(max_connections=2, max_keepalive_connections=1)
+            timeout_config = httpx.Timeout(self.timeout, pool=self._pool_timeout)
+            self._client = httpx.AsyncClient(timeout=timeout_config, limits=limits)
         else:
-            # Production client with HTTP/2 multiplexing support
-            self._client = httpx.AsyncClient(
-                timeout=timeout_config,
-                limits=limits,
-                http2=self._http2,
+            limits = httpx.Limits(
+                max_keepalive_connections=self._pool_connections,
+                max_connections=self._pool_maxsize,
+                keepalive_expiry=DEFAULT_POOL_TIMEOUT,
             )
+            timeout_config = httpx.Timeout(self.timeout, pool=self._pool_timeout)
+            if self._transport:
+                self._client = httpx.AsyncClient(
+                    transport=self._transport,
+                    timeout=timeout_config,
+                    limits=limits,
+                )
+            else:
+                self._client = httpx.AsyncClient(
+                    timeout=timeout_config,
+                    limits=limits,
+                    http2=self._http2,
+                )
         return self
 
     async def __aexit__(
@@ -657,7 +711,9 @@ class ASAPClient:
         exc_val: BaseException | None,
         exc_tb: object,
     ) -> None:
-        """Exit async context and close connection."""
+        if self._ws_transport:
+            await self._ws_transport.close()
+            self._ws_transport = None
         if self._client:
             await self._client.aclose()
             self._client = None
@@ -689,11 +745,28 @@ class ASAPClient:
         if envelope is None:
             raise ValueError("envelope cannot be None")
 
-        if not self._client:
+        if not self._client and not self._ws_transport:
             raise ASAPConnectionError(
                 "Client not connected. Use 'async with' context.",
                 url=sanitize_url(self.base_url),
             )
+
+        if self._ws_transport:
+            if self._circuit_breaker is not None and not self._circuit_breaker.can_attempt():
+                consecutive_failures = self._circuit_breaker.get_consecutive_failures()
+                raise CircuitOpenError(
+                    base_url=sanitize_url(self.base_url),
+                    consecutive_failures=consecutive_failures,
+                )
+            try:
+                return await self._ws_transport.send_and_receive(envelope)
+            except WebSocketRemoteError as e:
+                raise ASAPRemoteError(e.code, e.message, e.data) from e
+            except asyncio.TimeoutError as e:
+                raise ASAPTimeoutError(
+                    f"WebSocket receive timed out after {self.timeout}s",
+                    timeout=self.timeout,
+                ) from e
 
         if self._circuit_breaker is not None and not self._circuit_breaker.can_attempt():
             consecutive_failures = self._circuit_breaker.get_consecutive_failures()
@@ -774,6 +847,7 @@ class ASAPClient:
                 if content_encoding:
                     headers["Content-Encoding"] = content_encoding
 
+                assert self._client is not None  # HTTP path: __aenter__ set it
                 response = await self._client.post(
                     f"{self.base_url}/asap",
                     headers=headers,
@@ -1153,7 +1227,7 @@ class ASAPClient:
             ...     print(manifest.id, manifest.name)
         """
         if url is None:
-            url = f"{self.base_url}/.well-known/asap/manifest.json"
+            url = f"{self._http_base_url}/.well-known/asap/manifest.json"
 
         if not self._client:
             raise ASAPConnectionError(
@@ -1486,6 +1560,11 @@ class ASAPClient:
         """
         if not envelopes:
             raise ValueError("envelopes list cannot be empty")
+
+        if self._ws_transport:
+            raise NotImplementedError(
+                "send_batch is not supported with WebSocket transport; use send() in a loop."
+            )
 
         if not self._client:
             raise ASAPConnectionError(

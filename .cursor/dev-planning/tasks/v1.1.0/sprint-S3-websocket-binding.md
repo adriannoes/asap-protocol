@@ -9,13 +9,18 @@
 ## Relevant Files
 
 - `src/asap/transport/__init__.py` - Transport module init
-- `src/asap/transport/websocket.py` - WebSocket server and client
-- `src/asap/transport/server.py` - ASAPServer WebSocket integration
-- `src/asap/transport/client.py` - ASAPClient WebSocket transport
-- `tests/transport/test_websocket.py` - WebSocket unit tests
-- `tests/integration/test_websocket_e2e.py` - E2E WebSocket tests
-- `tests/transport/test_message_ack.py` - MessageAck unit tests (ADR-16)
-- `tests/transport/test_ack_aware_client.py` - AckAwareClient tests (ADR-16)
+- `src/asap/transport/websocket.py` - WebSocket server, client, pool, framing, handler
+- `src/asap/transport/server.py` - ASAPServer WebSocket integration (/asap/ws), lifespan graceful shutdown
+- `src/asap/transport/client.py` - ASAPClient WebSocket transport (Task 3.2)
+- `pyproject.toml` - websockets>=12.0 dependency
+- `tests/transport/test_websocket.py` - WebSocket unit tests (lifecycle, routing, errors, framing)
+- `tests/transport/integration/test_websocket_e2e.py` - E2E WebSocket tests (Task 3.2)
+- `tests/transport/test_message_ack.py` - MessageAck unit tests (ADR-16, Task 3.4)
+- `tests/transport/test_ack_aware_client.py` - AckAwareClient tests (ADR-16, Task 3.5)
+- `tests/transport/test_websocket_rate_limit.py` - WebSocket rate limit tests (Task 3.6)
+- `src/asap/transport/rate_limit.py` - WebSocketTokenBucket for per-connection rate limiting (Task 3.6)
+- `src/asap/models/payloads.py` - MessageAck payload (ADR-16)
+- `src/asap/models/envelope.py` - requires_ack field (ADR-16)
 
 ---
 
@@ -35,16 +40,16 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
 
 ### Sub-tasks
 
-- [ ] 3.1.1 Add websockets dependency
+- [x] 3.1.1 Add websockets dependency
   - **Command**: `uv add "websockets>=12.0"`
   - **Verify**: `uv run python -c "import websockets; print('OK')"`
 
-- [ ] 3.1.2 Create transport module structure
+- [x] 3.1.2 Create transport module structure
   - **Directory**: `src/asap/transport/`
   - **Files**: `__init__.py`, `websocket.py`
   - **Verify**: `from asap.transport import websocket` imports
 
-- [ ] 3.1.3 Implement WebSocket handler
+- [x] 3.1.3 Implement WebSocket handler
   - **File**: `src/asap/transport/websocket.py`
   - **What**: Create handler that:
     - Accepts connections at `ws://host:port/asap/ws`
@@ -52,20 +57,20 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
     - Handles: Connection open, message, close, error
   - **Verify**: WebSocket connection can be established
 
-- [ ] 3.1.4 Add message framing
+- [x] 3.1.4 Add message framing
   - **File**: `src/asap/transport/websocket.py`
   - **What**: 
     - Send/receive ASAP Envelope as JSON
     - Support binary mode for future (base64)
   - **Verify**: Messages are correctly framed
 
-- [ ] 3.1.5 Integrate with ASAPServer
+- [x] 3.1.5 Integrate with ASAPServer
   - **File**: `src/asap/transport/server.py`
   - **What**: `server.add_websocket_route("/asap/ws")`
   - Dispatch messages to existing handlers
   - **Verify**: Server accepts WebSocket connections
 
-- [ ] 3.1.6 Write unit tests
+- [x] 3.1.6 Write unit tests
   - **File**: `tests/transport/test_websocket.py`
   - **What**: Test:
     - Connection lifecycle
@@ -73,13 +78,13 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
     - Error handling
   - **Verify**: `pytest tests/transport/test_websocket.py -v` passes
 
-- [ ] 3.1.7 Commit
-  - **Command**: `git commit -m "feat(transport): add WebSocket server binding"`
+- [x] 3.1.7 Commit
+  - **Command**: `git commit -m "feat(transport): add WebSocket server binding"` (included in sprint commit)
 
 **Acceptance Criteria**:
-- [ ] Server accepts WebSocket connections
-- [ ] Messages routed to handlers
-- [ ] Errors handled gracefully
+- [x] Server accepts WebSocket connections
+- [x] Messages routed to handlers
+- [x] Errors handled gracefully
 
 ---
 
@@ -93,7 +98,7 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
 
 ### Sub-tasks
 
-- [ ] 3.2.1 Implement WebSocket client
+- [x] 3.2.1 Implement WebSocket client
   - **File**: `src/asap/transport/websocket.py`
   - **What**: Class `WebSocketTransport` with:
     - `connect(url)` - establish connection
@@ -101,41 +106,41 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
     - `receive()` - receive message
   - **Verify**: Client can connect to server
 
-- [ ] 3.2.2 Add to ASAPClient
+- [x] 3.2.2 Add to ASAPClient
   - **File**: `src/asap/transport/client.py`
   - **What**: 
-    - `client = ASAPClient(transport="websocket")`
-    - Auto-detect HTTP vs WebSocket from URL scheme
+    - `client = ASAPClient(..., transport_mode="websocket"|"auto")`
+    - Auto-detect HTTP vs WebSocket from URL scheme (ws/wss → websocket)
   - **Verify**: Client works with both transports
 
-- [ ] 3.2.3 Implement message correlation
+- [x] 3.2.3 Implement message correlation
   - **File**: `src/asap/transport/websocket.py`
   - **What**:
     - Track request_id for request/response matching
     - Timeout handling for pending requests
   - **Verify**: Requests correctly matched to responses
 
-- [ ] 3.2.4 Add async streaming
+- [x] 3.2.4 Add async streaming
   - **File**: `src/asap/transport/websocket.py`
   - **What**:
     - Support server-initiated messages (push)
     - Callback: `on_message(envelope)`
   - **Verify**: Server can push messages to client
 
-- [ ] 3.2.5 Write integration tests
-  - **File**: `tests/integration/test_websocket_e2e.py`
+- [x] 3.2.5 Write integration tests
+  - **File**: `tests/transport/integration/test_websocket_e2e.py`
   - **What**: 
     - Server + Client WebSocket communication
     - Full TaskRequest → TaskResponse flow
   - **Verify**: E2E tests pass
 
-- [ ] 3.2.6 Commit
-  - **Command**: `git commit -m "feat(transport): add WebSocket client"`
+- [x] 3.2.6 Commit
+  - **Command**: `git commit -m "feat(transport): add WebSocket client"` (included in sprint commit)
 
 **Acceptance Criteria**:
-- [ ] Client can communicate via WebSocket
-- [ ] Message correlation works
-- [ ] Streaming supported
+- [x] Client can communicate via WebSocket
+- [x] Message correlation works
+- [x] Streaming supported
 
 ---
 
@@ -147,9 +152,9 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
 
 **Prerequisites**: Tasks 3.1, 3.2 completed
 
-### Sub-tasks
+### Sub-tasks (all complete; commit deferred to end of sprint)
 
-- [ ] 3.3.1 Implement heartbeat
+- [x] 3.3.1 Implement heartbeat
   - **File**: `src/asap/transport/websocket.py`
   - **What**:
     - Server: Send ping every 30s
@@ -157,7 +162,7 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
     - Detect stale connections
   - **Verify**: Stale connections detected
 
-- [ ] 3.3.2 Add automatic reconnection
+- [x] 3.3.2 Add automatic reconnection
   - **File**: `src/asap/transport/websocket.py`
   - **What**:
     - Client: Reconnect on disconnect
@@ -165,7 +170,7 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
     - Max attempts: Configurable
   - **Verify**: Client reconnects after disconnect
 
-- [ ] 3.3.3 Add connection pooling
+- [x] 3.3.3 Add connection pooling
   - **File**: `src/asap/transport/websocket.py`
   - **What**:
     - Reuse connections to same host
@@ -173,14 +178,14 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
     - Cleanup idle connections
   - **Verify**: Connections are reused
 
-- [ ] 3.3.4 Add graceful shutdown
+- [x] 3.3.4 Add graceful shutdown
   - **File**: `src/asap/transport/websocket.py`
   - **What**:
     - Close all connections on server stop
     - Send close frame with reason
   - **Verify**: Clean shutdown with no errors
 
-- [ ] 3.3.5 Write chaos tests
+- [x] 3.3.5 Write chaos tests
   - **File**: `tests/transport/test_websocket.py`
   - **What**: Test:
     - Connection drops during request
@@ -188,13 +193,13 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
     - Network partition
   - **Verify**: System recovers from failures
 
-- [ ] 3.3.6 Commit
-  - **Command**: `git commit -m "feat(transport): add WebSocket connection management"`
+- [x] 3.3.6 Commit
+  - **Command**: `git commit -m "feat(transport): add WebSocket connection management"` (included in sprint commit)
 
 **Acceptance Criteria**:
-- [ ] Connections are robust and self-healing
-- [ ] Heartbeat detects stale connections
-- [ ] Reconnection with backoff works
+- [x] Connections are robust and self-healing
+- [x] Heartbeat detects stale connections
+- [x] Reconnection with backoff works
 
 ---
 
@@ -208,7 +213,7 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
 
 ### Sub-tasks
 
-- [ ] 3.4.1 Define MessageAck payload
+- [x] 3.4.1 Define MessageAck payload
   - **File**: `src/asap/models/payloads.py` (modify existing)
   - **What**: Add `MessageAck` payload type:
     - `original_envelope_id: str` — the envelope being acknowledged
@@ -218,7 +223,7 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
   - **Pattern**: Follow existing payload types (TaskRequest, TaskCancel, etc.)
   - **Verify**: `MessageAck` serializes and deserializes correctly
 
-- [ ] 3.4.2 Add `requires_ack` field to Envelope
+- [x] 3.4.2 Add `requires_ack` field to Envelope
   - **File**: `src/asap/models/envelope.py` (modify existing)
   - **What**: Add field:
     - `requires_ack: bool = False`
@@ -226,7 +231,7 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
   - **Why**: Opt-in ack behavior — only state-changing messages need it
   - **Verify**: Envelope with `requires_ack=True` serializes correctly
 
-- [ ] 3.4.3 Auto-set `requires_ack` for critical payloads
+- [x] 3.4.3 Auto-set `requires_ack` for critical payloads
   - **File**: `src/asap/transport/websocket.py` (modify)
   - **What**: When sending over WebSocket:
     - Auto-set `requires_ack=True` for: `TaskRequest`, `TaskCancel`, `StateRestore`, `MessageSend`
@@ -235,7 +240,7 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
   - **Why**: Ensures critical messages are always acknowledged without manual opt-in
   - **Verify**: Critical payloads have `requires_ack=True` over WebSocket
 
-- [ ] 3.4.4 Implement server-side ack response
+- [x] 3.4.4 Implement server-side ack response
   - **File**: `src/asap/transport/websocket.py` (modify)
   - **What**: When receiving a message with `requires_ack=True`:
     - Immediately send `MessageAck(status="received")` back
@@ -244,7 +249,7 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
   - **Why**: Sender needs to know message was received and processed
   - **Verify**: Server sends ack for critical messages
 
-- [ ] 3.4.5 Write tests for MessageAck
+- [x] 3.4.5 Write tests for MessageAck
   - **File**: `tests/transport/test_message_ack.py` (create new)
   - **What**: Test scenarios:
     - TaskRequest over WebSocket → receives MessageAck
@@ -253,16 +258,16 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
     - Rejected message → ack with error reason
   - **Verify**: `pytest tests/transport/test_message_ack.py -v` all pass
 
-- [ ] 3.4.6 Commit milestone
-  - **Command**: `git commit -m "feat(transport): add MessageAck for WebSocket reliability (ADR-16)"`
+- [x] 3.4.6 Commit milestone
+  - **Command**: `git commit -m "feat(transport): add MessageAck for WebSocket reliability (ADR-16)"` (included in sprint commit)
   - **Scope**: payloads.py, envelope.py, websocket.py, test_message_ack.py
   - **Verify**: `git log -1` shows correct message
 
 **Acceptance Criteria**:
-- [ ] MessageAck payload defined and functional
-- [ ] Critical payloads auto-set `requires_ack=True` over WebSocket
-- [ ] Server sends ack for critical messages
-- [ ] HTTP transport unchanged (implicit ack via response)
+- [x] MessageAck payload defined and functional
+- [x] Critical payloads auto-set `requires_ack=True` over WebSocket
+- [x] Server sends ack for critical messages
+- [x] HTTP transport unchanged (implicit ack via response)
 - [ ] Test coverage >95%
 
 ---
@@ -275,9 +280,9 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
 
 **Prerequisites**: Task 3.4 completed (MessageAck payload exists)
 
-### Sub-tasks
+### Sub-tasks (all complete; commit deferred until end of sprint)
 
-- [ ] 3.5.1 Implement pending ack tracker
+- [x] 3.5.1 Implement pending ack tracker
   - **File**: `src/asap/transport/websocket.py` (modify)
   - **What**: Add to WebSocket client:
     - `_pending_acks: dict[str, PendingAck]` — tracks sent messages awaiting ack
@@ -287,7 +292,7 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
   - **Why**: Tracks which messages need ack responses
   - **Verify**: Pending ack tracker works correctly
 
-- [ ] 3.5.2 Implement ack timeout detection
+- [x] 3.5.2 Implement ack timeout detection
   - **File**: `src/asap/transport/websocket.py` (modify)
   - **What**: Background task that:
     - Checks pending acks every 5 seconds
@@ -296,7 +301,7 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
   - **Why**: Detects lost messages and triggers retry
   - **Verify**: Timeout detected after configured period
 
-- [ ] 3.5.3 Implement retransmission logic
+- [x] 3.5.3 Implement retransmission logic
   - **File**: `src/asap/transport/websocket.py` (modify)
   - **What**: On ack timeout:
     - Retransmit the original envelope (same `id` for idempotency)
@@ -307,7 +312,7 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
   - **Pattern**: Idempotency keys make retransmission safe — receiver deduplicates by envelope `id`
   - **Verify**: Retransmission occurs on timeout, stops after max retries
 
-- [ ] 3.5.4 Integrate with circuit breaker
+- [x] 3.5.4 Integrate with circuit breaker
   - **File**: `src/asap/transport/websocket.py` (modify)
   - **What**: When max retries exhausted:
     - Record failure in circuit breaker
@@ -316,7 +321,7 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
   - **Why**: Prevents infinite retry loops, enables graceful degradation
   - **Verify**: Circuit breaker trips after max retries
 
-- [ ] 3.5.5 Write comprehensive tests
+- [x] 3.5.5 Write comprehensive tests
   - **File**: `tests/transport/test_ack_aware_client.py` (create new)
   - **What**: Test scenarios:
     - Normal flow: send → receive ack → pending cleared
@@ -327,16 +332,16 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
     - Concurrent messages: multiple pending acks tracked independently
   - **Verify**: `pytest tests/transport/test_ack_aware_client.py -v` all pass
 
-- [ ] 3.5.6 Commit milestone
-  - **Command**: `git commit -m "feat(transport): add AckAwareClient with timeout/retry (ADR-16)"`
+- [x] 3.5.6 Commit milestone
+  - **Command**: `git commit -m "feat(transport): add AckAwareClient with timeout/retry (ADR-16)"` (included in sprint commit)
   - **Scope**: websocket.py, test_ack_aware_client.py
   - **Verify**: `git log -1` shows correct message
 
 **Acceptance Criteria**:
-- [ ] Pending ack tracker works correctly
-- [ ] Timeout detection triggers retransmission
-- [ ] Retransmission uses same envelope `id` (idempotency)
-- [ ] Max retries triggers circuit breaker
+- [x] Pending ack tracker works correctly
+- [x] Timeout detection triggers retransmission
+- [x] Retransmission uses same envelope `id` (idempotency)
+- [x] Max retries triggers circuit breaker
 - [ ] Test coverage >95%
 
 ---
@@ -347,40 +352,42 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
 
 **Context**: HTTP rate limiting (middleware) doesn't apply to WebSocket messages once the connection is established. We need per-connection message rate limiting. See Roadmap Risk 472.
 
-### Sub-tasks
+### Sub-tasks (all complete; commit deferred to end of sprint)
 
-- [ ] 3.6.1 Implement Token Bucket for WebSocket
-  - **File**: `src/asap/transport/rate_limit.py` (modify)
-  - **What**: Adapt existing `TokenBucket` for persistent connections
+- [x] 3.6.1 Implement Token Bucket for WebSocket
+  - **File**: `src/asap/transport/rate_limit.py` (new)
+  - **What**: `WebSocketTokenBucket` for persistent connections
   - **Logic**: Refill tokens per second, deduct per message
 
-- [ ] 3.6.2 Enforce limits in WebSocket handler
+- [x] 3.6.2 Enforce limits in WebSocket handler
   - **File**: `src/asap/transport/websocket.py` (modify)
   - **What**: Check bucket before processing frame
-  - **Limit**: Default 10 messages/sec per connection
+  - **Limit**: Default 10 messages/sec per connection (`create_app(..., websocket_message_rate_limit=10.0)`)
   - **Action**: Send error frame and disconnect if abused
 
-- [ ] 3.6.3 Write tests
+- [x] 3.6.3 Write tests
   - **File**: `tests/transport/test_websocket_rate_limit.py`
-  - **Verify**: Spammers get disconnected
+  - **Verify**: Spammers get disconnected; normal traffic unaffected
 
-- [ ] 3.6.4 Commit
-  - **Command**: `git commit -m "feat(transport): add WebSocket message rate limiting"`
+- [x] 3.6.4 Commit
+  - **Command**: `git commit -m "feat(transport): add WebSocket message rate limiting"` (included in sprint commit)
 
 **Acceptance Criteria**:
-- [ ] Message flooding triggers disconnect
-- [ ] Normal traffic unaffected
+- [x] Message flooding triggers disconnect
+- [x] Normal traffic unaffected
 
 ---
 
 ## Sprint S3 Definition of Done
 
-- [ ] WebSocket server accepting connections
-- [ ] WebSocket client working
-- [ ] Connection management robust
-- [ ] Heartbeat and reconnection functional
-- [ ] MessageAck payload for state-changing messages (ADR-16)
-- [ ] AckAwareClient with timeout/retry/circuit breaker (ADR-16)
+- [x] WebSocket server accepting connections
+- [x] WebSocket client working
+- [x] Connection management robust
+- [x] Heartbeat and reconnection functional
+- [x] MessageAck payload for state-changing messages (ADR-16)
+- [x] AckAwareClient with timeout/retry/circuit breaker (ADR-16)
+- [x] WebSocket message rate limiting (Task 3.6)
 - [ ] Test coverage >95%
+  - **Status**: `envelope.py` and `payloads.py` 100% (full suite). `websocket.py` ~68% (many branches in server handler, reconnection, pool). DoD remains open until websocket module reaches >95% or team agrees to scope.
 
 **Total Sub-tasks**: ~30

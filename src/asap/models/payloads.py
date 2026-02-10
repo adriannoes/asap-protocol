@@ -4,7 +4,7 @@ Payloads define the content of protocol messages for different operations
 like task requests, responses, updates, state management, and MCP integration.
 """
 
-from typing import Any, Union
+from typing import Any, Literal, Union
 
 from pydantic import Field, field_validator, model_validator
 
@@ -393,6 +393,14 @@ class McpResourceData(ASAPBaseModel):
     content: dict[str, Any] = Field(..., description="Resource content (JSON-serializable)")
 
 
+class MessageAck(ASAPBaseModel):
+    """Application-level ack for WebSocket state-changing messages (ADR-16)."""
+
+    original_envelope_id: str = Field(..., description="Envelope ID being acknowledged")
+    status: Literal["received", "processed", "rejected"] = Field(...)
+    error: str | None = Field(default=None, description="Reason when rejected")
+
+
 # Union type for all payload types
 # Note: The discriminator (payload_type) will be in the Envelope, not in individual payloads
 PayloadType = Union[
@@ -408,10 +416,11 @@ PayloadType = Union[
     McpToolResult,
     McpResourceFetch,
     McpResourceData,
+    MessageAck,
 ]
 """Union type of all ASAP payload types.
 
-PayloadType represents any of the 12 payload types used in ASAP protocol messages.
+PayloadType represents any of the 13 payload types used in ASAP protocol messages.
 The actual payload type discrimination is done via the 'payload_type' field in the
 Envelope that wraps these payloads.
 
@@ -420,4 +429,5 @@ Payload types:
 - Messaging: MessageSend
 - State management: StateQuery, StateRestore, ArtifactNotify
 - MCP integration: McpToolCall, McpToolResult, McpResourceFetch, McpResourceData
+- WebSocket reliability: MessageAck (ADR-16)
 """

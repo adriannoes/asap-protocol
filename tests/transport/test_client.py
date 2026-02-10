@@ -759,8 +759,30 @@ class TestASAPClientHTTPSValidation:
         with pytest.raises(ValueError) as exc_info:
             ASAPClient("http://example.com")
 
-        assert "HTTPS is required" in str(exc_info.value)
+        assert "Encrypted transport" in str(exc_info.value)
         assert "require_https=False" in str(exc_info.value)
+
+    def test_require_https_rejects_ws_non_localhost(self) -> None:
+        """Test that ws:// URLs for non-localhost are rejected when require_https=True."""
+        from asap.transport.client import ASAPClient
+
+        with pytest.raises(ValueError) as exc_info:
+            ASAPClient(
+                "ws://example.com",
+                transport_mode="websocket",
+            )
+
+        assert "Encrypted transport" in str(exc_info.value)
+        assert "wss" in str(exc_info.value).lower() or "WSS" in str(exc_info.value)
+        assert "require_https=False" in str(exc_info.value)
+
+    def test_ws_localhost_accepted_with_warning(self) -> None:
+        """Test that ws:// localhost URLs are accepted with warning (same as HTTP localhost)."""
+        from asap.transport.client import ASAPClient
+
+        client = ASAPClient("ws://127.0.0.1:8000", transport_mode="websocket")
+        assert client.base_url == "ws://127.0.0.1:8000"
+        assert client.require_https is True
 
     def test_http_with_override_works(self) -> None:
         """Test that HTTP URLs work when require_https=False."""
