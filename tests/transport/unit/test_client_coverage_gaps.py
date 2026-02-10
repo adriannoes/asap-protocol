@@ -71,9 +71,10 @@ class TestASAPClientCoverageGaps:
     @pytest.mark.asyncio
     async def test_retry_after_future_date(self, sample_request_envelope: Envelope) -> None:
         """Test handling of Retry-After header with a future HTTP date."""
-        # Date 10 seconds in the future
-        future_date = datetime.now(timezone.utc) + timedelta(seconds=10)
-        # Format as HTTP date: Wed, 21 Oct 2015 07:28:00 GMT
+        # Freeze time.time so the delay calculation is deterministic.
+        frozen_now = datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        frozen_timestamp = frozen_now.timestamp()
+        future_date = frozen_now + timedelta(seconds=10)
         future_date_str = future_date.strftime("%a, %d %b %Y %H:%M:%S GMT")
 
         call_count = 0
@@ -100,7 +101,10 @@ class TestASAPClientCoverageGaps:
                 )
             )
 
-        with patch("asap.transport.client.asyncio.sleep") as mock_sleep:
+        with (
+            patch("asap.transport.client.asyncio.sleep") as mock_sleep,
+            patch("asap.transport.client.time.time", return_value=frozen_timestamp),
+        ):
 
             async def mock_sleep_fn(delay: float) -> None:
                 pass
