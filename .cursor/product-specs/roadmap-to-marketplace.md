@@ -517,6 +517,7 @@ Strategic risks identified during the v1.1.0 planning review (2026-02-07):
 ## Related Documents
 
 - **Vision**: [vision-agent-marketplace.md](./vision-agent-marketplace.md)
+- **Repository Strategy**: [repository-strategy.md](./repository-strategy.md)
 - **Design Decisions**: [ADR.md](./ADR.md)
 - **v1.1 PRD**: [prd-v1.1-roadmap.md](./prd/prd-v1.1-roadmap.md)
 - **v1.2 PRD**: [prd-v1.2-roadmap.md](./prd/prd-v1.2-roadmap.md)

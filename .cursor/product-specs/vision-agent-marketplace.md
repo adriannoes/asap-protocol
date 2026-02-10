@@ -434,6 +434,7 @@ Monetization model (Subscription, % of transactions, or Hybrid) will be decided 
 - **Roadmap**: [roadmap-to-marketplace.md](./roadmap-to-marketplace.md)
 - **v1.1 PRD**: [prd-v1.1-roadmap.md](./prd/prd-v1.1-roadmap.md)
 - **Original Spec**: [v0-original-specs.md](./v0-original-specs.md)
+- **Repository Strategy**: [repository-strategy.md](./repository-strategy.md)
 - **Design Decisions**: [ADR.md](./ADR.md)
 
 ---

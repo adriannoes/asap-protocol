@@ -19,7 +19,9 @@ As a solo developer, it's easy to lose context between sprints. These checkpoint
 
 ### CP-1: Post v1.1.0 Release
 
-**When**: After v1.1.0 ships
+**When**: After v1.1.0 ships (release preparation done 2026-02-10; publish in Task 4.7).
+
+Pre-release: Release materials (CHANGELOG, README, AGENTS.md, secure_agent example) completed. Full review and velocity update to be done after v1.1.0 ships.
 
 **Review**:
 - [ ] OAuth2 implementation complexity — update v1.2 estimates?
