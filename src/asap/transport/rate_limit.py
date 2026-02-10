@@ -4,6 +4,7 @@ HTTP rate limiting (middleware) does not apply once a WebSocket connection
 is established. One bucket per connection in handle_websocket_connection.
 """
 
+# NOTE: only time.monotonic() is used; time.sleep() is forbidden (sync I/O).
 import time
 
 
@@ -28,6 +29,7 @@ class WebSocketTokenBucket:
         self._last_refill = time.monotonic()
 
     def _refill(self) -> None:
+        """First call may grant full capacity if bucket was created long before first message."""
         now = time.monotonic()
         elapsed = now - self._last_refill
         self._tokens = min(

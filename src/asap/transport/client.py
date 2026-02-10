@@ -259,7 +259,8 @@ class ASAPClient:
         - Connection pooling supporting 1000+ concurrent requests
         - Automatic retry with exponential backoff
         - Circuit breaker pattern for fault tolerance
-        - Batch operations via send_batch() method
+        - Batch operations via send_batch() method (HTTP only; WebSocket transport
+          raises NotImplementedError)
         - Compression support (gzip/brotli) for bandwidth reduction
 
     Attributes:
@@ -465,24 +466,24 @@ class ASAPClient:
         is_https = scheme_lower in ("https", "wss")
         is_local = self._is_localhost(parsed)
 
-        if require_https and not is_https and not use_websocket:
+        if require_https and not is_https:
             if is_local:
-                # Allow HTTP for localhost with warning
+                # Allow unencrypted transport for localhost with warning
                 logger.warning(
                     "asap.client.http_localhost",
                     url=base_url,
                     message=(
-                        "Using HTTP for localhost connection. "
+                        "Using unencrypted transport for localhost connection. "
                         "For production, use HTTPS. "
                         "To disable this warning, set require_https=False."
                     ),
                 )
             else:
-                # Reject HTTP for non-localhost
+                # Reject unencrypted transport for non-localhost
                 raise ValueError(
-                    f"HTTPS is required for non-localhost connections. "
-                    f"Received HTTP URL: {base_url}. "
-                    f"Please use HTTPS or set require_https=False to override "
+                    f"Encrypted transport (https/wss) is required for non-localhost connections. "
+                    f"Received: {base_url}. "
+                    f"Please use HTTPS/WSS or set require_https=False to override "
                     f"(not recommended for production)."
                 )
 
@@ -679,6 +680,7 @@ class ASAPClient:
                 circuit_breaker=self._circuit_breaker,
             )
             await self._ws_transport.connect(self._ws_url)
+            # WebSocket mode still uses HTTP client for manifest fetches; small pool is enough.
             limits = httpx.Limits(max_connections=2, max_keepalive_connections=1)
             timeout_config = httpx.Timeout(self.timeout, pool=self._pool_timeout)
             self._client = httpx.AsyncClient(timeout=timeout_config, limits=limits)

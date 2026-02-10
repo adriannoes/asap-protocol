@@ -11,6 +11,8 @@ Message framing:
 - Binary mode (base64) reserved for future use via FRAME_ENCODING_BINARY.
 """
 
+from __future__ import annotations
+
 import asyncio
 import base64
 import itertools
@@ -41,6 +43,7 @@ ASAP_ACK_METHOD = "asap.ack"
 
 if TYPE_CHECKING:
     from asap.transport.server import ASAPRequestHandler
+    from websockets.legacy.client import WebSocketClientProtocol
 
 logger = get_logger(__name__)
 
@@ -192,7 +195,7 @@ class WebSocketTransport:
         circuit_breaker: CircuitBreaker | None = None,
         ack_check_interval: float = ACK_CHECK_INTERVAL,
     ) -> None:
-        self._ws: Any = None  # websockets.WebSocketClientProtocol when connected
+        self._ws: WebSocketClientProtocol | None = None
         self._receive_timeout = receive_timeout
         self._on_message = on_message
         self._ping_interval = ping_interval
@@ -225,13 +228,23 @@ class WebSocketTransport:
             self._ack_check_task = None
         self._connect_error = None
         logger.info("asap.websocket.client_connecting", url=url)
-        self._ws = await websockets.connect(
-            url,
-            open_timeout=10.0,
-            close_timeout=5.0,
-            ping_interval=self._ping_interval,
-            ping_timeout=self._ping_timeout,
+        # cast: connect() return type varies by websockets version (legacy vs asyncio client)
+        self._ws = cast(
+            Any,
+            await websockets.connect(
+                url,
+                open_timeout=10.0,
+                close_timeout=5.0,
+                ping_interval=self._ping_interval,
+                ping_timeout=self._ping_timeout,
+            ),
         )
+        if self._closed:
+            ws = self._ws
+            if ws is not None:
+                await ws.close()
+            self._ws = None
+            return
         self._recv_task = asyncio.create_task(self._recv_loop())
         self._ack_check_task = asyncio.create_task(self._ack_check_loop())
         self._connected_event.set()
@@ -349,7 +362,7 @@ class WebSocketTransport:
                             ):
                                 ack = MessageAck.model_validate(ack_env.payload)
                                 self._pending_acks.pop(ack.original_envelope_id, None)
-                        except (ValidationError, Exception):
+                        except ValidationError:
                             pass
                     continue
                 request_id = data.get("id")
@@ -475,7 +488,8 @@ class WebSocketTransport:
             request_id=request_id,
             encoding=FRAME_ENCODING_JSON,
         )
-        assert isinstance(frame, str)
+        if not isinstance(frame, str):
+            raise TypeError(f"Expected text frame (str), got {type(frame).__name__}")
         await self._ws.send(frame)
 
     async def _ack_check_loop(self) -> None:
@@ -536,7 +550,8 @@ class WebSocketTransport:
             request_id=request_id,
             encoding=FRAME_ENCODING_JSON,
         )
-        assert isinstance(frame, str)
+        if not isinstance(frame, str):
+            raise TypeError(f"Expected text frame (str), got {type(frame).__name__}")
         await self._ws.send(frame)
         self._register_pending_ack(envelope)
 
@@ -544,14 +559,15 @@ class WebSocketTransport:
         if self._ws is None:
             raise RuntimeError("WebSocket not connected; call connect(url) first")
         request_id = self._next_request_id()
-        future: asyncio.Future[Envelope] = asyncio.get_event_loop().create_future()
+        future: asyncio.Future[Envelope] = asyncio.get_running_loop().create_future()
         self._pending[request_id] = future
         frame = encode_envelope_frame(
             self._envelope_dict_for_send(envelope),
             request_id=request_id,
             encoding=FRAME_ENCODING_JSON,
         )
-        assert isinstance(frame, str)
+        if not isinstance(frame, str):
+            raise TypeError(f"Expected text frame (str), got {type(frame).__name__}")
         try:
             await self._ws.send(frame)
             self._register_pending_ack(envelope)
@@ -686,6 +702,10 @@ async def _make_fake_request(body: str, websocket: WebSocket) -> Request:
         "type": "http",
         "method": "POST",
         "headers": headers,
+        "path": websocket.scope.get("path", "/asap"),
+        "root_path": "",
+        "query_string": b"",
+        "server": websocket.scope.get("server", ("localhost", 8000)),
     }
     first_receive = True
 
@@ -783,6 +803,7 @@ async def handle_websocket_connection(
     logger.info("asap.websocket.connected", client=websocket.client)
     last_received: list[float] = [time.monotonic()]
     closed = asyncio.Event()
+    rate_limited = False
     bucket: WebSocketTokenBucket | None = (
         WebSocketTokenBucket(rate=ws_message_rate_limit)
         if ws_message_rate_limit is not None and ws_message_rate_limit > 0
@@ -806,10 +827,11 @@ async def handle_websocket_connection(
             try:
                 data = json.loads(raw)
             except json.JSONDecodeError:
-                data = {}
+                continue
             if _is_heartbeat_pong(data):
                 continue
             if bucket is not None and not bucket.consume(1):
+                rate_limited = True
                 logger.warning(
                     "asap.websocket.rate_limit_exceeded",
                     client=websocket.client,
@@ -893,7 +915,9 @@ async def handle_websocket_connection(
         if active_connections is not None:
             active_connections.discard(websocket)
         try:
-            await websocket.close()
+            await websocket.close(
+                code=WS_CLOSE_POLICY_VIOLATION if rate_limited else WS_CLOSE_GOING_AWAY
+            )
         except (OSError, RuntimeError) as close_err:
             logger.debug("asap.websocket.close_error", error=str(close_err))
         logger.info("asap.websocket.closed", client=websocket.client)
