@@ -70,7 +70,16 @@ def _get_jwks_uri() -> str | None:
         config = await discovery.discover()
         return config.jwks_uri
 
-    return asyncio.run(discover())
+    try:
+        # If there's already a running loop (Jupyter, async framework), use it.
+        asyncio.get_running_loop()
+        import concurrent.futures
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(asyncio.run, discover()).result()
+    except RuntimeError:
+        # No running loop — safe to use asyncio.run().
+        return asyncio.run(discover())
 
 
 def run_server(host: str, port: int) -> None:

@@ -22,24 +22,13 @@ class ASAPError(Exception):
     """
 
     def __init__(self, code: str, message: str, details: dict[str, Any] | None = None) -> None:
-        """Initialize ASAP error.
-
-        Args:
-            code: Error code (e.g., 'asap:protocol/invalid_state')
-            message: Human-readable error description
-            details: Optional dictionary with additional error context
-        """
         super().__init__(message)
         self.code = code
         self.message = message
         self.details = details or {}
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert error to dictionary for JSON serialization.
-
-        Returns:
-            Dictionary containing code, message, and details
-        """
+        """Serialize to ``{code, message, details}`` dict."""
         return {
             "code": self.code,
             "message": self.message,
@@ -61,13 +50,6 @@ class InvalidTransitionError(ASAPError):
     def __init__(
         self, from_state: str, to_state: str, details: dict[str, Any] | None = None
     ) -> None:
-        """Initialize invalid transition error.
-
-        Args:
-            from_state: Current task status
-            to_state: Attempted target status
-            details: Optional additional context
-        """
         message = f"Invalid transition from '{from_state}' to '{to_state}'"
         super().__init__(
             code="asap:protocol/invalid_state",
@@ -87,12 +69,6 @@ class MalformedEnvelopeError(ASAPError):
     """
 
     def __init__(self, reason: str, details: dict[str, Any] | None = None) -> None:
-        """Initialize malformed envelope error.
-
-        Args:
-            reason: Description of what's malformed
-            details: Optional additional context (e.g., validation errors)
-        """
         message = f"Malformed envelope: {reason}"
         super().__init__(
             code="asap:protocol/malformed_envelope", message=message, details=details or {}
@@ -108,12 +84,6 @@ class TaskNotFoundError(ASAPError):
     """
 
     def __init__(self, task_id: str, details: dict[str, Any] | None = None) -> None:
-        """Initialize task not found error.
-
-        Args:
-            task_id: The ID of the task that was not found
-            details: Optional additional context
-        """
         message = f"Task not found: {task_id}"
         super().__init__(
             code="asap:task/not_found",
@@ -133,13 +103,6 @@ class TaskAlreadyCompletedError(ASAPError):
     def __init__(
         self, task_id: str, current_status: str, details: dict[str, Any] | None = None
     ) -> None:
-        """Initialize task already completed error.
-
-        Args:
-            task_id: The ID of the completed task
-            current_status: The current terminal status
-            details: Optional additional context
-        """
         message = f"Task already completed: {task_id} (status: {current_status})"
         super().__init__(
             code="asap:task/already_completed",
@@ -168,13 +131,6 @@ class ThreadPoolExhaustedError(ASAPError):
         active_threads: int,
         details: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize thread pool exhausted error.
-
-        Args:
-            max_threads: Maximum number of threads in the pool
-            active_threads: Current number of active threads
-            details: Optional additional context
-        """
         message = (
             f"Thread pool exhausted: {active_threads}/{max_threads} threads in use. "
             "Service temporarily unavailable."
@@ -212,15 +168,6 @@ class InvalidTimestampError(ASAPError):
         future_offset_seconds: float | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize invalid timestamp error.
-
-        Args:
-            timestamp: The invalid timestamp value
-            message: Human-readable error description
-            age_seconds: Age of the envelope in seconds (if too old)
-            future_offset_seconds: Offset in seconds from current time (if too far in future)
-            details: Optional additional context
-        """
         # Build details dict with optional fields
         details_dict: dict[str, Any] = {"timestamp": timestamp}
         if age_seconds is not None:
@@ -256,13 +203,6 @@ class InvalidNonceError(ASAPError):
         message: str,
         details: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize invalid nonce error.
-
-        Args:
-            nonce: The invalid nonce value
-            message: Human-readable error description
-            details: Optional additional context
-        """
         super().__init__(
             code="asap:protocol/invalid_nonce",
             message=message,
@@ -292,13 +232,6 @@ class CircuitOpenError(ASAPError):
         consecutive_failures: int,
         details: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize circuit open error.
-
-        Args:
-            base_url: The URL for which the circuit is open
-            consecutive_failures: Number of consecutive failures
-            details: Optional additional context
-        """
         message = (
             f"Circuit breaker is OPEN for {base_url}. "
             f"Too many consecutive failures ({consecutive_failures}). "
@@ -365,13 +298,6 @@ class UnsupportedAuthSchemeError(ASAPError):
         supported_schemes: set[str] | frozenset[str],
         details: dict[str, Any] | None = None,
     ) -> None:
-        """Initialize unsupported auth scheme error.
-
-        Args:
-            scheme: The unsupported scheme name
-            supported_schemes: Set of supported schemes
-            details: Optional additional context
-        """
         supported_list = sorted(supported_schemes)
         message = (
             f"Unsupported authentication scheme '{scheme}'. "
