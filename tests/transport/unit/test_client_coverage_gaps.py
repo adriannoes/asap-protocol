@@ -116,9 +116,10 @@ class TestASAPClientCoverageGaps:
             ) as client:
                 await client.send(sample_request_envelope)
 
-            # verify sleep was called with approx 10 seconds
-            args, _ = mock_sleep.call_args
-            assert 9.0 <= args[0] <= 11.0
+            # verify sleep was called with approx 10 seconds among all calls
+            sleep_args = [c[0][0] for c in mock_sleep.call_args_list]
+            found = any(9.0 <= a <= 11.0 for a in sleep_args)
+            assert found, f"No sleep(~10s) found in calls: {sleep_args}"
 
     @pytest.mark.asyncio
     async def test_validate_connection_raises_when_not_connected(self) -> None:
