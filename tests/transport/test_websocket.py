@@ -42,7 +42,7 @@ from .conftest import NoRateLimitTestBase, TEST_RATE_LIMIT_DEFAULT
 import contextlib
 
 if TYPE_CHECKING:
-    from slowapi import Limiter
+    from asap.transport.rate_limit import ASAPRateLimiter
 
 
 # --- Fixtures ---
@@ -51,7 +51,7 @@ if TYPE_CHECKING:
 @pytest.fixture
 def app(
     sample_manifest: Manifest,
-    disable_rate_limiting: "Limiter",
+    disable_rate_limiting: "ASAPRateLimiter",
 ) -> FastAPI:
     """Create FastAPI app with WebSocket route (rate limiting disabled)."""
     app_instance = create_app(sample_manifest, rate_limit=TEST_RATE_LIMIT_DEFAULT)
@@ -305,16 +305,14 @@ class TestWebSocketTransportCorrelation(NoRateLimitTestBase):
     async def test_send_and_receive_returns_correlated_envelope(
         self,
         sample_manifest: Manifest,
-        disable_rate_limiting: "Limiter",
+        disable_rate_limiting: "ASAPRateLimiter",
     ) -> None:
         """send_and_receive() returns the response envelope for the sent request."""
         import uvicorn
         from asap.transport import middleware as middleware_module
-        from asap.transport import server as server_module
         from asap.transport.handlers import create_default_registry
 
         middleware_module.limiter = disable_rate_limiting
-        server_module.limiter = disable_rate_limiting
         port = _free_port()
         app_instance = create_app(
             sample_manifest,
@@ -770,16 +768,14 @@ class TestWebSocketConnectionPool(NoRateLimitTestBase):
     async def test_pool_acquire_release_reuse(
         self,
         sample_manifest: Manifest,
-        disable_rate_limiting: "Limiter",
+        disable_rate_limiting: "ASAPRateLimiter",
     ) -> None:
         """Release then acquire returns the same transport (connection reused)."""
         import uvicorn
         from asap.transport import middleware as middleware_module
-        from asap.transport import server as server_module
         from asap.transport.handlers import create_default_registry
 
         middleware_module.limiter = disable_rate_limiting
-        server_module.limiter = disable_rate_limiting
         port = _free_port()
         app_instance = create_app(
             sample_manifest,
@@ -829,16 +825,14 @@ class TestWebSocketConnectionPool(NoRateLimitTestBase):
     async def test_pool_idle_timeout_closes_and_creates_new(
         self,
         sample_manifest: Manifest,
-        disable_rate_limiting: "Limiter",
+        disable_rate_limiting: "ASAPRateLimiter",
     ) -> None:
         """After idle_timeout, released connection is closed; next acquire creates new transport."""
         import uvicorn
         from asap.transport import middleware as middleware_module
-        from asap.transport import server as server_module
         from asap.transport.handlers import create_default_registry
 
         middleware_module.limiter = disable_rate_limiting
-        server_module.limiter = disable_rate_limiting
         port = _free_port()
         app_instance = create_app(
             sample_manifest,
@@ -890,16 +884,14 @@ class TestWebSocketConnectionPool(NoRateLimitTestBase):
     async def test_pool_release_when_closed_closes_transport(
         self,
         sample_manifest: Manifest,
-        disable_rate_limiting: "Limiter",
+        disable_rate_limiting: "ASAPRateLimiter",
     ) -> None:
         """When pool is closed, release(transport) closes the transport and returns."""
         import uvicorn
         from asap.transport import middleware as middleware_module
-        from asap.transport import server as server_module
         from asap.transport.handlers import create_default_registry
 
         middleware_module.limiter = disable_rate_limiting
-        server_module.limiter = disable_rate_limiting
         port = _free_port()
         app_instance = create_app(
             sample_manifest,
@@ -942,16 +934,14 @@ class TestWebSocketConnectionPool(NoRateLimitTestBase):
     async def test_pool_release_when_transport_ws_none_does_not_put_back(
         self,
         sample_manifest: Manifest,
-        disable_rate_limiting: "Limiter",
+        disable_rate_limiting: "ASAPRateLimiter",
     ) -> None:
         """When transport._ws is None, release() does not put it back in the pool."""
         import uvicorn
         from asap.transport import middleware as middleware_module
-        from asap.transport import server as server_module
         from asap.transport.handlers import create_default_registry
 
         middleware_module.limiter = disable_rate_limiting
-        server_module.limiter = disable_rate_limiting
         port = _free_port()
         app_instance = create_app(
             sample_manifest,
@@ -1002,16 +992,14 @@ class TestWebSocketConnectionPool(NoRateLimitTestBase):
     async def test_pool_close_swallows_oserror_from_transport_close(
         self,
         sample_manifest: Manifest,
-        disable_rate_limiting: "Limiter",
+        disable_rate_limiting: "ASAPRateLimiter",
     ) -> None:
         """Pool close() does not raise when a transport's close() raises OSError."""
         import uvicorn
         from asap.transport import middleware as middleware_module
-        from asap.transport import server as server_module
         from asap.transport.handlers import create_default_registry
 
         middleware_module.limiter = disable_rate_limiting
-        server_module.limiter = disable_rate_limiting
         port = _free_port()
         app_instance = create_app(
             sample_manifest,
@@ -1057,16 +1045,14 @@ class TestWebSocketConnectionPool(NoRateLimitTestBase):
     async def test_pool_acquire_blocks_until_release(
         self,
         sample_manifest: Manifest,
-        disable_rate_limiting: "Limiter",
+        disable_rate_limiting: "ASAPRateLimiter",
     ) -> None:
         """When pool is full, second acquire() blocks until first release()."""
         import uvicorn
         from asap.transport import middleware as middleware_module
-        from asap.transport import server as server_module
         from asap.transport.handlers import create_default_registry
 
         middleware_module.limiter = disable_rate_limiting
-        server_module.limiter = disable_rate_limiting
         port = _free_port()
         app_instance = create_app(
             sample_manifest,
@@ -1123,16 +1109,14 @@ class TestWebSocketConnectionPool(NoRateLimitTestBase):
     async def test_pool_acquire_context(
         self,
         sample_manifest: Manifest,
-        disable_rate_limiting: "Limiter",
+        disable_rate_limiting: "ASAPRateLimiter",
     ) -> None:
         """acquire_context() yields a transport and releases on exit."""
         import uvicorn
         from asap.transport import middleware as middleware_module
-        from asap.transport import server as server_module
         from asap.transport.handlers import create_default_registry
 
         middleware_module.limiter = disable_rate_limiting
-        server_module.limiter = disable_rate_limiting
         port = _free_port()
         app_instance = create_app(
             sample_manifest,
@@ -1208,7 +1192,7 @@ class TestWebSocketGracefulShutdown(NoRateLimitTestBase):
 
 def _app_with_close_ws_route(
     sample_manifest: Manifest,
-    disable_rate_limiting: "Limiter",
+    disable_rate_limiting: "ASAPRateLimiter",
 ) -> FastAPI:
     """Create app with test-only POST /__test__/close_ws to close all WebSockets (chaos)."""
     from asap.transport.handlers import create_default_registry
@@ -1242,15 +1226,13 @@ class TestWebSocketChaos(NoRateLimitTestBase):
     async def test_connection_drop_then_reconnect(
         self,
         sample_manifest: Manifest,
-        disable_rate_limiting: "Limiter",
+        disable_rate_limiting: "ASAPRateLimiter",
     ) -> None:
         """After server closes all connections, client with reconnect recovers and next request succeeds."""
         import uvicorn
         from asap.transport import middleware as middleware_module
-        from asap.transport import server as server_module
 
         middleware_module.limiter = disable_rate_limiting
-        server_module.limiter = disable_rate_limiting
         app_instance = _app_with_close_ws_route(sample_manifest, disable_rate_limiting)
         port = _free_port()
         server_started = threading.Event()
@@ -1336,15 +1318,13 @@ class TestWebSocketChaos(NoRateLimitTestBase):
     async def test_send_fails_cleanly_after_connection_lost(
         self,
         sample_manifest: Manifest,
-        disable_rate_limiting: "Limiter",
+        disable_rate_limiting: "ASAPRateLimiter",
     ) -> None:
         """When server closes the connection, next send_and_receive fails (no reconnect in this test)."""
         import uvicorn
         from asap.transport import middleware as middleware_module
-        from asap.transport import server as server_module
 
         middleware_module.limiter = disable_rate_limiting
-        server_module.limiter = disable_rate_limiting
         app_instance = _app_with_close_ws_route(sample_manifest, disable_rate_limiting)
         port = _free_port()
         server_started = threading.Event()

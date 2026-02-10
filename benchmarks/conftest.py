@@ -1,6 +1,5 @@
 """Benchmark fixtures and configuration."""
 
-import uuid
 from typing import Any
 
 import pytest
@@ -73,20 +72,13 @@ def benchmark_app(
     monkeypatch: pytest.MonkeyPatch,
 ) -> TestClient:
     """Create a test client for HTTP benchmarks (isolated rate limiter)."""
-    from slowapi import Limiter
-    from slowapi.util import get_remote_address
+    from asap.transport.rate_limit import create_test_limiter
 
-    isolated_limiter = Limiter(
-        key_func=get_remote_address,
-        default_limits=["999999/minute"],
-        storage_uri=f"memory://{uuid.uuid4()}",
-    )
+    isolated_limiter = create_test_limiter(limits=["999999/minute"])
 
     import asap.transport.middleware as middleware_module
-    import asap.transport.server as server_module
 
     monkeypatch.setattr(middleware_module, "limiter", isolated_limiter)
-    monkeypatch.setattr(server_module, "limiter", isolated_limiter)
 
     app = create_app(sample_manifest, handler_registry, rate_limit="999999/minute")
     app.state.limiter = isolated_limiter

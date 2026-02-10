@@ -17,7 +17,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 if TYPE_CHECKING:
-    from slowapi import Limiter
+    from asap.transport.rate_limit import ASAPRateLimiter
 
 from asap.models.entities import Manifest
 from asap.models.envelope import Envelope
@@ -46,7 +46,7 @@ def test_registry() -> HandlerRegistry:
 def test_app(
     no_auth_manifest: Manifest,
     test_registry: HandlerRegistry,
-    disable_rate_limiting: "Limiter",
+    disable_rate_limiting: "ASAPRateLimiter",
 ) -> TestClient:
     """Create a test client for the ASAP server."""
     app = create_app(no_auth_manifest, test_registry)

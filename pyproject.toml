@@ -1,6 +1,6 @@
 [project]
 name = "asap-protocol"
-version = "1.0.0"
+version = "1.1.0"
 description = "Async Simple Agent Protocol - A streamlined protocol for agent-to-agent communication"
 authors = [
     {name = "ASAP Protocol Contributors"}
@@ -31,7 +31,7 @@ dependencies = [
     "uvicorn>=0.34",
     "python-ulid>=3.0",
     "packaging>=25.0",
-    "slowapi>=0.1.9",
+    "limits>=3.0",
     "structlog>=24.1",
     "typer>=0.21.1",
     "watchfiles>=0.21.0",
@@ -183,17 +183,19 @@ testpaths = ["tests"]
 # conflicts with pytest-xdist. Run benchmarks separately: uv run pytest benchmarks/
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-# Ignore slowapi deprecation (asyncio.iscoroutinefunction → inspect.iscoroutinefunction in 3.16)
 filterwarnings = [
-    "ignore::DeprecationWarning:slowapi.extension",
+    # Websockets 14.0+ deprecates legacy API, but migration is complex. Suppress for v1.1.0.
+    "ignore:websockets.legacy is deprecated:DeprecationWarning",
+    "ignore:websockets.server.WebSocketServerProtocol is deprecated:DeprecationWarning",
+    "ignore:remove second argument of ws_handler:DeprecationWarning",
 ]
 
 [tool.coverage.run]
 source = ["asap"]
 branch = true
 omit = [
-    "src/asap/examples/run_demo.py",
-    "src/asap/examples/secure_handler.py",
+    "src/asap/examples/*",  # Runnable examples and demos; tested via tests/examples/
+    "src/asap/discovery/dnssd.py",  # P3 optional, deferred to v1.1.1+
 ]
 
 [tool.coverage.report]

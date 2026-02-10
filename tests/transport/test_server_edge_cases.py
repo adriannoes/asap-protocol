@@ -37,7 +37,7 @@ from asap.transport.server import create_app
 from .conftest import NoRateLimitTestBase, TEST_RATE_LIMIT_DEFAULT
 
 if TYPE_CHECKING:
-    from slowapi import Limiter
+    from asap.transport.rate_limit import ASAPRateLimiter
 
 
 def _make_valid_jsonrpc_envelope(
@@ -68,7 +68,7 @@ def _make_valid_jsonrpc_envelope(
 @pytest.fixture
 def app(
     sample_manifest: Manifest,
-    disable_rate_limiting: "Limiter",
+    disable_rate_limiting: "ASAPRateLimiter",
 ) -> FastAPI:
     """Create FastAPI app for testing (rate limiting disabled)."""
     app_instance = create_app(sample_manifest, rate_limit=TEST_RATE_LIMIT_DEFAULT)
@@ -234,7 +234,7 @@ class TestHandlerNotFound(NoRateLimitTestBase):
     """Tests for unknown payload type (HandlerNotFoundError)."""
 
     def test_unknown_payload_type_returns_method_not_found(
-        self, sample_manifest: Manifest, disable_rate_limiting: "Limiter"
+        self, sample_manifest: Manifest, disable_rate_limiting: "ASAPRateLimiter"
     ) -> None:
         """Unknown payload type returns JSON-RPC method not found."""
         # Create app with empty registry (no handlers)
@@ -259,7 +259,7 @@ class TestThreadPoolExhausted(NoRateLimitTestBase):
     """Tests for ThreadPoolExhaustedError (executor full)."""
 
     def test_thread_pool_exhausted_returns_503(
-        self, sample_manifest: Manifest, disable_rate_limiting: "Limiter"
+        self, sample_manifest: Manifest, disable_rate_limiting: "ASAPRateLimiter"
     ) -> None:
         """ThreadPoolExhaustedError returns HTTP 503."""
         from asap.errors import ThreadPoolExhaustedError
@@ -288,7 +288,9 @@ class TestThreadPoolExhausted(NoRateLimitTestBase):
 class TestAuthFailure(NoRateLimitTestBase):
     """Tests for authentication failure paths."""
 
-    def test_auth_failure_returns_invalid_request(self, disable_rate_limiting: "Limiter") -> None:
+    def test_auth_failure_returns_invalid_request(
+        self, disable_rate_limiting: "ASAPRateLimiter"
+    ) -> None:
         """Auth failure (HTTPException 401) returns JSON-RPC invalid request."""
         manifest_with_auth = Manifest(
             id="urn:asap:agent:auth-test",
@@ -327,7 +329,7 @@ class TestInternalError(NoRateLimitTestBase):
     """Tests for internal server error fallback."""
 
     def test_handler_exception_returns_internal_error(
-        self, sample_manifest: Manifest, disable_rate_limiting: "Limiter"
+        self, sample_manifest: Manifest, disable_rate_limiting: "ASAPRateLimiter"
     ) -> None:
         """Unhandled exception in handler returns JSON-RPC internal error."""
         app_instance = create_app(
@@ -357,7 +359,7 @@ class TestDebugModeErrorData(NoRateLimitTestBase):
     def test_debug_mode_includes_traceback_in_error(
         self,
         sample_manifest: Manifest,
-        disable_rate_limiting: "Limiter",
+        disable_rate_limiting: "ASAPRateLimiter",
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """In debug mode, internal errors include traceback."""

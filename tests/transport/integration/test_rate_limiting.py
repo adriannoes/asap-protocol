@@ -4,7 +4,7 @@ This module contains tests specifically for rate limiting behavior.
 These tests are isolated in a separate file to prevent interference with other tests.
 
 CRITICAL: All tests use aggressive monkeypatch to replace module-level limiters
-to ensure complete isolation even when slowapi.Limiter maintains global state.
+to ensure complete isolation.
 """
 
 import collections.abc
@@ -18,7 +18,6 @@ from fastapi.testclient import TestClient
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
-    from slowapi import Limiter
 
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.envelope import Envelope
@@ -28,10 +27,8 @@ from asap.transport.middleware import (
     ERROR_RATE_LIMIT_EXCEEDED,
     HTTP_TOO_MANY_REQUESTS,
 )
+from asap.transport.rate_limit import ASAPRateLimiter
 from asap.transport.server import create_app
-
-# Filter deprecation warnings from slowapi
-pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning")
 
 
 def _create_test_rpc_request(sender: str = "urn:asap:agent:client-1") -> JsonRpcRequest:
@@ -96,26 +93,20 @@ class TestRateLimiting:
     def isolated_app_5_per_minute(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        isolated_limiter_factory: "collections.abc.Callable[[collections.abc.Sequence[str] | None], Limiter]",
+        isolated_limiter_factory: "collections.abc.Callable[[collections.abc.Sequence[str] | None], ASAPRateLimiter]",
         rate_limit_manifest: Manifest,
     ) -> "FastAPI":
         """Create an app with 5/minute rate limit and aggressive monkeypatch.
 
         This fixture is reused across all rate limiting tests to avoid code duplication.
         """
-        # Create completely isolated limiter
         limiter = isolated_limiter_factory(["5/minute"])
 
-        # Replace global limiter in BOTH modules
         import asap.transport.middleware as middleware_module
-        import asap.transport.server as server_module
 
         monkeypatch.setattr(middleware_module, "limiter", limiter)
-        monkeypatch.setattr(server_module, "limiter", limiter)
 
-        # Create app - it will use the monkeypatched limiter
         app = create_app(rate_limit_manifest, rate_limit="5/minute")
-        # Also set app.state.limiter for runtime
         app.state.limiter = limiter
 
         return app  # type: ignore[return-value]
@@ -124,26 +115,20 @@ class TestRateLimiting:
     def isolated_app_1_per_second(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        isolated_limiter_factory: "collections.abc.Callable[[collections.abc.Sequence[str] | None], Limiter]",
+        isolated_limiter_factory: "collections.abc.Callable[[collections.abc.Sequence[str] | None], ASAPRateLimiter]",
         rate_limit_manifest: Manifest,
     ) -> "FastAPI":
         """Create an app with 1/second rate limit and aggressive monkeypatch.
 
         Used for test_limit_resets_after_window which needs a short time window.
         """
-        # Create completely isolated limiter
         limiter = isolated_limiter_factory(["1/second"])
 
-        # Replace global limiter in BOTH modules
         import asap.transport.middleware as middleware_module
-        import asap.transport.server as server_module
 
         monkeypatch.setattr(middleware_module, "limiter", limiter)
-        monkeypatch.setattr(server_module, "limiter", limiter)
 
-        # Create app - it will use the monkeypatched limiter
         app = create_app(rate_limit_manifest, rate_limit="1/second")
-        # Also set app.state.limiter for runtime
         app.state.limiter = limiter
 
         return app  # type: ignore[return-value]
@@ -152,22 +137,19 @@ class TestRateLimiting:
     def isolated_app_from_env_2_per_minute(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        isolated_limiter_factory: "collections.abc.Callable[[collections.abc.Sequence[str] | None], Limiter]",
+        isolated_limiter_factory: "collections.abc.Callable[[collections.abc.Sequence[str] | None], ASAPRateLimiter]",
         rate_limit_manifest: Manifest,
     ) -> "FastAPI":
         """Create an app with rate limit from ASAP_RATE_LIMIT env var (2/minute).
 
-        Follow-up to test_docs_troubleshooting_smoke.test_create_app_reads_asap_rate_limit_from_env:
-        validates that when create_app(rate_limit=None) reads from env, the limiter
+        Validates that when create_app(rate_limit=None) reads from env, the limiter
         is actually enforced at runtime (POST /asap returns 429 when exceeded).
         """
         limiter = isolated_limiter_factory(["2/minute"])
 
         import asap.transport.middleware as middleware_module
-        import asap.transport.server as server_module
 
         monkeypatch.setattr(middleware_module, "limiter", limiter)
-        monkeypatch.setattr(server_module, "limiter", limiter)
 
         with patch.dict("os.environ", {"ASAP_RATE_LIMIT": "2/minute"}):
             app = create_app(rate_limit_manifest, rate_limit=None)

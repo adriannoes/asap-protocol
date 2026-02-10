@@ -20,7 +20,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.testclient import TestClient
-from slowapi.errors import RateLimitExceeded
+from asap.transport.rate_limit import RateLimitExceeded
 
 from asap.models.entities import AuthScheme, Capability, Endpoint, Manifest, Skill
 from asap.transport.middleware import (
@@ -797,7 +797,7 @@ class TestLimiterCreation:
         limiter = create_test_limiter()
 
         assert limiter is not None
-        assert limiter._default_limits is not None
+        assert len(limiter.limits) > 0
 
     def test_create_test_limiter_with_custom_limits(self) -> None:
         """Test create_test_limiter with custom limits."""
@@ -818,8 +818,9 @@ class TestLimiterCreation:
         assert limiter is not None
 
     def test_limiters_have_isolated_storage(self) -> None:
-        """Test that each limiter has isolated storage."""
+        """Test that each limiter has isolated storage (different instances)."""
         limiter1 = create_test_limiter()
         limiter2 = create_test_limiter()
 
-        assert limiter1._storage_uri != limiter2._storage_uri
+        # Each limiter should have its own storage backend instance.
+        assert limiter1._storage is not limiter2._storage

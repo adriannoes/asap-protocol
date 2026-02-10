@@ -10,7 +10,6 @@ See docs/testing.md for detailed usage guide and testing strategies.
 """
 
 import collections.abc
-import uuid
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING
 
@@ -18,6 +17,11 @@ import pytest
 
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.observability import get_logger
+from asap.transport.rate_limit import (
+    ASAPRateLimiter,
+    create_test_limiter,
+    get_remote_address,
+)
 from asap.transport.server import create_app
 
 # Get logger for test fixtures
@@ -25,59 +29,33 @@ logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
-    from slowapi import Limiter
 
 # Test configuration constants
 TEST_RATE_LIMIT_DEFAULT = "100000/minute"  # Very high default for testing
 
 
-def create_test_limiter(limits: collections.abc.Sequence[str] | None = None) -> "Limiter":
-    """Helper function to create a new isolated limiter instance for testing.
-
-    Args:
-        limits: Optional list of rate limit strings. Defaults to very high limits.
-
-    Returns:
-        New Limiter instance with isolated storage
-    """
-    from slowapi import Limiter
-    from slowapi.util import get_remote_address
-
-    if limits is None:
-        limits = [TEST_RATE_LIMIT_DEFAULT]
-
-    # Use unique storage URI to ensure complete isolation
-    unique_storage_id = str(uuid.uuid4())
-    return Limiter(
-        key_func=get_remote_address,
-        default_limits=list(limits),
-        storage_uri=f"memory://{unique_storage_id}",
-    )
-
-
 @pytest.fixture
-def isolated_limiter_factory() -> Callable[[Sequence[str] | None], "Limiter"]:
+def isolated_limiter_factory() -> Callable[[Sequence[str] | None], ASAPRateLimiter]:
     """Factory fixture that creates isolated rate limiters.
 
-    Returns a function that creates new Limiter instances with unique storage.
+    Returns a function that creates new ASAPRateLimiter instances with unique storage.
     Each limiter gets its own UUID-based storage to ensure complete test isolation.
 
     Args:
         limits: Optional rate limit strings (e.g., ["10/minute"]). Defaults to very high limit.
 
     Returns:
-        New Limiter instance with isolated memory storage
+        New ASAPRateLimiter instance with isolated memory storage.
     """
 
-    def _create(limits: collections.abc.Sequence[str] | None = None) -> "Limiter":
+    def _create(limits: collections.abc.Sequence[str] | None = None) -> ASAPRateLimiter:
         """Create a new isolated limiter."""
-        # Log fixture execution for debugging
         logger.debug(
             "test.fixture.isolated_limiter_factory",
             limits=limits,
             action="creating_limiter",
         )
-        return create_test_limiter(limits)
+        return create_test_limiter(limits, key_func=get_remote_address)
 
     return _create
 
@@ -85,32 +63,23 @@ def isolated_limiter_factory() -> Callable[[Sequence[str] | None], "Limiter"]:
 @pytest.fixture
 def replace_global_limiter(
     monkeypatch: pytest.MonkeyPatch,
-    isolated_limiter_factory: Callable[[Sequence[str] | None], "Limiter"],
-) -> "Limiter":
-    """Replace global limiter with isolated instance using aggressive monkeypatch.
+    isolated_limiter_factory: Callable[[Sequence[str] | None], ASAPRateLimiter],
+) -> ASAPRateLimiter:
+    """Replace global limiter with isolated instance using monkeypatch.
 
-    This fixture performs "aggressive monkeypatch" by replacing the module-level
-    limiter in BOTH asap.transport.middleware and asap.transport.server.
-
-    Why "aggressive"? The slowapi.Limiter maintains global state that persists
-    across tests. Simply replacing app.state.limiter is not sufficient because
-    code may reference the module-level limiter directly.
+    Replaces the module-level ``limiter`` in ``asap.transport.middleware``.
 
     Returns:
-        The new isolated limiter instance
+        The new isolated limiter instance.
     """
-    # Log fixture execution
     logger.debug(
         "test.fixture.replace_global_limiter",
         action="creating_isolated_limiter",
     )
 
-    # Create completely isolated limiter
     new_limiter = isolated_limiter_factory(None)
 
-    # Replace in both modules
     import asap.transport.middleware as middleware_module
-    import asap.transport.server as server_module
 
     logger.debug(
         "test.fixture.replace_global_limiter",
@@ -119,7 +88,6 @@ def replace_global_limiter(
     )
 
     monkeypatch.setattr(middleware_module, "limiter", new_limiter)
-    monkeypatch.setattr(server_module, "limiter", new_limiter)
 
     logger.debug(
         "test.fixture.replace_global_limiter",
@@ -159,7 +127,7 @@ def no_auth_manifest() -> Manifest:
 @pytest.fixture
 def create_isolated_app(
     monkeypatch: pytest.MonkeyPatch,
-    isolated_limiter_factory: "collections.abc.Callable[[collections.abc.Sequence[str] | None], Limiter]",
+    isolated_limiter_factory: "collections.abc.Callable[[collections.abc.Sequence[str] | None], ASAPRateLimiter]",
 ) -> "collections.abc.Callable[[Manifest, str | None, int | None, int | None, bool], FastAPI]":
     """Factory fixture for creating isolated FastAPI apps.
 
@@ -169,8 +137,7 @@ def create_isolated_app(
     co-locates fixture configuration with the tests that use them.
 
     The returned function creates apps with isolated rate limiters to prevent
-    interference between tests. Supports both direct limiter assignment and
-    aggressive monkeypatch strategies.
+    interference between tests.
 
     Args:
         monkeypatch: Pytest monkeypatch fixture
@@ -204,7 +171,7 @@ def create_isolated_app(
             rate_limit: Optional rate limit string (e.g., "100/minute")
             max_request_size: Optional maximum request size in bytes
             max_threads: Optional maximum number of threads
-            use_monkeypatch: If True, replace global limiter in modules (aggressive isolation)
+            use_monkeypatch: If True, replace global limiter in middleware module
 
         Returns:
             FastAPI app with isolated limiter configured
@@ -213,13 +180,11 @@ def create_isolated_app(
         limits = [rate_limit] if rate_limit else None
         isolated_limiter = isolated_limiter_factory(limits)
 
-        # If use_monkeypatch, replace global limiters in modules
+        # If use_monkeypatch, replace global limiter in middleware module
         if use_monkeypatch:
             import asap.transport.middleware as middleware_module
-            import asap.transport.server as server_module
 
             monkeypatch.setattr(middleware_module, "limiter", isolated_limiter)
-            monkeypatch.setattr(server_module, "limiter", isolated_limiter)
 
         # Create app
         app = create_app(
@@ -245,8 +210,8 @@ class NoRateLimitTestBase:
     Tests inheriting from this class will have rate limiting completely
     disabled to avoid interference from rate limiting tests.
 
-    The fixture automatically replaces the global limiter in both middleware
-    and server modules with a limiter that has no limits (empty limits list).
+    The fixture automatically replaces the global limiter in the middleware
+    module with a limiter that has very high limits.
 
     Example:
         class TestMyFeature(NoRateLimitTestBase):
@@ -259,13 +224,11 @@ class NoRateLimitTestBase:
     """
 
     @pytest.fixture(autouse=True)
-    def disable_rate_limiting(self, monkeypatch: pytest.MonkeyPatch) -> "Limiter":
+    def disable_rate_limiting(self, monkeypatch: pytest.MonkeyPatch) -> ASAPRateLimiter:
         """Automatically disable rate limiting for all tests in this class.
 
-        This fixture runs automatically for every test method in classes
-        that inherit from NoRateLimitTestBase. It creates a limiter with
-        no limits and replaces the global limiter in both middleware and
-        server modules.
+        Creates a limiter with very high limits and replaces the global limiter
+        in the middleware module.
 
         Args:
             monkeypatch: Pytest monkeypatch fixture
@@ -273,21 +236,13 @@ class NoRateLimitTestBase:
         Returns:
             The no-limit limiter instance
         """
-        from slowapi import Limiter
-        from slowapi.util import get_remote_address
-
-        # Create limiter with NO limits
-        no_limit_limiter = Limiter(
+        no_limit_limiter = create_test_limiter(
+            ["999999/minute"],
             key_func=get_remote_address,
-            storage_uri=f"memory://no-limits-{uuid.uuid4().hex}",
-            default_limits=[],  # Empty list = no limits
         )
 
-        # Replace globally in both modules
         import asap.transport.middleware as middleware_module
-        import asap.transport.server as server_module
 
         monkeypatch.setattr(middleware_module, "limiter", no_limit_limiter)
-        monkeypatch.setattr(server_module, "limiter", no_limit_limiter)
 
         return no_limit_limiter

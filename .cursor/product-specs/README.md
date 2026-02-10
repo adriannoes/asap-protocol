@@ -9,6 +9,7 @@ product-specs/
 ├── README.md                      # This file
 ├── vision-agent-marketplace.md    # North Star vision
 ├── roadmap-to-marketplace.md      # Version sequencing
+├── repository-strategy.md         # Monorepo vs Multi-repo decision
 ├── ADR.md                         # Architecture Decision Records
 ├── v0-original-specs.md           # Original specifications
 └── prd/                           # Product Requirements Documents
@@ -29,6 +30,10 @@ product-specs/
 ### `roadmap-to-marketplace.md` (The Strategic Map)
 - **Purpose**: Version sequencing from v1.0 to v2.0
 - **When to use**: Planning the theme of each version and understanding dependencies
+
+### `repository-strategy.md` (Codebase Structure)
+- **Purpose**: Strategic analysis of Monorepo vs Multi-repo
+- **When to use**: Understanding why code is structured the way it is
 
 ### `prd/` (Product Requirements)
 - **Purpose**: Detailed requirements per version

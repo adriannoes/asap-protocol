@@ -301,6 +301,8 @@ class HandlerRegistry:
         try:
             result = handler(envelope, manifest)
             if inspect.isawaitable(result):
+                if inspect.iscoroutine(result):
+                    result.close()
                 raise TypeError(
                     f"Handler {handler} returned awaitable in sync dispatch(). "
                     "Use dispatch_async() for async handlers."

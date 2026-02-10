@@ -30,7 +30,9 @@
 
 ## Overview
 
-The ASAP protocol is designed with security as a foundational concern. This guide covers:
+The ASAP protocol is designed with security as a foundational concern. For **v1.1 OAuth2, identity binding (Custom Claims), and trust limitations**, see [v1.1 Security Model](security/v1.1-security-model.md) (ADR-17).
+
+This guide covers:
 
 - **Authentication**: How agents verify identity
 - **Request Signing**: Cryptographic integrity for messages

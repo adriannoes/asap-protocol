@@ -34,6 +34,7 @@ from asap.models.payloads import (
     McpResourceFetch,
     McpToolCall,
     McpToolResult,
+    MessageAck,
     MessageSend,
     StateQuery,
     StateRestore,
@@ -438,6 +439,16 @@ def st_mcp_resource_data(draw: st.DrawFn) -> McpResourceData:
     )
 
 
+@st.composite
+def st_message_ack(draw: st.DrawFn) -> MessageAck:
+    """Strategy for MessageAck (ADR-16 WebSocket ack)."""
+    return MessageAck(
+        original_envelope_id=draw(st_ulid_like()),
+        status=draw(st.sampled_from(["received", "processed", "rejected"])),
+        error=draw(st.none() | st.text(max_size=200)),
+    )
+
+
 # --- Envelope strategy (payload_type + payload; correlation_id when response) ---
 
 _RESPONSE_PAYLOAD_TYPES = {"TaskResponse", "McpToolResult", "McpResourceData"}
@@ -656,6 +667,11 @@ class TestPayloadsRoundtrip:
     def test_mcp_resource_data_roundtrip(self, model: McpResourceData) -> None:
         """McpResourceData -> JSON -> McpResourceData preserves data."""
         _roundtrip_preserves_data(McpResourceData, model)
+
+    @given(st_message_ack())
+    def test_message_ack_roundtrip(self, model: MessageAck) -> None:
+        """MessageAck -> JSON -> MessageAck preserves data (ADR-16)."""
+        _roundtrip_preserves_data(MessageAck, model)
 
 
 class TestEnvelopeRoundtrip:

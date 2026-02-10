@@ -56,7 +56,6 @@ from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from opentelemetry import context
 from pydantic import ValidationError
-from slowapi.errors import RateLimitExceeded
 
 from asap.discovery import health as discovery_health
 from asap.discovery import wellknown
@@ -82,10 +81,10 @@ from asap.transport.middleware import (
     AuthenticationMiddleware,
     BearerTokenValidator,
     SizeLimitMiddleware,
-    create_limiter,
-    limiter,
+    _get_sender_from_envelope,
     rate_limit_handler,
 )
+from asap.transport.rate_limit import RateLimitExceeded, create_limiter
 from asap.observability.metrics import MetricsCollector
 from asap.transport.executors import BoundedExecutor
 from asap.transport.handlers import (
@@ -1237,7 +1236,7 @@ def create_app(
             **Warning:** The default storage is ``memory://`` (per-process). In
             multi-worker deployments (e.g., Gunicorn with 4 workers), each worker
             has isolated limits, so effective rate = limit × workers (e.g.,
-            10/s → 40/s). For production, use Redis-backed storage via slowapi.
+            10/s → 40/s). For production, use Redis-backed storage.
         max_request_size: Optional maximum request size in bytes.
             Defaults to ASAP_MAX_REQUEST_SIZE environment variable or 10MB.
         max_threads: Optional maximum number of threads for sync handlers.
@@ -1451,10 +1450,13 @@ def create_app(
     else:
         rate_limit_str = rate_limit
 
-    # Create isolated limiter instance for this app
-    # This ensures each app instance has its own rate limiter storage
-    # Tests can override this via monkeypatch or direct assignment to app.state.limiter
-    app.state.limiter = create_limiter([rate_limit_str])
+    # Create isolated limiter instance for this app.
+    # Each app instance gets its own rate limiter storage.
+    # Tests can override via direct assignment to app.state.limiter.
+    app.state.limiter = create_limiter(
+        [rate_limit_str],
+        key_func=_get_sender_from_envelope,
+    )
     app.state.max_request_size = max_request_size
     app.state.snapshot_store = snapshot_store
     app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
@@ -1533,16 +1535,16 @@ def create_app(
     configure_tracing(service_name=manifest.id, app=app)
 
     @app.post("/asap")
-    @limiter.limit(rate_limit_str)  # slowapi uses app.state.limiter at runtime
     async def handle_asap_message(request: Request) -> JSONResponse:
         """Handle ASAP messages wrapped in JSON-RPC 2.0.
 
         This endpoint:
-        1. Receives JSON-RPC wrapped ASAP envelopes
-        2. Validates the request structure
-        3. Extracts and processes the ASAP envelope
-        4. Returns response wrapped in JSON-RPC
-        5. Records metrics for observability
+        1. Enforces rate limiting via ``app.state.limiter``
+        2. Receives JSON-RPC wrapped ASAP envelopes
+        3. Validates the request structure
+        4. Extracts and processes the ASAP envelope
+        5. Returns response wrapped in JSON-RPC
+        6. Records metrics for observability
 
         Args:
             request: FastAPI request object with JSON body
@@ -1554,6 +1556,8 @@ def create_app(
             >>> # Send JSON-RPC to POST /asap and receive JSON-RPC response.
             >>> # See tests/transport/test_server.py for full request examples.
         """
+        # Rate limit check — uses app.state.limiter so tests can override.
+        app.state.limiter.check(request)
         return await handler.handle_message(request)
 
     @app.websocket("/asap/ws")

@@ -201,31 +201,35 @@ The v0 spec listed "First-class persistent state" as a key design goal. Currentl
 
 ### Tasks
 
-- [ ] 4.1 Implement webhook delivery
+- [x] 4.1 Implement webhook delivery
   - Goal: POST callbacks to registered URLs
   - Security: Validate callback URLs (prevent SSRF per backlog)
   - Deliverable: `src/asap/transport/webhook.py`
   - Details: [Transport Detailed - Task 4.1](./sprint-S4-webhooks-release.md#task-41-webhook-delivery)
 
-- [ ] 4.2 Add callback retry logic
+- [x] 4.2 Add callback retry logic
   - Goal: Retry failed deliveries with exponential backoff
   - Details: [Transport Detailed - Task 4.2](./sprint-S4-webhooks-release.md#task-42-callback-retry-logic)
 
-- [ ] 4.3 Migrate from slowapi (Tech Debt)
+- [x] 4.3 Migrate from slowapi (Tech Debt)
   - Goal: Replace slowapi with custom rate limiter to fix deprecation warnings
-  - Deliverable: `src/asap/transport/rate_limit.py`
+  - Deliverable: `src/asap/transport/rate_limit.py` (`ASAPRateLimiter` using `limits` package)
   - Details: [Transport Detailed - Task 4.3](./sprint-S4-webhooks-release.md#task-43-migrate-from-slowapi-tech-debt)
 
-- [ ] 4.4 Run comprehensive testing
+- [x] 4.4 Run comprehensive testing
   - Goal: All tests pass, benchmarks meet targets
+  - **Prerequisite completed**: 15 WebSocket stability chaos tests (`tests/chaos/test_websocket_stability.py`) covering reconnection, CB via ack timeout, graceful shutdown, CB thread safety, and backoff integration
+  - **Known gap for S4**: Circuit Breaker does not guard `connect()` and `send()` — currently only integrated via `_ack_check_loop` (see ADR-16). Evaluate adding CB protection to connect/send paths during S4 comprehensive testing.
   - Details: [Transport Detailed - Task 4.4](./sprint-S4-webhooks-release.md#task-44-comprehensive-testing)
+  - **Done**: 4.4.1–4.4.4 (unit + integration + property tests, docs update). 1801 tests pass; coverage 94.5%; 34 property tests; docs index + README updated for v1.1.
 
-- [ ] 4.5 Security Model documentation (ADR-17)
+- [x] 4.5 Security Model documentation (ADR-17)
   - Goal: Document v1.1 trust model limitations + Custom Claims setup guide
   - Deliverable: `docs/security/v1.1-security-model.md`
   - Details: [Release Detailed - Task 4.5](./sprint-S4-webhooks-release.md#task-45-security-model-documentation-adr-17)
+  - **Done**: v1.1-security-model.md created (trust model, threat model, Custom Claims, allowlist, Auth0/Keycloak/Azure AD, migration to v1.2). Linked from README, AGENTS.md, docs/index.md, docs/security.md. Commit deferred to end of sprint.
 
-- [ ] 4.6 Prepare release materials
+- [x] 4.6 Prepare release materials
   - Goal: CHANGELOG, docs, version bump
   - Details: [Transport Detailed - Task 4.6](./sprint-S4-webhooks-release.md#task-46-release-preparation)
 
@@ -258,16 +262,16 @@ The v0 spec listed "First-class persistent state" as a key design goal. Currentl
 
 ## Progress Tracking
 
-**Overall Progress**: 19/27 tasks completed (70%)
+**Overall Progress**: 25/27 tasks completed (93%)
 
 **Sprint Status**:
 - ✅ S1: 4/4 tasks (100%) — includes Custom Claims (ADR-17)
 - ✅ S2: 5/5 tasks (100%) — Well-known Discovery + Lite Registry + Health (SD-11, ADR-15)
 - ✅ S2.5: 5/5 tasks (100%) — State Storage + Best Practices Failover
 - ✅ S3: 6/6 tasks (100%) — 3.1–3.6 done (WebSocket server, client, connection management, MessageAck, AckAwareClient, WS rate limiting)
-- ⬜ S4: 0/7 tasks (0%) — includes slowapi migration + Security Model docs (ADR-17)
+- 🔧 S4: 6/7 tasks (86%) — 4.6 Release Preparation done; 4.7 Build and Publish next
 
-**Last Updated**: 2026-02-09
+**Last Updated**: 2026-02-10
 
 ---
 

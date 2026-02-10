@@ -18,12 +18,13 @@ import collections.abc
 import json
 import time
 from typing import TYPE_CHECKING
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
 
 if TYPE_CHECKING:
-    from slowapi import Limiter
+    from asap.transport.rate_limit import ASAPRateLimiter
 
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
@@ -43,13 +44,19 @@ from asap.transport.jsonrpc import (
     PARSE_ERROR,
     JsonRpcRequest,
 )
-from asap.transport.server import ASAPRequestHandler, RegistryHolder, RequestContext, create_app
+from asap.transport.server import (
+    ASAPRequestHandler,
+    RegistryHolder,
+    RequestContext,
+    create_app,
+    _run_handler_watcher,
+)
 
 
 @pytest.fixture
 def app(
     sample_manifest: Manifest,
-    isolated_rate_limiter: "Limiter | None",
+    isolated_rate_limiter: "ASAPRateLimiter | None",
 ) -> FastAPI:
     """Create FastAPI app for testing (very high rate limit, isolated limiter)."""
     app_instance = create_app(sample_manifest, rate_limit="999999/minute")
@@ -106,6 +113,52 @@ class TestAppFactory:
         """Test that create_app(..., hot_reload=True) returns an app (watcher starts in background)."""
         app = create_app(sample_manifest, hot_reload=True)
         assert isinstance(app, FastAPI)
+
+
+class TestRegistryHolder:
+    """Tests for RegistryHolder hot-reload support."""
+
+    def test_replace_registry_copies_executor_when_set(self) -> None:
+        """When holder has _executor set, replace_registry copies it to the new registry."""
+        registry = HandlerRegistry()
+        holder = RegistryHolder(registry)
+        executor = MagicMock()
+        holder._executor = executor
+        new_registry = HandlerRegistry()
+        holder.replace_registry(new_registry)
+        assert holder.registry is new_registry
+        assert getattr(new_registry, "_executor", None) is executor
+
+    def test_replace_registry_no_executor_when_not_set(self) -> None:
+        """When holder has no _executor, replace_registry only swaps the registry."""
+        registry = HandlerRegistry()
+        holder = RegistryHolder(registry)
+        new_registry = HandlerRegistry()
+        holder.replace_registry(new_registry)
+        assert holder.registry is new_registry
+        assert (
+            not hasattr(new_registry, "_executor")
+            or getattr(new_registry, "_executor", None) is None
+        )
+
+
+class TestHandlerWatcher:
+    """Tests for _run_handler_watcher (hot reload when watchfiles missing)."""
+
+    def test_run_handler_watcher_exits_when_watchfiles_not_installed(self) -> None:
+        """When watchfiles is not importable, watcher logs and returns without blocking."""
+        holder = RegistryHolder(HandlerRegistry())
+        import builtins
+
+        real_import = builtins.__import__
+
+        def fake_import(name: str, *args: object, **kwargs: object) -> object:
+            if name == "watchfiles":
+                raise ImportError("watchfiles not installed")
+            return real_import(name, *args, **kwargs)
+
+        with patch.object(builtins, "__import__", side_effect=fake_import):
+            _run_handler_watcher(holder, "/nonexistent/path")
 
 
 class TestHealthEndpoints:
@@ -219,6 +272,15 @@ class TestASAPRequestHandlerHelpers:
         """Get metrics collector."""
         reset_metrics()
         return get_metrics()
+
+    def test_log_response_debug_handles_memoryview_body(self, handler: ASAPRequestHandler) -> None:
+        """Test _log_response_debug decodes memoryview body when debug log is enabled."""
+        payload = b'{"jsonrpc":"2.0","result":{"ok":true}}'
+        response = MagicMock(spec=JSONResponse)
+        response.body = memoryview(payload)
+        response.status_code = 200
+        with patch("asap.transport.server.is_debug_log_mode", return_value=True):
+            handler._log_response_debug(response)
 
     def test_validate_envelope_with_valid_envelope(
         self, handler: ASAPRequestHandler, metrics: MetricsCollector
@@ -811,24 +873,16 @@ class TestDebugLogMode:
     ) -> None:
         """When ASAP_DEBUG_LOG=true, handler logs debug_request and debug_response."""
         from unittest.mock import patch
-        import uuid
-        from slowapi import Limiter
-        from slowapi.util import get_remote_address
+        from asap.transport.rate_limit import create_test_limiter
 
         # Use aggressive monkeypatch to replace global limiter (learned from v0.5.0)
         # This prevents rate limit state from accumulating across tests
-        isolated_limiter = Limiter(
-            key_func=get_remote_address,
-            default_limits=["999999/minute"],  # Very high limit
-            storage_uri=f"memory://{uuid.uuid4()}",  # Unique storage for isolation
-        )
+        isolated_limiter = create_test_limiter(limits=["999999/minute"])
 
-        # Replace in BOTH modules (aggressive monkeypatch pattern from v0.5.0)
+        # Replace in middleware module (server reads from app.state.limiter)
         import asap.transport.middleware as middleware_module
-        import asap.transport.server as server_module
 
         monkeypatch.setattr(middleware_module, "limiter", isolated_limiter)
-        monkeypatch.setattr(server_module, "limiter", isolated_limiter)
 
         # Create app - it will use the monkeypatched limiter
         app = create_app(sample_manifest, rate_limit="999999/minute")

@@ -39,31 +39,29 @@ Example:
 
 import asyncio
 import inspect
-import uuid
 from typing import Any, Awaitable, Callable, Protocol, cast
-from collections.abc import Sequence
 
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from slowapi import Limiter
-from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from asap.models.entities import Manifest
 from asap.observability import get_logger
+from asap.transport.rate_limit import (
+    DEFAULT_RATE_LIMIT,
+    ASAPRateLimiter,
+    RateLimitExceeded,
+    create_limiter,
+    create_test_limiter,
+    get_remote_address,
+)
 from asap.utils.sanitization import sanitize_token
 
 logger = get_logger(__name__)
 
 # Authentication header scheme
 AUTH_SCHEME_BEARER = "bearer"
-
-# Rate limiting default configuration
-# Uses token bucket pattern: burst limit (per second) + sustained limit (per minute)
-# This allows short bursts while preventing sustained abuse
-DEFAULT_RATE_LIMIT = "10/second;100/minute"
 
 
 def _get_sender_from_envelope(request: Request) -> str:
@@ -118,81 +116,24 @@ def _get_sender_from_envelope(request: Request) -> str:
     return str(remote_addr)
 
 
-limiter = Limiter(
-    key_func=_get_sender_from_envelope,
-    default_limits=[DEFAULT_RATE_LIMIT],
-    storage_uri="memory://",
-)
+_limiter: ASAPRateLimiter | None = None
 
 
-def create_test_limiter(limits: Sequence[str] | None = None) -> Limiter:
-    """Create a new limiter instance for testing isolation.
+def _get_default_limiter() -> ASAPRateLimiter:
+    """Lazy-initialize the default rate limiter on first use.
 
-    This allows tests to use isolated rate limiters to avoid interference
-    between test cases.
-
-    Args:
-        limits: Optional list of rate limit strings. Defaults to high limits for testing.
-
-    Returns:
-        New Limiter instance with isolated storage
-
-    Example:
-        >>> test_limiter = create_test_limiter(["100000/minute"])
-        >>> app.state.limiter = test_limiter
+    Avoids import-time side effects (memory storage warning, wasted allocation)
+    when the limiter is overridden by ``create_app()`` or test fixtures.
     """
-    if limits is None:
-        limits = ["100000/minute"]  # Very high limit for testing
-
-    # Use unique storage URI to ensure complete isolation between test instances
-    unique_storage_id = str(uuid.uuid4())
-    return Limiter(
-        key_func=_get_sender_from_envelope,
-        default_limits=list(limits),
-        storage_uri=f"memory://{unique_storage_id}",  # Each instance gets its own memory storage
-    )
+    global _limiter  # noqa: PLW0603
+    if _limiter is None:
+        _limiter = create_limiter(key_func=_get_sender_from_envelope)
+    return _limiter
 
 
-def create_limiter(limits: Sequence[str] | None = None) -> Limiter:
-    """Create a new limiter instance for production use.
-
-    Creates an isolated limiter instance with its own in-memory storage
-    (``memory://``), allowing multiple FastAPI app instances to have
-    independent rate limiters.
-
-    **Multi-worker warning:** ``memory://`` storage is per-process. In
-    multi-worker deployments (e.g., Gunicorn with 4 workers), each worker
-    has isolated limits—effective rate = configured limit × number of workers
-    (e.g., 10/s → 40/s across workers). For shared limits in production,
-    use Redis-backed storage via slowapi's ``storage_uri``.
-
-    Args:
-        limits: Optional list of rate limit strings (e.g., ["100/minute"]).
-            Defaults to DEFAULT_RATE_LIMIT if not provided.
-
-    Returns:
-        New Limiter instance with isolated storage
-
-    Example:
-        >>> limiter = create_limiter(["100/minute"])
-        >>> app.state.limiter = limiter
-    """
-    if limits is None:
-        limits = [DEFAULT_RATE_LIMIT]
-
-    # Use unique storage URI to ensure isolation between app instances
-    unique_storage_id = str(uuid.uuid4())
-    storage_uri = f"memory://{unique_storage_id}"
-    logger.warning(
-        "asap.rate_limit.memory_storage",
-        message="memory:// storage is per-process; in multi-worker deployments "
-        "(e.g., Gunicorn), effective rate = limit × workers. Use Redis for shared limits.",
-    )
-    return Limiter(
-        key_func=_get_sender_from_envelope,
-        default_limits=list(limits),
-        storage_uri=storage_uri,
-    )
+# Backward-compatible alias used by middleware and test fixtures.
+# Tests and create_app() override this via monkeypatch or app.state.limiter.
+limiter: ASAPRateLimiter | None = None
 
 
 def rate_limit_handler(request: Request, exc: Exception) -> JSONResponse:
@@ -227,18 +168,15 @@ def rate_limit_handler(request: Request, exc: Exception) -> JSONResponse:
             },
         )
 
-    # Calculate retry_after from exception or use default
-    retry_after = 60  # Default to 60 seconds
-    if hasattr(exc, "retry_after") and exc.retry_after is not None:
+    # Calculate retry_after — handle non-integer values gracefully.
+    retry_after = 60
+    if exc.retry_after is not None:
         try:
             retry_after = int(exc.retry_after)
         except (ValueError, TypeError):
             retry_after = 60
 
-    # Get limit information if available
-    limit_str = DEFAULT_RATE_LIMIT
-    if hasattr(exc, "limit") and exc.limit is not None:
-        limit_str = str(exc.limit)
+    limit_str = exc.limit if exc.limit else DEFAULT_RATE_LIMIT
 
     logger.warning(
         "asap.rate_limit.exceeded",
@@ -676,9 +614,12 @@ __all__ = [
     "BearerTokenValidator",
     "TokenValidator",
     "SizeLimitMiddleware",
+    "ASAPRateLimiter",
+    "RateLimitExceeded",
     "limiter",
     "rate_limit_handler",
     "create_limiter",
     "create_test_limiter",
+    "get_remote_address",
     "_get_sender_from_envelope",
 ]
