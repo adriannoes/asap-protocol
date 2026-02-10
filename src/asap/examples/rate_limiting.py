@@ -19,10 +19,7 @@ import os
 from typing import Sequence
 
 from asap.observability import get_logger
-from asap.transport.middleware import (
-    DEFAULT_RATE_LIMIT,
-    create_limiter,
-)
+from asap.transport.rate_limit import DEFAULT_RATE_LIMIT, create_limiter
 
 logger = get_logger(__name__)
 

@@ -73,6 +73,7 @@ Run agents individually:
 
 | Module | Description | Usage |
 |--------|-------------|--------|
+| **secure_agent** | OAuth2 server (OAuth2Config) + client (OAuth2ClientCredentials); Custom Claims env vars (v1.1) | `uv run python -m asap.examples.secure_agent --server` / `--client` |
 | **auth_patterns** | Bearer auth, custom token validators, OAuth2 concept (manifest + create_app) | `uv run python -m asap.examples.auth_patterns` |
 | **rate_limiting** | Per-sender and per-endpoint rate limit patterns (create_limiter, ASAP_RATE_LIMIT) | `uv run python -m asap.examples.rate_limiting` |
 
