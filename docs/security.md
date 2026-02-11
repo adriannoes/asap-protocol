@@ -55,7 +55,7 @@ The ASAP protocol validates authentication schemes at manifest creation time to 
 |--------|-------------|----------|--------|
 | `bearer` | Bearer token authentication (RFC 6750) | API keys, JWT tokens | ✅ Supported |
 | `basic` | HTTP Basic authentication (RFC 7617) | Simple username/password | ✅ Supported |
-| `oauth2` | OAuth 2.0 with authorization code or client credentials | Enterprise integrations | 🔜 Planned |
+| `oauth2` | OAuth 2.0 with authorization code or client credentials | Enterprise integrations | ✅ Supported (v1.1) |
 | `hmac` | HMAC-based authentication | Message signing and verification | 🔜 Planned |
 | `mtls` | Mutual TLS with client certificates | High-security environments | 🔜 Planned |
 | `none` | No authentication (development only) | Local testing | ⚠️ Development only |
@@ -95,7 +95,7 @@ manifest = Manifest(
 
 # Invalid: Unsupported scheme raises UnsupportedAuthSchemeError
 try:
-    auth = AuthScheme(schemes=["oauth2"])  # Not yet supported
+    auth = AuthScheme(schemes=["oauth2"])  # v1.1: use OAuth2Config with create_app()
     manifest = Manifest(
         id="urn:asap:agent:invalid-agent",
         name="Invalid Agent",
@@ -179,14 +179,14 @@ async with ASAPClient("https://api.example.com") as client:
     response = await client.send(envelope)
 ```
 
-#### OAuth 2.0 (Planned)
+#### OAuth 2.0 (v1.1+)
 
-OAuth 2.0 support is planned for future releases. When available, it will support:
+OAuth 2.0 is supported in v1.1 with JWKS validation, OIDC discovery, and Custom Claims identity binding. See [v1.1 Security Model](security/v1.1-security-model.md) (ADR-17) for setup, trust limitations, and provider guides (Auth0, Keycloak, Azure AD).
 
-- Authorization code flow
-- Client credentials flow
-- Token introspection
-- Token refresh
+- Authorization code flow (client-side)
+- Client credentials flow (`OAuth2ClientCredentials`)
+- Token validation via JWKS (OIDC discovery)
+- Custom Claims or allowlist for agent identity binding
 
 ```http
 POST /asap HTTP/1.1
