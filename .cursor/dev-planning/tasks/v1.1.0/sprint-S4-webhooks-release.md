@@ -90,7 +90,7 @@ Sprint S4 wraps up v1.1.0 with webhook support for event-driven callbacks, addre
     - HTTPS enforced in production
   - **Verify**: `pytest tests/transport/unit/test_webhook.py -v` passes (41 tests)
 
-- [ ] 4.1.6 Commit
+- [x] 4.1.6 Commit
   - **Command**: `git commit -m "feat(transport): add webhook delivery with SSRF protection"`
 
 **Acceptance Criteria**:
@@ -146,7 +146,7 @@ Sprint S4 wraps up v1.1.0 with webhook support for event-driven callbacks, addre
     - DLQ after max retries
   - **Verify**: All tests pass (60 tests total)
 
-- [ ] 4.2.6 Commit
+- [x] 4.2.6 Commit
   - **Command**: `git commit -m "feat(transport): add webhook retry with exponential backoff"`
 
 **Acceptance Criteria**:
@@ -200,7 +200,7 @@ Sprint S4 wraps up v1.1.0 with webhook support for event-driven callbacks, addre
   - **Command**: `uv run pytest tests/transport/integration/test_rate_limiting.py -v`
   - **Result**: ✅ 5/5 pass. Full suite: 1797 passed, 0 failed, 6 skipped
 
-- [ ] 4.3.7 Commit
+- [x] 4.3.7 Commit
   - **Command**: `git commit -m "refactor(transport): migrate from slowapi to custom rate limiter"`
 
 **Acceptance Criteria**:
@@ -278,7 +278,7 @@ Sprint S4 wraps up v1.1.0 with webhook support for event-driven callbacks, addre
   - **Why**: Developers need concrete steps, not abstract instructions
   - **Verify**: Examples work with each provider
 
-- [ ] 4.5.3 Commit milestone
+- [x] 4.5.3 Commit milestone
   - **Command**: `git commit -m "docs(security): add v1.1 Security Model and Custom Claims guide (ADR-17)"`
   - **Scope**: security model doc
   - **Note**: Deferred until end of sprint (per user request).
@@ -356,15 +356,14 @@ Sprint S4 wraps up v1.1.0 with webhook support for event-driven callbacks, addre
   - **Command**: `git tag v1.1.0` (tag created locally). **Note**: If you commit after this, move the tag to the new commit: `git tag -d v1.1.0 && git tag v1.1.0`, then push: `git push origin v1.1.0` (or `--force` if tag was already pushed).
 
 - [ ] 4.7.4 Publish to PyPI
-  - **Command**: `uv publish` (run manually; ensure `UV_PUBLISH_TOKEN` or keyring is set). Dry-run failed in environment due to uv internal panic; build is valid.
+  - **Triggered by**: `git push origin v1.1.0` — release workflow runs PyPI publish (Trusted Publishing). Manual fallback: `uv publish` with `UV_PUBLISH_TOKEN`.
 
 - [ ] 4.7.5 Create GitHub release
-  - **Tag**: v1.1.0 (push tag first: `git push origin v1.1.0`)
-  - **Notes**: Copy from CHANGELOG [1.1.0] section
+  - **Triggered by**: Same tag push — workflow creates release with CHANGELOG [1.1.0] notes.
+  - **Manual**: Push tag first: `git push origin v1.1.0`
 
 - [ ] 4.7.6 Update Docker images
-  - **Build**: `docker build -t ghcr.io/adriannoes/asap-protocol:v1.1.0 .`
-  - **Push**: `docker push ghcr.io/adriannoes/asap-protocol:v1.1.0` (requires login to ghcr.io)
+  - **Triggered by**: Same tag push — workflow builds and pushes `ghcr.io/$repo:v1.1.0` to ghcr.io.
 
 **Acceptance Criteria**:
 - [ ] v1.1.0 published to PyPI
@@ -410,8 +409,8 @@ Sprint S4 wraps up v1.1.0 with webhook support for event-driven callbacks, addre
 
 Checklist before you commit and open the PR (no implementation tasks left; this is verification only):
 
-- [ ] **CI**: `uv run ruff check src/ tests/ && uv run ruff format --check src/ tests/ && uv run mypy src/ && uv run pytest tests/ -q`
+- [x] **CI**: `uv run ruff check src/ tests/ && uv run ruff format --check src/ tests/ && uv run mypy src/ && uv run pytest tests/ -q` — 1802 passed
 - [ ] **Docs**: Review README, AGENTS.md, CHANGELOG [1.1.0], `docs/security/v1.1-security-model.md`, `docs/index.md` (links and wording)
-- [ ] **Version**: `pyproject.toml` has `version = "1.1.0"`
+- [x] **Version**: `pyproject.toml` has `version = "1.1.0"`
 
-After merge to main: re-tag if needed, then 4.7.4 (PyPI), 4.7.5 (GitHub release), 4.7.6 (Docker), 4.8 (mark S4 complete).
+After merge to main: re-tag if needed, then push tag to trigger release workflow: `git push origin v1.1.0`. The workflow (`.github/workflows/release.yml`) runs PyPI, Docker, and GitHub Release automatically.

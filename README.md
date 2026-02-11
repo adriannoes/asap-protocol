@@ -41,7 +41,7 @@ Or with pip:
 pip install asap-protocol
 ```
 
-📦 **Available on [PyPI](https://pypi.org/project/asap-protocol/1.0.0/)**. For reproducible environments, prefer `uv` when possible.
+📦 **Available on [PyPI](https://pypi.org/project/asap-protocol/)**. For reproducible environments, prefer `uv` when possible.
 
 ## Requirements
 
@@ -189,7 +189,7 @@ If you're building simple point-to-point agent communication, a basic HTTP API m
 - [Deployment](https://github.com/adriannoes/asap-protocol/blob/main/docs/deployment/kubernetes.md) | [Troubleshooting](https://github.com/adriannoes/asap-protocol/blob/main/docs/troubleshooting.md)
 
 **Release**
-- [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md) | [PyPI](https://pypi.org/project/asap-protocol/1.0.0/)
+- [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md) | [PyPI](https://pypi.org/project/asap-protocol/)
 
 ## CLI
 

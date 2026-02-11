@@ -9,7 +9,7 @@ ASAP (Async Simple Agent Protocol) is a production-ready protocol for agent-to-a
 
 - **Core**: Protocol models, state machines, and handlers
 - **Transport**: HTTP client/server with compression, rate limiting, observability
-- **CLI**: `asap` command for serving, validation,and tooling
+- **CLI**: `asap` command for serving, validation, and tooling
 
 ## Setup Commands
 
