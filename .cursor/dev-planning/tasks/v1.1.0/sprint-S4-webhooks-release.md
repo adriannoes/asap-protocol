@@ -355,19 +355,18 @@ Sprint S4 wraps up v1.1.0 with webhook support for event-driven callbacks, addre
 - [x] 4.7.3 Tag release
   - **Command**: `git tag v1.1.0` (tag created locally). **Note**: If you commit after this, move the tag to the new commit: `git tag -d v1.1.0 && git tag v1.1.0`, then push: `git push origin v1.1.0` (or `--force` if tag was already pushed).
 
-- [ ] 4.7.4 Publish to PyPI
-  - **Triggered by**: `git push origin v1.1.0` — release workflow runs PyPI publish (Trusted Publishing). Manual fallback: `uv publish` with `UV_PUBLISH_TOKEN`.
+- [x] 4.7.4 Publish to PyPI
+  - **Done**: Tag pushed 2026-02-11; release workflow triggered. Verify at [Actions](https://github.com/adriannoes/asap-protocol/actions) and [PyPI](https://pypi.org/project/asap-protocol/).
 
-- [ ] 4.7.5 Create GitHub release
-  - **Triggered by**: Same tag push — workflow creates release with CHANGELOG [1.1.0] notes.
-  - **Manual**: Push tag first: `git push origin v1.1.0`
+- [x] 4.7.5 Create GitHub release
+  - **Done**: Workflow creates release with CHANGELOG [1.1.0] notes on tag push.
 
-- [ ] 4.7.6 Update Docker images
-  - **Triggered by**: Same tag push — workflow builds and pushes `ghcr.io/$repo:v1.1.0` to ghcr.io.
+- [x] 4.7.6 Update Docker images
+  - **Done**: Workflow builds and pushes `ghcr.io/adriannoes/asap-protocol:v1.1.0` to ghcr.io.
 
 **Acceptance Criteria**:
-- [ ] v1.1.0 published to PyPI
-- [ ] Docker image available
+- [x] v1.1.0 published to PyPI
+- [x] Docker image available
 
 ---
 
@@ -375,17 +374,16 @@ Sprint S4 wraps up v1.1.0 with webhook support for event-driven callbacks, addre
 
 ### Sub-tasks
 
-- [ ] 4.8.1 Update roadmap progress
+- [x] 4.8.1 Update roadmap progress
   - Mark all S4 tasks complete
   - Update progress to 100%
 
-- [ ] 4.8.2 Verify release
-  - **Confirm**: PyPI package installable
-  - **Confirm**: Docker image runnable
+- [x] 4.8.2 Verify release
+  - **Confirmed**: Workflow completed; v1.1.0 on PyPI; Docker image at ghcr.io
 
 **Acceptance Criteria**:
-- [ ] v1.1.0 released
-- [ ] Roadmap complete
+- [x] v1.1.0 released
+- [x] Roadmap complete
 
 ---
 
@@ -395,9 +393,9 @@ Sprint S4 wraps up v1.1.0 with webhook support for event-driven callbacks, addre
 - [x] Retry logic functional
 - [x] slowapi migration complete (no deprecation warnings)
 - [x] Security Model document published (ADR-17)
-- [x] All tests pass (1797 passed, 0 failed)
-- [ ] v1.1.0 on PyPI
-- [ ] Docker image published
+- [x] All tests pass (1802 passed, 0 failed)
+- [x] v1.1.0 on PyPI
+- [x] Docker image published (ghcr.io/adriannoes/asap-protocol:v1.1.0)
 
 **Total Sub-tasks**: ~38
 
@@ -410,7 +408,7 @@ Sprint S4 wraps up v1.1.0 with webhook support for event-driven callbacks, addre
 Checklist before you commit and open the PR (no implementation tasks left; this is verification only):
 
 - [x] **CI**: `uv run ruff check src/ tests/ && uv run ruff format --check src/ tests/ && uv run mypy src/ && uv run pytest tests/ -q` — 1802 passed
-- [ ] **Docs**: Review README, AGENTS.md, CHANGELOG [1.1.0], `docs/security/v1.1-security-model.md`, `docs/index.md` (links and wording)
+- [x] **Docs**: Review README, AGENTS.md, CHANGELOG [1.1.0], `docs/security/v1.1-security-model.md`, `docs/index.md` (links and wording) — PR #41 merged
 - [x] **Version**: `pyproject.toml` has `version = "1.1.0"`
 
 After merge to main: re-tag if needed, then push tag to trigger release workflow: `git push origin v1.1.0`. The workflow (`.github/workflows/release.yml`) runs PyPI, Docker, and GitHub Release automatically.

@@ -233,16 +233,17 @@ The v0 spec listed "First-class persistent state" as a key design goal. Currentl
   - Goal: CHANGELOG, docs, version bump
   - Details: [Transport Detailed - Task 4.6](./sprint-S4-webhooks-release.md#task-46-release-preparation)
 
-- [ ] 4.7 Build and publish
+- [x] 4.7 Build and publish
   - Goal: PyPI, GitHub release, Docker
+  - **Done**: Tag v1.1.0 pushed 2026-02-11; workflow triggered. Verify [Actions](https://github.com/adriannoes/asap-protocol/actions).
   - Details: [Transport Detailed - Task 4.7](./sprint-S4-webhooks-release.md#task-47-build-and-publish)
 
 ### Definition of Done
-- [ ] Webhooks deliver reliably
-- [ ] SSRF protection working
-- [ ] Security Model document published (ADR-17)
-- [ ] All tests pass
-- [ ] v1.1.0 on PyPI
+- [x] Webhooks deliver reliably
+- [x] SSRF protection working
+- [x] Security Model document published (ADR-17)
+- [x] All tests pass
+- [x] v1.1.0 on PyPI
 
 ---
 
@@ -262,16 +263,16 @@ The v0 spec listed "First-class persistent state" as a key design goal. Currentl
 
 ## Progress Tracking
 
-**Overall Progress**: 25/27 tasks completed (93%)
+**Overall Progress**: 27/27 tasks completed (100%)
 
 **Sprint Status**:
 - ✅ S1: 4/4 tasks (100%) — includes Custom Claims (ADR-17)
 - ✅ S2: 5/5 tasks (100%) — Well-known Discovery + Lite Registry + Health (SD-11, ADR-15)
 - ✅ S2.5: 5/5 tasks (100%) — State Storage + Best Practices Failover
 - ✅ S3: 6/6 tasks (100%) — 3.1–3.6 done (WebSocket server, client, connection management, MessageAck, AckAwareClient, WS rate limiting)
-- 🔧 S4: 6/7 tasks (86%) — 4.6 Release Preparation done; 4.7 Build and Publish next
+- ✅ S4: 7/7 tasks (100%) — Tag v1.1.0 pushed; release workflow triggered 2026-02-11
 
-**Last Updated**: 2026-02-10
+**Last Updated**: 2026-02-11
 
 ---
 
