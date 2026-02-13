@@ -4,7 +4,6 @@ import base64
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import cast
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import (
@@ -37,14 +36,12 @@ def generate_keypair() -> tuple[Ed25519PrivateKey, Ed25519PublicKey]:
 
 def serialize_private_key(key: Ed25519PrivateKey) -> bytes:
     """PEM (PKCS#8, unencrypted) bytes for the private key."""
-    return cast(
-        bytes,
-        key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption(),
-        ),
+    pem: bytes = key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
     )
+    return pem
 
 
 def public_key_to_base64(key: Ed25519PublicKey) -> str:
