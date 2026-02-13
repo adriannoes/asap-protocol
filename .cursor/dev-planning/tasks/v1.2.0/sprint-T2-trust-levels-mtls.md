@@ -89,7 +89,9 @@ Trust Levels categorize agents by verification degree. mTLS provides transport-l
 
 - [ ] 2.2.2 Implement CA signing function
   - **File**: `src/asap/crypto/trust.py`
+  - **Dependencies**: Use `asap.crypto.signing.canonicalize` (JCS)
   - **What**: `sign_with_ca(manifest, agent_key, ca_key) -> SignedManifest`
+  - **Constraint**: Must use JCS canonicalization before signing.
   - **Verify**: Result has trust_level=VERIFIED
 
 - [ ] 2.2.3 Implement CA verification

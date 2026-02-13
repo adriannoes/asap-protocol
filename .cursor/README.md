@@ -5,26 +5,18 @@ It is the "brain" of the project's development process.
 ## Structure
 
 ### 📂 [commands/](.cursor/commands)
-**Workflows & Automation**.
-Prompt templates and workflows for the AI to follow when executing complex tasks.
-- *Example*: "Conduct a Security Review", "Create a PRD", "Generate Tasks".
-
-### 📂 [skills/](.cursor/skills)
-**Agent Capabilities**.
-Advanced workflows that combine instructions with executable scripts (e.g., automated audits).
-- *Example*: `code-quality-review`, `security-review`.
-
-### 📂 [rules/](.cursor/rules)
-**Active Instructions**.
-Files ending in `.mdc` that are automatically indexed by Cursor. They define strict coding standards, architectural principles, and behavior rules.
-- *Example*: `architecture-principles.mdc`, `python-best-practices.mdc`.
+- **[Commands](./commands)**: Workflow prompts (`create-prd`, `generate-tasks`)
+- **[Skills](./skills)**: Agent capabilities (`code-review`, `security-review`)
+- **[Rules](./rules)**: Context (`architecture-principles`, `security-standards`)
+- **[Product Specs](./product-specs)**: The "What" and "Why"
+- **[Dev Planning](./dev-planning)**: The "How" and "When"
 
 ### 📂 [product-specs/](.cursor/product-specs)
 **The "What" and "Why"**.
 Contains the immutable truths of the product.
-- **PRDs**: Product Requirement Documents.
-- **ADRs**: Architectural Decision Records.
-- **Vision**: Long-term goals.
+- **Vision**: `product-specs/strategy/vision-agent-marketplace.md`
+- **Roadmap**: `product-specs/strategy/roadmap-to-marketplace.md`
+- **Codebase Strategy**: `product-specs/strategy/repository-strategy.md`
 
 ### 📂 [dev-planning/](.cursor/dev-planning)
 **The "How" and "When"**.

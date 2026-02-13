@@ -98,213 +98,213 @@
     - Document how to implement custom `TokenValidator`
     - Add example of OAuth2 integration pattern
 
-- [ ] 2.0 Critical Security - Dependency Monitoring Setup (CRIT-02)
-  - [ ] 2.1 Create Dependabot configuration (Post-Release v0.1.0)
+- [x] 2.0 Critical Security - Dependency Monitoring Setup (CRIT-02)
+  - [x] 2.1 Create Dependabot configuration (Post-Release v0.1.0)
     - Create `.github/dependabot.yml` with pip ecosystem config
     - Configure daily security checks for Python dependencies
     - Set `open-pull-requests-limit: 5` to avoid PR spam
     - **Initially**: Security updates ONLY (no version updates)
     - Add labels: "dependencies" and "security"
-  - [ ] 2.2 Document dependency update process
+  - [x] 2.2 Document dependency update process
     - Add dependency update process to `CONTRIBUTING.md`
     - Document how to review and merge Dependabot PRs
     - Add security update policy to `SECURITY.md`
     - Document that version updates will be enabled later (monthly schedule)
-  - [ ] 2.3 Verify CI integration
+  - [x] 2.3 Verify CI integration
     - Ensure `pip-audit` continues running in CI (already configured)
     - Verify Dependabot PRs trigger full CI suite automatically
     - Test that security updates are properly flagged
     - Confirm no additional CI costs for public repo
-  - [ ] 2.4 Enable version updates (Post-Release v0.1.1+)
+  - [x] 2.4 Enable version updates (Post-Release v0.1.1+)
     - Add monthly version update schedule to dependabot.yml
     - Configure grouping for minor/patch updates
     - Set up auto-merge for passing tests (optional)
     - Monitor PR volume and adjust schedule if needed
 
-- [ ] 3.0 High Priority - DoS Prevention (HIGH-01, HIGH-02)
-  - [ ] 3.1 Add rate limiting dependency
+- [x] 3.0 High Priority - DoS Prevention (HIGH-01, HIGH-02)
+  - [x] 3.1 Add rate limiting dependency
     - Add `slowapi>=0.1.9` to `pyproject.toml` dependencies
     - Update `uv.lock` with new dependency
-  - [ ] 3.2 Implement rate limiting middleware
+  - [x] 3.2 Implement rate limiting middleware
     - Create `RateLimiter` in `middleware.py` using slowapi
     - Configure rate limit based on `envelope.sender` header
     - Set default limit to 100 requests/minute per sender
     - Return HTTP 429 with `Retry-After` header when limit exceeded
-  - [ ] 3.3 Add request size validation
+  - [x] 3.3 Add request size validation
     - Define `MAX_REQUEST_SIZE = 10 * 1024 * 1024` (10MB) in `constants.py`
     - Update `parse_json_body()` to check `Content-Length` header
     - Validate actual body size after reading
     - Return JSON-RPC parse error for oversized requests
-  - [ ] 3.4 Make limits configurable
+  - [x] 3.4 Make limits configurable
     - Add `max_request_size: int` parameter to `create_app()`
     - Add `rate_limit: str` parameter (e.g., "100/minute")
     - Support environment variable overrides
-  - [ ] 3.5 Add rate limiting tests
+  - [x] 3.5 Add rate limiting tests
     - Test requests within limit succeed
     - Test requests exceeding limit return HTTP 429
     - Test rate limit reset after time window
     - Test different senders have independent limits
-  - [ ] 3.6 Add payload size tests
+  - [x] 3.6 Add payload size tests
     - Test requests under 10MB are accepted
     - Test requests over 10MB are rejected
     - Test Content-Length header validation
     - Test actual body size validation
-  - [ ] 3.7 Update documentation
+  - [x] 3.7 Update documentation
     - Document rate limiting configuration in `docs/security.md`
     - Add production recommendations for rate limits
     - Document request size limits and rationale
 
-- [ ] 4.0 High Priority - Replay Attack Prevention (HIGH-03)
-  - [ ] 4.1 Add timestamp validation constants
+- [x] 4.0 High Priority - Replay Attack Prevention (HIGH-03)
+  - [x] 4.1 Add timestamp validation constants
     - Add `MAX_ENVELOPE_AGE_SECONDS = 300` (5 minutes) to `constants.py`
     - Add `MAX_FUTURE_TOLERANCE_SECONDS = 30` (30 seconds) to `constants.py`
     - Document rationale for chosen time windows
-  - [ ] 4.2 Implement timestamp validation function
+  - [x] 4.2 Implement timestamp validation function
     - Create `validate_envelope_timestamp()` in new `src/asap/transport/validators.py`
     - Reject envelopes older than `MAX_ENVELOPE_AGE_SECONDS`
     - Reject envelopes with timestamp in future beyond tolerance
     - Return detailed error message with timestamp details
-  - [ ] 4.3 Integrate validation in server
+  - [x] 4.3 Integrate validation in server
     - Call `validate_envelope_timestamp()` before handler dispatch
     - Return JSON-RPC error for invalid timestamps
     - Include timestamp window info in error response
-  - [ ] 4.4 Add optional nonce support
+  - [x] 4.4 Add optional nonce support
     - Add `nonce: str | None` field to `Envelope` extensions
     - Create `NonceStore` protocol for tracking used nonces
     - Implement `InMemoryNonceStore` with expiration
     - Make nonce validation optional based on configuration
-  - [ ] 4.5 Add comprehensive tests
+  - [x] 4.5 Add comprehensive tests
     - Test recent timestamps are accepted
     - Test old timestamps are rejected (>5 minutes)
     - Test future timestamps are rejected (>30 seconds)
     - Test timestamps within tolerance are accepted
     - Test nonce validation prevents replay within window
-  - [ ] 4.6 Update documentation
+  - [x] 4.6 Update documentation
     - Document timestamp validation in `docs/security.md`
     - Explain replay attack prevention mechanism
     - Document nonce usage for critical operations
 
-- [ ] 5.0 High Priority - HTTPS Enforcement (HIGH-04)
-  - [ ] 5.1 Add HTTPS validation to client
+- [x] 5.0 High Priority - HTTPS Enforcement (HIGH-04)
+  - [x] 5.1 Add HTTPS validation to client
     - Add `require_https: bool = True` parameter to `ASAPClient.__init__()`
     - Validate URL scheme is HTTPS when `require_https=True`
     - Allow HTTP only for localhost/127.0.0.1 in development
     - Raise `ValueError` with clear message for HTTP in production
-  - [ ] 5.2 Add environment-aware defaults
+  - [x] 5.2 Add environment-aware defaults
     - Detect development environment (localhost, 127.0.0.1, ::1)
     - Auto-disable HTTPS requirement for local development
     - Add warning log when using HTTP in development
-  - [ ] 5.3 Add tests for HTTPS enforcement
+  - [x] 5.3 Add tests for HTTPS enforcement
     - Test HTTPS URLs are always accepted
     - Test HTTP URLs are rejected in production mode
     - Test HTTP localhost URLs are accepted
     - Test `require_https=False` allows any URL
-  - [ ] 5.4 Update documentation and examples
+  - [x] 5.4 Update documentation and examples
     - Update client examples in README to use HTTPS
     - Document `require_https` parameter in API docs
     - Add security warning about disabling HTTPS
     - Update `docs/security.md` with HTTPS best practices
 
-- [ ] 6.0 High Priority - Retry Logic Improvements (HIGH-05)
-  - [ ] 6.1 Implement exponential backoff
+- [x] 6.0 High Priority - Retry Logic Improvements (HIGH-05)
+  - [x] 6.1 Implement exponential backoff
     - Add `_calculate_backoff()` method to `ASAPClient`
     - Implement exponential backoff: base_delay = 2^attempt seconds
     - Add jitter: random.uniform(0, 0.5) to prevent thundering herd
     - Cap maximum delay at 60 seconds
-  - [ ] 6.2 Add backoff configuration
+  - [x] 6.2 Add backoff configuration
     - Add `base_delay: float = 1.0` parameter to `ASAPClient`
     - Add `max_delay: float = 60.0` parameter
     - Add `jitter: bool = True` parameter
-  - [ ] 6.3 Update retry loop
+  - [x] 6.3 Update retry loop
     - Replace immediate retry with `await asyncio.sleep(delay)`
     - Apply backoff only for retriable errors (5xx, connection errors)
     - Don't apply backoff for client errors (4xx)
     - Log retry attempts with delay information
-  - [ ] 6.4 Add circuit breaker pattern (optional)
+  - [x] 6.4 Add circuit breaker pattern (optional)
     - Track consecutive failures per base_url
     - Open circuit after N consecutive failures
     - Add exponential backoff for circuit reset
     - Log circuit state changes
-  - [ ] 6.5 Add retry tests
+  - [x] 6.5 Add retry tests
     - Test backoff delays increase exponentially
     - Test jitter is applied correctly
     - Test maximum delay is respected
     - Test immediate retry for non-retriable errors
-  - [ ] 6.6 Update documentation
+  - [x] 6.6 Update documentation
     - Document retry configuration in client API docs
     - Explain backoff strategy in `docs/transport.md`
     - Add best practices for retry configuration
 
-- [ ] 7.0 Medium Priority - Sensitive Data Protection (MED-01, MED-02)
+- [x] 7.0 Medium Priority - Sensitive Data Protection (MED-01, MED-02)
   - **Related Issue**: [#12](https://github.com/adriannoes/asap-protocol/issues/12) - Security hardening - token logging
-  - [ ] 7.1 Implement log sanitization
+  - [x] 7.1 Implement log sanitization
     - Create `sanitize_for_logging()` function in `logging.py`
     - Define sensitive key patterns (password, token, secret, key, authorization)
     - Recursively sanitize nested dictionaries
     - Replace sensitive values with "***REDACTED***"
     - **Note**: This addresses token prefix logging issue identified in PR #8
-  - [ ] 7.2 Update logging calls
+  - [x] 7.2 Update logging calls
     - Apply sanitization to envelope payloads before logging
     - Sanitize request/response data in transport layer
     - Sanitize error details in exception handlers
-  - [ ] 7.3 Add debug mode for development
+  - [x] 7.3 Add debug mode for development
     - Add `ASAP_DEBUG` environment variable
     - Show full error details only when debug=True
     - Return generic errors in production mode
     - Log full stack traces server-side always
-  - [ ] 7.4 Update error responses
+  - [x] 7.4 Update error responses
     - Modify exception handler in `server.py`
     - Return sanitized error details by default
     - Include full details only in debug mode
     - Always log full errors server-side
-  - [ ] 7.5 Add sanitization tests
+  - [x] 7.5 Add sanitization tests
     - Test sensitive keys are redacted from logs
     - Test nested objects are sanitized
     - Test non-sensitive data is preserved
     - Test debug mode exposes full errors
     - Test production mode hides details
-  - [ ] 7.6 Update documentation
+  - [x] 7.6 Update documentation
     - Document sensitive data handling in `docs/security.md`
     - Document debug mode usage in `docs/observability.md`
     - Add production logging best practices
 
-- [ ] 8.0 Medium Priority - Input Validation Hardening (MED-03, MED-04)
-  - [ ] 8.1 Document handler security requirements
+- [x] 8.0 Medium Priority - Input Validation Hardening (MED-03, MED-04)
+  - [x] 8.1 Document handler security requirements
     - Add "Handler Security" section to `docs/security.md`
     - Document input validation requirements for handlers
     - Provide examples of secure handler implementation
     - Add checklist for handler security review
-  - [ ] 8.2 Add FilePart URI validation
+  - [x] 8.2 Add FilePart URI validation
     - Add `validate_uri()` field validator to `FilePart`
     - Detect path traversal attempts (../ patterns)
     - Reject file:// URIs with suspicious paths
     - Validate URI format with urlparse
-  - [ ] 8.3 Add handler validation helpers
+  - [x] 8.3 Add handler validation helpers
     - Create `validate_handler()` utility function
     - Check handler signature matches expected interface
     - Validate handler doesn't access dangerous modules
     - Add opt-in handler sandboxing documentation
-  - [ ] 8.4 Add validation tests
+  - [x] 8.4 Add validation tests
     - Test path traversal detection in FilePart
     - Test malicious file:// URIs are rejected
     - Test valid URIs are accepted
     - Test handler validation utility
-  - [ ] 8.5 Update handler examples
+  - [x] 8.5 Update handler examples
     - Add security-focused handler example
     - Show proper input validation patterns
     - Demonstrate error handling best practices
     - Add example of rate-limited handler
 
-- [ ] 9.0 Low Priority - Code Improvements (LOW-01, LOW-02, LOW-03)
-  - [ ] 9.1 Improve HandlerRegistry thread safety
+- [x] 9.0 Low Priority - Code Improvements (LOW-01, LOW-02, LOW-03)
+  - [x] 9.1 Improve HandlerRegistry thread safety
     - Copy handler reference before execution
     - Document thread-safe usage patterns
     - Add test for concurrent handler registration
-  - [ ] 9.2 Enhance URN validation
+  - [x] 9.2 Enhance URN validation
     - Add max length validation (suggested: 256 chars)
     - Restrict special characters more strictly
     - Add validation tests for edge cases
-  - [ ] 9.3 Add task depth validation
+  - [x] 9.3 Add task depth validation
     - Implement depth validation in `Task` model
     - Check depth when creating subtasks
     - Raise error if depth exceeds `MAX_TASK_DEPTH`
@@ -316,28 +316,28 @@
 
 ### Critical Tasks (1.0, 2.0)
 - [x] Task 1.0: Authentication implementation completed ✅
-- [ ] Task 2.0: To be completed AFTER v0.1.0 release
+- [x] Task 2.0: To be completed AFTER v0.1.0 release
   - Dependabot is free and takes 5 minutes to configure
   - Will be done post-release to avoid delaying launch
   - Security monitoring already covered by pip-audit in CI
-- [ ] CI passes with >95% coverage maintained
-- [ ] Documentation updated in `docs/security.md`
-- [ ] Breaking changes (if any) documented in CHANGELOG.md
-- [ ] Ready for PyPI v0.1.0 release
+- [x] CI passes with >95% coverage maintained
+- [x] Documentation updated in `docs/security.md`
+- [x] Breaking changes (if any) documented in CHANGELOG.md
+- [x] Ready for PyPI v0.1.0 release
 
 ### High Priority Tasks (3.0-6.0)
-- [ ] All sub-tasks completed and tested
-- [ ] Backward compatible (no breaking changes)
-- [ ] Performance benchmarks show no regression
-- [ ] Ready for v0.1.1 release
+- [x] All sub-tasks completed and tested
+- [x] Backward compatible (no breaking changes)
+- [x] Performance benchmarks show no regression
+- [x] Ready for v0.1.1 release
 
 ### Medium Priority Tasks (7.0-8.0)
-- [ ] All sub-tasks completed and tested
-- [ ] Production deployment guide updated
-- [ ] Security best practices documented
-- [ ] Ready for v0.1.2 release
+- [x] All sub-tasks completed and tested
+- [x] Production deployment guide updated
+- [x] Security best practices documented
+- [x] Ready for v0.1.2 release
 
 ### Low Priority Tasks (9.0)
-- [ ] Code quality improvements verified
-- [ ] No performance impact
-- [ ] Future release (v0.2.0+)
+- [x] Code quality improvements verified
+- [x] No performance impact
+- [x] Future release (v0.2.0+)

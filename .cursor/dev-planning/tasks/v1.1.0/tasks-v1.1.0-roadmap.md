@@ -58,7 +58,7 @@ See [SD-3 (WebSocket)](../../product-specs/roadmap-to-marketplace.md) and [SD-7 
 - [x] Token validation middleware functional
 - [x] OIDC discovery auto-configures endpoints
 - [x] Custom Claims identity binding functional (ADR-17)
-- [ ] Test coverage >95%
+- [x] Test coverage >95%
 
 ---
 
@@ -100,7 +100,7 @@ See [SD-3 (WebSocket)](../../product-specs/roadmap-to-marketplace.md) and [SD-7 
 - [x] Health endpoint returns agent status
 - [x] Manifest includes `ttl_seconds` field
 - [x] Integration tests validate flow
-- [ ] Docs updated
+- [x] Docs updated
 
 ---
 
@@ -191,7 +191,7 @@ The v0 spec listed "First-class persistent state" as a key design goal. Currentl
 - [x] MessageAck for state-changing messages (ADR-16)
 - [x] AckAwareClient with timeout/retry/circuit breaker (ADR-16)
 - [x] WebSocket message rate limiting (Task 3.6)
-- [ ] Test coverage >95%
+- [x] Test coverage >95%
 
 ---
 

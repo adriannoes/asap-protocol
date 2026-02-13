@@ -1,11 +1,11 @@
-# PRD: ASAP Protocol v1.3.0 — Economics Layer
+# PRD: ASAP Protocol v1.3.0 — Observability & Delegation
 
 > **Product Requirements Document**
 >
 > **Version**: 1.3.0
 > **Status**: APPROVED
 > **Created**: 2026-02-06
-> **Last Updated**: 2026-02-06
+> **Last Updated**: 2026-02-12
 
 ---
 
@@ -13,17 +13,19 @@
 
 ### 1.1 Purpose
 
-v1.3.0 establishes the **Economics Layer** for the Agent Marketplace. This release delivers:
-- **Usage Metering**: Track and report resource consumption
+v1.3.0 establishes **Observability & Delegation** for the Agent Marketplace. This release delivers:
+- **Observability Metering**: Track and report resource consumption for visibility
 - **Delegation Tokens**: Trust chains for hierarchical agent relationships
 - **SLA Framework**: Define and enforce service level agreements
-- **Audit Logging**: Compliance and dispute resolution support
+
+> [!NOTE]
+> **Lean Marketplace Pivot**: Audit logging and credit system are deferred. See [deferred-backlog.md](../strategy/deferred-backlog.md).
 
 ### 1.2 Strategic Context
 
-v1.3.0 is the final step before the v2.0 Marketplace. See [roadmap-to-marketplace.md](../roadmap-to-marketplace.md).
+v1.3.0 is the final step before the v2.0 Marketplace. See [roadmap-to-marketplace.md](../strategy/roadmap-to-marketplace.md).
 
-**Prerequisite**: v1.2.0 (Trust Layer) released — agents must have signed manifests and be discoverable via Registry.
+**Prerequisite**: v1.2.0 (Verified Identity) released — agents must have signed manifests.
 
 ---
 
@@ -31,29 +33,28 @@ v1.3.0 is the final step before the v2.0 Marketplace. See [roadmap-to-marketplac
 
 | Goal | Metric | Priority |
 |------|--------|----------|
-| Usage metering accuracy | <1% drift from actual | P1 |
+| Observability metering accuracy | <1% drift from actual | P1 |
 | Delegation token validation | <10ms overhead | P1 |
 | SLA breach detection | Real-time alerts | P1 |
-| Audit log completeness | 100% of billable events | P2 |
 
 ---
 
 ## 3. User Stories
 
 ### Agent Provider
-> As an **agent provider**, I want to **track usage metrics (tokens, API calls, duration)** so that **I can bill consumers accurately**.
+> As an **agent provider**, I want to **track usage metrics (tokens, API calls, duration)** so that **I can understand consumption patterns and optimize my agent**.
 
 ### Agent Consumer
 > As an **agent consumer**, I want to **set spending limits via delegation tokens** so that **I control costs when using third-party agents**.
 
 ### Enterprise Admin
-> As an **enterprise admin**, I want to **define SLAs and audit all interactions** so that **I can ensure compliance and resolve disputes**.
+> As an **enterprise admin**, I want to **define SLAs and monitor compliance** so that **I can ensure service guarantees are met**.
 
 ---
 
 ## 4. Functional Requirements
 
-### 4.1 Usage Metering (P1)
+### 4.1 Observability Metering (P1)
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
@@ -139,24 +140,13 @@ v1.3.0 is the final step before the v2.0 Marketplace. See [roadmap-to-marketplac
 
 ---
 
-### 4.4 Audit Logging (P2)
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| AUDIT-001 | Log all billable events | MUST |
-| AUDIT-002 | Tamper-evident log format | SHOULD |
-| AUDIT-003 | Query logs by task, agent, time | MUST |
-| AUDIT-004 | Retention policy (configurable) | SHOULD |
-| AUDIT-005 | Export for compliance | SHOULD |
-
----
-
 ## 5. Non-Goals (Out of Scope)
 
 | Feature | Reason | When |
 |---------|--------|------|
+| Audit logging | Deferred for Lean Marketplace pivot | v2.1+ |
 | Payment processing | Stripe integration in v2.0 | v2.0 Web App |
-| Credit system | Part of Marketplace | v2.0 |
+| Credit system | Part of Economy Settlement | v3.0 |
 | Real-time billing alerts | Post-MVP | v2.1+ |
 
 ---
@@ -175,10 +165,9 @@ v1.3.0 is the final step before the v2.0 Marketplace. See [roadmap-to-marketplac
 src/asap/
 ├── economics/
 │   ├── __init__.py
-│   ├── metering.py       # Usage tracking logic (uses MeteringStore from state/)
+│   ├── metering.py       # Observability tracking (uses MeteringStore from state/)
 │   ├── delegation.py     # Delegation tokens
-│   ├── sla.py            # SLA framework (uses health endpoint from v1.1)
-│   └── audit.py          # Audit logging
+│   └── sla.py            # SLA framework (uses health endpoint from v1.1)
 └── ...
 ```
 
@@ -187,10 +176,9 @@ src/asap/
 **Foundation**: v1.1.0 (SD-9, ADR-13) defined the `MeteringStore` Protocol and SQLite reference implementation. v1.3 builds on this:
 
 - **Metering**: Uses `MeteringStore` interface (defined in v1.1.0) with SQLite backend for dev, PostgreSQL for production
-- **Audit**: Append-only log with hash chain for integrity, using `SnapshotStore`-derived `AuditStore` interface
 - **SLA monitoring**: Leverages health endpoint (`/.well-known/asap/health`) from v1.1.0 (SD-10, ADR-14)
 
-> **Note**: Storage interfaces were intentionally defined in v1.1.0 to avoid duplicating storage plumbing in v1.3. This sprint focuses on **economics logic**, not storage infrastructure.
+> **Note**: Storage interfaces were intentionally defined in v1.1.0 to avoid duplicating storage plumbing in v1.3. This sprint focuses on **observability and delegation logic**, not storage infrastructure.
 
 ---
 
@@ -200,8 +188,7 @@ src/asap/
 |--------|--------|
 | Metering accuracy | <1% drift |
 | Delegation overhead | <10ms |
-| SLA tracking | 100% of agents |
-| Audit completeness | 100% billable events |
+| SLA tracking | 60% of agents |
 
 ---
 
@@ -211,8 +198,7 @@ v1.3 depends on interfaces and infrastructure from v1.1.0:
 
 | v1.1 Deliverable | v1.3 Usage | Reference |
 |-------------------|------------|-----------|
-| `MeteringStore` Protocol | Usage metering storage backend | SD-9, ADR-13 |
-| `SnapshotStore` + SQLite impl | Base for AuditStore pattern | SD-9, ADR-13 |
+| `MeteringStore` Protocol | Observability metering storage backend | SD-9, ADR-13 |
 | Health endpoint (`/.well-known/asap/health`) | SLA uptime monitoring | SD-10, ADR-14 |
 | `ttl_seconds` in Manifest | SLA availability measurement | SD-10, ADR-14 |
 
@@ -221,10 +207,11 @@ v1.3 depends on interfaces and infrastructure from v1.1.0:
 ## 9. Related Documents
 
 - **Tasks**: [tasks-v1.3.0-roadmap.md](../../dev-planning/tasks/v1.3.0/tasks-v1.3.0-roadmap.md)
-- **Roadmap**: [roadmap-to-marketplace.md](../roadmap-to-marketplace.md)
-- **Vision**: [vision-agent-marketplace.md](../vision-agent-marketplace.md)
-- **State Management Decision**: [ADR-13](../ADR.md#question-13-state-management-strategy-for-marketplace)
-- **Liveness Decision**: [ADR-14](../ADR.md#question-14-agent-liveness--health-protocol)
+- **Deferred Backlog**: [deferred-backlog.md](../strategy/deferred-backlog.md)
+- **Roadmap**: [roadmap-to-marketplace.md](../strategy/roadmap-to-marketplace.md)
+- **Vision**: [vision-agent-marketplace.md](../strategy/vision-agent-marketplace.md)
+- **State Management Decision**: [ADR-13](../decision-records/01-architecture.md)
+- **Liveness Decision**: [ADR-14](../decision-records/01-architecture.md)
 
 ---
 
@@ -234,3 +221,4 @@ v1.3 depends on interfaces and infrastructure from v1.1.0:
 |------|---------|--------|
 | 2026-02-06 | 1.0.0 | Initial PRD |
 | 2026-02-07 | 1.1.0 | Updated storage section to reference v1.1 interfaces (SD-9), added prerequisites section |
+| 2026-02-12 | 1.2.0 | **Lean Marketplace pivot**: Renamed to "Observability & Delegation", removed audit logging (§4.4 deferred v2.1+), reframed metering as observability, updated non-goals, success metrics, prerequisites |

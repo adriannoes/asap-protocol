@@ -34,11 +34,11 @@ Cryptographic signatures enable agents to prove authenticity without centralized
 
 ### Sub-tasks
 
-- [ ] 1.1.1 Add cryptography dependency
+- [ ] 1.1.1 Add cryptography and JCS dependencies
   - **File**: `pyproject.toml` (modify)
-  - **What**: Add `cryptography>=41.0` to dependencies
-  - **Command**: `uv add "cryptography>=41.0"`
-  - **Verify**: `uv run python -c "from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey"`
+  - **What**: Add `cryptography>=41.0` and `jcs>=0.2.0` (RFC 8785)
+  - **Command**: `uv add "cryptography>=41.0" "jcs>=0.2.0"`
+  - **Verify**: `uv run python -c "import jcs; from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey"`
 
 - [ ] 1.1.2 Create crypto module structure
   - **File**: `src/asap/crypto/__init__.py` (create new)
@@ -72,7 +72,14 @@ Cryptographic signatures enable agents to prove authenticity without centralized
   - **File**: `tests/crypto/test_keys.py` (create new)
   - **Verify**: `pytest tests/crypto/test_keys.py -v` all pass
 
-- [ ] 1.1.8 Commit milestone
+- [ ] 1.1.8 Add CLI command for key generation
+  - **File**: `src/asap/cli.py` (modify/create)
+  - **What**: `asap keys generate --out private.pem`
+  - **Security**: Warn if file permissions are too open (enforce `0600` on creation).
+  - **Note**: Native Keyring integration deferred to future release (ADR-18).
+  - **Verify**: Command creates a valid key file with strict permissions
+
+- [ ] 1.1.9 Commit milestone
   - **Command**: `git commit -m "feat(crypto): add Ed25519 key management"`
 
 **Acceptance Criteria**:
@@ -94,10 +101,12 @@ Cryptographic signatures enable agents to prove authenticity without centralized
   - **File**: `src/asap/crypto/signing.py` (create new)
   - **Verify**: Module imports without error
 
-- [ ] 1.2.2 Implement canonical JSON serialization
+- [ ] 1.2.2 Implement JCS canonicalization (RFC 8785)
   - **File**: `src/asap/crypto/signing.py`
-  - **What**: `canonicalize(manifest: Manifest) -> bytes` (deterministic JSON)
-  - **Verify**: Two calls with same manifest produce identical bytes
+  - **Library**: `jcs`
+  - **What**: `canonicalize(manifest: Manifest) -> bytes`
+  - **Constraint**: Must use JCS, not custom JSON sorting.
+  - **Verify**: Two calls with same manifest (different key order) produce identical bytes
 
 - [ ] 1.2.3 Implement signing function
   - **File**: `src/asap/crypto/signing.py`
@@ -106,7 +115,8 @@ Cryptographic signatures enable agents to prove authenticity without centralized
 
 - [ ] 1.2.4 Define SignedManifest and SignatureBlock models
   - **File**: `src/asap/crypto/models.py` (create new)
-  - **Verify**: Model validates correctly
+  - **Fields**: `SignatureBlock` must include `alg: Literal["ed25519"]` (ADR-18).
+  - **Verify**: Model validates correctly and rejects unknown algorithms
 
 - [ ] 1.2.5 Add CLI command for signing
   - **File**: `src/asap/cli.py` (modify)
@@ -135,9 +145,11 @@ Cryptographic signatures enable agents to prove authenticity without centralized
 
 ### Sub-tasks
 
-- [ ] 1.3.1 Implement verification function
+- [ ] 1.3.1 Implement verification function (Strict)
   - **File**: `src/asap/crypto/signing.py`
   - **What**: `verify_manifest(signed_manifest) -> bool`
+  - **Security**: Enforce `alg: "ed25519"` check.
+  - **Security**: Use RFC 8032 strict verification (reject malleable signatures).
   - **Verify**: Valid signatures return True, invalid return False
 
 - [ ] 1.3.2 Integrate verification with ASAPClient

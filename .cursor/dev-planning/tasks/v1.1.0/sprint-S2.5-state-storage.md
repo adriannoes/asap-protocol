@@ -3,7 +3,7 @@
 > **Goal**: Implement persistent state storage with SQLite reference implementation
 > **Prerequisites**: Sprint S1 completed (auth module structure as reference)
 > **Parent Roadmap**: [tasks-v1.1.0-roadmap.md](./tasks-v1.1.0-roadmap.md)
-> **Strategic Decision**: [SD-9 (State Management Hybrid)](../../../product-specs/roadmap-to-marketplace.md), [ADR-13](../../../product-specs/ADR.md)
+> **Strategic Decision**: [SD-9 (State Management Hybrid)](../../../product-specs/strategy/roadmap-to-marketplace.md), [ADR-13](../../../product-specs/decision-records/README.md)
 
 ---
 
@@ -30,7 +30,7 @@
 
 The v0 spec (Section 13.2) recommended "Option 2 (interface) for interoperability" for state storage. The `SnapshotStore` Protocol already exists in v1.0, but only `InMemorySnapshotStore` is implemented — state is lost on restart. This sprint:
 
-1. Defines the `MeteringStore` interface (foundation for v1.3 Economics Layer)
+1. Defines the `MeteringStore` interface (foundation for v1.3 Observability & Delegation)
 2. Provides a production-ready SQLite implementation of `SnapshotStore`
 3. Refactors `InMemorySnapshotStore` into the `stores/` subpackage
 4. Adds environment-based storage backend selection
@@ -55,7 +55,7 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
     - `record(event: UsageEvent) -> None` — Record a usage event
     - `query(agent_id: str, start: datetime, end: datetime) -> list[UsageEvent]` — Query events
     - `aggregate(agent_id: str, period: str) -> UsageAggregate` — Aggregate by period
-  - **Why**: v1.3 Economics Layer needs a defined storage contract
+  - **Why**: v1.3 Observability & Delegation needs a defined storage contract
   - **Pattern**: Follow `SnapshotStore` Protocol pattern in `snapshot.py`
   - **Verify**: `isinstance(InMemoryMeteringStore(), MeteringStore)` is True
 

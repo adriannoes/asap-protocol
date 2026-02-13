@@ -261,7 +261,7 @@ v1.1.0 establishes the Identity Layer for ASAP. OAuth2/OIDC provides enterprise-
 
 **Goal**: Validate JWT custom claims to map IdP identity to ASAP agent identity.
 
-**Context**: IdP-generated `sub` claims (`google-oauth2|12345`) don't match ASAP `agent_id` values (`urn:asap:agent:bot`). Custom Claims provide a portable, standards-based solution. See [ADR-17](../../../product-specs/ADR.md#question-17-trust-model-and-identity-binding-in-v11).
+**Context**: IdP-generated `sub` claims (`google-oauth2|12345`) don't match ASAP `agent_id` values (`urn:asap:agent:bot`). Custom Claims provide a portable, standards-based solution. See [ADR-17](../../../product-specs/decision-records/README.md#question-17-trust-model-and-identity-binding-in-v11).
 
 **Prerequisites**: Task 1.2 completed (middleware exists)
 

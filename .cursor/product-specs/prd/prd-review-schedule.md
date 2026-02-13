@@ -120,7 +120,7 @@ Each checkpoint has corresponding tasks in the roadmap files:
 
 ### v0.5.0 Checkpoints
 
-**Sprint S3, Section 3.6** ([tasks-v0.5.0-roadmap.md](../../dev-planning/tasks/tasks-v0.5.0-roadmap.md)):
+**Sprint S3, Section 3.6** ([tasks-v0.5.0-roadmap.md](../../dev-planning/tasks/v0.5.0/tasks-v0.5.0-roadmap.md)):
 - [ ] 3.6.1 Review PRD Open Questions
 - [ ] 3.6.2 Document learnings from security implementation
 

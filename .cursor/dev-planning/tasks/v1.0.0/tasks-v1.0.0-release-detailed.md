@@ -242,7 +242,7 @@
 - [x] Documentation 100% complete
 - [x] PRD fully reviewed
 - [x] Retrospective created
-- [ ] Post-release review scheduled (2 weeks after publish; optional)
+- [x] Post-release review scheduled (2 weeks after publish; optional)
 - [x] Progress tracked everywhere
 - [x] v1.0.0 marked as complete milestone
 

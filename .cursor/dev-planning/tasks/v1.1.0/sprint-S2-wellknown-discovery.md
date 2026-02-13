@@ -223,7 +223,7 @@ Well-known discovery enables agents to find each other without prior configurati
 
 **Goal**: Implement SDK method to discover agents from the static Lite Registry.
 
-**Context**: The Lite Registry is a `registry.json` file hosted on GitHub Pages. Developers submit agents via PR. This bridges the "Discovery Abyss" between v1.1 (identity + direct discovery) and v1.2 (full Registry API). See [SD-11](../../../product-specs/roadmap-to-marketplace.md) and [ADR-15](../../../product-specs/ADR.md#question-15-lite-registry-for-v11-discovery-gap).
+**Context**: The Lite Registry is a `registry.json` file hosted on GitHub Pages. Developers submit agents via PR. This bridges the "Discovery Abyss" between v1.1 (identity + direct discovery) and v2.1 (Registry API Backend). See [SD-11](../../../product-specs/strategy/roadmap-to-marketplace.md) and [ADR-15](../../../product-specs/decision-records/README.md#question-15-lite-registry-for-v11-discovery-gap).
 
 **Prerequisites**: Task 2.2 completed (client-side discovery exists)
 
@@ -293,7 +293,7 @@ Well-known discovery enables agents to find each other without prior configurati
 
 **Goal**: Implement health endpoint for agent liveness detection.
 
-**Context**: Without liveness, the Registry (v1.2) will list dead agents, creating a "graveyard" of stale entries. The SLA Framework (v1.3) defines `availability` claims but has no measurement mechanism. A simple health endpoint solves both problems with minimal cost. See [SD-10](../../../product-specs/roadmap-to-marketplace.md) and [ADR-14](../../../product-specs/ADR.md).
+**Context**: Without liveness, the Registry (v1.2) will list dead agents, creating a "graveyard" of stale entries. The SLA Framework (v1.3) defines `availability` claims but has no measurement mechanism. A simple health endpoint solves both problems with minimal cost. See [SD-10](../../../product-specs/strategy/roadmap-to-marketplace.md) and [ADR-14](../../../product-specs/decision-records/README.md).
 
 **Prerequisites**: Task 2.1 completed (well-known endpoint infrastructure)
 
@@ -349,7 +349,7 @@ Well-known discovery enables agents to find each other without prior configurati
     - TTL caching works correctly
   - **Verify**: `pytest tests/discovery/test_health.py -v` all pass
 
-- [ ] 2.5.6 Commit milestone
+- [x] 2.5.6 Commit milestone
   - **Command**: `git commit -m "feat(discovery): add agent health/liveness endpoint"`
   - **Scope**: health.py, entities.py, server.py, client.py, test_health.py
   - **Verify**: `git log -1` shows correct message

@@ -62,10 +62,10 @@ For v1.1 capabilities (OAuth2, WebSocket, Discovery, State Storage, Webhooks) se
 
 ## Architecture & Design Decisions
 
-- **ADR**: `.cursor/product-specs/ADR.md` - All architecture decisions
+- **ADR**: `.cursor/product-specs/decision-records/README.md` - All architecture decisions
 - **Tech Stack**: `.cursor/dev-planning/architecture/tech-stack-decisions.md` - Rationale for technology choices
-- **Vision**: `.cursor/product-specs/vision-agent-marketplace.md` - Future roadmap
-- **Roadmap**: `.cursor/product-specs/roadmap-to-marketplace.md` - v1.0 → v2.0 path
+- **Vision**: `.cursor/product-specs/strategy/vision-agent-marketplace.md` - Future roadmap
+- **Roadmap**: `.cursor/product-specs/strategy/roadmap-to-marketplace.md` - v1.0 → v2.0 path
 - **Best Practices**: `docs/best-practices/agent-failover-migration.md` - Agent failover & state migration patterns
 
 ## Development Planning

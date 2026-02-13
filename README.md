@@ -16,7 +16,7 @@ Building multi-agent systems today suffers from three core technical challenges 
 2. **State Drift**: Lack of native persistence makes it impossible to reliably resume long-running agentic workflows.
 3. **Fragmentation**: No unified way to handle task delegation, artifact exchange and tool execution (MCP) in a single envelope.
 
-**ASAP** provides a production-ready communication layer that simplifies these complexities. It introduces a standardized, stateful orchestration framework that ensures your agents can coordinate reliably across distributed environments. See the [spec](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/v0-original-specs.md) for details.
+**ASAP** provides a production-ready communication layer that simplifies these complexities. It introduces a standardized, stateful orchestration framework that ensures your agents can coordinate reliably across distributed environments. See the [spec](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/strategy/v0-original-specs.md) for details.
 
 ### Key Features
 
@@ -212,7 +212,7 @@ ASAP is evolving toward an **Agent Marketplace** — an open ecosystem where AI 
 - **v1.3**: Economics Layer (Metering, SLAs, Delegation)
 - **v2.0**: Agent Marketplace with Web App
 
-See our [vision document](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/vision-agent-marketplace.md) for the full roadmap.
+See our [vision document](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/strategy/vision-agent-marketplace.md) for the full roadmap.
 
 ## Contributing
 

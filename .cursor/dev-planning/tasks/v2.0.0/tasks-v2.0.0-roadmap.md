@@ -1,134 +1,105 @@
 # Tasks: ASAP Protocol v2.0.0 Roadmap
 
-> **High-level task overview** for v2.0.0 milestone (Marketplace + Web App)
+> **High-level task overview** for v2.0.0 milestone (Lean Marketplace + Web App)
 >
 > **Parent PRD**: [prd-v2.0-roadmap.md](../../../product-specs/prd/prd-v2.0-roadmap.md)
 > **Prerequisite**: v1.3.0 released
 > **Target Version**: v2.0.0
-> **Focus**: Marketplace Core, Web App, Verified Badge, Infrastructure
+> **Focus**: Web App, Lite Registry integration, Verified Badge
 >
 > 💡 **For detailed step-by-step instructions**, see sprint files:
-> - [M1: Production Registry](./sprint-M1-production-registry.md)
-> - [M2: Service Integration](./sprint-M2-service-integration.md)
-> - [M3: Web App Foundation](./sprint-M3-webapp-foundation.md)
-> - [M4: Web App Features](./sprint-M4-webapp-features.md)
-> - [M5: Verified Badge & Payments](./sprint-M5-verified-payments.md)
-> - [M6: Launch Preparation](./sprint-M6-launch-prep.md)
+> - [M1: Web App Foundation](./sprint-M1-webapp-foundation.md)
+> - [M2: Web App Features](./sprint-M2-webapp-features.md)
+> - [M3: Verified Badge & Payments](./sprint-M3-verified-payments.md)
+> - [M4: Launch Preparation](./sprint-M4-launch-prep.md)
+>
+> **Lean Marketplace Pivot**: Production Registry backend (formerly M1/M2) removed. Web App reads from Lite Registry (`registry.json` on GitHub Pages). No FastAPI backend, no PostgreSQL, no Railway. See [deferred-backlog.md](../../../product-specs/strategy/deferred-backlog.md).
 
 ---
 
-## Sprint M1: Production Registry
+## Strategic Context
 
-**Goal**: Deploy production-grade Registry service
+v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Registry:
+- **Web App**: Next.js 15 frontend on Vercel (SSG/ISR from `registry.json`)
+- **Lite Registry**: GitHub Pages JSON as the sole data source (no backend API)
+- **Verified Badge**: Stripe-powered trust verification
+- **No Backend**: All dynamic features (write API, real-time search) deferred to v2.1
 
-### Tasks
-
-- [ ] 1.1 Production database setup
-  - Goal: PostgreSQL for Registry data
-  - Deliverable: Database schema, migrations
-
-- [ ] 1.2 Registry API production deployment
-  - Goal: Scalable API on Railway/similar
-  - Deliverable: Deployed API with monitoring
-
-- [ ] 1.3 Trust score integration
-  - Goal: Connect Registry to Trust service
-  - Deliverable: Scores visible in Registry
-
-- [ ] 1.4 Full-text search
-  - Goal: Search agents by name, description, skills
-  - Deliverable: Postgres full-text or Meilisearch
-
-### Definition of Done
-- [ ] Registry deployed and accessible
-- [ ] Search works across 1000+ test agents
-- [ ] Trust scores displayed
+> [!NOTE]
+> **Deferred from v2.0**: Registry API Backend (to v2.1), Economy Settlement (to v3.0). See [deferred-backlog.md](../../../product-specs/strategy/deferred-backlog.md).
 
 ---
 
-## Sprint M2: Service Integration
+## Sprint M1: Web App Foundation
 
-**Goal**: Integrate all v1.x services
-
-### Tasks
-
-- [ ] 2.1 OAuth2 integration for Registry
-  - Goal: Authenticated writes, public reads
-
-- [ ] 2.2 Metering integration
-  - Goal: Track Registry API usage
-
-- [ ] 2.3 SLA integration
-  - Goal: Display agent SLA in Registry
-
-- [ ] 2.4 Audit integration
-  - Goal: Log all Registry mutations
-
-### Definition of Done
-- [ ] All v1.x services integrated
-- [ ] End-to-end flow working
-
----
-
-## Sprint M3: Web App Foundation
-
-**Goal**: Build Web App foundation
+**Goal**: Build Web App foundation with Lite Registry integration
 
 ### Tasks
 
-- [ ] 3.1 Project setup
+- [ ] 1.1 Design & Prototyping
+  - Goal: Wireframes and High-fidelity mockups for core pages
+
+- [ ] 1.2 Project setup
   - Goal: Next.js 15 (App Router) + TailwindCSS + Shadcn/UI
   - Deliverable: `apps/web/` initialized
 
-- [ ] 3.2 Landing page
+- [ ] 1.2 Lite Registry data layer
+  - Goal: Fetch and parse `registry.json` (SSG/ISR)
+  - Deliverable: TypeScript types + data fetching utilities
+
+- [ ] 1.3 Landing page
   - Goal: Hero, value prop, CTA
 
-- [ ] 3.3 OAuth2 login flow
-  - Goal: Developer authentication
+- [ ] 1.4 OAuth2 login flow
+  - Goal: Developer authentication (GitHub Sign-In)
 
-- [ ] 3.4 Base layout and navigation
+- [ ] 1.5 Base layout and navigation
 
 ### Definition of Done
-- [ ] Landing page live
+- [ ] Landing page live on Vercel
+- [ ] `registry.json` parsed and agents displayable
 - [ ] Login/logout working
 
 ---
 
-## Sprint M4: Web App Features
+## Sprint M2: Web App Features
 
-**Goal**: Registry browser and dashboard
+**Goal**: Registry browser and developer dashboard
 
 ### Tasks
 
-- [ ] 4.1 Registry browser page
-  - Goal: Search and filter agents
+- [ ] 2.1 Registry browser page
+  - Goal: Search and filter agents from Lite Registry data
+  - Note: Client-side filtering of static JSON
 
-- [ ] 4.2 Agent detail page
-  - Goal: Full agent info, SLA, reputation
+- [ ] 2.2 Agent detail page
+  - Goal: Full agent info, skills, SLA, trust level
 
-- [ ] 4.3 Developer dashboard
-  - Goal: My agents, metrics, API keys
+- [ ] 2.3 Developer dashboard
+  - Goal: My agents, metrics overview
 
-- [ ] 4.4 Register agent flow
-  - Goal: Upload manifest, register
+- [ ] 2.4 "Register agent" instructions
+  - Goal: Guide developers to submit PR to Lite Registry
+  - Note: No write API — registration is via GitHub PR
 
 ### Definition of Done
 - [ ] Browse and search working
-- [ ] Developers can register agents
+- [ ] Agent details page complete
+- [ ] PR submission flow documented
 
 ---
 
-## Sprint M5: Verified Badge & Payments
+## Sprint M3: Verified Badge & Payments
 
 **Goal**: Verified badge service with Stripe
 
 ### Tasks
 
-- [ ] 5.1 Stripe integration
-- [ ] 5.2 "Apply for Verified" flow
-- [ ] 5.3 Checkout flow ($49/month)
-- [ ] 5.4 ASAP CA signing on approval
-- [ ] 5.5 Admin review queue
+- [ ] 3.1 Stripe integration
+- [ ] 3.2 "Apply for Verified" flow
+- [ ] 3.3 Checkout flow ($49/month)
+- [ ] 3.4 ASAP CA signing on approval
+- [ ] 3.5 Admin review queue
 
 ### Definition of Done
 - [ ] Payment flow end-to-end
@@ -136,21 +107,21 @@
 
 ---
 
-## Sprint M6: Launch Preparation
+## Sprint M4: Launch Preparation
 
 **Goal**: Production readiness and launch
 
 ### Tasks
 
-- [ ] 6.1 Security audit
-- [ ] 6.2 Load testing (10k+ agents)
-- [ ] 6.3 Monitoring setup
-- [ ] 6.4 Documentation complete
-- [ ] 6.5 Beta program (100+ agents)
-- [ ] 6.6 Launch!
+- [ ] 4.1 Security audit
+- [ ] 4.2 Performance testing (100+ agents in Lite Registry)
+- [ ] 4.3 Monitoring setup (Vercel analytics)
+- [ ] 4.4 Documentation complete
+- [ ] 4.5 Beta program (20+ registered agents)
+- [ ] 4.6 Launch!
 
 ### Definition of Done
-- [ ] All launch criteria met
+- [ ] All launch criteria met (per PRD)
 - [ ] Security audit passed
 - [ ] Public launch
 
@@ -164,14 +135,14 @@
 
 **Context**: If JSON serialization becomes a bottleneck with high traffic in the Marketplace, consider replacing stdlib `json` with `orjson` (Rust-based, ~10x faster).
 
-**When to evaluate**: During M6 load testing (6.2) if API response times are slow.
+**When to evaluate**: During M4 performance testing (4.2) if API response times are slow.
 
 **Implementation**: 
 - Add `orjson>=3.9` to dependencies
 - Create thin wrapper `asap.utils.json` that uses orjson
 - Benchmark before/after
 
-**Decision**: Not required unless load testing reveals bottleneck.
+**Decision**: Not required unless testing reveals bottleneck.
 
 ---
 
@@ -179,7 +150,7 @@
 
 **Context**: bandit scans Python code for security issues (hardcoded passwords, SQL injection patterns, weak crypto). Currently only runs locally as dev dependency.
 
-**When to add**: Before public launch (M6) when external contributors or public scrutiny increase.
+**When to add**: Before public launch (M4) when external contributors or public scrutiny increase.
 
 **Implementation**:
 - Add to `.github/workflows/ci.yml` security job
@@ -194,26 +165,35 @@
 
 | Sprint | Tasks | Focus | Est. Days |
 |--------|-------|-------|-----------|
-| M1 | 4 | Production Registry | 6-8 |
-| M2 | 4 | Integration | 5-7 |
-| M3 | 4 | Web Foundation | 6-8 |
-| M4 | 4 | Web Features | 7-10 |
-| M5 | 5 | Verified + Payments | 6-8 |
-| M6 | 6 | Launch Prep | 8-12 |
+| M1 | 5 | Web Foundation + Lite Registry | 6-8 |
+| M2 | 4 | Web Features | 5-7 |
+| M3 | 5 | Verified + Payments | 6-8 |
+| M4 | 6 | Launch Prep | 6-10 |
 
-**Total**: 27 tasks across 6 sprints
+**Total**: 20 tasks across 4 sprints
 
 ---
 
 ## Progress Tracking
 
-**Overall Progress**: 0/27 tasks (0%)
+**Overall Progress**: 0/20 tasks (0%)
 
-**Last Updated**: 2026-02-06
+**Last Updated**: 2026-02-12
 
 ---
 
 ## Related Documents
 
 - **PRD**: [prd-v2.0-roadmap.md](../../../product-specs/prd/prd-v2.0-roadmap.md)
-- **Roadmap**: [roadmap-to-marketplace.md](../../../product-specs/roadmap-to-marketplace.md)
+- **Deferred Backlog**: [deferred-backlog.md](../../../product-specs/strategy/deferred-backlog.md)
+- **Roadmap**: [roadmap-to-marketplace.md](../../../product-specs/strategy/roadmap-to-marketplace.md)
+- **Vision**: [vision-agent-marketplace.md](../../../product-specs/strategy/vision-agent-marketplace.md)
+
+---
+
+## Change Log
+
+| Date | Change |
+|------|--------|
+| 2026-02-06 | Initial task roadmap |
+| 2026-02-12 | **Lean Marketplace pivot**: Removed Production Registry sprints (M1/M2), removed Service Integration sprint, Web App reads from Lite Registry, reduced from 6 sprints (27 tasks) to 4 sprints (20 tasks), scale targets reduced to 100+ agents |

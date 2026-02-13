@@ -1,17 +1,26 @@
 # Product Specs Directory Guide
 
-This directory contains **strategic and product-level documentation** for the ASAP Protocol.
+The `product-specs` directory contains **strategic and product-level documentation** for the ASAP Protocol.
 
 ## Directory Structure
 
 ```
 product-specs/
 ├── README.md                      # This file
-├── vision-agent-marketplace.md    # North Star vision
-├── roadmap-to-marketplace.md      # Version sequencing
-├── repository-strategy.md         # Monorepo vs Multi-repo decision
-├── ADR.md                         # Architecture Decision Records
-├── v0-original-specs.md           # Original specifications
+├── strategy/                      # Strategic vision and long-term planning
+│   ├── vision-agent-marketplace.md
+│   ├── roadmap-to-marketplace.md
+│   ├── repository-strategy.md
+│   ├── deferred-backlog.md
+│   ├── v0-original-specs.md
+│   └── user-flow.md
+├── decision-records/              # Architecture Decision Records (ADR)
+│   ├── README.md                  # Index of decisions
+│   ├── 01-architecture.md
+│   ├── 02-protocol.md
+│   ├── 03-security.md
+│   ├── 04-technology.md
+│   └── 05-product-strategy.md
 └── prd/                           # Product Requirements Documents
     ├── prd-v1-roadmap.md
     ├── prd-v1.1-roadmap.md
@@ -21,25 +30,16 @@ product-specs/
     └── prd-review-schedule.md
 ```
 
-## File Purposes
+## Key Documents
 
-### `vision-agent-marketplace.md` (The North Star)
-- **Purpose**: Architectural alignment for the v2.0 Agent Marketplace
-- **When to use**: Complex technical decisions to ensure alignment with long-term vision
+### Strategy (`strategy/`)
+- **[Vision](./strategy/vision-agent-marketplace.md)**: North Star for the Agent Marketplace.
+- **[Roadmap](./strategy/roadmap-to-marketplace.md)**: Version sequencing from v1.0 to v2.0.
+- **[Deferred Backlog](./strategy/deferred-backlog.md)**: Features deprioritized for the Lean Pivot.
 
-### `roadmap-to-marketplace.md` (The Strategic Map)
-- **Purpose**: Version sequencing from v1.0 to v2.0
-- **When to use**: Planning the theme of each version and understanding dependencies
+### Decisions (`decision-records/`)
+- **[Decision Index](./decision-records/README.md)**: Categorized list of all architectural and product decisions.
+- Replaces the old monolithic `ADR.md`.
 
-### `repository-strategy.md` (Codebase Structure)
-- **Purpose**: Strategic analysis of Monorepo vs Multi-repo
-- **When to use**: Understanding why code is structured the way it is
-
-### `prd/` (Product Requirements)
-- **Purpose**: Detailed requirements per version
-- **When to use**: Before starting implementation of a version
-
-### `ADR.md` (Architecture Decision Records)
-- **Purpose**: Document significant architecture decisions with rationale
-- **When to use**: Recording and referencing past technical decisions
-
+### Requirements (`prd/`)
+- Detailed requirements for each version version.

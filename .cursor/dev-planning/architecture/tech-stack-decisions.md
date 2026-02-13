@@ -4,7 +4,7 @@ This document provides a historical and technical rationale for the technology c
 
 > **Goal**: Explain *why* we chose these tools, offering context for future contributors and architects.
 >
-> **Last Updated**: 2026-02-07 (strategic review)
+> **Last Updated**: 2026-02-12 (Lean Marketplace pivot)
 
 ---
 
@@ -19,7 +19,7 @@ The foundation required stability, developer experience (DX), and strict correct
     -   **Sync/Async**: Python's `asyncio` is mature enough for high-concurrency IO-bound tasks (agents waiting on LLMs).
     -   **Ecosystem**: Unrivaled libraries for LLM integration (LangChain, OpenAI, Pydantic).
 -   **Why strict typing?**: We enforce `mypy` strict mode because protocols cannot be ambiguous. Python 3.13+ brings massive performance wins and better type hints.
--   **Why not Rust/Go?**: ASAP is I/O-bound, not CPU-bound. Critical performance paths already use Rust internally via dependencies (pydantic-core, orjson). Custom native extensions deferred until profiling identifies specific bottlenecks. See [ADR-9](../../product-specs/ADR.md#question-9-should-any-module-use-c-or-rust).
+-   **Why not Rust/Go?**: ASAP is I/O-bound, not CPU-bound. Critical performance paths already use Rust internally via dependencies (pydantic-core, orjson). Custom native extensions deferred until profiling identifies specific bottlenecks. See [ADR-9](../../product-specs/decision-records/04-technology.md).
 
 ### 1.2 Data Core: Pydantic v2
 -   **Decision**: **Pydantic**
@@ -34,7 +34,7 @@ The foundation required stability, developer experience (DX), and strict correct
     -   **Action-Oriented**: Agents perform *actions* (TaskRequest, TaskCancel), not just resource manipulation (GET/POST).
     -   **Transport Agnostic**: JSON-RPC works equally well over HTTP, WebSockets, or stdio (MCP).
     -   **Standard**: It is a stable, boring standard. Agents don't need creative URL schemes.
--   **Alternatives rejected**: REST (paradigm mismatch for agent actions), gRPC (limited browser support, heavier tooling). See [ADR-2](../../product-specs/ADR.md#question-2-why-json-rpc-over-rest-for-primary-binding).
+-   **Alternatives rejected**: REST (paradigm mismatch for agent actions), gRPC (limited browser support, heavier tooling). See [ADR-2](../../product-specs/decision-records/02-protocol.md).
 
 ### 1.4 API Framework: FastAPI
 -   **Decision**: **FastAPI**
@@ -64,7 +64,7 @@ Focus shifted to secure, real-time communication and persistent state.
     -   **joserfc**: Modern JOSE/JWT library (same author as Authlib), replaces abandoned `python-jose`. Provides JWS/JWE/JWK/JWT.
     -   **Maturity**: 45M downloads/month, BSD-3-Clause, active maintenance (v1.7 in dev).
 -   **Alternatives rejected**: httpx-oauth (no client_credentials), raw httpx (500+ lines of security-critical code to maintain), PyJWT (JWT only, no OIDC).
--   **Reference**: [ADR-12](../../product-specs/ADR.md#question-12-authlib-vs-httpx-oauth-for-oauth2oidc)
+-   **Reference**: [ADR-12](../../product-specs/decision-records/04-technology.md)
 
 ### 2.3 Real-time: WebSockets
 -   **Decision**: **WebSockets** (via `websockets>=12.0`)
@@ -72,8 +72,8 @@ Focus shifted to secure, real-time communication and persistent state.
     -   **Bi-directional**: Essential for "Interrupts" (Human-in-the-loop stopping an agent) and streaming partial LLM tokens.
     -   **Low Overhead**: Eliminates polling latency for agent-to-agent negotiation.
     -   **Sufficient for scale**: Handles direct connections well for <50 agents. Message broker (NATS/Kafka) deferred to v2.0+ for larger deployments.
--   **Alternatives deferred**: NATS/Kafka (overkill for startups, adds infrastructure cost). See [SD-3](../../product-specs/roadmap-to-marketplace.md).
--   **Reference**: [ADR-3](../../product-specs/ADR.md#question-3-is-peer-to-peer-default-practical)
+-   **Alternatives deferred**: NATS/Kafka (overkill for startups, adds infrastructure cost). See [SD-3](../../product-specs/strategy/roadmap-to-marketplace.md).
+-   **Reference**: [ADR-3](../../product-specs/decision-records/01-architecture.md)
 
 ### 2.4 State Storage: SQLite via aiosqlite
 -   **Decision**: **SQLite** as first persistent backend (via `aiosqlite>=0.20`)
@@ -95,7 +95,7 @@ Focus shifted to secure, real-time communication and persistent state.
 
 -   **Why not Redis first?**: The target audience (AI startups, individual developers) should be able to run `uv run asap serve` without installing Redis. SQLite provides persistence with zero external dependencies.
 -   **Why not sync SQLite?**: The `SnapshotStore` Protocol currently uses sync methods (inherited from v1.0 InMemorySnapshotStore). `aiosqlite` lets us use async internally while maintaining the sync interface. The CP-1 checkpoint (post-v1.1) will evaluate whether to evolve the Protocol to async — a controlled breaking change before marketplace adoption grows.
--   **Reference**: [SD-9](../../product-specs/roadmap-to-marketplace.md), [ADR-13](../../product-specs/ADR.md#question-13-state-management-strategy-for-marketplace)
+-   **Reference**: [SD-9](../../product-specs/strategy/roadmap-to-marketplace.md), [ADR-13](../../product-specs/decision-records/01-architecture.md)
 
 ### 2.5 Discovery: Well-Known URI + Health Endpoint + Lite Registry
 -   **Decision**: RFC 8615 well-known URIs + simple health endpoint + static Lite Registry on GitHub Pages
@@ -103,14 +103,14 @@ Focus shifted to secure, real-time communication and persistent state.
     -   **No infrastructure**: Agents discover each other via HTTP — no registry, no DNS, no service mesh required.
     -   **Kubernetes-aligned**: `/.well-known/asap/health` follows the `/healthz` pattern that platform engineers expect.
     -   **TTL-based freshness**: `ttl_seconds` in manifest tells consumers how long to trust cached data.
-    -   **Lite Registry (SD-11)**: Bridges the "Discovery Abyss" between v1.1 (identity) and v1.2 (full Registry API). Static `registry.json` on GitHub Pages, agents listed via PR. Multi-endpoint schema supports HTTP + WebSocket. SDK provides `discover_from_registry()` method.
+    -   **Lite Registry (SD-11)**: Bridges the "Discovery Abyss" between v1.1 (identity) and full Registry API (v2.1). Static `registry.json` on GitHub Pages, agents listed via PR. Multi-endpoint schema supports HTTP + WebSocket. SDK provides `discover_from_registry()` method.
 -   **Why GitHub Pages for Lite Registry?**:
     -   Zero infrastructure cost — hosted as static file
     -   PR-based submissions create social proof and community engagement (like Go modules before `proxy.golang.org`)
     -   Version-controlled — full history of agent registrations
     -   Machine-readable — JSON, not a human-curated "awesome list"
-    -   Migration path — v1.2 Registry API can seed itself from this file
--   **Alternatives deferred**: DNS-SD/mDNS (niche, LAN-only), centralized registry (v1.2). See [SD-10](../../product-specs/roadmap-to-marketplace.md), [SD-11](../../product-specs/roadmap-to-marketplace.md), [ADR-14](../../product-specs/ADR.md#question-14-agent-liveness--health-protocol), [ADR-15](../../product-specs/ADR.md#question-15-lite-registry-for-v11-discovery-gap).
+    -   Migration path — v2.1 Registry API can seed itself from this file
+-   **Alternatives deferred**: DNS-SD/mDNS (niche, LAN-only), centralized registry (v1.2). See [SD-10](../../product-specs/strategy/roadmap-to-marketplace.md), [SD-11](../../product-specs/strategy/roadmap-to-marketplace.md), [ADR-14](../../product-specs/decision-records/01-architecture.md), [ADR-15](../../product-specs/decision-records/05-product-strategy.md).
 
 ### 2.6 Identity Binding: Custom Claims
 -   **Decision**: **JWT Custom Claims** for mapping IdP identities to ASAP agent IDs
@@ -123,13 +123,13 @@ Focus shifted to secure, real-time communication and persistent state.
     -   Standards-based (RFC 7519 allows private claims with namespace-prefixed keys)
     -   More flexible than hardcoded config files
     -   Works with existing IdP admin UIs (no custom code needed on IdP side)
--   **Reference**: [ADR-17](../../product-specs/ADR.md#question-17-trust-model-and-identity-binding-in-v11)
+-   **Reference**: [ADR-17](../../product-specs/decision-records/03-security.md)
 
 ---
 
-## 3. Trust & Intelligence (v1.2 - "Brain")
+## 3. Verified Identity (v1.2 - "Signing & Compliance")
 
-We needed to evaluate agent quality, ensure safety, and establish verifiable identity.
+Focus shifted to verifiable agent identity and protocol compliance certification.
 
 ### 3.1 Signing: Ed25519
 -   **Decision**: **Ed25519** (via `cryptography>=41.0`)
@@ -138,36 +138,36 @@ We needed to evaluate agent quality, ensure safety, and establish verifiable ide
     -   **MCP-aligned**: MCP, SSH, and Signal all use Ed25519. Alignment reduces ecosystem friction.
     -   **Single curve**: No "which curve?" confusion (unlike ECDSA with P-256, P-384, etc.).
 -   **Alternatives rejected**: ECDSA (multiple curves = complexity), RSA-2048/4096 (slow, large signatures, legacy).
--   **Reference**: [SD-4](../../product-specs/roadmap-to-marketplace.md)
+-   **Reference**: [SD-4](../../product-specs/strategy/roadmap-to-marketplace.md)
 
-### 3.2 Evaluations: Hybrid (Native + DeepEval)
--   **Decision**: **Hybrid Approach**
+### 3.2 Evaluations: Protocol Compliance (Shell)
+-   **Decision**: **ASAP Compliance Harness** (pytest-based)
 -   **Rationale**:
-    -   **Native (Shell)**: For protocol compliance (schema checks, state transitions), we wrote our own `pytest` harness. Third-party tools don't understand our binary wire format.
-    -   **DeepEval (Brain)**: For "Intelligence" (Hallucination, Bias), we avoided reinventing the wheel. DeepEval gives us research-backed metrics out of the box.
-    -   **pytest-native**: DeepEval approaches evals as "Unit Tests for LLMs", aligning perfectly with ASAP's engineering rigor and existing test infrastructure.
--   **Reference**: [ADR-10](../../product-specs/ADR.md#question-10-build-vs-buy-for-agent-evals)
+    -   **Shell-only for v1.2**: Protocol compliance (schema checks, state transitions) via our own `pytest` harness. Third-party tools don't understand our wire format.
+    -   **DeepEval deferred**: Intelligence evaluation (Hallucination, Bias) deferred to v2.2+. The marketplace does not require AI quality scoring to function — it requires protocol compliance.
+-   **What changed**: Original plan was a Hybrid approach (Native Shell + DeepEval Brain). Lean Marketplace pivot recognized that compliance certification is the MVP blocker, not intelligence scoring.
+-   **Reference**: [ADR-10](../../product-specs/decision-records/05-product-strategy.md), [deferred-backlog.md](../../product-specs/strategy/deferred-backlog.md#2-deepeval-intelligence-layer-originally-v12-sprint-t61)
 
-### 3.3 Registry Storage: PostgreSQL (planned)
--   **Decision**: **PostgreSQL** for centralized Registry data
+### 3.3 Registry Storage: Lite Registry (deferred PostgreSQL)
+-   **Decision**: **Lite Registry** (`registry.json` on GitHub Pages) continues through v2.0
 -   **Rationale**:
-    -   **Marketplace metadata only**: The Registry stores manifests, trust scores, SLA metrics — not agent task state (per SD-9 Hybrid strategy).
-    -   **Full-text search**: `GET /registry/agents?skill=X` requires efficient text search. PostgreSQL's `tsvector` is built-in.
-    -   **Horizontal scaling**: PostgreSQL supports read replicas, connection pooling (PgBouncer), and partitioning.
-    -   **Mature**: Battle-tested for SaaS workloads. Every cloud provider offers managed Postgres.
--   **Why not SQLite for Registry?**: SQLite is single-writer. The Registry needs concurrent writes from multiple agents registering simultaneously.
+    -   **Lean Marketplace pivot**: Full Registry API Backend with PostgreSQL deferred to v2.1.
+    -   **Lite Registry sufficient**: Static JSON file handles 100+ agents without backend infrastructure.
+    -   **Web App reads JSON**: Next.js can fetch `registry.json` at build time (SSG) or via ISR.
+-   **Migration path**: When agent count exceeds Lite Registry capacity or dynamic features (real-time search, write API) are needed, PostgreSQL Registry API activates in v2.1.
+-   **Reference**: [deferred-backlog.md](../../product-specs/deferred-backlog.md#1-registry-api-backend-originally-v12-sprints-t3t4)
 
 ---
 
-## 4. Web Marketplace (v2.0 - "Product")
+## 4. Lean Marketplace (v2.0 - "Product")
 
-The shift from "Protocol" to "Product" required a modern, SEO-friendly web stack.
+The shift from "Protocol" to "Product" with a lean approach — no backend API, Web App reads from Lite Registry.
 
 ### 4.1 Frontend: Next.js 15 (App Router)
 -   **Decision**: **Next.js** (over Vite/React SPA)
 -   **Rationale**:
     -   **SEO**: The Agent Registry must be indexable by Google. Server-Side Rendering (SSR) is non-negotiable here.
-    -   **React Server Components (RSC)**: Allows fetching Registry data directly in the component, simplifying the architecture (no client-side effect chains for static data).
+    -   **React Server Components (RSC)**: Allows fetching `registry.json` directly in the component, simplifying the architecture (no client-side effect chains).
     -   **Vercel Ecosystem**: The project infrastructure (monorepo, edge functions) aligns natively with Next.js.
 
 ### 4.2 Language: TypeScript
@@ -176,10 +176,12 @@ The shift from "Protocol" to "Product" required a modern, SEO-friendly web stack
     -   **Shared Types**: We can generate TypeScript interfaces from the Python Pydantic models (via `datamodel-code-generator`), ensuring the Frontend is always in sync with the Protocol.
     -   **Safety**: Large-scale frontend apps without types are unmaintainable.
 
-### 4.3 Styling: TailwindCSS v4 + Shadcn/UI
--   **Decision**: **Tailwind + Shadcn**
+### 4.3 Design & Styling: Design-First + Tailwind/Shadcn
+-   **Decision**: **Design-First Workflow** implemented via **Tailwind v4 + Shadcn/UI**
 -   **Rationale**:
-    -   **Velocity**: Building a "Premium" look with Vanilla CSS takes months. Shadcn provides accessible, high-quality components (Radix primitives) that we can fully customize.
+    -   **Design-First**: No frontend coding without approved mockups. "Engineer-art" is unacceptable for a marketplace.
+    -   **Tools**: Excalidraw (Wireframes/Flows) -> Figma (High-fidelity) -> Code.
+    -   **Velocity**: Building a "Premium" look from scratch takes months. Shadcn provides accessible, high-quality components (Radix primitives) that we can customized to match Figma designs.
     -   **Modernity**: Tailwind v4 brings compiler performance improvements.
     -   **Standard**: This is currently the effective industry standard for modern React apps.
 
@@ -196,18 +198,37 @@ The shift from "Protocol" to "Product" required a modern, SEO-friendly web stack
     -   **Developer-friendly**: Excellent API, SDK, and documentation.
     -   **No alternatives needed**: Stripe handles all payment scenarios for Freemium → Verified tier (SD-2). Multiple payment providers deferred until demand justifies complexity.
 
-### 4.6 Hosting: Vercel (Frontend) + Railway (API)
--   **Decision**: **Vercel + Railway**
+### 4.6 Data Source: Lite Registry (GitHub Pages JSON)
+-   **Decision**: **Lite Registry (`registry.json`)** as primary data source
 -   **Rationale**:
-    -   **Vercel**: Native Next.js deployment. Edge functions, CDN, preview deployments. Ideal for solo/small team.
-    -   **Railway**: Simple container deployment for FastAPI. Auto-scaling, managed Postgres. Simpler than AWS/GCP for early stage.
-    -   **No Kubernetes (yet)**: K8s manifests provided optionally, but not required. Premature infrastructure complexity for pre-traction stage.
+    -   **No backend API needed**: Web App fetches `registry.json` at build time (SSG) or via Incremental Static Regeneration (ISR).
+    -   **Zero infrastructure**: No database, no API server, no Railway — just Vercel + GitHub Pages.
+    -   **Lean validation**: Proves marketplace value before investing in backend infrastructure.
+-   **What changed**: Original plan had FastAPI backend + PostgreSQL + Railway. Lean Marketplace pivot removed backend entirely.
+-   **Migration path**: When dynamic features are needed (real-time writes, complex search), Registry API Backend activates in v2.1.
+
+### 4.7 Backend Logic: Next.js API Routes (Serverless)
+-   **Decision**: **Next.js API Routes**
+-   **Rationale**:
+    -   **The "No Backend" Exception**: While we avoid a standalone backend service, some operations require server-side execution for security (hiding secrets) or webhook handling.
+    -   **Use Cases**:
+        -   **Stripe Webhooks**: Verifying signatures and processing events.
+        -   **Auth Exchange**: Swapping OAuth codes for access tokens (to keep client_secret hidden).
+        -   **Signing Triggers**: Triggering GitHub Actions for CA signing.
+    -   **Constraint**: Keep this layer minimal. No complex business logic or persistent database state (other than what's passed to Stripe/GitHub).
+
+### 4.8 Hosting: Vercel
+-   **Decision**: **Vercel**
+-   **Rationale**:
+    -   **Zero config**: Native Next.js support.
+    -   **Global Edge**: Fast content delivery.
+    -   **CI/CD**: Automatic deployments from GitHub.
 
 ---
 
 ## 5. Cross-cutting: Storage Strategy (SD-9)
 
-A key architectural decision spanning all versions. See [ADR-13](../../product-specs/ADR.md#question-13-state-management-strategy-for-marketplace).
+A key architectural decision spanning all versions. See [ADR-13](../../product-specs/decision-records/01-architecture.md).
 
 ### 5.1 The Hybrid Model
 
@@ -218,10 +239,10 @@ ASAP follows a **layered storage strategy** — we define interfaces and provide
 | v1.0 | Task snapshots (dev) | InMemorySnapshotStore | Zero-config, testing |
 | v1.1 | Task snapshots (persistent) | **SQLite** (aiosqlite) | Zero-config persistence, file-based |
 | v1.1 | Metering interface | MeteringStore Protocol | Foundation for v1.3 |
-| v1.2 | Registry metadata | **PostgreSQL** | Concurrent writes, full-text search |
-| v1.3 | Usage metering | SQLite or PostgreSQL (via MeteringStore) | Agent's choice |
-| v1.3 | Audit logs | Append-only store | Hash chain integrity |
-| v2.0 | Marketplace data | **PostgreSQL** (managed) | Production SaaS |
+| v1.2-v2.0 | Agent discovery | **Lite Registry** (GitHub Pages JSON) | Zero-infrastructure, PR-based |
+| v1.3 | Observability metering | SQLite or PostgreSQL (via MeteringStore) | Agent's choice |
+| v2.0 | Marketplace data | Lite Registry + Vercel | Static site, no backend |
+| v2.1 | Registry API Backend | **PostgreSQL** (managed) | Scale demands backend |
 | v2.0+ | ASAP Cloud (premium) | Managed storage | "Vercel for Agents" monetization |
 
 ### 5.2 The "No Lock-in" Principle
@@ -270,13 +291,14 @@ The `SnapshotStore` Protocol currently uses **sync** methods (inherited from v1.
 | **Discovery** | Well-known URI + Health + Lite Registry | No infrastructure needed + early discoverability | v1.1 | SD-10, SD-11, ADR-14, ADR-15 |
 | **Identity Binding** | Custom Claims + allowlist | IdP sub → agent_id mapping | v1.1 | ADR-17 |
 | **Signing** | cryptography (Ed25519) | Modern, fast, MCP-aligned | v1.2 | SD-4 |
-| **Evals** | pytest + DeepEval | Shell + Brain hybrid | v1.2 | ADR-10 |
-| **Registry DB** | PostgreSQL | Concurrent writes, FTS | v1.2 | |
+| **Evals** | pytest (Compliance Harness) | Shell-only (DeepEval deferred to v2.2+) | v1.2 | ADR-10 |
+| **Registry** | Lite Registry (GitHub Pages JSON) | Zero infrastructure, primary through v2.0 | v1.1-v2.0 | SD-11, ADR-15 |
 | **Web** | Next.js 15, TypeScript | SEO, type safety | v2.0 | |
 | **UI** | Tailwind v4, Shadcn | Development velocity | v2.0 | |
 | **Auth (web)** | GitHub + WebCrypto | Low friction signup | v2.0 | |
 | **Payments** | Stripe | SaaS standard | v2.0 | SD-2 |
-| **Hosting** | Vercel + Railway | Simple, scalable | v2.0 | |
+| **Data Source** | Lite Registry (`registry.json`) | No backend needed for MVP | v2.0 | SD-11 |
+| **Hosting** | Vercel | Simple, scalable (no Railway for v2.0) | v2.0 | |
 
 ---
 
@@ -287,3 +309,4 @@ The `SnapshotStore` Protocol currently uses **sync** methods (inherited from v1.
 | 2026-02-05 | Initial document |
 | 2026-02-07 | Strategic review: added OAuth2 library (Authlib/joserfc, ADR-12), State Storage (SQLite/aiosqlite, SD-9), Discovery (health endpoint, SD-10), Ed25519 (SD-4), Registry DB (PostgreSQL), Payments (Stripe), Hosting (Vercel/Railway), cross-cutting storage strategy (Section 5), updated Python version to 3.13+ |
 | 2026-02-07 | Added Lite Registry rationale (GitHub Pages, SD-11, ADR-15), Custom Claims identity binding (ADR-17), updated summary table |
+| 2026-02-12 | **Lean Marketplace pivot**: §3 renamed "Verified Identity", DeepEval deferred to v2.2+, PostgreSQL Registry deferred to v2.1, §4 updated to Lite Registry data source, Railway removed, storage strategy updated |

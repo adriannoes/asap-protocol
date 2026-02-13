@@ -87,37 +87,37 @@ This PRD covers the roadmap from **v0.1.0** (initial alpha) to **v1.0.0** (produ
    - Add schema validation for `AuthScheme` model
 
 #### Dependency Security
-3. **PENDING**: Dependabot configuration ([Task 2.0](../../dev-planning/tasks/tasks-security-review-report.md#20-critical-security---dependency-monitoring-setup-crit-02))
+3. **PENDING**: Dependabot configuration ([Task 2.0](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#20-critical-security---dependency-monitoring-setup-crit-02))
    - Create `.github/dependabot.yml` for daily security updates
    - Initially security-only (version updates added post-v0.5.0)
    - Document dependency update process in CONTRIBUTING.md
 
 #### DoS Prevention
-4. **PENDING**: Rate limiting implementation ([Task 3.0](../../dev-planning/tasks/tasks-security-review-report.md#30-high-priority---dos-prevention-high-01-high-02))
+4. **PENDING**: Rate limiting implementation ([Task 3.0](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#30-high-priority---dos-prevention-high-01-high-02))
    - Add `slowapi` dependency for rate limiting
    - Default: 100 requests/minute per sender
    - HTTP 429 with `Retry-After` header
    - Configurable limits via environment variables
 
-5. **PENDING**: Request size validation ([Task 3.3](../../dev-planning/tasks/tasks-security-review-report.md#30-high-priority---dos-prevention-high-01-high-02))
+5. **PENDING**: Request size validation ([Task 3.3](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#30-high-priority---dos-prevention-high-01-high-02))
    - 10MB default maximum request size
    - Validate `Content-Length` header before reading body
    - Return JSON-RPC parse error for oversized requests
 
 #### Replay Attack Prevention
-6. **PENDING**: Timestamp validation ([Task 4.0](../../dev-planning/tasks/tasks-security-review-report.md#40-high-priority---replay-attack-prevention-high-03))
+6. **PENDING**: Timestamp validation ([Task 4.0](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#40-high-priority---replay-attack-prevention-high-03))
    - Reject envelopes older than 5 minutes
    - Reject future timestamps beyond 30-second tolerance
    - Optional nonce support for critical operations
 
 #### HTTPS Enforcement
-7. **PENDING**: Client HTTPS validation ([Task 5.0](../../dev-planning/tasks/tasks-security-review-report.md#50-high-priority---https-enforcement-high-04))
+7. **PENDING**: Client HTTPS validation ([Task 5.0](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#50-high-priority---https-enforcement-high-04))
    - `require_https=True` parameter in ASAPClient
    - Auto-detect development environment (localhost)
    - Raise clear error for HTTP in production
 
 #### Retry Logic
-8. **PENDING**: Exponential backoff ([Task 6.0](../../dev-planning/tasks/tasks-security-review-report.md#60-high-priority---retry-logic-improvements-high-05))
+8. **PENDING**: Exponential backoff ([Task 6.0](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#60-high-priority---retry-logic-improvements-high-05))
    - Implement exponential backoff with jitter
    - Cap maximum delay at 60 seconds
    - Optional circuit breaker pattern
@@ -125,19 +125,19 @@ This PRD covers the roadmap from **v0.1.0** (initial alpha) to **v1.0.0** (produ
 ### 4.2 Additional Security (v1.0.0 - MEDIUM/LOW Priority)
 
 #### Sensitive Data Protection
-9. **PENDING**: Log sanitization ([Task 7.0](../../dev-planning/tasks/tasks-security-review-report.md#70-medium-priority---sensitive-data-protection-med-01-med-02), [Issue #12](https://github.com/adriannoes/asap-protocol/issues/12))
+9. **PENDING**: Log sanitization ([Task 7.0](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#70-medium-priority---sensitive-data-protection-med-01-med-02), [Issue #12](https://github.com/adriannoes/asap-protocol/issues/12))
    - Sanitize tokens, passwords, secrets from logs
    - Debug mode for development with full error details
    - Production mode with generic error messages
 
 #### Input Validation
-10. **PENDING**: Handler security hardening ([Task 8.0](../../dev-planning/tasks/tasks-security-review-report.md#80-medium-priority---input-validation-hardening-med-03-med-04))
+10. **PENDING**: Handler security hardening ([Task 8.0](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#80-medium-priority---input-validation-hardening-med-03-med-04))
     - Document handler security requirements
     - Path traversal detection in FilePart URIs
     - Handler validation utilities
 
 #### Code Quality
-11. **PENDING**: Code improvements ([Task 9.0](../../dev-planning/tasks/tasks-security-review-report.md#90-low-priority---code-improvements-low-01-low-02-low-03))
+11. **PENDING**: Code improvements ([Task 9.0](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#90-low-priority---code-improvements-low-01-low-02-low-03))
     - Thread safety improvements in HandlerRegistry
     - Enhanced URN validation (max length: 256 chars)
     - Task depth validation (prevent infinite recursion)
@@ -501,7 +501,7 @@ warnings.warn(
 - [ ] Remove `type: ignore` in handlers.py ([Issue #10](https://github.com/adriannoes/asap-protocol/issues/10))
 - [ ] Refactor `handle_message` into smaller helpers ([Issue #9](https://github.com/adriannoes/asap-protocol/issues/9))
 - [ ] Upgrade FastAPI to 0.128.0+ ([Issue #7](https://github.com/adriannoes/asap-protocol/issues/7))
-- [ ] Configure Dependabot for security updates ([Task 2.0](../../dev-planning/tasks/tasks-security-review-report.md#20-critical-security---dependency-monitoring-setup-crit-02))
+- [ ] Configure Dependabot for security updates ([Task 2.0](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#20-critical-security---dependency-monitoring-setup-crit-02))
 - [ ] Update CONTRIBUTING.md with dependency process
 
 **Definition of Done**:
@@ -515,12 +515,12 @@ warnings.warn(
 **Goal**: Implement rate limiting and request size validation
 
 **Tasks**:
-- [ ] Add `slowapi` dependency to pyproject.toml ([Task 3.1](../../dev-planning/tasks/tasks-security-review-report.md#30-high-priority---dos-prevention-high-01-high-02))
-- [ ] Implement rate limiting middleware ([Task 3.2](../../dev-planning/tasks/tasks-security-review-report.md#30-high-priority---dos-prevention-high-01-high-02))
-- [ ] Add request size validation ([Task 3.3](../../dev-planning/tasks/tasks-security-review-report.md#30-high-priority---dos-prevention-high-01-high-02))
-- [ ] Make limits configurable ([Task 3.4](../../dev-planning/tasks/tasks-security-review-report.md#30-high-priority---dos-prevention-high-01-high-02))
-- [ ] Add comprehensive tests ([Task 3.5, 3.6](../../dev-planning/tasks/tasks-security-review-report.md#30-high-priority---dos-prevention-high-01-high-02))
-- [ ] Update `docs/security.md` ([Task 3.7](../../dev-planning/tasks/tasks-security-review-report.md#30-high-priority---dos-prevention-high-01-high-02))
+- [ ] Add `slowapi` dependency to pyproject.toml ([Task 3.1](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#30-high-priority---dos-prevention-high-01-high-02))
+- [ ] Implement rate limiting middleware ([Task 3.2](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#30-high-priority---dos-prevention-high-01-high-02))
+- [ ] Add request size validation ([Task 3.3](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#30-high-priority---dos-prevention-high-01-high-02))
+- [ ] Make limits configurable ([Task 3.4](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#30-high-priority---dos-prevention-high-01-high-02))
+- [ ] Add comprehensive tests ([Task 3.5, 3.6](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#30-high-priority---dos-prevention-high-01-high-02))
+- [ ] Update `docs/security.md` ([Task 3.7](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#30-high-priority---dos-prevention-high-01-high-02))
 
 **Definition of Done**:
 - Rate limiting working: HTTP 429 after limit exceeded
@@ -533,13 +533,13 @@ warnings.warn(
 **Goal**: Implement timestamp validation and HTTPS enforcement
 
 **Tasks**:
-- [ ] Add timestamp validation constants ([Task 4.1](../../dev-planning/tasks/tasks-security-review-report.md#40-high-priority---replay-attack-prevention-high-03))
-- [ ] Implement timestamp validation function ([Task 4.2](../../dev-planning/tasks/tasks-security-review-report.md#40-high-priority---replay-attack-prevention-high-03))
-- [ ] Integrate validation in server ([Task 4.3](../../dev-planning/tasks/tasks-security-review-report.md#40-high-priority---replay-attack-prevention-high-03))
-- [ ] Add optional nonce support ([Task 4.4](../../dev-planning/tasks/tasks-security-review-report.md#40-high-priority---replay-attack-prevention-high-03))
-- [ ] Add HTTPS validation to client ([Task 5.1-5.2](../../dev-planning/tasks/tasks-security-review-report.md#50-high-priority---https-enforcement-high-04))
-- [ ] Add tests for both features ([Task 4.5, 5.3](../../dev-planning/tasks/tasks-security-review-report.md))
-- [ ] Update documentation ([Task 4.6, 5.4](../../dev-planning/tasks/tasks-security-review-report.md))
+- [ ] Add timestamp validation constants ([Task 4.1](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#40-high-priority---replay-attack-prevention-high-03))
+- [ ] Implement timestamp validation function ([Task 4.2](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#40-high-priority---replay-attack-prevention-high-03))
+- [ ] Integrate validation in server ([Task 4.3](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#40-high-priority---replay-attack-prevention-high-03))
+- [ ] Add optional nonce support ([Task 4.4](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#40-high-priority---replay-attack-prevention-high-03))
+- [ ] Add HTTPS validation to client ([Task 5.1-5.2](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#50-high-priority---https-enforcement-high-04))
+- [ ] Add tests for both features ([Task 4.5, 5.3](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md))
+- [ ] Update documentation ([Task 4.6, 5.4](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md))
 
 **Definition of Done**:
 - Envelopes older than 5 minutes rejected
@@ -553,11 +553,11 @@ warnings.warn(
 **Goal**: Implement exponential backoff and authorization validation
 
 **Tasks**:
-- [ ] Implement exponential backoff ([Task 6.1-6.3](../../dev-planning/tasks/tasks-security-review-report.md#60-high-priority---retry-logic-improvements-high-05))
-- [ ] Add circuit breaker pattern (optional) ([Task 6.4](../../dev-planning/tasks/tasks-security-review-report.md#60-high-priority---retry-logic-improvements-high-05))
-- [ ] Add retry tests ([Task 6.5](../../dev-planning/tasks/tasks-security-review-report.md#60-high-priority---retry-logic-improvements-high-05))
+- [ ] Implement exponential backoff ([Task 6.1-6.3](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#60-high-priority---retry-logic-improvements-high-05))
+- [ ] Add circuit breaker pattern (optional) ([Task 6.4](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#60-high-priority---retry-logic-improvements-high-05))
+- [ ] Add retry tests ([Task 6.5](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#60-high-priority---retry-logic-improvements-high-05))
 - [ ] Implement authorization scheme validation ([Issue #13](https://github.com/adriannoes/asap-protocol/issues/13))
-- [ ] Update documentation ([Task 6.6](../../dev-planning/tasks/tasks-security-review-report.md#60-high-priority---retry-logic-improvements-high-05))
+- [ ] Update documentation ([Task 6.6](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#60-high-priority---retry-logic-improvements-high-05))
 
 **Definition of Done**:
 - Exponential backoff with jitter working
@@ -599,13 +599,13 @@ warnings.warn(
 **Goal**: Complete MED priority security tasks
 
 **Tasks**:
-- [ ] Implement log sanitization ([Task 7.1-7.2](../../dev-planning/tasks/tasks-security-review-report.md#70-medium-priority---sensitive-data-protection-med-01-med-02), [Issue #12](https://github.com/adriannoes/asap-protocol/issues/12))
-- [ ] Add debug mode configuration ([Task 7.3-7.4](../../dev-planning/tasks/tasks-security-review-report.md#70-medium-priority---sensitive-data-protection-med-01-med-02))
-- [ ] Add sanitization tests ([Task 7.5](../../dev-planning/tasks/tasks-security-review-report.md#70-medium-priority---sensitive-data-protection-med-01-med-02))
-- [ ] Document handler security requirements ([Task 8.1](../../dev-planning/tasks/tasks-security-review-report.md#80-medium-priority---input-validation-hardening-med-03-med-04))
-- [ ] Add FilePart URI validation ([Task 8.2](../../dev-planning/tasks/tasks-security-review-report.md#80-medium-priority---input-validation-hardening-med-03-med-04))
-- [ ] Add handler validation helpers ([Task 8.3-8.4](../../dev-planning/tasks/tasks-security-review-report.md#80-medium-priority---input-validation-hardening-med-03-med-04))
-- [ ] Update handler examples ([Task 8.5](../../dev-planning/tasks/tasks-security-review-report.md#80-medium-priority---input-validation-hardening-med-03-med-04))
+- [ ] Implement log sanitization ([Task 7.1-7.2](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#70-medium-priority---sensitive-data-protection-med-01-med-02), [Issue #12](https://github.com/adriannoes/asap-protocol/issues/12))
+- [ ] Add debug mode configuration ([Task 7.3-7.4](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#70-medium-priority---sensitive-data-protection-med-01-med-02))
+- [ ] Add sanitization tests ([Task 7.5](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#70-medium-priority---sensitive-data-protection-med-01-med-02))
+- [ ] Document handler security requirements ([Task 8.1](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#80-medium-priority---input-validation-hardening-med-03-med-04))
+- [ ] Add FilePart URI validation ([Task 8.2](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#80-medium-priority---input-validation-hardening-med-03-med-04))
+- [ ] Add handler validation helpers ([Task 8.3-8.4](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#80-medium-priority---input-validation-hardening-med-03-med-04))
+- [ ] Update handler examples ([Task 8.5](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#80-medium-priority---input-validation-hardening-med-03-med-04))
 
 **Definition of Done**:
 - Tokens/secrets redacted from logs
@@ -619,9 +619,9 @@ warnings.warn(
 **Goal**: Complete LOW priority security and code quality improvements
 
 **Tasks**:
-- [ ] Improve HandlerRegistry thread safety ([Task 9.1](../../dev-planning/tasks/tasks-security-review-report.md#90-low-priority---code-improvements-low-01-low-02-low-03))
-- [ ] Enhance URN validation ([Task 9.2](../../dev-planning/tasks/tasks-security-review-report.md#90-low-priority---code-improvements-low-01-low-02-low-03))
-- [ ] Add task depth validation ([Task 9.3](../../dev-planning/tasks/tasks-security-review-report.md#90-low-priority---code-improvements-low-01-low-02-low-03))
+- [ ] Improve HandlerRegistry thread safety ([Task 9.1](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#90-low-priority---code-improvements-low-01-low-02-low-03))
+- [ ] Enhance URN validation ([Task 9.2](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#90-low-priority---code-improvements-low-01-low-02-low-03))
+- [ ] Add task depth validation ([Task 9.3](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md#90-low-priority---code-improvements-low-01-low-02-low-03))
 - [ ] Run full code quality audit (ruff, mypy --strict)
 - [ ] Address any remaining linter warnings
 
@@ -1277,11 +1277,11 @@ Based on load testing results:
 
 ### Related Documents
 - [Original PRD: ASAP Implementation](./prd-asap-implementation.md)
-- [Original Tasks](../../dev-planning/tasks/tasks-prd-asap-implementation.md)
-- [Security Review Tasks](../../dev-planning/tasks/tasks-security-review-report.md)
+- [Original Tasks](../../dev-planning/tasks/v0.1.0/tasks-prd-asap-implementation.md)
+- [Security Review Tasks](../../dev-planning/tasks/v0.1.0/tasks-security-review-report.md)
 - [Security Review Report](../code-review/security-review-report.md)
-- **[v0.5.0 Roadmap Tasks](../../dev-planning/tasks/tasks-v0.5.0-roadmap.md)** - 64 tasks across 5 sprints
-- **[v1.0.0 Roadmap Tasks](../../dev-planning/tasks/tasks-v1.0.0-roadmap.md)** - 126 tasks across 13 sprints
+- **[v0.5.0 Roadmap Tasks](../../dev-planning/tasks/v0.5.0/tasks-v0.5.0-roadmap.md)** - 64 tasks across 5 sprints
+- **[v1.0.0 Roadmap Tasks](../../dev-planning/tasks/v1.0.0/tasks-v1.0.0-roadmap.md)** - 126 tasks across 13 sprints
 
 ### GitHub Issues (Mapped to Sprints)
 - [Issue #7: Upgrade FastAPI](https://github.com/adriannoes/asap-protocol/issues/7) → **Sprint S1** (v0.5.0)
@@ -1327,14 +1327,14 @@ Based on load testing results:
 Detailed task lists have been created in separate files:
 
 ### v0.5.0 Security-Hardened Release
-**File**: [tasks-v0.5.0-roadmap.md](../../dev-planning/tasks/tasks-v0.5.0-roadmap.md)
+**File**: [tasks-v0.5.0-roadmap.md](../../dev-planning/tasks/v0.5.0/tasks-v0.5.0-roadmap.md)
 - **Sprints**: 5 (S1-S5)
 - **Tasks**: 64
 - **Duration**: 17-26 days (estimated)
 - **Focus**: CRITICAL + HIGH priority security issues
 
 ### v1.0.0 Production-Ready Release  
-**File**: [tasks-v1.0.0-roadmap.md](../../dev-planning/tasks/tasks-v1.0.0-roadmap.md)
+**File**: [tasks-v1.0.0-roadmap.md](../../dev-planning/tasks/v1.0.0/tasks-v1.0.0-roadmap.md)
 - **Sprints**: 13 (P1-P13)
 - **Tasks**: 126
 - **Duration**: 60-80 days (estimated)

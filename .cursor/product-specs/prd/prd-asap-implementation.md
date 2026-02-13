@@ -335,4 +335,4 @@ schemas/
 
 **Total estimated effort**: ~7 days
 
-> **Note**: See [SPRINT_PLAN.md](../../docs/SPRINT_PLAN.md) for detailed task breakdown.
+> **Note**: See [SPRINT_PLAN.md](../../dev-planning/tasks/v1.0.0/tasks-v1.0.0-roadmap.md) for detailed task breakdown.

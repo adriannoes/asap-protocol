@@ -263,7 +263,7 @@
   - Script that generates JSON Schema files to `schemas/` directory
   - Organize by category: `schemas/entities/`, `schemas/payloads/`, `schemas/envelope.schema.json`
 - [x] 2.7.5 Verify import: `from asap.models import Envelope, TaskRequest`
-- [ ] 2.7.6 Commit: `feat(models): add all core entities, parts, payloads and envelope`
+- [x] 2.7.6 Commit: `feat(models): add all core entities, parts, payloads and envelope`
 
 **Definition of Done**:
 - ✅ All models have passing tests

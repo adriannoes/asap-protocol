@@ -126,7 +126,7 @@
   - Configure: Grafana provisioning loads from `src/asap/observability/dashboards/`
   - Verify: `tests/observability/test_grafana_dashboards.py` validates JSON and panel structure
 
-- [ ] 12.1.4 Commit
+- [x] 12.1.4 Commit
   - Command: `git commit -m "feat(observability): add Grafana dashboards"` (at end of sprint)
 
 **Acceptance**: 2 dashboards (RED + Detailed), working with Prometheus data
@@ -161,7 +161,7 @@
   - File: `docs/mcp-integration.md`
   - Sections: "How to Expose ASAP Agents as MCP Servers", "Connecting Claude/Gemini to ASAP", Demo, Protocol version
 
-- [ ] 12.2.5 Commit
+- [x] 12.2.5 Commit
   - Command: `git commit -m "feat(mcp): add complete MCP server and client"`
 
 **Acceptance**: MCP 100% spec compliant, documented, verified with demo script

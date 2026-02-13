@@ -1,38 +1,40 @@
 # Tasks: ASAP Protocol v1.2.0 Roadmap
 
-> **High-level task overview** for v1.2.0 milestone (Trust Layer)
+> **High-level task overview** for v1.2.0 milestone (Verified Identity)
 >
-> **Parent PRD**: [roadmap-to-marketplace.md](../../product-specs/roadmap-to-marketplace.md)
+> **Parent PRD**: [prd-v1.2-roadmap.md](../../../product-specs/prd/prd-v1.2-roadmap.md)
 > **Prerequisite**: v1.1.0 released
 > **Target Version**: v1.2.0
-> **Focus**: Signed Manifests (Ed25519), Registry API, Evals, mTLS (optional)
+> **Focus**: Signed Manifests (Ed25519), Compliance Harness, mTLS (optional)
 >
 > 💡 **For detailed step-by-step instructions**, see sprint files:
 > - [T1: Ed25519 PKI Foundation](./sprint-T1-ed25519-pki.md)
 > - [T2: Trust Levels & mTLS](./sprint-T2-trust-levels-mtls.md)
-> - [T3: Registry API Core](./sprint-T3-registry-core.md)
-> - [T4: Registry Features](./sprint-T4-registry-features.md)
-> - [T5: Compliance Harness](./sprint-T5-compliance-harness.md)
-> - [T6: DeepEval & Release](./sprint-T6-deepeval-release.md)
+> - [T3: Compliance Harness](./sprint-T3-compliance-harness.md)
+> - [T4: Testing & Release](./sprint-T4-testing-release.md)
+>
+> **Lean Marketplace Pivot**: Registry API (formerly T3/T4) and DeepEval (formerly T6) have been deferred. See [deferred-backlog.md](../../../product-specs/strategy/deferred-backlog.md).
 
 ---
 
 ## Strategic Context
 
-v1.2.0 establishes the Trust Layer for the marketplace:
+v1.2.0 establishes Verified Identity for the marketplace:
 - **Signed Manifests**: Verifiable agent identity using Ed25519 (per SD-4)
-- **Registry API**: Centralized discovery service (per SD-1), uses health endpoint from v1.1 (SD-10) for agent liveness
-- **Evals Framework**: Protocol compliance testing (Shell) + Intelligence (Brain)
+- **Compliance Harness**: Protocol compliance testing (Shell-only)
 - **mTLS**: Optional transport security (per SD-6)
+
+> [!NOTE]
+> **Deferred from v1.2**: Registry API Backend (to v2.1), DeepEval Intelligence (to v2.2+). Lite Registry (v1.1) provides discovery. See [deferred-backlog.md](../../../product-specs/strategy/deferred-backlog.md).
 
 ### Prerequisites from v1.1.0
 
 | v1.1 Deliverable | v1.2 Usage |
 |-------------------|------------|
-| Health endpoint (`/.well-known/asap/health`) | Registry verifies agent liveness before listing (SD-10) |
-| `ttl_seconds` in Manifest | Registry marks agents stale after TTL expires |
-| `SnapshotStore` interface + SQLite | Registry storage follows same interface pattern (SD-9) |
-| Well-known discovery | Registry extends (not replaces) well-known discovery |
+| Health endpoint (`/.well-known/asap/health`) | Compliance harness validates agent liveness (SD-10) |
+| `ttl_seconds` in Manifest | Compliance harness validates freshness |
+| Lite Registry (`registry.json`) | Continues as discovery mechanism (SD-11) |
+| Well-known discovery | Extended with signed manifests |
 
 ---
 
@@ -93,84 +95,28 @@ v1.2.0 establishes the Trust Layer for the marketplace:
 
 ---
 
-## Sprint T3: Registry API Core
-
-**Goal**: Implement centralized registry service (per SD-1)
-
-### Tasks
-
-- [ ] 3.1 Implement registry data model
-  - Goal: Agent registration storage
-  - Deliverable: `src/asap/registry/models.py`
-  - Details: [Registry Detailed - Task 3.1](./sprint-T3-registry-core.md#task-31-data-model)
-
-- [ ] 3.2 Implement registry CRUD endpoints
-  - Goal: Register, update, delete, get agents
-  - Deliverable: RESTful API
-  - Details: [Registry Detailed - Task 3.2](./sprint-T3-registry-core.md#task-32-crud-endpoints)
-
-- [ ] 3.3 Implement search and filtering
-  - Goal: Search by skill, capability, trust level
-  - Deliverable: Query API
-  - Details: [Registry Detailed - Task 3.3](./sprint-T3-registry-core.md#task-33-search-api)
-
-### Definition of Done
-- [ ] Agents can register with signed manifests
-- [ ] Search returns matching agents
-- [ ] API documented
-
----
-
-## Sprint T4: Registry Features
-
-**Goal**: Add reputation and advanced features
-
-### Tasks
-
-- [ ] 4.1 Implement basic reputation
-  - Goal: Store and retrieve reputation scores
-  - Deliverable: Reputation endpoint
-  - Details: [Registry Detailed - Task 4.1](./sprint-T4-registry-features.md#task-41-reputation-system)
-
-- [ ] 4.2 Add registry client SDK
-  - Goal: Python SDK for registry operations
-  - Deliverable: `src/asap/registry/client.py`
-  - Details: [Registry Detailed - Task 4.2](./sprint-T4-registry-features.md#task-42-registry-client)
-
-- [ ] 4.3 Integrate discovery with registry
-  - Goal: Client.discover() uses registry if available
-  - Fallback: Well-known URI (v1.1)
-  - Details: [Registry Detailed - Task 4.3](./sprint-T4-registry-features.md#task-43-discovery-integration)
-
-### Definition of Done
-- [ ] Reputation queryable
-- [ ] SDK simplifies registry ops
-- [ ] Discovery prefers registry
-
----
-
-## Sprint T5: ASAP Compliance Harness
+## Sprint T3: ASAP Compliance Harness
 
 **Goal**: Implement Shell evaluation (protocol compliance)
 
 ### Tasks
 
-- [ ] 5.1 Create compliance test suite
+- [ ] 3.1 Create compliance test suite
   - Goal: Pytest-based compliance tests
   - Deliverable: `asap-compliance/` package
-  - Details: [Evals Detailed - Task 5.1](./sprint-T5-compliance-harness.md#task-51-compliance-suite)
+  - Details: [Evals Detailed - Task 3.1](./sprint-T3-compliance-harness.md#task-31-compliance-suite)
 
-- [ ] 5.2 Implement handshake validation
+- [ ] 3.2 Implement handshake validation
   - Goal: Validate agent handshake correctness
-  - Details: [Evals Detailed - Task 5.2](./sprint-T5-compliance-harness.md#task-52-handshake-validation)
+  - Details: [Evals Detailed - Task 3.2](./sprint-T3-compliance-harness.md#task-32-handshake-validation)
 
-- [ ] 5.3 Implement schema validation
+- [ ] 3.3 Implement schema validation
   - Goal: Verify Pydantic schema compliance
-  - Details: [Evals Detailed - Task 5.3](./sprint-T5-compliance-harness.md#task-53-schema-validation)
+  - Details: [Evals Detailed - Task 3.3](./sprint-T3-compliance-harness.md#task-33-schema-validation)
 
-- [ ] 5.4 Implement state machine validation
+- [ ] 3.4 Implement state machine validation
   - Goal: Verify correct state transitions
-  - Details: [Evals Detailed - Task 5.4](./sprint-T5-compliance-harness.md#task-54-state-machine-validation)
+  - Details: [Evals Detailed - Task 3.4](./sprint-T3-compliance-harness.md#task-34-state-machine-validation)
 
 ### Definition of Done
 - [ ] Compliance harness runnable against any agent
@@ -179,33 +125,28 @@ v1.2.0 establishes the Trust Layer for the marketplace:
 
 ---
 
-## Sprint T6: DeepEval Integration & Release
+## Sprint T4: Testing & Release
 
-**Goal**: Add Intelligence evaluation and release v1.2.0
+**Goal**: Comprehensive testing and release v1.2.0
 
 ### Tasks
 
-- [ ] 6.1 Integrate DeepEval (optional)
-  - Goal: Intelligence metrics for Brain evaluation
-  - Deliverable: DeepEval adapter
-  - Details: [Evals Detailed - Task 6.1](./sprint-T6-deepeval-release.md#task-61-deepeval-integration)
+- [ ] 4.1 Run comprehensive testing
+  - Goal: All tests pass, integration tests with v1.1 features
+  - Details: [Release Detailed - Task 4.1](./sprint-T4-testing-release.md#task-41-comprehensive-testing)
 
-- [ ] 6.2 Run comprehensive testing
-  - Goal: All tests pass
-  - Details: [Evals Detailed - Task 6.2](./sprint-T6-deepeval-release.md#task-62-comprehensive-testing)
-
-- [ ] 6.3 Prepare release materials
+- [ ] 4.2 Prepare release materials
   - Goal: CHANGELOG, docs, version bump
-  - Details: [Evals Detailed - Task 6.3](./sprint-T6-deepeval-release.md#task-63-release-preparation)
+  - Details: [Release Detailed - Task 4.2](./sprint-T4-testing-release.md#task-42-release-preparation)
 
-- [ ] 6.4 Build and publish
+- [ ] 4.3 Build and publish
   - Goal: PyPI, GitHub, Docker
-  - Details: [Evals Detailed - Task 6.4](./sprint-T6-deepeval-release.md#task-64-build-and-publish)
+  - Details: [Release Detailed - Task 4.3](./sprint-T4-testing-release.md#task-43-build-and-publish)
 
 ### Definition of Done
 - [ ] Compliance harness published
-- [ ] DeepEval integration documented
 - [ ] v1.2.0 on PyPI
+- [ ] Documentation complete
 
 ---
 
@@ -215,34 +156,41 @@ v1.2.0 establishes the Trust Layer for the marketplace:
 |--------|-------|-------|----------------|
 | T1 | 3 | Ed25519 PKI | 5-7 |
 | T2 | 3 | Trust Levels + mTLS | 4-6 |
-| T3 | 3 | Registry API Core | 6-8 |
-| T4 | 3 | Registry Features | 4-6 |
-| T5 | 4 | Compliance Harness | 5-7 |
-| T6 | 4 | DeepEval + Release | 4-6 |
+| T3 | 4 | Compliance Harness | 5-7 |
+| T4 | 3 | Testing + Release | 4-6 |
 
-**Total**: 20 high-level tasks across 6 sprints
+**Total**: 13 high-level tasks across 4 sprints
 
 ---
 
 ## Progress Tracking
 
-**Overall Progress**: 0/20 tasks completed (0%)
+**Overall Progress**: 0/13 tasks completed (0%)
 
 **Sprint Status**:
 - ⬜ T1: 0/3 tasks (0%)
 - ⬜ T2: 0/3 tasks (0%)
-- ⬜ T3: 0/3 tasks (0%)
+- ⬜ T3: 0/4 tasks (0%)
 - ⬜ T4: 0/3 tasks (0%)
-- ⬜ T5: 0/4 tasks (0%)
-- ⬜ T6: 0/4 tasks (0%)
 
-**Last Updated**: 2026-02-05
+**Last Updated**: 2026-02-12
 
 ---
 
 ## Related Documents
 
 - **Detailed Tasks**: See sprint files listed at top
-- **Parent Roadmap**: [roadmap-to-marketplace.md](../../product-specs/roadmap-to-marketplace.md)
-- **Vision**: [vision-agent-marketplace.md](../../product-specs/vision-agent-marketplace.md)
-- **Strategic Decisions**: SD-1, SD-4, SD-5, SD-6 in roadmap
+- **Parent PRD**: [prd-v1.2-roadmap.md](../../../product-specs/prd/prd-v1.2-roadmap.md)
+- **Deferred Backlog**: [deferred-backlog.md](../../../product-specs/strategy/deferred-backlog.md)
+- **Parent Roadmap**: [roadmap-to-marketplace.md](../../../product-specs/strategy/roadmap-to-marketplace.md)
+- **Vision**: [vision-agent-marketplace.md](../../../product-specs/strategy/vision-agent-marketplace.md)
+- **Strategic Decisions**: SD-4, SD-5, SD-6, SD-11 in roadmap
+
+---
+
+## Change Log
+
+| Date | Change |
+|------|--------|
+| 2026-02-05 | Initial task roadmap |
+| 2026-02-12 | **Lean Marketplace pivot**: Removed Registry sprints (T3/T4) and DeepEval sprint (T6), renumbered Compliance Harness to T3 and Testing/Release to T4, reduced from 6 sprints (20 tasks) to 4 sprints (13 tasks) |

@@ -1,56 +1,60 @@
 # Tasks: ASAP Protocol v1.3.0 Roadmap
 
-> **High-level task overview** for v1.3.0 milestone (Economics Layer)
+> **High-level task overview** for v1.3.0 milestone (Observability & Delegation)
 >
 > **Parent PRD**: [prd-v1.3-roadmap.md](../../../product-specs/prd/prd-v1.3-roadmap.md)
 > **Prerequisite**: v1.2.0 released
 > **Target Version**: v1.3.0
-> **Focus**: Usage Metering, Delegation Tokens, SLA Framework, Audit Logging
+> **Focus**: Observability Metering, Delegation Tokens, SLA Framework
 >
 > 💡 **For detailed step-by-step instructions**, see sprint files:
-> - [E1: Usage Metering](./sprint-E1-usage-metering.md)
+> - [E1: Observability Metering](./sprint-E1-usage-metering.md)
 > - [E2: Delegation Tokens](./sprint-E2-delegation-tokens.md)
-> - [E3: SLA Framework](./sprint-E3-sla-framework.md)
-> - [E4: Audit Logging & Release](./sprint-E4-audit-release.md)
+> - [E3: SLA Framework & Release](./sprint-E3-sla-framework.md)
+>
+> **Lean Marketplace Pivot**: Audit logging (formerly E4) has been deferred to v2.1+. Metering reframed as observability (visibility, not billing). See [deferred-backlog.md](../../../product-specs/strategy/deferred-backlog.md).
 
 ---
 
 ## Strategic Context
 
 v1.3.0 is the **final infrastructure release** before v2.0 Marketplace:
-- **Metering**: Foundation for pay-per-use billing — uses `MeteringStore` interface from v1.1 (SD-9, ADR-13)
+- **Observability Metering**: Usage visibility (not billing) — uses `MeteringStore` interface from v1.1 (SD-9, ADR-13)
 - **Delegation**: Trust chains for enterprise hierarchies
 - **SLA**: Service guarantees — uses health endpoint from v1.1 for availability monitoring (SD-10, ADR-14)
-- **Audit**: Compliance and dispute resolution
 
-### Prerequisites from v1.1.0
+> [!NOTE]
+> **Deferred from v1.3**: Credit system (to v3.0), Audit logging (to v2.1+). See [deferred-backlog.md](../../../product-specs/strategy/deferred-backlog.md).
 
-| v1.1 Deliverable | v1.3 Usage |
+### Prerequisites from v1.1.0 / v1.2.0
+
+| Deliverable | Usage in v1.3 |
 |-------------------|------------|
-| `MeteringStore` Protocol | Usage metering storage backend (Sprint E1) |
-| `SnapshotStore` + SQLite impl | Base pattern for `AuditStore` (Sprint E4) |
-| Health endpoint (`/.well-known/asap/health`) | SLA uptime/availability monitoring (Sprint E3) |
-| `ttl_seconds` in Manifest | SLA availability measurement (Sprint E3) |
+| `MeteringStore` Protocol (v1.1) | Observability metering storage backend (Sprint E1) |
+| Health endpoint (v1.1) | SLA uptime/availability monitoring (Sprint E3) |
+| `ttl_seconds` in Manifest (v1.1) | SLA availability measurement (Sprint E3) |
+| Ed25519 signing (v1.2) | Delegation tokens signed with agent keys |
+| Compliance Harness (v1.2) | Extended to validate delegation flows |
 
 ---
 
-## Sprint E1: Usage Metering
+## Sprint E1: Observability Metering
 
-**Goal**: Track and report resource consumption per task
+**Goal**: Track and report resource consumption per task (visibility, not billing)
 
 ### Tasks
 
 - [ ] 1.1 Design metering data model
   - Goal: Define metrics schema (tokens, duration, calls)
-  - Deliverable: `src/asap/economics/metering.py`
+  - Deliverable: `src/asap/observability/metering.py`
 
 - [ ] 1.2 Implement metering hooks
   - Goal: Capture metrics during task execution
   - Deliverable: Middleware integration
 
 - [ ] 1.3 Implement metering storage
-  - Goal: Store and query usage data
-  - Deliverable: Time-series storage interface
+  - Goal: Store and query usage data via `MeteringStore`
+  - Deliverable: SQLite reference implementation
 
 - [ ] 1.4 Implement metering API
   - Goal: GET /usage endpoint for querying
@@ -72,10 +76,10 @@ v1.3.0 is the **final infrastructure release** before v2.0 Marketplace:
 
 - [ ] 2.1 Design delegation token model
   - Goal: Token with scopes, constraints, signature
-  - Deliverable: `src/asap/economics/delegation.py`
+  - Deliverable: `src/asap/auth/delegation.py`
 
 - [ ] 2.2 Implement token creation and signing
-  - Goal: Create tokens signed by delegator
+  - Goal: Create tokens signed by delegator (Ed25519 from v1.2)
   - Deliverable: CLI + API
 
 - [ ] 2.3 Implement token validation
@@ -94,9 +98,9 @@ v1.3.0 is the **final infrastructure release** before v2.0 Marketplace:
 
 ---
 
-## Sprint E3: SLA Framework
+## Sprint E3: SLA Framework & Release
 
-**Goal**: Define and enforce service level agreements
+**Goal**: Define and enforce service level agreements, then release v1.3.0
 
 ### Tasks
 
@@ -105,55 +109,26 @@ v1.3.0 is the **final infrastructure release** before v2.0 Marketplace:
   - Deliverable: Manifest schema extension
 
 - [ ] 3.2 Implement SLA tracking
-  - Goal: Measure actual vs promised SLA
+  - Goal: Measure actual vs promised SLA (uses health endpoint)
   - Deliverable: SLA metrics collection
 
 - [ ] 3.3 Implement breach detection
   - Goal: Real-time breach alerts
   - Deliverable: Alert hooks
 
-- [ ] 3.4 Implement SLA API
-  - Goal: GET /agents/{id}/sla endpoint
-  - Deliverable: SLA history API
+- [ ] 3.4 Comprehensive testing
+  - Goal: All tests pass, integration with v1.1/v1.2 features
+  - Deliverable: Test suite
+
+- [ ] 3.5 Release preparation
+  - Goal: CHANGELOG, docs, version bump
+  - Deliverable: v1.3.0 release on PyPI
 
 ### Definition of Done
 - [ ] SLA defined in manifest
 - [ ] Breaches detected in real-time
-- [ ] SLA history queryable
-- [ ] Test coverage >95%
-
----
-
-## Sprint E4: Audit Logging & Release
-
-**Goal**: Compliance logging and v1.3.0 release
-
-### Tasks
-
-- [ ] 4.1 Implement audit log format
-  - Goal: Append-only, tamper-evident
-  - Deliverable: `src/asap/economics/audit.py`
-
-- [ ] 4.2 Log all billable events
-  - Goal: Task start, complete, usage reports
-  - Deliverable: Audit integration
-
-- [ ] 4.3 Implement audit query API
-  - Goal: Query by task, agent, time
-  - Deliverable: REST API
-
-- [ ] 4.4 Comprehensive testing
-  - Goal: All tests pass
-  - Deliverable: Test suite
-
-- [ ] 4.5 Release preparation
-  - Goal: CHANGELOG, docs, version bump
-  - Deliverable: v1.3.0 release
-
-### Definition of Done
-- [ ] Audit logs all events
-- [ ] Query API functional
 - [ ] v1.3.0 published to PyPI
+- [ ] Test coverage >95%
 
 ---
 
@@ -161,20 +136,19 @@ v1.3.0 is the **final infrastructure release** before v2.0 Marketplace:
 
 | Sprint | Tasks | Focus | Estimated Days |
 |--------|-------|-------|----------------|
-| E1 | 4 | Usage Metering | 5-7 |
+| E1 | 4 | Observability Metering | 5-7 |
 | E2 | 4 | Delegation Tokens | 5-7 |
-| E3 | 4 | SLA Framework | 4-6 |
-| E4 | 5 | Audit + Release | 4-6 |
+| E3 | 5 | SLA Framework + Release | 5-8 |
 
-**Total**: 17 high-level tasks across 4 sprints
+**Total**: 13 high-level tasks across 3 sprints
 
 ---
 
 ## Progress Tracking
 
-**Overall Progress**: 0/17 tasks completed (0%)
+**Overall Progress**: 0/13 tasks completed (0%)
 
-**Last Updated**: 2026-02-06
+**Last Updated**: 2026-02-12
 
 ---
 
@@ -185,11 +159,22 @@ After releasing v1.3.0, conduct a checkpoint review:
 - [ ] Update v2.0.0 PRD with learnings
 - [ ] Review and update v2.0.0 sprint estimates
 - [ ] Document lessons learned
-- [ ] Validate Economics Layer meets v2.0 requirements
+- [ ] Validate Observability Layer meets v2.0 requirements
 
 ---
 
 ## Related Documents
 
 - **PRD**: [prd-v1.3-roadmap.md](../../../product-specs/prd/prd-v1.3-roadmap.md)
-- **Roadmap**: [roadmap-to-marketplace.md](../../../product-specs/roadmap-to-marketplace.md)
+- **Deferred Backlog**: [deferred-backlog.md](../../../product-specs/strategy/deferred-backlog.md)
+- **Roadmap**: [roadmap-to-marketplace.md](../../../product-specs/strategy/roadmap-to-marketplace.md)
+- **Vision**: [vision-agent-marketplace.md](../../../product-specs/strategy/vision-agent-marketplace.md)
+
+---
+
+## Change Log
+
+| Date | Change |
+|------|--------|
+| 2026-02-06 | Initial task roadmap |
+| 2026-02-12 | **Lean Marketplace pivot**: Removed Audit Logging sprint (E4), reframed metering as observability, merged release into E3, reduced from 4 sprints (17 tasks) to 3 sprints (13 tasks) |

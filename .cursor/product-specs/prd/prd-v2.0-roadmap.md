@@ -1,11 +1,11 @@
-# PRD: ASAP Protocol v2.0.0 — Marketplace + Web App
+# PRD: ASAP Protocol v2.0.0 — Lean Marketplace + Web App
 
 > **Product Requirements Document**
 >
 > **Version**: 2.0.0
 > **Status**: APPROVED
 > **Created**: 2026-02-06
-> **Last Updated**: 2026-02-06
+> **Last Updated**: 2026-02-12
 
 ---
 
@@ -13,23 +13,25 @@
 
 ### 1.1 Purpose
 
-v2.0.0 is **The End Goal** — the complete Agent Marketplace with human-facing Web App. This release delivers:
+v2.0.0 is **The End Goal** — the Agent Marketplace with human-facing Web App. This release delivers:
 
-- **Marketplace Core**: Production Registry with full trust and economy integration
 - **Web App**: Human interface for agent discovery, registration, and management
+- **Lite Registry Integration**: Web App reads from `registry.json` (GitHub Pages)
 - **Verified Badge**: ASAP-signed verification service ($49/month)
 - **Payment Integration**: Stripe checkout for Verified badge
-- **Production Infrastructure**: Scalable, secure, monitored
+
+> [!NOTE]
+> **Lean Marketplace approach**: No backend API. The Web App reads from the Lite Registry (SD-11). A full Registry API Backend is deferred to v2.1. See [deferred-backlog.md](../strategy/deferred-backlog.md).
 
 ### 1.2 Strategic Context
 
 All previous versions (v1.0-v1.3) built foundational capabilities:
 - v1.0: Core protocol
-- v1.1: Identity (OAuth2, WebSocket, Discovery)
-- v1.2: Trust (Ed25519, Registry, Evals)
-- v1.3: Economics (Metering, Delegation, SLA, Audit)
+- v1.1: Identity (OAuth2, WebSocket, Discovery, Lite Registry)
+- v1.2: Verified Identity (Ed25519, Compliance Harness)
+- v1.3: Observability (Metering, Delegation, SLA)
 
-v2.0 integrates everything into a cohesive marketplace product.
+v2.0 wraps the Lite Registry in a Web App with Verified badge as the first revenue stream.
 
 **Domain**: asap-protocol.com (marketplace product name TBD — Open Question Q10)
 
@@ -39,11 +41,10 @@ v2.0 integrates everything into a cohesive marketplace product.
 
 | Goal | Metric | Priority |
 |------|--------|----------|
-| Registry handles scale | 10,000+ agents | P1 |
 | Web App live | Core flows functional | P1 |
+| Lite Registry browsable | Agents searchable in Web App | P1 |
 | Verified badge operational | Payment flow works | P1 |
-| Trust scores computed | All registered agents | P1 |
-| 100+ beta registrations | Before public launch | P1 |
+| 100+ agents in Lite Registry | Before launch | P1 |
 | Security audit passed | No critical findings | P1 |
 
 ---
@@ -66,16 +67,15 @@ v2.0 integrates everything into a cohesive marketplace product.
 
 ## 4. Functional Requirements
 
-### 4.1 Marketplace Core (P1)
+### 4.1 Lite Registry Integration (P1)
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| MARKET-001 | Production Registry deployment | MUST |
-| MARKET-002 | Registry scaling (10k+ agents) | MUST |
-| MARKET-003 | Trust score integration | MUST |
-| MARKET-004 | Full-text agent search | MUST |
-| MARKET-005 | Reputation display | MUST |
-| MARKET-006 | Real-time status (online/offline) | SHOULD |
+| REG-001 | Fetch and parse `registry.json` from GitHub Pages | MUST |
+| REG-002 | Agent search by skill, trust level | MUST |
+| REG-003 | Agent detail view (manifest, SLA, status) | MUST |
+| REG-004 | Real-time status (online/offline via health endpoint) | SHOULD |
+| REG-005 | Cache registry data with configurable TTL | MUST |
 
 ---
 
@@ -123,12 +123,10 @@ v2.0 integrates everything into a cohesive marketplace product.
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| INFRA-001 | Production deployment (Vercel/Railway) | MUST |
-| INFRA-002 | Database (Postgres or SQLite scaling) | MUST |
-| INFRA-003 | CDN for static assets | SHOULD |
-| INFRA-004 | Monitoring (Prometheus + Grafana) | MUST |
-| INFRA-005 | Error tracking (Sentry or similar) | MUST |
-| INFRA-006 | Automated backups | MUST |
+| INFRA-001 | Production deployment (Vercel) | MUST |
+| INFRA-002 | CDN for static assets | SHOULD |
+| INFRA-003 | Monitoring (uptime, error rates) | MUST |
+| INFRA-004 | Error tracking (Sentry or similar) | MUST |
 
 ---
 
@@ -148,11 +146,13 @@ v2.0 integrates everything into a cohesive marketplace product.
 
 | Feature | Reason | When |
 |---------|--------|------|
+| Registry API Backend | Lite Registry sufficient for MVP | v2.1 |
 | Federation | After centralized proves ROI | v2.x+ |
 | Advanced analytics dashboard | Post-MVP | v2.1+ |
 | Mobile app | Web-first | TBD |
 | Multiple payment providers | Stripe is enough | TBD |
 | Enterprise SSO | After enterprise traction | v2.1+ |
+| Economy Settlement | Requires live marketplace transactions | v3.0 |
 
 ---
 
@@ -164,59 +164,37 @@ v2.0 integrates everything into a cohesive marketplace product.
 |-------|------------|-----------|
 | Frontend | **Next.js 15 (App Router)** | SSR for Registry SEO, React Server Components |
 | Styling | **TailwindCSS v4 + Shadcn** | Premium UI velocity (Exception to no-Tailwind rule) |
-| Backend API | FastAPI (existing ASAP code) | Code reuse, same stack |
-| Database | PostgreSQL | Production-grade |
+| Data Source | Lite Registry (`registry.json`) | No backend needed for MVP |
 | Auth | ASAP OAuth2 + **GitHub (TBD)** | Dog-fooding + Bootstrap ease (See Q11) |
 | Payments | Stripe | SaaS standard |
-| Hosting | Vercel (frontend) + Railway (API) | Simple, scalable |
+| Hosting | Vercel | Simple, scalable |
 | Docs | Separate MkDocs | Per SD-8 decision |
 
 ### 6.2 Architecture
 
 ```
-┌───────────────────────────────────────────────────────────────────┐
-│                        WEB LAYER                                   │
+┌─────────────────────────────────────────────────────────────────┐
+│                        WEB LAYER (Next.js)                          │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐               │
 │  │   Landing   │  │  Registry   │  │  Dashboard  │               │
 │  │    Page     │  │   Browser   │  │   (Auth)    │               │
 │  └─────────────┘  └─────────────┘  └─────────────┘               │
-└───────────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────────┘
                             │
-                            ▼
-┌───────────────────────────────────────────────────────────────────┐
-│                        API LAYER (FastAPI)                         │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐               │
-│  │  Registry   │  │   Trust     │  │  Economy    │               │
-│  │    API      │  │    API      │  │    API      │               │
-│  └─────────────┘  └─────────────┘  └─────────────┘               │
-└───────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌───────────────────────────────────────────────────────────────────┐
-│                    STORAGE LAYER (SD-9)                             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐               │
-│  │SnapshotStore│  │MeteringStore│  │  AuditStore │               │
-│  │ (interface) │  │ (interface) │  │ (interface) │               │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘               │
-│         └────────────────┼────────────────┘                       │
-│                          ▼                                         │
-│               Agent's choice of backend                            │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐               │
-│  │   SQLite    │  │   Redis     │  │  Postgres   │               │
-│  └─────────────┘  └─────────────┘  └─────────────┘               │
-└───────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌───────────────────────────────────────────────────────────────────┐
-│                    MARKETPLACE DATA (centrally managed)             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐               │
-│  │  PostgreSQL │  │   Stripe    │  │   Metrics   │               │
-│  │ (registry)  │  │   (SaaS)    │  │ (Prometheus)│               │
-│  └─────────────┘  └─────────────┘  └─────────────┘               │
-└───────────────────────────────────────────────────────────────────┘
+              ┌────────────┼────────────┐
+              ▼                         ▼
+┌───────────────────────┐  ┌───────────────────────┐
+│  LITE REGISTRY (SD-11)    │  │  EXTERNAL SERVICES        │
+│  ┌───────────────────┐  │  │  ┌───────────────────┐  │
+│  │  registry.json     │  │  │  │ Stripe (Payments)  │  │
+│  │  (GitHub Pages)    │  │  │  └───────────────────┘  │
+│  └───────────────────┘  │  │  ┌───────────────────┐  │
+└───────────────────────┘  │  │ Sentry (Errors)    │  │
+                               │  └───────────────────┘  │
+                               └───────────────────────┘
 ```
 
-> **Note (SD-9)**: Agent task state uses the `SnapshotStore`/`MeteringStore` interfaces (defined in v1.1) — agents choose their own backend. Marketplace metadata (registry, trust scores, SLA compliance) is stored centrally in PostgreSQL. **ASAP Cloud** (post-v2.0) may offer managed storage as a premium feature ("Vercel for Agents").
+> **Note**: No backend API in v2.0. The Web App fetches `registry.json` at build time (SSG) or at request time (ISR) from GitHub Pages. Agent registration is still PR-based. A full Registry API Backend is planned for v2.1 when scale demands it.
 
 ### 6.3 Repository Structure
 
@@ -224,19 +202,15 @@ v2.0 integrates everything into a cohesive marketplace product.
 asap-protocol/
 ├── src/asap/              # Protocol library (existing)
 ├── apps/
-│   ├── web/               # Next.js 15 Web App (App Router)
-│   │   ├── src/
-│   │   │   ├── pages/
-│   │   │   ├── components/
-│   │   │   └── styles/
-│   │   └── package.json
-│   └── api/               # FastAPI production API
-│       ├── main.py
-│       ├── routers/
-│       └── Dockerfile
+│   └── web/               # Next.js 15 Web App (App Router)
+│       ├── src/
+│       │   ├── app/           # App Router pages
+│       │   ├── components/
+│       │   ├── lib/           # Data fetching (registry.json)
+│       │   └── styles/
+│       └── package.json
 └── infra/
-    ├── docker-compose.yml
-    └── k8s/               # Optional K8s manifests
+    └── vercel.json
 ```
 
 ---
@@ -245,7 +219,7 @@ asap-protocol/
 
 | Metric | Target |
 |--------|--------|
-| Registry agents | 1,000+ at launch |
+| Lite Registry agents | 100+ at launch |
 | Web App uptime | 99.9% |
 | Verified conversions | 5% of registered agents |
 | Page load time | <2s (p95) |
@@ -257,13 +231,11 @@ asap-protocol/
 
 Before announcing v2.0.0:
 
-- [ ] Registry handles 10,000+ agents (load test)
-- [ ] Trust scores computed for all agents
-- [ ] Freemium pricing live (Verified at $49/mo)
-- [ ] 100+ agents registered (beta)
-- [ ] Web App live with core features
+- [ ] Lite Registry has 100+ agents
+- [ ] Verified badge flow working (Stripe + ASAP CA signing)
+- [ ] Web App live with core features (browse, search, register)
 - [ ] Security audit passed
-- [ ] Monitoring dashboards operational
+- [ ] Monitoring operational
 - [ ] Documentation complete
 
 ---
@@ -271,8 +243,9 @@ Before announcing v2.0.0:
 ## 9. Related Documents
 
 - **Tasks**: [tasks-v2.0.0-roadmap.md](../../dev-planning/tasks/v2.0.0/tasks-v2.0.0-roadmap.md)
-- **Roadmap**: [roadmap-to-marketplace.md](../roadmap-to-marketplace.md)
-- **Vision**: [vision-agent-marketplace.md](../vision-agent-marketplace.md)
+- **Deferred Backlog**: [deferred-backlog.md](../strategy/deferred-backlog.md)
+- **Roadmap**: [roadmap-to-marketplace.md](../strategy/roadmap-to-marketplace.md)
+- **Vision**: [vision-agent-marketplace.md](../strategy/vision-agent-marketplace.md)
 - **v1.3 PRD**: [prd-v1.3-roadmap.md](./prd-v1.3-roadmap.md)
 
 ---
@@ -283,3 +256,4 @@ Before announcing v2.0.0:
 |------|---------|--------|
 | 2026-02-06 | 1.0.0 | Initial PRD for v2.0.0 |
 | 2026-02-07 | 1.1.0 | Updated architecture diagram with Storage Layer (SD-9), ASAP Cloud reference |
+| 2026-02-12 | 1.2.0 | **Lean Marketplace pivot**: Replaced Production Registry with Lite Registry integration, removed FastAPI backend/PostgreSQL, simplified architecture to Next.js + GitHub Pages JSON, updated goals/launch criteria (100+ instead of 10k+), added Economy Settlement to non-goals (v3.0) |

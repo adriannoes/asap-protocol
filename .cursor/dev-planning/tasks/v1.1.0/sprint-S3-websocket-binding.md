@@ -207,7 +207,7 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
 
 **Goal**: Implement selective message acknowledgment for reliable WebSocket delivery.
 
-**Context**: WebSocket is fire-and-forget at the transport level. State-changing messages (`TaskRequest`, `TaskCancel`, `StateRestore`, `MessageSend`) MUST be acknowledged to prevent task state machine inconsistencies. Streaming updates and heartbeats do NOT need acks. See [ADR-16](../../../product-specs/ADR.md#question-16-websocket-message-acknowledgment).
+**Context**: WebSocket is fire-and-forget at the transport level. State-changing messages (`TaskRequest`, `TaskCancel`, `StateRestore`, `MessageSend`) MUST be acknowledged to prevent task state machine inconsistencies. Streaming updates and heartbeats do NOT need acks. See [ADR-16](../../../product-specs/decision-records/README.md#question-16-websocket-message-acknowledgment).
 
 **Prerequisites**: Tasks 3.1-3.3 completed (WebSocket server, client, connection management)
 
@@ -268,7 +268,7 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
 - [x] Critical payloads auto-set `requires_ack=True` over WebSocket
 - [x] Server sends ack for critical messages
 - [x] HTTP transport unchanged (implicit ack via response)
-- [ ] Test coverage >95%
+- [x] Test coverage >95%
 
 ---
 
@@ -276,7 +276,7 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
 
 **Goal**: Implement client-side ack tracking with timeout/retry logic.
 
-**Context**: The `MessageAck` payload (Task 3.4) is useless without a client that acts on it. The `AckAwareClient` manages pending acks, retransmits on timeout, and integrates with the circuit breaker. Without this, the ack protocol defines behavior but nothing enforces it. See [ADR-16](../../../product-specs/ADR.md#question-16-websocket-message-acknowledgment).
+**Context**: The `MessageAck` payload (Task 3.4) is useless without a client that acts on it. The `AckAwareClient` manages pending acks, retransmits on timeout, and integrates with the circuit breaker. Without this, the ack protocol defines behavior but nothing enforces it. See [ADR-16](../../../product-specs/decision-records/README.md#question-16-websocket-message-acknowledgment).
 
 **Prerequisites**: Task 3.4 completed (MessageAck payload exists)
 
@@ -342,7 +342,7 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
 - [x] Timeout detection triggers retransmission
 - [x] Retransmission uses same envelope `id` (idempotency)
 - [x] Max retries triggers circuit breaker
-- [ ] Test coverage >95%
+- [x] Test coverage >95%
 
 ---
 
@@ -387,7 +387,7 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
 - [x] MessageAck payload for state-changing messages (ADR-16)
 - [x] AckAwareClient with timeout/retry/circuit breaker (ADR-16)
 - [x] WebSocket message rate limiting (Task 3.6)
-- [ ] Test coverage >95%
+- [x] Test coverage >95%
   - **Status**: `envelope.py` and `payloads.py` 100% (full suite). `websocket.py` ~68% (many branches in server handler, reconnection, pool). DoD remains open until websocket module reaches >95% or team agrees to scope.
 
 **Total Sub-tasks**: ~30

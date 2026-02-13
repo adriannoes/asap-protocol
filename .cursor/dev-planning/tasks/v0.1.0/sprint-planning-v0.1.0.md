@@ -25,14 +25,14 @@
 
 ### Tarefas
 
-- [ ] Criar repositório no GitHub com nome asap-protocol
-- [ ] Criar estrutura de diretórios
-- [ ] Configurar `pyproject.toml` (Poetry/PDM)
-- [ ] Setup pytest + pytest-asyncio
-- [ ] Configurar ruff (linting) + black (formatting)
-- [ ] GitHub Actions: lint + test
-- [ ] README básico com badge de CI (ou atualizar o README existente)
-- [ ] Primeiro commit e push (criando o repo) pedindo confirmação ao usuário.
+- [x] Criar repositório no GitHub com nome asap-protocol
+- [x] Criar estrutura de diretórios
+- [x] Configurar `pyproject.toml` (Poetry/PDM)
+- [x] Setup pytest + pytest-asyncio
+- [x] Configurar ruff (linting) + black (formatting)
+- [x] GitHub Actions: lint + test
+- [x] README básico com badge de CI (ou atualizar o README existente)
+- [x] Primeiro commit e push (criando o repo) pedindo confirmação ao usuário.
 
 ### Definição de Pronto
 ✅ Repositório criado e disponível no GitHub
@@ -60,39 +60,39 @@ asap-protocol/
 
 ### Fase 1A: Entities (0.5 dia)
 
-- [ ] `models/base.py` - BaseModel com configurações comuns
-- [ ] `models/ids.py` - ULID generation helpers
-- [ ] `models/entities.py`:
-  - [ ] `Agent`
-  - [ ] `Manifest`
-  - [ ] `Conversation`
-  - [ ] `Task`
-  - [ ] `Message`
-  - [ ] `Artifact`
-  - [ ] `StateSnapshot`
-- [ ] Testes unitários para cada entity
+- [x] `models/base.py` - BaseModel com configurações comuns
+- [x] `models/ids.py` - ULID generation helpers
+- [x] `models/entities.py`:
+  - [x] `Agent`
+  - [x] `Manifest`
+  - [x] `Conversation`
+  - [x] `Task`
+  - [x] `Message`
+  - [x] `Artifact`
+  - [x] `StateSnapshot`
+- [x] Testes unitários para cada entity
 
 ### Fase 1B: Parts (0.5 dia)
 
-- [ ] `models/parts.py`:
-  - [ ] `TextPart`
-  - [ ] `DataPart`
-  - [ ] `FilePart`
-  - [ ] `ResourcePart`
-  - [ ] `TemplatePart`
-  - [ ] `Part` (união discriminada)
-- [ ] Testes de serialização/deserialização
+- [x] `models/parts.py`:
+  - [x] `TextPart`
+  - [x] `DataPart`
+  - [x] `FilePart`
+  - [x] `ResourcePart`
+  - [x] `TemplatePart`
+  - [x] `Part` (união discriminada)
+- [x] Testes de serialização/deserialização
 
 ### Fase 1C: Payloads + Envelope (0.5 dia)
 
-- [ ] `models/payloads.py`:
-  - [ ] `TaskRequest`, `TaskResponse`, `TaskUpdate`, `TaskCancel`
-  - [ ] `MessageSend`, `StateQuery`, `StateRestore`, `ArtifactNotify`
-  - [ ] `McpToolCall`, `McpToolResult`, `McpResourceFetch`, `McpResourceData`
-  - [ ] `Payload` (união discriminada por `payload_type`)
-- [ ] `models/envelope.py`:
-  - [ ] `Envelope` com auto-gen de id, timestamp
-- [ ] Testes de envelope creation
+- [x] `models/payloads.py`:
+  - [x] `TaskRequest`, `TaskResponse`, `TaskUpdate`, `TaskCancel`
+  - [x] `MessageSend`, `StateQuery`, `StateRestore`, `ArtifactNotify`
+  - [x] `McpToolCall`, `McpToolResult`, `McpResourceFetch`, `McpResourceData`
+  - [x] `Payload` (união discriminada por `payload_type`)
+- [x] `models/envelope.py`:
+  - [x] `Envelope` com auto-gen de id, timestamp
+- [x] Testes de envelope creation
 
 ### Definição de Pronto
 ✅ `from asap.models import Envelope, TaskRequest` funciona
@@ -107,18 +107,18 @@ asap-protocol/
 
 ### Tarefas
 
-- [ ] `state/machine.py`:
-  - [ ] Enum `TaskStatus` com todos os estados
-  - [ ] Dict `VALID_TRANSITIONS`
-  - [ ] Função `can_transition(from, to) -> bool`
-  - [ ] Função `transition(task, new_status) -> Task` (com validação)
-  - [ ] Exception `InvalidTransitionError`
-- [ ] `state/snapshot.py`:
-  - [ ] Classe `SnapshotStore` (interface)
-  - [ ] Implementação `InMemorySnapshotStore`
-  - [ ] Métodos: `save(snapshot)`, `get(task_id, version?)`, `list_versions(task_id)`
-- [ ] Testes da state machine
-- [ ] Testes do snapshot store
+- [x] `state/machine.py`:
+  - [x] Enum `TaskStatus` com todos os estados
+  - [x] Dict `VALID_TRANSITIONS`
+  - [x] Função `can_transition(from, to) -> bool`
+  - [x] Função `transition(task, new_status) -> Task` (com validação)
+  - [x] Exception `InvalidTransitionError`
+- [x] `state/snapshot.py`:
+  - [x] Classe `SnapshotStore` (interface)
+  - [x] Implementação `InMemorySnapshotStore`
+  - [x] Métodos: `save(snapshot)`, `get(task_id, version?)`, `list_versions(task_id)`
+- [x] Testes da state machine
+- [x] Testes do snapshot store
 
 ### Definição de Pronto
 ✅ `task.transition("completed")` funciona ou levanta erro
@@ -133,22 +133,22 @@ asap-protocol/
 
 ### Fase 3A: Server (1 dia)
 
-- [ ] `transport/server.py`:
-  - [ ] FastAPI app factory
-  - [ ] Endpoint POST `/asap` recebendo JSON-RPC
-  - [ ] Handler registry (payload_type → handler)
-  - [ ] Endpoint GET `/.well-known/asap/manifest.json`
-- [ ] `transport/handlers.py`:
-  - [ ] `TaskRequestHandler` base (echo response)
-- [ ] Testes com TestClient
+- [x] `transport/server.py`:
+  - [x] FastAPI app factory
+  - [x] Endpoint POST `/asap` recebendo JSON-RPC
+  - [x] Handler registry (payload_type → handler)
+  - [x] Endpoint GET `/.well-known/asap/manifest.json`
+- [x] `transport/handlers.py`:
+  - [x] `TaskRequestHandler` base (echo response)
+- [x] Testes com TestClient
 
 ### Fase 3B: Client (0.5 dia)
 
-- [ ] `transport/client.py`:
-  - [ ] Classe `ASAPClient` (async context manager)
-  - [ ] Método `send(envelope) -> Envelope`
-  - [ ] Auto-retry com idempotency_key
-- [ ] Testes de client (mock server)
+- [x] `transport/client.py`:
+  - [x] Classe `ASAPClient` (async context manager)
+  - [x] Método `send(envelope) -> Envelope`
+  - [x] Auto-retry com idempotency_key
+- [x] Testes de client (mock server)
 
 ### Definição de Pronto
 ✅ Servidor roda com `uvicorn asap.transport.server:app`
@@ -163,15 +163,15 @@ asap-protocol/
 
 ### Tarefas
 
-- [ ] `src/asap/examples/echo_agent.py`:
-  - [ ] Agente que retorna input como output
-  - [ ] Usa ASAPClient para responder
-- [ ] `src/asap/examples/coordinator.py`:
-  - [ ] Envia TaskRequest para echo_agent
-  - [ ] Recebe e imprime TaskResponse
-- [ ] `src/asap/examples/run_demo.py`:
-  - [ ] Script que sobe ambos e executa fluxo
-- [ ] Teste E2E automatizado
+- [x] `src/asap/examples/echo_agent.py`:
+  - [x] Agente que retorna input como output
+  - [x] Usa ASAPClient para responder
+- [x] `src/asap/examples/coordinator.py`:
+  - [x] Envia TaskRequest para echo_agent
+  - [x] Recebe e imprime TaskResponse
+- [x] `src/asap/examples/run_demo.py`:
+  - [x] Script que sobe ambos e executa fluxo
+- [x] Teste E2E automatizado
 
 ### Definição de Pronto
 ✅ Demo roda: `python -m asap.examples.run_demo`
@@ -186,16 +186,16 @@ asap-protocol/
 
 ### Tarefas
 
-- [ ] Docstrings em todas as classes públicas
-- [ ] README completo:
-  - [ ] Instalação
-  - [ ] Quick start
-  - [ ] Exemplos
-  - [ ] Link para spec
-- [ ] CHANGELOG.md atualizado
-- [ ] `pyproject.toml` metadata completa
-- [ ] CLI básica: `asap --version`
-- [ ] Publicar em TestPyPI para validação
+- [x] Docstrings em todas as classes públicas
+- [x] README completo:
+  - [x] Instalação
+  - [x] Quick start
+  - [x] Exemplos
+  - [x] Link para spec
+- [x] CHANGELOG.md atualizado
+- [x] `pyproject.toml` metadata completa
+- [x] CLI básica: `asap --version`
+- [x] Publicar em TestPyPI para validação
 
 ### Definição de Pronto
 ✅ `pip install asap-protocol` funciona (TestPyPI)

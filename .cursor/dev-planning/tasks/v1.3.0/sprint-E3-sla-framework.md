@@ -50,6 +50,7 @@ SLAs (Service Level Agreements) define guarantees agents commit to - availabilit
   - Optional field handling
 
 - [ ] 3.1.6 Commit
+  - **Command**: `git commit -m "feat(economics): add SLA schema to manifest"`
 
 **Acceptance Criteria**:
 - [ ] SLA schema in manifest
@@ -93,6 +94,7 @@ SLAs (Service Level Agreements) define guarantees agents commit to - availabilit
   - Rolling window correctness
 
 - [ ] 3.2.6 Commit
+  - **Command**: `git commit -m "feat(economics): implement SLA metrics tracking"`
 
 **Acceptance Criteria**:
 - [ ] SLA metrics tracked accurately
@@ -127,6 +129,7 @@ SLAs (Service Level Agreements) define guarantees agents commit to - availabilit
   - Alert delivery
 
 - [ ] 3.3.6 Commit
+  - **Command**: `git commit -m "feat(economics): add SLA breach detection and alerts"`
 
 **Acceptance Criteria**:
 - [ ] Breach detection working
@@ -158,6 +161,7 @@ SLAs (Service Level Agreements) define guarantees agents commit to - availabilit
 - [ ] 3.4.5 Write integration tests
 
 - [ ] 3.4.6 Commit
+  - **Command**: `git commit -m "feat(economics): expose SLA metrics via API"`
 
 **Acceptance Criteria**:
 - [ ] SLA API functional

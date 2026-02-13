@@ -19,7 +19,7 @@ v1.1.0 establishes the **Identity Layer** for the ASAP Protocol Agent Marketplac
 
 ### 1.2 Strategic Context
 
-v1.1.0 is the first step toward the Agent Marketplace (v2.0). See [roadmap-to-marketplace.md](../roadmap-to-marketplace.md) for evolution path.
+v1.1.0 is the first step toward the Agent Marketplace (v2.0). See [roadmap-to-marketplace.md](../strategy/roadmap-to-marketplace.md) for evolution path.
 
 **Key Strategic Decisions** (from strategy review):
 - **SD-3**: WebSocket for v1.x, Message Broker optional in v2.0+
@@ -213,7 +213,7 @@ v1.1.0 is the first step toward the Agent Marketplace (v2.0). See [roadmap-to-ma
 | REG-004 | Registry entry validation (schema compliance) | SHOULD |
 | REG-005 | CLI command to generate registry entry from manifest | MAY |
 
-**Rationale** (SD-11): v1.1 introduces identity and direct discovery, but no one can find agents unless they know the URL. A static Lite Registry on GitHub Pages bridges this "Discovery Abyss" before the v1.2 Registry API.
+**Rationale** (SD-11): v1.1 introduces identity and direct discovery, but no one can find agents unless they know the URL. A static Lite Registry on GitHub Pages bridges this "Discovery Abyss" before the full Registry API Backend (v2.1).
 
 **Schema** (multi-endpoint, supporting HTTP + WebSocket):
 ```json
@@ -297,13 +297,13 @@ v1.1.0 is the first step toward the Agent Marketplace (v2.0). See [roadmap-to-ma
 | Feature | Reason | When |
 |---------|--------|------|
 | Signed manifests | Part of Trust Layer | v1.2.0 |
-| Full Registry API | Part of Trust Layer (Lite Registry in v1.1 bridges gap) | v1.2.0 |
+| Full Registry API | Part of Trust Layer (Lite Registry in v1.1 bridges gap) | v2.1 (deferred from v1.2) |
 | mTLS | Part of Trust Layer | v1.2.0 |
 | Agent identity verification (PKI) | Requires Ed25519 signed manifests | v1.2.0 |
 | Message Broker (NATS) | Overkill for startups (SD-3) | v2.0+ optional |
 | DNS-SD discovery | P3, well-known URI is sufficient | v1.1.1+ or drop |
 | Redis storage impl | SQLite is sufficient for v1.1 | v1.2.0+ |
-| Usage metering | Part of Economics Layer (uses `MeteringStore` interface) | v1.3.0 |
+| Usage metering | Part of Observability Layer (uses `MeteringStore` interface) | v1.3.0 |
 | Formal TaskHandover protocol | Requires signed state for integrity | v1.2.0 |
 
 ---
@@ -402,8 +402,8 @@ src/asap/
 - **Detailed Discovery**: [Sprint S2](../../dev-planning/tasks/v1.1.0/sprint-S2-wellknown-discovery.md)
 - **Detailed State Storage**: [Sprint S2.5](../../dev-planning/tasks/v1.1.0/sprint-S2.5-state-storage.md)
 - **Detailed Transport**: [Sprint S3](../../dev-planning/tasks/v1.1.0/sprint-S3-websocket-binding.md), [Sprint S4](../../dev-planning/tasks/v1.1.0/sprint-S4-webhooks-release.md)
-- **Roadmap**: [roadmap-to-marketplace.md](../roadmap-to-marketplace.md)
-- **Vision**: [vision-agent-marketplace.md](../vision-agent-marketplace.md)
+- **Roadmap**: [roadmap-to-marketplace.md](../strategy/roadmap-to-marketplace.md)
+- **Vision**: [vision-agent-marketplace.md](../strategy/vision-agent-marketplace.md)
 
 ---
 

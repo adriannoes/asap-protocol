@@ -89,7 +89,7 @@ Dependabot automatically creates pull requests for dependency updates. Here's ho
 
 1. **Security Updates**: Automatically created when vulnerabilities are detected
    - These are **high priority** and should be reviewed promptly
-   - See [Security Update Policy](../SECURITY.md#security-update-policy) for target review times
+   - **Security**: See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
 
 2. **Version Updates**: Created monthly for non-security dependency updates
    - These can be reviewed during regular maintenance windows

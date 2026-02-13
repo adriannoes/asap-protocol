@@ -79,6 +79,6 @@ We continuously monitor dependencies using:
 ### Version Update Schedule
 
 - **Security Updates**: Automatic and immediate (no schedule)
-- **Version Updates**: Monthly checks for non-security updates (see [Dependabot configuration](../.github/dependabot.yml))
+- **Version Updates**: Monthly checks for non-security updates (see [Dependabot confThis project relies on [Dependabot](.github/dependabot.yml) to monitor security notes and bump dependency versions.ee [CONTRIBUTING.md](../CONTRIBUTING.md#reviewing-dependabot-prs).
 
 For more information on reviewing Dependabot PRs, see [CONTRIBUTING.md](../CONTRIBUTING.md#reviewing-dependabot-prs).

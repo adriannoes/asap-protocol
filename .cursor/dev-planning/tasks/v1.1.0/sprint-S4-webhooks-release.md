@@ -250,7 +250,7 @@ Sprint S4 wraps up v1.1.0 with webhook support for event-driven callbacks, addre
 
 **Goal**: Create comprehensive security model documentation for v1.1.
 
-**Context**: v1.1 provides authentication (OAuth2) and authorization (scopes), but NOT identity verification (that comes in v1.2 with Ed25519 signed manifests). This must be documented explicitly to prevent false security expectations. Developers need clear guidance on Custom Claims configuration for identity binding. See [ADR-17](../../../product-specs/ADR.md#question-17-trust-model-and-identity-binding-in-v11).
+**Context**: v1.1 provides authentication (OAuth2) and authorization (scopes), but NOT identity verification (that comes in v1.2 with Ed25519 signed manifests). This must be documented explicitly to prevent false security expectations. Developers need clear guidance on Custom Claims configuration for identity binding. See [ADR-17](../../../product-specs/decision-records/README.md#question-17-trust-model-and-identity-binding-in-v11).
 
 **Prerequisites**: All feature sprints (S1-S3) completed
 

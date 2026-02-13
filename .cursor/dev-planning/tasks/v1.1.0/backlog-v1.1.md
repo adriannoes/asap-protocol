@@ -31,16 +31,16 @@ All items below are **planned but not committed** to v1.1.0.
 
 > **Strategic Alignment**: This section adheres to the "Compliance First" pillar, prioritizing security and resilience.
 
-- [ ] **[P0]** Security: validate callback URLs (Prevent SSRF)
-- [ ] **[P1]** Rate limiting for callback endpoints (DoS protection)
-- [ ] **[P1]** Retry logic for failed deliveries (Resilience)
+- [x] **[P0]** Security: validate callback URLs (Prevent SSRF)
+- [x] **[P1]** Rate limiting for callback endpoints (DoS protection)
+- [x] **[P1]** Retry logic for failed deliveries (Resilience)
 - [ ] **[P2]** Callback event filtering
 
 ---
 
 ### 4. State Storage Interface
 
-**Source**: [v0-original-specs.md §13.2](../../../product-specs/prd/v0-original-specs.md)
+**Source**: [v0-original-specs.md §13.2](../../../product-specs/strategy/v0-original-specs.md)
 
 **Current State**:
 - Spec lists this as **open decision**
@@ -48,11 +48,11 @@ All items below are **planned but not committed** to v1.1.0.
 
 **Scope for v1.1**:
 ```
-[ ] Define abstract state storage interface
-[ ] Reference implementation: in-memory
-[ ] Reference implementation: SQLite
+[x] Define abstract state storage interface
+[x] Reference implementation: in-memory
+[x] Reference implementation: SQLite
 [ ] Reference implementation: Redis
-[ ] Migration guide for custom implementations
+[x] Migration guide for custom implementations
 ```
 
 **Options**:
@@ -66,7 +66,7 @@ All items below are **planned but not committed** to v1.1.0.
 
 ### 5. Message Broker Integration (NATS/Pub-Sub)
 
-**Source**: [v0-original-specs.md §6.3, §7.4](../../../product-specs/prd/v0-original-specs.md)
+**Source**: [v0-original-specs.md §6.3, §7.4](../../../product-specs/strategy/v0-original-specs.md)
 
 **Current State**:
 - Explicitly excluded from v1.0.0 PRD
@@ -89,7 +89,7 @@ All items below are **planned but not committed** to v1.1.0.
 
 ### 6. DNS-SD Discovery
 
-**Source**: [v0-original-specs.md §7.4](../../../product-specs/prd/v0-original-specs.md)
+**Source**: [v0-original-specs.md §7.4](../../../product-specs/strategy/v0-original-specs.md)
 
 **Current State**:
 - Spec mentions `_asap._tcp.example.com`
@@ -125,7 +125,7 @@ All items below are **planned but not committed** to v1.1.0.
 
 ## Related Documents
 
-- **Original Spec**: [v0-original-specs.md](../../../product-specs/v0-original-specs.md)
+- **Original Spec**: [v0-original-specs.md](../../../product-specs/strategy/v0-original-specs.md)
 - **v1.0.0 Roadmap**: [tasks-v1.0.0-roadmap.md](./v1.0.0/tasks-v1.0.0-roadmap.md)
 - **PRD**: [prd-v1.1-roadmap.md](../../../product-specs/prd/prd-v1.1-roadmap.md)
 - **Gap Analysis**: Conversation 2026-01-30

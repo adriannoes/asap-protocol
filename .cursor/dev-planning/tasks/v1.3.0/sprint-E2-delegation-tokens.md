@@ -70,6 +70,7 @@ Delegation tokens allow agents to grant limited permissions to other agents. Thi
 
 - [ ] 2.2.1 Implement token creation
   - Use delegator's Ed25519 key (from v1.2)
+  - **Security**: Serialize with JCS before signing
   - Sign token content
 
 - [ ] 2.2.2 Implement CLI command
@@ -105,7 +106,7 @@ Delegation tokens allow agents to grant limited permissions to other agents. Thi
 - [ ] 2.3.1 Implement validation function
   ```python
   def validate_delegation(token: str, action: str) -> ValidationResult:
-      # Check signature
+      # Check Ed25519 signature (Strict Verification)
       # Check expiration
       # Check scope includes action
       # Check constraints (cost, tasks)

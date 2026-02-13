@@ -610,7 +610,7 @@ v0.5.0 is a **security-hardened release** with zero breaking changes. All existi
 - See [Security Guide](security.md) for authentication setup
 - See [Transport Guide](transport.md) for retry configuration
 - Run compatibility tests: `tests/compatibility/test_v0_1_0_compatibility.py`
-- Check [CHANGELOG.md](../../CHANGELOG.md) for detailed changes
+- Guide for migrating from A2A, MCP, or older ASAP versions. See [CHANGELOG](../CHANGELOG.md) for version history.
 
 ---
 

@@ -149,7 +149,8 @@ Metering enables billing for agent-to-agent interactions. It tracks tokens, API 
 
 - [ ] 1.4.3 Implement POST /usage (for agents)
   - Agents report their own metrics
-  - Validate signature
+  - **Security**: Validate Ed25519 signature (Strict Mode)
+  - **Security**: Verify `agent_id` matches signer
 
 - [ ] 1.4.4 Add export endpoints
   - GET /usage/export?format=csv

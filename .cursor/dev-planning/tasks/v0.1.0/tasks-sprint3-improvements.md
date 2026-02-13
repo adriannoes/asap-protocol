@@ -46,8 +46,8 @@
 - [x] 2.0 Add Thread Safety to HandlerRegistry ✅
 - [x] 3.0 Integrate HandlerRegistry into Server ✅
 - [x] 4.0 Implement Structured Logging ✅
-- [ ] 5.0 Add Observability & Metrics (Optional)
-- [ ] 6.0 Enhance Client Retry Configuration
+- [x] 5.0 Add Observability & Metrics (Optional)
+- [x] 6.0 Enhance Client Retry Configuration
 
 ---
 
@@ -265,35 +265,35 @@
 
 **Goal**: Add Prometheus metrics for monitoring production deployments.
 
-- [ ] 5.1 Add Prometheus dependencies
+- [x] 5.1 Add Prometheus dependencies
   - Add `prometheus-fastapi-instrumentator>=7.0` to pyproject.toml
   - Add `prometheus-client>=0.20` for custom metrics
   
-- [ ] 5.2 Create metrics module
+- [x] 5.2 Create metrics module
   - Create `src/asap/observability/metrics.py`
   - Define metrics: request_latency_seconds (Histogram), request_total (Counter), active_connections (Gauge)
   
-- [ ] 5.3 Instrument FastAPI server
+- [x] 5.3 Instrument FastAPI server
   - Use `Instrumentator()` to auto-instrument FastAPI
   - Add custom `/metrics` endpoint
   - Instrument `/asap` endpoint specifically
   
-- [ ] 5.4 Add custom metrics
+- [x] 5.4 Add custom metrics
   - Counter: `asap_requests_total{payload_type, status}`
   - Histogram: `asap_request_duration_seconds{payload_type}`
   - Gauge: `asap_active_handlers{payload_type}`
   
-- [ ] 5.5 Instrument client
+- [x] 5.5 Instrument client
   - Counter: `asap_client_requests_total{target, status}`
   - Histogram: `asap_client_duration_seconds{target}`
   - Counter: `asap_client_retries_total{target}`
   
-- [ ] 5.6 Add metrics tests
+- [x] 5.6 Add metrics tests
   - Test metrics endpoint returns Prometheus format
   - Test counters increment correctly
   - Test histograms record durations
   
-- [ ] 5.7 Add Grafana dashboard example
+- [x] 5.7 Add Grafana dashboard example
   - Create `src/asap/examples/grafana-dashboard.json`
   - Include panels for latency, throughput, errors
   - Document dashboard setup in README
@@ -311,33 +311,33 @@
 
 **Goal**: Make retry backoff parameters configurable for production flexibility.
 
-- [ ] 6.1 Update `ASAPClient.__init__()` signature
+- [x] 6.1 Update `ASAPClient.__init__()` signature
   - Add `retry_backoff_factor: float = 2.0` parameter
   - Add `retry_backoff_max: float = 60.0` parameter
   - Store as instance attributes
   
-- [ ] 6.2 Create `RetryConfig` dataclass
+- [x] 6.2 Create `RetryConfig` dataclass
   - Define `@dataclass RetryConfig` with max_retries, backoff_factor, backoff_max
   - Add factory method `RetryConfig.default()`
   - Use in `ASAPClient.__init__(retry_config: RetryConfig | None = None)`
   
-- [ ] 6.3 Update retry logic in `send()`
+- [x] 6.3 Update retry logic in `send()`
   - Use `self.retry_config.backoff_factor` for exponential backoff
   - Use `self.retry_config.backoff_max` to cap delay
   - Calculate: `delay = min(backoff_factor ** attempt, backoff_max)`
   
-- [ ] 6.4 Add retry configuration tests
+- [x] 6.4 Add retry configuration tests
   - Test custom backoff_factor (e.g., 1.5)
   - Test custom backoff_max (e.g., 30.0)
   - Test delay calculations are correct
   - Test configuration via `RetryConfig` dataclass
   
-- [ ] 6.5 Update client documentation
+- [x] 6.5 Update client documentation
   - Document retry configuration in docstring
   - Add example with custom retry settings
   - Explain backoff algorithm
   
-- [ ] 6.6 Add configuration example
+- [x] 6.6 Add configuration example
   - Create `src/asap/examples/client_with_custom_retry.py`
   - Show different retry configurations for different scenarios
 

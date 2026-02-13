@@ -2,6 +2,7 @@
 
 > **Purpose**: Formal review points to update documentation with learnings
 > **Created**: 2026-02-06
+> **Updated**: 2026-02-12 (Lean Marketplace pivot)
 
 ---
 
@@ -39,7 +40,7 @@ Pre-release: Release materials (CHANGELOG, README, AGENTS.md, secure_agent examp
 **Update**:
 - [ ] `prd-v1.2-roadmap.md` — refine based on auth + storage learnings
 - [ ] `prd-v1.3-roadmap.md` — confirm `MeteringStore` interface meets v1.3 needs
-- [ ] `tasks-v1.2.0-roadmap.md` — adjust estimates
+- [ ] `tasks-v1.2.0-roadmap.md` — adjust estimates (now 4 sprints / 13 tasks post-Lean pivot)
 - [ ] `lessons-learned/v1.1.0-retro.md` — create retrospective
 
 ---
@@ -50,14 +51,17 @@ Pre-release: Release materials (CHANGELOG, README, AGENTS.md, secure_agent examp
 
 **Review**:
 - [ ] Ed25519 PKI complexity
-- [ ] Registry API patterns
-- [ ] Compliance harness effectiveness
+- [ ] Compliance harness effectiveness — is it usable by third parties?
+- [ ] Lite Registry (SD-11): Is GitHub Pages still sufficient? Should Registry API Backend be accelerated for v2.0?
 - [ ] Time taken vs estimated
 
 **Update**:
-- [ ] `prd-v1.3-roadmap.md` — refine economics based on PKI learnings
-- [ ] `tasks-v1.3.0-roadmap.md` — adjust estimates
+- [ ] `prd-v1.3-roadmap.md` — refine observability based on PKI learnings
+- [ ] `tasks-v1.3.0-roadmap.md` — adjust estimates (now 3 sprints / 13 tasks post-Lean pivot)
 - [ ] `lessons-learned/v1.2.0-retro.md` — create retrospective
+
+> [!NOTE]
+> Registry API review item removed (deferred to v2.1). Compliance harness is now the primary deliverable to evaluate.
 
 ---
 
@@ -66,62 +70,46 @@ Pre-release: Release materials (CHANGELOG, README, AGENTS.md, secure_agent examp
 **When**: After v1.3.0 ships
 
 **Review**:
-- [ ] Metering implementation lessons
+- [ ] Observability metering implementation lessons
 - [ ] Delegation token complexity
 - [ ] SLA framework effectiveness
-- [ ] Infrastructure patterns for v2.0
+- [ ] Lite Registry capacity — can it handle target 100+ agents for v2.0?
 
 **Update**:
 - [ ] `prd-v2.0-roadmap.md` — major update with all v1.x learnings
-- [ ] `tasks-v2.0.0-roadmap.md` — realistic estimates
+- [ ] `tasks-v2.0.0-roadmap.md` — realistic estimates (now 4 sprints / 20 tasks post-Lean pivot)
 - [ ] `lessons-learned/v1.3.0-retro.md` — create retrospective
-- [ ] Tech stack decisions for Web App
+- [ ] Web App tech stack decisions (Next.js + Lite Registry)
 
 ---
 
-### CP-4: Post v2.0.0 M2 (Marketplace Core)
+### CP-4: Post v2.0.0 M2 (Web App Features)
 
 **When**: After completing sprints M1-M2
 
 **Review**:
-- [ ] Production deployment challenges
-- [ ] Integration complexity
-- [ ] Performance characteristics
+- [ ] Lite Registry data layer — is `registry.json` SSG/ISR working well?
+- [ ] Web App performance with static registry data
+- [ ] Client-side search/filter UX
 
 **Update**:
-- [ ] `sprint-M3-webapp-foundation.md` and `sprint-M4-webapp-features.md` — adjust Web App estimates
-- [ ] Infrastructure decisions for Web App
-- [ ] Document production patterns
+- [ ] `sprint-M3-verified-payments.md` and `sprint-M4-launch-prep.md` — adjust estimates
+- [ ] Evaluate if Registry API Backend should be built for v2.1
 
 ---
 
-### CP-5: Post v2.0.0 M4 (Web App Core)
-
-**When**: After completing sprints M3-M4
-
-**Review**:
-- [ ] Frontend tech stack effectiveness
-- [ ] UX feedback from early testing
-- [ ] Performance on real users
-
-**Update**:
-- [ ] `sprint-M5-verified-payments.md` and `sprint-M6-launch-prep.md` — adjust launch estimates
-- [ ] Prioritize M5-M6 based on feedback
-
----
-
-### CP-6: Post v2.0.0 Launch
+### CP-5: Post v2.0.0 M4 (Launch)
 
 **When**: 2 weeks after launch
 
 **Review**:
-- [ ] Launch success metrics
+- [ ] Launch success metrics (per PRD: 100+ agents, 500+ weekly visits)
 - [ ] User feedback
-- [ ] What to do next (v2.1?)
+- [ ] What to do next (v2.1 Registry API Backend? v2.2 DeepEval?)
 
 **Create**:
 - [ ] `lessons-learned/v2.0.0-retro.md` — comprehensive retrospective
-- [ ] `vision-v2.1.md` — if continuing development
+- [ ] `vision-v2.1.md` — Registry API Backend + deferred features roadmap
 
 ---
 
@@ -144,13 +132,26 @@ Track actual vs estimated to improve future planning:
 | Version | Estimated Days | Actual Days | Velocity |
 |---------|----------------|-------------|----------|
 | v1.1.0 | 31-41 | — | — |
-| v1.2.0 | 28-40 | — | — |
-| v1.3.0 | 18-26 | — | — |
-| v2.0.0 | 38-53 | — | — |
+| v1.2.0 | 18-26 | — | — |
+| v1.3.0 | 15-22 | — | — |
+| v2.0.0 | 23-33 | — | — |
+
+> [!NOTE]
+> Estimates updated after Lean Marketplace pivot: v1.2 reduced (6→4 sprints), v1.3 reduced (4→3 sprints), v2.0 reduced (6→4 sprints).
 
 ---
 
 ## Related Documents
 
-- [roadmap-to-marketplace.md](../product-specs/roadmap-to-marketplace.md)
+- [roadmap-to-marketplace.md](../product-specs/strategy/roadmap-to-marketplace.md)
+- [deferred-backlog.md](../product-specs/strategy/deferred-backlog.md)
 - [lessons-learned/](./lessons-learned/)
+
+---
+
+## Change Log
+
+| Date | Change |
+|------|--------|
+| 2026-02-06 | Initial checkpoints document |
+| 2026-02-12 | **Lean Marketplace pivot**: Updated CP-2 (removed Registry API review), CP-3 (metering→observability), CP-4 (renamed from "Marketplace Core" to "Web App Features"), CP-5 (merged with CP-6, updated metrics). Reduced from 6 checkpoints to 5. Updated velocity estimates. |
