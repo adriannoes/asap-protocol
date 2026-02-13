@@ -38,7 +38,7 @@ import threading
 import time
 from dataclasses import dataclass
 from email.utils import parsedate_to_datetime
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Mapping, Optional
 from urllib.parse import ParseResult, urlparse, urlunparse
 
 import httpx
@@ -51,10 +51,13 @@ from asap.transport.websocket import (
     WebSocketTransport,
 )
 
+from asap.crypto.keys import load_public_key_from_base64
+from asap.crypto.models import SignedManifest
+from asap.crypto.signing import verify_manifest
 from asap.discovery.health import HealthStatus, WELLKNOWN_HEALTH_PATH
 from asap.discovery.validation import ManifestValidationError, validate_manifest_schema
 from asap.discovery.wellknown import WELLKNOWN_MANIFEST_PATH
-from asap.errors import CircuitOpenError
+from asap.errors import CircuitOpenError, SignatureVerificationError
 from asap.models.constants import (
     DEFAULT_BASE_DELAY,
     DEFAULT_CIRCUIT_BREAKER_THRESHOLD,
@@ -329,6 +332,8 @@ class ASAPClient:
         circuit_breaker_threshold: int | None = None,
         circuit_breaker_timeout: float | None = None,
         manifest_cache_size: int | None = None,
+        verify_signatures: bool = False,
+        trusted_manifest_keys: Optional[Mapping[str, str]] = None,
         on_message: Optional[OnMessageCallback] = None,
     ) -> None:
         """Initialize ASAP client.
@@ -383,6 +388,13 @@ class ASAPClient:
             manifest_cache_size: Maximum number of manifests to cache (default: 1000).
                 Increase for high-cardinality environments (e.g. thousands of agents).
                 Set to 0 for unlimited. See ManifestCache for cleanup latency notes.
+            verify_signatures: If True, when a signed manifest is fetched (manifest + signature
+                block), verify the Ed25519 signature. Requires trusted_manifest_keys to be set
+                for the manifest URL (we do not trust the embedded public_key; TOFU prevention).
+            trusted_manifest_keys: Optional mapping from manifest URL to base64-encoded Ed25519
+                public key. When verify_signatures is True and the response is a signed manifest,
+                verification uses this key for the request URL. If no key is provided for the URL,
+                verification fails. Prevents MITM: never use the signer's embedded public_key.
             on_message: Optional callback for server-initiated (push) messages when using
                 WebSocket transport. Called with Envelope; may be sync or async. Ignored for HTTP.
 
@@ -539,6 +551,8 @@ class ASAPClient:
         self._manifest_cache = ManifestCache(max_size=cache_max)
         self._manifest_fetch_locks: dict[str, asyncio.Lock] = {}
         self._manifest_fetch_locks_guard = threading.Lock()
+        self._verify_signatures = verify_signatures
+        self._trusted_manifest_keys = dict(trusted_manifest_keys) if trusted_manifest_keys else {}
 
     @staticmethod
     def _is_localhost(parsed_url: ParseResult) -> bool:
@@ -1277,7 +1291,25 @@ class ASAPClient:
                     raise ValueError(f"Invalid JSON in manifest response: {e}") from e
 
                 try:
-                    manifest = Manifest(**manifest_data)
+                    if "manifest" in manifest_data and "signature" in manifest_data:
+                        signed = SignedManifest.model_validate(manifest_data)
+                        if self._verify_signatures:
+                            trusted_b64 = self._trusted_manifest_keys.get(url)
+                            if not trusted_b64:
+                                raise SignatureVerificationError(
+                                    f"Cannot verify signed manifest from {sanitize_url(url)}: "
+                                    "no trusted public key provided. Pass trusted_manifest_keys "
+                                    "to ASAPClient (or disable verify_signatures).",
+                                    details={"url": sanitize_url(url)},
+                                )
+                            trusted_key = load_public_key_from_base64(trusted_b64)
+                            await asyncio.to_thread(verify_manifest, signed, trusted_key)
+                        manifest = signed.manifest
+                    else:
+                        manifest = Manifest.model_validate(manifest_data)
+                except SignatureVerificationError:
+                    self._manifest_cache.invalidate(url)
+                    raise
                 except Exception as e:
                     self._manifest_cache.invalidate(url)
                     raise ValueError(f"Invalid manifest format: {e}") from e
@@ -1304,7 +1336,7 @@ class ASAPClient:
                     cause=e,
                     url=sanitize_url(url),
                 ) from e
-            except (ASAPConnectionError, ASAPTimeoutError, ValueError):
+            except (ASAPConnectionError, ASAPTimeoutError, ValueError, SignatureVerificationError):
                 raise
             except Exception as e:
                 self._manifest_cache.invalidate(url)

@@ -22,6 +22,8 @@ classifiers = [
 
 dependencies = [
     "aiosqlite>=0.20",
+    "cryptography>=41.0",
+    "jcs>=0.2.0",
     "jsonschema>=4.23.0",
     "pydantic>=2.12.5",
     "fastapi>=0.128.0",
@@ -42,6 +44,8 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi>=0.41",
     "opentelemetry-instrumentation-httpx>=0.41",
     "opentelemetry-exporter-otlp-proto-grpc>=1.20",
+    "cryptography>=41.0",
+    "jcs>=0.2.0",
 ]
 
 [project.optional-dependencies]

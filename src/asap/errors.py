@@ -281,6 +281,17 @@ class WebhookURLValidationError(ASAPError):
         self.reason = reason
 
 
+class SignatureVerificationError(ASAPError):
+    """Tampering, wrong algorithm, or invalid/corrupted signature; see message for cause."""
+
+    def __init__(self, message: str, details: dict[str, Any] | None = None) -> None:
+        super().__init__(
+            code="asap:error/signature-verification",
+            message=message,
+            details=details or {},
+        )
+
+
 class UnsupportedAuthSchemeError(ASAPError):
     """Raised when an unsupported authentication scheme is specified.
 

@@ -9,13 +9,17 @@ from __future__ import annotations
 
 import pytest
 
+from asap.crypto.keys import generate_keypair
+from asap.crypto.signing import sign_manifest
 from asap.discovery.validation import (
     ManifestValidationError,
     check_version_compatibility,
     manifest_supports_skill,
     require_skill,
     validate_manifest_schema,
+    validate_signed_manifest_response,
 )
+from asap.errors import SignatureVerificationError
 from asap.models.constants import ASAP_PROTOCOL_VERSION
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 
@@ -269,3 +273,57 @@ class TestRequireSkill:
         msg = str(exc_info.value)
         assert "alpha" in msg
         assert "beta" in msg
+
+
+# --------------------------------------------------------------------------- #
+# validate_signed_manifest_response
+# --------------------------------------------------------------------------- #
+
+
+class TestValidateSignedManifestResponse:
+    """Tests for validate_signed_manifest_response (plain or signed manifest dict)."""
+
+    def test_plain_manifest_dict_returns_manifest(self) -> None:
+        """Plain manifest dict (no signature) returns validated Manifest."""
+        data = _make_valid_manifest_dict()
+        result = validate_signed_manifest_response(data, verify_signature=False)
+        assert isinstance(result, Manifest)
+        assert result.id == "urn:asap:agent:test"
+
+    def test_signed_manifest_with_verify_returns_inner_manifest(self) -> None:
+        """Signed manifest dict with verify_signature=True returns inner Manifest when valid."""
+        manifest = _make_manifest()
+        private_key, _ = generate_keypair()
+        signed = sign_manifest(manifest, private_key)
+        data = signed.model_dump(mode="json")
+        result = validate_signed_manifest_response(data, verify_signature=True)
+        assert isinstance(result, Manifest)
+        assert result.id == manifest.id
+
+    def test_signed_manifest_verify_false_returns_inner_without_verifying(self) -> None:
+        """Signed manifest with verify_signature=False returns inner manifest without verifying."""
+        manifest = _make_manifest()
+        private_key, _ = generate_keypair()
+        signed = sign_manifest(manifest, private_key)
+        data = signed.model_dump(mode="json")
+        result = validate_signed_manifest_response(data, verify_signature=False)
+        assert result.id == manifest.id
+
+    def test_signed_manifest_tampered_raises_when_verify_true(self) -> None:
+        """Signed manifest with tampered content raises SignatureVerificationError when verify_signature=True."""
+        manifest = _make_manifest()
+        private_key, _ = generate_keypair()
+        signed = sign_manifest(manifest, private_key)
+        data = signed.model_dump(mode="json")
+        data["manifest"] = {**data["manifest"], "name": "Tampered"}
+        with pytest.raises(SignatureVerificationError, match="tamper|invalid"):
+            validate_signed_manifest_response(data, verify_signature=True)
+
+    def test_invalid_signed_schema_raises_manifest_validation_error(self) -> None:
+        """Dict with manifest+signature but invalid schema raises ManifestValidationError."""
+        data = _make_valid_manifest_dict()
+        data["signature"] = {"alg": "ed25519", "signature": "x"}
+        data["manifest"] = data.copy()
+        del data["manifest"]["id"]
+        with pytest.raises(ManifestValidationError, match="schema"):
+            validate_signed_manifest_response(data, verify_signature=False)
