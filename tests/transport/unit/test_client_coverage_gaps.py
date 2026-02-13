@@ -4,10 +4,13 @@ from unittest.mock import patch
 import httpx
 import pytest
 
+from asap.crypto.keys import generate_keypair, public_key_to_base64
+from asap.crypto.signing import sign_manifest
+from asap.errors import CircuitOpenError, SignatureVerificationError
+from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest, TaskResponse
-from asap.errors import CircuitOpenError
 from asap.transport.client import ASAPClient, RetryConfig, ASAPConnectionError, ASAPTimeoutError
 from asap.transport.circuit_breaker import CircuitState, get_registry
 
@@ -628,3 +631,112 @@ class TestASAPClientManifestCache:
         for r in results:
             assert not isinstance(r, BaseException), r
             assert r.id == "urn:asap:agent:testagent"
+
+
+class TestASAPClientManifestSignatureVerification:
+    """Tests for get_manifest with verify_signatures and trusted_manifest_keys."""
+
+    @staticmethod
+    def _signed_manifest_payload() -> tuple[dict, str]:
+        """Build a signed manifest JSON payload and the signer's public key (base64)."""
+        manifest = Manifest(
+            id="urn:asap:agent:signed-test",
+            name="Signed Agent",
+            version="1.0.0",
+            description="Agent with signed manifest",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="echo", description="Echo")],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="https://example.com/asap"),
+        )
+        private_key, public_key = generate_keypair()
+        signed = sign_manifest(manifest, private_key)
+        return signed.model_dump(mode="json"), public_key_to_base64(public_key)
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_signed_with_trusted_key_succeeds(self) -> None:
+        """get_manifest with verify_signatures and matching trusted_manifest_keys returns manifest."""
+        payload, pub_b64 = self._signed_manifest_payload()
+        manifest_url = "https://example.com/.well-known/asap/manifest.json"
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, json=payload)
+
+        trusted = {manifest_url: pub_b64}
+        async with ASAPClient(
+            "https://example.com",
+            transport=httpx.MockTransport(mock_transport),
+            verify_signatures=True,
+            trusted_manifest_keys=trusted,
+        ) as client:
+            result = await client.get_manifest()
+        assert result.id == "urn:asap:agent:signed-test"
+        assert result.name == "Signed Agent"
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_signed_without_trusted_key_raises(self) -> None:
+        """get_manifest with verify_signatures but no trusted key for URL raises SignatureVerificationError."""
+        payload, _ = self._signed_manifest_payload()
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, json=payload)
+
+        async with ASAPClient(
+            "https://example.com",
+            transport=httpx.MockTransport(mock_transport),
+            verify_signatures=True,
+            trusted_manifest_keys={},
+        ) as client:
+            with pytest.raises(SignatureVerificationError, match="no trusted public key"):
+                await client.get_manifest()
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_signed_with_wrong_trusted_key_raises(self) -> None:
+        """get_manifest with verify_signatures and wrong trusted key raises SignatureVerificationError."""
+        payload, _ = self._signed_manifest_payload()
+        _, other_public_key = generate_keypair()
+        wrong_pub_b64 = public_key_to_base64(other_public_key)
+        manifest_url = "https://example.com/.well-known/asap/manifest.json"
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, json=payload)
+
+        trusted = {manifest_url: wrong_pub_b64}
+        async with ASAPClient(
+            "https://example.com",
+            transport=httpx.MockTransport(mock_transport),
+            verify_signatures=True,
+            trusted_manifest_keys=trusted,
+        ) as client:
+            with pytest.raises(SignatureVerificationError, match="tamper|invalid"):
+                await client.get_manifest()
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_plain_json_when_verify_signatures_ignored(self) -> None:
+        """get_manifest with verify_signatures=True still accepts plain (unsigned) manifest JSON."""
+        plain_data = {
+            "id": "urn:asap:agent:plain",
+            "name": "Plain Agent",
+            "version": "1.0.0",
+            "description": "No signature",
+            "capabilities": {
+                "asap_version": "0.1",
+                "skills": [{"id": "echo", "description": "Echo"}],
+                "state_persistence": False,
+            },
+            "endpoints": {"asap": "http://localhost:8000/asap"},
+        }
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, json=plain_data)
+
+        async with ASAPClient(
+            "https://example.com",
+            transport=httpx.MockTransport(mock_transport),
+            verify_signatures=True,
+            trusted_manifest_keys={},
+        ) as client:
+            result = await client.get_manifest()
+        assert result.id == "urn:asap:agent:plain"

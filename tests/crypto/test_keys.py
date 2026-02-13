@@ -21,7 +21,7 @@ from asap.crypto.keys import (
     generate_keypair,
     get_key_metadata_from_file,
     load_private_key_from_env,
-    load_private_key_from_file,
+    load_private_key_from_file_sync,
     load_private_key_from_pem,
     public_key_to_base64,
     serialize_private_key,
@@ -101,30 +101,46 @@ def test_load_private_key_from_pem_non_ed25519_raises() -> None:
 
 
 def test_load_private_key_from_file_success(tmp_path: Path) -> None:
-    """load_private_key_from_file loads key from a PEM file."""
+    """load_private_key_from_file_sync loads key from a PEM file."""
     private_key, _ = generate_keypair()
     pem = serialize_private_key(private_key)
     key_file = tmp_path / "key.pem"
     key_file.write_bytes(pem)
+    key_file.chmod(0o600)
     with patch("asap.crypto.keys.logger") as mock_logger:
-        loaded = load_private_key_from_file(key_file)
+        loaded = load_private_key_from_file_sync(key_file)
     assert loaded.sign(b"x") == private_key.sign(b"x")
     mock_logger.warning.assert_not_called()
 
 
 def test_load_private_key_from_file_accepts_str_path(tmp_path: Path) -> None:
-    """load_private_key_from_file accepts string path."""
+    """load_private_key_from_file_sync accepts string path."""
     private_key, _ = generate_keypair()
     key_file = tmp_path / "key.pem"
     key_file.write_bytes(serialize_private_key(private_key))
-    loaded = load_private_key_from_file(str(key_file))
+    loaded = load_private_key_from_file_sync(str(key_file))
     assert loaded.sign(b"y") == private_key.sign(b"y")
 
 
 def test_load_private_key_from_file_missing_raises() -> None:
-    """load_private_key_from_file raises FileNotFoundError for missing file."""
+    """load_private_key_from_file_sync raises FileNotFoundError for missing file."""
     with pytest.raises(FileNotFoundError):
-        load_private_key_from_file("/nonexistent/key.pem")
+        load_private_key_from_file_sync("/nonexistent/key.pem")
+
+
+def test_load_private_key_from_file_logs_warning_when_permissions_loose(
+    tmp_path: Path,
+) -> None:
+    """Loading a key file readable by group/others logs a security warning."""
+    private_key, _ = generate_keypair()
+    key_file = tmp_path / "loose.pem"
+    key_file.write_bytes(serialize_private_key(private_key))
+    key_file.chmod(0o644)
+    with patch("asap.crypto.keys.logger") as mock_logger:
+        load_private_key_from_file_sync(key_file)
+    mock_logger.warning.assert_called()
+    calls = [str(c) for c in mock_logger.warning.call_args_list]
+    assert any("key_file_permissions_loose" in c or "permissions" in c for c in calls)
 
 
 def test_load_private_key_from_env_success(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -208,10 +224,11 @@ def test_load_private_key_from_file_logs_warning_for_old_key(
     private_key, _ = generate_keypair()
     key_file = tmp_path / "old.pem"
     key_file.write_bytes(serialize_private_key(private_key))
+    key_file.chmod(0o600)
     old_ts = time.time() - (400 * 24 * 3600)
     os.utime(key_file, (old_ts, old_ts))
     with patch("asap.crypto.keys.logger") as mock_logger:
-        load_private_key_from_file(key_file)
+        load_private_key_from_file_sync(key_file)
     mock_logger.warning.assert_called_once()
     call_args = mock_logger.warning.call_args
     assert "key_rotation_recommended" in str(call_args)

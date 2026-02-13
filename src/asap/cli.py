@@ -25,7 +25,11 @@ import typer
 from pydantic import ValidationError
 
 from asap import __version__
-from asap.crypto.keys import generate_keypair, load_private_key_from_file, serialize_private_key
+from asap.crypto.keys import (
+    generate_keypair,
+    load_private_key_from_file_sync,
+    serialize_private_key,
+)
 from asap.crypto.models import SignedManifest
 from asap.crypto.signing import sign_manifest, verify_manifest
 from asap.errors import SignatureVerificationError
@@ -105,7 +109,7 @@ def manifest_sign(
         manifest = Manifest.model_validate(manifest_data)
     except ValidationError as exc:
         raise typer.BadParameter(f"Invalid manifest: {exc}") from exc
-    private_key = load_private_key_from_file(key)
+    private_key = load_private_key_from_file_sync(key)
     signed = sign_manifest(manifest, private_key)
     output = json.dumps(signed.model_dump(), indent=2)
     if out is not None:
@@ -145,7 +149,7 @@ def manifest_verify(
     if public_key is not None:
         if not public_key.exists():
             raise typer.BadParameter(f"Public key file not found: {public_key}")
-        priv = load_private_key_from_file(public_key)
+        priv = load_private_key_from_file_sync(public_key)
         pub_key = priv.public_key()
     try:
         verify_manifest(signed, public_key=pub_key)

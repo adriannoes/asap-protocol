@@ -1,10 +1,13 @@
 """Pydantic models for signed manifests and signature blocks (ADR-18)."""
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from asap.models.entities import Manifest
+
+# Base64 (standard alphabet) pattern for public_key and signature fields.
+BASE64_PATTERN = r"^[A-Za-z0-9+/=]+$"
 
 
 class SignatureBlock(BaseModel):
@@ -16,10 +19,10 @@ class SignatureBlock(BaseModel):
         ...,
         description="Signature algorithm (Ed25519 only per ADR-18).",
     )
-    signature: str = Field(
-        ...,
-        description="Base64-encoded 64-byte Ed25519 signature.",
-    )
+    signature: Annotated[
+        str,
+        Field(..., description="Base64-encoded 64-byte Ed25519 signature.", pattern=BASE64_PATTERN),
+    ]
 
 
 class SignedManifest(BaseModel):
@@ -35,4 +38,5 @@ class SignedManifest(BaseModel):
     public_key: str | None = Field(
         default=None,
         description="Optional base64-encoded Ed25519 public key for verification.",
+        pattern=BASE64_PATTERN,
     )

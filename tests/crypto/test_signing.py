@@ -192,7 +192,7 @@ def test_verify_manifest_invalid_public_key_raises() -> None:
     manifest = _sample_manifest()
     private_key, _ = generate_keypair()
     signed = sign_manifest(manifest, private_key)
-    signed_bad_pk = SignedManifest(
+    signed_bad_pk = SignedManifest.model_construct(
         manifest=signed.manifest,
         signature=signed.signature,
         public_key="not-valid-base64-key!!!",
@@ -206,7 +206,7 @@ def test_verify_manifest_invalid_signature_base64_raises() -> None:
     manifest = _sample_manifest()
     private_key, public_key = generate_keypair()
     signed = sign_manifest(manifest, private_key)
-    bad_block = SignatureBlock(alg="ed25519", signature="not-valid-base64!!!")
+    bad_block = SignatureBlock.model_construct(alg="ed25519", signature="not-valid-base64!!!")
     bad_signed = SignedManifest(
         manifest=signed.manifest,
         signature=bad_block,

@@ -66,7 +66,7 @@ def validate_signed_manifest_response(
     data: dict[str, object],
     verify_signature: bool = True,
 ) -> Manifest:
-    """Plain or signed manifest from dict. If signed and verify_signature, verifies Ed25519 (needs public_key). Raises ManifestValidationError or SignatureVerificationError."""
+    """Plain or signed manifest dict; if signed and verify_signature, verifies Ed25519. Raises ManifestValidationError or SignatureVerificationError."""
     if "manifest" in data and "signature" in data:
         try:
             signed = SignedManifest.model_validate(data)

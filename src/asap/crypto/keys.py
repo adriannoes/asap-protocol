@@ -19,6 +19,8 @@ logger = get_logger(__name__)
 
 # Age in days after which to log a key rotation warning (e.g. recommend key renewal).
 KEY_ROTATION_WARNING_DAYS = 365
+# Recommended mode for private key files (owner read/write only).
+KEY_FILE_RECOMMENDED_MODE = 0o600
 
 
 class KeyMetadata(BaseModel):
@@ -28,14 +30,13 @@ class KeyMetadata(BaseModel):
 
 
 def generate_keypair() -> tuple[Ed25519PrivateKey, Ed25519PublicKey]:
-    """New Ed25519 key pair (private_key, public_key)."""
     private_key = Ed25519PrivateKey.generate()
     public_key = private_key.public_key()
     return (private_key, public_key)
 
 
 def serialize_private_key(key: Ed25519PrivateKey) -> bytes:
-    """PEM (PKCS#8, unencrypted) bytes for the private key."""
+    """PEM (PKCS#8, unencrypted)."""
     pem: bytes = key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
@@ -45,7 +46,6 @@ def serialize_private_key(key: Ed25519PrivateKey) -> bytes:
 
 
 def public_key_to_base64(key: Ed25519PublicKey) -> str:
-    """Base64 of raw 32-byte Ed25519 public key."""
     raw = key.public_bytes(
         encoding=serialization.Encoding.Raw,
         format=serialization.PublicFormat.Raw,
@@ -54,7 +54,7 @@ def public_key_to_base64(key: Ed25519PublicKey) -> str:
 
 
 def load_public_key_from_base64(b64: str) -> Ed25519PublicKey:
-    """Ed25519 public key from base64 raw 32 bytes. Raises ValueError if not 32 bytes."""
+    """From base64 raw 32 bytes. Raises ValueError if not 32 bytes."""
     raw = base64.b64decode(b64)
     if len(raw) != 32:
         raise ValueError(f"Ed25519 public key must be 32 bytes, got {len(raw)}")
@@ -62,7 +62,7 @@ def load_public_key_from_base64(b64: str) -> Ed25519PublicKey:
 
 
 def load_private_key_from_pem(pem: bytes) -> Ed25519PrivateKey:
-    """Ed25519 private key from PEM. Raises ValueError if invalid or not Ed25519."""
+    """From PEM. Raises ValueError if invalid or not Ed25519."""
     key = load_pem_private_key(pem, password=None)
     if not isinstance(key, Ed25519PrivateKey):
         raise ValueError("Key is not an Ed25519 private key")
@@ -70,7 +70,7 @@ def load_private_key_from_pem(pem: bytes) -> Ed25519PrivateKey:
 
 
 def get_key_metadata_from_file(path: str | Path) -> KeyMetadata:
-    """KeyMetadata from file mtime (UTC); used for rotation warning."""
+    """KeyMetadata from file mtime (UTC)."""
     path = Path(path)
     mtime = path.stat().st_mtime
     created_at = datetime.fromtimestamp(mtime, tz=timezone.utc)
@@ -81,7 +81,6 @@ def warn_if_key_old(
     metadata: KeyMetadata,
     max_age_days: int = KEY_ROTATION_WARNING_DAYS,
 ) -> None:
-    """Log rotation warning when key age >= max_age_days."""
     now = datetime.now(timezone.utc)
     age_days = (now - metadata.created_at).days
     if age_days >= max_age_days:
@@ -93,9 +92,33 @@ def warn_if_key_old(
         )
 
 
-def load_private_key_from_file(path: str | Path) -> Ed25519PrivateKey:
-    """Ed25519 private key from PEM file; logs rotation warning if key is old."""
+def warn_if_key_file_permissions_loose(path: Path) -> None:
+    """Warn when key file is group/other readable (recommend chmod 0600)."""
+    try:
+        mode = path.stat().st_mode
+    except OSError:
+        return
+    if (mode & 0o77) != 0:
+        logger.warning(
+            "key_file_permissions_loose",
+            path=str(path),
+            mode=oct(mode),
+            recommended=oct(KEY_FILE_RECOMMENDED_MODE),
+            message="Private key file is readable by group or others; consider chmod 0600.",
+        )
+
+
+def load_private_key_from_file_sync(path: str | Path) -> Ed25519PrivateKey:
+    """Load Ed25519 private key from PEM file (synchronous, blocking I/O).
+
+    **WARNING:** This function performs blocking disk I/O. Do NOT call it from
+    async server or transport code (e.g. request handlers); it would block the
+    event loop. Use only from CLI, scripts, or after loading in a thread.
+    Logs rotation warning if the key file is older than KEY_ROTATION_WARNING_DAYS.
+    Logs a security warning if the file is readable by group or others (recommend chmod 0600).
+    """
     path = Path(path)
+    warn_if_key_file_permissions_loose(path)
     pem = path.read_bytes()
     key = load_private_key_from_pem(pem)
     metadata = get_key_metadata_from_file(path)
@@ -104,7 +127,7 @@ def load_private_key_from_file(path: str | Path) -> Ed25519PrivateKey:
 
 
 def load_private_key_from_env(var_name: str) -> Ed25519PrivateKey:
-    """Ed25519 private key from env var (PEM string). Raises ValueError if unset or invalid."""
+    """From env var (PEM string). Raises ValueError if unset or invalid."""
     value = os.environ.get(var_name)
     if not value:
         raise ValueError(f"Environment variable {var_name!r} is not set or empty")
