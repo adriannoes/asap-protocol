@@ -25,6 +25,10 @@ import typer
 from pydantic import ValidationError
 
 from asap import __version__
+from asap.crypto.keys import generate_keypair, load_private_key_from_file, serialize_private_key
+from asap.crypto.models import SignedManifest
+from asap.crypto.signing import sign_manifest, verify_manifest
+from asap.errors import SignatureVerificationError
 from asap.models import Envelope, TaskRequest, generate_id
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 
@@ -33,8 +37,123 @@ from asap.schemas import SCHEMA_REGISTRY, export_all_schemas, get_schema_json, l
 
 app = typer.Typer(help="ASAP Protocol CLI.")
 
+# Nested Typer app for key management (Ed25519)
+keys_app = typer.Typer(help="Ed25519 key generation and management.")
+app.add_typer(keys_app, name="keys")
+
+manifest_app = typer.Typer(help="Manifest operations (sign, verify).")
+app.add_typer(manifest_app, name="manifest")
+
+# Restrict private key file to owner read/write only (security)
+PRIVATE_KEY_FILE_MODE = 0o600
+
 # Default directory for schema operations
 DEFAULT_SCHEMAS_DIR = Path("schemas")
+
+
+@keys_app.command("generate")
+def keys_generate(
+    out: Annotated[
+        Path,
+        typer.Option(..., "--out", "-o", help="Output path for the private key PEM file."),
+    ],
+) -> None:
+    """Write new Ed25519 key pair to PEM file (mode 0600)."""
+    if out.exists() and out.is_dir():
+        raise typer.BadParameter(f"Output path is a directory: {out}")
+    out = Path(out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    private_key, _ = generate_keypair()
+    pem = serialize_private_key(private_key)
+    out.write_bytes(pem)
+    try:
+        out.chmod(PRIVATE_KEY_FILE_MODE)
+    except OSError as exc:
+        typer.echo(
+            f"Warning: could not set file permissions to 0600: {exc}. "
+            "Ensure the key file is not readable by others.",
+            err=True,
+        )
+    typer.echo(f"Private key written to {out}")
+
+
+@manifest_app.command("sign")
+def manifest_sign(
+    key: Annotated[
+        Path,
+        typer.Option(..., "--key", "-k", help="Path to the Ed25519 private key PEM file."),
+    ],
+    manifest_file: Annotated[
+        Path,
+        typer.Argument(help="Path to the manifest JSON file."),
+    ],
+    out: Annotated[
+        Optional[Path],
+        typer.Option("--out", "-o", help="Output path for signed manifest JSON (default: stdout)."),
+    ] = None,
+) -> None:
+    """Sign manifest JSON with Ed25519; output signed manifest (JCS canonicalized)."""
+    if not key.exists():
+        raise typer.BadParameter(f"Key file not found: {key}")
+    if not manifest_file.exists():
+        raise typer.BadParameter(f"Manifest file not found: {manifest_file}")
+    try:
+        manifest_data = json.loads(manifest_file.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise typer.BadParameter(f"Invalid JSON in manifest: {exc}") from exc
+    try:
+        manifest = Manifest.model_validate(manifest_data)
+    except ValidationError as exc:
+        raise typer.BadParameter(f"Invalid manifest: {exc}") from exc
+    private_key = load_private_key_from_file(key)
+    signed = sign_manifest(manifest, private_key)
+    output = json.dumps(signed.model_dump(), indent=2)
+    if out is not None:
+        Path(out).write_text(output, encoding="utf-8")
+        typer.echo(f"Signed manifest written to {out}")
+    else:
+        typer.echo(output)
+
+
+@manifest_app.command("verify")
+def manifest_verify(
+    signed_manifest_file: Annotated[
+        Path,
+        typer.Argument(help="Path to the signed manifest JSON file."),
+    ],
+    public_key: Annotated[
+        Optional[Path],
+        typer.Option(
+            "--public-key",
+            "-k",
+            help="Path to private key PEM (public key is used for verification). Optional if manifest includes public_key.",
+        ),
+    ] = None,
+) -> None:
+    """Verify Ed25519 signature; use --public-key if manifest has no embedded public_key."""
+    if not signed_manifest_file.exists():
+        raise typer.BadParameter(f"File not found: {signed_manifest_file}")
+    try:
+        data = json.loads(signed_manifest_file.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise typer.BadParameter(f"Invalid JSON: {exc}") from exc
+    try:
+        signed = SignedManifest.model_validate(data)
+    except ValidationError as exc:
+        raise typer.BadParameter(f"Invalid signed manifest format: {exc}") from exc
+    pub_key = None
+    if public_key is not None:
+        if not public_key.exists():
+            raise typer.BadParameter(f"Public key file not found: {public_key}")
+        priv = load_private_key_from_file(public_key)
+        pub_key = priv.public_key()
+    try:
+        verify_manifest(signed, public_key=pub_key)
+    except SignatureVerificationError as e:
+        typer.echo(f"Verification failed: {e.message}", err=True)
+        raise typer.Exit(1) from e
+    typer.echo(f"Signature valid: {signed_manifest_file}")
+
 
 # Global verbose flag
 _verbose: bool = False

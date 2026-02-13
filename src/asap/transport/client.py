@@ -51,10 +51,12 @@ from asap.transport.websocket import (
     WebSocketTransport,
 )
 
+from asap.crypto.models import SignedManifest
+from asap.crypto.signing import verify_manifest
 from asap.discovery.health import HealthStatus, WELLKNOWN_HEALTH_PATH
 from asap.discovery.validation import ManifestValidationError, validate_manifest_schema
 from asap.discovery.wellknown import WELLKNOWN_MANIFEST_PATH
-from asap.errors import CircuitOpenError
+from asap.errors import CircuitOpenError, SignatureVerificationError
 from asap.models.constants import (
     DEFAULT_BASE_DELAY,
     DEFAULT_CIRCUIT_BREAKER_THRESHOLD,
@@ -329,6 +331,7 @@ class ASAPClient:
         circuit_breaker_threshold: int | None = None,
         circuit_breaker_timeout: float | None = None,
         manifest_cache_size: int | None = None,
+        verify_signatures: bool = False,
         on_message: Optional[OnMessageCallback] = None,
     ) -> None:
         """Initialize ASAP client.
@@ -383,6 +386,9 @@ class ASAPClient:
             manifest_cache_size: Maximum number of manifests to cache (default: 1000).
                 Increase for high-cardinality environments (e.g. thousands of agents).
                 Set to 0 for unlimited. See ManifestCache for cleanup latency notes.
+            verify_signatures: If True, when a signed manifest is fetched (manifest + signature
+                block), verify the Ed25519 signature. Requires the signed manifest to include
+                public_key (base64) or verification will raise SignatureVerificationError.
             on_message: Optional callback for server-initiated (push) messages when using
                 WebSocket transport. Called with Envelope; may be sync or async. Ignored for HTTP.
 
@@ -539,6 +545,7 @@ class ASAPClient:
         self._manifest_cache = ManifestCache(max_size=cache_max)
         self._manifest_fetch_locks: dict[str, asyncio.Lock] = {}
         self._manifest_fetch_locks_guard = threading.Lock()
+        self._verify_signatures = verify_signatures
 
     @staticmethod
     def _is_localhost(parsed_url: ParseResult) -> bool:
@@ -1277,7 +1284,16 @@ class ASAPClient:
                     raise ValueError(f"Invalid JSON in manifest response: {e}") from e
 
                 try:
-                    manifest = Manifest(**manifest_data)
+                    if "manifest" in manifest_data and "signature" in manifest_data:
+                        signed = SignedManifest.model_validate(manifest_data)
+                        if self._verify_signatures:
+                            verify_manifest(signed)
+                        manifest = signed.manifest
+                    else:
+                        manifest = Manifest.model_validate(manifest_data)
+                except SignatureVerificationError:
+                    self._manifest_cache.invalidate(url)
+                    raise
                 except Exception as e:
                     self._manifest_cache.invalidate(url)
                     raise ValueError(f"Invalid manifest format: {e}") from e

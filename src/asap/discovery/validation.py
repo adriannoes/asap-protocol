@@ -2,6 +2,7 @@
 
 Validates schema, version compatibility, and capability/skill matching
 to prevent runtime errors from malformed or incompatible manifests.
+Supports signed manifests (SignedManifest) with optional signature verification.
 """
 
 from __future__ import annotations
@@ -9,6 +10,8 @@ from __future__ import annotations
 from packaging.version import InvalidVersion, Version
 from pydantic import ValidationError
 
+from asap.crypto.models import SignedManifest
+from asap.crypto.signing import verify_manifest
 from asap.models.constants import ASAP_PROTOCOL_VERSION
 from asap.models.entities import Manifest
 
@@ -57,6 +60,25 @@ def validate_manifest_schema(data: dict[str, object]) -> Manifest:
             f"Invalid manifest schema: {e!s}",
             field="schema",
         ) from e
+
+
+def validate_signed_manifest_response(
+    data: dict[str, object],
+    verify_signature: bool = True,
+) -> Manifest:
+    """Plain or signed manifest from dict. If signed and verify_signature, verifies Ed25519 (needs public_key). Raises ManifestValidationError or SignatureVerificationError."""
+    if "manifest" in data and "signature" in data:
+        try:
+            signed = SignedManifest.model_validate(data)
+        except ValidationError as e:
+            raise ManifestValidationError(
+                f"Invalid signed manifest schema: {e!s}",
+                field="schema",
+            ) from e
+        if verify_signature:
+            verify_manifest(signed)
+        return signed.manifest
+    return validate_manifest_schema(data)
 
 
 def check_version_compatibility(
