@@ -1,0 +1,35 @@
+{
+  "manifest": {
+    "id": "urn:asap:agent:fixture-agent",
+    "name": "Fixture Agent",
+    "version": "1.0.0",
+    "description": "Test fixture agent",
+    "capabilities": {
+      "asap_version": "0.1",
+      "skills": [
+        {
+          "id": "echo",
+          "description": "Echo",
+          "input_schema": null,
+          "output_schema": null
+        }
+      ],
+      "state_persistence": false,
+      "streaming": false,
+      "mcp_tools": []
+    },
+    "endpoints": {
+      "asap": "https://example.com/asap",
+      "events": null
+    },
+    "auth": null,
+    "signature": null,
+    "ttl_seconds": 300
+  },
+  "signature": {
+    "alg": "ed25519",
+    "signature": "KUP2iICgG4okWqzfobx1G/l0NyZ8x56nO/se26pI6eAiN1w9XkW/EdX0M/vxqSrQcJvrGFeU0+2z5ME95iosCA==",
+    "trust_level": "verified"
+  },
+  "public_key": "QRVEqzwjzUfPhzznmftAZzpf83euZuoWzbynkuqj4E4="
+}
