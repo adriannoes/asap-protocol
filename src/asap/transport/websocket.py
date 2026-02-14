@@ -14,6 +14,7 @@ Message framing:
 from __future__ import annotations
 
 import asyncio
+import ssl
 import base64
 import itertools
 import json
@@ -194,6 +195,7 @@ class WebSocketTransport:
         max_ack_retries: int = DEFAULT_MAX_ACK_RETRIES,
         circuit_breaker: CircuitBreaker | None = None,
         ack_check_interval: float = ACK_CHECK_INTERVAL,
+        ssl_context: ssl.SSLContext | None = None,
     ) -> None:
         self._ws: WebSocketClientProtocol | None = None
         self._receive_timeout = receive_timeout
@@ -217,6 +219,7 @@ class WebSocketTransport:
         self._closed = False
         self._connected_event: asyncio.Event = asyncio.Event()
         self._connect_error: Exception | None = None
+        self._ssl_context = ssl_context
 
     async def _do_connect(self, url: str) -> None:
         if self._ws is not None:
@@ -229,15 +232,17 @@ class WebSocketTransport:
         self._connect_error = None
         logger.info("asap.websocket.client_connecting", url=url)
         # cast: connect() return type varies by websockets version (legacy vs asyncio client)
+        connect_kwargs: dict[str, Any] = {
+            "open_timeout": 10.0,
+            "close_timeout": 5.0,
+            "ping_interval": self._ping_interval,
+            "ping_timeout": self._ping_timeout,
+        }
+        if self._ssl_context is not None:
+            connect_kwargs["ssl"] = self._ssl_context
         self._ws = cast(
             Any,
-            await websockets.connect(
-                url,
-                open_timeout=10.0,
-                close_timeout=5.0,
-                ping_interval=self._ping_interval,
-                ping_timeout=self._ping_timeout,
-            ),
+            await websockets.connect(url, **connect_kwargs),
         )
         if self._closed:
             ws = self._ws

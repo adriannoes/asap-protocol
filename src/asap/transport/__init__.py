@@ -70,6 +70,7 @@ from asap.transport.handlers import (
     create_default_registry,
     create_echo_handler,
 )
+from asap.transport.mtls import MTLSConfig, create_ssl_context, mtls_config_to_uvicorn_kwargs
 from asap.transport.jsonrpc import (
     JsonRpcError,
     JsonRpcErrorResponse,
@@ -100,6 +101,10 @@ __all__ = [
     "JsonRpcResponse",
     "JsonRpcError",
     "JsonRpcErrorResponse",
+    # mTLS
+    "MTLSConfig",
+    "create_ssl_context",
+    "mtls_config_to_uvicorn_kwargs",
     # Server
     "create_app",
     "ASAPRequestHandler",
