@@ -388,3 +388,6 @@ This is critical for the marketplace vision: without persistent storage, v1.3 me
 - [x] Progress tracked in roadmap
 
 **Total Sub-tasks**: ~26
+
+## Documentation Updates
+- [ ] **Update Roadmap**: Mark completed items in [v1.1.0 Roadmap](./tasks-v1.1.0-roadmap.md)

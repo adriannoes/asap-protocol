@@ -412,3 +412,6 @@ Checklist before you commit and open the PR (no implementation tasks left; this 
 - [x] **Version**: `pyproject.toml` has `version = "1.1.0"`
 
 After merge to main: re-tag if needed, then push tag to trigger release workflow: `git push origin v1.1.0`. The workflow (`.github/workflows/release.yml`) runs PyPI, Docker, and GitHub Release automatically.
+
+## Documentation Updates
+- [ ] **Update Roadmap**: Mark completed items in [v1.1.0 Roadmap](./tasks-v1.1.0-roadmap.md)

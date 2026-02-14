@@ -109,3 +109,6 @@
 - [ ] Documentation complete
 
 **Total Sub-tasks**: ~13
+
+## Documentation Updates
+- [ ] **Update Roadmap**: Mark completed items in [v1.2.0 Roadmap](./tasks-v1.2.0-roadmap.md)

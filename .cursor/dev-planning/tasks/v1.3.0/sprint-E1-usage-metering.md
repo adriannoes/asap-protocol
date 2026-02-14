@@ -176,3 +176,6 @@ Metering enables billing for agent-to-agent interactions. It tracks tokens, API 
 - [ ] Test coverage >95%
 
 **Total Sub-tasks**: ~22
+
+## Documentation Updates
+- [ ] **Update Roadmap**: Mark completed items in [v1.3.0 Roadmap](./tasks-v1.3.0-roadmap.md)

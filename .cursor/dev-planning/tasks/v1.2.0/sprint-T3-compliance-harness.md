@@ -190,3 +190,6 @@ The Compliance Harness validates that ASAP implementations follow the protocol s
 - [ ] Test coverage >95%
 
 **Total Sub-tasks**: ~22
+
+## Documentation Updates
+- [ ] **Update Roadmap**: Mark completed items in [v1.2.0 Roadmap](./tasks-v1.2.0-roadmap.md)

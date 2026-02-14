@@ -414,3 +414,6 @@ Well-known discovery enables agents to find each other without prior configurati
 - [x] Progress tracked in roadmap
 
 **Total Sub-tasks**: ~32
+
+## Documentation Updates
+- [ ] **Update Roadmap**: Mark completed items in [v1.1.0 Roadmap](./tasks-v1.1.0-roadmap.md)

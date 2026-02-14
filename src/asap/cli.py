@@ -119,6 +119,34 @@ def manifest_sign(
         typer.echo(output)
 
 
+@manifest_app.command("info")
+def manifest_info(
+    signed_manifest_file: Annotated[
+        Path,
+        typer.Argument(help="Path to the signed manifest JSON file."),
+    ],
+) -> None:
+    """Show manifest ID, name, trust level, ASAP version."""
+    if not signed_manifest_file.exists():
+        raise typer.BadParameter(f"File not found: {signed_manifest_file}")
+    try:
+        data = json.loads(signed_manifest_file.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise typer.BadParameter(f"Invalid JSON: {exc}") from exc
+    try:
+        signed = SignedManifest.model_validate(data)
+    except ValidationError as exc:
+        raise typer.BadParameter(f"Invalid signed manifest format: {exc}") from exc
+    from asap.crypto.trust import detect_trust_level
+
+    trust_level = detect_trust_level(signed)
+    manifest = signed.manifest
+    typer.echo(f"Manifest ID: {manifest.id}")
+    typer.echo(f"Name: {manifest.name}")
+    typer.echo(f"Trust level: {trust_level.value}")
+    typer.echo(f"ASAP version: {manifest.capabilities.asap_version}")
+
+
 @manifest_app.command("verify")
 def manifest_verify(
     signed_manifest_file: Annotated[
@@ -156,7 +184,10 @@ def manifest_verify(
     except SignatureVerificationError as e:
         typer.echo(f"Verification failed: {e.message}", err=True)
         raise typer.Exit(1) from e
-    typer.echo(f"Signature valid: {signed_manifest_file}")
+    from asap.crypto.trust import detect_trust_level
+
+    trust_level = detect_trust_level(signed)
+    typer.echo(f"Signature valid (trust: {trust_level.value}): {signed_manifest_file}")
 
 
 # Global verbose flag

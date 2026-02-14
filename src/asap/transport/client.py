@@ -69,6 +69,7 @@ from asap.models.envelope import Envelope
 from asap.models.ids import generate_id
 from asap.observability import get_logger, get_metrics
 from asap.transport.cache import DEFAULT_MAX_SIZE, ManifestCache
+from asap.transport.mtls import MTLSConfig, create_ssl_context
 from asap.transport.circuit_breaker import CircuitBreaker, CircuitState, get_registry
 from asap.transport.compression import (
     COMPRESSION_THRESHOLD,
@@ -335,6 +336,7 @@ class ASAPClient:
         verify_signatures: bool = False,
         trusted_manifest_keys: Optional[Mapping[str, str]] = None,
         on_message: Optional[OnMessageCallback] = None,
+        mtls_config: Optional[MTLSConfig] = None,
     ) -> None:
         """Initialize ASAP client.
 
@@ -397,6 +399,8 @@ class ASAPClient:
                 verification fails. Prevents MITM: never use the signer's embedded public_key.
             on_message: Optional callback for server-initiated (push) messages when using
                 WebSocket transport. Called with Envelope; may be sync or async. Ignored for HTTP.
+            mtls_config: Optional mTLS config for client certificate authentication. When provided,
+                the client presents its cert to the server and verifies the server's cert.
 
         Raises:
             ValueError: If URL format is invalid, scheme is not HTTP/HTTPS, or HTTPS is
@@ -553,6 +557,7 @@ class ASAPClient:
         self._manifest_fetch_locks_guard = threading.Lock()
         self._verify_signatures = verify_signatures
         self._trusted_manifest_keys = dict(trusted_manifest_keys) if trusted_manifest_keys else {}
+        self._mtls_config = mtls_config
 
     @staticmethod
     def _is_localhost(parsed_url: ParseResult) -> bool:
@@ -684,7 +689,26 @@ class ASAPClient:
         """Check if client has an active connection."""
         return self._client is not None or self._ws_transport is not None
 
+    def _httpx_mtls_kwargs(
+        self,
+    ) -> tuple[tuple[str, str] | tuple[str, str, str] | None, bool | str]:
+        if self._mtls_config is None:
+            return (None, True)
+        cfg = self._mtls_config
+        cert: tuple[str, str] | tuple[str, str, str] = (
+            str(cfg.cert_file),
+            str(cfg.key_file),
+        )
+        if cfg.key_password:
+            cert = (str(cfg.cert_file), str(cfg.key_file), cfg.key_password)
+        verify: bool | str = str(cfg.ca_certs) if cfg.ca_certs else True
+        return (cert, verify)
+
     async def __aenter__(self) -> "ASAPClient":
+        cert, verify = self._httpx_mtls_kwargs()
+        ws_ssl_context = None
+        if self._mtls_config is not None:
+            ws_ssl_context = create_ssl_context(self._mtls_config, purpose="client")
         if self._use_websocket:
             self._ws_transport = WebSocketTransport(
                 receive_timeout=self.timeout,
@@ -692,12 +716,18 @@ class ASAPClient:
                 ack_timeout_seconds=DEFAULT_ACK_TIMEOUT,
                 max_ack_retries=DEFAULT_MAX_ACK_RETRIES,
                 circuit_breaker=self._circuit_breaker,
+                ssl_context=ws_ssl_context,
             )
             await self._ws_transport.connect(self._ws_url)
             # WebSocket mode still uses HTTP client for manifest fetches; small pool is enough.
             limits = httpx.Limits(max_connections=2, max_keepalive_connections=1)
             timeout_config = httpx.Timeout(self.timeout, pool=self._pool_timeout)
-            self._client = httpx.AsyncClient(timeout=timeout_config, limits=limits)
+            self._client = httpx.AsyncClient(
+                timeout=timeout_config,
+                limits=limits,
+                cert=cert,
+                verify=verify,
+            )
         else:
             limits = httpx.Limits(
                 max_keepalive_connections=self._pool_connections,
@@ -710,12 +740,16 @@ class ASAPClient:
                     transport=self._transport,
                     timeout=timeout_config,
                     limits=limits,
+                    cert=cert,
+                    verify=verify,
                 )
             else:
                 self._client = httpx.AsyncClient(
                     timeout=timeout_config,
                     limits=limits,
                     http2=self._http2,
+                    cert=cert,
+                    verify=verify,
                 )
         return self
 
@@ -1305,8 +1339,10 @@ class ASAPClient:
                             trusted_key = load_public_key_from_base64(trusted_b64)
                             await asyncio.to_thread(verify_manifest, signed, trusted_key)
                         manifest = signed.manifest
+                        trust_level = signed.signature.trust_level.value
                     else:
                         manifest = Manifest.model_validate(manifest_data)
+                        trust_level = None
                 except SignatureVerificationError:
                     self._manifest_cache.invalidate(url)
                     raise
@@ -1319,7 +1355,9 @@ class ASAPClient:
                     "asap.client.manifest_fetched",
                     url=sanitize_url(url),
                     manifest_id=manifest.id,
-                    message=f"Manifest fetched and cached for {sanitize_url(url)}",
+                    trust_level=trust_level,
+                    message=f"Manifest fetched and cached for {sanitize_url(url)}"
+                    + (f" (trust: {trust_level})" if trust_level else ""),
                 )
                 return manifest
 

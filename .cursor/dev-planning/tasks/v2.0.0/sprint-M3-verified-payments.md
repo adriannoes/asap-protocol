@@ -98,6 +98,8 @@ This sprint enables monetization through the Verified badge at $49/month plus th
 ### Context
 When an agent is approved/paid, we need to sign its manifest with the ASAP CA Key.
 
+> **Resolves**: [Issue #44](https://github.com/adriannoes/asap-protocol/issues/44) — Replace `sign_with_ca` simulation with real CA service integration.
+
 ### Sub-tasks
 
 - [ ] 3.4.1 Generate ASAP CA Keypair
@@ -125,6 +127,7 @@ When an agent is approved/paid, we need to sign its manifest with the ASAP CA Ke
 - [ ] GitHub Action signs manifest automatically
 - [ ] 3.4.5 Commit Signing
   - **Command**: `git commit -m "feat(ci): add automatic manifest signing workflow"`
+- [ ] Close [issue #44](https://github.com/adriannoes/asap-protocol/issues/44) with comment: "Resolved by Task 3.4 (ASAP CA Signing Automation). See sprint-M3-verified-payments.md."
 
 ---
 
@@ -160,3 +163,6 @@ When an agent is approved/paid, we need to sign its manifest with the ASAP CA Ke
 - [ ] Admin review queue functional
 
 **Total Sub-tasks**: ~18
+
+## Documentation Updates
+- [ ] **Update Roadmap**: Mark completed items in [v2.0.0 Roadmap](./tasks-v2.0.0-roadmap.md)

@@ -417,6 +417,53 @@ class TestCliTrace:
         assert "not found" in result.output.lower() or "No such" in result.output
 
 
+class TestCliManifestInfo:
+    """Tests for manifest info command (trust level display)."""
+
+    FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
+
+    def test_manifest_info_shows_trust_level_verified(self) -> None:
+        manifest_path = self.FIXTURES_DIR / "verified_manifest.json"
+        assert manifest_path.exists(), "Fixture verified_manifest.json required"
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["manifest", "info", str(manifest_path)])
+
+        assert result.exit_code == 0
+        output = strip_ansi(result.stdout)
+        assert "Trust level: verified" in output
+        assert "Manifest ID:" in output
+        assert "Name:" in output
+
+    def test_manifest_info_shows_trust_level_self_signed(self) -> None:
+        manifest_path = self.FIXTURES_DIR / "self_signed_manifest.json"
+        assert manifest_path.exists(), "Fixture self_signed_manifest.json required"
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["manifest", "info", str(manifest_path)])
+
+        assert result.exit_code == 0
+        output = strip_ansi(result.stdout)
+        assert "Trust level: self-signed" in output
+
+    def test_manifest_info_rejects_missing_file(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(app, ["manifest", "info", "/nonexistent/manifest.json"])
+
+        assert result.exit_code != 0
+        assert "not found" in result.output.lower() or "File not found" in result.output
+
+    def test_manifest_info_rejects_invalid_json(self, tmp_path: Path) -> None:
+        bad_file = tmp_path / "bad.json"
+        bad_file.write_text("{invalid}", encoding="utf-8")
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["manifest", "info", str(bad_file)])
+
+        assert result.exit_code != 0
+        assert "Invalid JSON" in result.output
+
+
 class TestCliRepl:
     """Tests for repl command."""
 

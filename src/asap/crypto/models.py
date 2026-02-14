@@ -4,6 +4,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from asap.crypto.trust_levels import TrustLevel
 from asap.models.entities import Manifest
 
 # Base64 (standard alphabet) pattern for public_key and signature fields.
@@ -23,6 +24,10 @@ class SignatureBlock(BaseModel):
         str,
         Field(..., description="Base64-encoded 64-byte Ed25519 signature.", pattern=BASE64_PATTERN),
     ]
+    trust_level: TrustLevel = Field(
+        default=TrustLevel.SELF_SIGNED,
+        description="Trust tier: self-signed, verified (ASAP CA), or enterprise (org CA).",
+    )
 
 
 class SignedManifest(BaseModel):

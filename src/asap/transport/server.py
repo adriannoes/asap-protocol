@@ -121,6 +121,7 @@ from asap.transport.websocket import (
     WS_CLOSE_REASON_SHUTDOWN,
     handle_websocket_connection,
 )
+from asap.transport.mtls import MTLSConfig
 
 # Module logger
 logger = get_logger(__name__)
@@ -1206,6 +1207,7 @@ def create_app(
     hot_reload: bool | None = None,
     snapshot_store: SnapshotStore | None = None,
     websocket_message_rate_limit: float | None = 10.0,
+    mtls_config: MTLSConfig | None = None,
 ) -> FastAPI:
     """Create and configure a FastAPI application for ASAP protocol.
 
@@ -1253,6 +1255,8 @@ def create_app(
         websocket_message_rate_limit: Max messages per second per WebSocket connection.
             When set (default 10.0), connections exceeding this are sent an error frame
             and closed. Set to None to disable WebSocket message rate limiting.
+        mtls_config: Optional mTLS config for server. When provided, store on app.state.mtls_config.
+            Use asap.transport.mtls.mtls_config_to_uvicorn_kwargs() when running uvicorn.
 
     Returns:
         Configured FastAPI application ready to run
@@ -1421,6 +1425,13 @@ def create_app(
     )
     app.state.websocket_connections = _active_websockets
     app.state.websocket_message_rate_limit = websocket_message_rate_limit
+    app.state.mtls_config = mtls_config
+    if mtls_config is not None:
+        logger.info(
+            "asap.server.mtls_enabled",
+            manifest_id=manifest.id,
+            cert_file=str(mtls_config.cert_file),
+        )
 
     # Add size limit middleware (runs before routing)
     app.add_middleware(SizeLimitMiddleware, max_size=max_request_size)

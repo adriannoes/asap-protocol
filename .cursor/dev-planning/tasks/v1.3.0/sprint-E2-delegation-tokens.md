@@ -180,3 +180,6 @@ Delegation tokens allow agents to grant limited permissions to other agents. Thi
 - [ ] Test coverage >95%
 
 **Total Sub-tasks**: ~23
+
+## Documentation Updates
+- [ ] **Update Roadmap**: Mark completed items in [v1.3.0 Roadmap](./tasks-v1.3.0-roadmap.md)

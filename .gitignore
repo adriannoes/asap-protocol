@@ -130,6 +130,9 @@ venv.bak/
 *.pem
 *.key
 credentials.json
+# Allow test fixture certs (Sprint T2 mTLS/trust)
+!tests/fixtures/**/*.pem
+!tests/fixtures/**/*.key
 
 # Spyder project settings
 .spyderproject
