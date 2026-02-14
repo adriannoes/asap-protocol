@@ -126,7 +126,7 @@ def manifest_info(
         typer.Argument(help="Path to the signed manifest JSON file."),
     ],
 ) -> None:
-    """Show manifest info including trust level."""
+    """Show manifest ID, name, trust level, ASAP version."""
     if not signed_manifest_file.exists():
         raise typer.BadParameter(f"File not found: {signed_manifest_file}")
     try:

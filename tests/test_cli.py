@@ -423,7 +423,6 @@ class TestCliManifestInfo:
     FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 
     def test_manifest_info_shows_trust_level_verified(self) -> None:
-        """manifest info displays Trust Level for verified manifest."""
         manifest_path = self.FIXTURES_DIR / "verified_manifest.json"
         assert manifest_path.exists(), "Fixture verified_manifest.json required"
 
@@ -437,7 +436,6 @@ class TestCliManifestInfo:
         assert "Name:" in output
 
     def test_manifest_info_shows_trust_level_self_signed(self) -> None:
-        """manifest info displays Trust Level for self-signed manifest."""
         manifest_path = self.FIXTURES_DIR / "self_signed_manifest.json"
         assert manifest_path.exists(), "Fixture self_signed_manifest.json required"
 
@@ -449,7 +447,6 @@ class TestCliManifestInfo:
         assert "Trust level: self-signed" in output
 
     def test_manifest_info_rejects_missing_file(self) -> None:
-        """manifest info fails when file does not exist."""
         runner = CliRunner()
         result = runner.invoke(app, ["manifest", "info", "/nonexistent/manifest.json"])
 
@@ -457,7 +454,6 @@ class TestCliManifestInfo:
         assert "not found" in result.output.lower() or "File not found" in result.output
 
     def test_manifest_info_rejects_invalid_json(self, tmp_path: Path) -> None:
-        """manifest info fails on invalid JSON."""
         bad_file = tmp_path / "bad.json"
         bad_file.write_text("{invalid}", encoding="utf-8")
 

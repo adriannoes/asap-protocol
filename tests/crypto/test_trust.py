@@ -32,27 +32,23 @@ def _sample_manifest() -> Manifest:
 
 
 def test_trust_level_enum_values() -> None:
-    """TrustLevel enum has expected string values."""
     assert TrustLevel.SELF_SIGNED.value == "self-signed"
     assert TrustLevel.VERIFIED.value == "verified"
     assert TrustLevel.ENTERPRISE.value == "enterprise"
 
 
 def test_trust_level_serializes_to_json() -> None:
-    """TrustLevel values serialize correctly to JSON."""
     assert json.dumps(TrustLevel.SELF_SIGNED.value) == '"self-signed"'
     assert json.dumps(TrustLevel.VERIFIED.value) == '"verified"'
     assert json.dumps(TrustLevel.ENTERPRISE.value) == '"enterprise"'
 
 
 def test_signature_block_includes_trust_level_default() -> None:
-    """SignatureBlock defaults to SELF_SIGNED when trust_level omitted."""
     block = SignatureBlock(alg="ed25519", signature="a" * 88)  # 64 bytes base64
     assert block.trust_level == TrustLevel.SELF_SIGNED
 
 
 def test_signature_block_accepts_explicit_trust_level() -> None:
-    """SignatureBlock accepts explicit trust_level."""
     sig_b64 = "x" * 88
     for level in TrustLevel:
         block = SignatureBlock(alg="ed25519", signature=sig_b64, trust_level=level)
@@ -60,7 +56,6 @@ def test_signature_block_accepts_explicit_trust_level() -> None:
 
 
 def test_signed_manifest_includes_trust_level() -> None:
-    """SignedManifest from sign_manifest includes trust_level (default SELF_SIGNED)."""
     manifest = _sample_manifest()
     private_key, _ = generate_keypair()
     signed = sign_manifest(manifest, private_key)
@@ -68,7 +63,6 @@ def test_signed_manifest_includes_trust_level() -> None:
 
 
 def test_detect_trust_level_self_signed() -> None:
-    """detect_trust_level returns SELF_SIGNED for agent-signed manifest."""
     manifest = _sample_manifest()
     private_key, _ = generate_keypair()
     signed = sign_manifest(manifest, private_key)
@@ -76,7 +70,6 @@ def test_detect_trust_level_self_signed() -> None:
 
 
 def test_detect_trust_level_verified() -> None:
-    """detect_trust_level returns VERIFIED when signature has trust_level=VERIFIED."""
     manifest = _sample_manifest()
     private_key, _ = generate_keypair()
     signed = sign_manifest(manifest, private_key)
@@ -87,7 +80,6 @@ def test_detect_trust_level_verified() -> None:
 
 
 def test_detect_trust_level_enterprise() -> None:
-    """detect_trust_level returns ENTERPRISE when signature has trust_level=enterprise."""
     manifest = _sample_manifest()
     private_key, _ = generate_keypair()
     signed = sign_manifest(manifest, private_key)
@@ -98,7 +90,6 @@ def test_detect_trust_level_enterprise() -> None:
 
 
 def test_signed_manifest_model_dump_includes_trust_level() -> None:
-    """SignedManifest model_dump includes trust_level in signature block."""
     manifest = _sample_manifest()
     private_key, _ = generate_keypair()
     signed = sign_manifest(manifest, private_key)
@@ -108,7 +99,6 @@ def test_signed_manifest_model_dump_includes_trust_level() -> None:
 
 
 def test_trust_level_backward_compat_omitted_field() -> None:
-    """Manifests without trust_level (old format) default to SELF_SIGNED."""
     manifest = _sample_manifest()
     private_key, _ = generate_keypair()
     signed = sign_manifest(manifest, private_key)
@@ -129,7 +119,6 @@ def test_trust_level_backward_compat_omitted_field() -> None:
 
 
 def test_sign_with_ca_returns_verified_trust_level() -> None:
-    """sign_with_ca produces SignedManifest with trust_level=VERIFIED."""
     manifest = _sample_manifest()
     agent_key, _ = generate_keypair()
     ca_key, _ = generate_keypair()
@@ -139,17 +128,15 @@ def test_sign_with_ca_returns_verified_trust_level() -> None:
 
 
 def test_sign_with_ca_uses_jcs_canonicalization() -> None:
-    """sign_with_ca uses JCS canonicalization (deterministic)."""
     manifest = _sample_manifest()
     agent_key, _ = generate_keypair()
     ca_key, _ = generate_keypair()
-    a = sign_with_ca(manifest, agent_key, ca_key)
-    b = sign_with_ca(manifest, agent_key, ca_key)
-    assert a.signature.signature == b.signature.signature
+    signed_a = sign_with_ca(manifest, agent_key, ca_key)
+    signed_b = sign_with_ca(manifest, agent_key, ca_key)
+    assert signed_a.signature.signature == signed_b.signature.signature
 
 
 def test_verify_ca_signature_accepts_known_ca() -> None:
-    """verify_ca_signature returns True for manifest signed by known CA."""
     manifest = _sample_manifest()
     agent_key, _ = generate_keypair()
     ca_key, _ = generate_keypair()
@@ -159,7 +146,6 @@ def test_verify_ca_signature_accepts_known_ca() -> None:
 
 
 def test_verify_ca_signature_rejects_unknown_ca() -> None:
-    """verify_ca_signature raises when CA not in known_cas."""
     manifest = _sample_manifest()
     agent_key, _ = generate_keypair()
     ca_key, _ = generate_keypair()
@@ -172,7 +158,6 @@ def test_verify_ca_signature_rejects_unknown_ca() -> None:
 
 
 def test_verify_ca_signature_rejects_self_signed() -> None:
-    """verify_ca_signature raises for trust_level != VERIFIED."""
     manifest = _sample_manifest()
     agent_key, _ = generate_keypair()
     signed = sign_manifest(manifest, agent_key)
@@ -183,7 +168,6 @@ def test_verify_ca_signature_rejects_self_signed() -> None:
 
 
 def test_fixtures_load_and_validate() -> None:
-    """verified_manifest.json and self_signed_manifest.json load and validate."""
     for name in ("verified_manifest.json", "self_signed_manifest.json"):
         path = FIXTURES_DIR / name
         assert path.exists(), f"Fixture {name} not found"
@@ -194,21 +178,18 @@ def test_fixtures_load_and_validate() -> None:
 
 
 def test_verified_fixture_has_trust_level_verified() -> None:
-    """verified_manifest.json has trust_level=verified."""
     data = json.loads((FIXTURES_DIR / "verified_manifest.json").read_text())
     signed = SignedManifest.model_validate(data)
     assert signed.signature.trust_level == TrustLevel.VERIFIED
 
 
 def test_self_signed_fixture_has_trust_level_self_signed() -> None:
-    """self_signed_manifest.json has trust_level=self-signed."""
     data = json.loads((FIXTURES_DIR / "self_signed_manifest.json").read_text())
     signed = SignedManifest.model_validate(data)
     assert signed.signature.trust_level == TrustLevel.SELF_SIGNED
 
 
 def test_verify_ca_signature_with_asap_ca_fixture() -> None:
-    """verify_ca_signature works with tests/fixtures/asap_ca CA."""
     ca_pem = (ASAP_CA_DIR / "ca_private.pem").read_bytes()
     ca_key = load_private_key_from_pem(ca_pem)
     ca_public_b64 = (ASAP_CA_DIR / "ca_public_b64.txt").read_text().strip()

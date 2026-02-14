@@ -692,7 +692,6 @@ class ASAPClient:
     def _httpx_mtls_kwargs(
         self,
     ) -> tuple[tuple[str, str] | tuple[str, str, str] | None, bool | str]:
-        """Return (cert, verify) for httpx.AsyncClient when mTLS is configured."""
         if self._mtls_config is None:
             return (None, True)
         cfg = self._mtls_config
@@ -1352,15 +1351,13 @@ class ASAPClient:
                     raise ValueError(f"Invalid manifest format: {e}") from e
 
                 self._manifest_cache.set(url, manifest)
-                log_msg = f"Manifest fetched and cached for {sanitize_url(url)}"
-                if trust_level is not None:
-                    log_msg += f" (trust: {trust_level})"
                 logger.info(
                     "asap.client.manifest_fetched",
                     url=sanitize_url(url),
                     manifest_id=manifest.id,
                     trust_level=trust_level,
-                    message=log_msg,
+                    message=f"Manifest fetched and cached for {sanitize_url(url)}"
+                    + (f" (trust: {trust_level})" if trust_level else ""),
                 )
                 return manifest
 

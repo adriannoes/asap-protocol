@@ -14,8 +14,6 @@ from pathlib import Path
 
 @dataclass
 class MTLSConfig:
-    """mTLS config: cert_file + key_file = identity; ca_certs = peer verification (None = system default)."""
-
     cert_file: str | Path
     key_file: str | Path
     ca_certs: str | Path | None = None
@@ -64,7 +62,6 @@ def create_ssl_context(config: MTLSConfig, *, purpose: str = "client") -> ssl.SS
 
 
 def mtls_config_to_uvicorn_kwargs(config: MTLSConfig) -> dict[str, str | int]:
-    """Return uvicorn.run() kwargs for server mTLS."""
     cert_path = Path(config.cert_file)
     key_path = Path(config.key_file)
     kwargs: dict[str, str | int] = {

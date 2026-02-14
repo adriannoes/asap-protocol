@@ -25,7 +25,6 @@ from asap.models.entities import Manifest
 
 
 def detect_trust_level(signed_manifest: SignedManifest) -> TrustLevel:
-    """Return trust_level from signature block (defaults to SELF_SIGNED for legacy manifests)."""
     return signed_manifest.signature.trust_level
 
 
@@ -55,7 +54,6 @@ def verify_ca_signature(
     signed_manifest: SignedManifest,
     known_cas: Iterable[str] | Iterable[Ed25519PublicKey],
 ) -> bool:
-    """Verify manifest was signed by a known CA. Raises SignatureVerificationError if invalid or unknown CA."""
     if signed_manifest.signature.trust_level != TrustLevel.VERIFIED:
         raise SignatureVerificationError(
             f"Expected trust_level=verified for CA verification, got {signed_manifest.signature.trust_level.value}.",

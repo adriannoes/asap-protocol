@@ -159,7 +159,7 @@ def test_create_app_without_mtls_config() -> None:
         endpoints=Endpoint(asap="http://localhost:8000/asap"),
     )
     app = create_app(manifest)
-    assert not hasattr(app.state, "mtls_config") or app.state.mtls_config is None
+    assert app.state.mtls_config is None
 
 
 def test_asap_client_with_mtls_config(tmp_path: Path) -> None:
