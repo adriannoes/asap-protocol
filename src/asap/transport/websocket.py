@@ -220,6 +220,7 @@ class WebSocketTransport:
         self._connected_event: asyncio.Event = asyncio.Event()
         self._connect_error: Exception | None = None
         self._ssl_context = ssl_context
+        self._connect_lock = asyncio.Lock()
 
     async def _do_connect(self, url: str) -> None:
         if self._ws is not None:
@@ -322,22 +323,23 @@ class WebSocketTransport:
             await asyncio.sleep(delay)
 
     async def connect(self, url: str) -> None:
-        if self._ws is not None:
-            return
-        self._closed = False
-        if self._reconnect_on_disconnect:
-            self._run_task = asyncio.create_task(self._run_loop(url))
-            await self._connected_event.wait()
-            if self._connect_error is not None:
-                err = self._connect_error
-                self._connect_error = None
-                if self._run_task is not None:
-                    with suppress(asyncio.CancelledError):
-                        await self._run_task
-                    self._run_task = None
-                raise err
-        else:
-            await self._do_connect(url)
+        async with self._connect_lock:
+            if self._ws is not None:
+                return
+            self._closed = False
+            if self._reconnect_on_disconnect:
+                self._run_task = asyncio.create_task(self._run_loop(url))
+                await self._connected_event.wait()
+                if self._connect_error is not None:
+                    err = self._connect_error
+                    self._connect_error = None
+                    if self._run_task is not None:
+                        with suppress(asyncio.CancelledError):
+                            await self._run_task
+                        self._run_task = None
+                    raise err
+            else:
+                await self._do_connect(url)
 
     async def _recv_loop(self) -> None:
         if self._ws is None:
