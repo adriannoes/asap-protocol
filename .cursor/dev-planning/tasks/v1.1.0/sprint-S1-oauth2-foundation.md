@@ -320,3 +320,6 @@ v1.1.0 establishes the Identity Layer for ASAP. OAuth2/OIDC provides enterprise-
 - [x] Progress tracked in roadmap
 
 **Total Sub-tasks**: ~30
+
+## Documentation Updates
+- [ ] **Update Roadmap**: Mark completed items in [v1.1.0 Roadmap](./tasks-v1.1.0-roadmap.md)

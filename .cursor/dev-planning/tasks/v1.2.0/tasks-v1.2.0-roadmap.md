@@ -38,60 +38,60 @@ v1.2.0 establishes Verified Identity for the marketplace:
 
 ---
 
-## Sprint T1: Ed25519 PKI Foundation
+## Sprint T1: Ed25519 PKI Foundation ✅
 
 **Goal**: Implement cryptographic signing infrastructure (per SD-4, SD-5)
 
 ### Tasks
 
-- [ ] 1.1 Implement key generation and management
+- [x] 1.1 Implement key generation and management
   - Goal: Ed25519 keypair generation, storage, rotation
   - Deliverable: `src/asap/crypto/keys.py`
   - Details: [PKI Detailed - Task 1.1](./sprint-T1-ed25519-pki.md#task-11-key-management)
 
-- [ ] 1.2 Implement manifest signing
+- [x] 1.2 Implement manifest signing
   - Goal: Sign manifests with Ed25519
   - Deliverable: `src/asap/crypto/signing.py`
   - Details: [PKI Detailed - Task 1.2](./sprint-T1-ed25519-pki.md#task-12-manifest-signing)
 
-- [ ] 1.3 Implement signature verification
+- [x] 1.3 Implement signature verification
   - Goal: Verify signed manifests
   - Deliverable: Verification in client
   - Details: [PKI Detailed - Task 1.3](./sprint-T1-ed25519-pki.md#task-13-signature-verification)
 
 ### Definition of Done
-- [ ] Ed25519 key generation working
-- [ ] Manifests signed with 64-byte signatures
-- [ ] Verification rejects tampering
-- [ ] Test coverage >95%
+- [x] Ed25519 key generation working
+- [x] Manifests signed with 64-byte signatures
+- [x] Verification rejects tampering
+- [x] Test coverage >95%
 
 ---
 
-## Sprint T2: Trust Levels & mTLS
+## Sprint T2: Trust Levels & mTLS ✅
 
 **Goal**: Implement 3-tier trust levels and optional mTLS (per SD-5, SD-6)
 
 ### Tasks
 
-- [ ] 2.1 Implement trust level model
+- [x] 2.1 Implement trust level model
   - Goal: Self-signed, Verified ($49/mo), Enterprise levels
   - Deliverable: Trust level enum and validation
   - Details: [PKI Detailed - Task 2.1](./sprint-T2-trust-levels-mtls.md#task-21-trust-levels)
 
-- [ ] 2.2 Add Verified badge simulation
+- [x] 2.2 Add Verified badge simulation
   - Goal: ASAP-signed manifests for "Verified" agents
   - Note: Actual verification service is v2.0
   - Details: [PKI Detailed - Task 2.2](./sprint-T2-trust-levels-mtls.md#task-22-verified-badge)
 
-- [ ] 2.3 Implement optional mTLS
+- [x] 2.3 Implement optional mTLS
   - Goal: Mutual TLS for transport security
   - Constraint: Optional, never required (SD-6)
   - Details: [PKI Detailed - Task 2.3](./sprint-T2-trust-levels-mtls.md#task-23-mtls-support)
 
 ### Definition of Done
-- [ ] Trust levels displayed in manifest
-- [ ] mTLS optional and configurable
-- [ ] Enterprise CA support ready
+- [x] Trust levels displayed in manifest
+- [x] mTLS optional and configurable
+- [x] Enterprise CA support ready
 
 ---
 
@@ -165,15 +165,15 @@ v1.2.0 establishes Verified Identity for the marketplace:
 
 ## Progress Tracking
 
-**Overall Progress**: 0/13 tasks completed (0%)
+**Overall Progress**: 6/13 tasks completed (46%)
 
 **Sprint Status**:
-- ⬜ T1: 0/3 tasks (0%)
-- ⬜ T2: 0/3 tasks (0%)
+- ✅ T1: 3/3 tasks (100%) — merged PR #42
+- ✅ T2: 3/3 tasks (100%) — Trust Levels, Verified badge, mTLS (branch t2-trust-levels)
 - ⬜ T3: 0/4 tasks (0%)
 - ⬜ T4: 0/3 tasks (0%)
 
-**Last Updated**: 2026-02-12
+**Last Updated**: 2026-02-13
 
 ---
 
@@ -194,3 +194,5 @@ v1.2.0 establishes Verified Identity for the marketplace:
 |------|--------|
 | 2026-02-05 | Initial task roadmap |
 | 2026-02-12 | **Lean Marketplace pivot**: Removed Registry sprints (T3/T4) and DeepEval sprint (T6), renumbered Compliance Harness to T3 and Testing/Release to T4, reduced from 6 sprints (20 tasks) to 4 sprints (13 tasks) |
+| 2026-02-13 | **Sprint T1 complete**: Ed25519 PKI (key management, signing, verification) merged via PR #42 |
+| 2026-02-13 | **Sprint T2 complete**: Trust Levels (2.1), Verified badge simulation (2.2), optional mTLS (2.3) on branch t2-trust-levels |

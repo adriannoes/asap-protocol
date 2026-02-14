@@ -391,3 +391,6 @@ WebSocket provides full-duplex communication for scenarios requiring low latency
   - **Status**: `envelope.py` and `payloads.py` 100% (full suite). `websocket.py` ~68% (many branches in server handler, reconnection, pool). DoD remains open until websocket module reaches >95% or team agrees to scope.
 
 **Total Sub-tasks**: ~30
+
+## Documentation Updates
+- [ ] **Update Roadmap**: Mark completed items in [v1.1.0 Roadmap](./tasks-v1.1.0-roadmap.md)

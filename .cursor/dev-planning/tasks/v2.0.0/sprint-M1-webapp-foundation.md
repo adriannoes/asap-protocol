@@ -194,3 +194,6 @@ The web app is the human-facing marketplace interface. This sprint sets up the p
 - [ ] Base layout complete
 
 **Total Sub-tasks**: ~20
+
+## Documentation Updates
+- [ ] **Update Roadmap**: Mark completed items in [v2.0.0 Roadmap](./tasks-v2.0.0-roadmap.md)

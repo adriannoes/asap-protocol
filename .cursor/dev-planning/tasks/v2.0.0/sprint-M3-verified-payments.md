@@ -160,3 +160,6 @@ When an agent is approved/paid, we need to sign its manifest with the ASAP CA Ke
 - [ ] Admin review queue functional
 
 **Total Sub-tasks**: ~18
+
+## Documentation Updates
+- [ ] **Update Roadmap**: Mark completed items in [v2.0.0 Roadmap](./tasks-v2.0.0-roadmap.md)

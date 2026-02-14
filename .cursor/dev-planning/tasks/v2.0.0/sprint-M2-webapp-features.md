@@ -142,3 +142,6 @@ This sprint adds the core features: browsing agents, viewing agent details, and 
 - [ ] Agent registration flow complete
 
 **Total Sub-tasks**: ~20
+
+## Documentation Updates
+- [ ] **Update Roadmap**: Mark completed items in [v2.0.0 Roadmap](./tasks-v2.0.0-roadmap.md)

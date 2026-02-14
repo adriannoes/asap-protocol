@@ -203,3 +203,6 @@ Cryptographic signatures enable agents to prove authenticity without centralized
 - [x] Test coverage >95%
 
 **Total Sub-tasks**: ~25
+
+## Documentation Updates
+- [x] **Update Roadmap**: Mark completed items in [v1.2.0 Roadmap](./tasks-v1.2.0-roadmap.md)

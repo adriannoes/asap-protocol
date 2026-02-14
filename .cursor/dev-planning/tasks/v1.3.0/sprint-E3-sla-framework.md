@@ -177,3 +177,6 @@ SLAs (Service Level Agreements) define guarantees agents commit to - availabilit
 - [ ] Test coverage >95%
 
 **Total Sub-tasks**: ~24
+
+## Documentation Updates
+- [ ] **Update Roadmap**: Mark completed items in [v1.3.0 Roadmap](./tasks-v1.3.0-roadmap.md)
