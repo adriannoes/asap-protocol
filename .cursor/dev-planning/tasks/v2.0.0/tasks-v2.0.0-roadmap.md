@@ -131,6 +131,12 @@ v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Regi
 
 > **Note**: The following items were identified during v1.x development and should be considered during v2.0.0 if performance bottlenecks appear.
 
+### Resolved by M3: sign_with_ca Simulation → Real CA Service
+
+**Context**: [Issue #44](https://github.com/adriannoes/asap-protocol/issues/44) — `sign_with_ca` in `src/asap/crypto/trust.py` is a simulation (caller provides CA key). Acceptable for v1.2.0; must be integrated into a real flow for v2.0.
+
+**Resolved by**: Task 3.4 (ASAP CA Signing Automation) — GitHub Action + Stripe approval flow will use the CA key from secrets to sign manifests. When implementing 3.4, close #44 and add a comment linking to this task.
+
 ### Consider: orjson for JSON Serialization
 
 **Context**: If JSON serialization becomes a bottleneck with high traffic in the Marketplace, consider replacing stdlib `json` with `orjson` (Rust-based, ~10x faster).

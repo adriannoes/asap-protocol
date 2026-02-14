@@ -32,20 +32,13 @@ This PR introduces a 3-tier trust model (`SELF_SIGNED`, `VERIFIED`, `ENTERPRISE`
 ### Test Coverage
 - **Passed**: `tests/crypto/test_trust.py` covers trust logic and CA signing/verification extensively.
 - **Passed**: `tests/transport/test_mtls.py` covers mTLS configuration and context creation, including error cases.
-- **FAILED**: `src/asap/cli.py` adds a new command `manifest info` which **lacks test coverage**.
-    - **Action Required**: Add a test case in `tests/test_cli.py` that invokes `manifest info <path/to/manifest>`.
-    - Verify that the output contains the correct `Trust Level`.
+- **Passed**: `src/asap/cli.py` is covered by `tests/test_cli.py`, including the new `manifest info` command.
 
 ### Architecture & linting
 - **Pydantic v2**: Usage is consistent with the codebase.
 - **Async/Await**: Correctly used in transport layers.
 
 ## 3. Recommendations
-### Critical (Must Fix)
-1.  **Add Tests for `manifest info`**:
-    - Create a test in `tests/test_cli.py` that uses `CliRunner` to call `manifest info <path/to/manifest>`.
-    - Verify that the output contains the correct `Trust Level`.
-
 ### Suggestions (Nice to Have)
 1.  **Explicit Locking in WebSocketTransport**: Consider adding `self._connect_lock = asyncio.Lock()` in `WebSocketTransport` to guard `_do_connect` independently of `ASAPClient`.
 2.  **Tech Debt Tracking**: Create a ticket/issue to replace `sign_with_ca` (simulation) with a real CA service integration for v2.0.0.
