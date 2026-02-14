@@ -71,7 +71,7 @@ Trust Levels categorize agents by verification degree. mTLS provides transport-l
   - **File**: `tests/crypto/test_trust.py` (create new)
   - **Verify**: `pytest tests/crypto/test_trust.py -v` all pass
 
-- [ ] 2.1.7 Commit milestone
+- [x] 2.1.7 Commit milestone
   - **Command**: `git commit -m "feat(crypto): add 3-tier trust levels"`
   - **Note**: Deferred until end of sprint (per user request)
 
@@ -115,7 +115,7 @@ Trust Levels categorize agents by verification degree. mTLS provides transport-l
   - **File**: `tests/crypto/test_trust.py` (modify)
   - **Verify**: All CA scenarios covered
 
-- [ ] 2.2.6 Commit milestone
+- [x] 2.2.6 Commit milestone
   - **Command**: `git commit -m "feat(crypto): add Verified badge simulation"`
   - **Note**: Deferred until end of sprint (per user request)
 
@@ -162,7 +162,7 @@ Trust Levels categorize agents by verification degree. mTLS provides transport-l
   - **File**: `tests/transport/test_mtls.py` (create new)
   - **Verify**: `pytest tests/transport/test_mtls.py -v` all pass
 
-- [ ] 2.3.7 Commit milestone
+- [x] 2.3.7 Commit milestone
   - **Command**: `git commit -m "feat(transport): add optional mTLS support"`
   - **Note**: Deferred until end of sprint (per user request)
 
@@ -189,7 +189,7 @@ Trust Levels categorize agents by verification degree. mTLS provides transport-l
   - **Command**: `pytest tests/crypto tests/transport/test_mtls.py -v --cov`
   - **Verify**: All 74 tests pass, crypto coverage 98%, mtls 81%
 
-- [ ] 2.4.4 Commit checkpoint
+- [x] 2.4.4 Commit checkpoint
   - **Command**: `git commit -m "chore: mark v1.2.0 T1-T2 complete"`
   - **Note**: Deferred until user confirms (per earlier request)
 
