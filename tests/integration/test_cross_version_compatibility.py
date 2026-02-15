@@ -9,10 +9,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import httpx
 import pytest
 
-from asap.crypto.keys import generate_keypair, public_key_to_base64
+from asap.crypto.keys import generate_keypair
 from asap.crypto.signing import sign_manifest
 from asap.discovery.validation import validate_signed_manifest_response
 from asap.models.entities import Capability, Endpoint, Manifest, Skill

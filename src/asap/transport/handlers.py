@@ -32,7 +32,7 @@ import time
 from collections.abc import Awaitable
 from concurrent.futures import Executor
 from threading import RLock
-from typing import Any, Callable, Protocol, cast
+from typing import Callable, Protocol, cast
 
 from asap.errors import ASAPError
 from asap.models.entities import Manifest
