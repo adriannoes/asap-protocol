@@ -174,7 +174,7 @@ init_typed = true
 warn_required_dynamic_aliases = true
 
 [tool.pytest.ini_options]
-pythonpath = ["src", "."]  # src for asap; . for tests
+pythonpath = ["src", ".", "asap-compliance"]  # src for asap; . for tests; asap-compliance for harness
 minversion = "8.0"
 addopts = [
     "--strict-markers",
