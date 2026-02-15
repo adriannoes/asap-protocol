@@ -84,6 +84,8 @@ jobs:
         timeout-minutes: 12
 
       - name: Run compliance tests
+        env:
+          PYTHONPATH: src:.:asap-compliance
         run: uv run pytest asap-compliance/tests/ -q
 
   # Coverage: sequential pytest + Codecov (no -n auto)
