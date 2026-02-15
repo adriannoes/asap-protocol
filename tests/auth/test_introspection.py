@@ -231,3 +231,49 @@ def test_token_info_cache_ttl_caps_at_max() -> None:
         exp=now + 86400 * 7,  # 7 days
     )
     assert info.cache_ttl_seconds() == MAX_ACTIVE_CACHE_TTL_SECONDS
+
+
+async def test_introspect_cache_eviction_when_max_size_exceeded() -> None:
+    """Verify LRU eviction when cache exceeds max_cache_size (oldest evicted)."""
+    now = int(time.time())
+    call_count = 0
+
+    def counting_transport(request: httpx.Request) -> httpx.Response:
+        nonlocal call_count
+        call_count += 1
+        return httpx.Response(
+            status_code=200,
+            json={
+                "active": True,
+                "sub": f"sub-{call_count}",
+                "scope": "asap:read",
+                "exp": now + 3600,
+            },
+        )
+
+    introspector = TokenIntrospector(
+        introspection_url="https://auth.example.com/oauth/introspect",
+        client_id="c",
+        client_secret="s",
+        transport=httpx.MockTransport(counting_transport),
+        max_cache_size=2,
+    )
+
+    # Introspect 3 different tokens; cache holds max 2, oldest (token-1) evicted
+    r1 = await introspector.introspect("token-1")
+    r2 = await introspector.introspect("token-2")
+    r3 = await introspector.introspect("token-3")
+
+    assert r1 is not None and r1.sub == "sub-1"
+    assert r2 is not None and r2.sub == "sub-2"
+    assert r3 is not None and r3.sub == "sub-3"
+    assert call_count == 3
+
+    # Re-introspect token-1: was evicted when token-3 added, so transport called again
+    r1_again = await introspector.introspect("token-1")
+    assert r1_again is not None and r1_again.sub == "sub-4"
+    assert call_count == 4
+
+    # Cache size remains 2; one of token-2/token-3 may have been evicted when token-1
+    # was re-added. Verify cache eviction occurred (4 unique fetches for 3+1 tokens).
+    assert call_count == 4
