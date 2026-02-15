@@ -14,7 +14,7 @@ from typing import Any, Optional
 import httpx
 from joserfc import jwk
 from joserfc import jwt as jose_jwt
-from joserfc.errors import JoseError
+from joserfc.errors import JoseError, MissingClaimError
 
 from asap.observability import get_logger
 
@@ -72,8 +72,8 @@ async def fetch_keys(
 def validate_jwt(token: str, key_set: jwk.KeySet) -> Claims:
     """Validate JWT signature and return claims.
 
-    Decodes the JWT and verifies the signature using the provided KeySet.
-    Does not check exp, nbf, or other claims—caller should validate as needed.
+    Decodes the JWT, verifies the signature using the provided KeySet,
+    and enforces exp (expiration) validation. Tokens without exp are rejected.
 
     Args:
         token: Raw JWT string (e.g. from Authorization: Bearer <token>).
@@ -83,11 +83,20 @@ def validate_jwt(token: str, key_set: jwk.KeySet) -> Claims:
         Decoded claims dict (sub, scope, exp, etc.).
 
     Raises:
-        JoseError: If signature is invalid or token is malformed (BadSignatureError,
-            DecodeError, InvalidKeyIdError, etc.).
+        JoseError: If signature is invalid, token is malformed, or exp validation
+            fails (BadSignatureError, DecodeError, InvalidKeyIdError,
+            ExpiredTokenError, MissingClaimError, etc.).
     """
     token_obj = jose_jwt.decode(token, key_set)
-    return dict(token_obj.claims)
+    claims = dict(token_obj.claims)
+
+    if "exp" not in claims:
+        raise MissingClaimError("exp")
+
+    registry = jose_jwt.JWTClaimsRegistry()
+    registry.validate(claims)
+
+    return claims
 
 
 class JWKSValidator:

@@ -6,7 +6,13 @@ import httpx
 import pytest
 from joserfc import jwk
 from joserfc import jwt as jose_jwt
-from joserfc.errors import BadSignatureError, DecodeError, JoseError
+from joserfc.errors import (
+    BadSignatureError,
+    DecodeError,
+    ExpiredTokenError,
+    JoseError,
+    MissingClaimError,
+)
 
 from asap.auth.jwks import JWKSValidator, fetch_keys, validate_jwt
 
@@ -50,6 +56,37 @@ async def test_validate_jwt_succeeds_with_mocked_jwks() -> None:
 
     assert claims["sub"] == "urn:asap:agent:test"
     assert "asap:execute" in (claims.get("scope") or "").split()
+
+
+async def test_validate_jwt_raises_on_expired_token() -> None:
+    """Verify validate_jwt raises JoseError when token exp is in the past."""
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    key_set = jwk.KeySet.import_key_set(_make_jwks_response(key))
+
+    now = int(time.time())
+    expired_token = jose_jwt.encode(
+        {"alg": "RS256", "typ": "JWT"},
+        {"sub": "urn:asap:agent:test", "scope": "asap:execute", "exp": now - 3600},
+        key,
+    )
+
+    with pytest.raises((ExpiredTokenError, JoseError)):
+        validate_jwt(expired_token, key_set)
+
+
+async def test_validate_jwt_raises_on_missing_exp_claim() -> None:
+    """Verify validate_jwt raises when token has no exp claim."""
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    key_set = jwk.KeySet.import_key_set(_make_jwks_response(key))
+
+    token_without_exp = jose_jwt.encode(
+        {"alg": "RS256", "typ": "JWT"},
+        {"sub": "urn:asap:agent:test", "scope": "asap:execute"},
+        key,
+    )
+
+    with pytest.raises((MissingClaimError, JoseError)):
+        validate_jwt(token_without_exp, key_set)
 
 
 async def test_validate_jwt_raises_on_invalid_signature() -> None:
