@@ -7,9 +7,11 @@ Auth0, Keycloak, Azure AD, and other OIDC-compliant providers.
 
 from __future__ import annotations
 
+import ipaddress
 import time
 from threading import Lock
 from typing import Any, Optional
+from urllib.parse import urlparse
 
 import httpx
 from authlib.oidc.discovery import get_well_known_url
@@ -21,6 +23,30 @@ from asap.observability import get_logger
 logger = get_logger(__name__)
 
 DISCOVERY_CACHE_TTL_SECONDS = 3600.0
+
+
+def _is_private_or_internal_host(host: str) -> bool:
+    """Return True if host is private/internal (SSRF risk)."""
+    if not host or host == "localhost":
+        return True
+    try:
+        addr = ipaddress.ip_address(host)
+        return addr.is_private or addr.is_loopback or addr.is_reserved or addr.is_link_local
+    except ValueError:
+        return False
+
+
+def _validate_issuer_url(issuer_url: str, *, allow_private_issuers: bool = False) -> None:
+    """Validate issuer_url to mitigate SSRF; block private/internal hosts unless allowed."""
+    if allow_private_issuers:
+        return
+    parsed = urlparse(issuer_url)
+    host = parsed.hostname
+    if host and _is_private_or_internal_host(host):
+        raise ValueError(
+            f"OIDC issuer_url host '{host}' is private/internal. "
+            "Use allow_private_issuers=True for local development only."
+        )
 
 
 class _DiscoveryCacheEntry:
@@ -78,6 +104,7 @@ class OIDCDiscovery:
         issuer_url: str,
         *,
         transport: Optional[httpx.AsyncBaseTransport] = None,
+        allow_private_issuers: bool = False,
     ) -> None:
         """Initialize the discovery client.
 
@@ -85,7 +112,10 @@ class OIDCDiscovery:
             issuer_url: Issuer URL (e.g. https://auth.example.com or
                 https://tenant.auth0.com).
             transport: Optional httpx transport for testing.
+            allow_private_issuers: If True, allow private/internal hosts (127.0.0.1,
+                10.x, etc.). Use only for local development; defaults to False.
         """
+        _validate_issuer_url(issuer_url, allow_private_issuers=allow_private_issuers)
         self._issuer_url = issuer_url.rstrip("/")
         self._transport = transport
         self._cache_entry: Optional[_DiscoveryCacheEntry] = None

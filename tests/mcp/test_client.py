@@ -10,6 +10,30 @@ import pytest
 from asap.mcp.client import MCPClient
 
 
+def test_allowed_binaries_rejects_unknown_binary() -> None:
+    """allowed_binaries raises ValueError when binary not in allowlist."""
+    with pytest.raises(ValueError, match="not in allowed_binaries"):
+        MCPClient(
+            ["/usr/bin/unknown-binary", "-m", "server"],
+            allowed_binaries=frozenset({"python", "python3"}),
+        )
+
+
+def test_allowed_binaries_accepts_basename() -> None:
+    """allowed_binaries validates basename of path (e.g. python3 from /usr/bin/python3)."""
+    client = MCPClient(
+        ["/usr/bin/python3", "-m", "asap.mcp.server_runner"],
+        allowed_binaries=frozenset({"python", "python3"}),
+    )
+    assert client._server_command[0] == "/usr/bin/python3"
+
+
+def test_allowed_binaries_none_disables_validation() -> None:
+    """allowed_binaries=None (default) skips validation."""
+    client = MCPClient(["any-binary", "arg"])
+    assert client._server_command == ["any-binary", "arg"]
+
+
 @pytest.mark.asyncio
 async def test_client_send_without_connect_raises() -> None:
     """_send raises RuntimeError when not connected."""

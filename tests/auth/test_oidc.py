@@ -9,7 +9,7 @@ from joserfc import jwt as jose_jwt
 from joserfc.errors import JoseError
 
 from asap.auth.jwks import JWKSValidator
-from asap.auth.oidc import OIDCDiscovery
+from asap.auth.oidc import OIDCDiscovery, _validate_issuer_url
 
 
 def _discovery_response(jwks_uri: str = "https://auth.example.com/.well-known/jwks.json") -> dict:
@@ -25,6 +25,49 @@ def _discovery_response(jwks_uri: str = "https://auth.example.com/.well-known/jw
 def _make_jwks_response(public_key: jwk.RSAKey) -> dict:
     """Build JWKS JSON response from RSA key."""
     return {"keys": [public_key.as_dict(private=False)]}
+
+
+def test_validate_issuer_url_blocks_private_hosts() -> None:
+    """Verify private/internal issuer_url hosts are rejected by default."""
+    with pytest.raises(ValueError, match="private/internal"):
+        _validate_issuer_url("http://127.0.0.1/")
+    with pytest.raises(ValueError, match="private/internal"):
+        _validate_issuer_url("https://localhost/.well-known/openid-configuration")
+    with pytest.raises(ValueError, match="private/internal"):
+        _validate_issuer_url("http://192.168.1.1/")
+
+
+def test_validate_issuer_url_allows_public_hosts() -> None:
+    """Verify public issuer_url hosts are allowed."""
+    _validate_issuer_url("https://auth.example.com")
+    _validate_issuer_url("https://tenant.auth0.com")
+
+
+def test_validate_issuer_url_allow_private_issuers_override() -> None:
+    """Verify allow_private_issuers=True permits localhost for dev."""
+    _validate_issuer_url("http://127.0.0.1/", allow_private_issuers=True)
+    _validate_issuer_url("https://localhost/", allow_private_issuers=True)
+
+
+def test_oidc_discovery_rejects_private_issuer_by_default() -> None:
+    """Verify OIDCDiscovery raises on private issuer_url unless allow_private_issuers=True."""
+    with pytest.raises(ValueError, match="private/internal"):
+        OIDCDiscovery("http://127.0.0.1/")
+
+
+async def test_oidc_discovery_with_allow_private_issuers() -> None:
+    """Verify OIDCDiscovery with allow_private_issuers=True works for localhost."""
+
+    def mock_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=_discovery_response())
+
+    discovery = OIDCDiscovery(
+        "http://127.0.0.1",
+        transport=httpx.MockTransport(mock_handler),
+        allow_private_issuers=True,
+    )
+    config = await discovery.discover()
+    assert config.issuer == "https://auth.example.com"
 
 
 async def test_discover_fetches_and_parses_config() -> None:

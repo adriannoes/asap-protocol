@@ -72,7 +72,7 @@ OAuth2 (v1.1) proves "I have valid credentials from an IdP", but NOT "I am the a
 
 ### Expert Assessment
 
-**Custom Claims** is the most flexible solution: agents configure their IdP to include `https://asap.ai/agent_id` as a custom claim in the JWT. The ASAP server validates this claim matches the requesting agent's manifest `id`. For environments where custom claims aren't possible, a configurable allowlist mapping (`ASAP_AUTH_SUBJECT_MAP`) provides a fallback.
+**Custom Claims** is the most flexible solution: agents configure their IdP to include a custom claim (default: `https://github.com/adriannoes/asap-protocol/agent_id`) in the JWT. The ASAP server validates this claim matches the requesting agent's manifest `id`. Future: `https://asap-protocol.com/agent_id` will be the canonical namespace when the domain is available. For environments where custom claims aren't possible, a configurable allowlist mapping (`ASAP_AUTH_SUBJECT_MAP`) provides a fallback.
 
 ### Decision
 
@@ -80,7 +80,7 @@ OAuth2 (v1.1) proves "I have valid credentials from an IdP", but NOT "I am the a
 > **ADR-17**: v1.1 Trust Model uses **Custom Claims binding** for identity mapping, with explicit documentation of security limitations.
 >
 > **Identity Binding** (two approaches, both supported):
-> 1. **Custom Claims** (recommended): Agent configures IdP to include `https://asap.ai/agent_id: urn:asap:agent:bot` in JWT. Server validates claim matches manifest `id`.
+> 1. **Custom Claims** (recommended): Agent configures IdP to include `https://github.com/adriannoes/asap-protocol/agent_id: urn:asap:agent:bot` in JWT. Server validates claim matches manifest `id`.
 > 2. **Allowlist fallback**: `ASAP_AUTH_SUBJECT_MAP = {"urn:asap:agent:bot": "auth0|abc123"}` for environments without custom claims support.
 >
 > **Security Model documentation**:

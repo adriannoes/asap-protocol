@@ -286,6 +286,57 @@ class TestWebSocketErrorHandling(NoRateLimitTestBase):
         assert "error" in data
         assert data["error"].get("code") == -32602
 
+    def test_websocket_handler_exception_returns_jsonrpc_internal_error(
+        self,
+        sample_manifest: Manifest,
+        disable_rate_limiting: "ASAPRateLimiter",
+    ) -> None:
+        """When handle_message raises, client receives JSON-RPC error frame (-32603); connection stays open."""
+        from asap.transport.handlers import HandlerRegistry
+
+        def boom_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+            raise Exception("Boom")
+
+        registry = HandlerRegistry()
+        registry.register("task.request", boom_handler)
+        app_instance = create_app(
+            sample_manifest,
+            registry,
+            rate_limit=TEST_RATE_LIMIT_DEFAULT,
+        )
+        app_instance.state.limiter = disable_rate_limiting
+
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="c1",
+                skill_id="echo",
+                input={"msg": "trigger-boom"},
+            ).model_dump(),
+        )
+        rpc = JsonRpcRequest(
+            method=ASAP_METHOD,
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="ws-req-boom",
+        )
+        body = json.dumps(rpc.model_dump())
+
+        with (
+            TestClient(app_instance) as ws_client,
+            ws_client.websocket_connect("/asap/ws") as websocket,
+        ):
+            websocket.send_text(body)
+            response_text = websocket.receive_text()
+
+        data = json.loads(response_text)
+        assert data.get("jsonrpc") == "2.0"
+        assert "error" in data
+        assert data["error"].get("code") == -32603
+        assert "Internal error" in (data["error"].get("message") or "")
+
 
 # --- WebSocketTransport: correlation (3.2.3) and on_message (3.2.4) ---
 
@@ -391,6 +442,60 @@ class TestWebSocketTransportCorrelation(NoRateLimitTestBase):
         transport._ack_check_task = asyncio.create_task(transport._ack_check_loop())
         transport._closed = False
         await transport.close()
+        assert transport._ws is None
+        assert transport._closed
+
+    @pytest.mark.asyncio
+    async def test_connect_passes_ssl_context_to_websockets_connect(
+        self,
+    ) -> None:
+        """WebSocketTransport passes ssl_context to websockets.connect for wss://."""
+        import ssl
+
+        from unittest.mock import patch
+
+        ssl_ctx = ssl.create_default_context()
+        connect_calls: list[tuple[str, dict]] = []
+
+        async def fake_connect(url: str, **kwargs: object) -> object:
+            connect_calls.append((url, dict(kwargs)))
+            raise ConnectionRefusedError("mock: no real server")
+
+        with patch("asap.transport.websocket.websockets.connect", side_effect=fake_connect):
+            transport = WebSocketTransport(ssl_context=ssl_ctx)
+            with pytest.raises(ConnectionRefusedError):
+                await transport.connect("wss://example.com/asap/ws")
+
+        assert len(connect_calls) == 1
+        _, kwargs = connect_calls[0]
+        assert kwargs.get("ssl") is ssl_ctx
+
+    @pytest.mark.asyncio
+    async def test_connect_race_with_close_cleans_up_when_closed_during_connect(
+        self,
+    ) -> None:
+        """When close() runs while connect() is awaiting, _do_connect cleans up (lines 249-253)."""
+        from unittest.mock import AsyncMock, patch
+
+        release_connect = asyncio.Event()
+        connect_called = asyncio.Event()
+
+        async def slow_connect(url: str, **kwargs: object) -> object:
+            connect_called.set()
+            await release_connect.wait()
+            return AsyncMock()
+
+        with patch("asap.transport.websocket.websockets.connect", side_effect=slow_connect):
+            transport = WebSocketTransport(
+                receive_timeout=5.0,
+                reconnect_on_disconnect=False,
+            )
+            connect_task = asyncio.create_task(transport.connect("ws://localhost:9999/asap/ws"))
+            await connect_called.wait()
+            await transport.close()
+            release_connect.set()
+            await connect_task
+
         assert transport._ws is None
         assert transport._closed
 

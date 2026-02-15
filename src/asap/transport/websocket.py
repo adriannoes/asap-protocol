@@ -424,6 +424,8 @@ class WebSocketTransport:
                         )
         except asyncio.CancelledError:
             pass
+        except (SystemExit, KeyboardInterrupt):
+            raise
         except Exception as e:
             logger.warning("asap.websocket.recv_loop_error", error=str(e))
             for future in self._pending.values():
@@ -788,6 +790,8 @@ async def _heartbeat_loop(
             await websocket.send_text(ping_frame)
         except asyncio.CancelledError:
             return
+        except (SystemExit, KeyboardInterrupt):
+            raise
         except Exception as e:
             logger.debug("asap.websocket.heartbeat_error", error=str(e))
             closed.set()
@@ -828,6 +832,8 @@ async def handle_websocket_connection(
         while not closed.is_set():
             try:
                 raw = await websocket.receive_text()
+            except (SystemExit, KeyboardInterrupt):
+                raise
             except Exception as e:
                 logger.warning(
                     "asap.websocket.receive_error",
@@ -915,6 +921,8 @@ async def handle_websocket_connection(
                     await websocket.send_text(json.dumps(error_payload))
                 except Exception:
                     break
+    except (SystemExit, KeyboardInterrupt):
+        raise
     except Exception as e:
         logger.warning("asap.websocket.connection_error", error=str(e))
     finally:
