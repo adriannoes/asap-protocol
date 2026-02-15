@@ -121,7 +121,7 @@ v1.2.0 establishes Verified Identity for the marketplace:
 ### Definition of Done
 - [x] Compliance harness runnable against any agent
 - [x] Clear pass/fail output
-- [ ] Documentation for agent developers
+- [x] Documentation for agent developers (`docs/guides/compliance-testing.md`, `docs/guides/identity-signing.md`, `docs/guides/migration-v1.1-to-v1.2.md`)
 
 ---
 
@@ -131,11 +131,11 @@ v1.2.0 establishes Verified Identity for the marketplace:
 
 ### Tasks
 
-- [ ] 4.1 Run comprehensive testing
+- [x] 4.1 Run comprehensive testing
   - Goal: All tests pass, integration tests with v1.1 features
   - Details: [Release Detailed - Task 4.1](./sprint-T4-testing-release.md#task-41-comprehensive-testing)
 
-- [ ] 4.2 Prepare release materials
+- [x] 4.2 Prepare release materials
   - Goal: CHANGELOG, docs, version bump
   - Details: [Release Detailed - Task 4.2](./sprint-T4-testing-release.md#task-42-release-preparation)
 
@@ -144,9 +144,9 @@ v1.2.0 establishes Verified Identity for the marketplace:
   - Details: [Release Detailed - Task 4.3](./sprint-T4-testing-release.md#task-43-build-and-publish)
 
 ### Definition of Done
-- [ ] Compliance harness published
-- [ ] v1.2.0 on PyPI
-- [ ] Documentation complete
+- [ ] Compliance harness published (separate PyPI package)
+- [ ] v1.2.0 on PyPI (push tag v1.2.0)
+- [x] Documentation complete
 
 ---
 
@@ -165,15 +165,15 @@ v1.2.0 establishes Verified Identity for the marketplace:
 
 ## Progress Tracking
 
-**Overall Progress**: 10/13 tasks completed (77%)
+**Overall Progress**: 12/13 tasks completed (92%)
 
 **Sprint Status**:
 - ✅ T1: 3/3 tasks (100%) — merged PR #42
 - ✅ T2: 3/3 tasks (100%) — Trust Levels, Verified badge, mTLS (branch t2-trust-levels)
 - ✅ T3: 4/4 tasks (100%) — Compliance Harness (branch t3-compliance-harness)
-- ⬜ T4: 0/3 tasks (0%)
+- 🔄 T4: 2/3 tasks (67%) — Testing ✅, Release materials ✅, Build/publish pending (tag push)
 
-**Last Updated**: 2026-02-13
+**Last Updated**: 2026-02-15
 
 ---
 
@@ -196,3 +196,4 @@ v1.2.0 establishes Verified Identity for the marketplace:
 | 2026-02-12 | **Lean Marketplace pivot**: Removed Registry sprints (T3/T4) and DeepEval sprint (T6), renumbered Compliance Harness to T3 and Testing/Release to T4, reduced from 6 sprints (20 tasks) to 4 sprints (13 tasks) |
 | 2026-02-13 | **Sprint T1 complete**: Ed25519 PKI (key management, signing, verification) merged via PR #42 |
 | 2026-02-13 | **Sprint T2 complete**: Trust Levels (2.1), Verified badge simulation (2.2), optional mTLS (2.3) on branch t2-trust-levels |
+| 2026-02-15 | **Sprint T4 progress**: 4.1 comprehensive testing ✅, 4.2 release materials ✅; 4.3 build/publish pending (tag v1.2.0 + asap-compliance publish) |

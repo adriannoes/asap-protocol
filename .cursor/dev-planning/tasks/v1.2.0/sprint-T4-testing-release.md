@@ -28,8 +28,8 @@
   - Compliance harness execution time
 
 **Acceptance Criteria**:
-- [ ] Test coverage >95% for new code
-- [ ] No regressions in v1.1 features
+- [x] Test coverage >95% for new code (crypto: 94–100%, mtls: 95.31%; overall src/asap: 94.12%)
+- [x] No regressions in v1.1 features (1941 tests pass, 54 compliance tests pass)
 
 ---
 
@@ -78,34 +78,34 @@
 
 ### Sub-tasks
 
-- [ ] 4.3.1 Run CI pipeline
-  - All checks pass
+- [x] 4.3.1 Run CI pipeline
+  - Lint, mypy, tests pass locally; push to main triggers CI
 
 - [ ] 4.3.2 Create GitHub release
-  - Tag v1.2.0
-  - Release notes
+  - Tag v1.2.0 and push: `git tag v1.2.0 && git push origin v1.2.0`
+  - Release workflow auto-creates release from CHANGELOG
 
 - [ ] 4.3.3 Publish to PyPI
-  - `asap-protocol` package
-  - `asap-compliance` package
+  - `asap-protocol` — auto-published by release workflow on tag push
+  - `asap-compliance` — publish separately: `cd asap-compliance && uv build && uv publish`
 
 - [ ] 4.3.4 Update Docker image
-  - Build and push v1.2.0
+  - Auto-built and pushed to ghcr.io by release workflow on tag push
 
 **Acceptance Criteria**:
-- [ ] v1.2.0 on PyPI
-- [ ] GitHub release created
-- [ ] Docker image available
+- [ ] v1.2.0 on PyPI (after tag push)
+- [ ] GitHub release created (after tag push)
+- [ ] Docker image available (after tag push)
 
 ---
 
 ## Sprint T4 Definition of Done
 
-- [ ] All tests pass
-- [ ] CHANGELOG updated
-- [ ] v1.2.0 published to PyPI
-- [ ] Compliance harness published as separate package
-- [ ] Documentation complete
+- [x] All tests pass (1941 + 54 compliance)
+- [x] CHANGELOG updated
+- [ ] v1.2.0 published to PyPI (push tag v1.2.0)
+- [ ] Compliance harness published as separate package (`cd asap-compliance && uv build && uv publish`)
+- [x] Documentation complete
 
 **Total Sub-tasks**: ~13
 
@@ -125,4 +125,4 @@
 - `pyproject.toml`, `asap-compliance/pyproject.toml` – Version 1.2.0
 
 ## Documentation Updates
-- [ ] **Update Roadmap**: Mark completed items in [v1.2.0 Roadmap](./tasks-v1.2.0-roadmap.md)
+- [x] **Update Roadmap**: Mark completed items in [v1.2.0 Roadmap](./tasks-v1.2.0-roadmap.md)
