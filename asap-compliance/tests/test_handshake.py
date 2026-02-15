@@ -7,9 +7,6 @@ from typing import TYPE_CHECKING
 import httpx
 import pytest
 
-from asap.models.entities import Capability, Endpoint, Manifest, Skill
-from asap.transport.server import create_app
-
 from asap_compliance.config import ComplianceConfig
 from asap_compliance.validators.handshake import (
     CheckResult,
@@ -20,49 +17,6 @@ from asap_compliance.validators.handshake import (
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
-
-TEST_RATE_LIMIT = "999999/minute"
-
-
-@pytest.fixture
-def sample_manifest() -> Manifest:
-    """Create a sample manifest for compliance tests."""
-    return Manifest(
-        id="urn:asap:agent:compliance-test",
-        name="Compliance Test Agent",
-        version="1.0.0",
-        description="Agent for handshake compliance tests",
-        capabilities=Capability(
-            asap_version="0.1",
-            skills=[Skill(id="echo", description="Echo skill")],
-            state_persistence=False,
-        ),
-        endpoints=Endpoint(asap="http://localhost:8000/asap"),
-    )
-
-
-@pytest.fixture
-def good_agent_app(sample_manifest: Manifest) -> "FastAPI":
-    """Create ASAP server app (known-good agent)."""
-    return create_app(sample_manifest, rate_limit=TEST_RATE_LIMIT)
-
-
-@pytest.fixture
-def compliance_config_with_transport(
-    good_agent_app: "FastAPI",
-) -> tuple[ComplianceConfig, httpx.AsyncClient]:
-    """Return (ComplianceConfig, AsyncClient) using ASGI transport against good agent.
-
-    Note: Caller must aclose() the client when done, or use within async with.
-    """
-    transport = httpx.ASGITransport(app=good_agent_app)
-    client = httpx.AsyncClient(transport=transport, base_url="http://testserver")
-    config = ComplianceConfig(
-        agent_url="http://testserver",
-        timeout_seconds=5.0,
-        test_categories=["handshake"],
-    )
-    return config, client
 
 
 class TestHandshakeKnownGood:
@@ -232,6 +186,20 @@ class TestHandshakeKnownBad:
         assert not result.manifest_ok
         failed = [c for c in result.checks if not c.passed and "manifest" in c.name]
         assert len(failed) >= 1
+
+
+class TestHandshakeSyncWrapper:
+    """Tests for sync wrapper behavior when event loop is running."""
+
+    @pytest.mark.asyncio
+    async def test_validate_handshake_raises_when_called_from_running_loop(
+        self, compliance_config_with_transport: tuple[ComplianceConfig, httpx.AsyncClient]
+    ) -> None:
+        """Sync validate_handshake raises RuntimeError when called from async context."""
+        config, client = compliance_config_with_transport
+
+        with pytest.raises(RuntimeError, match="Cannot call sync validate_handshake"):
+            validate_handshake(config, client=client)
 
 
 class TestHandshakeResult:

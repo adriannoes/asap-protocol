@@ -7,42 +7,17 @@ from typing import TYPE_CHECKING
 import httpx
 import pytest
 
-from asap.models.entities import Capability, Endpoint, Manifest, Skill
-from asap.transport.server import create_app
-
 from asap_compliance.config import ComplianceConfig
 from asap_compliance.validators.handshake import CheckResult
 from asap_compliance.validators.sla import (
     SlaResult,
+    validate_sla,
     validate_sla_async,
     _check_progress_schema,
 )
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
-
-TEST_RATE_LIMIT = "999999/minute"
-
-
-@pytest.fixture
-def sla_manifest() -> Manifest:
-    return Manifest(
-        id="urn:asap:agent:sla-test",
-        name="SLA Test Agent",
-        version="1.0.0",
-        description="Agent for SLA compliance tests",
-        capabilities=Capability(
-            asap_version="0.1",
-            skills=[Skill(id="echo", description="Echo skill")],
-            state_persistence=False,
-        ),
-        endpoints=Endpoint(asap="http://localhost:8000/asap"),
-    )
-
-
-@pytest.fixture
-def sla_agent_app(sla_manifest: Manifest) -> "FastAPI":
-    return create_app(sla_manifest, rate_limit=TEST_RATE_LIMIT)
 
 
 class TestProgressSchema:
@@ -55,8 +30,8 @@ class TestProgressSchema:
 
 class TestSlaKnownGood:
     @pytest.mark.asyncio
-    async def test_sla_passes_against_echo_agent(self, sla_agent_app: "FastAPI") -> None:
-        transport = httpx.ASGITransport(app=sla_agent_app)
+    async def test_sla_passes_against_echo_agent(self, good_agent_app: "FastAPI") -> None:
+        transport = httpx.ASGITransport(app=good_agent_app)
         async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
             config = ComplianceConfig(
                 agent_url="http://testserver",
@@ -69,8 +44,8 @@ class TestSlaKnownGood:
         assert result.passed
 
     @pytest.mark.asyncio
-    async def test_task_completes_within_timeout(self, sla_agent_app: "FastAPI") -> None:
-        transport = httpx.ASGITransport(app=sla_agent_app)
+    async def test_task_completes_within_timeout(self, good_agent_app: "FastAPI") -> None:
+        transport = httpx.ASGITransport(app=good_agent_app)
         async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
             config = ComplianceConfig(
                 agent_url="http://testserver",
@@ -81,6 +56,27 @@ class TestSlaKnownGood:
         timeout_check = next((c for c in result.checks if c.name == "sla_task_timeout"), None)
         assert timeout_check is not None
         assert timeout_check.passed
+
+
+class TestSlaSkipChecks:
+    """Tests for skip_checks configuration."""
+
+    def test_skip_sla_check_passes_without_agent(self) -> None:
+        """When skip_checks includes 'sla', timeout check is skipped."""
+        config = ComplianceConfig(
+            agent_url="http://localhost:99999",
+            timeout_seconds=0.5,
+            skip_checks=["sla"],
+        )
+        result = validate_sla(config)
+        assert result.timeout_ok
+        assert result.passed
+        skip_check = next(
+            (c for c in result.checks if "skipped" in c.message.lower()),
+            None,
+        )
+        assert skip_check is not None
+        assert skip_check.passed
 
 
 class TestSlaResult:

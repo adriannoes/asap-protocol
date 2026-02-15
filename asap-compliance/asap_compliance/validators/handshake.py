@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
-from typing import Any
+from urllib.parse import urljoin
 
 import httpx
 from packaging.version import InvalidVersion, Version
@@ -27,14 +27,6 @@ CONTENT_TYPE_JSON = "application/json"
 
 @dataclass
 class CheckResult:
-    """Result of a single compliance check.
-
-    Attributes:
-        name: Check identifier.
-        passed: Whether the check passed.
-        message: Human-readable result or error message.
-    """
-
     name: str
     passed: bool
     message: str
@@ -42,15 +34,6 @@ class CheckResult:
 
 @dataclass
 class HandshakeResult:
-    """Aggregated result of handshake validation.
-
-    Attributes:
-        connection_ok: Health endpoint reachable and content-type correct.
-        manifest_ok: Manifest endpoint exists, schema valid, signature valid if signed.
-        version_ok: Agent reports version and rejects unsupported versions.
-        checks: Individual check results.
-    """
-
     connection_ok: bool
     manifest_ok: bool
     version_ok: bool
@@ -58,29 +41,28 @@ class HandshakeResult:
 
     @property
     def passed(self) -> bool:
-        """Return True if all handshake checks passed."""
         return self.connection_ok and self.manifest_ok and self.version_ok
 
 
 def _base_url(config: ComplianceConfig) -> str:
-    """Return normalized base URL (no trailing slash)."""
     return config.agent_url.rstrip("/")
 
 
 def _health_url(config: ComplianceConfig) -> str:
-    """Return full health endpoint URL."""
-    return _base_url(config) + WELLKNOWN_HEALTH_PATH
+    base = _base_url(config) + "/"
+    path = WELLKNOWN_HEALTH_PATH.lstrip("/")
+    return str(urljoin(base, path))
 
 
 def _manifest_url(config: ComplianceConfig) -> str:
-    """Return full manifest endpoint URL."""
-    return _base_url(config) + WELLKNOWN_MANIFEST_PATH
+    base = _base_url(config) + "/"
+    path = WELLKNOWN_MANIFEST_PATH.lstrip("/")
+    return str(urljoin(base, path))
 
 
 async def _check_connection(
     config: ComplianceConfig, client: httpx.AsyncClient
 ) -> list[CheckResult]:
-    """Test agent responds to health check with correct content-type."""
     results: list[CheckResult] = []
     url = _health_url(config)
 
@@ -147,11 +129,6 @@ async def _check_connection(
 async def _check_manifest(
     config: ComplianceConfig, client: httpx.AsyncClient
 ) -> tuple[list[CheckResult], Manifest | None]:
-    """Test manifest endpoint exists, schema valid, signature valid if signed.
-
-    Returns:
-        Tuple of (check results, parsed Manifest or None).
-    """
     results: list[CheckResult] = []
     manifest: Manifest | None = None
     url = _manifest_url(config)
@@ -194,8 +171,8 @@ async def _check_manifest(
         return results, None
 
     try:
-        data: dict[str, Any] = response.json()
-    except Exception as e:
+        data = response.json()
+    except (ValueError, TypeError) as e:
         results.append(
             CheckResult(
                 name="manifest_json",
@@ -245,7 +222,6 @@ async def _check_manifest(
 
 
 def _check_version(config: ComplianceConfig, manifest: Manifest | None) -> list[CheckResult]:
-    """Test agent reports version and rejects unsupported versions."""
     results: list[CheckResult] = []
 
     if manifest is None:
@@ -311,16 +287,6 @@ async def validate_handshake_async(
     *,
     client: httpx.AsyncClient | None = None,
 ) -> HandshakeResult:
-    """Run handshake validation against an ASAP agent (async).
-
-    Args:
-        config: Compliance configuration with agent_url and timeout.
-        client: Optional pre-configured httpx.AsyncClient (e.g. with ASGITransport
-            for testing). When provided, it is used and not closed.
-
-    Returns:
-        HandshakeResult with connection, manifest, and version check results.
-    """
     checks: list[CheckResult] = []
     connection_ok = False
     manifest_ok = False
@@ -360,8 +326,11 @@ def validate_handshake(
     *,
     client: httpx.AsyncClient | None = None,
 ) -> HandshakeResult:
-    """Run handshake validation against an ASAP agent (sync wrapper).
-
-    For async usage, call validate_handshake_async directly.
-    """
-    return asyncio.run(validate_handshake_async(config, client=client))
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(validate_handshake_async(config, client=client))
+    raise RuntimeError(
+        "Cannot call sync validate_handshake from inside a running event loop. "
+        "Use validate_handshake_async."
+    )

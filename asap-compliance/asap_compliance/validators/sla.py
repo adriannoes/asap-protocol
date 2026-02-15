@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import time
 from dataclasses import dataclass, field
+from typing import Any
 
 import httpx
 from pydantic import ValidationError
@@ -20,8 +21,6 @@ ASAP_METHOD = "asap.send"
 
 @dataclass
 class SlaResult:
-    """Aggregated result of SLA validation."""
-
     timeout_ok: bool
     progress_schema_ok: bool
     checks: list[CheckResult] = field(default_factory=list)
@@ -36,10 +35,10 @@ def _asap_url(config: ComplianceConfig) -> str:
     return f"{base}/asap"
 
 
-def _build_task_request_envelope() -> dict:
+def _build_task_request_envelope(config: ComplianceConfig) -> dict[str, Any]:
     payload = TaskRequest(
         conversation_id="conv_compliance_sla_01",
-        skill_id="echo",
+        skill_id=config.sla_skill_id,
         input={"compliance": "sla_test"},
     )
     return {
@@ -51,7 +50,7 @@ def _build_task_request_envelope() -> dict:
     }
 
 
-def _build_jsonrpc_request(envelope: dict) -> dict:
+def _build_jsonrpc_request(envelope: dict[str, Any]) -> dict[str, Any]:
     return {
         "jsonrpc": "2.0",
         "method": ASAP_METHOD,
@@ -63,7 +62,7 @@ def _build_jsonrpc_request(envelope: dict) -> dict:
     }
 
 
-def _parse_task_response(response_body: dict) -> TaskResponse | None:
+def _parse_task_response(response_body: dict[str, Any]) -> TaskResponse | None:
     result = response_body.get("result")
     if not isinstance(result, dict):
         return None
@@ -90,7 +89,7 @@ async def _check_task_completes_within_timeout(
 ) -> list[CheckResult]:
     results: list[CheckResult] = []
     url = _asap_url(config)
-    envelope = _build_task_request_envelope()
+    envelope = _build_task_request_envelope(config)
     body = _build_jsonrpc_request(envelope)
 
     start = time.perf_counter()
@@ -123,7 +122,7 @@ async def _check_task_completes_within_timeout(
 
     try:
         data = response.json()
-    except Exception as e:
+    except (ValueError, TypeError) as e:
         results.append(
             CheckResult(
                 name="sla_task_timeout",
@@ -212,14 +211,25 @@ async def validate_sla_async(
     checks.extend(progress_results)
     progress_schema_ok = all(r.passed for r in progress_results)
 
-    if client is not None:
-        timeout_results = await _check_task_completes_within_timeout(config, client)
+    skip_sla = "sla" in config.skip_checks
+    if skip_sla:
+        timeout_ok = True
+        checks.append(
+            CheckResult(
+                name="sla_task_timeout",
+                passed=True,
+                message="SLA timeout check skipped (skip_checks)",
+            )
+        )
     else:
-        async with httpx.AsyncClient(timeout=config.timeout_seconds) as c:
-            timeout_results = await _check_task_completes_within_timeout(config, c)
-    checks.extend(timeout_results)
-    timeout_check = next((r for r in timeout_results if r.name == "sla_task_timeout"), None)
-    timeout_ok = timeout_check.passed if timeout_check else False
+        if client is not None:
+            timeout_results = await _check_task_completes_within_timeout(config, client)
+        else:
+            async with httpx.AsyncClient(timeout=config.timeout_seconds) as c:
+                timeout_results = await _check_task_completes_within_timeout(config, c)
+        checks.extend(timeout_results)
+        timeout_check = next((r for r in timeout_results if r.name == "sla_task_timeout"), None)
+        timeout_ok = timeout_check.passed if timeout_check else False
 
     return SlaResult(
         timeout_ok=timeout_ok,
@@ -233,4 +243,10 @@ def validate_sla(
     *,
     client: httpx.AsyncClient | None = None,
 ) -> SlaResult:
-    return asyncio.run(validate_sla_async(config, client=client))
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(validate_sla_async(config, client=client))
+    raise RuntimeError(
+        "Cannot call sync validate_sla from inside a running event loop. Use validate_sla_async."
+    )
