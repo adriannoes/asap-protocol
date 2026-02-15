@@ -15,8 +15,15 @@
 - `asap-compliance/asap_compliance/__init__.py` - Package init
 - `asap-compliance/asap_compliance/harness.py` - Test harness
 - `asap-compliance/asap_compliance/config.py` - Configuration
+- `asap-compliance/asap_compliance/pytest_plugin.py` - Pytest plugin (fixture, marker)
+- `asap-compliance/asap_compliance/validators/handshake.py` - Handshake validator
+- `asap-compliance/asap_compliance/validators/schema.py` - Schema validator
+- `asap-compliance/asap_compliance/validators/state.py` - State machine validator
+- `asap-compliance/asap_compliance/validators/sla.py` - SLA validator (timeout, progress)
 - `asap-compliance/asap_compliance/validators/` - Validators
-- `asap-compliance/tests/` - Self-tests
+- `asap-compliance/tests/test_state.py` - State validator unit tests
+- `asap-compliance/tests/test_sla.py` - SLA validator tests
+- `asap-compliance/tests/test_state_integration.py` - Integration tests (lifecycle, failures)
 
 ---
 
@@ -32,7 +39,7 @@ The Compliance Harness validates that ASAP implementations follow the protocol s
 
 ### Sub-tasks
 
-- [ ] 3.1.1 Create package structure
+- [x] 3.1.1 Create package structure
   ```
   asap-compliance/
   ├── pyproject.toml
@@ -49,7 +56,7 @@ The Compliance Harness validates that ASAP implementations follow the protocol s
   └── tests/
   ```
 
-- [ ] 3.1.2 Define configuration
+- [x] 3.1.2 Define configuration
   ```python
   class ComplianceConfig(BaseModel):
       agent_url: str
@@ -57,20 +64,20 @@ The Compliance Harness validates that ASAP implementations follow the protocol s
       test_categories: List[str] = ["handshake", "schema", "state"]
   ```
 
-- [ ] 3.1.3 Create pytest plugin
+- [x] 3.1.3 Create pytest plugin
   - **Plugin**: `pytest-asap-compliance`
   - **Fixture**: `compliance_harness`
   - **Marker**: `@pytest.mark.asap_compliance`
 
-- [ ] 3.1.4 Write package setup
+- [x] 3.1.4 Write package setup
   - **File**: `pyproject.toml`
   - **Dependencies**: pytest, httpx, asap-protocol
 
-- [ ] 3.1.5 Commit
+- [x] 3.1.5 Commit
   - **Command**: `git commit -m "feat(evals): create compliance package structure"`
 
 **Acceptance Criteria**:
-- [ ] Package structure ready for validators
+- [x] Package structure ready for validators
 
 ---
 
@@ -80,34 +87,31 @@ The Compliance Harness validates that ASAP implementations follow the protocol s
 
 ### Sub-tasks
 
-- [ ] 3.2.1 Create handshake validator
+- [x] 3.2.1 Create handshake validator
   - **File**: `validators/handshake.py`
 
-- [ ] 3.2.2 Implement connection test
+- [x] 3.2.2 Implement connection test
   - Test: Agent responds to health check
   - Test: Correct content-type
 
-- [ ] 3.2.3 Implement manifest test
+- [x] 3.2.3 Implement manifest test
   - Test: Manifest endpoint exists
   - Test: Manifest schema valid
   - Test: Signature valid (using JCS and Strict Verification)
 
-- [ ] 3.2.4 Implement version negotiation test
+- [x] 3.2.4 Implement version negotiation test
   - Test: Agent reports version
   - Test: Rejects unsupported versions
 
-- [ ] 3.2.5 Write test for validator
+- [x] 3.2.5 Write test for validator
   - Test: Against known-good agent
-
-- [ ] 3.2.6 Commit
-  - **Command**: `git commit -m "feat(compliance): add handshake validator"`
   - Test: Against known-bad agent
 
-- [ ] 3.2.6 Commit
-  - **Command**: `git commit -m "feat(evals): add handshake validation"`
+- [x] 3.2.6 Commit
+  - **Command**: `git commit -m "feat(compliance): add handshake validator"`
 
 **Acceptance Criteria**:
-- [ ] Handshake tests detect issues
+- [x] Handshake tests detect issues
 
 ---
 
@@ -117,32 +121,32 @@ The Compliance Harness validates that ASAP implementations follow the protocol s
 
 ### Sub-tasks
 
-- [ ] 3.3.1 Create schema validator
+- [x] 3.3.1 Create schema validator
   - **File**: `validators/schema.py`
 
-- [ ] 3.3.2 Implement envelope validation
+- [x] 3.3.2 Implement envelope validation
   - Test: Envelope structure correct
   - Test: Required fields present
   - Test: Types correct
 
-- [ ] 3.3.3 Implement payload validation
+- [x] 3.3.3 Implement payload validation
   - Test: TaskRequest schema
   - Test: TaskResponse schema
-  - Test: Error schema
+  - Test: Error schema (MessageAck, McpToolResult)
 
-- [ ] 3.3.4 Implement extension handling
-  - Test: Unknown fields ignored
+- [x] 3.3.4 Implement extension handling
+  - Test: Unknown fields rejected (extra='forbid')
   - Test: Extensions passed through
 
-- [ ] 3.3.5 Write comprehensive tests
+- [x] 3.3.5 Write comprehensive tests
   - Edge cases from property tests
   - Known-bad payloads rejected
 
-- [ ] 3.3.6 Commit
+- [x] 3.3.6 Commit
   - **Command**: `git commit -m "feat(evals): add schema validation"`
 
 **Acceptance Criteria**:
-- [ ] Schema validation catches errors
+- [x] Schema validation catches errors
 
 ---
 
@@ -152,44 +156,44 @@ The Compliance Harness validates that ASAP implementations follow the protocol s
 
 ### Sub-tasks
 
-- [ ] 3.4.1 Create state validator
+- [x] 3.4.1 Create state validator
   - **File**: `validators/state.py`
 
-- [ ] 3.4.2 Implement transition tests
+- [x] 3.4.2 Implement transition tests
   - Test: PENDING → RUNNING allowed
   - Test: COMPLETED → RUNNING rejected
   - Test: All valid paths work
 
-- [ ] 3.4.3 Implement terminal state tests
+- [x] 3.4.3 Implement terminal state tests
   - Test: COMPLETED is terminal
   - Test: FAILED is terminal
   - Test: No transitions from terminal
 
-- [ ] 3.4.4 Implement SLA validation
+- [x] 3.4.4 Implement SLA validation
   - Test: Task completes within timeout
   - Test: Progress updates sent
 
-- [ ] 3.4.5 Write integration tests
+- [x] 3.4.5 Write integration tests
   - Full task lifecycle
   - Various failure scenarios
 
-- [ ] 3.4.6 Commit
+- [x] 3.4.6 Commit
   - **Command**: `git commit -m "feat(evals): add state machine validation"`
 
 **Acceptance Criteria**:
-- [ ] State machine correctness verified
+- [x] State machine correctness verified
 
 ---
 
 ## Sprint T3 Definition of Done
 
-- [ ] Compliance package structure ready
-- [ ] Handshake validation working
-- [ ] Schema validation working
-- [ ] State machine validation working
-- [ ] Test coverage >95%
+- [x] Compliance package structure ready
+- [x] Handshake validation working
+- [x] Schema validation working
+- [x] State machine validation working
+- [x] Test coverage >95%
 
 **Total Sub-tasks**: ~22
 
 ## Documentation Updates
-- [ ] **Update Roadmap**: Mark completed items in [v1.2.0 Roadmap](./tasks-v1.2.0-roadmap.md)
+- [x] **Update Roadmap**: Mark completed items in [v1.2.0 Roadmap](./tasks-v1.2.0-roadmap.md)

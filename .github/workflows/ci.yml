@@ -9,6 +9,7 @@ on:
     paths:
       - 'src/**'
       - 'tests/**'
+      - 'asap-compliance/**'
       - 'docs/**'
       - 'pyproject.toml'
       - 'uv.lock'
@@ -20,6 +21,7 @@ on:
     paths:
       - 'src/**'
       - 'tests/**'
+      - 'asap-compliance/**'
       - 'docs/**'
       - 'pyproject.toml'
       - 'uv.lock'
@@ -80,6 +82,11 @@ jobs:
           PYTHONPATH: src
         run: uv run pytest -n auto --tb=short
         timeout-minutes: 12
+
+      - name: Run compliance tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}:${{ github.workspace }}/asap-compliance
+        run: uv run pytest asap-compliance/tests/ -q --tb=short
 
   # Coverage: sequential pytest + Codecov (no -n auto)
   coverage:

@@ -101,26 +101,26 @@ v1.2.0 establishes Verified Identity for the marketplace:
 
 ### Tasks
 
-- [ ] 3.1 Create compliance test suite
+- [x] 3.1 Create compliance test suite
   - Goal: Pytest-based compliance tests
   - Deliverable: `asap-compliance/` package
   - Details: [Evals Detailed - Task 3.1](./sprint-T3-compliance-harness.md#task-31-compliance-suite)
 
-- [ ] 3.2 Implement handshake validation
+- [x] 3.2 Implement handshake validation
   - Goal: Validate agent handshake correctness
   - Details: [Evals Detailed - Task 3.2](./sprint-T3-compliance-harness.md#task-32-handshake-validation)
 
-- [ ] 3.3 Implement schema validation
+- [x] 3.3 Implement schema validation
   - Goal: Verify Pydantic schema compliance
   - Details: [Evals Detailed - Task 3.3](./sprint-T3-compliance-harness.md#task-33-schema-validation)
 
-- [ ] 3.4 Implement state machine validation
+- [x] 3.4 Implement state machine validation
   - Goal: Verify correct state transitions
   - Details: [Evals Detailed - Task 3.4](./sprint-T3-compliance-harness.md#task-34-state-machine-validation)
 
 ### Definition of Done
-- [ ] Compliance harness runnable against any agent
-- [ ] Clear pass/fail output
+- [x] Compliance harness runnable against any agent
+- [x] Clear pass/fail output
 - [ ] Documentation for agent developers
 
 ---
@@ -165,12 +165,12 @@ v1.2.0 establishes Verified Identity for the marketplace:
 
 ## Progress Tracking
 
-**Overall Progress**: 6/13 tasks completed (46%)
+**Overall Progress**: 10/13 tasks completed (77%)
 
 **Sprint Status**:
 - ✅ T1: 3/3 tasks (100%) — merged PR #42
 - ✅ T2: 3/3 tasks (100%) — Trust Levels, Verified badge, mTLS (branch t2-trust-levels)
-- ⬜ T3: 0/4 tasks (0%)
+- ✅ T3: 4/4 tasks (100%) — Compliance Harness (branch t3-compliance-harness)
 - ⬜ T4: 0/3 tasks (0%)
 
 **Last Updated**: 2026-02-13
