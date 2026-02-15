@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import json
 import uuid
 from datetime import datetime
@@ -19,18 +20,31 @@ DEFAULT_DB_PATH = "asap_state.db"
 SNAPSHOTS_TABLE = "snapshots"
 USAGE_EVENTS_TABLE = "usage_events"
 
+# Shared executor for sync bridge when called from async context.
+# Reused across all DB operations to avoid per-call ThreadPoolExecutor creation.
+_SYNC_BRIDGE_EXECUTOR: concurrent.futures.ThreadPoolExecutor | None = None
+
+
+def _get_sync_bridge_executor() -> concurrent.futures.ThreadPoolExecutor:
+    """Return the shared executor for running async coros from sync code."""
+    global _SYNC_BRIDGE_EXECUTOR
+    if _SYNC_BRIDGE_EXECUTOR is None:
+        _SYNC_BRIDGE_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+            max_workers=4,
+            thread_name_prefix="asap-sqlite-sync",
+        )
+    return _SYNC_BRIDGE_EXECUTOR
+
 
 def _run_sync(coro: Any) -> Any:
-    """Run an async coroutine from sync code (creates new loop or uses existing)."""
+    """Run an async coroutine from sync code (creates new loop or uses shared executor)."""
     try:
         asyncio.get_running_loop()
     except RuntimeError:
         return asyncio.run(coro)
-    import concurrent.futures
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-        future = pool.submit(asyncio.run, coro)
-        return future.result()
+    executor = _get_sync_bridge_executor()
+    future = executor.submit(asyncio.run, coro)
+    return future.result()
 
 
 def _snapshot_to_row(snapshot: StateSnapshot) -> tuple[str, str, int, str, int, str]:
