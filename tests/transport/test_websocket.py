@@ -324,9 +324,10 @@ class TestWebSocketErrorHandling(NoRateLimitTestBase):
         )
         body = json.dumps(rpc.model_dump())
 
-        with TestClient(app_instance) as ws_client, ws_client.websocket_connect(
-            "/asap/ws"
-        ) as websocket:
+        with (
+            TestClient(app_instance) as ws_client,
+            ws_client.websocket_connect("/asap/ws") as websocket,
+        ):
             websocket.send_text(body)
             response_text = websocket.receive_text()
 
@@ -489,9 +490,7 @@ class TestWebSocketTransportCorrelation(NoRateLimitTestBase):
                 receive_timeout=5.0,
                 reconnect_on_disconnect=False,
             )
-            connect_task = asyncio.create_task(
-                transport.connect("ws://localhost:9999/asap/ws")
-            )
+            connect_task = asyncio.create_task(transport.connect("ws://localhost:9999/asap/ws"))
             await connect_called.wait()
             await transport.close()
             release_connect.set()

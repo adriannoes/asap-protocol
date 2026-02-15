@@ -57,6 +57,7 @@ def test_oidc_discovery_rejects_private_issuer_by_default() -> None:
 
 async def test_oidc_discovery_with_allow_private_issuers() -> None:
     """Verify OIDCDiscovery with allow_private_issuers=True works for localhost."""
+
     def mock_handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json=_discovery_response())
 
