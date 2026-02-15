@@ -1,5 +1,6 @@
 """Tests for SQLite SnapshotStore and MeteringStore."""
 
+import threading
 from datetime import datetime, timezone
 
 import pytest
@@ -181,6 +182,28 @@ class TestSQLiteSnapshotStoreCRUD:
     ) -> None:
         """delete for unknown task returns False."""
         assert sqlite_snapshot_store.delete("nonexistent", None) is False
+
+    def test_sequential_operations_do_not_spawn_excessive_threads(
+        self,
+        sqlite_snapshot_store: SQLiteSnapshotStore,
+        sample_snapshot: StateSnapshot,
+    ) -> None:
+        """Multiple sequential DB operations reuse shared executor; no per-call thread explosion."""
+        initial_count = threading.active_count()
+        for i in range(15):
+            snap = StateSnapshot(
+                id=f"snap_{i:02d}",
+                task_id=sample_snapshot.task_id,
+                version=sample_snapshot.version + i,
+                data={"seq": i},
+                checkpoint=False,
+                created_at=datetime.now(timezone.utc),
+            )
+            sqlite_snapshot_store.save(snap)
+            _ = sqlite_snapshot_store.get(snap.task_id, snap.version)
+        final_count = threading.active_count()
+        # Shared executor has max 4 workers; delta should be bounded (not 15+ new threads)
+        assert final_count - initial_count <= 8
 
 
 class TestSQLiteSnapshotStorePersistence:
