@@ -8,7 +8,7 @@ Copy-paste ready example showing:
 
 Run server (requires JWKS endpoint and env vars):
     ASAP_AUTH_JWKS_URI=https://your-tenant.auth0.com/.well-known/jwks.json \\
-    ASAP_AUTH_CUSTOM_CLAIM=https://asap.ai/agent_id \\
+    ASAP_AUTH_CUSTOM_CLAIM=https://github.com/adriannoes/asap-protocol/agent_id \\
     uv run python -m asap.examples.secure_agent --server --port 8000
 
 Run client (requires token endpoint and credentials):

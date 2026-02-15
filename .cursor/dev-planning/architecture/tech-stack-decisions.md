@@ -116,7 +116,7 @@ Focus shifted to secure, real-time communication and persistent state.
 -   **Decision**: **JWT Custom Claims** for mapping IdP identities to ASAP agent IDs
 -   **Rationale**:
     -   **The problem**: IdP-generated `sub` claims (e.g., `google-oauth2|12345`) never match ASAP `agent_id` values (e.g., `urn:asap:agent:bot`). A strict `sub == agent_id` binding is impossible in practice.
-    -   **Custom Claims** (recommended): Agent configures IdP to include `https://asap.ai/agent_id` as a private claim in the JWT. ASAP server validates this claim matches the requesting agent's manifest `id`.
+    -   **Custom Claims** (recommended): Agent configures IdP to include a custom claim (default: `https://github.com/adriannoes/asap-protocol/agent_id`) in the JWT. ASAP server validates this claim matches the requesting agent's manifest `id`. Future: `https://asap-protocol.com/agent_id` will be the canonical namespace when the domain is available.
     -   **Allowlist fallback**: `ASAP_AUTH_SUBJECT_MAP` env var for environments where custom claims aren't possible.
 -   **Why Custom Claims over strict binding?**:
     -   Portable across IdPs (Auth0, Keycloak, Azure AD all support custom claims)

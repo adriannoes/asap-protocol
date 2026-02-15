@@ -347,7 +347,7 @@ Identity layer: OAuth2/OIDC, discovery, WebSocket, state storage, and webhooks. 
 - **OAuth2 server**: `OAuth2Config`, `OAuth2Middleware` — JWT validation via JWKS, optional scope, path prefix
 - **OAuth2 client**: `OAuth2ClientCredentials` for client_credentials grant; `Token` model with expiry
 - **OIDC discovery**: `OIDCDiscovery`, `OIDCConfig` — auto-config from `/.well-known/openid-configuration`
-- **Custom Claims identity binding**: JWT custom claim (e.g. `https://asap.ai/agent_id`) or `ASAP_AUTH_SUBJECT_MAP` allowlist; envelope sender must match authenticated agent
+- **Custom Claims identity binding**: JWT custom claim (default: `https://github.com/adriannoes/asap-protocol/agent_id`; future: `https://asap-protocol.com/agent_id`) or `ASAP_AUTH_SUBJECT_MAP` allowlist; envelope sender must match authenticated agent
 - **v1.1 Security Model**: `docs/security/v1.1-security-model.md` — trust limitations, Custom Claims, Auth0/Keycloak/Azure AD guides
 
 #### Discovery (S2, SD-11, ADR-15)

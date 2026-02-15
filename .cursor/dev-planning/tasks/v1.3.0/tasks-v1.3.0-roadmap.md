@@ -3,7 +3,7 @@
 > **High-level task overview** for v1.3.0 milestone (Observability & Delegation)
 >
 > **Parent PRD**: [prd-v1.3-roadmap.md](../../../product-specs/prd/prd-v1.3-roadmap.md)
-> **Prerequisite**: v1.2.0 released
+> **Prerequisite**: v1.2.0 released; [Security Remediation](../v1.2.1/plan-security-remediation-pre-v1.3.md) (P0–P2) before v1.3.0
 > **Target Version**: v1.3.0
 > **Focus**: Observability Metering, Delegation Tokens, SLA Framework
 >
