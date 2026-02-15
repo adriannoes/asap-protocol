@@ -87,11 +87,11 @@ class TestStateSyncWrapper:
     def test_validate_state_machine_sync_requires_running_agent(self) -> None:
         """Sync validate_state_machine works when no event loop is running.
 
-        Note: This test uses localhost:99999 (unreachable) - we only verify the
-        sync wrapper runs without crashing. For full pass, use async with good_agent_app.
+        Note: Uses unreachable port 17999 - we only verify the sync wrapper runs
+        without crashing. For full pass, use async with good_agent_app.
         """
         config = ComplianceConfig(
-            agent_url="http://localhost:99999",
+            agent_url="http://127.0.0.1:17999",
             timeout_seconds=0.5,
         )
         result = validate_state_machine(config)

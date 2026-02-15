@@ -84,7 +84,7 @@ class TestHandshakeKnownBad:
     def test_fails_when_agent_unreachable(self) -> None:
         """Validation fails when agent URL is unreachable."""
         config = ComplianceConfig(
-            agent_url="http://localhost:99999",
+            agent_url="http://127.0.0.1:17999",
             timeout_seconds=0.5,
         )
         result = validate_handshake(config)

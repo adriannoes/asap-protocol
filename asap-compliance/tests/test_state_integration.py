@@ -56,7 +56,7 @@ class TestFailureScenarios:
         from asap_compliance.validators.sla import validate_sla
 
         config = ComplianceConfig(
-            agent_url="http://localhost:99999",
+            agent_url="http://127.0.0.1:17999",
             timeout_seconds=0.5,
         )
         result = validate_sla(config)
@@ -67,7 +67,7 @@ class TestFailureScenarios:
         from asap_compliance.validators.state import validate_state_machine
 
         config = ComplianceConfig(
-            agent_url="http://localhost:99999",
+            agent_url="http://127.0.0.1:17999",
             timeout_seconds=0.5,
         )
         result = validate_state_machine(config)
@@ -76,7 +76,7 @@ class TestFailureScenarios:
     @pytest.mark.asyncio
     async def test_handshake_fails_on_bad_agent(self) -> None:
         config = ComplianceConfig(
-            agent_url="http://localhost:99999",
+            agent_url="http://127.0.0.1:17999",
             timeout_seconds=0.5,
         )
         result = await validate_handshake_async(config)

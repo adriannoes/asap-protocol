@@ -64,7 +64,7 @@ class TestSlaSkipChecks:
     def test_skip_sla_check_passes_without_agent(self) -> None:
         """When skip_checks includes 'sla', timeout check is skipped."""
         config = ComplianceConfig(
-            agent_url="http://localhost:99999",
+            agent_url="http://127.0.0.1:17999",
             timeout_seconds=0.5,
             skip_checks=["sla"],
         )
