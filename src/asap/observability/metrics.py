@@ -37,25 +37,11 @@ class Counter:
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     def increment(self, labels: dict[str, str] | None = None, value: float = 1.0) -> None:
-        """Increment the counter by value.
-
-        Args:
-            labels: Optional label key-value pairs
-            value: Amount to increment (default: 1.0)
-        """
         label_key = tuple(sorted((labels or {}).items()))
         with self._lock:
             self.values[label_key] = self.values.get(label_key, 0.0) + value
 
     def get(self, labels: dict[str, str] | None = None) -> float:
-        """Get current counter value for labels.
-
-        Args:
-            labels: Optional label key-value pairs
-
-        Returns:
-            Current counter value
-        """
         label_key = tuple(sorted((labels or {}).items()))
         with self._lock:
             return self.values.get(label_key, 0.0)
@@ -86,12 +72,6 @@ class Histogram:
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     def observe(self, value: float, labels: dict[str, str] | None = None) -> None:
-        """Record an observation in the histogram.
-
-        Args:
-            value: The observed value
-            labels: Optional label key-value pairs
-        """
         label_key = tuple(sorted((labels or {}).items()))
         with self._lock:
             if label_key not in self.values:
@@ -114,14 +94,6 @@ class Histogram:
                 data["count"] += 1.0
 
     def get_count(self, labels: dict[str, str] | None = None) -> float:
-        """Get total observation count for labels.
-
-        Args:
-            labels: Optional label key-value pairs
-
-        Returns:
-            Total observation count
-        """
         label_key = tuple(sorted((labels or {}).items()))
         with self._lock:
             if label_key not in self.values:
@@ -218,13 +190,6 @@ class MetricsCollector:
     def increment_counter(
         self, name: str, labels: dict[str, str] | None = None, value: float = 1.0
     ) -> None:
-        """Increment a counter metric.
-
-        Args:
-            name: Metric name
-            labels: Optional label key-value pairs
-            value: Amount to increment (default: 1.0)
-        """
         with self._lock:
             if name in self._counters:
                 self._counters[name].increment(labels, value)
@@ -232,59 +197,23 @@ class MetricsCollector:
     def observe_histogram(
         self, name: str, value: float, labels: dict[str, str] | None = None
     ) -> None:
-        """Record an observation in a histogram.
-
-        Args:
-            name: Metric name
-            value: The observed value
-            labels: Optional label key-value pairs
-        """
         with self._lock:
             if name in self._histograms:
                 self._histograms[name].observe(value, labels)
 
     def get_counter(self, name: str, labels: dict[str, str] | None = None) -> float:
-        """Get current counter value.
-
-        Args:
-            name: Metric name
-            labels: Optional label key-value pairs
-
-        Returns:
-            Current counter value or 0.0 if not found
-        """
         with self._lock:
             if name in self._counters:
                 return self._counters[name].get(labels)
             return 0.0
 
     def get_histogram_count(self, name: str, labels: dict[str, str] | None = None) -> float:
-        """Get histogram observation count.
-
-        Args:
-            name: Metric name
-            labels: Optional label key-value pairs
-
-        Returns:
-            Total observation count or 0.0 if not found
-        """
         with self._lock:
             if name in self._histograms:
                 return self._histograms[name].get_count(labels)
             return 0.0
 
     def _format_labels(self, labels: tuple[tuple[str, str], ...]) -> str:
-        """Format labels for Prometheus output.
-
-        Prometheus label values must escape backslashes and double quotes.
-        Backslashes are escaped as \\, and double quotes are escaped as \\".
-
-        Args:
-            labels: Sorted tuple of label key-value pairs
-
-        Returns:
-            Formatted label string (e.g., '{key="value",key2="value2"}')
-        """
         if not labels:
             return ""
 

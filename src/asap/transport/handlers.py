@@ -32,7 +32,7 @@ import time
 from collections.abc import Awaitable
 from concurrent.futures import Executor
 from threading import RLock
-from typing import Callable, Protocol, TypeAlias, cast
+from typing import Callable, Protocol, cast
 
 from asap.errors import ASAPError
 from asap.models.entities import Manifest
@@ -51,15 +51,6 @@ class SyncHandler(Protocol):
     """Protocol for synchronous handlers."""
 
     def __call__(self, envelope: Envelope, manifest: Manifest) -> Envelope:
-        """Process envelope synchronously.
-
-        Args:
-            envelope: The incoming ASAP envelope to process
-            manifest: The server's manifest for context
-
-        Returns:
-            Response envelope to send back
-        """
         ...
 
 
@@ -67,37 +58,14 @@ class AsyncHandler(Protocol):
     """Protocol for asynchronous handlers."""
 
     def __call__(self, envelope: Envelope, manifest: Manifest) -> Awaitable[Envelope]:
-        """Process envelope asynchronously.
-
-        Args:
-            envelope: The incoming ASAP envelope to process
-            manifest: The server's manifest for context
-
-        Returns:
-            Awaitable that resolves to response envelope
-        """
         ...
 
 
 # Type alias for handler functions (supports both sync and async)
 Handler = SyncHandler | AsyncHandler
-"""Type alias for ASAP message handlers.
-
-A handler is a callable that receives an Envelope and a Manifest,
-and returns a response Envelope (sync) or an awaitable that resolves
-to a response Envelope (async).
-
-Args:
-    envelope: The incoming ASAP envelope to process
-    manifest: The server's manifest for context
-
-Returns:
-    Response envelope to send back (sync) or awaitable (async)
-"""
 
 # Type alias for factories that return a sync handler (useful in tests)
-SyncHandlerFactory: TypeAlias = Callable[[], SyncHandler]
-"""Type alias for callables that return a SyncHandler (e.g. create_echo_handler)."""
+SyncHandlerFactory = Callable[[], SyncHandler]
 
 
 def validate_handler(handler: Handler) -> None:
@@ -157,11 +125,6 @@ class HandlerNotFoundError(ASAPError):
     """
 
     def __init__(self, payload_type: str) -> None:
-        """Initialize handler not found error.
-
-        Args:
-            payload_type: The payload type that has no handler
-        """
         message = f"No handler registered for payload type: {payload_type}"
         super().__init__(
             code="asap:transport/handler_not_found",
@@ -198,33 +161,11 @@ class HandlerRegistry:
     """
 
     def __init__(self, executor: Executor | None = None) -> None:
-        """Initialize empty handler registry with thread-safe lock.
-
-        Args:
-            executor: Optional executor for running sync handlers.
-                If None, uses default asyncio executor (unbounded).
-                Should be a BoundedExecutor instance for DoS prevention.
-        """
         self._handlers: dict[str, Handler] = {}
         self._lock = RLock()
         self._executor: Executor | None = executor
 
     def register(self, payload_type: str, handler: Handler) -> None:
-        """Register a handler for a payload type.
-
-        If a handler is already registered for the payload type,
-        it will be replaced with the new handler.
-
-        This method is thread-safe.
-
-        Args:
-            payload_type: The payload type to handle (e.g., "task.request")
-            handler: Callable that processes envelopes of this type
-
-        Example:
-            >>> registry = HandlerRegistry()
-            >>> registry.register("task.request", create_echo_handler())
-        """
         validate_handler(handler)
         with self._lock:
             is_override = payload_type in self._handlers
@@ -237,21 +178,6 @@ class HandlerRegistry:
             )
 
     def has_handler(self, payload_type: str) -> bool:
-        """Check if a handler is registered for a payload type.
-
-        This method is thread-safe.
-
-        Args:
-            payload_type: The payload type to check
-
-        Returns:
-            True if a handler is registered, False otherwise
-
-        Example:
-            >>> registry = HandlerRegistry()
-            >>> registry.has_handler("task.request")
-            False
-        """
         with self._lock:
             return payload_type in self._handlers
 

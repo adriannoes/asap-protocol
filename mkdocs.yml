@@ -69,6 +69,9 @@ nav:
       - ADR-016 Versioning Policy: adr/ADR-016-versioning-policy.md
       - ADR-017 Failure Injection: adr/ADR-017-failure-injection-strategy.md
   - Guides:
+      - Identity Signing (v1.2): guides/identity-signing.md
+      - Compliance Testing (v1.2): guides/compliance-testing.md
+      - Migration v1.1 → v1.2: guides/migration-v1.1-to-v1.2.md
       - Security: security.md
       - State Management: state-management.md
       - Transport: transport.md

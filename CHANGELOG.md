@@ -208,6 +208,62 @@ Security-hardened release with comprehensive authentication, DoS protection, rep
 
 ---
 
+## [1.2.0] - 2026-02-15
+
+Verified Identity: Ed25519 signed manifests, trust levels, optional mTLS, and compliance harness.
+Backward compatible with v1.1.0.
+
+### Added
+
+#### Signed Manifests (T1, SD-4, SD-5)
+- **Ed25519 key management**: `asap.crypto.keys` — `generate_keypair`, `serialize_private_key`, `load_private_key_from_file_sync`, `load_private_key_from_env`
+- **Manifest signing**: `asap.crypto.signing` — `sign_manifest`, `verify_manifest`, JCS canonicalization (RFC 8785)
+- **SignedManifest model**: `asap.crypto.models` — `SignedManifest`, `SignatureBlock` with `public_key` and `trust_level`
+- **CLI**: `asap keys generate`, `asap manifest sign`, `asap manifest verify`, `asap manifest info`
+
+#### Trust Levels (T2, SD-5)
+- **Trust level model**: `asap.crypto.trust_levels` — `TrustLevel` enum (self-signed, verified, enterprise)
+- **Trust detection**: `asap.crypto.trust` — `detect_trust_level`, `sign_with_ca` for Verified badge simulation
+- **Client verification**: `ASAPClient` — `verify_signatures`, `trusted_manifest_keys` for optional manifest signature verification
+
+#### mTLS (T2, SD-6)
+- **Optional mTLS**: `asap.transport.mtls` — `MTLSConfig`, `create_ssl_context`, `mtls_config_to_uvicorn_kwargs`
+- **Server/client support**: `create_app(mtls_config=...)`, `ASAPClient(mtls_config=...)`
+- **Documentation**: `docs/security/mtls.md` — Enterprise CA, client cert configuration
+
+#### Compliance Harness (T3)
+- **asap-compliance package**: Separate PyPI package for protocol compliance testing
+- **Handshake validation**: Health endpoint, manifest schema, signed manifest verification, version compatibility
+- **Schema validation**: Envelope, TaskRequest, TaskResponse, McpToolResult, MessageAck; `extra="forbid"`
+- **State machine validation**: Task lifecycle (PENDING → RUNNING → COMPLETED/FAILED)
+- **SLA validation**: Timeout and progress schema checks
+- **Usage**: `pytest --asap-agent-url https://your-agent.example.com -m asap_compliance`
+
+#### Testing & Benchmarks (T4)
+- **Cross-version compatibility**: Signed manifests with discovery; compliance harness against signed manifest agents
+- **Crypto benchmarks**: `benchmarks/benchmark_crypto.py` — Ed25519 sign/verify, JCS canonicalization, compliance handshake
+- **Coverage**: CLI keys/manifest tests, mTLS edge cases, integration tests
+
+### Changed
+
+- **Discovery validation**: `validate_signed_manifest_response` accepts plain or signed manifests; optional signature verification
+- **AGENTS.md**: mTLS note updated (now implemented); crypto module and compliance harness documented
+
+### Deferred (not in v1.2.0)
+
+- **Registry API**: Centralized agent registry backend (planned for v2.1)
+- **DeepEval integration**: Intelligence layer for compliance (planned for v2.2+)
+- **Lite Registry** (v1.1) continues as discovery mechanism
+
+### Technical Details
+
+- **Python**: 3.13+
+- **Tests**: 1940+ (asap-protocol), 54 (asap-compliance)
+- **Coverage**: ~94.2% (asap-protocol)
+- **New packages**: `asap-compliance` on PyPI (separate from `asap-protocol`)
+
+---
+
 ## [1.0.0] - 2026-02-03
 
 Production-ready release. All features from v0.5.0 preserved with backward compatibility (see contract tests: v0.1.0 → v1.0.0, v0.5.0 ↔ v1.0.0).

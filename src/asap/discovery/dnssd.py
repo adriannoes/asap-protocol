@@ -94,18 +94,6 @@ class DNSSDAdvertiser:
         *,
         host: str | None = None,
     ) -> None:
-        """Initialize the advertiser.
-
-        Host resolution is deferred to start() when host is None to avoid
-        blocking the event loop in __init__ (socket.gethostbyname can block).
-
-        Args:
-            manifest: The agent's manifest (used for version and capabilities).
-            manifest_url: Full URL to the manifest (e.g. well-known URI).
-            port: TCP port the ASAP server listens on.
-            host: Optional host IP for the service. If None, resolved at start()
-                time (may block briefly on first start).
-        """
         self._manifest = manifest
         self._manifest_url = manifest_url
         self._port = port
@@ -261,12 +249,6 @@ class DNSSDDiscovery:
         on_service_added: ServiceAddedCallback | None = None,
         on_service_removed: ServiceRemovedCallback | None = None,
     ) -> None:
-        """Initialize the discovery browser.
-
-        Args:
-            on_service_added: Optional callback when a new ASAP agent is discovered.
-            on_service_removed: Optional callback when an ASAP agent is removed.
-        """
         self._on_added = on_service_added
         self._on_removed = on_service_removed
 
@@ -304,13 +286,5 @@ class DNSSDDiscovery:
         return collected
 
     async def browse(self, wait_seconds: float = 2.0) -> list[AgentInfo]:
-        """Discover ASAP agents on the local network.
-
-        Args:
-            wait_seconds: Seconds to wait for discovery (default 2.0).
-
-        Returns:
-            List of discovered AgentInfo (agents with valid manifest_url).
-        """
         async with asyncio.timeout(wait_seconds + 1.0):
             return await asyncio.to_thread(self._run_browse, wait_seconds)

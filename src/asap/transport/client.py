@@ -101,14 +101,6 @@ DISCOVER_CACHE_MAX_AGE_CAP = 86400.0
 
 
 def _parse_max_age_from_cache_control(cache_control: str | None) -> float | None:
-    """Parse max-age value in seconds from Cache-Control header.
-
-    Args:
-        cache_control: Value of the Cache-Control response header.
-
-    Returns:
-        max-age in seconds, or None if missing or invalid.
-    """
     if not cache_control:
         return None
     match = re.search(r"max-age\s*=\s*(\d+)", cache_control, re.IGNORECASE)
@@ -119,7 +111,6 @@ def _parse_max_age_from_cache_control(cache_control: str | None) -> float | None
 
 
 def _record_send_error_metrics(start_time: float, error: BaseException) -> None:
-    """Record transport send error metrics (status=error, duration, reason)."""
     duration_seconds = time.perf_counter() - start_time
     metrics = get_metrics()
     metrics.increment_counter("asap_transport_send_total", {"status": "error"})
@@ -175,13 +166,6 @@ class ASAPConnectionError(Exception):
     def __init__(
         self, message: str, cause: Exception | None = None, url: str | None = None
     ) -> None:
-        """Initialize connection error.
-
-        Args:
-            message: Error description
-            cause: Original exception that caused this error
-            url: URL that failed to connect (for better error messages)
-        """
         # Enhance message with troubleshooting suggestions if URL is provided
         if url and "Verify" not in message and "troubleshooting" not in message.lower():
             enhanced_message = (
@@ -211,12 +195,6 @@ class ASAPTimeoutError(Exception):
     """
 
     def __init__(self, message: str, timeout: float | None = None) -> None:
-        """Initialize timeout error.
-
-        Args:
-            message: Error description
-            timeout: Timeout value in seconds
-        """
         super().__init__(message)
         self.message = message
         self.timeout = timeout
@@ -235,13 +213,6 @@ class ASAPRemoteError(Exception):
     """
 
     def __init__(self, code: int, message: str, data: dict[str, Any] | None = None) -> None:
-        """Initialize remote error.
-
-        Args:
-            code: JSON-RPC error code
-            message: Error message from remote
-            data: Optional additional error data
-        """
         super().__init__(f"Remote error {code}: {message}")
         self.code = code
         self.message = message
@@ -338,85 +309,6 @@ class ASAPClient:
         on_message: Optional[OnMessageCallback] = None,
         mtls_config: Optional[MTLSConfig] = None,
     ) -> None:
-        """Initialize ASAP client.
-
-        Args:
-            base_url: Base URL of the remote agent (e.g., "http://localhost:8000" or "ws://localhost:8000")
-            timeout: Request timeout in seconds (default: 60)
-            transport_mode: "http", "websocket", or "auto". If "auto", use WebSocket when base_url
-                scheme is ws/wss, else HTTP. When "websocket", base_url can be http(s) (converted to
-                ws(s)/asap/ws) or ws(s) (path /asap/ws added if missing). Default: "auto".
-            transport: Optional custom async transport (for testing). Must be an instance
-                of httpx.AsyncBaseTransport (e.g., httpx.MockTransport). Ignored when transport_mode is websocket.
-            require_https: If True, enforces HTTPS for non-localhost connections (default: True).
-            pool_connections: Max keep-alive connections in pool. Default: DEFAULT_POOL_CONNECTIONS (100).
-                Controls how many idle connections are kept open.
-            pool_maxsize: Max total connections in pool. Default: DEFAULT_POOL_MAXSIZE (100).
-                Controls maximum number of concurrent connections.
-                Tuning:
-                - Single agent: 100 (default)
-                - Small cluster: 200-500
-                - Large cluster: 500-1000
-                Safe to increase if OS file descriptor limits allow.
-            pool_timeout: Seconds to wait for connection from pool. Default: DEFAULT_POOL_TIMEOUT (5.0).
-                Increase if you see PoolTimeout exceptions under high load.
-                HTTP connections to localhost are allowed with a warning for development.
-            http2: Enable HTTP/2 multiplexing for improved batch performance (default: True).
-                HTTP/2 allows multiple concurrent requests over a single TCP connection,
-                reducing latency for batch operations. Falls back to HTTP/1.1 if server
-                doesn't support HTTP/2.
-            compression: Enable request compression for bandwidth reduction (default: True).
-                When enabled, payloads exceeding compression_threshold are compressed
-                using gzip or brotli (if available). The server must support the
-                Content-Encoding header to decompress requests.
-            compression_threshold: Minimum payload size in bytes to trigger compression
-                (default: 1024 = 1KB). Payloads smaller than this are sent uncompressed.
-            retry_config: Optional RetryConfig dataclass to group retry and circuit breaker parameters.
-                If provided, individual retry parameters are ignored.
-            max_retries: Maximum retry attempts for transient failures (default: 3).
-                Ignored if retry_config is provided.
-            base_delay: Base delay in seconds for exponential backoff (default: 1.0).
-                Ignored if retry_config is provided.
-            max_delay: Maximum delay in seconds for exponential backoff (default: 60.0).
-                Ignored if retry_config is provided.
-            jitter: Whether to add random jitter to backoff delays (default: True).
-                Ignored if retry_config is provided.
-            circuit_breaker_enabled: Enable circuit breaker pattern (default: False).
-                Ignored if retry_config is provided.
-            circuit_breaker_threshold: Number of consecutive failures before opening circuit (default: 5).
-                Ignored if retry_config is provided.
-            circuit_breaker_timeout: Seconds before transitioning OPEN -> HALF_OPEN (default: 60.0).
-                Ignored if retry_config is provided.
-            manifest_cache_size: Maximum number of manifests to cache (default: 1000).
-                Increase for high-cardinality environments (e.g. thousands of agents).
-                Set to 0 for unlimited. See ManifestCache for cleanup latency notes.
-            verify_signatures: If True, when a signed manifest is fetched (manifest + signature
-                block), verify the Ed25519 signature. Requires trusted_manifest_keys to be set
-                for the manifest URL (we do not trust the embedded public_key; TOFU prevention).
-            trusted_manifest_keys: Optional mapping from manifest URL to base64-encoded Ed25519
-                public key. When verify_signatures is True and the response is a signed manifest,
-                verification uses this key for the request URL. If no key is provided for the URL,
-                verification fails. Prevents MITM: never use the signer's embedded public_key.
-            on_message: Optional callback for server-initiated (push) messages when using
-                WebSocket transport. Called with Envelope; may be sync or async. Ignored for HTTP.
-            mtls_config: Optional mTLS config for client certificate authentication. When provided,
-                the client presents its cert to the server and verifies the server's cert.
-
-        Raises:
-            ValueError: If URL format is invalid, scheme is not HTTP/HTTPS, or HTTPS is
-                required but URL uses HTTP for non-localhost connections.
-
-        Example:
-            >>> # Using individual parameters (backward compatible)
-            >>> client = ASAPClient("http://localhost:8000", max_retries=5)
-            >>>
-            >>> # Using RetryConfig (recommended)
-            >>> config = RetryConfig(max_retries=5, circuit_breaker_enabled=True)
-            >>> client = ASAPClient("http://localhost:8000", retry_config=config)
-            >>>
-            >>> # With compression disabled
-            >>> client = ASAPClient("http://localhost:8000", compression=False)
-        """
         # Extract retry config values
         if retry_config is not None:
             # Use retry_config values
@@ -561,16 +453,6 @@ class ASAPClient:
 
     @staticmethod
     def _is_localhost(parsed_url: ParseResult) -> bool:
-        """Check if URL points to localhost.
-
-        Detects localhost, 127.0.0.1, and ::1 (IPv6 localhost).
-
-        Args:
-            parsed_url: Parsed URL from urlparse
-
-        Returns:
-            True if URL points to localhost, False otherwise
-        """
         hostname = parsed_url.hostname
         if not hostname:
             return False
@@ -580,19 +462,6 @@ class ASAPClient:
         return hostname_lower in ("localhost", "127.0.0.1", "::1", "[::1]")
 
     def _calculate_backoff(self, attempt: int) -> float:
-        """Calculate exponential backoff delay for retry attempt.
-
-        Implements exponential backoff with optional jitter:
-        delay = base_delay * (2 ** attempt) + jitter
-
-        The delay is capped at max_delay to prevent excessively long waits.
-
-        Args:
-            attempt: Zero-based attempt number (0 = first retry)
-
-        Returns:
-            Delay in seconds before next retry attempt
-        """
         # Calculate exponential delay: base_delay * (2 ** attempt)
         delay = self.base_delay * (2**attempt)
 

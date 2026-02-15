@@ -120,11 +120,6 @@ _limiter: ASAPRateLimiter | None = None
 
 
 def _get_default_limiter() -> ASAPRateLimiter:
-    """Lazy-initialize the default rate limiter on first use.
-
-    Avoids import-time side effects (memory storage warning, wasted allocation)
-    when the limiter is overridden by ``create_app()`` or test fixtures.
-    """
     global _limiter  # noqa: PLW0603
     if _limiter is None:
         _limiter = create_limiter(key_func=_get_sender_from_envelope)
@@ -280,25 +275,9 @@ class BearerTokenValidator:
         self,
         validate_func: Callable[[str], str | None | Awaitable[str | None]],
     ) -> None:
-        """Initialize the Bearer token validator.
-
-        Args:
-            validate_func: Sync or async function that validates tokens
-                and returns agent IDs. Sync functions with I/O are run
-                in a thread pool to avoid blocking the event loop.
-        """
         self.validate_func = validate_func
 
     def __call__(self, token: str) -> str | None | Awaitable[str | None]:
-        """Validate a token and return the authenticated agent ID.
-
-        Args:
-            token: The authentication token to validate
-
-        Returns:
-            The agent ID (URN) if token is valid, None otherwise.
-            May return a coroutine for async validate_func.
-        """
         return self.validate_func(token)
 
 
@@ -339,15 +318,6 @@ class AuthenticationMiddleware:
         manifest: Manifest,
         validator: TokenValidator | None = None,
     ) -> None:
-        """Initialize authentication middleware.
-
-        Args:
-            manifest: Agent manifest with auth configuration
-            validator: Token validator implementation (optional if auth not required)
-
-        Raises:
-            ValueError: If manifest requires auth but no validator provided
-        """
         self.manifest = manifest
         self.validator = validator
         self.security = HTTPBearer(auto_error=False)
@@ -358,19 +328,9 @@ class AuthenticationMiddleware:
             )
 
     def _is_auth_required(self) -> bool:
-        """Check if authentication is required by manifest.
-
-        Returns:
-            True if manifest has auth configuration, False otherwise
-        """
         return self.manifest.auth is not None
 
     def _supports_bearer_auth(self) -> bool:
-        """Check if manifest supports Bearer token authentication.
-
-        Returns:
-            True if "bearer" is in auth schemes, False otherwise
-        """
         if not self.manifest.auth:
             return False
         return AUTH_SCHEME_BEARER in self.manifest.auth.schemes
@@ -602,7 +562,7 @@ class SizeLimitMiddleware(BaseHTTPMiddleware):
                         },
                     )
             except ValueError:
-                pass
+                logger.debug("asap.middleware.invalid_content_length", content_length=content_length)
 
         # Continue to next middleware or route handler
         return await call_next(request)

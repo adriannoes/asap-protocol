@@ -199,7 +199,6 @@ class Agent(ASAPBaseModel):
     @field_validator("id")
     @classmethod
     def validate_urn_format(cls, v: str) -> str:
-        """Validate agent ID URN format and length."""
         return validate_agent_urn(v)
 
 
@@ -255,13 +254,11 @@ class Manifest(ASAPBaseModel):
     @field_validator("id")
     @classmethod
     def validate_urn_format(cls, v: str) -> str:
-        """Validate that agent ID follows URN format and length limits."""
         return validate_agent_urn(v)
 
     @field_validator("version")
     @classmethod
     def validate_semver(cls, v: str) -> str:
-        """Validate semantic versioning format."""
         try:
             Version(v)
         except InvalidVersion as e:
@@ -270,14 +267,6 @@ class Manifest(ASAPBaseModel):
 
     @model_validator(mode="after")
     def validate_auth_schemes(self) -> "Manifest":
-        """Validate that all authentication schemes are supported.
-
-        Raises:
-            UnsupportedAuthSchemeError: If any scheme in auth.schemes is not supported
-
-        Returns:
-            Self (for method chaining)
-        """
         if self.auth is not None:
             _validate_auth_scheme(self.auth)
         return self

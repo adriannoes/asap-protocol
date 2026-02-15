@@ -50,12 +50,6 @@ class CircuitBreaker:
         threshold: int = DEFAULT_CIRCUIT_BREAKER_THRESHOLD,
         timeout: float = DEFAULT_CIRCUIT_BREAKER_TIMEOUT,
     ) -> None:
-        """Initialize circuit breaker.
-
-        Args:
-            threshold: Number of consecutive failures before opening (default: 5)
-            timeout: Seconds before transitioning OPEN -> HALF_OPEN (default: 60.0)
-        """
         self.threshold = threshold
         self.timeout = timeout
         self._state = CircuitState.CLOSED
@@ -65,10 +59,6 @@ class CircuitBreaker:
         self._lock = threading.RLock()
 
     def record_success(self) -> None:
-        """Record a successful request.
-
-        Resets failure count and closes circuit if it was HALF_OPEN.
-        """
         with self._lock:
             self._consecutive_failures = 0
             if self._state == CircuitState.HALF_OPEN:
@@ -76,11 +66,6 @@ class CircuitBreaker:
                 self._last_failure_time = None
 
     def record_failure(self) -> None:
-        """Record a failed request.
-
-        Increments failure count and opens circuit if threshold is reached
-        or if the circuit was in HALF_OPEN state.
-        """
         with self._lock:
             self._consecutive_failures += 1
             self._last_failure_time = time.time()
@@ -115,20 +100,10 @@ class CircuitBreaker:
             return True
 
     def get_state(self) -> CircuitState:
-        """Get current circuit state.
-
-        Returns:
-            Current circuit state
-        """
         with self._lock:
             return self._state
 
     def get_consecutive_failures(self) -> int:
-        """Get number of consecutive failures.
-
-        Returns:
-            Number of consecutive failures
-        """
         with self._lock:
             return self._consecutive_failures
 
@@ -141,7 +116,6 @@ class CircuitBreakerRegistry:
     """
 
     def __init__(self) -> None:
-        """Initialize registry."""
         self._breakers: dict[str, CircuitBreaker] = {}
         self._lock = threading.RLock()
 

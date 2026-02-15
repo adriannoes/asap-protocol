@@ -48,17 +48,19 @@ uv run ruff format src/ tests/
 ```
 src/asap/
 ├── models/        # Pydantic models (Envelope, TaskRequest, etc.)
+├── crypto/        # Ed25519 keys, signing, trust levels (v1.2)
 ├── auth/          # OAuth2 client/server, OIDC discovery, middleware (v1.1)
 ├── discovery/     # Well-known manifest, health, Lite Registry (v1.1)
 ├── state/         # SnapshotStore, MeteringStore; stores/ (memory, sqlite) (v1.1)
-├── transport/     # HTTP client, server, middleware, WebSocket, webhook
+├── transport/     # HTTP client, server, middleware, WebSocket, webhook, mTLS (v1.2)
 ├── handlers/      # Task processing logic
 ├── observability/ # Logging, tracing, metrics
-└── cli.py         # CLI entry point
+└── cli.py         # CLI entry point (keys, manifest sign/verify in v1.2)
 tests/             # pytest tests mirroring src/ structure
+asap-compliance/   # Compliance harness package (v1.2, separate PyPI)
 ```
 
-For v1.1 capabilities (OAuth2, WebSocket, Discovery, State Storage, Webhooks) see README and [docs index](docs/index.md).
+For v1.1 capabilities (OAuth2, WebSocket, Discovery, State Storage, Webhooks) and v1.2 (crypto, compliance harness, mTLS) see README and [docs index](docs/index.md).
 
 ## Architecture & Design Decisions
 
@@ -134,7 +136,9 @@ uv run pytest -n auto
 - Never commit secrets or API keys
 - Use environment variables for configuration
 - Rate limiting enabled by default
-- mTLS optional (planned for v1.2.0)
+- **mTLS** (v1.2): Optional mutual TLS via `MTLSConfig`; see `asap.transport.mtls`
+- **Signed manifests** (v1.2): Ed25519 signing for verifiable agent identity; see `asap.crypto`
+- **Compliance harness** (v1.2): `asap-compliance` package validates protocol compliance
 - **v1.1 trust model**: OAuth2 provides authentication and authorization, not identity verification. See [v1.1 Security Model](docs/security/v1.1-security-model.md) (ADR-17) for Custom Claims, allowlist, and limitations.
 
 ## PR Guidelines

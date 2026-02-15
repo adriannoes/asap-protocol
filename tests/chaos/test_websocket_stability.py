@@ -434,7 +434,6 @@ async def test_graceful_shutdown_during_reconnection() -> None:
 
 @pytest.mark.asyncio
 async def test_graceful_shutdown_cancels_pending_futures() -> None:
-    """close() sets TimeoutError on all pending send_and_receive futures."""
     transport = WebSocketTransport()
     mock_ws = _SilentWebSocket()
     transport._ws = mock_ws  # type: ignore[assignment]
@@ -458,7 +457,6 @@ async def test_graceful_shutdown_cancels_pending_futures() -> None:
 
 @pytest.mark.asyncio
 async def test_graceful_shutdown_clears_pending_acks() -> None:
-    """close() clears all pending ack entries."""
     transport = WebSocketTransport()
     mock_ws = _SilentWebSocket()
     transport._ws = mock_ws  # type: ignore[assignment]

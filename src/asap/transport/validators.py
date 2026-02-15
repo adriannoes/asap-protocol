@@ -167,12 +167,10 @@ class InMemoryNonceStore:
     """
 
     def __init__(self) -> None:
-        """Initialize in-memory nonce store."""
         self._store: dict[str, float] = {}
         self._lock = threading.RLock()
 
     def _cleanup_expired(self) -> None:
-        """Remove expired nonces; runs with _CLEANUP_PROBABILITY to bound cost."""
         if random.random() >= _CLEANUP_PROBABILITY:
             return
         now = time.time()
@@ -181,14 +179,6 @@ class InMemoryNonceStore:
             self._store.pop(nonce, None)
 
     def is_used(self, nonce: str) -> bool:
-        """Check if a nonce has been used.
-
-        Args:
-            nonce: The nonce value to check
-
-        Returns:
-            True if the nonce has been used and not expired, False otherwise
-        """
         with self._lock:
             self._cleanup_expired()
             if nonce not in self._store:
@@ -197,30 +187,12 @@ class InMemoryNonceStore:
             return expiry >= time.time()
 
     def mark_used(self, nonce: str, ttl_seconds: int) -> None:
-        """Mark a nonce as used with a TTL.
-
-        Args:
-            nonce: The nonce value to mark as used
-            ttl_seconds: Time-to-live in seconds for the nonce
-        """
         with self._lock:
             self._cleanup_expired()
             expiry = time.time() + ttl_seconds
             self._store[nonce] = expiry
 
     def check_and_mark(self, nonce: str, ttl_seconds: int) -> bool:
-        """Atomically check if nonce is used and mark it if not.
-
-        This method performs both check and mark operations atomically to
-        prevent race conditions between concurrent requests with the same nonce.
-
-        Args:
-            nonce: The nonce value to check and mark
-            ttl_seconds: Time-to-live in seconds for the nonce
-
-        Returns:
-            True if nonce was already used, False if it was newly marked
-        """
         with self._lock:
             self._cleanup_expired()
             if nonce in self._store and self._store[nonce] >= time.time():

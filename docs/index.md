@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
 ## CLI
 
-ASAP provides a CLI for schema management:
+ASAP provides a CLI for schema management and (v1.2) key/manifest operations:
 
 ```bash
 # Show version
@@ -67,7 +67,15 @@ asap list-schemas
 
 # Show a specific schema
 asap show-schema agent
+
+# v1.2: Ed25519 keys and signed manifests
+asap keys generate -o key.pem
+asap manifest sign -k key.pem manifest.json
+asap manifest verify signed.json
+asap manifest info signed.json
 ```
+
+See [Identity Signing](guides/identity-signing.md) for full CLI reference.
 
 ## Documentation
 

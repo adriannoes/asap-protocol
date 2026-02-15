@@ -136,7 +136,6 @@ class ASAPRateLimiter:
 
     @property
     def limits(self) -> list[RateLimitItem]:
-        """Return the configured rate limits (read-only)."""
         return list(self._rate_limits)
 
 
@@ -199,7 +198,6 @@ def create_test_limiter(
 
 
 def get_remote_address(request: Request) -> str:
-    """Client IP from request, or \"127.0.0.1\" if unavailable (slowapi replacement)."""
     if request.client is not None:
         return str(request.client.host)
     return "127.0.0.1"
@@ -240,7 +238,6 @@ class WebSocketTokenBucket:
         self._last_refill = now
 
     def consume(self, n: int = 1) -> bool:
-        """Return True if n tokens available and deducted, else False (rate limited)."""
         if n <= 0:
             return True
         self._refill()
