@@ -1,87 +1,61 @@
-"""Tests for state machine validator - transition and terminal state compliance."""
+"""Tests for state machine validator - black-box compliance of agent state transitions."""
 
 from __future__ import annotations
 
-from asap.models.enums import TaskStatus
+from typing import TYPE_CHECKING
 
+import httpx
+import pytest
+
+from asap_compliance.config import ComplianceConfig
 from asap_compliance.validators.handshake import CheckResult
 from asap_compliance.validators.state import (
     StateResult,
     validate_state_machine,
-    validate_state_transitions,
-    validate_terminal_states,
+    validate_state_machine_async,
 )
 
-
-class TestTransitionValidation:
-    def test_submitted_to_working_allowed(self) -> None:
-        result = validate_state_machine()
-        check = next(
-            (c for c in result.checks if c.name == "submitted_to_working_allowed"),
-            None,
-        )
-        assert check is not None
-        assert check.passed
-
-    def test_completed_to_working_rejected(self) -> None:
-        result = validate_state_machine()
-        check = next(
-            (c for c in result.checks if c.name == "completed_to_working_rejected"),
-            None,
-        )
-        assert check is not None
-        assert check.passed
-
-    def test_all_valid_paths_work(self) -> None:
-        results = validate_state_transitions()
-        path_checks = [r for r in results if r.name in ("valid_path", "all_valid_paths")]
-        assert len(path_checks) >= 1
-        assert all(r.passed for r in path_checks)
+if TYPE_CHECKING:
+    from fastapi import FastAPI
 
 
-class TestTerminalStateValidation:
-    def test_completed_is_terminal(self) -> None:
-        result = validate_state_machine()
-        check = next(
-            (c for c in result.checks if c.name == "completed_is_terminal"),
-            None,
-        )
-        assert check is not None
-        assert check.passed
-        assert TaskStatus.COMPLETED.is_terminal()
+class TestStateBlackBoxKnownGood:
+    """Tests against a known-good agent (echo returns COMPLETED)."""
 
-    def test_failed_is_terminal(self) -> None:
-        result = validate_state_machine()
-        check = next(
-            (c for c in result.checks if c.name == "failed_is_terminal"),
-            None,
-        )
-        assert check is not None
-        assert check.passed
-        assert TaskStatus.FAILED.is_terminal()
+    @pytest.mark.asyncio
+    async def test_state_passes_against_good_agent(self, good_agent_app: "FastAPI") -> None:
+        """State validation passes when agent returns valid terminal status."""
+        transport = httpx.ASGITransport(app=good_agent_app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            config = ComplianceConfig(
+                agent_url="http://testserver",
+                timeout_seconds=5.0,
+            )
+            result = await validate_state_machine_async(config, client=client)
 
-    def test_no_transitions_from_terminal(self) -> None:
-        results = validate_terminal_states()
+        assert result.passed
+        assert result.transitions_ok
+        assert result.terminal_ok
+        assert all(c.passed for c in result.checks)
+
+    @pytest.mark.asyncio
+    async def test_state_terminal_status_check(
+        self, compliance_config_with_transport: tuple[ComplianceConfig, httpx.AsyncClient]
+    ) -> None:
+        """Agent returns valid terminal status (completed/failed/cancelled)."""
+        config, client = compliance_config_with_transport
+        result = await validate_state_machine_async(config, client=client)
         terminal_check = next(
-            (r for r in results if r.name == "no_transitions_from_terminal"),
+            (c for c in result.checks if c.name == "state_terminal_status"),
             None,
         )
         assert terminal_check is not None
         assert terminal_check.passed
 
 
-class TestTransitionRaisesInvalidTransition:
-    def test_transition_raises_for_invalid(self) -> None:
-        result = validate_state_machine()
-        check = next(
-            (c for c in result.checks if c.name == "transition_raises_invalid"),
-            None,
-        )
-        assert check is not None
-        assert check.passed
-
-
 class TestStateResult:
+    """Tests for StateResult model."""
+
     def test_passed_true_when_all_ok(self) -> None:
         result = StateResult(
             transitions_ok=True,
@@ -107,10 +81,19 @@ class TestStateResult:
         assert not result.passed
 
 
-class TestValidateStateMachineFull:
-    def test_validate_state_machine_passes(self) -> None:
-        result = validate_state_machine()
-        assert result.passed
-        assert result.transitions_ok
-        assert result.terminal_ok
-        assert all(c.passed for c in result.checks)
+class TestStateSyncWrapper:
+    """Tests for sync wrapper behavior."""
+
+    def test_validate_state_machine_sync_requires_running_agent(self) -> None:
+        """Sync validate_state_machine works when no event loop is running.
+
+        Note: This test uses localhost:99999 (unreachable) - we only verify the
+        sync wrapper runs without crashing. For full pass, use async with good_agent_app.
+        """
+        config = ComplianceConfig(
+            agent_url="http://localhost:99999",
+            timeout_seconds=0.5,
+        )
+        result = validate_state_machine(config)
+        assert not result.passed
+        assert any(not c.passed for c in result.checks)

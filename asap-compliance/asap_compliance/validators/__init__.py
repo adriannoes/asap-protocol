@@ -22,8 +22,7 @@ from asap_compliance.validators.sla import (
 from asap_compliance.validators.state import (
     StateResult,
     validate_state_machine,
-    validate_state_transitions,
-    validate_terminal_states,
+    validate_state_machine_async,
 )
 
 __all__ = [
@@ -39,7 +38,6 @@ __all__ = [
     "validate_sla",
     "validate_sla_async",
     "validate_state_machine",
-    "validate_state_transitions",
-    "validate_terminal_states",
+    "validate_state_machine_async",
     "SlaResult",
 ]

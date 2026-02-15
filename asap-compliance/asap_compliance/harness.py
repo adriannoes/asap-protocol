@@ -10,7 +10,11 @@ from asap_compliance.validators.handshake import (
 )
 from asap_compliance.validators.schema import SchemaResult, validate_schema
 from asap_compliance.validators.sla import SlaResult, validate_sla, validate_sla_async
-from asap_compliance.validators.state import StateResult, validate_state_machine
+from asap_compliance.validators.state import (
+    StateResult,
+    validate_state_machine,
+    validate_state_machine_async,
+)
 
 __all__ = [
     "ComplianceConfig",
@@ -24,4 +28,5 @@ __all__ = [
     "validate_sla",
     "validate_sla_async",
     "validate_state_machine",
+    "validate_state_machine_async",
 ]

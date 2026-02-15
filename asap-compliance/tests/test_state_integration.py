@@ -7,46 +7,20 @@ from typing import TYPE_CHECKING
 import httpx
 import pytest
 
-from asap.models.entities import Capability, Endpoint, Manifest, Skill
-from asap.transport.server import create_app
-
 from asap_compliance.config import ComplianceConfig
 from asap_compliance.validators.handshake import validate_handshake_async
 from asap_compliance.validators.schema import validate_schema
-from asap_compliance.validators.state import validate_state_machine
+from asap_compliance.validators.state import validate_state_machine_async
 from asap_compliance.validators.sla import validate_sla_async
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
 
-TEST_RATE_LIMIT = "999999/minute"
-
-
-@pytest.fixture
-def integration_manifest() -> Manifest:
-    return Manifest(
-        id="urn:asap:agent:integration-test",
-        name="Integration Test Agent",
-        version="1.0.0",
-        description="Agent for full lifecycle integration tests",
-        capabilities=Capability(
-            asap_version="0.1",
-            skills=[Skill(id="echo", description="Echo skill")],
-            state_persistence=False,
-        ),
-        endpoints=Endpoint(asap="http://localhost:8000/asap"),
-    )
-
-
-@pytest.fixture
-def integration_agent_app(integration_manifest: Manifest) -> "FastAPI":
-    return create_app(integration_manifest, rate_limit=TEST_RATE_LIMIT)
-
 
 class TestFullTaskLifecycle:
     @pytest.mark.asyncio
-    async def test_full_compliance_pipeline_passes(self, integration_agent_app: "FastAPI") -> None:
-        transport = httpx.ASGITransport(app=integration_agent_app)
+    async def test_full_compliance_pipeline_passes(self, good_agent_app: "FastAPI") -> None:
+        transport = httpx.ASGITransport(app=good_agent_app)
         async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
             config = ComplianceConfig(
                 agent_url="http://testserver",
@@ -57,15 +31,21 @@ class TestFullTaskLifecycle:
             handshake_result = await validate_handshake_async(config, client=client)
             assert handshake_result.passed, f"Handshake failed: {handshake_result.checks}"
 
-            state_result = validate_state_machine()
+            state_result = await validate_state_machine_async(config, client=client)
             assert state_result.passed, f"State machine failed: {state_result.checks}"
 
             sla_result = await validate_sla_async(config, client=client)
             assert sla_result.passed, f"SLA failed: {sla_result.checks}"
 
     @pytest.mark.asyncio
-    async def test_state_machine_validation_standalone(self) -> None:
-        result = validate_state_machine()
+    async def test_state_machine_validation_standalone(self, good_agent_app: "FastAPI") -> None:
+        transport = httpx.ASGITransport(app=good_agent_app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            config = ComplianceConfig(
+                agent_url="http://testserver",
+                timeout_seconds=5.0,
+            )
+            result = await validate_state_machine_async(config, client=client)
         assert result.passed
         assert result.transitions_ok
         assert result.terminal_ok
@@ -81,6 +61,16 @@ class TestFailureScenarios:
         )
         result = validate_sla(config)
         assert not result.timeout_ok
+        assert not result.passed
+
+    def test_state_fails_when_agent_unreachable(self) -> None:
+        from asap_compliance.validators.state import validate_state_machine
+
+        config = ComplianceConfig(
+            agent_url="http://localhost:99999",
+            timeout_seconds=0.5,
+        )
+        result = validate_state_machine(config)
         assert not result.passed
 
     @pytest.mark.asyncio
