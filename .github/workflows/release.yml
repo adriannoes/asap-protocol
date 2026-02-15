@@ -98,16 +98,23 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras --dev
 
-      - name: Build package
+      - name: Build asap-protocol
         run: uv build
+
+      - name: Install asap-protocol for asap-compliance build
+        run: uv pip install dist/asap_protocol-*.whl
+
+      - name: Build asap-compliance
+        run: |
+          cd asap-compliance && uv build
+          cp -v dist/* ../dist/
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        # Note: We are using Trusted Publishing (id-token: write), so no username/password is needed
-        # if configured on PyPI side. Otherwise, uncomment below:
-        # with:
-        #   user: __token__
-        #   password: ${{ secrets.PYPI_API_TOKEN }}
+        # Publishes both asap-protocol and asap-compliance from dist/
+        # Requires Trusted Publishing configured for BOTH projects on PyPI:
+        #   - asap-protocol
+        #   - asap-compliance
 
       - name: Extract version from tag
         id: tag_version
