@@ -50,15 +50,13 @@ logger = get_logger(__name__)
 class SyncHandler(Protocol):
     """Protocol for synchronous handlers."""
 
-    def __call__(self, envelope: Envelope, manifest: Manifest) -> Envelope:
-        ...
+    def __call__(self, envelope: Envelope, manifest: Manifest) -> Envelope: ...
 
 
 class AsyncHandler(Protocol):
     """Protocol for asynchronous handlers."""
 
-    def __call__(self, envelope: Envelope, manifest: Manifest) -> Awaitable[Envelope]:
-        ...
+    def __call__(self, envelope: Envelope, manifest: Manifest) -> Awaitable[Envelope]: ...
 
 
 # Type alias for handler functions (supports both sync and async)

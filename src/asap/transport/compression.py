@@ -49,6 +49,7 @@ class CompressionAlgorithm(str, Enum):
 def is_brotli_available() -> bool:
     try:
         import brotli  # noqa: F401
+
         return True
     except ImportError:
         return False
@@ -78,6 +79,7 @@ def decompress_gzip(data: bytes) -> bytes:
 
 def compress_brotli(data: bytes) -> bytes:
     import brotli
+
     # Quality 4 is a good balance of speed and compression ratio
     result: bytes = brotli.compress(data, quality=4)
     return result
@@ -85,6 +87,7 @@ def compress_brotli(data: bytes) -> bytes:
 
 def decompress_brotli(data: bytes) -> bytes:
     import brotli
+
     try:
         result: bytes = brotli.decompress(data)
         return result

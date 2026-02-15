@@ -370,7 +370,11 @@ class WebSocketTransport:
                                 ack = MessageAck.model_validate(ack_env.payload)
                                 self._pending_acks.pop(ack.original_envelope_id, None)
                         except ValidationError as e:
-                            logger.warning("asap.websocket.ack_validation_failed", error=str(e), envelope_id=env_dict.get("id"))
+                            logger.warning(
+                                "asap.websocket.ack_validation_failed",
+                                error=str(e),
+                                envelope_id=env_dict.get("id"),
+                            )
                     continue
                 request_id = data.get("id")
                 if "error" in data:

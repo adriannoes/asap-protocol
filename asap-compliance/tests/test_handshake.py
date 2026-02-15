@@ -132,9 +132,7 @@ class TestHandshakeKnownGood:
                 return httpx.Response(404)
 
         transport = MockTransport()
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://testserver"
-        ) as client:
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
             config = ComplianceConfig(
                 agent_url="http://testserver",
                 timeout_seconds=5.0,

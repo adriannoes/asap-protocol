@@ -97,6 +97,7 @@ class TestJcsCanonicalization:
         assert isinstance(result, bytes)
         assert result.startswith(b"{")
 
+
 class TestComplianceHarnessExecution:
     """Benchmarks for compliance harness execution time."""
 

@@ -562,7 +562,9 @@ class SizeLimitMiddleware(BaseHTTPMiddleware):
                         },
                     )
             except ValueError:
-                logger.debug("asap.middleware.invalid_content_length", content_length=content_length)
+                logger.debug(
+                    "asap.middleware.invalid_content_length", content_length=content_length
+                )
 
         # Continue to next middleware or route handler
         return await call_next(request)

@@ -250,7 +250,16 @@ class TestCliManifestSign:
         out_file = tmp_path / "signed.json"
         runner = CliRunner()
         result = runner.invoke(
-            app, ["manifest", "sign", "--key", str(key_file), str(manifest_file), "--out", str(out_file)]
+            app,
+            [
+                "manifest",
+                "sign",
+                "--key",
+                str(key_file),
+                str(manifest_file),
+                "--out",
+                str(out_file),
+            ],
         )
 
         assert result.exit_code == 0
@@ -287,7 +296,9 @@ class TestCliManifestSign:
         manifest_file.write_text(json.dumps(manifest_json), encoding="utf-8")
 
         runner = CliRunner()
-        result = runner.invoke(app, ["manifest", "sign", "--key", str(key_file), str(manifest_file)])
+        result = runner.invoke(
+            app, ["manifest", "sign", "--key", str(key_file), str(manifest_file)]
+        )
 
         assert result.exit_code == 0
         signed = json.loads(result.stdout)
@@ -314,7 +325,9 @@ class TestCliManifestSign:
         key_file.write_bytes(serialize_private_key(private_key))
 
         runner = CliRunner()
-        result = runner.invoke(app, ["manifest", "sign", "--key", str(key_file), "/nonexistent/manifest.json"])
+        result = runner.invoke(
+            app, ["manifest", "sign", "--key", str(key_file), "/nonexistent/manifest.json"]
+        )
 
         assert result.exit_code != 0
         assert "not found" in result.output.lower()
@@ -329,7 +342,9 @@ class TestCliManifestSign:
         manifest_file.write_text("{invalid json}", encoding="utf-8")
 
         runner = CliRunner()
-        result = runner.invoke(app, ["manifest", "sign", "--key", str(key_file), str(manifest_file)])
+        result = runner.invoke(
+            app, ["manifest", "sign", "--key", str(key_file), str(manifest_file)]
+        )
 
         assert result.exit_code != 0
         assert "Invalid JSON" in result.output
@@ -344,7 +359,9 @@ class TestCliManifestSign:
         manifest_file.write_text(json.dumps({"id": "invalid", "name": "x"}), encoding="utf-8")
 
         runner = CliRunner()
-        result = runner.invoke(app, ["manifest", "sign", "--key", str(key_file), str(manifest_file)])
+        result = runner.invoke(
+            app, ["manifest", "sign", "--key", str(key_file), str(manifest_file)]
+        )
 
         assert result.exit_code != 0
         assert "Invalid manifest" in result.output or "validation" in result.output.lower()
@@ -501,7 +518,11 @@ class TestCliValidateSchema:
         result = runner.invoke(app, ["validate-schema", str(json_file), "--schema-type", "agent"])
 
         assert result.exit_code != 0
-        assert "object" in result.output.lower() or "root" in result.output.lower() or "JSON" in result.output
+        assert (
+            "object" in result.output.lower()
+            or "root" in result.output.lower()
+            or "JSON" in result.output
+        )
 
     def test_auto_detects_envelope_schema(self, tmp_path: Path) -> None:
         """Ensure validate-schema can auto-detect envelope schema from payload_type."""

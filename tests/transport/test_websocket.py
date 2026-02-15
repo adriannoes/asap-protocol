@@ -835,9 +835,7 @@ class TestWebSocketConnectionPool(NoRateLimitTestBase):
         server_started = threading.Event()
 
         def run() -> None:
-            config = uvicorn.Config(
-                app_instance, host="127.0.0.1", port=port, log_level="warning"
-            )
+            config = uvicorn.Config(app_instance, host="127.0.0.1", port=port, log_level="warning")
             server_started.set()
             asyncio.run(uvicorn.Server(config).serve())
 
@@ -891,9 +889,7 @@ class TestWebSocketConnectionPool(NoRateLimitTestBase):
         server_started = threading.Event()
 
         def run() -> None:
-            config = uvicorn.Config(
-                app_instance, host="127.0.0.1", port=port, log_level="warning"
-            )
+            config = uvicorn.Config(app_instance, host="127.0.0.1", port=port, log_level="warning")
             server_started.set()
             asyncio.run(uvicorn.Server(config).serve())
 
@@ -938,9 +934,7 @@ class TestWebSocketConnectionPool(NoRateLimitTestBase):
         server_started = threading.Event()
 
         def run() -> None:
-            config = uvicorn.Config(
-                app_instance, host="127.0.0.1", port=port, log_level="warning"
-            )
+            config = uvicorn.Config(app_instance, host="127.0.0.1", port=port, log_level="warning")
             server_started.set()
             asyncio.run(uvicorn.Server(config).serve())
 
@@ -993,9 +987,7 @@ class TestWebSocketConnectionPool(NoRateLimitTestBase):
         server_started = threading.Event()
 
         def run() -> None:
-            config = uvicorn.Config(
-                app_instance, host="127.0.0.1", port=port, log_level="warning"
-            )
+            config = uvicorn.Config(app_instance, host="127.0.0.1", port=port, log_level="warning")
             server_started.set()
             asyncio.run(uvicorn.Server(config).serve())
 
@@ -1044,9 +1036,7 @@ class TestWebSocketConnectionPool(NoRateLimitTestBase):
         acquired_event = asyncio.Event()
 
         def run() -> None:
-            config = uvicorn.Config(
-                app_instance, host="127.0.0.1", port=port, log_level="warning"
-            )
+            config = uvicorn.Config(app_instance, host="127.0.0.1", port=port, log_level="warning")
             server_started.set()
             asyncio.run(uvicorn.Server(config).serve())
 
