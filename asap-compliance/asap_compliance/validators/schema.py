@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Optional, Type
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from asap.models.envelope import Envelope
 from asap.models.payloads import (
@@ -71,26 +71,16 @@ PAYLOAD_TYPE_TO_MODEL: dict[str, type] = {
 
 @dataclass
 class SchemaResult:
-    """Aggregated result of schema validation.
-
-    Attributes:
-        envelope_ok: Envelope structure valid.
-        payload_ok: Payload conforms to payload_type schema.
-        checks: Individual check results.
-    """
-
     envelope_ok: bool
     payload_ok: bool
     checks: list[CheckResult] = field(default_factory=list)
 
     @property
     def passed(self) -> bool:
-        """Return True if all schema checks passed."""
         return self.envelope_ok and self.payload_ok
 
 
 def _normalize_payload_type(payload_type: str) -> str:
-    """Normalize payload_type for lookup (lowercase, dots to underscores)."""
     normalized = payload_type.lower().replace(".", "_").replace("-", "_")
     return re.sub(r"_+", "_", normalized).strip("_")
 
@@ -100,8 +90,7 @@ _NORMALIZED_LOOKUP: dict[str, type] = {
 }
 
 
-def _get_payload_model(payload_type: str) -> type | None:
-    """Return Pydantic model for payload_type, or None if unknown."""
+def _get_payload_model(payload_type: str) -> Optional[Type[BaseModel]]:
     direct = PAYLOAD_TYPE_TO_MODEL.get(payload_type)
     if direct is not None:
         return direct
@@ -110,14 +99,6 @@ def _get_payload_model(payload_type: str) -> type | None:
 
 
 def validate_envelope(data: dict[str, Any]) -> tuple[bool, list[CheckResult]]:
-    """Validate envelope structure, required fields, and types.
-
-    Args:
-        data: Raw dict (e.g. from JSON).
-
-    Returns:
-        Tuple of (passed, list of CheckResult).
-    """
     results: list[CheckResult] = []
 
     required = {"asap_version", "sender", "recipient", "payload_type", "payload"}
@@ -166,15 +147,6 @@ def validate_envelope(data: dict[str, Any]) -> tuple[bool, list[CheckResult]]:
 
 
 def validate_payload(payload: dict[str, Any], payload_type: str) -> tuple[bool, list[CheckResult]]:
-    """Validate payload against schema for payload_type.
-
-    Args:
-        payload: Raw payload dict.
-        payload_type: Envelope payload_type (e.g. "task.request", "TaskRequest").
-
-    Returns:
-        Tuple of (passed, list of CheckResult).
-    """
     results: list[CheckResult] = []
 
     model = _get_payload_model(payload_type)
@@ -218,14 +190,6 @@ def validate_payload(payload: dict[str, Any], payload_type: str) -> tuple[bool, 
 
 
 def validate_extensions_passed_through(data: dict[str, Any]) -> list[CheckResult]:
-    """Verify envelope extensions field is accepted when present.
-
-    Args:
-        data: Envelope dict with optional extensions.
-
-    Returns:
-        List of CheckResult.
-    """
     results: list[CheckResult] = []
     if "extensions" not in data:
         results.append(
@@ -260,15 +224,6 @@ def validate_extensions_passed_through(data: dict[str, Any]) -> list[CheckResult
 def validate_unknown_fields_rejected(
     payload: dict[str, Any], payload_type: str
 ) -> list[CheckResult]:
-    """Verify unknown/extra fields in payload are rejected (extra='forbid').
-
-    Args:
-        payload: Payload dict with an extra unknown field.
-        payload_type: Payload type (e.g. "task.request").
-
-    Returns:
-        List of CheckResult.
-    """
     results: list[CheckResult] = []
     model = _get_payload_model(payload_type)
     if model is None:
@@ -303,17 +258,6 @@ def validate_unknown_fields_rejected(
 
 
 def validate_schema(data: dict[str, Any]) -> SchemaResult:
-    """Run full schema validation on an envelope dict.
-
-    Validates envelope structure, payload against payload_type, extensions,
-    and that unknown fields are rejected.
-
-    Args:
-        data: Raw envelope dict (e.g. from JSON request body).
-
-    Returns:
-        SchemaResult with envelope, payload, and extension check results.
-    """
     checks: list[CheckResult] = []
     envelope_ok = False
     payload_ok = False

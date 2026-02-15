@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from asap_compliance.validators.handshake import CheckResult
 from asap_compliance.validators.schema import (
-    CheckResult,
     SchemaResult,
     validate_envelope,
     validate_payload,
@@ -14,12 +14,12 @@ from asap_compliance.validators.schema import (
 
 def _minimal_envelope(
     payload_type: str = "task.request",
-    payload: dict | None = None,
+    payload: dict[str, object] | None = None,
     correlation_id: str | None = None,
-    extensions: dict | None = None,
-) -> dict:
+    extensions: dict[str, object] | None = None,
+) -> dict[str, object]:
     """Build minimal valid envelope dict."""
-    base = {
+    base: dict[str, object] = {
         "asap_version": "0.1",
         "sender": "urn:asap:agent:test",
         "recipient": "urn:asap:agent:echo",
@@ -38,7 +38,7 @@ def _minimal_envelope(
     return base
 
 
-def _minimal_task_response() -> dict:
+def _minimal_task_response() -> dict[str, object]:
     """Minimal valid TaskResponse payload."""
     return {
         "task_id": "task_01HX5K4N",
@@ -47,16 +47,16 @@ def _minimal_task_response() -> dict:
     }
 
 
-def _minimal_mcp_tool_result(success: bool = True) -> dict:
+def _minimal_mcp_tool_result(success: bool = True) -> dict[str, object]:
     """Minimal McpToolResult payload."""
     if success:
         return {"request_id": "req_1", "success": True, "result": {}}
     return {"request_id": "req_1", "success": False, "error": "Tool failed"}
 
 
-def _minimal_message_ack(status: str = "received", error: str | None = None) -> dict:
+def _minimal_message_ack(status: str = "received", error: str | None = None) -> dict[str, object]:
     """Minimal MessageAck payload."""
-    d: dict = {"original_envelope_id": "env_1", "status": status}
+    d: dict[str, object] = {"original_envelope_id": "env_1", "status": status}
     if error is not None:
         d["error"] = error
     return d

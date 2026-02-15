@@ -18,7 +18,6 @@ MARKER_HELP = "Marks a test as an ASAP protocol compliance test."
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
-    """Register command-line options for the compliance harness."""
     group = parser.getgroup("asap-compliance", description="ASAP protocol compliance options")
     group.addoption(
         "--asap-agent-url",
@@ -38,17 +37,11 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    """Register the asap_compliance marker."""
     config.addinivalue_line("markers", f"{MARKER_NAME}: {MARKER_HELP}")
 
 
 @pytest.fixture
 def compliance_harness(request: pytest.FixtureRequest) -> ComplianceConfig:
-    """Provide ComplianceConfig for compliance tests.
-
-    Reads agent URL and timeout from pytest options (--asap-agent-url, --asap-timeout)
-    or environment variable ASAP_AGENT_URL.
-    """
     config = request.config
     agent_url = config.getoption("asap_agent_url", default="http://localhost:8000")
     timeout = config.getoption("asap_timeout", default=30.0)
