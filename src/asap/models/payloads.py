@@ -129,17 +129,6 @@ class TaskUpdate(ASAPBaseModel):
     @field_validator("progress")
     @classmethod
     def validate_progress_percent(cls, v: dict[str, Any] | None) -> dict[str, Any] | None:
-        """Validate that progress percent is between 0 and 100 if provided.
-
-        Args:
-            v: Progress dictionary or None
-
-        Returns:
-            Progress dictionary after validation
-
-        Raises:
-            ValueError: If percent is not between 0 and 100
-        """
         if v and "percent" in v:
             percent = v["percent"]
             if not isinstance(percent, (int, float)):
@@ -331,17 +320,6 @@ class McpToolResult(ASAPBaseModel):
 
     @model_validator(mode="after")
     def validate_result_error_exclusivity(self) -> "McpToolResult":
-        """Validate that result and error are mutually exclusive based on success.
-
-        When success=True, result must be provided and error must be None.
-        When success=False, error must be provided and result must be None.
-
-        Returns:
-            Self after validation
-
-        Raises:
-            ValueError: If result/error are not mutually exclusive based on success
-        """
         if self.success:
             if self.result is None:
                 raise ValueError("result must be provided when success=True")

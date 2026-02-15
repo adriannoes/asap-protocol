@@ -47,28 +47,14 @@ class CompressionAlgorithm(str, Enum):
 
 
 def is_brotli_available() -> bool:
-    """Check if brotli compression is available.
-
-    Brotli is an optional dependency that provides better compression
-    ratios than gzip, especially for JSON payloads.
-
-    Returns:
-        True if brotli package is installed, False otherwise
-    """
     try:
         import brotli  # noqa: F401
-
         return True
     except ImportError:
         return False
 
 
 def get_supported_encodings() -> list[str]:
-    """Get list of supported Content-Encoding values.
-
-    Returns:
-        List of supported encoding names (e.g., ["gzip", "br"])
-    """
     encodings = ["gzip"]
     if is_brotli_available():
         encodings.insert(0, "br")  # Prefer brotli when available
@@ -76,14 +62,6 @@ def get_supported_encodings() -> list[str]:
 
 
 def get_accept_encoding_header() -> str:
-    """Get Accept-Encoding header value for client requests.
-
-    Returns a comma-separated list of supported encodings with quality
-    values to indicate preference.
-
-    Returns:
-        Accept-Encoding header value (e.g., "br, gzip, identity")
-    """
     encodings = get_supported_encodings()
     # Add identity as fallback (always supported)
     encodings.append("identity")
@@ -91,66 +69,22 @@ def get_accept_encoding_header() -> str:
 
 
 def compress_gzip(data: bytes) -> bytes:
-    """Compress data using gzip algorithm.
-
-    Args:
-        data: Raw bytes to compress
-
-    Returns:
-        Gzip compressed bytes
-    """
     return gzip.compress(data, compresslevel=GZIP_COMPRESSION_LEVEL)
 
 
 def decompress_gzip(data: bytes) -> bytes:
-    """Decompress gzip data.
-
-    Args:
-        data: Gzip compressed bytes
-
-    Returns:
-        Decompressed bytes
-
-    Raises:
-        OSError: If data is not valid gzip format
-    """
     return gzip.decompress(data)
 
 
 def compress_brotli(data: bytes) -> bytes:
-    """Compress data using brotli algorithm.
-
-    Args:
-        data: Raw bytes to compress
-
-    Returns:
-        Brotli compressed bytes
-
-    Raises:
-        ImportError: If brotli package is not installed
-    """
     import brotli
-
     # Quality 4 is a good balance of speed and compression ratio
     result: bytes = brotli.compress(data, quality=4)
     return result
 
 
 def decompress_brotli(data: bytes) -> bytes:
-    """Decompress brotli data.
-
-    Args:
-        data: Brotli compressed bytes
-
-    Returns:
-        Decompressed bytes
-
-    Raises:
-        ImportError: If brotli package is not installed
-        brotli.error: If data is not valid brotli format
-    """
     import brotli
-
     try:
         result: bytes = brotli.decompress(data)
         return result

@@ -150,6 +150,25 @@ For production deployments targeting <5ms p95, consider:
 
 ---
 
+## v1.2.0 Crypto Benchmarks (pytest-benchmark)
+
+Run with: `uv run pytest benchmarks/benchmark_crypto.py --benchmark-only -v`
+
+| Benchmark | Mean (μs) | OPS | Notes |
+|-----------|-----------|-----|-------|
+| JCS canonicalize manifest | ~17 | ~59k | Canonicalization only |
+| Ed25519 sign_manifest | ~112 | ~9k | Canonicalize + sign |
+| Ed25519 verify_manifest | ~215 | ~4.6k | Canonicalize + verify |
+| Compliance handshake | ~1,240 | ~800 | Full handshake vs in-process agent |
+
+### Observations
+
+1. **JCS overhead**: Canonicalization is ~15μs; Ed25519 sign adds ~95μs
+2. **Verification**: ~2x slower than signing (typical for Ed25519)
+3. **Compliance harness**: ~1.2ms per handshake (health + manifest + version checks)
+
+---
+
 ## Running Benchmarks
 
 ### Load Test
@@ -167,6 +186,12 @@ uv run locust -f benchmarks/load_test.py --headless -u 50 -r 10 -t 30s --host ht
 ```bash
 # Step-load stress test
 uv run locust -f benchmarks/stress_test.py --headless -u 500 -r 50 -t 5m --host http://localhost:8000
+```
+
+### Crypto Benchmarks (v1.2.0)
+
+```bash
+uv run pytest benchmarks/benchmark_crypto.py --benchmark-only -v
 ```
 
 ### Memory Test

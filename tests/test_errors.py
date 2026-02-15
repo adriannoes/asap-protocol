@@ -14,7 +14,6 @@ class TestASAPError:
     """Test ASAPError base class."""
 
     def test_basic_error_creation(self) -> None:
-        """Test creating a basic ASAPError."""
         error = ASAPError(code="asap:test/error", message="Test error message")
 
         assert error.code == "asap:test/error"
@@ -23,7 +22,6 @@ class TestASAPError:
         assert str(error) == "Test error message"
 
     def test_error_with_details(self) -> None:
-        """Test ASAPError with additional details."""
         details = {"context": "test", "value": 42}
         error = ASAPError(
             code="asap:test/detailed_error", message="Detailed error", details=details
@@ -34,7 +32,6 @@ class TestASAPError:
         assert error.details == details
 
     def test_error_details_immutability(self) -> None:
-        """Test that details dict is not shared between instances."""
         error1 = ASAPError("code", "msg", {"key": "value1"})
         error2 = ASAPError("code", "msg", {"key": "value2"})
 
@@ -46,7 +43,6 @@ class TestInvalidTransitionError:
     """Test InvalidTransitionError class."""
 
     def test_basic_transition_error(self) -> None:
-        """Test creating an InvalidTransitionError."""
         error = InvalidTransitionError(from_state="working", to_state="completed")
 
         assert error.code == "asap:protocol/invalid_state"
@@ -55,7 +51,6 @@ class TestInvalidTransitionError:
         assert "Invalid transition from 'working' to 'completed'" in str(error)
 
     def test_transition_error_with_details(self) -> None:
-        """Test InvalidTransitionError with additional details."""
         details = {"task_id": "task-123", "reason": "business_logic"}
         error = InvalidTransitionError(from_state="completed", to_state="working", details=details)
 
@@ -68,7 +63,6 @@ class TestInvalidTransitionError:
         assert error.details["to_state"] == "working"
 
     def test_transition_error_inheritance(self) -> None:
-        """Test that InvalidTransitionError inherits from ASAPError."""
         error = InvalidTransitionError("state1", "state2")
 
         assert isinstance(error, ASAPError)
@@ -79,7 +73,6 @@ class TestMalformedEnvelopeError:
     """Test MalformedEnvelopeError class."""
 
     def test_basic_malformed_envelope_error(self) -> None:
-        """Test creating a MalformedEnvelopeError."""
         error = MalformedEnvelopeError(reason="missing required field 'id'")
 
         assert error.code == "asap:protocol/malformed_envelope"
@@ -87,7 +80,6 @@ class TestMalformedEnvelopeError:
         assert "Malformed envelope: missing required field 'id'" in str(error)
 
     def test_malformed_envelope_error_with_details(self) -> None:
-        """Test MalformedEnvelopeError with additional details."""
         details = {"field": "payload", "expected_type": "dict"}
         error = MalformedEnvelopeError(reason="invalid payload type", details=details)
 
@@ -95,7 +87,6 @@ class TestMalformedEnvelopeError:
         assert error.details == details
 
     def test_malformed_envelope_error_inheritance(self) -> None:
-        """Test that MalformedEnvelopeError inherits from ASAPError."""
         error = MalformedEnvelopeError("test reason")
 
         assert isinstance(error, ASAPError)
@@ -106,7 +97,6 @@ class TestTaskNotFoundError:
     """Test TaskNotFoundError class."""
 
     def test_basic_task_not_found_error(self) -> None:
-        """Test creating a TaskNotFoundError."""
         error = TaskNotFoundError(task_id="task-123")
 
         assert error.code == "asap:task/not_found"
@@ -114,7 +104,6 @@ class TestTaskNotFoundError:
         assert "Task not found: task-123" in str(error)
 
     def test_task_not_found_error_with_details(self) -> None:
-        """Test TaskNotFoundError with additional details."""
         details = {"searched_in": "database", "timestamp": "2026-01-19T10:00:00Z"}
         error = TaskNotFoundError(task_id="task-456", details=details)
 
@@ -124,7 +113,6 @@ class TestTaskNotFoundError:
         assert error.details["task_id"] == "task-456"  # Should be included in details
 
     def test_task_not_found_error_inheritance(self) -> None:
-        """Test that TaskNotFoundError inherits from ASAPError."""
         error = TaskNotFoundError("task-789")
 
         assert isinstance(error, ASAPError)
@@ -135,7 +123,6 @@ class TestTaskAlreadyCompletedError:
     """Test TaskAlreadyCompletedError class."""
 
     def test_basic_task_already_completed_error(self) -> None:
-        """Test creating a TaskAlreadyCompletedError."""
         error = TaskAlreadyCompletedError(task_id="task-123", current_status="completed")
 
         assert error.code == "asap:task/already_completed"
@@ -144,7 +131,6 @@ class TestTaskAlreadyCompletedError:
         assert "Task already completed: task-123 (status: completed)" in str(error)
 
     def test_task_already_completed_error_with_details(self) -> None:
-        """Test TaskAlreadyCompletedError with additional details."""
         details = {"completed_at": "2026-01-19T09:30:00Z", "output_size": 1024}
         error = TaskAlreadyCompletedError(
             task_id="task-456", current_status="failed", details=details
@@ -158,7 +144,6 @@ class TestTaskAlreadyCompletedError:
         assert error.details["current_status"] == "failed"  # Should be included in details
 
     def test_task_already_completed_error_inheritance(self) -> None:
-        """Test that TaskAlreadyCompletedError inherits from ASAPError."""
         error = TaskAlreadyCompletedError("task-789", "cancelled")
 
         assert isinstance(error, ASAPError)
@@ -169,7 +154,6 @@ class TestErrorSerialization:
     """Test error serialization to dictionary."""
 
     def test_asap_error_to_dict_basic(self) -> None:
-        """Test basic ASAPError serialization to dictionary."""
         error = ASAPError(code="asap:test/error", message="Test error message")
         result = error.to_dict()
 

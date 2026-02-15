@@ -143,8 +143,6 @@ async def validate_callback_url(url: str, *, require_https: bool = True) -> None
 
 @dataclass(frozen=True, slots=True)
 class WebhookResult:
-    """Result of a single webhook delivery (url, status_code, success, elapsed_ms, optional error)."""
-
     url: str
     status_code: int
     success: bool
@@ -186,7 +184,6 @@ class WebhookDelivery:
     # ------------------------------------------------------------------
 
     async def validate_url(self, url: str) -> None:
-        """Validate url against SSRF rules and this instance's HTTPS policy."""
         await validate_callback_url(url, require_https=self._require_https)
 
     async def deliver(
@@ -196,7 +193,6 @@ class WebhookDelivery:
         *,
         extra_headers: dict[str, str] | None = None,
     ) -> WebhookResult:
-        """Validate url, sign payload if secret set, POST JSON; return WebhookResult."""
         await self.validate_url(url)
 
         body = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()

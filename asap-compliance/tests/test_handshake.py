@@ -7,6 +7,10 @@ from typing import TYPE_CHECKING
 import httpx
 import pytest
 
+from asap.crypto.keys import generate_keypair
+from asap.crypto.signing import sign_manifest
+from asap.models.entities import Capability, Endpoint, Manifest, Skill
+
 from asap_compliance.config import ComplianceConfig
 from asap_compliance.validators.handshake import (
     CheckResult,
@@ -76,6 +80,74 @@ class TestHandshakeKnownGood:
         version_checks = [c for c in result.checks if "version" in c.name]
         assert len(version_checks) >= 1
         assert all(c.passed for c in version_checks)
+
+    @pytest.mark.asyncio
+    async def test_validate_handshake_passes_against_signed_manifest_agent(
+        self,
+    ) -> None:
+        """Compliance harness handshake passes when agent returns signed manifest.
+
+        Verifies cross-version compatibility: v1.2 signed manifests work
+        with the compliance handshake validator (validate_signed_manifest_response).
+        """
+        manifest = Manifest(
+            id="urn:asap:agent:signed-compliance-test",
+            name="Signed Compliance Agent",
+            version="1.0.0",
+            description="Agent serving signed manifest",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="echo", description="Echo")],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="http://testserver/asap"),
+        )
+        private_key, _ = generate_keypair()
+        signed = sign_manifest(manifest, private_key)
+        signed_manifest_json = signed.model_dump(mode="json")
+
+        health_json: dict[str, object] = {
+            "status": "healthy",
+            "agent_id": manifest.id,
+            "version": manifest.version,
+            "asap_version": "0.1",
+            "uptime_seconds": 0,
+        }
+
+        class MockTransport(httpx.AsyncBaseTransport):
+            async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+                url = str(request.url)
+                if "/.well-known/asap/health" in url:
+                    return httpx.Response(
+                        200,
+                        headers={"content-type": "application/json"},
+                        json=health_json,
+                    )
+                if "/.well-known/asap/manifest.json" in url:
+                    return httpx.Response(
+                        200,
+                        headers={"content-type": "application/json"},
+                        json=signed_manifest_json,
+                    )
+                return httpx.Response(404)
+
+        transport = MockTransport()
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://testserver"
+        ) as client:
+            config = ComplianceConfig(
+                agent_url="http://testserver",
+                timeout_seconds=5.0,
+            )
+            result = await validate_handshake_async(config, client=client)
+
+        assert result.passed, f"Handshake failed: {result.checks}"
+        assert result.manifest_ok
+        manifest_sig_check = next(
+            (c for c in result.checks if c.name == "manifest_signature"), None
+        )
+        assert manifest_sig_check is not None
+        assert manifest_sig_check.passed
 
 
 class TestHandshakeKnownBad:

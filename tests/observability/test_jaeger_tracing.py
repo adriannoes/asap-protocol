@@ -26,7 +26,6 @@ CONTAINER_NAME = "asap-jaeger-tracing-test"
 
 
 def _docker_available() -> bool:
-    """Return True if Docker is available and we can run containers."""
     try:
         result = subprocess.run(
             ["docker", "info"],
@@ -39,7 +38,6 @@ def _docker_available() -> bool:
 
 
 def _jaeger_container_running() -> bool:
-    """Return True if our test Jaeger container is already running."""
     try:
         result = subprocess.run(
             ["docker", "ps", "--filter", f"name={CONTAINER_NAME}", "--format", "{{.Names}}"],
@@ -53,7 +51,6 @@ def _jaeger_container_running() -> bool:
 
 
 def _start_jaeger() -> bool:
-    """Start Jaeger all-in-one in Docker. Return True if started or already running."""
     if _jaeger_container_running():
         return True
     try:
@@ -80,35 +77,32 @@ def _start_jaeger() -> bool:
 
 
 def _wait_for_jaeger_ui(timeout_seconds: int = 30) -> bool:
-    """Wait until Jaeger UI responds. Return True if ready."""
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
         try:
             r = httpx.get(f"http://127.0.0.1:{JAEGER_UI_PORT}", timeout=2.0)
             if r.status_code == 200:
                 return True
-        except Exception:
+        except httpx.HTTPError:
             pass
         time.sleep(1.0)
     return False
 
 
 def _wait_for_asap_server(timeout_seconds: int = 15) -> bool:
-    """Wait until ASAP server health endpoint responds. Return True if ready."""
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
         try:
             r = httpx.get(f"http://127.0.0.1:{ASAP_SERVER_PORT}/health", timeout=2.0)
             if r.status_code == 200:
                 return True
-        except Exception:
+        except httpx.HTTPError:
             pass
         time.sleep(0.5)
     return False
 
 
 def _send_asap_request() -> bool:
-    """Send a single POST /asap request (task.request) to trigger tracing. Return True if 200."""
     envelope = {
         "asap_version": "0.1",
         "sender": "urn:asap:agent:client",
@@ -133,12 +127,11 @@ def _send_asap_request() -> bool:
             timeout=5.0,
         )
         return r.status_code == 200
-    except Exception:
+    except httpx.HTTPError:
         return False
 
 
 def _query_jaeger_traces(service: str) -> list[dict]:
-    """Query Jaeger API for traces of the given service. Return list of trace objects."""
     try:
         url = f"http://127.0.0.1:{JAEGER_UI_PORT}/api/traces?service={quote_plus(service)}"
         r = httpx.get(url, timeout=5.0)
@@ -146,12 +139,11 @@ def _query_jaeger_traces(service: str) -> list[dict]:
             return []
         data = r.json()
         return data.get("data") or []
-    except Exception:
+    except httpx.HTTPError:
         return []
 
 
 def _wait_for_jaeger_traces(service: str, timeout_seconds: int = 15) -> list[dict]:
-    """Poll Jaeger API until at least one trace appears or timeout. Return list of traces."""
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
         traces = _query_jaeger_traces(service)
@@ -162,7 +154,6 @@ def _wait_for_jaeger_traces(service: str, timeout_seconds: int = 15) -> list[dic
 
 
 def _stop_jaeger() -> None:
-    """Stop and remove the test Jaeger container."""
     try:
         subprocess.run(
             ["docker", "stop", CONTAINER_NAME],
@@ -174,7 +165,7 @@ def _stop_jaeger() -> None:
             capture_output=True,
             timeout=10,
         )
-    except Exception:
+    except (subprocess.SubprocessError, subprocess.TimeoutExpired):
         pass
 
 

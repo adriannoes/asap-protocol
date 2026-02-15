@@ -4,36 +4,34 @@ This module defines type aliases to improve code readability and
 document the semantic meaning of string types.
 """
 
-from typing import TypeAlias
-
 # Entity identifiers
-AgentURN: TypeAlias = str
+AgentURN = str
 """Agent identifier in URN format: urn:asap:agent:{name}"""
 
-ConversationID: TypeAlias = str
+ConversationID = str
 """Unique conversation identifier (ULID format)"""
 
-TaskID: TypeAlias = str
+TaskID = str
 """Unique task identifier (ULID format)"""
 
-MessageID: TypeAlias = str
+MessageID = str
 """Unique message identifier (ULID format)"""
 
-ArtifactID: TypeAlias = str
+ArtifactID = str
 """Unique artifact identifier (ULID format)"""
 
-SnapshotID: TypeAlias = str
+SnapshotID = str
 """Unique state snapshot identifier (ULID format)"""
 
-PartID: TypeAlias = str
+PartID = str
 """Unique part identifier (ULID format)"""
 
 # Other semantic types
-URI: TypeAlias = str
+URI = str
 """Uniform Resource Identifier"""
 
-MIMEType: TypeAlias = str
+MIMEType = str
 """MIME type string (e.g., 'application/json')"""
 
-SemanticVersion: TypeAlias = str
+SemanticVersion = str
 """Semantic version string (e.g., '1.0.0')"""

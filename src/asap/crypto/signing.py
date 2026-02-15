@@ -18,7 +18,6 @@ from asap.models.entities import Manifest
 
 
 def canonicalize(manifest: Manifest) -> bytes:
-    """JCS (RFC 8785) canonical bytes; excludes signature."""
     payload = manifest.model_dump(exclude={"signature"})
     return cast(bytes, jcs.canonicalize(payload))
 
@@ -27,7 +26,6 @@ def sign_manifest(
     manifest: Manifest,
     private_key: Ed25519PrivateKey,
 ) -> SignedManifest:
-    """JCS canonicalize + Ed25519 sign; 64-byte signature (base64) in SignedManifest."""
     payload_bytes = canonicalize(manifest)
     raw_signature = private_key.sign(payload_bytes)
     assert len(raw_signature) == 64, "Ed25519 signature must be 64 bytes"
@@ -41,7 +39,6 @@ def verify_manifest(
     signed_manifest: SignedManifest,
     public_key: Ed25519PublicKey | None = None,
 ) -> bool:
-    """RFC 8032 strict; alg ed25519. Uses public_key arg or signed_manifest.public_key. Raises SignatureVerificationError on failure."""
     if signed_manifest.signature.alg != "ed25519":
         raise SignatureVerificationError(
             f"Unsupported signature algorithm: {signed_manifest.signature.alg}. "

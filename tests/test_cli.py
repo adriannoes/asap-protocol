@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 
 from asap import __version__
 from asap.cli import DEFAULT_SCHEMAS_DIR, app
+from asap.crypto.keys import generate_keypair, serialize_private_key
 from asap.schemas import TOTAL_SCHEMA_COUNT
 
 # ANSI escape sequence pattern for stripping colors from output
@@ -76,6 +77,14 @@ class TestCliExportSchemas:
 
         assert result.exit_code == 0
         assert f"Exported {TOTAL_SCHEMA_COUNT} schemas" in result.stdout
+
+    def test_verbose_lists_exported_files(self, tmp_path: Path) -> None:
+        """Ensure export-schemas with -v (global) lists each exported file."""
+        runner = CliRunner()
+        result = runner.invoke(app, ["-v", "export-schemas", "--output-dir", str(tmp_path)])
+
+        assert result.exit_code == 0
+        assert "agent.schema.json" in result.stdout or "envelope.schema.json" in result.stdout
 
     def test_handles_permission_error(self, tmp_path: Path) -> None:
         """Ensure export-schemas handles permission errors gracefully."""
@@ -171,6 +180,210 @@ class TestCliDefaults:
     def test_default_schemas_dir_exists(self) -> None:
         """Ensure DEFAULT_SCHEMAS_DIR is defined."""
         assert Path("schemas") == DEFAULT_SCHEMAS_DIR
+
+
+class TestCliKeysGenerate:
+    """Tests for keys generate command."""
+
+    def test_keys_generate_writes_pem_file(self, tmp_path: Path) -> None:
+        """Ensure keys generate creates a PEM file with mode 0600."""
+        key_file = tmp_path / "key.pem"
+        runner = CliRunner()
+        result = runner.invoke(app, ["keys", "generate", "--out", str(key_file)])
+
+        assert result.exit_code == 0
+        assert key_file.exists()
+        assert key_file.read_bytes().startswith(b"-----BEGIN")
+        assert oct(key_file.stat().st_mode)[-3:] == "600"
+
+    def test_keys_generate_rejects_directory_as_output(self, tmp_path: Path) -> None:
+        """Ensure keys generate rejects when --out is a directory."""
+        runner = CliRunner()
+        result = runner.invoke(app, ["keys", "generate", "--out", str(tmp_path)])
+
+        assert result.exit_code != 0
+        assert "directory" in result.output.lower()
+
+    def test_keys_generate_chmod_warning_on_os_error(self, tmp_path: Path) -> None:
+        """Ensure keys generate warns when chmod fails but still succeeds."""
+        key_file = tmp_path / "key.pem"
+        with patch("pathlib.Path.chmod") as mock_chmod:
+            mock_chmod.side_effect = OSError("Permission denied")
+            runner = CliRunner()
+            result = runner.invoke(app, ["keys", "generate", "--out", str(key_file)])
+
+        assert result.exit_code == 0
+        assert key_file.exists()
+        assert "Warning" in result.output or "0600" in result.output
+
+
+class TestCliManifestSign:
+    """Tests for manifest sign command."""
+
+    def test_manifest_sign_writes_signed_manifest_to_file(self, tmp_path: Path) -> None:
+        """Ensure manifest sign produces valid signed manifest."""
+        private_key, _ = generate_keypair()
+        key_file = tmp_path / "key.pem"
+        key_file.write_bytes(serialize_private_key(private_key))
+        key_file.chmod(0o600)
+
+        manifest_json = {
+            "id": "urn:asap:agent:test",
+            "name": "Test",
+            "version": "1.0.0",
+            "description": "Test agent",
+            "capabilities": {
+                "asap_version": "0.1",
+                "skills": [{"id": "echo", "description": "Echo"}],
+                "state_persistence": False,
+                "streaming": False,
+                "mcp_tools": [],
+            },
+            "endpoints": {"asap": "https://example.com/asap", "events": None},
+            "auth": None,
+            "signature": None,
+            "ttl_seconds": 300,
+        }
+        manifest_file = tmp_path / "manifest.json"
+        manifest_file.write_text(json.dumps(manifest_json), encoding="utf-8")
+
+        out_file = tmp_path / "signed.json"
+        runner = CliRunner()
+        result = runner.invoke(
+            app, ["manifest", "sign", "--key", str(key_file), str(manifest_file), "--out", str(out_file)]
+        )
+
+        assert result.exit_code == 0
+        assert out_file.exists()
+        signed = json.loads(out_file.read_text())
+        assert "manifest" in signed
+        assert "signature" in signed
+
+    def test_manifest_sign_outputs_to_stdout_when_no_out(self, tmp_path: Path) -> None:
+        """Ensure manifest sign prints to stdout when --out not specified."""
+        private_key, _ = generate_keypair()
+        key_file = tmp_path / "key.pem"
+        key_file.write_bytes(serialize_private_key(private_key))
+        key_file.chmod(0o600)
+
+        manifest_json = {
+            "id": "urn:asap:agent:test",
+            "name": "Test",
+            "version": "1.0.0",
+            "description": "Test",
+            "capabilities": {
+                "asap_version": "0.1",
+                "skills": [{"id": "echo", "description": "Echo"}],
+                "state_persistence": False,
+                "streaming": False,
+                "mcp_tools": [],
+            },
+            "endpoints": {"asap": "https://example.com/asap", "events": None},
+            "auth": None,
+            "signature": None,
+            "ttl_seconds": 300,
+        }
+        manifest_file = tmp_path / "manifest.json"
+        manifest_file.write_text(json.dumps(manifest_json), encoding="utf-8")
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["manifest", "sign", "--key", str(key_file), str(manifest_file)])
+
+        assert result.exit_code == 0
+        signed = json.loads(result.stdout)
+        assert "manifest" in signed
+        assert "signature" in signed
+
+    def test_manifest_sign_rejects_missing_key(self, tmp_path: Path) -> None:
+        """Ensure manifest sign rejects when key file missing."""
+        manifest_file = tmp_path / "manifest.json"
+        manifest_file.write_text("{}", encoding="utf-8")
+
+        runner = CliRunner()
+        result = runner.invoke(
+            app, ["manifest", "sign", "--key", "/nonexistent/key.pem", str(manifest_file)]
+        )
+
+        assert result.exit_code != 0
+        assert "key" in result.output.lower() or "not found" in result.output.lower()
+
+    def test_manifest_sign_rejects_missing_manifest_file(self, tmp_path: Path) -> None:
+        """Ensure manifest sign rejects when manifest file missing."""
+        private_key, _ = generate_keypair()
+        key_file = tmp_path / "key.pem"
+        key_file.write_bytes(serialize_private_key(private_key))
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["manifest", "sign", "--key", str(key_file), "/nonexistent/manifest.json"])
+
+        assert result.exit_code != 0
+        assert "not found" in result.output.lower()
+
+    def test_manifest_sign_rejects_invalid_json(self, tmp_path: Path) -> None:
+        """Ensure manifest sign rejects invalid JSON in manifest file."""
+        private_key, _ = generate_keypair()
+        key_file = tmp_path / "key.pem"
+        key_file.write_bytes(serialize_private_key(private_key))
+
+        manifest_file = tmp_path / "manifest.json"
+        manifest_file.write_text("{invalid json}", encoding="utf-8")
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["manifest", "sign", "--key", str(key_file), str(manifest_file)])
+
+        assert result.exit_code != 0
+        assert "Invalid JSON" in result.output
+
+    def test_manifest_sign_rejects_invalid_manifest_schema(self, tmp_path: Path) -> None:
+        """Ensure manifest sign rejects manifest that fails schema validation."""
+        private_key, _ = generate_keypair()
+        key_file = tmp_path / "key.pem"
+        key_file.write_bytes(serialize_private_key(private_key))
+
+        manifest_file = tmp_path / "manifest.json"
+        manifest_file.write_text(json.dumps({"id": "invalid", "name": "x"}), encoding="utf-8")
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["manifest", "sign", "--key", str(key_file), str(manifest_file)])
+
+        assert result.exit_code != 0
+        assert "Invalid manifest" in result.output or "validation" in result.output.lower()
+
+
+class TestCliManifestVerify:
+    """Tests for manifest verify command."""
+
+    FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
+
+    def test_manifest_verify_succeeds_with_valid_signed_manifest(self) -> None:
+        """Ensure manifest verify passes for valid signed manifest."""
+        manifest_path = self.FIXTURES_DIR / "verified_manifest.json"
+        assert manifest_path.exists()
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["manifest", "verify", str(manifest_path)])
+
+        assert result.exit_code == 0
+        assert "valid" in result.output.lower() or "Signature valid" in result.output
+
+    def test_manifest_verify_rejects_missing_file(self) -> None:
+        """Ensure manifest verify rejects when file not found."""
+        runner = CliRunner()
+        result = runner.invoke(app, ["manifest", "verify", "/nonexistent/signed.json"])
+
+        assert result.exit_code != 0
+        assert "not found" in result.output.lower()
+
+    def test_manifest_verify_rejects_invalid_json(self, tmp_path: Path) -> None:
+        """Ensure manifest verify rejects invalid JSON."""
+        bad_file = tmp_path / "bad.json"
+        bad_file.write_text("{invalid}", encoding="utf-8")
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["manifest", "verify", str(bad_file)])
+
+        assert result.exit_code != 0
+        assert "Invalid JSON" in result.output
 
 
 class TestCliValidateSchema:
@@ -278,6 +491,17 @@ class TestCliValidateSchema:
 
         assert result.exit_code != 0
         assert "File not found" in result.output
+
+    def test_rejects_json_root_not_object(self, tmp_path: Path) -> None:
+        """Ensure validate-schema rejects JSON with root not a dict (e.g. array)."""
+        json_file = tmp_path / "array.json"
+        json_file.write_text("[1, 2, 3]", encoding="utf-8")
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["validate-schema", str(json_file), "--schema-type", "agent"])
+
+        assert result.exit_code != 0
+        assert "object" in result.output.lower() or "root" in result.output.lower() or "JSON" in result.output
 
     def test_auto_detects_envelope_schema(self, tmp_path: Path) -> None:
         """Ensure validate-schema can auto-detect envelope schema from payload_type."""

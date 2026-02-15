@@ -172,3 +172,33 @@ def test_asap_client_with_mtls_config(tmp_path: Path) -> None:
 def test_asap_client_without_mtls_config() -> None:
     client = ASAPClient("http://localhost:8000")
     assert client._mtls_config is None
+
+
+def test_create_ssl_context_server_ca_missing_raises(tmp_path: Path) -> None:
+    """Server with ca_certs pointing to non-existent file raises FileNotFoundError."""
+    cert_path, key_path = _generate_test_cert_and_key(tmp_path)
+    config = MTLSConfig(cert_file=cert_path, key_file=key_path, ca_certs="/nonexistent/ca.pem")
+    with pytest.raises(FileNotFoundError) as exc_info:
+        create_ssl_context(config, purpose="server")
+    assert "ca" in str(exc_info.value).lower() or "CA" in str(exc_info.value)
+
+
+def test_create_ssl_context_client_ca_missing_raises(tmp_path: Path) -> None:
+    """Client with ca_certs pointing to non-existent file raises FileNotFoundError."""
+    cert_path, key_path = _generate_test_cert_and_key(tmp_path)
+    config = MTLSConfig(cert_file=cert_path, key_file=key_path, ca_certs="/nonexistent/ca.pem")
+    with pytest.raises(FileNotFoundError) as exc_info:
+        create_ssl_context(config, purpose="client")
+    assert "ca" in str(exc_info.value).lower() or "CA" in str(exc_info.value)
+
+
+def test_mtls_config_to_uvicorn_kwargs_with_key_password(tmp_path: Path) -> None:
+    """mtls_config_to_uvicorn_kwargs includes ssl_keyfile_password when key_password set."""
+    cert_path, key_path = _generate_test_cert_and_key(tmp_path)
+    config = MTLSConfig(
+        cert_file=cert_path,
+        key_file=key_path,
+        key_password="secret123",
+    )
+    kwargs = mtls_config_to_uvicorn_kwargs(config)
+    assert kwargs["ssl_keyfile_password"] == "secret123"

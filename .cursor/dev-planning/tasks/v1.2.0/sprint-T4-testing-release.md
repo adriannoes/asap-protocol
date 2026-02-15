@@ -14,15 +14,15 @@
 
 ### Sub-tasks
 
-- [ ] 4.1.1 Run full test suite
+- [x] 4.1.1 Run full test suite
   - Unit, integration, and E2E tests
   - Ensure v1.2 features work with v1.1 (OAuth2, WebSocket, SQLite)
 
-- [ ] 4.1.2 Cross-version compatibility testing
+- [x] 4.1.2 Cross-version compatibility testing
   - Verify signed manifests work with existing discovery
   - Verify compliance harness against sample agents
 
-- [ ] 4.1.3 Performance testing
+- [x] 4.1.3 Performance testing
   - Ed25519 signing/verification benchmarks
   - JCS canonicalization overhead benchmarks
   - Compliance harness execution time
@@ -39,37 +39,36 @@
 
 ### Sub-tasks
 
-- [ ] 4.2.1 Update CHANGELOG.md
+- [x] 4.2.1 Update CHANGELOG.md
   - Document all v1.2.0 features
   - Note deferred items (Registry API, DeepEval)
 
-- [ ] 4.2.2 Update README.md
+- [x] 4.2.2 Update README.md
   - Updated quick start with signing
   - Compliance harness usage guide
 
-- [ ] 4.2.3 Update Official Docs (MkDocs)
+- [x] 4.2.3 Update Official Docs (MkDocs)
   - **New Page**: `docs/guides/identity-signing.md`
   - **New Page**: `docs/guides/compliance-testing.md`
-  - **Update**: `docs/reference/cli.md` with new commands
+  - **New Page**: `docs/guides/migration-v1.1-to-v1.2.md`
+  - **Update**: `docs/index.md` CLI section with new commands
   - **Reference**: https://adriannoes.github.io/asap-protocol
 
-- [ ] 4.2.3 Version bump
+- [x] 4.2.4 Version bump
   - `pyproject.toml` → 1.2.0
-  - Update `__version__` constants
+  - `asap-compliance/pyproject.toml` → 1.2.0
+  - Update `__version__` in both packages
 
-- [ ] 4.2.4 Update AGENTS.md
+- [x] 4.2.5 Update AGENTS.md
   - Document new crypto module
   - Document compliance harness
 
-- [ ] 4.2.5 Create migration guide
+- [x] 4.2.6 Create migration guide
   - v1.1 → v1.2 upgrade steps
 
-- [ ] 4.2.6 Commit Release
-  - **Command**: `git commit -m "chore(release): prepare v1.2.0"`
-
 **Acceptance Criteria**:
-- [ ] All docs up to date
-- [ ] Version bumped
+- [x] All docs up to date
+- [x] Version bumped
 
 ---
 
@@ -109,6 +108,21 @@
 - [ ] Documentation complete
 
 **Total Sub-tasks**: ~13
+
+## Relevant Files (Task 4.1 + 4.2)
+- `tests/integration/test_cross_version_compatibility.py` – Cross-version compatibility tests
+- `asap-compliance/tests/test_handshake.py` – Signed manifest handshake test
+- `benchmarks/benchmark_crypto.py` – Ed25519, JCS, compliance benchmarks
+- `benchmarks/RESULTS.md` – v1.2.0 crypto benchmark section
+- `CHANGELOG.md` – v1.2.0 release notes
+- `README.md` – Quick start signing, compliance harness
+- `docs/guides/identity-signing.md` – Identity signing guide
+- `docs/guides/compliance-testing.md` – Compliance testing guide
+- `docs/guides/migration-v1.1-to-v1.2.md` – Migration guide
+- `docs/index.md` – CLI section updated
+- `mkdocs.yml` – New guides in nav
+- `AGENTS.md` – Crypto, compliance, mTLS documented
+- `pyproject.toml`, `asap-compliance/pyproject.toml` – Version 1.2.0
 
 ## Documentation Updates
 - [ ] **Update Roadmap**: Mark completed items in [v1.2.0 Roadmap](./tasks-v1.2.0-roadmap.md)

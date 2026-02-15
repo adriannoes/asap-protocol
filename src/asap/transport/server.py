@@ -147,7 +147,6 @@ class RegistryHolder:
         self._executor: BoundedExecutor | None = None
 
     def replace_registry(self, new_registry: HandlerRegistry) -> None:
-        """Replace the held registry (e.g. after reloading handlers module)."""
         if self._executor is not None:
             new_registry._executor = self._executor
         self.registry = new_registry
@@ -255,15 +254,6 @@ class ASAPRequestHandler:
         max_request_size: int = MAX_REQUEST_SIZE,
         nonce_store: NonceStore | None = None,
     ) -> None:
-        """Initialize the request handler.
-
-        Args:
-            registry_holder: Holder for handler registry (supports hot reload).
-            manifest: Agent manifest describing capabilities
-            auth_middleware: Optional authentication middleware for request validation
-            max_request_size: Maximum allowed request size in bytes
-            nonce_store: Optional nonce store for replay attack prevention
-        """
         self.registry_holder = registry_holder
         self.manifest = manifest
         self.auth_middleware = auth_middleware
@@ -271,18 +261,6 @@ class ASAPRequestHandler:
         self.nonce_store = nonce_store
 
     def _normalize_payload_type_for_metrics(self, payload_type: str) -> str:
-        """Normalize payload type for metrics to prevent cardinality explosion.
-
-        Only registered payload types are used as metric labels. Unknown
-        payload types are normalized to "other" to prevent DoS attacks
-        through metric cardinality explosion.
-
-        Args:
-            payload_type: The payload type to normalize
-
-        Returns:
-            The payload type if registered, or "other" if unknown
-        """
         if self.registry_holder.registry.has_handler(payload_type):
             return payload_type
         return "other"
@@ -293,16 +271,6 @@ class ASAPRequestHandler:
         data: dict[str, Any] | None = None,
         request_id: str | int | None = None,
     ) -> JSONResponse:
-        """Build a JSON-RPC error response.
-
-        Args:
-            code: JSON-RPC error code
-            data: Optional error data
-            request_id: Optional request ID from original request
-
-        Returns:
-            JSONResponse with error
-        """
         error_response = JsonRpcErrorResponse(
             error=JsonRpcError.from_code(code, data=data),
             id=request_id,
@@ -316,14 +284,6 @@ class ASAPRequestHandler:
         error_type: str,
         duration_seconds: float,
     ) -> None:
-        """Record error metrics for a failed request.
-
-        Args:
-            metrics: Metrics collector instance
-            payload_type: Payload type (or "unknown")
-            error_type: Type of error that occurred
-            duration_seconds: Request duration in seconds
-        """
         # Normalize payload_type to prevent cardinality explosion
         normalized_payload_type = self._normalize_payload_type_for_metrics(payload_type)
         metrics.increment_counter(
@@ -361,17 +321,6 @@ class ASAPRequestHandler:
         self,
         ctx: RequestContext,
     ) -> tuple[Envelope | None, JSONResponse | str]:
-        """Validate and extract envelope from JSON-RPC params.
-
-        Validates that params is a dict, extracts the envelope field,
-        and validates the envelope structure.
-
-        Args:
-            ctx: Request context with rpc_request, start_time, and metrics
-
-        Returns:
-            Tuple of (Envelope, payload_type) if valid, or (None, error_response) if invalid
-        """
         rpc_request = ctx.rpc_request
         if not isinstance(rpc_request.params, dict):
             logger.warning(
@@ -535,16 +484,6 @@ class ASAPRequestHandler:
         request: Request,
         ctx: RequestContext,
     ) -> HandlerResult[str]:
-        """Authenticate the request if authentication is enabled.
-
-        Args:
-            request: FastAPI request object
-            ctx: Request context with rpc_request, start_time, and metrics
-
-        Returns:
-            Tuple of (authenticated_agent_id, None) if successful or auth disabled,
-            or (None, error_response) if authentication failed
-        """
         if self.auth_middleware is None:
             return None, None
 
@@ -580,17 +519,6 @@ class ASAPRequestHandler:
         ctx: RequestContext,
         payload_type: str,
     ) -> JSONResponse | None:
-        """Verify that envelope sender matches authenticated identity.
-
-        Args:
-            authenticated_agent_id: Authenticated agent ID from auth middleware
-            envelope: Validated ASAP envelope
-            ctx: Request context with rpc_request, start_time, and metrics
-            payload_type: Payload type for metrics
-
-        Returns:
-            None if verification passes, or error_response if sender mismatch
-        """
         if self.auth_middleware is None:
             return None
 
@@ -621,16 +549,6 @@ class ASAPRequestHandler:
         ctx: RequestContext,
         payload_type: str,
     ) -> JSONResponse:
-        """Build success response with metrics and logging.
-
-        Args:
-            response_envelope: Response envelope from handler
-            ctx: Request context with rpc_request, start_time, and metrics
-            payload_type: Payload type for metrics
-
-        Returns:
-            JSON-RPC success response
-        """
         response_envelope = inject_envelope_trace_context(response_envelope)
         duration_seconds = time.perf_counter() - ctx.start_time
         duration_ms = duration_seconds * 1000
@@ -682,16 +600,6 @@ class ASAPRequestHandler:
         ctx: RequestContext,
         payload_type: str,
     ) -> JSONResponse:
-        """Handle internal server errors with metrics and logging.
-
-        Args:
-            error: The exception that occurred
-            ctx: Request context with rpc_request, start_time, and metrics
-            payload_type: Payload type for metrics
-
-        Returns:
-            JSON-RPC internal error response
-        """
         duration_seconds = time.perf_counter() - ctx.start_time
         duration_ms = duration_seconds * 1000
 
@@ -758,14 +666,6 @@ class ASAPRequestHandler:
         self,
         request: Request,
     ) -> HandlerResult[JsonRpcRequest]:
-        """Parse JSON body and validate JSON-RPC request structure.
-
-        Args:
-            request: FastAPI request object
-
-        Returns:
-            Tuple of (JsonRpcRequest, None) if valid, or (None, error_response) if invalid
-        """
         # Parse JSON body
         try:
             body = await self.parse_json_body(request)
@@ -852,7 +752,7 @@ class ASAPRequestHandler:
                         detail=f"Request size ({size} bytes) exceeds maximum ({max_size} bytes)",
                     )
             except ValueError:
-                pass
+                logger.debug("asap.request.invalid_content_length", content_length=content_length)
 
     async def parse_json_body(self, request: Request) -> dict[str, Any]:
         """Parse JSON body from request with size validation and decompression.

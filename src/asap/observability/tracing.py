@@ -90,7 +90,6 @@ def configure_tracing(
 
 
 def _add_otlp_processor() -> None:
-    """Add OTLP span processor if endpoint is set."""
     global _tracer_provider
     if _tracer_provider is None:
         return
@@ -116,7 +115,6 @@ def _add_otlp_processor() -> None:
 
 
 def _add_console_processor() -> None:
-    """Add console span processor for debugging."""
     global _tracer_provider
     if _tracer_provider is None:
         return
@@ -129,7 +127,6 @@ def _add_console_processor() -> None:
 
 
 def _instrument_app(app: FastAPI) -> None:
-    """Instrument FastAPI and httpx for automatic spans."""
     try:
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
@@ -156,14 +153,6 @@ def reset_tracing() -> None:
 
 
 def get_tracer(name: str | None = None) -> trace.Tracer:
-    """Return the ASAP protocol tracer for custom spans.
-
-    Args:
-        name: Optional logger/module name for span attribution.
-
-    Returns:
-        OpenTelemetry Tracer instance.
-    """
     if _tracer is None:
         trace.set_tracer_provider(TracerProvider())
         return trace.get_tracer("asap.protocol", "1.0.0", schema_url=None)
@@ -244,18 +233,6 @@ def handler_span_context(
     agent_urn: str,
     envelope_id: str | None,
 ) -> AbstractContextManager[trace.Span]:
-    """Start a current span for handler execution (use as context manager).
-
-    Attributes: asap.payload_type, asap.agent.urn, asap.envelope.id.
-
-    Args:
-        payload_type: Envelope payload type.
-        agent_urn: Manifest/agent URN.
-        envelope_id: Envelope id.
-
-    Returns:
-        Span context manager (use with "with").
-    """
     tracer = get_tracer(__name__)
     attrs: dict[str, str] = {
         "asap.payload_type": payload_type,
@@ -271,18 +248,6 @@ def state_transition_span_context(
     to_status: str,
     task_id: str | None = None,
 ) -> AbstractContextManager[trace.Span]:
-    """Start a current span for a state machine transition (use as context manager).
-
-    Attributes: asap.state.from, asap.state.to, asap.task.id.
-
-    Args:
-        from_status: Previous status.
-        to_status: New status.
-        task_id: Optional task id.
-
-    Returns:
-        Span context manager (use with "with").
-    """
     tracer = get_tracer(__name__)
     attrs: dict[str, str] = {
         "asap.state.from": from_status,

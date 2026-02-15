@@ -53,7 +53,6 @@ def app(
     sample_manifest: Manifest,
     disable_rate_limiting: "ASAPRateLimiter",
 ) -> FastAPI:
-    """Create FastAPI app with WebSocket route (rate limiting disabled)."""
     app_instance = create_app(sample_manifest, rate_limit=TEST_RATE_LIMIT_DEFAULT)
     app_instance.state.limiter = disable_rate_limiting
     return app_instance  # type: ignore[no-any-return]
@@ -61,7 +60,6 @@ def app(
 
 @pytest.fixture
 def client(app: FastAPI) -> TestClient:
-    """Create test client."""
     return TestClient(app)
 
 
@@ -118,7 +116,7 @@ class TestWebSocketRemoteError:
         assert err.message == "Test"
         assert err.data == {}
 
-    def test_remote_error_data_dict_preserved(self) -> None:
+    def test_remote_error_data_preserved(self) -> None:
         err = WebSocketRemoteError(-32600, "Parse error", data={"line": 1})
         assert err.data == {"line": 1}
 
@@ -195,21 +193,15 @@ class TestWebSocketConnectionLifecycle(NoRateLimitTestBase):
     """Tests for WebSocket connection open, message, close."""
 
     def test_websocket_accepts_connection(self, client: TestClient) -> None:
-        """Server accepts WebSocket connection at /asap/ws."""
         with client.websocket_connect("/asap/ws") as websocket:
-            # Connection accepted; no exception
             assert websocket is not None
 
     def test_websocket_closes_cleanly(self, client: TestClient) -> None:
-        """WebSocket closes without error when context exits."""
         with client.websocket_connect("/asap/ws") as websocket:
             websocket.send_text("{}")
-            # Receive something (error response for invalid body) then exit
             _ = websocket.receive_text()
-        # Context exit closes connection
 
     def test_websocket_route_registered(self, app: FastAPI) -> None:
-        """App has WebSocket route /asap/ws."""
         routes = [r for r in app.routes if getattr(r, "path", None) == "/asap/ws"]
         assert len(routes) == 1
 
@@ -843,14 +835,11 @@ class TestWebSocketConnectionPool(NoRateLimitTestBase):
         server_started = threading.Event()
 
         def run() -> None:
-            try:
-                config = uvicorn.Config(
-                    app_instance, host="127.0.0.1", port=port, log_level="warning"
-                )
-                server_started.set()
-                asyncio.run(uvicorn.Server(config).serve())
-            except Exception:
-                pass
+            config = uvicorn.Config(
+                app_instance, host="127.0.0.1", port=port, log_level="warning"
+            )
+            server_started.set()
+            asyncio.run(uvicorn.Server(config).serve())
 
         thread = threading.Thread(target=run, daemon=True)
         thread.start()
@@ -902,14 +891,11 @@ class TestWebSocketConnectionPool(NoRateLimitTestBase):
         server_started = threading.Event()
 
         def run() -> None:
-            try:
-                config = uvicorn.Config(
-                    app_instance, host="127.0.0.1", port=port, log_level="warning"
-                )
-                server_started.set()
-                asyncio.run(uvicorn.Server(config).serve())
-            except Exception:
-                pass
+            config = uvicorn.Config(
+                app_instance, host="127.0.0.1", port=port, log_level="warning"
+            )
+            server_started.set()
+            asyncio.run(uvicorn.Server(config).serve())
 
         thread = threading.Thread(target=run, daemon=True)
         thread.start()
@@ -952,14 +938,11 @@ class TestWebSocketConnectionPool(NoRateLimitTestBase):
         server_started = threading.Event()
 
         def run() -> None:
-            try:
-                config = uvicorn.Config(
-                    app_instance, host="127.0.0.1", port=port, log_level="warning"
-                )
-                server_started.set()
-                asyncio.run(uvicorn.Server(config).serve())
-            except Exception:
-                pass
+            config = uvicorn.Config(
+                app_instance, host="127.0.0.1", port=port, log_level="warning"
+            )
+            server_started.set()
+            asyncio.run(uvicorn.Server(config).serve())
 
         thread = threading.Thread(target=run, daemon=True)
         thread.start()
@@ -1010,14 +993,11 @@ class TestWebSocketConnectionPool(NoRateLimitTestBase):
         server_started = threading.Event()
 
         def run() -> None:
-            try:
-                config = uvicorn.Config(
-                    app_instance, host="127.0.0.1", port=port, log_level="warning"
-                )
-                server_started.set()
-                asyncio.run(uvicorn.Server(config).serve())
-            except Exception:
-                pass
+            config = uvicorn.Config(
+                app_instance, host="127.0.0.1", port=port, log_level="warning"
+            )
+            server_started.set()
+            asyncio.run(uvicorn.Server(config).serve())
 
         thread = threading.Thread(target=run, daemon=True)
         thread.start()
@@ -1064,14 +1044,11 @@ class TestWebSocketConnectionPool(NoRateLimitTestBase):
         acquired_event = asyncio.Event()
 
         def run() -> None:
-            try:
-                config = uvicorn.Config(
-                    app_instance, host="127.0.0.1", port=port, log_level="warning"
-                )
-                server_started.set()
-                asyncio.run(uvicorn.Server(config).serve())
-            except Exception:
-                pass
+            config = uvicorn.Config(
+                app_instance, host="127.0.0.1", port=port, log_level="warning"
+            )
+            server_started.set()
+            asyncio.run(uvicorn.Server(config).serve())
 
         thread = threading.Thread(target=run, daemon=True)
         thread.start()
