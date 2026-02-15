@@ -85,8 +85,8 @@ jobs:
 
       - name: Run compliance tests
         env:
-          PYTHONPATH: src:.:asap-compliance
-        run: uv run pytest asap-compliance/tests/ -q
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}:${{ github.workspace }}/asap-compliance
+        run: uv run pytest asap-compliance/tests/ -q --tb=short
 
   # Coverage: sequential pytest + Codecov (no -n auto)
   coverage:
