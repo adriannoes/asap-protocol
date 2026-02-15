@@ -16,7 +16,9 @@ Building multi-agent systems today suffers from three core technical challenges 
 2. **State Drift**: Lack of native persistence makes it impossible to reliably resume long-running agentic workflows.
 3. **Fragmentation**: No unified way to handle task delegation, artifact exchange and tool execution (MCP) in a single envelope.
 
-**ASAP** provides a production-ready communication layer that simplifies these complexities. It introduces a standardized, stateful orchestration framework that ensures your agents can coordinate reliably across distributed environments. See the [spec](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/strategy/v0-original-specs.md) for details.
+**ASAP** provides a production-ready communication layer that simplifies these complexities. It's ideal for **multi-agent orchestration**, **stateful workflows** (persistence, resumability), **MCP integration**, and **production systems** requiring high-performance, type-safe agent communication. 
+
+For simple point-to-point communication, a basic HTTP API might suffice; ASAP shines when you need orchestration, state management and multi-agent coordination. See the [spec](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/strategy/v0-original-specs.md) for details.
 
 ### Key Features
 
@@ -43,99 +45,17 @@ pip install asap-protocol
 
 📦 **Available on [PyPI](https://pypi.org/project/asap-protocol/)**. For reproducible environments, prefer `uv` when possible.
 
-## Requirements
-
-- **Python**: 3.13+
-- **Dependencies**: Automatically installed via `uv` or `pip`
-- **For development**: see [Contributing](https://github.com/adriannoes/asap-protocol/blob/main/CONTRIBUTING.md).
-- **For AI agents**: see [AGENTS.md](https://github.com/adriannoes/asap-protocol/blob/main/AGENTS.md) for project instructions.
-
 ## Quick Start
 
-### 1. Create an Agent (Server)
-
-```python
-from asap.models.entities import Capability, Endpoint, Manifest, Skill
-from asap.transport.handlers import HandlerRegistry, create_echo_handler
-from asap.transport.server import create_app
-
-manifest = Manifest(
-    id="urn:asap:agent:echo-agent",
-    name="Echo Agent",
-    version="1.0.0",
-    description="Echoes task input as output",
-    capabilities=Capability(
-        asap_version="0.1",
-        skills=[Skill(id="echo", description="Echo back the input")],
-        state_persistence=False,
-    ),
-    # Development: HTTP localhost is allowed
-    # Production: Always use HTTPS (e.g., "https://api.example.com/asap")
-    endpoints=Endpoint(asap="http://127.0.0.1:8001/asap"),
-)
-
-registry = HandlerRegistry()
-registry.register("task.request", create_echo_handler())
-
-app = create_app(manifest, registry)
-```
-
-### 2. Send a Task (Client)
-
-```python
-import asyncio
-from asap.models.envelope import Envelope
-from asap.models.payloads import TaskRequest
-from asap.transport.client import ASAPClient
-
-async def main():
-    request = TaskRequest(
-        conversation_id="conv_01HX5K3MQVN8",
-        skill_id="echo",
-        input={"message": "hello from client"},
-    )
-    envelope = Envelope(
-        asap_version="0.1",
-        sender="urn:asap:agent:client",
-        recipient="urn:asap:agent:echo-agent",
-        payload_type="task.request",
-        payload=request.model_dump(),
-    )
-    # Development: HTTP localhost is allowed (with warning)
-    # Production: Always use HTTPS (e.g., "https://api.example.com")
-    async with ASAPClient("http://127.0.0.1:8001") as client:
-        response = await client.send(envelope)
-        print(response.payload)
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
-## Try it
-
-**Run the multi-agent demo** (echo agent + coordinator, one round-trip):
+**Run the demo** (echo agent + coordinator in one command):
 
 ```bash
 uv run python -m asap.examples.run_demo
 ```
 
-**Run any of 14+ examples** (auth, MCP, state migration, etc.):
+**Build your first agent**: [Building Your First Agent](docs/tutorials/first-agent.md) — server setup, client code, step-by-step (~15 min).
 
-```bash
-uv run python -m asap.examples.<module_name> [options]
-```
-
-See the [full list of 15+ examples](https://github.com/adriannoes/asap-protocol/blob/main/src/asap/examples/README.md) for detailed patterns.
-
-| Category | Examples |
-|:---------|:---------|
-| **Core** | `run_demo`, `echo_agent`, `coordinator`, `secure_handler` |
-| **Orchestration** | `orchestration` (multi-agent, task coordination, state tracking) |
-| **State** | `long_running` (checkpoints, resume after crash), `state_migration` (move state between agents) |
-| **Resilience** | `error_recovery` (retry, circuit breaker, fallback) |
-| **Integration** | `mcp_client_demo` (stdio), `mcp_integration` (ASAP envelopes) |
-| **Auth & limits** | `auth_patterns` (Bearer, OAuth2), `rate_limiting`, `secure_agent` (OAuth2 + Custom Claims) |
-| **Concepts** | `websocket_concept`, `streaming_response`, `multi_step_workflow` |
+[15+ examples](src/asap/examples/README.md): orchestration, state migration, MCP, OAuth2, WebSocket, resilience.
 
 ## Testing
 
@@ -160,27 +80,11 @@ uv add asap-compliance
 pytest --asap-agent-url https://your-agent.example.com -m asap_compliance
 ```
 
-See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/compliance-testing.md) for handshake, schema, and state machine validation.
+See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/compliance-testing.md) for handshake, schema and state machine validation.
 
 ## Benchmarks
 
 [Benchmark Results](https://github.com/adriannoes/asap-protocol/blob/main/benchmarks/RESULTS.md): load (1,500+ RPS), stress, memory.
-
-## API Overview
-
-Core models: `Envelope`, `TaskRequest`/`TaskResponse`/`TaskUpdate`/`TaskCancel`, `MessageSend`, `ArtifactNotify`, `StateQuery`/`StateRestore`, `McpToolCall`/`McpToolResult`/`McpResourceFetch`/`McpResourceData`, `MessageAck` (WebSocket ack). See [API Reference](https://github.com/adriannoes/asap-protocol/blob/main/docs/api-reference.md).
-
-Transport: `create_app`, `HandlerRegistry`, `ASAPClient`, `WebhookDelivery`/`WebhookRetryManager`, WebSocket client/server. Discovery: well-known manifest, `GET /.well-known/asap/health`, Lite Registry. See [Transport](https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md) and [Docs index](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#v11-features-api-reference--guides).
-
-## When to use ASAP?
-
-ASAP is ideal for:
-- **Multi-agent orchestration**: Coordinate tasks across multiple AI agents
-- **Stateful workflows**: Long-running tasks that need persistence and resumability
-- **MCP integration**: Agents that need to execute tools via Model Context Protocol
-- **Production systems**: High-performance, type-safe agent communication
-
-If you're building simple point-to-point agent communication, a basic HTTP API might suffice. ASAP shines when you need orchestration, state management and multi-agent coordination.
 
 ## Documentation
 
@@ -192,6 +96,7 @@ If you're building simple point-to-point agent communication, a basic HTTP API m
 **Deep Dive**
 - [State Management](https://github.com/adriannoes/asap-protocol/blob/main/docs/state-management.md) | [Best Practices: Failover & Migration](https://github.com/adriannoes/asap-protocol/blob/main/docs/best-practices/agent-failover-migration.md) | [Error Handling](https://github.com/adriannoes/asap-protocol/blob/main/docs/error-handling.md)
 - [Transport](https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md) | [Security](https://github.com/adriannoes/asap-protocol/blob/main/docs/security.md) | [v1.1 Security Model](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/v1.1-security-model.md) (OAuth2 trust, Custom Claims, ADR-17)
+- **v1.2**: [Identity Signing](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/identity-signing.md) | [Compliance Testing](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/compliance-testing.md) | [Migration v1.1→v1.2](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/migration-v1.1-to-v1.2.md) | [mTLS](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/mtls.md)
 - [Observability](https://github.com/adriannoes/asap-protocol/blob/main/docs/observability.md) | [Testing](https://github.com/adriannoes/asap-protocol/blob/main/docs/testing.md)
 
 **Decisions & Operations**
@@ -204,11 +109,13 @@ If you're building simple point-to-point agent communication, a basic HTTP API m
 
 ## CLI
 
+**v1.1** adds OAuth2, WebSocket, Discovery (well-known + Lite Registry), State Storage (SQLite), and Webhooks. **v1.2** adds Ed25519 signed manifests, trust levels, optional mTLS, and the [Compliance Harness](https://github.com/adriannoes/asap-protocol/blob/main/asap-compliance/README.md).
+
 ```bash
-asap --version          # Show version
-asap list-schemas       # List all available schemas
-asap export-schemas     # Export JSON schemas to file
-asap keys generate -o key.pem                    # Generate Ed25519 keypair (v1.2)
+asap --version                                    # Show version
+asap list-schemas                                 # List all available schemas
+asap export-schemas                               # Export JSON schemas to file
+asap keys generate -o key.pem                     # Generate Ed25519 keypair (v1.2)
 asap manifest sign -k key.pem manifest.json       # Sign manifest (v1.2)
 asap manifest verify signed.json                  # Verify signature (v1.2)
 asap manifest info signed.json                    # Show trust level (v1.2)
@@ -216,13 +123,13 @@ asap manifest info signed.json                    # Show trust level (v1.2)
 
 See [CLI reference](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/identity-signing.md) or run `asap --help`.
 
-**v1.1** adds OAuth2, WebSocket, Discovery (well-known + Lite Registry), State Storage (SQLite), and Webhooks. **v1.2** adds Ed25519 signed manifests, trust levels, optional mTLS, and the [Compliance Harness](https://github.com/adriannoes/asap-protocol/blob/main/asap-compliance/README.md). See [docs index](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#v11-features-api-reference--guides) and [Identity Signing](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/identity-signing.md) for details.
+See [docs index](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#v11-features-api-reference--guides) and [Identity Signing](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/identity-signing.md) for details.
 
 ## What's Next? 🔭
 
 ASAP is evolving toward an **Agent Marketplace** — an open ecosystem where AI agents discover, trust and collaborate autonomously:
 
-- **v1.1**: Identity Layer (OAuth2, WebSocket, Discovery)
+- **v1.1**: Identity Layer (OAuth2, WebSocket, Discovery) ✅
 - **v1.2**: Trust Layer (Signed Manifests, Compliance Harness, mTLS) ✅
 - **v1.3**: Economics Layer (Metering, SLAs, Delegation)
 - **v2.0**: Agent Marketplace with Web App
