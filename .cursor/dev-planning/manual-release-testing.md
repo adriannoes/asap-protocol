@@ -1,14 +1,14 @@
-# Manual Release Testing Checklist (v1.2.0)
+# Manual Release Testing Checklist (v1.2.1)
 
 Simulates a real user validating the ASAP Protocol before release.
 
 **Last run**: 2026-02-15 — All checks passed ✅  
-**v1.2.0 released**: PyPI, GitHub, Docker ✅
+**v1.2.1 released**: PyPI, GitHub, Docker ✅
 
 ## 1. Installation & Environment
 
 - [x] `uv sync` succeeds
-- [x] `asap --version` shows 1.2.0
+- [x] `asap --version` shows 1.2.1
 - [x] Python 3.13+ detected
 
 ## 2. CLI Commands

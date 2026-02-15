@@ -316,7 +316,7 @@
 ## Definition of Done (Pre-v1.3.0)
 
 - [x] P0.1 complete — JWT exp enforced, test added
-- [ ] v1.2.1 released to PyPI with JWT fix
+- [x] v1.2.1 released to PyPI with JWT fix
 - [x] P1.1, P1.2, P1.3 complete
 - [x] P2.1, P2.2 complete (or explicitly deferred with documented rationale)
 - [x] P3.1, P3.2, P3.3 complete (or coverage gaps documented)
