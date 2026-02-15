@@ -208,6 +208,32 @@ Security-hardened release with comprehensive authentication, DoS protection, rep
 
 ---
 
+## [1.2.1] - 2026-02-15
+
+Security remediation pre-v1.3.0. Critical JWT fix + hardening. Backward compatible with v1.2.0.
+
+### Fixed
+
+- **JWT exp validation**: Reject expired tokens in `validate_jwt` to prevent authentication bypass (P0)
+- **WebSocket**: Reraise critical exceptions (`SystemExit`, `KeyboardInterrupt`) in heartbeat loop
+- **OIDC SSRF**: Validate `issuer_url` to block private/internal hosts; `allow_private_issuers=True` for dev/test
+
+### Security
+
+- **MCP**: Document trusted-source requirement for `server_command`; add opt-in `allowed_binaries` validation
+- **OIDC**: Block 127.0.0.1, 10.x, 172.16–31.x, 192.168.x by default
+
+### Changed
+
+- **SQLite**: Use shared executor for sync bridge (performance; no per-call ThreadPoolExecutor)
+
+### Added
+
+- **Tests**: Introspection cache eviction, WebSocket SSL context, WebSocket race condition (close-during-connect), MCP allowlist, SQLite thread count
+- **Docs**: Security remediation plan, P4.2 loose-typing follow-up task
+
+---
+
 ## [1.2.0] - 2026-02-15
 
 Verified Identity: Ed25519 signed manifests, trust levels, optional mTLS, and compliance harness.
