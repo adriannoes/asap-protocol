@@ -2,7 +2,8 @@
 
 Simulates a real user validating the ASAP Protocol before release.
 
-**Last run**: 2026-02-15 — All checks passed ✅
+**Last run**: 2026-02-15 — All checks passed ✅  
+**v1.2.0 released**: PyPI, GitHub, Docker ✅
 
 ## 1. Installation & Environment
 
@@ -42,10 +43,10 @@ Simulates a real user validating the ASAP Protocol before release.
 ## 7. Full Test Suite
 
 - [x] `uv run pytest -n auto --tb=short` — 1940 passed, 5 skipped
-- [ ] `uv run pytest --cov=src/asap --cov-report=term-missing` (optional)
+- [x] `uv run pytest --cov=src/asap --cov-report=term-missing` (optional)
 
 ## 8. Lint & Type Check
 
 - [x] `uv run ruff check .` — All checks passed
 - [x] `uv run ruff format --check .` — 258 files formatted
-- [ ] `uv run mypy src/` (if applicable)
+- [x] `uv run mypy src/` — Success

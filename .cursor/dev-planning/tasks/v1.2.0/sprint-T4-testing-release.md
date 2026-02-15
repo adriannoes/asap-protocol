@@ -81,21 +81,20 @@
 - [x] 4.3.1 Run CI pipeline
   - Lint, mypy, tests pass locally; push to main triggers CI
 
-- [ ] 4.3.2 Create GitHub release
-  - Tag v1.2.0 and push: `git tag v1.2.0 && git push origin v1.2.0`
-  - Release workflow auto-creates release from CHANGELOG
+- [x] 4.3.2 Create GitHub release
+  - Tag v1.2.0 pushed; release workflow auto-created release from CHANGELOG
 
-- [ ] 4.3.3 Publish to PyPI
-  - `asap-protocol` — auto-published by release workflow on tag push
-  - `asap-compliance` — publish separately: `cd asap-compliance && uv build && uv publish`
+- [x] 4.3.3 Publish to PyPI
+  - `asap-protocol` and `asap-compliance` — both published via release workflow
+  - Trusted Publishing configured for asap-compliance on PyPI
 
-- [ ] 4.3.4 Update Docker image
-  - Auto-built and pushed to ghcr.io by release workflow on tag push
+- [x] 4.3.4 Update Docker image
+  - Built and pushed to ghcr.io by release workflow
 
 **Acceptance Criteria**:
-- [ ] v1.2.0 on PyPI (after tag push)
-- [ ] GitHub release created (after tag push)
-- [ ] Docker image available (after tag push)
+- [x] v1.2.0 on PyPI
+- [x] GitHub release created
+- [x] Docker image available
 
 ---
 
@@ -103,8 +102,8 @@
 
 - [x] All tests pass (1941 + 54 compliance)
 - [x] CHANGELOG updated
-- [ ] v1.2.0 published to PyPI (push tag v1.2.0)
-- [ ] Compliance harness published as separate package (`cd asap-compliance && uv build && uv publish`)
+- [x] v1.2.0 published to PyPI (asap-protocol + asap-compliance)
+- [x] Compliance harness published (asap-compliance on PyPI)
 - [x] Documentation complete
 
 **Total Sub-tasks**: ~13

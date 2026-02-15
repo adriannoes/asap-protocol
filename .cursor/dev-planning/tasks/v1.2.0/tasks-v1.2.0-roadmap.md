@@ -139,13 +139,13 @@ v1.2.0 establishes Verified Identity for the marketplace:
   - Goal: CHANGELOG, docs, version bump
   - Details: [Release Detailed - Task 4.2](./sprint-T4-testing-release.md#task-42-release-preparation)
 
-- [ ] 4.3 Build and publish
+- [x] 4.3 Build and publish
   - Goal: PyPI, GitHub, Docker
   - Details: [Release Detailed - Task 4.3](./sprint-T4-testing-release.md#task-43-build-and-publish)
 
 ### Definition of Done
-- [ ] Compliance harness published (separate PyPI package)
-- [ ] v1.2.0 on PyPI (push tag v1.2.0)
+- [x] Compliance harness published (asap-compliance on PyPI)
+- [x] v1.2.0 on PyPI
 - [x] Documentation complete
 
 ---
@@ -165,13 +165,13 @@ v1.2.0 establishes Verified Identity for the marketplace:
 
 ## Progress Tracking
 
-**Overall Progress**: 12/13 tasks completed (92%)
+**Overall Progress**: 13/13 tasks completed (100%) ✅
 
 **Sprint Status**:
 - ✅ T1: 3/3 tasks (100%) — merged PR #42
 - ✅ T2: 3/3 tasks (100%) — Trust Levels, Verified badge, mTLS (branch t2-trust-levels)
 - ✅ T3: 4/4 tasks (100%) — Compliance Harness (branch t3-compliance-harness)
-- 🔄 T4: 2/3 tasks (67%) — Testing ✅, Release materials ✅, Build/publish pending (tag push)
+- ✅ T4: 3/3 tasks (100%) — v1.2.0 released (PyPI, GitHub, Docker)
 
 **Last Updated**: 2026-02-15
 
@@ -197,3 +197,4 @@ v1.2.0 establishes Verified Identity for the marketplace:
 | 2026-02-13 | **Sprint T1 complete**: Ed25519 PKI (key management, signing, verification) merged via PR #42 |
 | 2026-02-13 | **Sprint T2 complete**: Trust Levels (2.1), Verified badge simulation (2.2), optional mTLS (2.3) on branch t2-trust-levels |
 | 2026-02-15 | **Sprint T4 progress**: 4.1 comprehensive testing ✅, 4.2 release materials ✅; 4.3 build/publish pending (tag v1.2.0 + asap-compliance publish) |
+| 2026-02-15 | **v1.2.0 released**: PyPI (asap-protocol + asap-compliance), GitHub Release, Docker ghcr.io. Trusted Publishing configured for asap-compliance. Sprint T4 complete. |
