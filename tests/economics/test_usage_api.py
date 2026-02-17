@@ -1,5 +1,6 @@
 """Integration tests for usage metering REST API (GET /usage, etc.)."""
 
+import asyncio
 from datetime import datetime, timezone
 
 import pytest
@@ -8,6 +9,11 @@ from fastapi.testclient import TestClient
 from asap.economics import InMemoryMeteringStorage, UsageMetrics
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.transport.server import create_app
+
+
+def _run(coro):
+    """Run async coroutine from sync test (for storage setup)."""
+    return asyncio.run(coro)
 
 
 @pytest.fixture
@@ -70,14 +76,16 @@ class TestUsageAPIGetUsage:
         metering_storage: InMemoryMeteringStorage,
     ) -> None:
         """GET /usage returns events recorded via POST or handlers."""
-        metering_storage.record(
-            UsageMetrics(
-                task_id="t1",
-                agent_id="a1",
-                consumer_id="c1",
-                tokens_in=10,
-                tokens_out=20,
-                timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+        _run(
+            metering_storage.record(
+                UsageMetrics(
+                    task_id="t1",
+                    agent_id="a1",
+                    consumer_id="c1",
+                    tokens_in=10,
+                    tokens_out=20,
+                    timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+                )
             )
         )
         app = create_app(
@@ -100,20 +108,24 @@ class TestUsageAPIGetUsage:
         metering_storage: InMemoryMeteringStorage,
     ) -> None:
         """GET /usage?agent_id=... filters by agent."""
-        metering_storage.record(
-            UsageMetrics(
-                task_id="t1",
-                agent_id="a1",
-                consumer_id="c1",
-                timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+        _run(
+            metering_storage.record(
+                UsageMetrics(
+                    task_id="t1",
+                    agent_id="a1",
+                    consumer_id="c1",
+                    timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+                )
             )
         )
-        metering_storage.record(
-            UsageMetrics(
-                task_id="t2",
-                agent_id="a2",
-                consumer_id="c1",
-                timestamp=datetime(2026, 2, 17, 13, 0, 0, tzinfo=timezone.utc),
+        _run(
+            metering_storage.record(
+                UsageMetrics(
+                    task_id="t2",
+                    agent_id="a2",
+                    consumer_id="c1",
+                    timestamp=datetime(2026, 2, 17, 13, 0, 0, tzinfo=timezone.utc),
+                )
             )
         )
         app = create_app(
@@ -133,20 +145,24 @@ class TestUsageAPIGetUsage:
         metering_storage: InMemoryMeteringStorage,
     ) -> None:
         """GET /usage?task_id=... filters by task."""
-        metering_storage.record(
-            UsageMetrics(
-                task_id="t1",
-                agent_id="a1",
-                consumer_id="c1",
-                timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+        _run(
+            metering_storage.record(
+                UsageMetrics(
+                    task_id="t1",
+                    agent_id="a1",
+                    consumer_id="c1",
+                    timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+                )
             )
         )
-        metering_storage.record(
-            UsageMetrics(
-                task_id="t2",
-                agent_id="a1",
-                consumer_id="c1",
-                timestamp=datetime(2026, 2, 17, 13, 0, 0, tzinfo=timezone.utc),
+        _run(
+            metering_storage.record(
+                UsageMetrics(
+                    task_id="t2",
+                    agent_id="a1",
+                    consumer_id="c1",
+                    timestamp=datetime(2026, 2, 17, 13, 0, 0, tzinfo=timezone.utc),
+                )
             )
         )
         app = create_app(
@@ -170,24 +186,28 @@ class TestUsageAPIGetAggregate:
         metering_storage: InMemoryMeteringStorage,
     ) -> None:
         """GET /usage/aggregate?group_by=agent returns aggregates."""
-        metering_storage.record(
-            UsageMetrics(
-                task_id="t1",
-                agent_id="a1",
-                consumer_id="c1",
-                tokens_in=10,
-                tokens_out=20,
-                timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+        _run(
+            metering_storage.record(
+                UsageMetrics(
+                    task_id="t1",
+                    agent_id="a1",
+                    consumer_id="c1",
+                    tokens_in=10,
+                    tokens_out=20,
+                    timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+                )
             )
         )
-        metering_storage.record(
-            UsageMetrics(
-                task_id="t2",
-                agent_id="a1",
-                consumer_id="c1",
-                tokens_in=5,
-                tokens_out=5,
-                timestamp=datetime(2026, 2, 17, 13, 0, 0, tzinfo=timezone.utc),
+        _run(
+            metering_storage.record(
+                UsageMetrics(
+                    task_id="t2",
+                    agent_id="a1",
+                    consumer_id="c1",
+                    tokens_in=5,
+                    tokens_out=5,
+                    timestamp=datetime(2026, 2, 17, 13, 0, 0, tzinfo=timezone.utc),
+                )
             )
         )
         app = create_app(
@@ -211,24 +231,28 @@ class TestUsageAPIGetAggregate:
         metering_storage: InMemoryMeteringStorage,
     ) -> None:
         """GET /usage/aggregate?group_by=agent&start=...&end=... filters by time range."""
-        metering_storage.record(
-            UsageMetrics(
-                task_id="t1",
-                agent_id="a1",
-                consumer_id="c1",
-                tokens_in=10,
-                tokens_out=20,
-                timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+        _run(
+            metering_storage.record(
+                UsageMetrics(
+                    task_id="t1",
+                    agent_id="a1",
+                    consumer_id="c1",
+                    tokens_in=10,
+                    tokens_out=20,
+                    timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+                )
             )
         )
-        metering_storage.record(
-            UsageMetrics(
-                task_id="t2",
-                agent_id="a1",
-                consumer_id="c1",
-                tokens_in=5,
-                tokens_out=5,
-                timestamp=datetime(2026, 2, 19, 13, 0, 0, tzinfo=timezone.utc),
+        _run(
+            metering_storage.record(
+                UsageMetrics(
+                    task_id="t2",
+                    agent_id="a1",
+                    consumer_id="c1",
+                    tokens_in=5,
+                    tokens_out=5,
+                    timestamp=datetime(2026, 2, 19, 13, 0, 0, tzinfo=timezone.utc),
+                )
             )
         )
         app = create_app(
@@ -299,28 +323,32 @@ class TestUsageAPIGetSummary:
         metering_storage: InMemoryMeteringStorage,
     ) -> None:
         """GET /usage/summary returns total_tasks, total_tokens, etc."""
-        metering_storage.record(
-            UsageMetrics(
-                task_id="t1",
-                agent_id="a1",
-                consumer_id="c1",
-                tokens_in=10,
-                tokens_out=20,
-                duration_ms=100,
-                api_calls=1,
-                timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+        _run(
+            metering_storage.record(
+                UsageMetrics(
+                    task_id="t1",
+                    agent_id="a1",
+                    consumer_id="c1",
+                    tokens_in=10,
+                    tokens_out=20,
+                    duration_ms=100,
+                    api_calls=1,
+                    timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+                )
             )
         )
-        metering_storage.record(
-            UsageMetrics(
-                task_id="t2",
-                agent_id="a2",
-                consumer_id="c1",
-                tokens_in=5,
-                tokens_out=15,
-                duration_ms=200,
-                api_calls=2,
-                timestamp=datetime(2026, 2, 17, 13, 0, 0, tzinfo=timezone.utc),
+        _run(
+            metering_storage.record(
+                UsageMetrics(
+                    task_id="t2",
+                    agent_id="a2",
+                    consumer_id="c1",
+                    tokens_in=5,
+                    tokens_out=15,
+                    duration_ms=200,
+                    api_calls=2,
+                    timestamp=datetime(2026, 2, 17, 13, 0, 0, tzinfo=timezone.utc),
+                )
             )
         )
         app = create_app(
@@ -345,26 +373,30 @@ class TestUsageAPIGetSummary:
         metering_storage: InMemoryMeteringStorage,
     ) -> None:
         """GET /usage/summary?start=...&end=... filters by time range."""
-        metering_storage.record(
-            UsageMetrics(
-                task_id="t1",
-                agent_id="a1",
-                consumer_id="c1",
-                tokens_in=10,
-                tokens_out=20,
-                duration_ms=100,
-                timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+        _run(
+            metering_storage.record(
+                UsageMetrics(
+                    task_id="t1",
+                    agent_id="a1",
+                    consumer_id="c1",
+                    tokens_in=10,
+                    tokens_out=20,
+                    duration_ms=100,
+                    timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+                )
             )
         )
-        metering_storage.record(
-            UsageMetrics(
-                task_id="t2",
-                agent_id="a1",
-                consumer_id="c1",
-                tokens_in=5,
-                tokens_out=5,
-                duration_ms=50,
-                timestamp=datetime(2026, 2, 19, 12, 0, 0, tzinfo=timezone.utc),
+        _run(
+            metering_storage.record(
+                UsageMetrics(
+                    task_id="t2",
+                    agent_id="a1",
+                    consumer_id="c1",
+                    tokens_in=5,
+                    tokens_out=5,
+                    duration_ms=50,
+                    timestamp=datetime(2026, 2, 19, 12, 0, 0, tzinfo=timezone.utc),
+                )
             )
         )
         app = create_app(
@@ -507,24 +539,28 @@ class TestUsageAPIGetAgents:
         metering_storage: InMemoryMeteringStorage,
     ) -> None:
         """GET /usage/agents returns agent aggregates."""
-        metering_storage.record(
-            UsageMetrics(
-                task_id="t1",
-                agent_id="a1",
-                consumer_id="c1",
-                tokens_in=10,
-                tokens_out=20,
-                timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+        _run(
+            metering_storage.record(
+                UsageMetrics(
+                    task_id="t1",
+                    agent_id="a1",
+                    consumer_id="c1",
+                    tokens_in=10,
+                    tokens_out=20,
+                    timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+                )
             )
         )
-        metering_storage.record(
-            UsageMetrics(
-                task_id="t2",
-                agent_id="a2",
-                consumer_id="c1",
-                tokens_in=5,
-                tokens_out=5,
-                timestamp=datetime(2026, 2, 17, 13, 0, 0, tzinfo=timezone.utc),
+        _run(
+            metering_storage.record(
+                UsageMetrics(
+                    task_id="t2",
+                    agent_id="a2",
+                    consumer_id="c1",
+                    tokens_in=5,
+                    tokens_out=5,
+                    timestamp=datetime(2026, 2, 17, 13, 0, 0, tzinfo=timezone.utc),
+                )
             )
         )
         app = create_app(
@@ -550,20 +586,24 @@ class TestUsageAPIGetConsumers:
         metering_storage: InMemoryMeteringStorage,
     ) -> None:
         """GET /usage/consumers returns consumer aggregates."""
-        metering_storage.record(
-            UsageMetrics(
-                task_id="t1",
-                agent_id="a1",
-                consumer_id="c1",
-                timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+        _run(
+            metering_storage.record(
+                UsageMetrics(
+                    task_id="t1",
+                    agent_id="a1",
+                    consumer_id="c1",
+                    timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+                )
             )
         )
-        metering_storage.record(
-            UsageMetrics(
-                task_id="t2",
-                agent_id="a1",
-                consumer_id="c2",
-                timestamp=datetime(2026, 2, 17, 13, 0, 0, tzinfo=timezone.utc),
+        _run(
+            metering_storage.record(
+                UsageMetrics(
+                    task_id="t2",
+                    agent_id="a1",
+                    consumer_id="c2",
+                    timestamp=datetime(2026, 2, 17, 13, 0, 0, tzinfo=timezone.utc),
+                )
             )
         )
         app = create_app(
@@ -589,12 +629,14 @@ class TestUsageAPIGetStats:
         metering_storage: InMemoryMeteringStorage,
     ) -> None:
         """GET /usage/stats returns total_events, oldest_timestamp."""
-        metering_storage.record(
-            UsageMetrics(
-                task_id="t1",
-                agent_id="a1",
-                consumer_id="c1",
-                timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+        _run(
+            metering_storage.record(
+                UsageMetrics(
+                    task_id="t1",
+                    agent_id="a1",
+                    consumer_id="c1",
+                    timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+                )
             )
         )
         app = create_app(
@@ -640,8 +682,16 @@ class TestUsageAPIPostPurge:
         store = InMemoryMeteringStorage(retention_ttl_seconds=3600)
         now = datetime.now(timezone.utc)
         old = now - timedelta(seconds=7200)
-        store.record(UsageMetrics(task_id="old", agent_id="a1", consumer_id="c1", timestamp=old))
-        store.record(UsageMetrics(task_id="new", agent_id="a1", consumer_id="c1", timestamp=now))
+        _run(
+            store.record(
+                UsageMetrics(task_id="old", agent_id="a1", consumer_id="c1", timestamp=old)
+            )
+        )
+        _run(
+            store.record(
+                UsageMetrics(task_id="new", agent_id="a1", consumer_id="c1", timestamp=now)
+            )
+        )
         app = create_app(
             sample_manifest,
             metering_storage=store,
@@ -709,14 +759,16 @@ class TestUsageAPIExport:
         metering_storage: InMemoryMeteringStorage,
     ) -> None:
         """GET /usage/export?format=json returns JSON."""
-        metering_storage.record(
-            UsageMetrics(
-                task_id="t1",
-                agent_id="a1",
-                consumer_id="c1",
-                tokens_in=10,
-                tokens_out=20,
-                timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+        _run(
+            metering_storage.record(
+                UsageMetrics(
+                    task_id="t1",
+                    agent_id="a1",
+                    consumer_id="c1",
+                    tokens_in=10,
+                    tokens_out=20,
+                    timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+                )
             )
         )
         app = create_app(
@@ -725,7 +777,7 @@ class TestUsageAPIExport:
             rate_limit="999999/minute",
         )
         client = TestClient(app)
-        resp = client.get("/usage/export", params={"format": "json"})
+        resp = client.get("/usage/export", params={"export_format": "json"})
         assert resp.status_code == 200
         data = resp.json()
         assert "data" in data
@@ -737,14 +789,16 @@ class TestUsageAPIExport:
         metering_storage: InMemoryMeteringStorage,
     ) -> None:
         """GET /usage/export?format=csv returns CSV."""
-        metering_storage.record(
-            UsageMetrics(
-                task_id="t1",
-                agent_id="a1",
-                consumer_id="c1",
-                tokens_in=10,
-                tokens_out=20,
-                timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+        _run(
+            metering_storage.record(
+                UsageMetrics(
+                    task_id="t1",
+                    agent_id="a1",
+                    consumer_id="c1",
+                    tokens_in=10,
+                    tokens_out=20,
+                    timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+                )
             )
         )
         app = create_app(
@@ -753,18 +807,108 @@ class TestUsageAPIExport:
             rate_limit="999999/minute",
         )
         client = TestClient(app)
-        resp = client.get("/usage/export", params={"format": "csv"})
+        resp = client.get("/usage/export", params={"export_format": "csv"})
         assert resp.status_code == 200
-        assert "text/csv" in resp.headers.get("content-type", "")
-        lines = resp.text.strip().split("\n")
-        assert len(lines) >= 2
-        assert "task_id" in lines[0]
-        assert "t1" in lines[1]
+        assert resp.headers["content-type"] == "text/csv; charset=utf-8"
+        content = resp.text
+        assert "tokens_in,tokens_out" in content
+        assert "t1,a1,c1,10,20" in content
+
+
+class TestUsageAPIConfiguration:
+    """Test configuration edge cases."""
+
+    def test_usage_api_returns_503_when_storage_missing(
+        self,
+        sample_manifest: Manifest,
+    ) -> None:
+        """Usage endpoints return 503 if metering_storage is not configured."""
+        # Create app WITHOUT metering_storage
+        app = create_app(sample_manifest)
+        # We need to manually include the router because create_app only includes it 
+        # if metering_storage IS provided. 
+        # However, if we include it manually but storage is missing on state, it should 503.
+        from asap.transport.usage_api import create_usage_router
+        app.include_router(create_usage_router())
+        
+        client = TestClient(app)
+        
+        # GET /usage
+        resp = client.get("/usage")
+        assert resp.status_code == 503
+        assert "Usage API not configured" in resp.json()["detail"]
+        
+        # POST /usage
+        resp = client.post("/usage", json={})
+        assert resp.status_code == 503
+
+
+class TestUsageAPIRateLimiting:
+    """Test rate limiting on usage API."""
+
+    def test_usage_api_enforces_rate_limit(
+        self,
+        sample_manifest: Manifest,
+        metering_storage: InMemoryMeteringStorage,
+    ) -> None:
+        """Usage API respects app.state.limiter."""
+        # Create app with very strict limit
+        app = create_app(
+            sample_manifest,
+            metering_storage=metering_storage,
+            rate_limit="1/minute",
+        )
+        client = TestClient(app)
+        
+        # First request succeeds
+        resp = client.get("/usage")
+        assert resp.status_code == 200
+        
+        # Second request fails
+        resp = client.get("/usage")
+        assert resp.status_code == 429
+        assert "Rate limit exceeded" in resp.text
+
+    def test_usage_api_ignores_missing_limiter(
+        self,
+        sample_manifest: Manifest,
+        metering_storage: InMemoryMeteringStorage,
+    ) -> None:
+        """Usage API proceeds if limiter is not configured on app state."""
+        app = create_app(sample_manifest, metering_storage=metering_storage)
+        # Manually remove limiter to trigger the 'if limiter is not None' else branch
+        if hasattr(app.state, "limiter"):
+            delattr(app.state, "limiter")
+            
+        client = TestClient(app)
+        resp = client.get("/usage")
+        assert resp.status_code == 200
+
+
+class TestUsageAPIPostUsageValidation:
+    """Additional validation tests for POST /usage."""
+
+    def test_post_usage_invalid_body_returns_400(
+        self,
+        sample_manifest: Manifest,
+        metering_storage: InMemoryMeteringStorage,
+    ) -> None:
+        """POST /usage with invalid body returns 400 (validation error)."""
+        app = create_app(
+            sample_manifest,
+            metering_storage=metering_storage,
+            rate_limit="999999/minute",
+        )
+        client = TestClient(app)
+        
+        # Missing required fields
+        resp = client.post("/usage", json={"task_id": "t1"})
+        assert resp.status_code == 400
+        # Check that it's the Pydantic validation error message
+        assert "Field required" in resp.text or "validation error" in resp.text.lower()
 
 
 class TestUsageAPINotConfigured:
-    """Test usage endpoints when metering_storage is not configured."""
-
     def test_get_usage_returns_404_when_not_configured(
         self,
         sample_manifest: Manifest,
