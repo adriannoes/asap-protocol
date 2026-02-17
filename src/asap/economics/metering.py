@@ -4,6 +4,7 @@ Defines metrics schema for tracking resource consumption per task:
 tokens, duration, API calls. Integrates with MeteringStore from state layer.
 
 Example:
+    >>> from datetime import timezone
     >>> from asap.economics import UsageMetrics
     >>> record = UsageMetrics(
     ...     task_id="task_123",
@@ -13,7 +14,7 @@ Example:
     ...     tokens_out=2300,
     ...     duration_ms=4500,
     ...     api_calls=3,
-    ...     timestamp=datetime.now(datetime.UTC),
+    ...     timestamp=datetime.now(timezone.utc),
     ... )
 """
 

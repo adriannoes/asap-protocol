@@ -68,6 +68,7 @@ docs = [
 dns-sd = [
     "zeroconf>=0.80",
 ]
+# Redis: shared rate limit storage for multi-worker deployments (see rate_limit.py).
 redis = [
     "redis>=5.0.0",
 ]
