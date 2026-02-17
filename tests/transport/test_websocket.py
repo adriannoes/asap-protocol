@@ -1471,61 +1471,72 @@ class TestWebSocketServerRateLimit(NoRateLimitTestBase):
         app_instance = create_app(
             sample_manifest,
             create_default_registry(),
-            rate_limit="100/minute", # HTTP limit
-            websocket_message_rate_limit=1.0, # WS limit
+            rate_limit="100/minute",  # HTTP limit
+            websocket_message_rate_limit=1.0,  # WS limit
         )
 
         client = TestClient(app_instance)
         with client.websocket_connect("/asap/ws") as websocket:
             # First message should pass (bucket has tokens)
-            websocket.send_text(json.dumps({
-                "jsonrpc": "2.0", 
-                "method": "asap.send", 
-                "params": {"envelope": {"payload_type": "test", "payload": {}}}, 
-                "id": 1
-            }))
-                
+            websocket.send_text(
+                json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "method": "asap.send",
+                        "params": {"envelope": {"payload_type": "test", "payload": {}}},
+                        "id": 1,
+                    }
+                )
+            )
+
             # Receive response (echo or whatever) - wait for it
-            # The server logic puts the response in `body`. 
+            # The server logic puts the response in `body`.
             # If we send a valid legacy format or just a valid frame, it processes.
             # To trigger rate limit, we just need to send frames fast.
             # Receive response (echo or whatever) - wait for it
-            # The server logic puts the response in `body`. 
+            # The server logic puts the response in `body`.
             # If we send a valid legacy format or just a valid frame, it processes.
             # To trigger rate limit, we just need to send frames fast.
             with contextlib.suppress(Exception):
                 _ = websocket.receive_text()
 
             # Second message immediately might be rate limited if burst is 1.
-            # If burst is 1, and we consume 1, now empty. 
+            # If burst is 1, and we consume 1, now empty.
             # Next consume fails until token refill (1 sec).
-            
-            websocket.send_text(json.dumps({
-                "jsonrpc": "2.0", 
-                "method": "asap.send", 
-                "params": {"envelope": {"payload_type": "test", "payload": {}}}, 
-                "id": 2
-            }))
-            
+
+            websocket.send_text(
+                json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "method": "asap.send",
+                        "params": {"envelope": {"payload_type": "test", "payload": {}}},
+                        "id": 2,
+                    }
+                )
+            )
+
             # This response should be the error frame
             response_text = websocket.receive_text()
             data = json.loads(response_text)
-            
+
             # It might be the success response for msg 2 if burst > 1
             if "result" in data:
-                    # Try a third one
+                # Try a third one
                 websocket.send_text(json.dumps({"jsonrpc": "2.0", "method": "test", "id": 3}))
                 response_text = websocket.receive_text()
                 data = json.loads(response_text)
 
             assert "error" in data
-            assert data["error"]["code"] == -32001 # Rate limit exceeded
-            
+            assert data["error"]["code"] == -32001  # Rate limit exceeded
+
             # Connection should be closed by server with policy violation
             # TestClient websocket checks state on simple interaction?
             # or verify we can't send/receive anymore?
             from fastapi.websockets import WebSocketDisconnect
-            with pytest.raises((WebSocketDisconnect, Exception)): # starlette/fastapi test client raises on closed
+
+            with pytest.raises(
+                (WebSocketDisconnect, Exception)
+            ):  # starlette/fastapi test client raises on closed
                 websocket.receive_text()
 
 
@@ -1548,7 +1559,7 @@ class TestWebSocketAckHandling(NoRateLimitTestBase):
         transport._ws = AsyncMock()
         # Mock _send_envelope_only to track calls
         transport._send_envelope_only = AsyncMock()
-        
+
         envelope = Envelope(
             asap_version="0.1",
             sender="urn:asap:agent:a",
@@ -1558,17 +1569,17 @@ class TestWebSocketAckHandling(NoRateLimitTestBase):
             id="env-1",
             requires_ack=True,
         )
-        
+
         # Manually register pending ack
         transport._register_pending_ack(envelope)
         assert "env-1" in transport._pending_acks
-        
+
         # Start the check loop
         transport._ack_check_task = asyncio.create_task(transport._ack_check_loop())
-        
+
         # Wait for at least one retransmission (timeout 0.1s)
         await asyncio.sleep(0.25)
-        
+
         try:
             # Should have retransmitted at least once
             assert transport._send_envelope_only.call_count >= 1
@@ -1581,7 +1592,7 @@ class TestWebSocketAckHandling(NoRateLimitTestBase):
     async def test_ack_max_retries_removes_pending(self) -> None:
         """After max_retries, pending ack is removed."""
         from unittest.mock import AsyncMock
-        
+
         transport = WebSocketTransport(
             ack_timeout_seconds=0.01,
             max_ack_retries=2,
@@ -1589,7 +1600,7 @@ class TestWebSocketAckHandling(NoRateLimitTestBase):
         )
         transport._ws = AsyncMock()
         transport._send_envelope_only = AsyncMock()
-        
+
         envelope = Envelope(
             asap_version="0.1",
             sender="urn:asap:agent:a",
@@ -1599,15 +1610,15 @@ class TestWebSocketAckHandling(NoRateLimitTestBase):
             id="env-1",
             requires_ack=True,
         )
-        
+
         transport._register_pending_ack(envelope)
-        
+
         transport._ack_check_task = asyncio.create_task(transport._ack_check_loop())
-        
+
         # Wait enough time for 2 retries + cleanup
         # 0.01 timeout * 2 retries + buffer
         await asyncio.sleep(0.2)
-        
+
         try:
             # Should be removed
             assert "env-1" not in transport._pending_acks
@@ -1626,9 +1637,9 @@ class TestWebSocketCircuitBreakerIntegration(NoRateLimitTestBase):
     async def test_circuit_breaker_records_failure_on_ack_timeout(self) -> None:
         """Circuit breaker records failure when ack max retries exceeded."""
         from unittest.mock import AsyncMock, Mock
-        
+
         mock_cb = Mock()
-        
+
         transport = WebSocketTransport(
             ack_timeout_seconds=0.01,
             max_ack_retries=1,
@@ -1637,7 +1648,7 @@ class TestWebSocketCircuitBreakerIntegration(NoRateLimitTestBase):
         )
         transport._ws = AsyncMock()
         transport._send_envelope_only = AsyncMock()
-        
+
         envelope = Envelope(
             asap_version="0.1",
             sender="urn:asap:agent:a",
@@ -1647,12 +1658,12 @@ class TestWebSocketCircuitBreakerIntegration(NoRateLimitTestBase):
             id="env-cb",
             requires_ack=True,
         )
-        
+
         transport._register_pending_ack(envelope)
         transport._ack_check_task = asyncio.create_task(transport._ack_check_loop())
-        
+
         await asyncio.sleep(0.15)
-        
+
         try:
             assert "env-cb" not in transport._pending_acks
             # Verify circuit breaker call
@@ -1672,7 +1683,7 @@ class TestWebSocketTransportSend(NoRateLimitTestBase):
         transport = WebSocketTransport()
         transport._ws = AsyncMock()
         transport._ws.send = AsyncMock()
-        
+
         envelope = Envelope(
             asap_version="0.1",
             sender="urn:asap:agent:a",
@@ -1682,12 +1693,12 @@ class TestWebSocketTransportSend(NoRateLimitTestBase):
             id="env-send",
             requires_ack=True,
         )
-        
+
         await transport.send(envelope)
-        
+
         transport._ws.send.assert_called_once()
         assert "env-send" in transport._pending_acks
-        
+
     @pytest.mark.asyncio
     async def test_send_raises_type_error_if_frame_not_str(self) -> None:
         """send() raises TypeError if encode returns bytes (binary encoding not supported by current text-only check)."""
@@ -1695,7 +1706,7 @@ class TestWebSocketTransportSend(NoRateLimitTestBase):
 
         transport = WebSocketTransport()
         transport._ws = AsyncMock()
-        
+
         envelope = Envelope(
             asap_version="0.1",
             sender="urn:asap:agent:a",
@@ -1703,7 +1714,7 @@ class TestWebSocketTransportSend(NoRateLimitTestBase):
             payload_type="TaskRequest",
             payload={},
         )
-        
+
         # Mock encode_envelope_frame to return bytes
         with (
             patch("asap.transport.websocket.encode_envelope_frame", return_value=b"binary"),
@@ -1719,58 +1730,68 @@ class TestWebSocketServerExceptions(NoRateLimitTestBase):
         self,
         sample_manifest: Manifest,
     ) -> None:
-        """If internal processing raises exception (e.g. fake request creation), 
+        """If internal processing raises exception (e.g. fake request creation),
         websocket sends error frame and rejection ack if needed.
-        Note: The Registry/Handler catches exceptions inside handle_message, 
+        Note: The Registry/Handler catches exceptions inside handle_message,
         so we need to mock something outside handle_message to trigger the websocket exception handler.
         _make_fake_request is outside handle_message.
         """
         from asap.transport.server import create_app
         from asap.transport.handlers import create_default_registry
         from unittest.mock import patch
-        
+
         app_instance = create_app(sample_manifest, create_default_registry())
         client = TestClient(app_instance)
-        
+
         # Patch _make_fake_request in websocket module to raise exception
         with (
-            patch("asap.transport.websocket._make_fake_request", side_effect=ValueError("Fake request failed")),
+            patch(
+                "asap.transport.websocket._make_fake_request",
+                side_effect=ValueError("Fake request failed"),
+            ),
             client.websocket_connect("/asap/ws") as websocket,
         ):
             # Send message requiring ack
-            websocket.send_text(json.dumps({
-                    "jsonrpc": "2.0", 
-                    "method": "asap.send", 
-                    "params": {
-                        "envelope": {
-                            "asap_version": "0.1",
-                            "sender": "urn:asap:agent:sender",
-                            "recipient": "urn:asap:agent:test",
-                            "payload_type": "test",
-                            "payload": {},
-                            "id": "msg-1",
-                            "requires_ack": True
-                        }
-                    }, 
-                    "id": 1
-                }))
-                
+            websocket.send_text(
+                json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "method": "asap.send",
+                        "params": {
+                            "envelope": {
+                                "asap_version": "0.1",
+                                "sender": "urn:asap:agent:sender",
+                                "recipient": "urn:asap:agent:test",
+                                "payload_type": "test",
+                                "payload": {},
+                                "id": "msg-1",
+                                "requires_ack": True,
+                            }
+                        },
+                        "id": 1,
+                    }
+                )
+            )
+
             # Expect 3 messages: "received" ack, "rejected" ack, and Error response
             messages = [json.loads(websocket.receive_text()) for _ in range(3)]
-                
+
             error_res = next((m for m in messages if "error" in m and m.get("id") is None), None)
             assert error_res is not None
             assert error_res["error"]["code"] == -32603
             assert "Fake request failed" in error_res["error"]["data"]["error"]
-            
-            rejection_ack = next((
-                m for m in messages 
-                if m.get("method") == "asap.ack" 
-                and m.get("params", {}).get("envelope", {}).get("payload", {}).get("status") == "rejected"
-            ), None)
-            
+
+            rejection_ack = next(
+                (
+                    m
+                    for m in messages
+                    if m.get("method") == "asap.ack"
+                    and m.get("params", {}).get("envelope", {}).get("payload", {}).get("status")
+                    == "rejected"
+                ),
+                None,
+            )
+
             assert rejection_ack is not None
             assert rejection_ack["params"]["envelope"]["payload"]["original_envelope_id"] == "msg-1"
             assert "Fake request failed" in rejection_ack["params"]["envelope"]["payload"]["error"]
-
-

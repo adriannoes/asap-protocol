@@ -645,9 +645,6 @@ class TestSQLiteMeteringStorage:
         assert results[0].task_id == "new"
 
 
-
-
-
 class TestPeriodToMeteringQuery:
     """Tests for _period_to_metering_query logic."""
 

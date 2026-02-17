@@ -829,19 +829,20 @@ class TestUsageAPIConfiguration:
         """Usage endpoints return 503 if metering_storage is not configured."""
         # Create app WITHOUT metering_storage
         app = create_app(sample_manifest)
-        # We need to manually include the router because create_app only includes it 
-        # if metering_storage IS provided. 
+        # We need to manually include the router because create_app only includes it
+        # if metering_storage IS provided.
         # However, if we include it manually but storage is missing on state, it should 503.
         from asap.transport.usage_api import create_usage_router
+
         app.include_router(create_usage_router())
-        
+
         client = TestClient(app)
-        
+
         # GET /usage
         resp = client.get("/usage")
         assert resp.status_code == 503
         assert "Usage API not configured" in resp.json()["detail"]
-        
+
         # POST /usage
         resp = client.post("/usage", json={})
         assert resp.status_code == 503
@@ -863,11 +864,11 @@ class TestUsageAPIRateLimiting:
             rate_limit="1/minute",
         )
         client = TestClient(app)
-        
+
         # First request succeeds
         resp = client.get("/usage")
         assert resp.status_code == 200
-        
+
         # Second request fails
         resp = client.get("/usage")
         assert resp.status_code == 429
@@ -883,7 +884,7 @@ class TestUsageAPIRateLimiting:
         # Manually remove limiter to trigger the 'if limiter is not None' else branch
         if hasattr(app.state, "limiter"):
             delattr(app.state, "limiter")
-            
+
         client = TestClient(app)
         resp = client.get("/usage")
         assert resp.status_code == 200
@@ -904,7 +905,7 @@ class TestUsageAPIPostUsageValidation:
             rate_limit="999999/minute",
         )
         client = TestClient(app)
-        
+
         # Missing required fields
         resp = client.post("/usage", json={"task_id": "t1"})
         assert resp.status_code == 400

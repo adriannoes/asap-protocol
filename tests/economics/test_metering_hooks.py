@@ -316,9 +316,6 @@ class TestCreateAppMeteringIntegration:
         assert events[0].consumer_id == "urn:asap:agent:consumer"
 
 
-
-
-
 class TestWrapHandlerWithMetering:
     """Tests for wrap_handler_with_metering decorator."""
 
@@ -339,9 +336,7 @@ class TestWrapHandlerWithMetering:
                 payload={"task_id": "t1", "status": "completed", "result": {}},
             )
 
-        wrapped = wrap_handler_with_metering(
-            my_handler, metering_store, sample_manifest
-        )
+        wrapped = wrap_handler_with_metering(my_handler, metering_store, sample_manifest)
 
         envelope = Envelope(
             asap_version="0.1",
@@ -375,6 +370,7 @@ class TestWrapHandlerWithMetering:
     ) -> None:
         def my_sync_handler(env: Envelope, mf: Manifest) -> Envelope:
             import time
+
             time.sleep(0.01)
             return Envelope(
                 asap_version="0.1",
@@ -384,9 +380,7 @@ class TestWrapHandlerWithMetering:
                 payload={"task_id": "t1", "status": "completed", "result": {}},
             )
 
-        wrapped = wrap_handler_with_metering(
-            my_sync_handler, metering_store, sample_manifest
-        )
+        wrapped = wrap_handler_with_metering(my_sync_handler, metering_store, sample_manifest)
 
         envelope = Envelope(
             asap_version="0.1",
@@ -469,9 +463,7 @@ class TestRecordTaskUsageEdgeCases:
             },
         )
 
-        await record_task_usage(
-            metering_store, envelope, response, 100, sample_manifest
-        )
+        await record_task_usage(metering_store, envelope, response, 100, sample_manifest)
 
         events = await metering_store.query(
             sample_manifest.id,
@@ -509,9 +501,7 @@ class TestRecordTaskUsageEdgeCases:
             },
         )
 
-        await record_task_usage(
-            metering_store, envelope, response, 100, sample_manifest
-        )
+        await record_task_usage(metering_store, envelope, response, 100, sample_manifest)
 
         events = await metering_store.query(
             sample_manifest.id,
@@ -545,14 +535,12 @@ class TestRecordTaskUsageEdgeCases:
                 "metrics": {
                     "tokens_in": 10,
                     "tokens_out": 0,  # Explicit 0
-                    "tokens_used": 55, # Should be used as fallback
+                    "tokens_used": 55,  # Should be used as fallback
                 },
             },
         )
 
-        await record_task_usage(
-            metering_store, envelope, response, 100, sample_manifest
-        )
+        await record_task_usage(metering_store, envelope, response, 100, sample_manifest)
 
         events = await metering_store.query(
             sample_manifest.id,
@@ -583,9 +571,7 @@ class TestRecordTaskUsageEdgeCases:
             payload={"task_id": "t1", "status": "completed"},
         )
 
-        await record_task_usage(
-            metering_store, envelope, response, -50.0, sample_manifest
-        )
+        await record_task_usage(metering_store, envelope, response, -50.0, sample_manifest)
 
         events = await metering_store.query(
             sample_manifest.id,
