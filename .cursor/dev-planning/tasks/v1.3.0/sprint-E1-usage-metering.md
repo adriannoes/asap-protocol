@@ -60,7 +60,7 @@ Metering enables visibility for agent-to-agent interactions. It tracks tokens, A
   - Model validation
   - Aggregation correctness
 
-- [ ] 1.1.5 Commit 
+- [x] 1.1.5 Commit 
   - **Command**: `git commit -m "feat(economics): add metering data model"`
 
 **Acceptance Criteria**:
@@ -94,7 +94,7 @@ Metering enables visibility for agent-to-agent interactions. It tracks tokens, A
   - Middleware captures correctly
   - No double-counting
 
-- [ ] 1.2.6 Commit
+- [x] 1.2.6 Commit
   - **Command**: `git commit -m "feat(economics): add metering hooks"`
 
 **Acceptance Criteria**:
@@ -132,7 +132,7 @@ Metering enables visibility for agent-to-agent interactions. It tracks tokens, A
   - Query filtering
   - Aggregation
 
-- [ ] 1.3.6 Commit
+- [x] 1.3.6 Commit
   - **Command**: `git commit -m "feat(economics): add metering storage"`
 
 **Acceptance Criteria**:
@@ -205,7 +205,7 @@ Metering enables visibility for agent-to-agent interactions. It tracks tokens, A
 
 - [x] 1.4.15 Write integration tests for new endpoints
 
-- [ ] 1.4.16 Commit
+- [x] 1.4.16 Commit
   - **Command**: `git commit -m "feat(economics): add metering API"`
 
 **Acceptance Criteria**:
@@ -221,7 +221,7 @@ Metering enables visibility for agent-to-agent interactions. It tracks tokens, A
 - [x] Hooks capture metrics automatically
 - [x] Storage and query working
 - [x] API endpoints functional
-- [ ] Test coverage >95%
+- [x] Test coverage >95%
 
 **Total Sub-tasks**: ~31
 

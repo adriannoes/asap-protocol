@@ -63,8 +63,9 @@ v1.3.0 is the **final infrastructure release** before v2.0 Marketplace:
   - Deliverable: SQLite reference implementation
 
 - [x] 1.4 Implement metering API
-  - Goal: GET /usage endpoint for querying
-  - Deliverable: REST API
+  - Goal: REST API for querying and reporting usage
+  - Deliverable: GET /usage, /usage/aggregate, /usage/summary, /usage/agents, /usage/consumers, /usage/stats, /usage/export; POST /usage, /usage/batch, /usage/purge, /usage/validate
+  - See [sprint-E1-usage-metering.md](./sprint-E1-usage-metering.md) for full sub-task breakdown (~31 items)
 
 ### Definition of Done
 - [x] Metering captures all task metrics
@@ -190,3 +191,4 @@ After releasing v1.3.0, conduct a checkpoint review:
 |------|--------|
 | 2026-02-06 | Initial task roadmap |
 | 2026-02-12 | **Lean Marketplace pivot**: Removed Audit Logging sprint (E4), reframed metering as observability, merged release into E3, reduced from 4 sprints (17 tasks) to 3 sprints (13 tasks) |
+| 2026-02-17 | **Sprint E1 complete**: Metering API expanded (summary, batch, agents, consumers, stats, purge, validate, export); roadmap aligned with sprint sub-tasks |
