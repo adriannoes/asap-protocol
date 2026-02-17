@@ -1343,6 +1343,13 @@ def create_app(
     if metering_storage is not None and isinstance(metering_storage, MeteringStorage):
         app.state.metering_storage = metering_storage
         app.include_router(create_usage_router())
+        logger.warning(
+            "asap.server.usage_api_unauthenticated",
+            message=(
+                "Usage API (/usage) is enabled but unauthenticated. "
+                "Intended for local/operator use only. Protect with OAuth2 or network controls when exposed."
+            ),
+        )
     if mtls_config is not None:
         logger.info(
             "asap.server.mtls_enabled",
