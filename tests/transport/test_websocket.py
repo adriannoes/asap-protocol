@@ -1466,7 +1466,6 @@ class TestWebSocketServerRateLimit(NoRateLimitTestBase):
         """Sending messages faster than rate limit triggers error frame and close."""
         from asap.transport.server import create_app
         from asap.transport.handlers import create_default_registry
-        from asap.transport.websocket import WS_CLOSE_POLICY_VIOLATION
 
         # We need a low rate to trigger it easily in a test without sleeping too long.
         app_instance = create_app(
@@ -1490,10 +1489,12 @@ class TestWebSocketServerRateLimit(NoRateLimitTestBase):
             # The server logic puts the response in `body`. 
             # If we send a valid legacy format or just a valid frame, it processes.
             # To trigger rate limit, we just need to send frames fast.
-            try:
+            # Receive response (echo or whatever) - wait for it
+            # The server logic puts the response in `body`. 
+            # If we send a valid legacy format or just a valid frame, it processes.
+            # To trigger rate limit, we just need to send frames fast.
+            with contextlib.suppress(Exception):
                 _ = websocket.receive_text()
-            except Exception:
-                pass
 
             # Second message immediately might be rate limited if burst is 1.
             # If burst is 1, and we consume 1, now empty. 
@@ -1523,7 +1524,8 @@ class TestWebSocketServerRateLimit(NoRateLimitTestBase):
             # Connection should be closed by server with policy violation
             # TestClient websocket checks state on simple interaction?
             # or verify we can't send/receive anymore?
-            with pytest.raises(Exception): # starlette/fastapi test client raises on closed
+            from fastapi.websockets import WebSocketDisconnect
+            with pytest.raises((WebSocketDisconnect, Exception)): # starlette/fastapi test client raises on closed
                 websocket.receive_text()
 
 
@@ -1536,7 +1538,7 @@ class TestWebSocketAckHandling(NoRateLimitTestBase):
     @pytest.mark.asyncio
     async def test_ack_retransmission_logic(self) -> None:
         """_ack_check_loop retransmits pending messages when ack is missing."""
-        from unittest.mock import AsyncMock, patch
+        from unittest.mock import AsyncMock
 
         transport = WebSocketTransport(
             ack_timeout_seconds=0.1,
@@ -1703,9 +1705,11 @@ class TestWebSocketTransportSend(NoRateLimitTestBase):
         )
         
         # Mock encode_envelope_frame to return bytes
-        with patch("asap.transport.websocket.encode_envelope_frame", return_value=b"binary"):
-            with pytest.raises(TypeError, match="Expected text frame"):
-                await transport.send(envelope)
+        with (
+            patch("asap.transport.websocket.encode_envelope_frame", return_value=b"binary"),
+            pytest.raises(TypeError, match="Expected text frame"),
+        ):
+            await transport.send(envelope)
 
 
 class TestWebSocketServerExceptions(NoRateLimitTestBase):
@@ -1721,17 +1725,20 @@ class TestWebSocketServerExceptions(NoRateLimitTestBase):
         so we need to mock something outside handle_message to trigger the websocket exception handler.
         _make_fake_request is outside handle_message.
         """
-        from asap.transport.server import create_app, create_default_registry
+        from asap.transport.server import create_app
+        from asap.transport.handlers import create_default_registry
         from unittest.mock import patch
         
         app_instance = create_app(sample_manifest, create_default_registry())
         client = TestClient(app_instance)
         
         # Patch _make_fake_request in websocket module to raise exception
-        with patch("asap.transport.websocket._make_fake_request", side_effect=ValueError("Fake request failed")):
-            with client.websocket_connect("/asap/ws") as websocket:
-                # Send message requiring ack
-                websocket.send_text(json.dumps({
+        with (
+            patch("asap.transport.websocket._make_fake_request", side_effect=ValueError("Fake request failed")),
+            client.websocket_connect("/asap/ws") as websocket,
+        ):
+            # Send message requiring ack
+            websocket.send_text(json.dumps({
                     "jsonrpc": "2.0", 
                     "method": "asap.send", 
                     "params": {
@@ -1748,22 +1755,22 @@ class TestWebSocketServerExceptions(NoRateLimitTestBase):
                     "id": 1
                 }))
                 
-                # Expect 3 messages: "received" ack, "rejected" ack, and Error response
-                messages = [json.loads(websocket.receive_text()) for _ in range(3)]
-                    
-                error_res = next((m for m in messages if "error" in m and m.get("id") is None), None)
-                assert error_res is not None
-                assert error_res["error"]["code"] == -32603
-                assert "Fake request failed" in error_res["error"]["data"]["error"]
+            # Expect 3 messages: "received" ack, "rejected" ack, and Error response
+            messages = [json.loads(websocket.receive_text()) for _ in range(3)]
                 
-                rejection_ack = next((
-                    m for m in messages 
-                    if m.get("method") == "asap.ack" 
-                    and m.get("params", {}).get("envelope", {}).get("payload", {}).get("status") == "rejected"
-                ), None)
-                
-                assert rejection_ack is not None
-                assert rejection_ack["params"]["envelope"]["payload"]["original_envelope_id"] == "msg-1"
-                assert "Fake request failed" in rejection_ack["params"]["envelope"]["payload"]["error"]
+            error_res = next((m for m in messages if "error" in m and m.get("id") is None), None)
+            assert error_res is not None
+            assert error_res["error"]["code"] == -32603
+            assert "Fake request failed" in error_res["error"]["data"]["error"]
+            
+            rejection_ack = next((
+                m for m in messages 
+                if m.get("method") == "asap.ack" 
+                and m.get("params", {}).get("envelope", {}).get("payload", {}).get("status") == "rejected"
+            ), None)
+            
+            assert rejection_ack is not None
+            assert rejection_ack["params"]["envelope"]["payload"]["original_envelope_id"] == "msg-1"
+            assert "Fake request failed" in rejection_ack["params"]["envelope"]["payload"]["error"]
 
 
