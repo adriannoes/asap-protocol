@@ -170,6 +170,18 @@ def create_limiter(
                 "(e.g. Gunicorn), effective rate = limit × workers. Use Redis for shared limits."
             ),
         )
+    elif storage_uri.startswith("redis://"):
+        try:
+            import redis  # noqa: F401
+        except ImportError:
+            logger.error(
+                "asap.rate_limit.redis_missing",
+                message="Redis storage requested but 'redis' package is not installed.",
+            )
+            raise ImportError(
+                "Redis support requires the 'redis' package. "
+                "Install it with: pip install 'asap-protocol[redis]'"
+            ) from None
 
     return ASAPRateLimiter(
         key_func=key_func,
