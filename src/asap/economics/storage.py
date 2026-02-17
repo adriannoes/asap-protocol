@@ -1,4 +1,14 @@
-"""Metering storage: record, query, aggregate usage metrics (v1.3)."""
+"""Metering storage: record, query, aggregate usage metrics (v1.3).
+
+**Architecture:** Two metering layers exist:
+- **Economics layer** (this module): ``MeteringStorage`` protocol with full CRUD,
+  aggregation, summary, stats, purge. Used by the Usage REST API and as the
+  backend for the adapter.
+- **State layer** (``asap.state.metering``): ``MeteringStore`` protocol with
+  minimal record/query/aggregate. Used by handlers for task completion recording.
+  The ``metering_storage_adapter`` bridges economics -> state so a single
+  MeteringStorage can serve both the API and handlers.
+"""
 
 from __future__ import annotations
 
@@ -45,37 +55,40 @@ class MeteringQuery(ASAPBaseModel):
 
 @runtime_checkable
 class MeteringStorage(Protocol):
-    def record(self, metrics: UsageMetrics) -> None: ...
-    def query(self, filters: MeteringQuery) -> list[UsageMetrics]: ...
-    def aggregate(
+    async def record(self, metrics: UsageMetrics) -> None: ...
+    async def query(self, filters: MeteringQuery) -> list[UsageMetrics]: ...
+    async def aggregate(
         self,
         group_by: str,
         filters: MeteringQuery | None = None,
     ) -> list[UsageAggregate]: ...
-    def summary(self, filters: MeteringQuery | None = None) -> UsageSummary: ...
-    def stats(self) -> StorageStats: ...
-    def purge_expired(self) -> int: ...
+    async def summary(self, filters: MeteringQuery | None = None) -> UsageSummary: ...
+    async def stats(self) -> StorageStats: ...
+    async def purge_expired(self) -> int: ...
 
 
 class MeteringStorageBase(ABC):
     @abstractmethod
-    def record(self, metrics: UsageMetrics) -> None: ...
+    async def record(self, metrics: UsageMetrics) -> None: ...
 
     @abstractmethod
-    def query(self, filters: MeteringQuery) -> list[UsageMetrics]: ...
+    async def query(self, filters: MeteringQuery) -> list[UsageMetrics]: ...
 
     @abstractmethod
-    def aggregate(
+    async def aggregate(
         self,
         group_by: str,
         filters: MeteringQuery | None = None,
     ) -> list[UsageAggregate]: ...
 
     @abstractmethod
-    def summary(self, filters: MeteringQuery | None = None) -> UsageSummary: ...
+    async def summary(self, filters: MeteringQuery | None = None) -> UsageSummary: ...
 
     @abstractmethod
-    def stats(self) -> StorageStats: ...
+    async def stats(self) -> StorageStats: ...
+
+    @abstractmethod
+    async def purge_expired(self) -> int: ...
 
 
 def _matches(e: UsageMetrics, f: MeteringQuery) -> bool:
@@ -215,7 +228,7 @@ class InMemoryMeteringStorage(MeteringStorageBase):
     """In-memory MeteringStorage for development and testing.
 
     Stores UsageMetrics in a list. Not persistent across restarts.
-    Thread-safe via RLock. Optional retention_ttl_seconds for auto-cleanup.
+    Async-safe via asyncio.Lock. Optional retention_ttl_seconds for auto-cleanup.
     """
 
     def __init__(self, retention_ttl_seconds: int | None = None) -> None:
@@ -225,29 +238,27 @@ class InMemoryMeteringStorage(MeteringStorageBase):
             retention_ttl_seconds: If set, purge_expired() removes events older
                 than this. None disables retention (keep all).
         """
-        import threading
-
-        self._lock = threading.RLock()
+        self._lock = asyncio.Lock()
         self._events: list[UsageMetrics] = []
         self._retention_ttl_seconds = retention_ttl_seconds
 
-    def record(self, metrics: UsageMetrics) -> None:
-        """Append a usage event (thread-safe)."""
-        with self._lock:
+    async def record(self, metrics: UsageMetrics) -> None:
+        """Append a usage event (async-safe)."""
+        async with self._lock:
             self._events.append(metrics)
 
-    def query(self, filters: MeteringQuery) -> list[UsageMetrics]:
+    async def query(self, filters: MeteringQuery) -> list[UsageMetrics]:
         """Return events matching filters, sorted by timestamp."""
-        with self._lock:
+        async with self._lock:
             return _apply_query_filters(list(self._events), filters)
 
-    def aggregate(
+    async def aggregate(
         self,
         group_by: str,
         filters: MeteringQuery | None = None,
     ) -> list[UsageAggregate]:
         """Aggregate by agent, consumer, day, or week, optionally filtered."""
-        with self._lock:
+        async with self._lock:
             events = list(self._events)
         if filters is not None:
             agg_filters = MeteringQuery(
@@ -272,9 +283,9 @@ class InMemoryMeteringStorage(MeteringStorageBase):
             f"group_by must be one of 'agent', 'consumer', 'day', 'week'; got {group_by!r}"
         )
 
-    def summary(self, filters: MeteringQuery | None = None) -> UsageSummary:
+    async def summary(self, filters: MeteringQuery | None = None) -> UsageSummary:
         """Return dashboard summary, optionally filtered."""
-        with self._lock:
+        async with self._lock:
             events = list(self._events)
         if filters is not None:
             agg_filters = MeteringQuery(
@@ -289,9 +300,9 @@ class InMemoryMeteringStorage(MeteringStorageBase):
             events = _apply_query_filters(events, agg_filters)
         return _compute_summary(events)
 
-    def stats(self) -> StorageStats:
+    async def stats(self) -> StorageStats:
         """Return storage statistics."""
-        with self._lock:
+        async with self._lock:
             events = list(self._events)
         if not events:
             return StorageStats(
@@ -306,14 +317,15 @@ class InMemoryMeteringStorage(MeteringStorageBase):
             retention_ttl_seconds=self._retention_ttl_seconds,
         )
 
-    def purge_expired(self) -> int:
+    async def purge_expired(self) -> int:
         """Remove events older than retention_ttl_seconds. Returns count removed."""
         if self._retention_ttl_seconds is None:
             return 0
         from datetime import timedelta, timezone
 
         cutoff = datetime.now(timezone.utc) - timedelta(seconds=self._retention_ttl_seconds)
-        with self._lock:
+        cutoff = cutoff.replace(microsecond=0)
+        async with self._lock:
             before = len(self._events)
             self._events = [e for e in self._events if e.timestamp >= cutoff]
             return before - len(self._events)
@@ -327,25 +339,26 @@ def metering_storage_adapter(storage: MeteringStorage) -> "MeteringStore":
         def __init__(self, s: MeteringStorage) -> None:
             self._storage = s
 
-        def record(self, event: "UsageEvent") -> None:
+        async def record(self, event: "UsageEvent") -> None:
             metrics = UsageMetrics.from_usage_event(event)
-            self._storage.record(metrics)
+            await self._storage.record(metrics)
 
-        def query(
+        async def query(
             self,
             agent_id: str,
             start: datetime,
             end: datetime,
         ) -> list["UsageEvent"]:
             filters = MeteringQuery(agent_id=agent_id, start=start, end=end)
-            events = self._storage.query(filters)
+            events = await self._storage.query(filters)
             return [m.to_usage_event() for m in events]
 
-        def aggregate(self, agent_id: str, period: str) -> "StateUsageAggregate":
+        async def aggregate(self, agent_id: str, period: str) -> "StateUsageAggregate":
             from asap.economics.metering import UsageAggregateByAgent
             from asap.state.metering import UsageAggregate as StateUsageAggregate
 
-            aggs = self._storage.aggregate("agent")
+            filters = _period_to_metering_query(agent_id, period)
+            aggs = await self._storage.aggregate("agent", filters=filters)
             for a in aggs:
                 if isinstance(a, UsageAggregateByAgent) and a.agent_id == agent_id:
                     return StateUsageAggregate(
@@ -361,21 +374,31 @@ def metering_storage_adapter(storage: MeteringStorage) -> "MeteringStore":
     return _Adapter(storage)
 
 
+def _period_to_metering_query(agent_id: str, period: str) -> MeteringQuery | None:
+    """Convert period string (hour, day, week, today) to MeteringQuery with start/end.
+
+    Returns None for unknown periods (no time filter).
+    """
+    from datetime import timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    if period in ("hour", "h"):
+        start = now - timedelta(hours=1)
+        return MeteringQuery(agent_id=agent_id, start=start, end=now)
+    if period in ("day", "d", "today"):
+        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        return MeteringQuery(agent_id=agent_id, start=start, end=now)
+    if period in ("week", "w"):
+        start = now - timedelta(weeks=1)
+        return MeteringQuery(agent_id=agent_id, start=start, end=now)
+    # Unknown period: filter by agent_id only (no time range)
+    return MeteringQuery(agent_id=agent_id)
+
+
 # SQLite storage constants (aligned with state layer for shared DB).
 _DEFAULT_DB_PATH = "asap_state.db"
+# Safe to use in f-strings: compile-time constant, never user-controlled (no SQL injection).
 _USAGE_EVENTS_TABLE = "usage_events"
-
-
-def _run_sync(coro: Any) -> Any:
-    """Run async coroutine from sync context."""
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(coro)
-    import concurrent.futures
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
-        return ex.submit(asyncio.run, coro).result()
 
 
 def _metrics_to_row(metrics: UsageMetrics, event_id: str) -> tuple[str, str, str, str, str, str]:
@@ -557,24 +580,21 @@ class SQLiteMeteringStorage(MeteringStorageBase):
             f"group_by must be one of 'agent', 'consumer', 'day', 'week'; got {group_by!r}"
         )
 
-    def record(self, metrics: UsageMetrics) -> None:
-        """Record a usage event (sync wrapper)."""
-        _run_sync(self._record_impl(metrics))
+    async def record(self, metrics: UsageMetrics) -> None:
+        """Record a usage event."""
+        await self._record_impl(metrics)
 
-    def query(self, filters: MeteringQuery) -> list[UsageMetrics]:
-        """Query events with filters (sync wrapper)."""
-        return cast(list[UsageMetrics], _run_sync(self._query_impl(filters)))
+    async def query(self, filters: MeteringQuery) -> list[UsageMetrics]:
+        """Query events with filters."""
+        return await self._query_impl(filters)
 
-    def aggregate(
+    async def aggregate(
         self,
         group_by: str,
         filters: MeteringQuery | None = None,
     ) -> list[UsageAggregate]:
-        """Aggregate by agent, consumer, day, or week (sync wrapper)."""
-        return cast(
-            list[UsageAggregate],
-            _run_sync(self._aggregate_impl(group_by, filters)),
-        )
+        """Aggregate by agent, consumer, day, or week."""
+        return await self._aggregate_impl(group_by, filters)
 
     async def _summary_impl(self, filters: MeteringQuery | None = None) -> UsageSummary:
         """Compute summary from events, optionally filtered."""
@@ -585,7 +605,7 @@ class SQLiteMeteringStorage(MeteringStorageBase):
                 task_id=filters.task_id,
                 start=filters.start,
                 end=filters.end,
-                limit=999999999,
+                limit=None,
                 offset=0,
             )
             events = await self._query_impl(summary_filters)
@@ -603,9 +623,9 @@ class SQLiteMeteringStorage(MeteringStorageBase):
             events = [_row_to_metrics(tuple(r)) for r in rows]
         return _compute_summary(events)
 
-    def summary(self, filters: MeteringQuery | None = None) -> UsageSummary:
-        """Return dashboard summary (sync wrapper)."""
-        return cast(UsageSummary, _run_sync(self._summary_impl(filters)))
+    async def summary(self, filters: MeteringQuery | None = None) -> UsageSummary:
+        """Return dashboard summary."""
+        return await self._summary_impl(filters)
 
     async def _stats_impl(self) -> StorageStats:
         """Compute storage stats from SQLite."""
@@ -628,9 +648,9 @@ class SQLiteMeteringStorage(MeteringStorageBase):
             retention_ttl_seconds=self._retention_ttl_seconds,
         )
 
-    def stats(self) -> StorageStats:
-        """Return storage statistics (sync wrapper)."""
-        return cast(StorageStats, _run_sync(self._stats_impl()))
+    async def stats(self) -> StorageStats:
+        """Return storage statistics."""
+        return await self._stats_impl()
 
     async def _purge_expired_impl(self) -> int:
         """Delete events older than retention_ttl_seconds. Returns count removed."""
@@ -639,6 +659,7 @@ class SQLiteMeteringStorage(MeteringStorageBase):
         from datetime import timedelta, timezone
 
         cutoff = datetime.now(timezone.utc) - timedelta(seconds=self._retention_ttl_seconds)
+        cutoff = cutoff.replace(microsecond=0)
         cutoff_str = cutoff.isoformat()
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_table(conn)
@@ -653,6 +674,6 @@ class SQLiteMeteringStorage(MeteringStorageBase):
             await conn.commit()
             return max(0, deleted)
 
-    def purge_expired(self) -> int:
+    async def purge_expired(self) -> int:
         """Remove events older than retention_ttl_seconds. Returns count removed."""
-        return cast(int, _run_sync(self._purge_expired_impl()))
+        return await self._purge_expired_impl()

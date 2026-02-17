@@ -11,7 +11,8 @@ Example:
 
 from __future__ import annotations
 
-import threading
+import asyncio
+from collections.abc import Awaitable
 from datetime import datetime
 from typing import Protocol, runtime_checkable
 
@@ -87,14 +88,14 @@ class MeteringStore(Protocol):
 
     Example:
         >>> class CustomMeteringStore:
-        ...     def record(self, event: UsageEvent) -> None: ...
-        ...     def query(self, agent_id: str, start: datetime, end: datetime) -> list[UsageEvent]: ...
-        ...     def aggregate(self, agent_id: str, period: str) -> UsageAggregate: ...
+        ...     async def record(self, event: UsageEvent) -> None: ...
+        ...     async def query(self, agent_id: str, start: datetime, end: datetime) -> list[UsageEvent]: ...
+        ...     async def aggregate(self, agent_id: str, period: str) -> UsageAggregate: ...
         >>> isinstance(CustomMeteringStore(), MeteringStore)
         True
     """
 
-    def record(self, event: "UsageEvent") -> None:
+    def record(self, event: "UsageEvent") -> "Awaitable[None]":
         """Record a usage event.
 
         Args:
@@ -112,7 +113,7 @@ class MeteringStore(Protocol):
         agent_id: str,
         start: datetime,
         end: datetime,
-    ) -> list["UsageEvent"]:
+    ) -> Awaitable[list["UsageEvent"]]:
         """Query usage events for an agent in a time range.
 
         Args:
@@ -129,7 +130,7 @@ class MeteringStore(Protocol):
         """
         ...
 
-    def aggregate(self, agent_id: str, period: str) -> "UsageAggregate":
+    def aggregate(self, agent_id: str, period: str) -> Awaitable["UsageAggregate"]:
         """Aggregate usage for an agent over a period.
 
         Args:
@@ -149,36 +150,36 @@ class MeteringStore(Protocol):
 class InMemoryMeteringStore:
     """In-memory implementation of MeteringStore.
 
-    Stores usage events in a list with RLock for thread-safe concurrent access.
+    Stores usage events in a list with asyncio.Lock for async-safe concurrent access.
     Used for testing and development; not persistent across restarts.
     """
 
     def __init__(self) -> None:
         """Initialize the in-memory metering store."""
-        self._lock = threading.RLock()
+        self._lock = asyncio.Lock()
         self._events: list[UsageEvent] = []
 
-    def record(self, event: UsageEvent) -> None:
-        """Append a usage event to the store (thread-safe)."""
-        with self._lock:
+    async def record(self, event: UsageEvent) -> None:
+        """Append a usage event to the store (async-safe)."""
+        async with self._lock:
             self._events.append(event)
 
-    def query(
+    async def query(
         self,
         agent_id: str,
         start: datetime,
         end: datetime,
     ) -> list[UsageEvent]:
         """Return events for the agent in [start, end], sorted by timestamp."""
-        with self._lock:
+        async with self._lock:
             out = [
                 e for e in self._events if e.agent_id == agent_id and start <= e.timestamp <= end
             ]
         return sorted(out, key=lambda e: e.timestamp)
 
-    def aggregate(self, agent_id: str, period: str) -> UsageAggregate:
+    async def aggregate(self, agent_id: str, period: str) -> UsageAggregate:
         """Aggregate all stored events for the agent into one UsageAggregate."""
-        with self._lock:
+        async with self._lock:
             agent_events = [e for e in self._events if e.agent_id == agent_id]
         total_tokens = sum(e.metrics.tokens_in + e.metrics.tokens_out for e in agent_events)
         total_duration = sum(e.metrics.duration_ms for e in agent_events)

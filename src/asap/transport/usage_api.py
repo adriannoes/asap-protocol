@@ -1,11 +1,16 @@
-"""Usage metering REST API (v1.3). Requires metering_storage on app state."""
+"""Usage metering REST API (v1.3). Requires metering_storage on app state.
+
+**Security (v1.3):** This API is intended for local/operator use only. Endpoints
+are unauthenticated by default. When exposing beyond localhost, configure
+OAuth2 or network-level access controls. Rate limiting is applied per-client.
+"""
 
 from __future__ import annotations
 
 import csv
-from typing import cast
 import io
 from datetime import datetime
+from typing import Literal, cast
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
@@ -13,6 +18,13 @@ from pydantic import ValidationError
 
 from asap.economics import BatchUsageRequest, MeteringQuery, UsageMetrics
 from asap.economics.storage import MeteringStorage
+
+
+def _rate_limit_usage(request: Request) -> None:
+    """Apply rate limiting to usage API endpoints (uses app.state.limiter)."""
+    limiter = getattr(request.app.state, "limiter", None)
+    if limiter is not None:
+        limiter.check(request)
 
 
 def get_metering_storage(request: Request) -> MeteringStorage:
@@ -28,7 +40,11 @@ def get_metering_storage(request: Request) -> MeteringStorage:
 
 
 def create_usage_router() -> APIRouter:
-    router = APIRouter(prefix="/usage", tags=["usage"])
+    router = APIRouter(
+        prefix="/usage",
+        tags=["usage"],
+        dependencies=[Depends(_rate_limit_usage)],
+    )
 
     @router.get("")
     async def get_usage(
@@ -50,7 +66,7 @@ def create_usage_router() -> APIRouter:
             limit=limit,
             offset=offset,
         )
-        events = storage.query(filters)
+        events = await storage.query(filters)
         return JSONResponse(
             content={
                 "data": [e.model_dump(mode="json") for e in events],
@@ -82,7 +98,7 @@ def create_usage_router() -> APIRouter:
             if any((agent_id, consumer_id, start, end))
             else None
         )
-        aggs = storage.aggregate(group_by, filters=filters)
+        aggs = await storage.aggregate(group_by, filters=filters)
         return JSONResponse(
             content={
                 "group_by": group_by,
@@ -108,7 +124,7 @@ def create_usage_router() -> APIRouter:
             if any((agent_id, consumer_id, start, end))
             else None
         )
-        summary = storage.summary(filters=filters)
+        summary = await storage.summary(filters=filters)
         return JSONResponse(content=summary.model_dump(mode="json"))
 
     @router.post("")
@@ -123,7 +139,7 @@ def create_usage_router() -> APIRouter:
             from fastapi import HTTPException
 
             raise HTTPException(status_code=400, detail=str(e)) from e
-        storage.record(metrics)
+        await storage.record(metrics)
         return JSONResponse(
             status_code=201,
             content={"status": "recorded", "task_id": metrics.task_id},
@@ -142,7 +158,7 @@ def create_usage_router() -> APIRouter:
 
             raise HTTPException(status_code=400, detail=str(e)) from e
         for metrics in batch.events:
-            storage.record(metrics)
+            await storage.record(metrics)
         return JSONResponse(
             status_code=201,
             content={
@@ -170,7 +186,7 @@ def create_usage_router() -> APIRouter:
             if any((agent_id, consumer_id, start, end))
             else None
         )
-        aggs = storage.aggregate("agent", filters=filters)
+        aggs = await storage.aggregate("agent", filters=filters)
         return JSONResponse(
             content={
                 "data": [a.model_dump(mode="json") for a in aggs],
@@ -195,7 +211,7 @@ def create_usage_router() -> APIRouter:
             if any((agent_id, consumer_id, start, end))
             else None
         )
-        aggs = storage.aggregate("consumer", filters=filters)
+        aggs = await storage.aggregate("consumer", filters=filters)
         return JSONResponse(
             content={
                 "data": [a.model_dump(mode="json") for a in aggs],
@@ -206,14 +222,14 @@ def create_usage_router() -> APIRouter:
     async def get_usage_stats(
         storage: MeteringStorage = Depends(get_metering_storage),
     ) -> JSONResponse:
-        stats = storage.stats()
+        stats = await storage.stats()
         return JSONResponse(content=stats.model_dump(mode="json"))
 
     @router.post("/purge")
     async def post_usage_purge(
         storage: MeteringStorage = Depends(get_metering_storage),
     ) -> JSONResponse:
-        removed = storage.purge_expired()
+        removed = await storage.purge_expired()
         return JSONResponse(
             content={"status": "purged", "removed": removed},
         )
@@ -231,7 +247,7 @@ def create_usage_router() -> APIRouter:
                     "consumer_id": metrics.consumer_id,
                 },
             )
-        except Exception as e:
+        except (ValidationError, ValueError, TypeError) as e:
             return JSONResponse(
                 status_code=200,
                 content={"valid": False, "error": str(e)},
@@ -239,7 +255,10 @@ def create_usage_router() -> APIRouter:
 
     @router.get("/export")
     async def export_usage(
-        format: str = Query(default="json", description="Export format: json or csv"),
+        export_format: Literal["json", "csv"] = Query(
+            default="json",
+            description="Export format: json or csv",
+        ),
         agent_id: str | None = Query(default=None),
         consumer_id: str | None = Query(default=None),
         start: datetime | None = Query(default=None),
@@ -254,8 +273,8 @@ def create_usage_router() -> APIRouter:
             end=end,
             limit=limit,
         )
-        events = storage.query(filters)
-        if format == "csv":
+        events = await storage.query(filters)
+        if export_format == "csv":
             output = io.StringIO()
             writer = csv.writer(output)
             writer.writerow(

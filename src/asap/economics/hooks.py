@@ -38,7 +38,7 @@ def _safe_int(value: object, default: int = 0) -> int:
     return default
 
 
-def record_task_usage(
+async def record_task_usage(
     store: "MeteringStore",
     envelope: Envelope,
     response_envelope: Envelope,
@@ -59,7 +59,7 @@ def record_task_usage(
         manifest: Agent manifest (agent_id = manifest.id).
 
     Example:
-        >>> record_task_usage(store, req_env, resp_env, 1234.5, manifest)
+        >>> await record_task_usage(store, req_env, resp_env, 1234.5, manifest)
     """
     if envelope.payload_type != "task.request":
         return
@@ -102,7 +102,7 @@ def record_task_usage(
     )
 
     event = usage.to_usage_event()
-    store.record(event)
+    await store.record(event)
 
 
 def wrap_handler_with_metering(
@@ -145,17 +145,20 @@ def wrap_handler_with_metering(
             start = time.perf_counter()
             result = await handler(envelope, mf)
             duration_ms = (time.perf_counter() - start) * 1000
-            record_task_usage(store, envelope, cast(Envelope, result), duration_ms, manifest)
+            await record_task_usage(store, envelope, cast(Envelope, result), duration_ms, manifest)
             return cast(Envelope, result)
 
         return cast("Handler", async_wrapper)
 
-    def sync_wrapper(envelope: Envelope, mf: Manifest) -> Envelope:
+    async def sync_wrapper(envelope: Envelope, mf: Manifest) -> Envelope:
+        import asyncio
+
+        loop = asyncio.get_running_loop()
         start = time.perf_counter()
-        result = cast(Envelope, handler(envelope, mf))
+        result = await loop.run_in_executor(None, handler, envelope, mf)
         duration_ms = (time.perf_counter() - start) * 1000
-        record_task_usage(store, envelope, result, duration_ms, manifest)
-        return result
+        await record_task_usage(store, envelope, cast(Envelope, result), duration_ms, manifest)
+        return cast(Envelope, result)
 
     return cast("Handler", sync_wrapper)
 

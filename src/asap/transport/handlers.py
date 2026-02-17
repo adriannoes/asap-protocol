@@ -354,7 +354,7 @@ class HandlerRegistry:
                 if self._metering_store is not None:
                     from asap.state.metering import MeteringStore
 
-                    record_task_usage(
+                    await record_task_usage(
                         cast(MeteringStore, self._metering_store),
                         envelope,
                         response,
