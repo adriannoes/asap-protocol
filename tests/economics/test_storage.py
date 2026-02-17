@@ -10,6 +10,7 @@ from asap.economics import (
     SQLiteMeteringStorage,
     UsageMetrics,
 )
+from asap.economics.storage import _period_to_metering_query
 
 
 @pytest.fixture
@@ -644,7 +645,7 @@ class TestSQLiteMeteringStorage:
         assert results[0].task_id == "new"
 
 
-from asap.economics.storage import _period_to_metering_query
+
 
 
 class TestPeriodToMeteringQuery:

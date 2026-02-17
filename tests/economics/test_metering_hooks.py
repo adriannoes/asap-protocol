@@ -7,7 +7,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from asap.economics.hooks import record_task_usage
+from asap.economics.hooks import record_task_usage, wrap_handler_with_metering, _safe_int
 from asap.models.entities import Manifest
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest, TaskResponse
@@ -316,7 +316,7 @@ class TestCreateAppMeteringIntegration:
         assert events[0].consumer_id == "urn:asap:agent:consumer"
 
 
-from asap.economics.hooks import wrap_handler_with_metering, _safe_int
+
 
 
 class TestWrapHandlerWithMetering:

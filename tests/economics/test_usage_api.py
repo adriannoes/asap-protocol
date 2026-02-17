@@ -2,6 +2,7 @@
 
 import asyncio
 from datetime import datetime, timezone
+from typing import Any, Coroutine, TypeVar
 
 import pytest
 from fastapi.testclient import TestClient
@@ -11,7 +12,10 @@ from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.transport.server import create_app
 
 
-def _run(coro):
+T = TypeVar("T")
+
+
+def _run(coro: Coroutine[Any, Any, T]) -> T:
     """Run async coroutine from sync test (for storage setup)."""
     return asyncio.run(coro)
 
