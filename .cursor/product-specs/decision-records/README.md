@@ -40,6 +40,11 @@ Product roadmap, feature prioritization, and ecosystem strategy.
 - **Q15**: Lite Registry (Discovery Gap)
 - **Q18**: Agent Registration Flow (GitHub PRs)
 - **Q19**: Design Strategy (Design-First)
+- **Q21**: Pricing Strategy (Free vs Paid)
+
+### Planning Documents (dev-planning/)
+
+- **[v2.0-marketplace-usage-foundation.md](../../dev-planning/tasks/v2.0.0/v2.0-marketplace-usage-foundation.md)** — Usage storage (local vs central), control model, evolution path to marketplace. Reference when building v2.0 central dashboard.
 
 ---
 

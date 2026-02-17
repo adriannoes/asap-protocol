@@ -218,6 +218,9 @@ This pattern is well-established — Homebrew (`brew tap`), Terraform Registry, 
 > **Impact**: Added as tasks in v2.0 Sprint M3 (Web App). GitHub OAuth setup + registration form + PR automation.
 >
 > **Date**: 2026-02-12
+>
+> **Update (2026-02-16)**: Refined to **IssueOps** pattern. Instead of a direct PR, the Web App submits a **GitHub Issue** (via URL or API). A GitHub Action then triggers to validate and create the commit/PR. This allows for better error feedback (comments on Issue) and leveraging GitHub's native governance tools.
+
 
 ---
 
@@ -256,3 +259,36 @@ For a marketplace, **trust is visual**. A sloppy or generic UI suggests low-qual
 > **Impact**: Added "Design Phase" tasks to v2.0 Sprint M1.
 >
 > **Date**: 2026-02-12
+
+---
+
+## Question 21: Pricing Strategy — Free vs Paid at Launch?
+
+### The Question
+Should the v2.0 Marketplace launch with a revenue model (Verified Badge = $49/mo) or as a free ecosystem?
+
+### Analysis
+
+**The Goal**: Maximize agent adoption and directory growth.
+
+**Options**:
+1.  **Paid Verified Badge ($49/mo)**: Generates immediate revenue but creates friction. Requires Stripe integration, tax compliance, and support.
+2.  **Free Verified Badge**: Trust is awarded based on merit/security, not payment. Higher operational load (manual review) but zero friction for developers.
+
+### Expert Assessment
+
+**Adoption is the scarcity** in a new two-sided marketplace. Charging for the "Verified" status early on penalizes early adopters who add value to the network.
+Furthermore, integrating payments (Stripe) adds significant scope (webhooks, subscriptions, tax handling) to the MVP, delaying launch.
+
+### Decision
+
+> [!IMPORTANT]
+> **ADR-21**: The v2.0 Marketplace launches with a **Free** pricing model.
+>
+> 1.  **Stripe Removed**: Payment processing logic (Sprint M3) is removed from v2.0 scope.
+> 2.  **Verified Badge**: Retained as a trust signal, but awarded via **Usage-Based Merit** and **Manual Review** (IssueOps). It is not purchasable.
+> 3.  **Monetization**: Deferred to v3.0 (when the network effect is established).
+>
+> **Rationale**: Prioritizes adoption and reduces MVP complexity ("Lean Marketplace").
+>
+> **Date**: 2026-02-16

@@ -234,28 +234,30 @@ class TestSQLiteMeteringStore:
         """SQLiteMeteringStore is a MeteringStore."""
         assert isinstance(sqlite_metering_store, MeteringStore)
 
-    def test_record_and_query(
+    @pytest.mark.asyncio
+    async def test_record_and_query(
         self,
         sqlite_metering_store: SQLiteMeteringStore,
         sample_usage_event: UsageEvent,
     ) -> None:
         """Record then query returns events in range."""
-        sqlite_metering_store.record(sample_usage_event)
+        await sqlite_metering_store.record(sample_usage_event)
         start = datetime(2025, 2, 8, 11, 0, 0, tzinfo=timezone.utc)
         end = datetime(2025, 2, 8, 14, 0, 0, tzinfo=timezone.utc)
-        events = sqlite_metering_store.query("agent_01", start, end)
+        events = await sqlite_metering_store.query("agent_01", start, end)
         assert len(events) == 1
         assert events[0].task_id == sample_usage_event.task_id
         assert events[0].metrics.tokens_in == 10
 
-    def test_aggregate_sums_metrics(
+    @pytest.mark.asyncio
+    async def test_aggregate_sums_metrics(
         self,
         sqlite_metering_store: SQLiteMeteringStore,
         sample_usage_event: UsageEvent,
     ) -> None:
         """Aggregate returns correct totals."""
-        sqlite_metering_store.record(sample_usage_event)
-        sqlite_metering_store.record(
+        await sqlite_metering_store.record(sample_usage_event)
+        await sqlite_metering_store.record(
             UsageEvent(
                 task_id="task_02",
                 agent_id="agent_01",
@@ -264,28 +266,30 @@ class TestSQLiteMeteringStore:
                 timestamp=datetime(2025, 2, 8, 13, 0, 0, tzinfo=timezone.utc),
             )
         )
-        agg = sqlite_metering_store.aggregate("agent_01", "day")
+        agg = await sqlite_metering_store.aggregate("agent_01", "day")
         assert isinstance(agg, UsageAggregate)
         assert agg.agent_id == "agent_01"
         assert agg.total_tokens == 10 + 20 + 5 + 5
         assert agg.total_tasks == 2
         assert agg.total_api_calls == 3
 
-    def test_query_empty_returns_empty_list(
+    @pytest.mark.asyncio
+    async def test_query_empty_returns_empty_list(
         self,
         sqlite_metering_store: SQLiteMeteringStore,
     ) -> None:
         """Query on empty store returns []."""
         start = datetime(2025, 1, 1, tzinfo=timezone.utc)
         end = datetime(2025, 12, 31, tzinfo=timezone.utc)
-        assert sqlite_metering_store.query("any_agent", start, end) == []
+        assert await sqlite_metering_store.query("any_agent", start, end) == []
 
-    def test_aggregate_empty_returns_zeros(
+    @pytest.mark.asyncio
+    async def test_aggregate_empty_returns_zeros(
         self,
         sqlite_metering_store: SQLiteMeteringStore,
     ) -> None:
         """Aggregate for agent with no events returns zero totals."""
-        agg = sqlite_metering_store.aggregate("no_events", "day")
+        agg = await sqlite_metering_store.aggregate("no_events", "day")
         assert agg.total_tokens == 0
         assert agg.total_tasks == 0
         assert agg.total_api_calls == 0

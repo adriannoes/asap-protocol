@@ -32,8 +32,12 @@ import time
 from collections.abc import Awaitable
 from concurrent.futures import Executor
 from threading import RLock
-from typing import Callable, Protocol, cast
+from typing import TYPE_CHECKING, Callable, Protocol, cast
 
+if TYPE_CHECKING:
+    from asap.state.metering import MeteringStore  # noqa: F401
+
+from asap.economics.hooks import record_task_usage
 from asap.errors import ASAPError
 from asap.models.entities import Manifest
 from asap.models.enums import TaskStatus
@@ -158,10 +162,15 @@ class HandlerRegistry:
         >>> response = registry.dispatch(envelope, manifest)
     """
 
-    def __init__(self, executor: Executor | None = None) -> None:
+    def __init__(
+        self,
+        executor: Executor | None = None,
+        metering_store: object | None = None,
+    ) -> None:
         self._handlers: dict[str, Handler] = {}
         self._lock = RLock()
         self._executor: Executor | None = executor
+        self._metering_store = metering_store
 
     def register(self, payload_type: str, handler: Handler) -> None:
         validate_handler(handler)
@@ -178,6 +187,13 @@ class HandlerRegistry:
     def has_handler(self, payload_type: str) -> bool:
         with self._lock:
             return payload_type in self._handlers
+
+    def set_metering_store(self, store: object | None) -> None:
+        """Set MeteringStore for usage recording (optional).
+
+        When set, task.request completions are recorded to the store.
+        """
+        self._metering_store = store
 
     def dispatch(self, envelope: Envelope, manifest: Manifest) -> Envelope:
         """Dispatch an envelope to its registered handler.
@@ -335,6 +351,16 @@ class HandlerRegistry:
                     duration_seconds,
                     {"payload_type": payload_type},
                 )
+                if self._metering_store is not None:
+                    from asap.state.metering import MeteringStore
+
+                    await record_task_usage(
+                        cast(MeteringStore, self._metering_store),
+                        envelope,
+                        response,
+                        duration_ms,
+                        manifest,
+                    )
                 return response
             except Exception as e:
                 duration_ms = (time.perf_counter() - start_time) * 1000
@@ -414,13 +440,18 @@ def create_echo_handler() -> SyncHandler:
     return echo_handler
 
 
-def create_default_registry() -> HandlerRegistry:
+def create_default_registry(
+    metering_store: object | None = None,
+) -> HandlerRegistry:
     """Create a registry with default handlers.
 
     Creates a HandlerRegistry pre-configured with standard handlers:
     - task.request: Echo handler (for basic testing)
 
     Additional handlers can be registered after creation.
+
+    Args:
+        metering_store: Optional MeteringStore for usage recording.
 
     Returns:
         HandlerRegistry with default handlers registered
@@ -430,6 +461,6 @@ def create_default_registry() -> HandlerRegistry:
         >>> registry.has_handler("task.request")
         True
     """
-    registry = HandlerRegistry()
+    registry = HandlerRegistry(metering_store=metering_store)
     registry.register("task.request", create_echo_handler())
     return registry

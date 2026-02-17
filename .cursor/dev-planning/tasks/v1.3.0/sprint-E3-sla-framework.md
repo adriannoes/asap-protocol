@@ -16,7 +16,7 @@
 
 ## Context
 
-SLAs (Service Level Agreements) define guarantees agents commit to - availability, latency, error rates. This enables consumers to choose agents based on reliability commitments. Breach detection alerts when agents fail to meet their SLAs.
+SLAs (Service Level Agreements) define guarantees agents commit to - availability, latency, error rates. In the "Lean Marketplace" (v2.0), these serve as **Trust Signals** to help users separate high-quality agents from experimental ones. Breach detection alerts usage, but does not trigger financial penalties in v2.0.
 
 ---
 
@@ -168,7 +168,33 @@ SLAs (Service Level Agreements) define guarantees agents commit to - availabilit
 
 ---
 
-## Sprint E3 Definition of Done
+## Task 3.5: End-to-End Showcase (Verify "It Works")
+
+**Goal**: A runnable script demonstrating all v1.3.0 features working together.
+
+### Sub-tasks
+
+- [ ] 3.5.1 Create `examples/v1_3_0_showcase.py`
+  - Scenario:
+    1. **Delegation**: Agent A generates a token for Agent B with `max_tasks=5`.
+    2. **Metering**: Agent B performs tasks; usage is logged locally.
+    3. **Transparency**: Agent A queries `GET /usage` to see Agent B's consumption.
+    4. **Trust/SLA**: Agent B artificially injects a delay -> Agent A receives an SLA breach alert.
+
+- [ ] 3.5.2 Verify Output
+  - Ensure updated `README` instructions work.
+  - "One command to run them all".
+
+- [ ] 3.5.3 Commit
+  - **Command**: `git commit -m "docs: add v1.3.0 end-to-end showcase"`
+
+**Acceptance Criteria**:
+- [ ] Demo script runs without errors
+- [ ] Prints clear, narrative output for the user
+
+---
+
+## Task 3.6: Release Preparation
 
 - [ ] SLA schema in manifests
 - [ ] Metrics tracking accurate
@@ -176,7 +202,7 @@ SLAs (Service Level Agreements) define guarantees agents commit to - availabilit
 - [ ] API endpoints functional
 - [ ] Test coverage >95%
 
-**Total Sub-tasks**: ~24
+**Total Sub-tasks**: ~27
 
 ## Documentation Updates
 - [ ] **Update Roadmap**: Mark completed items in [v1.3.0 Roadmap](./tasks-v1.3.0-roadmap.md)

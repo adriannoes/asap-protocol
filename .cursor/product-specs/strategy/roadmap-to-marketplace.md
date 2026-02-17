@@ -56,7 +56,7 @@ Key architectural and business decisions made during planning. Each decision inc
 
 ### SD-2: Pricing Model — Freemium First
 
-**Decision**: Launch with Freemium model. Monetization model (Subscription, % transactions, or Hybrid) decided after traction.
+**Decision**: Launch with Free model. Monetization deferred to v3.0.
 
 | Option | Considered | Rationale |
 |--------|------------|-----------|
@@ -66,7 +66,7 @@ Key architectural and business decisions made during planning. Each decision inc
 
 **Initial tiers**:
 - **Free**: List agents, basic features
-- **Verified**: $49/month (manual review, badge)
+- **Verified**: $0 (manual review, badge) - High trust bar.
 
 **Why this matters**: Target ICP (AI startups, individual developers) need zero friction. They often build solutions for enterprise clients who value reliable protocols.
 
@@ -387,7 +387,7 @@ src/asap/
 |-----------|-------------|
 | **Web App** | Human interface for marketplace (SD-8) |
 | **Lite Registry** | GitHub Pages JSON as data source (SD-11) |
-| **Verified Badge** | Stripe-powered trust verification (SD-2) |
+| **Verified Badge** | Manual trust verification (IssueOps) |
 | **Message Broker** | Optional premium for scale (SD-3) |
 
 > [!NOTE]
@@ -402,7 +402,7 @@ Human interface for marketplace interactions:
 | Landing | Hero, value prop, "Get Started" CTA |
 | Registry Browser | Search, filters (skill, trust level), agent details |
 | Developer Dashboard | My agents, analytics, API keys |
-| Verified Signup | Stripe checkout ($49/mo), KYC minimal |
+| Verified Signup | Manual IssueOps request (Free), KYC minimal |
 | Auth | OAuth2 (dog-fooding ASAP auth) |
 
 **Technical Stack**:
@@ -412,7 +412,7 @@ Human interface for marketplace interactions:
 | Frontend | **Next.js 15 (App Router)** | SSR for SEO, Registry indexing |
 | Data Source | Lite Registry (GitHub JSON) | No backend needed for MVP |
 | Auth | ASAP OAuth2 | Dog-fooding |
-| Payments | Stripe | SaaS standard |
+| Payments | None | Deferred to v3.0 |
 | Hosting | Vercel | Simple for solo dev |
 | Docs | Separate MkDocs | Keep docs simple (SD-8) |
 
@@ -421,7 +421,7 @@ Human interface for marketplace interactions:
 ### Launch Criteria
 
 - [ ] Lite Registry has 100+ agents
-- [ ] Verified badge flow working (Stripe + ASAP CA signing)
+- [ ] Verified badge flow working (Manual IssueOps process)
 - [ ] Web App live with core features (browse, search, register)
 - [ ] Security audit passed
 - [ ] Documentation complete
@@ -435,7 +435,7 @@ Human interface for marketplace interactions:
 | v1.0 → v1.1 | Add OAuth2 config (with Custom Claims), expose well-known + health endpoints, choose storage backend, register in Lite Registry |
 | v1.1 → v1.2 | Sign manifest with Ed25519, run compliance harness |
 | v1.2 → v1.3 | Define SLAs, add metering hooks (using `MeteringStore` interface), configure delegation |
-| v1.3 → v2.0 | Register in marketplace Web App, consider Verified badge ($49/mo) |
+| v1.3 → v2.0 | Register in marketplace Web App, consider Verified badge (Free) |
 
 ### Backward Compatibility
 

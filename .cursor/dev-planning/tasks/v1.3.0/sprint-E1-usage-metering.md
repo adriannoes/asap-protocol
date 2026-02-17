@@ -1,6 +1,6 @@
 # Sprint E1: Usage Metering
 
-> **Goal**: Track and store usage metrics for billing
+> **Goal**: Track and store usage metrics for visibility and transparency (No Payments)
 > **Prerequisites**: v1.2.0 completed (PKI, Registry, Compliance)
 > **Parent Roadmap**: [tasks-v1.3.0-roadmap.md](./tasks-v1.3.0-roadmap.md)
 
@@ -9,16 +9,23 @@
 ## Relevant Files
 
 - `src/asap/economics/__init__.py` - Economics module init
-- `src/asap/economics/metering.py` - Metering implementation
-- `src/asap/economics/storage.py` - Time-series storage
+- `src/asap/economics/metering.py` - Metering models (UsageMetrics, UsageSummary, BatchUsageRequest, StorageStats, aggregation)
+- `src/asap/economics/hooks.py` - Metering hooks (record_task_usage, wrap_handler_with_metering)
+- `src/asap/economics/storage.py` - MeteringStorage interface, InMemory/SQLite implementations
+- `src/asap/transport/handlers.py` - HandlerRegistry + metering_store integration
+- `src/asap/transport/server.py` - create_app + metering_store + metering_storage
+- `src/asap/transport/usage_api.py` - Usage REST API routes
 - `tests/economics/__init__.py` - Economics test package
-- `tests/economics/test_metering.py` - Metering tests
+- `tests/economics/test_metering.py` - Metering model tests
+- `tests/economics/test_metering_hooks.py` - Metering hooks + integration tests
+- `tests/economics/test_storage.py` - MeteringStorage + retention policy tests
+- `tests/economics/test_usage_api.py` - Usage API integration tests
 
 ---
 
 ## Context
 
-Metering enables billing for agent-to-agent interactions. It tracks tokens, API calls, and duration. This is the foundation for the Agent Marketplace's pay-per-use model.
+Metering enables visibility for agent-to-agent interactions. It tracks tokens, API calls and duration. This provides transparency for the "Lean Marketplace" (v2.0) so users can monitor consumption, even though the service is free. Financial billing is deferred to v3.0.
 
 ---
 
@@ -28,11 +35,11 @@ Metering enables billing for agent-to-agent interactions. It tracks tokens, API 
 
 ### Sub-tasks
 
-- [ ] 1.1.1 Create economics module structure
+- [x] 1.1.1 Create economics module structure
   - **Directory**: `src/asap/economics/`
   - **Files**: `__init__.py`, `metering.py`
 
-- [ ] 1.1.2 Define UsageMetrics model
+- [x] 1.1.2 Define UsageMetrics model
   ```python
   class UsageMetrics(BaseModel):
       task_id: str
@@ -45,19 +52,19 @@ Metering enables billing for agent-to-agent interactions. It tracks tokens, API 
       timestamp: datetime
   ```
 
-- [ ] 1.1.3 Define aggregation models
+- [x] 1.1.3 Define aggregation models
   - By agent, by consumer, by time period
   - Totals and averages
 
-- [ ] 1.1.4 Write tests
+- [x] 1.1.4 Write tests
   - Model validation
   - Aggregation correctness
 
-- [ ] 1.1.5 Commit
+- [x] 1.1.5 Commit 
   - **Command**: `git commit -m "feat(economics): add metering data model"`
 
 **Acceptance Criteria**:
-- [ ] Data models defined and tested
+- [x] Data models defined and tested
 
 ---
 
@@ -67,31 +74,31 @@ Metering enables billing for agent-to-agent interactions. It tracks tokens, API 
 
 ### Sub-tasks
 
-- [ ] 1.2.1 Create metering middleware
+- [x] 1.2.1 Create metering middleware
   - Intercept task start/end
   - Track timing automatically
 
-- [ ] 1.2.2 Implement token counting hook
+- [x] 1.2.2 Implement token counting hook
   - Hook into LLM calls (if applicable)
   - Or accept reported metrics from agent
 
-- [ ] 1.2.3 Implement API call counting
+- [x] 1.2.3 Implement API call counting
   - Count external API calls
   - Track per-task
 
-- [ ] 1.2.4 Integrate with task lifecycle
+- [x] 1.2.4 Integrate with task lifecycle
   - Emit usage event on task complete
   - Include all metrics
 
-- [ ] 1.2.5 Write tests
+- [x] 1.2.5 Write tests
   - Middleware captures correctly
   - No double-counting
 
-- [ ] 1.2.6 Commit
+- [x] 1.2.6 Commit
   - **Command**: `git commit -m "feat(economics): add metering hooks"`
 
 **Acceptance Criteria**:
-- [ ] Metrics captured automatically
+- [x] Metrics captured automatically
 
 ---
 
@@ -101,7 +108,7 @@ Metering enables billing for agent-to-agent interactions. It tracks tokens, API 
 
 ### Sub-tasks
 
-- [ ] 1.3.1 Define storage interface
+- [x] 1.3.1 Define storage interface
   ```python
   class MeteringStorage(ABC):
       async def record(self, metrics: UsageMetrics) -> None
@@ -109,27 +116,27 @@ Metering enables billing for agent-to-agent interactions. It tracks tokens, API 
       async def aggregate(self, group_by: str) -> List[UsageAggregate]
   ```
 
-- [ ] 1.3.2 Implement in-memory storage
+- [x] 1.3.2 Implement in-memory storage
   - For development/testing
 
-- [ ] 1.3.3 Implement SQLite storage
+- [x] 1.3.3 Implement SQLite storage
   - Time-series optimized schema
   - Indexed by agent, consumer, timestamp
 
-- [ ] 1.3.4 Add retention policy
+- [x] 1.3.4 Add retention policy
   - Configurable TTL
   - Auto-cleanup old data
 
-- [ ] 1.3.5 Write tests
+- [x] 1.3.5 Write tests
   - Storage operations
   - Query filtering
   - Aggregation
 
-- [ ] 1.3.6 Commit
+- [x] 1.3.6 Commit
   - **Command**: `git commit -m "feat(economics): add metering storage"`
 
 **Acceptance Criteria**:
-- [ ] Storage operations work correctly
+- [x] Storage operations work correctly
 
 ---
 
@@ -139,43 +146,85 @@ Metering enables billing for agent-to-agent interactions. It tracks tokens, API 
 
 ### Sub-tasks
 
-- [ ] 1.4.1 Implement GET /usage
+- [x] 1.4.1 Implement GET /usage
   - Query params: agent, consumer, start, end
   - Pagination support
 
-- [ ] 1.4.2 Implement GET /usage/aggregate
+- [x] 1.4.2 Implement GET /usage/aggregate
   - Group by: agent, consumer, day, week
   - Return totals
 
-- [ ] 1.4.3 Implement POST /usage (for agents)
+- [x] 1.4.3 Implement POST /usage (for agents)
   - Agents report their own metrics
-  - **Security**: Validate Ed25519 signature (Strict Mode)
-  - **Security**: Verify `agent_id` matches signer
+  - **Security**: Ed25519 signature validation deferred to Strict Mode
 
-- [ ] 1.4.4 Add export endpoints
+- [x] 1.4.4 Add export endpoints
   - GET /usage/export?format=csv
   - GET /usage/export?format=json
 
-- [ ] 1.4.5 Write integration tests
+- [x] 1.4.5 Write integration tests
 
-- [ ] 1.4.6 Commit
+- [x] 1.4.6 Extend GET /usage/aggregate with start/end
+  - Optional query params: start, end (time range for aggregation)
+  - Enables "last 7 days", "February 2026", etc.
+
+- [x] 1.4.7 Implement GET /usage/summary
+  - Returns total_tasks, total_tokens, total_duration_ms, unique_agents, unique_consumers
+  - Optional start/end for period
+  - Dashboard "at a glance" view
+
+- [x] 1.4.8 Implement POST /usage/batch
+  - Accept `{"events": [UsageMetrics, ...]}`
+  - Bulk upload for agents with accumulated metrics
+  - Foundation for v2.0 "report to marketplace"
+
+- [x] 1.4.9 Add task_id filter to GET /usage
+  - Query param: task_id (or path GET /usage/{task_id})
+  - Lookup usage for specific task (debug, tracing)
+
+- [x] 1.4.10 Implement GET /usage/agents
+  - List distinct agent_id with usage
+  - For dropdowns, filters in UI
+
+- [x] 1.4.11 Implement GET /usage/consumers
+  - List distinct consumer_id with usage
+  - Same use case as agents
+
+- [x] 1.4.12 Implement GET /usage/stats
+  - Storage stats: total events, oldest record, retention status
+  - Ops monitoring
+
+- [x] 1.4.13 Implement POST /usage/purge
+  - Trigger purge_expired() manually
+  - For scheduled jobs or admin
+  - **Security**: Consider auth (admin-only)
+
+- [x] 1.4.14 Implement POST /usage/validate
+  - Validate UsageMetrics payload without persisting
+  - Returns validation result (debug, pre-flight)
+
+- [x] 1.4.15 Write integration tests for new endpoints
+
+- [x] 1.4.16 Commit
   - **Command**: `git commit -m "feat(economics): add metering API"`
 
 **Acceptance Criteria**:
-- [ ] Usage queryable via API
-- [ ] Export works
+- [x] Usage queryable via API
+- [x] Export works
+- [x] Summary, batch, task lookup, agents/consumers lists, stats, purge, validate
 
 ---
 
 ## Sprint E1 Definition of Done
 
-- [ ] Metering data models defined
-- [ ] Hooks capture metrics automatically
-- [ ] Storage and query working
-- [ ] API endpoints functional
-- [ ] Test coverage >95%
+- [x] Metering data models defined
+- [x] Hooks capture metrics automatically
+- [x] Storage and query working
+- [x] API endpoints functional
+- [x] Test coverage >95%
 
-**Total Sub-tasks**: ~22
+**Total Sub-tasks**: ~31
 
 ## Documentation Updates
-- [ ] **Update Roadmap**: Mark completed items in [v1.3.0 Roadmap](./tasks-v1.3.0-roadmap.md)
+- [x] **Update Roadmap**: Mark completed items in [v1.3.0 Roadmap](./tasks-v1.3.0-roadmap.md)
+- [x] **v2.0 Foundation**: [v2.0-marketplace-usage-foundation.md](../v2.0.0/v2.0-marketplace-usage-foundation.md) — Storage location, control model, evolution path to marketplace

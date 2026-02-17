@@ -344,22 +344,22 @@ class SQLiteMeteringStore:
                 total_api_calls=total_api_calls,
             )
 
-    def record(self, event: UsageEvent) -> None:
-        """Record a usage event (sync wrapper)."""
-        _run_sync(self._record_impl(event))
+    async def record(self, event: UsageEvent) -> None:
+        """Record a usage event."""
+        await self._record_impl(event)
 
-    def query(
+    async def query(
         self,
         agent_id: str,
         start: datetime,
         end: datetime,
     ) -> list[UsageEvent]:
-        """Query events in range (sync wrapper)."""
-        return cast(list[UsageEvent], _run_sync(self._query_impl(agent_id, start, end)))
+        """Query events in range."""
+        return await self._query_impl(agent_id, start, end)
 
-    def aggregate(self, agent_id: str, period: str) -> UsageAggregate:
-        """Aggregate usage for agent (sync wrapper)."""
-        return cast(UsageAggregate, _run_sync(self._aggregate_impl(agent_id, period)))
+    async def aggregate(self, agent_id: str, period: str) -> UsageAggregate:
+        """Aggregate usage for agent."""
+        return await self._aggregate_impl(agent_id, period)
 
     async def initialize(self) -> None:
         """Create usage_events table if not exists."""

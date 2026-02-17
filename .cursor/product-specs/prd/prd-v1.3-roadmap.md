@@ -90,7 +90,7 @@ v1.3.0 is the final step before the v2.0 Marketplace. See [roadmap-to-marketplac
 | ID | Requirement | Priority |
 |----|-------------|----------|
 | DELEG-001 | Create delegation token with scopes | MUST |
-| DELEG-002 | Set spending limits (max_cost_usd) | MUST |
+| DELEG-002 | Set spending limits (max_cost_usd) | OPTIONAL |
 | DELEG-003 | Set expiration (expires_at) | MUST |
 | DELEG-004 | Validate token chain (delegator → delegate) | MUST |
 | DELEG-005 | Revoke delegation tokens | MUST |
@@ -105,9 +105,9 @@ v1.3.0 is the final step before the v2.0 Marketplace. See [roadmap-to-marketplac
     "delegate": "urn:asap:agent:team",
     "scopes": ["research.execute", "data.read"],
     "constraints": {
-      "max_cost_usd": 100.00,
-      "max_tasks": 50,
       "expires_at": "2026-02-28T00:00:00Z"
+      // Financial limits deferred to v3.0
+      // "max_cost_usd": 100.00
     },
     "signature": "..."
   }
@@ -145,9 +145,10 @@ v1.3.0 is the final step before the v2.0 Marketplace. See [roadmap-to-marketplac
 | Feature | Reason | When |
 |---------|--------|------|
 | Audit logging | Deferred for Lean Marketplace pivot | v2.1+ |
-| Payment processing | Stripe integration in v2.0 | v2.0 Web App |
+| Payment processing | Deferred to v3.0 | v3.0 |
 | Credit system | Part of Economy Settlement | v3.0 |
 | Real-time billing alerts | Post-MVP | v2.1+ |
+| Hard financial limits | Enforcement requires payment rails | v3.0 |
 
 ---
 

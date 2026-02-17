@@ -40,8 +40,8 @@ Delegation tokens allow agents to grant limited permissions to other agents. Thi
       created_at: datetime
   
   class DelegationConstraints(BaseModel):
-      max_cost_usd: Optional[float]
-      max_tasks: Optional[int]
+      max_cost_usd: Optional[float]  # Reserved for v3.0 (Payments)
+      max_tasks: Optional[int]       # Primary limit for v2.0 (Free)
       expires_at: datetime
   ```
 
@@ -117,7 +117,7 @@ Delegation tokens allow agents to grant limited permissions to other agents. Thi
   - Validate before handler execution
 
 - [ ] 2.3.3 Implement constraint tracking
-  - Track spent cost against max_cost
+  - Track spent cost (future v3.0)
   - Track used tasks against max_tasks
 
 - [ ] 2.3.4 Implement chain validation

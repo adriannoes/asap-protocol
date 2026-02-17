@@ -108,7 +108,10 @@ from asap.transport.compression import (
     decompress_payload,
     get_supported_encodings,
 )
+from asap.state.metering import MeteringStore
 from asap.state.snapshot import SnapshotStore
+from asap.economics.storage import MeteringStorage, metering_storage_adapter
+from asap.transport.usage_api import create_usage_router
 from asap.state.stores import create_snapshot_store
 from asap.transport.validators import (
     InMemoryNonceStore,
@@ -1106,6 +1109,8 @@ def create_app(
     require_nonce: bool = False,
     hot_reload: bool | None = None,
     snapshot_store: SnapshotStore | None = None,
+    metering_store: MeteringStore | None = None,
+    metering_storage: object | None = None,
     websocket_message_rate_limit: float | None = 10.0,
     mtls_config: MTLSConfig | None = None,
 ) -> FastAPI:
@@ -1152,6 +1157,8 @@ def create_app(
         snapshot_store: Optional SnapshotStore for state persistence. If None, uses
             create_snapshot_store() (ASAP_STORAGE_BACKEND and ASAP_STORAGE_PATH).
             Stored on app.state.snapshot_store for handlers.
+        metering_store: Optional MeteringStore for usage recording. When set, task.request
+            completions are recorded (tokens, duration, api_calls from TaskResponse.metrics).
         websocket_message_rate_limit: Max messages per second per WebSocket connection.
             When set (default 10.0), connections exceeding this are sent an error frame
             and closed. Set to None to disable WebSocket message rate limiting.
@@ -1212,10 +1219,17 @@ def create_app(
             max_threads=max_threads,
         )
 
+    # Resolve metering: metering_storage takes precedence (enables usage API)
+    effective_metering_store: MeteringStore | None = metering_store
+    if metering_storage is not None and isinstance(metering_storage, MeteringStorage):
+        effective_metering_store = metering_storage_adapter(metering_storage)
+
     # Use default registry if none provided
     use_default_registry = registry is None
     if registry is None:
-        registry = create_default_registry()
+        registry = create_default_registry(metering_store=effective_metering_store)
+    elif effective_metering_store is not None:
+        registry.set_metering_store(effective_metering_store)
 
     # Attach executor to registry if provided
     if executor is not None:
@@ -1326,6 +1340,16 @@ def create_app(
     app.state.websocket_connections = _active_websockets
     app.state.websocket_message_rate_limit = websocket_message_rate_limit
     app.state.mtls_config = mtls_config
+    if metering_storage is not None and isinstance(metering_storage, MeteringStorage):
+        app.state.metering_storage = metering_storage
+        app.include_router(create_usage_router())
+        logger.warning(
+            "asap.server.usage_api_unauthenticated",
+            message=(
+                "Usage API (/usage) is enabled but unauthenticated. "
+                "Intended for local/operator use only. Protect with OAuth2 or network controls when exposed."
+            ),
+        )
     if mtls_config is not None:
         logger.info(
             "asap.server.mtls_enabled",
@@ -1370,6 +1394,7 @@ def create_app(
     )
     app.state.max_request_size = max_request_size
     app.state.snapshot_store = snapshot_store
+    app.state.metering_store = metering_store
     app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
     logger.info(
         "asap.server.rate_limit_enabled",

@@ -38,33 +38,40 @@ v1.3.0 is the **final infrastructure release** before v2.0 Marketplace:
 
 ---
 
+### Sprint E4: Security Hardening (Type Safety)
+
+- **Goal**: Tighten `dict[str, Any]` typing and improve validation
+- **Details**: [Sprint E4 Plan](./sprint-E4-type-safety.md)
+- **Status**: Pending
+
 ## Sprint E1: Observability Metering
 
 **Goal**: Track and report resource consumption per task (visibility, not billing)
 
 ### Tasks
 
-- [ ] 1.1 Design metering data model
+- [x] 1.1 Design metering data model
   - Goal: Define metrics schema (tokens, duration, calls)
-  - Deliverable: `src/asap/observability/metering.py`
+  - Deliverable: `src/asap/economics/metering.py`
 
-- [ ] 1.2 Implement metering hooks
+- [x] 1.2 Implement metering hooks
   - Goal: Capture metrics during task execution
   - Deliverable: Middleware integration
 
-- [ ] 1.3 Implement metering storage
+- [x] 1.3 Implement metering storage
   - Goal: Store and query usage data via `MeteringStore`
   - Deliverable: SQLite reference implementation
 
-- [ ] 1.4 Implement metering API
-  - Goal: GET /usage endpoint for querying
-  - Deliverable: REST API
+- [x] 1.4 Implement metering API
+  - Goal: REST API for querying and reporting usage
+  - Deliverable: GET /usage, /usage/aggregate, /usage/summary, /usage/agents, /usage/consumers, /usage/stats, /usage/export; POST /usage, /usage/batch, /usage/purge, /usage/validate
+  - See [sprint-E1-usage-metering.md](./sprint-E1-usage-metering.md) for full sub-task breakdown (~31 items)
 
 ### Definition of Done
-- [ ] Metering captures all task metrics
-- [ ] API returns usage by agent/consumer/period
+- [x] Metering captures all task metrics
+- [x] API returns usage by agent/consumer/period
 - [ ] <1% drift from actual usage
-- [ ] Test coverage >95%
+- [x] Test coverage >95%
 
 ---
 
@@ -76,6 +83,7 @@ v1.3.0 is the **final infrastructure release** before v2.0 Marketplace:
 
 - [ ] 2.1 Design delegation token model
   - Goal: Token with scopes, constraints, signature
+  - Note: Financial limits (`max_cost_usd`) optional/deferred to v3.0
   - Deliverable: `src/asap/auth/delegation.py`
 
 - [ ] 2.2 Implement token creation and signing
@@ -120,13 +128,18 @@ v1.3.0 is the **final infrastructure release** before v2.0 Marketplace:
   - Goal: All tests pass, integration with v1.1/v1.2 features
   - Deliverable: Test suite
 
-- [ ] 3.5 Release preparation
+- [ ] 3.5 Create End-to-End Demo / Showcase
+  - Goal: "See it working" - Script combining Metering, Delegation, and SLA
+  - Deliverable: `examples/v1_3_0_showcase.py`
+
+- [ ] 3.6 Release preparation
   - Goal: CHANGELOG, docs, version bump
   - Deliverable: v1.3.0 release on PyPI
 
 ### Definition of Done
 - [ ] SLA defined in manifest
 - [ ] Breaches detected in real-time
+- [ ] End-to-End demo runs successfully
 - [ ] v1.3.0 published to PyPI
 - [ ] Test coverage >95%
 
@@ -138,17 +151,17 @@ v1.3.0 is the **final infrastructure release** before v2.0 Marketplace:
 |--------|-------|-------|----------------|
 | E1 | 4 | Observability Metering | 5-7 |
 | E2 | 4 | Delegation Tokens | 5-7 |
-| E3 | 5 | SLA Framework + Release | 5-8 |
+| E3 | 6 | SLA, Demo & Release | 5-8 |
 
-**Total**: 13 high-level tasks across 3 sprints
+**Total**: 14 high-level tasks across 3 sprints
 
 ---
 
 ## Progress Tracking
 
-**Overall Progress**: 0/13 tasks completed (0%)
+**Overall Progress**: 2/13 tasks completed (15%)
 
-**Last Updated**: 2026-02-12
+**Last Updated**: 2026-02-17
 
 ---
 
@@ -178,3 +191,4 @@ After releasing v1.3.0, conduct a checkpoint review:
 |------|--------|
 | 2026-02-06 | Initial task roadmap |
 | 2026-02-12 | **Lean Marketplace pivot**: Removed Audit Logging sprint (E4), reframed metering as observability, merged release into E3, reduced from 4 sprints (17 tasks) to 3 sprints (13 tasks) |
+| 2026-02-17 | **Sprint E1 complete**: Metering API expanded (summary, batch, agents, consumers, stats, purge, validate, export); roadmap aligned with sprint sub-tasks |

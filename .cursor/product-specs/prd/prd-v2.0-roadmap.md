@@ -17,8 +17,8 @@ v2.0.0 is **The End Goal** — the Agent Marketplace with human-facing Web App. 
 
 - **Web App**: Human interface for agent discovery, registration, and management
 - **Lite Registry Integration**: Web App reads from `registry.json` (GitHub Pages)
-- **Verified Badge**: ASAP-signed verification service ($49/month)
-- **Payment Integration**: Stripe checkout for Verified badge
+- **IssueOps Registration**: Low-friction agent submission via Web Form -> GitHub Issue
+- **Verified Badge**: Manual validation of trusted agents (Payment deferred to v3.0)
 
 > [!NOTE]
 > **Lean Marketplace approach**: No backend API. The Web App reads from the Lite Registry (SD-11). A full Registry API Backend is deferred to v2.1. See [deferred-backlog.md](../strategy/deferred-backlog.md).
@@ -31,7 +31,7 @@ All previous versions (v1.0-v1.3) built foundational capabilities:
 - v1.2: Verified Identity (Ed25519, Compliance Harness)
 - v1.3: Observability (Metering, Delegation, SLA)
 
-v2.0 wraps the Lite Registry in a Web App with Verified badge as the first revenue stream.
+v2.0 wraps the Lite Registry in a Web App with manual Verified status to build initial trust.
 
 **Domain**: asap-protocol.com (marketplace product name TBD — Open Question Q10)
 
@@ -43,7 +43,7 @@ v2.0 wraps the Lite Registry in a Web App with Verified badge as the first reven
 |------|--------|----------|
 | Web App live | Core flows functional | P1 |
 | Lite Registry browsable | Agents searchable in Web App | P1 |
-| Verified badge operational | Payment flow works | P1 |
+| Registration friction low | < 2 min to submit agent | P1 |
 | 100+ agents in Lite Registry | Before launch | P1 |
 | Security audit passed | No critical findings | P1 |
 
@@ -110,12 +110,11 @@ v2.0 wraps the Lite Registry in a Web App with Verified badge as the first reven
 | ID | Requirement | Priority |
 |----|-------------|----------|
 | VERIFY-001 | "Apply for Verified" button in dashboard | MUST |
-| VERIFY-002 | Stripe checkout ($49/month) | MUST |
+| VERIFY-002 | Manual review process (Contact/Issue) | MUST |
 | VERIFY-003 | Minimal KYC (email, name, URL check) | MUST |
 | VERIFY-004 | Manual review queue for ASAP team | MUST |
 | VERIFY-005 | ASAP-sign manifest on approval | MUST |
 | VERIFY-006 | Badge visible in Registry and Web App | MUST |
-| VERIFY-007 | Subscription management (cancel, upgrade) | SHOULD |
 
 ---
 
@@ -138,7 +137,6 @@ v2.0 wraps the Lite Registry in a Web App with Verified badge as the first reven
 | SEC-002 | HTTPS everywhere | MUST |
 | SEC-003 | Rate limiting on all endpoints | MUST |
 | SEC-004 | CSRF protection on Web App | MUST |
-| SEC-005 | Secure Stripe integration | MUST |
 
 ---
 
@@ -147,6 +145,7 @@ v2.0 wraps the Lite Registry in a Web App with Verified badge as the first reven
 | Feature | Reason | When |
 |---------|--------|------|
 | Registry API Backend | Lite Registry sufficient for MVP | v2.1 |
+| Payment processing | Deferred to v3.0 | v3.0 |
 | Federation | After centralized proves ROI | v2.x+ |
 | Advanced analytics dashboard | Post-MVP | v2.1+ |
 | Mobile app | Web-first | TBD |
@@ -166,7 +165,7 @@ v2.0 wraps the Lite Registry in a Web App with Verified badge as the first reven
 | Styling | **TailwindCSS v4 + Shadcn** | Premium UI velocity (Exception to no-Tailwind rule) |
 | Data Source | Lite Registry (`registry.json`) | No backend needed for MVP |
 | Auth | ASAP OAuth2 + **GitHub (TBD)** | Dog-fooding + Bootstrap ease (See Q11) |
-| Payments | Stripe | SaaS standard |
+| Registration | **IssueOps** (GitHub Actions) | Low friction, no git needed |
 | Hosting | Vercel | Simple, scalable |
 | Docs | Separate MkDocs | Per SD-8 decision |
 
@@ -176,22 +175,24 @@ v2.0 wraps the Lite Registry in a Web App with Verified badge as the first reven
 ┌─────────────────────────────────────────────────────────────────┐
 │                        WEB LAYER (Next.js)                          │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐               │
-│  │   Landing   │  │  Registry   │  │  Dashboard  │               │
-│  │    Page     │  │   Browser   │  │   (Auth)    │               │
+│  │   Landing   │  │  Registry   │  │ Registration│               │
+│  │    Page     │  │   Browser   │  │    Form     │               │
 │  └─────────────┘  └─────────────┘  └─────────────┘               │
 └─────────────────────────────────────────────────────────────────┘
-                            │
-              ┌────────────┼────────────┐
-              ▼                         ▼
-┌───────────────────────┐  ┌───────────────────────┐
-│  LITE REGISTRY (SD-11)    │  │  EXTERNAL SERVICES        │
-│  ┌───────────────────┐  │  │  ┌───────────────────┐  │
-│  │  registry.json     │  │  │  │ Stripe (Payments)  │  │
-│  │  (GitHub Pages)    │  │  │  └───────────────────┘  │
-│  └───────────────────┘  │  │  ┌───────────────────┐  │
-└───────────────────────┘  │  │ Sentry (Errors)    │  │
-                               │  └───────────────────┘  │
-                               └───────────────────────┘
+       │                    ▲                 │
+       │ (Read JSON)        │                 │ (Submit to GitHub)
+       ▼                    │                 ▼
+┌───────────────────────┐   │      ┌───────────────────────┐
+│  LITE REGISTRY        │   │      │  GITHUB ISSUES        │
+│  ┌─────────────────┐  │   │      │  ┌─────────────────┐  │
+│  │  registry.json  │  │   │      │  │ Agent Req Issue │  │
+│  │ (GitHub Pages)  │──┘   │      │  └────────┬────────┘  │
+│  └────────┬────────┘      │      └───────────┼───────────┘
+└───────────┼───────────────┘                  │
+            │                                  │ (Action Trigger)
+            │                           ┌──────▼──────┐
+            └───────────────────────────│  GH ACTION  │
+                                        └─────────────┘
 ```
 
 > **Note**: No backend API in v2.0. The Web App fetches `registry.json` at build time (SSG) or at request time (ISR) from GitHub Pages. Agent registration is still PR-based. A full Registry API Backend is planned for v2.1 when scale demands it.
@@ -247,6 +248,7 @@ Before announcing v2.0.0:
 - **Roadmap**: [roadmap-to-marketplace.md](../strategy/roadmap-to-marketplace.md)
 - **Vision**: [vision-agent-marketplace.md](../strategy/vision-agent-marketplace.md)
 - **v1.3 PRD**: [prd-v1.3-roadmap.md](./prd-v1.3-roadmap.md)
+- **Usage Foundation**: [v2.0-marketplace-usage-foundation.md](../../dev-planning/tasks/v2.0.0/v2.0-marketplace-usage-foundation.md) — Storage, control model, evolution path for central dashboard
 
 ---
 

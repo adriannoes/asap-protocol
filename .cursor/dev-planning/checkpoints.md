@@ -80,6 +80,7 @@ Pre-release: Release materials (CHANGELOG, README, AGENTS.md, secure_agent examp
 - [ ] `tasks-v2.0.0-roadmap.md` — realistic estimates (now 4 sprints / 20 tasks post-Lean pivot)
 - [ ] `lessons-learned/v1.3.0-retro.md` — create retrospective
 - [ ] Web App tech stack decisions (Next.js + Lite Registry)
+- [ ] `v2.0-marketplace-usage-foundation.md` — refine with E1/E2/E3 implementation learnings
 
 ---
 
@@ -145,6 +146,7 @@ Track actual vs estimated to improve future planning:
 
 - [roadmap-to-marketplace.md](../product-specs/strategy/roadmap-to-marketplace.md)
 - [deferred-backlog.md](../product-specs/strategy/deferred-backlog.md)
+- [v2.0-marketplace-usage-foundation.md](./tasks/v2.0.0/v2.0-marketplace-usage-foundation.md) — Usage storage & control for v2.0
 - [lessons-learned/](./lessons-learned/)
 
 ---

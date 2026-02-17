@@ -4,6 +4,12 @@ Please include a summary of the change and which issue is fixed. Please also inc
 
 Fixes # (issue)
 
+## User Value
+
+What does this add for our users? (2–3 sentences on business impact.)
+
+<!-- Example: Usage Metering gives visibility into resource consumption (tokens, duration, calls) per agent and consumer. Users can monitor usage in near real time at no extra cost, and this lays the groundwork for the future marketplace (v2.0) with consumption metrics already in place. -->
+
 ## Type of change
 
 Please delete options that are not relevant.
