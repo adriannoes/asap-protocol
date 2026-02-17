@@ -68,6 +68,9 @@ docs = [
 dns-sd = [
     "zeroconf>=0.80",
 ]
+redis = [
+    "redis>=5.0.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/adriannoes/asap-protocol"
@@ -118,6 +121,7 @@ ignore = [
 "src/asap/examples/**" = ["T201"]
 "benchmarks/**" = ["T201"]
 "tests/**" = ["B008"]
+"src/asap/transport/usage_api.py" = ["B008"]
 
 [tool.ruff.format]
 quote-style = "double"
