@@ -1,6 +1,6 @@
 """Tests for ASAP metering store (MeteringStore protocol and InMemoryMeteringStore)."""
 
-import threading
+import asyncio
 from datetime import datetime, timezone
 
 import pytest
@@ -59,52 +59,56 @@ class TestMeteringStoreProtocol:
 class TestInMemoryMeteringStoreRecordAndQuery:
     """Test record and query behavior."""
 
-    def test_record_and_query_returns_event(
+    @pytest.mark.asyncio
+    async def test_record_and_query_returns_event(
         self,
         metering_store: InMemoryMeteringStore,
         sample_event: UsageEvent,
     ) -> None:
         """Record stores event; query returns it in range."""
-        metering_store.record(sample_event)
+        await metering_store.record(sample_event)
         start = datetime(2025, 2, 8, 11, 0, 0, tzinfo=timezone.utc)
         end = datetime(2025, 2, 8, 14, 0, 0, tzinfo=timezone.utc)
-        events = metering_store.query("agent_01", start, end)
+        events = await metering_store.query("agent_01", start, end)
         assert len(events) == 1
         assert events[0].task_id == sample_event.task_id
         assert events[0].metrics.tokens_in == 10
         assert events[0].metrics.tokens_out == 20
 
-    def test_query_excludes_out_of_range(
+    @pytest.mark.asyncio
+    async def test_query_excludes_out_of_range(
         self,
         metering_store: InMemoryMeteringStore,
         sample_event: UsageEvent,
     ) -> None:
         """Query returns empty when time range does not include events."""
-        metering_store.record(sample_event)
+        await metering_store.record(sample_event)
         start = datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
         end = datetime(2026, 1, 2, 0, 0, 0, tzinfo=timezone.utc)
-        events = metering_store.query("agent_01", start, end)
+        events = await metering_store.query("agent_01", start, end)
         assert events == []
 
-    def test_query_filters_by_agent_id(
+    @pytest.mark.asyncio
+    async def test_query_filters_by_agent_id(
         self,
         metering_store: InMemoryMeteringStore,
         sample_event: UsageEvent,
     ) -> None:
         """Query returns only events for the given agent_id."""
-        metering_store.record(sample_event)
+        await metering_store.record(sample_event)
         start = datetime(2025, 2, 8, 0, 0, 0, tzinfo=timezone.utc)
         end = datetime(2025, 2, 9, 0, 0, 0, tzinfo=timezone.utc)
-        assert len(metering_store.query("agent_01", start, end)) == 1
-        assert len(metering_store.query("other_agent", start, end)) == 0
+        assert len(await metering_store.query("agent_01", start, end)) == 1
+        assert len(await metering_store.query("other_agent", start, end)) == 0
 
-    def test_query_returns_sorted_by_timestamp(
+    @pytest.mark.asyncio
+    async def test_query_returns_sorted_by_timestamp(
         self,
         metering_store: InMemoryMeteringStore,
     ) -> None:
         """Query returns events ordered by timestamp ascending."""
         base = datetime(2025, 2, 8, 12, 0, 0, tzinfo=timezone.utc)
-        metering_store.record(
+        await metering_store.record(
             UsageEvent(
                 task_id="t2",
                 agent_id="a1",
@@ -113,7 +117,7 @@ class TestInMemoryMeteringStoreRecordAndQuery:
                 metrics=UsageMetrics(),
             )
         )
-        metering_store.record(
+        await metering_store.record(
             UsageEvent(
                 task_id="t1",
                 agent_id="a1",
@@ -124,7 +128,7 @@ class TestInMemoryMeteringStoreRecordAndQuery:
         )
         start = datetime(2025, 2, 8, 10, 0, 0, tzinfo=timezone.utc)
         end = datetime(2025, 2, 8, 14, 0, 0, tzinfo=timezone.utc)
-        events = metering_store.query("a1", start, end)
+        events = await metering_store.query("a1", start, end)
         assert len(events) == 2
         assert events[0].task_id == "t1" and events[1].task_id == "t2"
 
@@ -132,14 +136,15 @@ class TestInMemoryMeteringStoreRecordAndQuery:
 class TestInMemoryMeteringStoreAggregate:
     """Test aggregation by period."""
 
-    def test_aggregate_sums_metrics(
+    @pytest.mark.asyncio
+    async def test_aggregate_sums_metrics(
         self,
         metering_store: InMemoryMeteringStore,
         sample_event: UsageEvent,
     ) -> None:
         """Aggregate returns correct totals for the agent."""
-        metering_store.record(sample_event)
-        metering_store.record(
+        await metering_store.record(sample_event)
+        await metering_store.record(
             UsageEvent(
                 task_id="task_02",
                 agent_id="agent_01",
@@ -148,7 +153,7 @@ class TestInMemoryMeteringStoreAggregate:
                 timestamp=datetime(2025, 2, 8, 13, 0, 0, tzinfo=timezone.utc),
             )
         )
-        agg = metering_store.aggregate("agent_01", "day")
+        agg = await metering_store.aggregate("agent_01", "day")
         assert isinstance(agg, UsageAggregate)
         assert agg.agent_id == "agent_01"
         assert agg.period == "day"
@@ -156,14 +161,15 @@ class TestInMemoryMeteringStoreAggregate:
         assert agg.total_tasks == 2
         assert agg.total_api_calls == 1 + 2
 
-    def test_aggregate_hour_period_label(
+    @pytest.mark.asyncio
+    async def test_aggregate_hour_period_label(
         self,
         metering_store: InMemoryMeteringStore,
         sample_event: UsageEvent,
     ) -> None:
         """Aggregate accepts period label 'hour'."""
-        metering_store.record(sample_event)
-        agg = metering_store.aggregate("agent_01", "hour")
+        await metering_store.record(sample_event)
+        agg = await metering_store.aggregate("agent_01", "hour")
         assert agg.period == "hour"
         assert agg.total_tasks == 1
 
@@ -171,21 +177,23 @@ class TestInMemoryMeteringStoreAggregate:
 class TestInMemoryMeteringStoreEmpty:
     """Test empty store behavior."""
 
-    def test_query_empty_store_returns_empty_list(
+    @pytest.mark.asyncio
+    async def test_query_empty_store_returns_empty_list(
         self,
         metering_store: InMemoryMeteringStore,
     ) -> None:
         """Query on empty store returns []."""
         start = datetime(2025, 1, 1, tzinfo=timezone.utc)
         end = datetime(2025, 12, 31, tzinfo=timezone.utc)
-        assert metering_store.query("any_agent", start, end) == []
+        assert await metering_store.query("any_agent", start, end) == []
 
-    def test_aggregate_empty_store_returns_zero_totals(
+    @pytest.mark.asyncio
+    async def test_aggregate_empty_store_returns_zero_totals(
         self,
         metering_store: InMemoryMeteringStore,
     ) -> None:
         """Aggregate for agent with no events returns zero totals."""
-        agg = metering_store.aggregate("no_events_agent", "day")
+        agg = await metering_store.aggregate("no_events_agent", "day")
         assert agg.agent_id == "no_events_agent"
         assert agg.total_tokens == 0
         assert agg.total_tasks == 0
@@ -193,53 +201,42 @@ class TestInMemoryMeteringStoreEmpty:
         assert agg.total_api_calls == 0
 
 
-class TestInMemoryMeteringStoreThreadSafety:
-    """Test thread-safe concurrent access."""
+class TestInMemoryMeteringStoreConcurrency:
+    """Test async-safe concurrent access."""
 
-    def test_concurrent_record_and_query(
+    @pytest.mark.asyncio
+    async def test_concurrent_record_and_query(
         self,
         metering_store: InMemoryMeteringStore,
     ) -> None:
-        """Multiple threads can record and query without corruption."""
-        errors: list[Exception] = []
+        """Multiple async tasks can record and query without corruption."""
         n_events = 50
 
-        def record_events() -> None:
-            try:
-                for i in range(n_events):
-                    metering_store.record(
-                        UsageEvent(
-                            task_id=f"t{i}",
-                            agent_id="a1",
-                            consumer_id="c1",
-                            timestamp=datetime(2025, 2, 8, 12, i % 24, 0, tzinfo=timezone.utc),
-                            metrics=UsageMetrics(tokens_in=i, tokens_out=i),
-                        )
+        async def record_events() -> None:
+            for i in range(n_events):
+                await metering_store.record(
+                    UsageEvent(
+                        task_id=f"t{i}",
+                        agent_id="a1",
+                        consumer_id="c1",
+                        timestamp=datetime(2025, 2, 8, 12, i % 24, 0, tzinfo=timezone.utc),
+                        metrics=UsageMetrics(tokens_in=i, tokens_out=i),
                     )
-            except Exception as e:
-                errors.append(e)
+                )
 
-        def query_events() -> None:
-            try:
-                start = datetime(2025, 2, 8, 0, 0, 0, tzinfo=timezone.utc)
-                end = datetime(2025, 2, 9, 0, 0, 0, tzinfo=timezone.utc)
-                for _ in range(20):
-                    metering_store.query("a1", start, end)
-                    metering_store.aggregate("a1", "day")
-            except Exception as e:
-                errors.append(e)
+        async def query_events() -> None:
+            start = datetime(2025, 2, 8, 0, 0, 0, tzinfo=timezone.utc)
+            end = datetime(2025, 2, 9, 0, 0, 0, tzinfo=timezone.utc)
+            for _ in range(20):
+                await metering_store.query("a1", start, end)
+                await metering_store.aggregate("a1", "day")
 
-        threads = [
-            threading.Thread(target=record_events),
-            threading.Thread(target=record_events),
-            threading.Thread(target=query_events),
-            threading.Thread(target=query_events),
-        ]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
+        await asyncio.gather(
+            record_events(),
+            record_events(),
+            query_events(),
+            query_events(),
+        )
 
-        assert not errors
-        agg = metering_store.aggregate("a1", "day")
+        agg = await metering_store.aggregate("a1", "day")
         assert agg.total_tasks == n_events * 2

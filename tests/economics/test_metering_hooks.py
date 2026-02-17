@@ -1,5 +1,6 @@
 """Tests for metering hooks (task lifecycle integration)."""
 
+import asyncio
 from datetime import datetime, timezone
 
 import pytest
@@ -73,7 +74,8 @@ def task_response_envelope(sample_manifest: Manifest) -> Envelope:
 class TestRecordTaskUsage:
     """Test record_task_usage extraction and recording."""
 
-    def test_records_usage_with_measured_duration(
+    @pytest.mark.asyncio
+    async def test_records_usage_with_measured_duration(
         self,
         metering_store: InMemoryMeteringStore,
         task_request_envelope: Envelope,
@@ -81,7 +83,7 @@ class TestRecordTaskUsage:
         sample_manifest: Manifest,
     ) -> None:
         """record_task_usage stores event with duration, agent, consumer."""
-        record_task_usage(
+        await record_task_usage(
             metering_store,
             task_request_envelope,
             task_response_envelope,
@@ -91,7 +93,7 @@ class TestRecordTaskUsage:
 
         start = datetime(2020, 1, 1, tzinfo=timezone.utc)
         end = datetime(2030, 1, 1, tzinfo=timezone.utc)
-        events = metering_store.query(sample_manifest.id, start, end)
+        events = await metering_store.query(sample_manifest.id, start, end)
         assert len(events) == 1
         assert events[0].task_id == "task_123"
         assert events[0].agent_id == sample_manifest.id
@@ -101,7 +103,8 @@ class TestRecordTaskUsage:
         assert events[0].metrics.tokens_out == 0
         assert events[0].metrics.api_calls == 0
 
-    def test_extracts_agent_reported_metrics(
+    @pytest.mark.asyncio
+    async def test_extracts_agent_reported_metrics(
         self,
         metering_store: InMemoryMeteringStore,
         task_request_envelope: Envelope,
@@ -125,7 +128,7 @@ class TestRecordTaskUsage:
             ).model_dump(),
         )
 
-        record_task_usage(
+        await record_task_usage(
             metering_store,
             task_request_envelope,
             response_with_metrics,
@@ -135,14 +138,15 @@ class TestRecordTaskUsage:
 
         start = datetime(2020, 1, 1, tzinfo=timezone.utc)
         end = datetime(2030, 1, 1, tzinfo=timezone.utc)
-        events = metering_store.query(sample_manifest.id, start, end)
+        events = await metering_store.query(sample_manifest.id, start, end)
         assert len(events) == 1
         assert events[0].metrics.tokens_in == 1500
         assert events[0].metrics.tokens_out == 2300
         assert events[0].metrics.api_calls == 5
         assert events[0].metrics.duration_ms == 500
 
-    def test_skips_non_task_request(
+    @pytest.mark.asyncio
+    async def test_skips_non_task_request(
         self,
         metering_store: InMemoryMeteringStore,
         task_response_envelope: Envelope,
@@ -156,7 +160,7 @@ class TestRecordTaskUsage:
             payload_type="state.query",
             payload={},
         )
-        record_task_usage(
+        await record_task_usage(
             metering_store,
             other_envelope,
             task_response_envelope,
@@ -165,10 +169,11 @@ class TestRecordTaskUsage:
         )
         start = datetime(2020, 1, 1, tzinfo=timezone.utc)
         end = datetime(2030, 1, 1, tzinfo=timezone.utc)
-        events = metering_store.query(sample_manifest.id, start, end)
+        events = await metering_store.query(sample_manifest.id, start, end)
         assert len(events) == 0
 
-    def test_skips_when_response_not_task_response(
+    @pytest.mark.asyncio
+    async def test_skips_when_response_not_task_response(
         self,
         metering_store: InMemoryMeteringStore,
         task_request_envelope: Envelope,
@@ -182,7 +187,7 @@ class TestRecordTaskUsage:
             payload_type="task.update",
             payload={"task_id": "t1", "status": "working"},
         )
-        record_task_usage(
+        await record_task_usage(
             metering_store,
             task_request_envelope,
             other_response,
@@ -191,7 +196,7 @@ class TestRecordTaskUsage:
         )
         start = datetime(2020, 1, 1, tzinfo=timezone.utc)
         end = datetime(2030, 1, 1, tzinfo=timezone.utc)
-        events = metering_store.query(sample_manifest.id, start, end)
+        events = await metering_store.query(sample_manifest.id, start, end)
         assert len(events) == 0
 
 
@@ -217,7 +222,7 @@ class TestHandlerRegistryMetering:
 
         start = datetime(2020, 1, 1, tzinfo=timezone.utc)
         end = datetime(2030, 1, 1, tzinfo=timezone.utc)
-        events = metering_store.query(sample_manifest.id, start, end)
+        events = await metering_store.query(sample_manifest.id, start, end)
         assert len(events) == 1
         assert events[0].task_id == task_id
         assert events[0].agent_id == sample_manifest.id
@@ -239,7 +244,7 @@ class TestHandlerRegistryMetering:
 
         start = datetime(2020, 1, 1, tzinfo=timezone.utc)
         end = datetime(2030, 1, 1, tzinfo=timezone.utc)
-        events = metering_store.query(sample_manifest.id, start, end)
+        events = await metering_store.query(sample_manifest.id, start, end)
         assert len(events) == 1
 
     @pytest.mark.asyncio
@@ -305,7 +310,287 @@ class TestCreateAppMeteringIntegration:
 
         start = datetime(2020, 1, 1, tzinfo=timezone.utc)
         end = datetime(2030, 1, 1, tzinfo=timezone.utc)
-        events = metering_store.query(sample_manifest.id, start, end)
+        events = asyncio.run(metering_store.query(sample_manifest.id, start, end))
         assert len(events) == 1
         assert events[0].agent_id == sample_manifest.id
         assert events[0].consumer_id == "urn:asap:agent:consumer"
+
+
+from asap.economics.hooks import wrap_handler_with_metering, _safe_int
+
+
+class TestWrapHandlerWithMetering:
+    """Tests for wrap_handler_with_metering decorator."""
+
+    @pytest.mark.asyncio
+    async def test_wraps_async_handler(
+        self,
+        metering_store: InMemoryMeteringStore,
+        sample_manifest: Manifest,
+    ) -> None:
+        async def my_handler(env: Envelope, mf: Manifest) -> Envelope:
+            await asyncio.sleep(0.01)
+            # Must return a task.response for metering to record it
+            return Envelope(
+                asap_version="0.1",
+                sender=mf.id,
+                recipient=env.sender,
+                payload_type="task.response",
+                payload={"task_id": "t1", "status": "completed", "result": {}},
+            )
+
+        wrapped = wrap_handler_with_metering(
+            my_handler, metering_store, sample_manifest
+        )
+
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:consumer",
+            recipient=sample_manifest.id,
+            payload_type="task.request",
+            payload={
+                "conversation_id": "c1",
+                "skill_id": "s",
+                "input": {},
+            },
+        )
+
+        result = await wrapped(envelope, sample_manifest)
+        assert result.payload_type == "task.response"
+
+        # Check store
+        events = await metering_store.query(
+            sample_manifest.id,
+            datetime(2000, 1, 1, tzinfo=timezone.utc),
+            datetime(2100, 1, 1, tzinfo=timezone.utc),
+        )
+        assert len(events) > 0  # Should record event
+        assert events[0].metrics.duration_ms >= 10
+
+    @pytest.mark.asyncio
+    async def test_wraps_sync_handler(
+        self,
+        metering_store: InMemoryMeteringStore,
+        sample_manifest: Manifest,
+    ) -> None:
+        def my_sync_handler(env: Envelope, mf: Manifest) -> Envelope:
+            import time
+            time.sleep(0.01)
+            return Envelope(
+                asap_version="0.1",
+                sender=mf.id,
+                recipient=env.sender,
+                payload_type="task.response",
+                payload={"task_id": "t1", "status": "completed", "result": {}},
+            )
+
+        wrapped = wrap_handler_with_metering(
+            my_sync_handler, metering_store, sample_manifest
+        )
+
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:consumer",
+            recipient=sample_manifest.id,
+            payload_type="task.request",
+            payload={
+                "conversation_id": "c1",
+                "skill_id": "s",
+                "input": {},
+            },
+        )
+
+        # The wrapper returns a coroutine even if handler is sync
+        result = await wrapped(envelope, sample_manifest)
+        assert result.payload_type == "task.response"
+
+        events = await metering_store.query(
+            sample_manifest.id,
+            datetime(2000, 1, 1, tzinfo=timezone.utc),
+            datetime(2100, 1, 1, tzinfo=timezone.utc),
+        )
+        assert len(events) > 0
+        assert events[0].metrics.duration_ms >= 10
+
+    @pytest.mark.asyncio
+    async def test_returns_original_handler_if_store_none(self) -> None:
+        async def my_handler(env: Envelope, mf: Manifest) -> Envelope:
+            return env
+
+        # Pass None as store
+        wrapped = wrap_handler_with_metering(my_handler, None, None)  # type: ignore
+        assert wrapped is my_handler
+
+
+class TestSafeInt:
+    """Tests for internal _safe_int helper."""
+
+    def test_safe_int_values(self) -> None:
+        assert _safe_int(None) == 0
+        assert _safe_int(None, 42) == 42
+        assert _safe_int(10) == 10
+        assert _safe_int(-5) == 0
+        assert _safe_int("10") == 10
+        assert _safe_int("10.5") == 0  # int("10.5") raises ValueError
+        assert _safe_int("abc", 5) == 5
+        assert _safe_int([], 7) == 7
+
+
+class TestRecordTaskUsageEdgeCases:
+    """Tests for record_task_usage edge cases."""
+
+    @pytest.mark.asyncio
+    async def test_safe_int_parsing_in_context(
+        self,
+        metering_store: InMemoryMeteringStore,
+        sample_manifest: Manifest,
+    ) -> None:
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:consumer",
+            recipient=sample_manifest.id,
+            payload_type="task.request",
+            payload={"conversation_id": "c", "skill_id": "s"},
+        )
+        response = Envelope(
+            asap_version="0.1",
+            sender=sample_manifest.id,
+            recipient="urn:asap:agent:consumer",
+            payload_type="task.response",
+            payload={
+                "task_id": "t1",
+                "status": "completed",
+                "result": {},
+                "metrics": {
+                    "tokens_in": "not-an-int",
+                    "tokens_out": 123.45,
+                    "api_calls": None,
+                },
+            },
+        )
+
+        await record_task_usage(
+            metering_store, envelope, response, 100, sample_manifest
+        )
+
+        events = await metering_store.query(
+            sample_manifest.id,
+            datetime(2000, 1, 1, tzinfo=timezone.utc),
+            datetime(2100, 1, 1, tzinfo=timezone.utc),
+        )
+        assert len(events) == 1
+        m = events[0].metrics
+        assert m.tokens_in == 0
+        assert m.tokens_out == 123
+        assert m.api_calls == 0
+
+    @pytest.mark.asyncio
+    async def test_missing_task_id_ignored(
+        self,
+        metering_store: InMemoryMeteringStore,
+        sample_manifest: Manifest,
+    ) -> None:
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:consumer",
+            recipient=sample_manifest.id,
+            payload_type="task.request",
+            payload={"conversation_id": "c", "skill_id": "s"},
+        )
+        response = Envelope(
+            asap_version="0.1",
+            sender=sample_manifest.id,
+            recipient="urn:asap:agent:consumer",
+            payload_type="task.response",
+            payload={
+                # "task_id": "t1",  <-- missing
+                "status": "completed",
+                "result": {},
+            },
+        )
+
+        await record_task_usage(
+            metering_store, envelope, response, 100, sample_manifest
+        )
+
+        events = await metering_store.query(
+            sample_manifest.id,
+            datetime(2000, 1, 1, tzinfo=timezone.utc),
+            datetime(2100, 1, 1, tzinfo=timezone.utc),
+        )
+        assert len(events) == 0
+
+    @pytest.mark.asyncio
+    async def test_tokens_used_fallback(
+        self,
+        metering_store: InMemoryMeteringStore,
+        sample_manifest: Manifest,
+    ) -> None:
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:consumer",
+            recipient=sample_manifest.id,
+            payload_type="task.request",
+            payload={"conversation_id": "c", "skill_id": "s"},
+        )
+        response = Envelope(
+            asap_version="0.1",
+            sender=sample_manifest.id,
+            recipient="urn:asap:agent:consumer",
+            payload_type="task.response",
+            payload={
+                "task_id": "t1",
+                "status": "completed",
+                "result": {},
+                "metrics": {
+                    "tokens_in": 10,
+                    "tokens_out": 0,  # Explicit 0
+                    "tokens_used": 55, # Should be used as fallback
+                },
+            },
+        )
+
+        await record_task_usage(
+            metering_store, envelope, response, 100, sample_manifest
+        )
+
+        events = await metering_store.query(
+            sample_manifest.id,
+            datetime(2000, 1, 1, tzinfo=timezone.utc),
+            datetime(2100, 1, 1, tzinfo=timezone.utc),
+        )
+        assert len(events) == 1
+        assert events[0].metrics.tokens_out == 55
+
+    @pytest.mark.asyncio
+    async def test_negative_duration_clamped(
+        self,
+        metering_store: InMemoryMeteringStore,
+        sample_manifest: Manifest,
+    ) -> None:
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:consumer",
+            recipient=sample_manifest.id,
+            payload_type="task.request",
+            payload={"conversation_id": "c", "skill_id": "s"},
+        )
+        response = Envelope(
+            asap_version="0.1",
+            sender=sample_manifest.id,
+            recipient="urn:asap:agent:consumer",
+            payload_type="task.response",
+            payload={"task_id": "t1", "status": "completed"},
+        )
+
+        await record_task_usage(
+            metering_store, envelope, response, -50.0, sample_manifest
+        )
+
+        events = await metering_store.query(
+            sample_manifest.id,
+            datetime(2000, 1, 1, tzinfo=timezone.utc),
+            datetime(2100, 1, 1, tzinfo=timezone.utc),
+        )
+        assert len(events) == 1
+        assert events[0].metrics.duration_ms == 0
