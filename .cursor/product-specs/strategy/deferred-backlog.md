@@ -126,6 +126,18 @@
 
 ---
 
+## 5. Payment Processing & Verified Revenue (Originally v2.0)
+
+**What**: Stripe integration for $49/mo subscriptions and payment capability.
+
+**Why deferred**: Focus on "Leanness" and "Trust" first. Payments introduce legal/tax friction (Nexus, VAT) and infrastructure complexity that is unnecessary for the initial directory growth phase.
+
+**Trigger to revisit**: When **Verified Agent count > 100** OR when enterprise partners demand paid support/SLA tiers.
+
+**Proposed milestone**: v3.0
+
+---
+
 ## Summary
 
 | Feature | Original Version | Deferred To | Trigger |
@@ -134,6 +146,7 @@
 | DeepEval Intelligence | v1.2 | v2.2+ | User demand for quality filtering |
 | Audit Logging | v1.3 | v2.1+ | Enterprise customer or billing disputes |
 | Economy Settlement | v2.0+ | v3.0 | Revenue > $5k/mo + user demand |
+| Payment Processing | v2.0 | v3.0 | 100+ Verified Agents |
 
 ---
 

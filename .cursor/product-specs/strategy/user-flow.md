@@ -207,36 +207,31 @@ flowchart LR
 sequenceDiagram
     actor Dev as Developer
     participant App as Web App
-    participant GH as GitHub API
+    participant GH as GitHub Issues
+    participant Action as GitHub Action
 
     Dev->>App: Click "Register Agent"
-    
-    alt Not logged in
-        App-->>Dev: Redirect to login (F2)
-        Dev->>App: Complete login
-    end
-
     App-->>Dev: Show registration form
-    Dev->>App: Fill form (name, endpoints, skills, description)
-    App->>App: Client-side validation<br/>(schema, required fields)
+    Dev->>App: Fill form (name, endpoints, skills)
+    App->>App: Client-side Zod validation
     
-    opt Endpoint reachability check
-        App->>Dev: "Checking your agent..."
-        App->>App: Fetch manifest URL<br/>+ health endpoint
-        App-->>Dev: "Agent is reachable ✅" or<br/>"Warning: agent not responding ⚠️"
+    Dev->>App: Click "Submit via GitHub"
+    App->>GH: Redirect to New Issue URL<br/>(pre-filled YAML body)
+    GH-->>Dev: Show New Issue page
+    Dev->>GH: Click "Submit New Issue"
+    
+    Action->>GH: Trigger on New Issue
+    Action->>Action: Validate YAML Schema
+    Action->>Action: Check endpoint reachability
+    
+    alt Valid
+        Action->>GH: Commit to registry.json
+        Action->>GH: Close Issue (Success)
+        Dev->>App: (Later) See agent in "My Agents"
+    else Invalid
+        Action->>GH: Comment on Issue with errors
+        Dev->>GH: Edit Issue body to fix
     end
-    
-    Dev->>App: Click "Submit Registration"
-    App->>GH: Fork asap-protocol repo<br/>(if not already forked)
-    App->>GH: Update registry.json<br/>(add new agent entry)
-    App->>GH: Create PR to main repo
-    GH-->>App: PR created (#N)
-    App-->>Dev: "Registration submitted! ✅<br/>Under review (typically < 24h)"
-    
-    Note over Dev,GH: Maintainer reviews PR (F10)
-    
-    GH-->>App: PR merged (webhook)
-    App-->>Dev: Email/notification:<br/>"Your agent is now listed! 🎉"
 ```
 
 ### Screens
@@ -391,120 +386,33 @@ Agent status is derived from:
 
 ---
 
-## F9: Apply for Verified Badge
+## F9: Verified Request (Manual)
 
 **Persona**: Agent Developer
-**Goal**: Apply for Verified badge to increase trust ($49/month)
-**Requires**: Authenticated (F2), at least one agent listed
+**Goal**: Request Verified status (No Payment)
 
 ### Journey
 
-```mermaid
-sequenceDiagram
-    actor Dev as Developer
-    participant App as Web App
-    participant Stripe as Stripe
-    participant Admin as Platform Admin
-
-    Dev->>App: Dashboard → "Apply for Verified"
-    App-->>Dev: Show requirements checklist<br/>(listed agent, valid endpoints, etc.)
-    Dev->>App: Click "Proceed to Payment"
-    App->>Stripe: Create Checkout Session
-    Stripe-->>Dev: Stripe Checkout page ($49/month)
-    Dev->>Stripe: Complete payment
-    Stripe->>App: Webhook: payment_intent.succeeded
-    App-->>Dev: "Payment received! ✅<br/>Application under review."
-    
-    Note over Admin: Manual review (F11)
-    
-    Admin->>App: Approve application
-    App->>App: Sign manifest with ASAP CA key
-    App-->>Dev: "Verified! 🏆" + badge on agent listing
-```
-
-### Screens
-
-| Screen | Key Elements |
-|--------|-------------|
-| **Verified Intro** | What is Verified?, benefits (badge, higher ranking, trust), requirements, pricing |
-| **Requirements Checklist** | Agent listed ✅, endpoints responding ✅, manifest valid ✅, compliance check passed ✅ |
-| **Stripe Checkout** | Standard Stripe checkout ($49/month), subscription with cancellation |
-| **Review Status** | "Under review" / "Approved" / "Rejected (reason)" |
-
-### Acceptance Criteria
-
-- [ ] Requirements checked before allowing payment
-- [ ] Stripe checkout session created correctly
-- [ ] Payment confirmed via Stripe webhook
-- [ ] Review queue visible to admin (F11)
-- [ ] Badge appears on approved agents within 1 hour of approval
-- [ ] Subscription cancellation removes badge at end of billing period
+1. Developer contacts Admins (Discord/Email) or submits "Verification Request" Issue.
+2. Admin manually reviews agent quality/trust.
+3. Admin manually updates `registry.json` to set `verification: "verified"`.
 
 ---
 
-## F10: Admin — Review Registration
+## F10: Admin — Review Registration (Automated)
 
-**Persona**: Platform Admin
-**Goal**: Approve or reject agent registration PRs
-**Requires**: GitHub org member
+**Persona**: Platform Admin / GitHub Action
+**Goal**: Ensure registry quality
 
-### Journey
-
-```mermaid
-flowchart TD
-    A["New PR notification\n(GitHub)"] --> B["Review PR in\nGitHub Interface"]
-    B --> C{"Decision"}
-    C -->|Approve| D["Merge PR\n(GitHub UI)"]
-    C -->|Request Changes| E["Comment on PR\n(GitHub UI)"]
-    C -->|Reject| F["Close PR\n(GitHub UI)"]
-    D --> G["Agent appears in\nmarketplace\n(via auto-update)"]
-    E --> H["Developer updates\nand re-requests review"]
-```
-
-### Review Checklist
-
-- [ ] Schema valid (automated CI check)
-- [ ] Agent name is appropriate (no spam, profanity)
-- [ ] Endpoints are reachable (automated CI check)
-- [ ] Description is meaningful
-- [ ] Skills are reasonable (not `["everything"]`)
-
-> **v2.0+**: When compliance harness CI is integrated, PRs that pass all automated checks will be auto-merged (ADR-18 hybrid strategy).
-
-### Acceptance Criteria
-
-- [ ] Admin sees pending registration PRs in dashboard or GitHub
-- [ ] One-click approve/reject from admin panel (calls GitHub API)
-- [ ] Rejection sends comment to developer with reason
-- [ ] Merged PRs trigger `registry.json` update on GitHub Pages
+- Most checks are automated by the IssueOps Action.
+- Admins only intervene if the Action fails or flagrant spam is reported.
 
 ---
 
-## F11: Admin — Review Verified Application
+## F11: Admin — Review Verified Application (Manual)
 
-**Persona**: Platform Admin
-**Goal**: Approve or reject Verified badge applications
-**Requires**: Internal access
-
-### Journey
-
-```mermaid
-flowchart TD
-    A["Verified application\nreceived (post-payment)"] --> B["Review in Admin panel"]
-    B --> C["Check agent:\nhealth, compliance,\nmanifest quality"]
-    C --> D{"Decision"}
-    D -->|Approve| E["Sign manifest with\nASAP CA key"]
-    D -->|Reject| F["Refund via Stripe +\nnotify developer"]
-    E --> G["Badge appears\non marketplace"]
-```
-
-### Acceptance Criteria
-
-- [ ] Pending applications listed with payment confirmation
-- [ ] Admin can view agent details, health status, compliance results
-- [ ] Approval triggers ASAP CA signing of agent manifest
-- [ ] Rejection triggers Stripe refund + email notification
-- [ ] Verified badge visible on agent card and detail page
+- **Process**: Ad-hoc review of "Verification Request" issues.
+- **Action**: Commit direct update to `registry.json`.
 
 ---
 

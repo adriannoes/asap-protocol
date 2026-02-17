@@ -10,10 +10,12 @@
 > 💡 **For detailed step-by-step instructions**, see sprint files:
 > - [M1: Web App Foundation](./sprint-M1-webapp-foundation.md)
 > - [M2: Web App Features](./sprint-M2-webapp-features.md)
-> - [M3: Verified Badge & Payments](./sprint-M3-verified-payments.md)
+> - [M3: Developer Experience (IssueOps)](./sprint-M3-developer-experience.md)
 > - [M4: Launch Preparation](./sprint-M4-launch-prep.md)
 >
 > **Lean Marketplace Pivot**: Production Registry backend (formerly M1/M2) removed. Web App reads from Lite Registry (`registry.json` on GitHub Pages). No FastAPI backend, no PostgreSQL, no Railway. See [deferred-backlog.md](../../../product-specs/strategy/deferred-backlog.md).
+>
+> **Usage & Control**: For evolution of usage storage (local → central) and consumer dashboard, see [v2.0-marketplace-usage-foundation.md](./v2.0-marketplace-usage-foundation.md).
 
 ---
 
@@ -89,22 +91,27 @@ v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Regi
 
 ---
 
-## Sprint M3: Verified Badge & Payments
+## Sprint M3: Developer Experience (IssueOps)
 
-**Goal**: Verified badge service with Stripe
+**Goal**: Low-friction registration flow
 
 ### Tasks
 
-- [ ] 3.1 Stripe integration
-- [ ] 3.2 "Apply for Verified" flow
-- [ ] 3.3 Checkout flow ($49/month)
-- [ ] 3.4 ASAP CA signing on approval
-- [ ] 3.5 Admin review queue
+- [ ] 3.1 GitHub Issue Template configured
+  - Goal: YAML template for agent registration
+
+- [ ] 3.2 Registration Form (Web)
+  - Goal: Web form that validates input and links to GitHub Issue creation
+
+- [ ] 3.3 Registration Action (GitHub Actions)
+ - Goal: Parse Issue YAML, validate Zod schema, update `registry.json`, close issue
+
+- [ ] 3.4 Developer Dashboard
+ - Goal: "My Agents" list derived from `maintainers` field in registry
 
 ### Definition of Done
-- [ ] Payment flow end-to-end
-- [ ] Verified badge appears after approval
-
+- [ ] User can register agent via Web Form -> GitHub Issue flow
+- [ ] Action automatically merges valid agents
 ---
 
 ## Sprint M4: Launch Preparation

@@ -385,35 +385,32 @@ We adopt an **Open Core** model (similar to LangChain/LangSmith). The Goal: ubiq
 
 ### 5.3 Pricing Strategy
 
-**Phase 1: Freemium (v2.0 launch)**
+**Phase 1: Free (v2.0 launch)**
 
 | Tier | Price | Includes |
 |------|-------|----------|
 | **Free** | $0 | List agents, basic features, self-signed manifests |
-| **Verified** | $49/month | Manual review, Verified badge, ASAP-signed manifest |
+| **Verified** | $0 | Manual review, Verified badge, ASAP-signed manifest (High bar for entry) |
 
-**Phase 2: TBD (after traction)**
+**Phase 2: Monetization (v3.0+)**
 
-Monetization model (Subscription, % of transactions, or Hybrid) will be decided based on adoption data. Options under consideration:
+Monetization model (Subscription, % of transactions, or Hybrid) deferred until critical mass is reached.
 
 | Model | When to consider |
 |-------|------------------|
-| Subscription tiers | If enterprise features dominate demand |
+| Subscription ($49/mo) | If enterprise features dominate demand |
 | % of transactions | If Clearing House has volume |
-| Hybrid | If both patterns emerge |
 
-### 5.4 Monetization Areas
+### 5.4 Monetization Areas (Deferred to v3.0)
 
 1.  **ASAP Cloud (Managed Infrastructure)**:
     *   "Vercel for Agents". Deploy ASAP-compliant agents with one command.
-    *   Includes mTLS, key rotation, liveness checks.
-    *   Optional Message Broker for scale (v2.0+).
 
 2.  **The Registry (Marketplace & Trust)**:
-    *   **Verified badge**: $49/month (manual review, ASAP-signed manifest).
-    *   **Clearing House**: Potential % fee on transactions (Phase 2).
+    *   **Verified badge**: Currently free to build trust. Future: $49/month.
+    *   **Clearing House**: Potential % fee on transactions.
 
-3.  **Enterprise Observability (Future)**:
+3.  **Enterprise Observability**:
     *   Analytics on agent interactions, costs, content safety.
 
 ---

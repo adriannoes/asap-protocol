@@ -191,12 +191,12 @@ The shift from "Protocol" to "Product" with a lean approach — no backend API, 
     -   **The Bootstrap Problem**: Developers don't want to use CLI tools to sign up.
     -   **Solution**: "Sign in with GitHub" to create the account ⇒ Browser generates ASAP Protocol keys (WebCrypto API) locally for agent operations. Low friction, high security.
 
-### 4.5 Payments: Stripe
--   **Decision**: **Stripe**
+### 4.5 Payments: None (Deferred to v3.0)
+-   **Decision**: **No Payments in v2.0**
 -   **Rationale**:
-    -   **SaaS standard**: Subscriptions ($49/mo Verified badge), checkout flows, and invoicing are built-in.
-    -   **Developer-friendly**: Excellent API, SDK, and documentation.
-    -   **No alternatives needed**: Stripe handles all payment scenarios for Freemium → Verified tier (SD-2). Multiple payment providers deferred until demand justifies complexity.
+    -   **Lean focus**: Priority is adoption and directory growth.
+    -   **Lower barrier**: Verified badge is manually awarded based on merit/trust, not paid subscription.
+    -   **Simplicity**: Avoids legal/tax complexity during initial growth phase.
 
 ### 4.6 Data Source: Lite Registry (GitHub Pages JSON)
 -   **Decision**: **Lite Registry (`registry.json`)** as primary data source
@@ -212,10 +212,8 @@ The shift from "Protocol" to "Product" with a lean approach — no backend API, 
 -   **Rationale**:
     -   **The "No Backend" Exception**: While we avoid a standalone backend service, some operations require server-side execution for security (hiding secrets) or webhook handling.
     -   **Use Cases**:
-        -   **Stripe Webhooks**: Verifying signatures and processing events.
         -   **Auth Exchange**: Swapping OAuth codes for access tokens (to keep client_secret hidden).
-        -   **Signing Triggers**: Triggering GitHub Actions for CA signing.
-    -   **Constraint**: Keep this layer minimal. No complex business logic or persistent database state (other than what's passed to Stripe/GitHub).
+    -   **Constraint**: Keep this layer minimal. No complex business logic or persistent database state.
 
 ### 4.8 Hosting: Vercel
 -   **Decision**: **Vercel**
@@ -296,7 +294,7 @@ The `SnapshotStore` Protocol currently uses **sync** methods (inherited from v1.
 | **Web** | Next.js 15, TypeScript | SEO, type safety | v2.0 | |
 | **UI** | Tailwind v4, Shadcn | Development velocity | v2.0 | |
 | **Auth (web)** | GitHub + WebCrypto | Low friction signup | v2.0 | |
-| **Payments** | Stripe | SaaS standard | v2.0 | SD-2 |
+| **Payments** | None (Deferred) | Deferred to v3.0 | v3.0 | SD-2 |
 | **Data Source** | Lite Registry (`registry.json`) | No backend needed for MVP | v2.0 | SD-11 |
 | **Hosting** | Vercel | Simple, scalable (no Railway for v2.0) | v2.0 | |
 
