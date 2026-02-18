@@ -53,6 +53,12 @@ pip install asap-protocol
 uv run python -m asap.examples.run_demo
 ```
 
+**v1.3.0 showcase** (Delegation + Metering + SLA in one command):
+
+```bash
+uv run python -m asap.examples.v1_3_0_showcase
+```
+
 **Build your first agent** [here](docs/tutorials/first-agent.md) — server setup, client code, step-by-step (~15 min).
 
 [15+ examples](src/asap/examples/README.md): orchestration, state migration, MCP, OAuth2, WebSocket, resilience.

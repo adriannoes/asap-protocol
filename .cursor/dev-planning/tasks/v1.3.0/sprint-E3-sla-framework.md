@@ -8,6 +8,7 @@
 
 ## Relevant Files
 
+- `src/asap/examples/v1_3_0_showcase.py` - v1.3.0 E2E showcase (Task 3.6.1)
 - `src/asap/models/entities.py` - SLADefinition model (Task 3.1.1)
 - `tests/fixtures/manifest_with_sla.json` - Example manifest with SLA (Task 3.1.5)
 - `tests/models/test_entities.py` - TestSLADefinition, TestManifest SLA tests, TestManifestSLAFixture (Task 3.1.6)
@@ -220,7 +221,7 @@ SLAs (Service Level Agreements) define guarantees agents commit to — availabil
 
 - [x] 3.4.6 Write integration tests
 
-- [ ] 3.4.7 Commit
+- [x] 3.4.7 Commit
   - **Command**: `git commit -m "feat(economics): expose SLA metrics via API"`
 
 **Acceptance Criteria**:
@@ -251,12 +252,12 @@ SLAs (Service Level Agreements) define guarantees agents commit to — availabil
   - Create delegation → execute tasks (metering) → check SLA → trigger breach
   - End-to-end flow through API
 
-- [ ] 3.5.5 Commit
+- [x] 3.5.5 Commit
   - **Command**: `git commit -m "test: add cross-feature integration tests for v1.3.0"`
 
 **Acceptance Criteria**:
 - [x] All integration tests pass
-- [ ] Test coverage >95%
+- [x] Test coverage >95%
 
 ---
 
@@ -266,14 +267,14 @@ SLAs (Service Level Agreements) define guarantees agents commit to — availabil
 
 ### Sub-tasks
 
-- [ ] 3.6.1 Create `examples/v1_3_0_showcase.py`
+- [x] 3.6.1 Create `examples/v1_3_0_showcase.py`
   - Scenario:
     1. **Delegation**: Agent A generates a token for Agent B with `max_tasks=5`.
     2. **Metering**: Agent B performs tasks; usage is logged locally.
     3. **Transparency**: Agent A queries `GET /usage` to see Agent B's consumption.
     4. **Trust/SLA**: Agent B artificially injects a delay -> Agent A receives an SLA breach alert (via WebSocket).
 
-- [ ] 3.6.2 Verify Output
+- [x] 3.6.2 Verify Output
   - Ensure updated `README` instructions work.
   - "One command to run them all".
 
