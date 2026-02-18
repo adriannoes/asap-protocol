@@ -837,12 +837,15 @@ async def broadcast_sla_breach(
         },
     }
     text = json.dumps(payload, default=str)
-    for ws in list(subscribers):
+
+    async def _safe_send(ws: WebSocket) -> None:
         try:
             await ws.send_text(text)
         except (RuntimeError, OSError) as e:
             logger.debug("asap.websocket.sla_breach_send_error", error=str(e))
             subscribers.discard(ws)
+
+    await asyncio.gather(*(_safe_send(ws) for ws in list(subscribers)))
 
 
 async def handle_websocket_connection(
