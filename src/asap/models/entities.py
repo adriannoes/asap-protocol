@@ -19,7 +19,7 @@ from datetime import datetime
 from typing import Any
 
 from packaging.version import InvalidVersion, Version
-from pydantic import Field, field_validator, model_validator
+from pydantic import ConfigDict, Field, field_validator, model_validator
 
 from asap.errors import UnsupportedAuthSchemeError
 from asap.models.base import ASAPBaseModel
@@ -41,6 +41,18 @@ from asap.models.types import (
     SnapshotID,
     TaskID,
 )
+
+
+class CommonMetadata(ASAPBaseModel):
+    """Common metadata keys (extra allowed)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    purpose: str | None = Field(default=None, description="Conversation purpose")
+    ttl_hours: int | None = Field(default=None, ge=1, description="Time-to-live in hours")
+    source: str | None = Field(default=None, description="Source identifier")
+    timestamp: str | None = Field(default=None, description="ISO timestamp")
+    tags: list[str] | None = Field(default=None, description="Tags for categorization")
 
 
 def _validate_auth_scheme(auth: "AuthScheme") -> None:
@@ -367,7 +379,7 @@ class Conversation(ASAPBaseModel):
         ..., min_length=1, description="Agent URNs in conversation"
     )
     created_at: datetime = Field(..., description="Creation timestamp (UTC)")
-    metadata: dict[str, Any] | None = Field(
+    metadata: CommonMetadata | None = Field(
         default=None, description="Optional metadata (purpose, TTL, etc.)"
     )
 
