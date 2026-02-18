@@ -2,7 +2,7 @@
 
 > **Purpose**: Formal review points to update documentation with learnings
 > **Created**: 2026-02-06
-> **Updated**: 2026-02-12 (Lean Marketplace pivot)
+> **Updated**: 2026-02-18 (v1.3.0 release prep complete)
 
 ---
 
@@ -69,6 +69,8 @@ Pre-release: Release materials (CHANGELOG, README, AGENTS.md, secure_agent examp
 
 **When**: After v1.3.0 ships
 
+**Status**: v1.3.0 release prep complete (2026-02-18). PR #50 open; Sprints E1–E3 done (Metering, Delegation, SLA Framework). Tag v1.3.0 pending merge.
+
 **Review**:
 - [ ] Observability metering implementation lessons
 - [ ] Delegation token complexity
@@ -84,7 +86,22 @@ Pre-release: Release materials (CHANGELOG, README, AGENTS.md, secure_agent examp
 
 ---
 
-### CP-4: Post v2.0.0 M2 (Web App Features)
+### CP-4: Post v1.4.0 Release
+
+**When**: After v1.4.0 ships
+
+**Review**:
+- [ ] Type safety impact (mypy checks, runtime stability)
+- [ ] Memory usage with paginated queries (SLA history)
+- [ ] Developer experience with stricter types
+
+**Update**:
+- [ ] `prd-v2.0-roadmap.md` — confirm "Hardening" sprint met v2.0 scale needs
+- [ ] `tasks-v2.0.0-roadmap.md` — adjust final v2.0 estimate
+
+---
+
+### CP-5: Post v2.0.0 M2 (Web App Features)
 
 **When**: After completing sprints M1-M2
 
@@ -99,7 +116,7 @@ Pre-release: Release materials (CHANGELOG, README, AGENTS.md, secure_agent examp
 
 ---
 
-### CP-5: Post v2.0.0 M4 (Launch)
+### CP-6: Post v2.0.0 M4 (Launch)
 
 **When**: 2 weeks after launch
 
@@ -134,7 +151,8 @@ Track actual vs estimated to improve future planning:
 |---------|----------------|-------------|----------|
 | v1.1.0 | 31-41 | — | — |
 | v1.2.0 | 18-26 | — | — |
-| v1.3.0 | 15-22 | — | — |
+| v1.3.0 | 15-22 | ~12 | On track |
+| v1.4.0 | 5-8 | — | — |
 | v2.0.0 | 23-33 | — | — |
 
 > [!NOTE]
@@ -157,3 +175,4 @@ Track actual vs estimated to improve future planning:
 |------|--------|
 | 2026-02-06 | Initial checkpoints document |
 | 2026-02-12 | **Lean Marketplace pivot**: Updated CP-2 (removed Registry API review), CP-3 (metering→observability), CP-4 (renamed from "Marketplace Core" to "Web App Features"), CP-5 (merged with CP-6, updated metrics). Reduced from 6 checkpoints to 5. Updated velocity estimates. |
+| 2026-02-18 | **v1.3.0 release prep**: CP-3 status updated (Sprints E1–E3 complete, PR #50 open). Velocity: v1.3.0 ~12 days actual vs 15–22 estimated. |

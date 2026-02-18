@@ -23,7 +23,7 @@ v1.3.0 establishes **Observability & Delegation** for the Agent Marketplace. Thi
 
 ### 1.2 Strategic Context
 
-v1.3.0 is the final step before the v2.0 Marketplace. See [roadmap-to-marketplace.md](../strategy/roadmap-to-marketplace.md).
+v1.3.0 is followed by **v1.4.0 (Hardening)** before the v2.0 Marketplace. See [roadmap-to-marketplace.md](../strategy/roadmap-to-marketplace.md).
 
 **Prerequisite**: v1.2.0 (Verified Identity) released — agents must have signed manifests.
 
@@ -208,6 +208,7 @@ v1.3 depends on interfaces and infrastructure from v1.1.0:
 ## 9. Related Documents
 
 - **Tasks**: [tasks-v1.3.0-roadmap.md](../../dev-planning/tasks/v1.3.0/tasks-v1.3.0-roadmap.md)
+- **Next Version (v1.4 PRD)**: [prd-v1.4-roadmap.md](./prd-v1.4-roadmap.md)
 - **Deferred Backlog**: [deferred-backlog.md](../strategy/deferred-backlog.md)
 - **Roadmap**: [roadmap-to-marketplace.md](../strategy/roadmap-to-marketplace.md)
 - **Vision**: [vision-agent-marketplace.md](../strategy/vision-agent-marketplace.md)

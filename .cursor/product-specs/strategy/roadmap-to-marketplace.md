@@ -20,16 +20,16 @@ This roadmap defines the evolution from v1.0.0 (stable protocol) to v2.0.0 (Agen
 │                    ROADMAP TO AGENT MARKETPLACE                         │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
-│  v1.0.0          v1.1           v1.2           v1.3           v2.0      │
-│  ═══════        ═══════        ═══════        ═══════        ═══════    │
-│    │              │              │              │              │        │
-│    │ ┌──────────┐ │ ┌──────────┐ │ ┌──────────┐ │ ┌──────────┐ │        │
-│    ├─│ Stable   │─┼─│ Identity │─┼─│ Verified │─┼─│ Observe  │─┼─→ 🏪   │
-│    │ │ Protocol │ │ │ +Discov  │ │ │ Identity │ │ │ +Deleg   │ │        │
-│    │ └──────────┘ │ └──────────┘ │ └──────────┘ │ └──────────┘ │        │
-│    │              │              │              │              │        │
-│    ▼              ▼              ▼              ▼              ▼        │
-│  Released     Identity       Verified     Observability   Marketplace   │
+│  v1.0.0          v1.1           v1.2           v1.3           v1.4           v2.0      │
+│  ═══════        ═══════        ═══════        ═══════        ═══════        ═══════    │
+│    │              │              │              │              │              │        │
+│    │ ┌──────────┐ │ ┌──────────┐ │ ┌──────────┐ │ ┌──────────┐ │ ┌──────────┐ │        │
+│    ├─│ Stable   │─┼─│ Identity │─┼─│ Verified │─┼─│ Observe  │─┼─│ Scale    │─┼─→ 🏪   │
+│    │ │ Protocol │ │ │ +Discov  │ │ │ Identity │ │ │ +Deleg   │ │ │ +Types   │ │        │
+│    │ └──────────┘ │ └──────────┘ │ └──────────┘ │ └──────────┘ │ └──────────┘ │        │
+│    │              │              │              │              │              │        │
+│    ▼              ▼              ▼              ▼              ▼              ▼        │
+│  Released     Identity       Verified     Observability    Hardening     Marketplace   │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -216,6 +216,7 @@ Key architectural and business decisions made during planning. Each decision inc
 | **v1.1.0** | Identity | Auth + Discovery + Real-time | OAuth2, WebSocket, Well-known URI, Lite Registry, MessageAck |
 | **v1.2.0** | Verified Identity | Signing + Compliance | Ed25519 signing, Compliance Harness, mTLS (opt) |
 | **v1.3.0** | Observability | Metering + SLAs + Delegation | Observability metering, SLA framework, delegation tokens |
+| **v1.4.0** | Hardening | Resilience + Scale | Type safety hardening, storage pagination |
 | **v2.0.0** | Marketplace | Full launch | Web App, Lite Registry integration, Verified Badge |
 
 ---
@@ -379,16 +380,44 @@ src/asap/
 
 SLAs define service guarantees as trust signals (not financial penalties in v1.3). The `SLADefinition` lives on the `Manifest` model; metrics are stored via a dedicated `SLAStorage` Protocol (InMemory + SQLite implementations). API endpoints use feature-centric paths (`/sla/*`).
 
-```json
-{
-  "sla": {
-    "availability": "99.5%",
-    "max_latency_p95_ms": 5000,
-    "max_error_rate": "1%",
-    "support_hours": "business"
-  }
-}
 ```
+
+---
+
+## v1.4.0 "Hardening" — Resilience & Scale
+
+**Goal**: Prepare the codebase for marketplace scale by addressing technical debt and performance bottlenecks.
+
+### Features
+
+| Feature | Priority | Purpose |
+|---------|----------|---------|
+| Type Safety Hardening | P1 | Eliminate runtime type errors |
+| Storage Pagination | P1 | Scalable data access (SLA history, Metering) |
+
+### Why This Matters
+
+- **Type Safety**: Reduces regression risks as the codebase grows.
+- **Pagination**: Prevents OOM errors when users query large datasets (vital for the SLA dashboards in v2.0).
+
+
+---
+
+## v1.4.0 "Hardening" — Resilience & Scale
+
+**Goal**: Prepare the codebase for marketplace scale by addressing technical debt and performance bottlenecks.
+
+### Features
+
+| Feature | Priority | Purpose |
+|---------|----------|---------|
+| Type Safety Hardening | P1 | Eliminate runtime type errors |
+| Storage Pagination | P1 | Scalable data access (SLA history, Metering) |
+
+### Why This Matters
+
+- **Type Safety**: Reduces regression risks as the codebase grows.
+- **Pagination**: Prevents OOM errors when users query large datasets (vital for the SLA dashboards in v2.0).
 
 ---
 
