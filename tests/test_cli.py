@@ -1,5 +1,6 @@
 """Tests for ASAP CLI."""
 
+import asyncio
 import json
 import re
 from pathlib import Path
@@ -10,6 +11,7 @@ from typer.testing import CliRunner
 from asap import __version__
 from asap.cli import DEFAULT_SCHEMAS_DIR, app
 from asap.crypto.keys import generate_keypair, serialize_private_key
+from asap.economics.delegation_storage import SQLiteDelegationStorage
 from asap.schemas import TOTAL_SCHEMA_COUNT
 
 # ANSI escape sequence pattern for stripping colors from output
@@ -736,3 +738,39 @@ class TestCliRepl:
         # Banner may go to stdout or stderr depending on code.interact()
         combined = result.stdout + result.stderr
         assert "REPL" in combined or "sample_envelope" in combined or ">>> " in combined
+
+
+class TestCliDelegationRevoke:
+    """Tests for delegation revoke command."""
+
+    def test_revoke_writes_to_db_and_echoes(self, tmp_path: Path) -> None:
+        """Revoke writes to DB and echoes message."""
+        db_path = tmp_path / "revoke.db"
+        runner = CliRunner()
+        result = runner.invoke(
+            app,
+            ["delegation", "revoke", "del_test_123", "--db", str(db_path)],
+        )
+        assert result.exit_code == 0
+        assert "Revoked delegation token: del_test_123" in result.stdout
+        storage = SQLiteDelegationStorage(db_path=db_path)
+        assert asyncio.run(storage.is_revoked("del_test_123")) is True
+
+    def test_revoke_with_reason(self, tmp_path: Path) -> None:
+        """Revoke accepts --reason."""
+        db_path = tmp_path / "revoke_reason.db"
+        runner = CliRunner()
+        result = runner.invoke(
+            app,
+            [
+                "delegation",
+                "revoke",
+                "del_r",
+                "--db",
+                str(db_path),
+                "--reason",
+                "compromised",
+            ],
+        )
+        assert result.exit_code == 0
+        assert asyncio.run(SQLiteDelegationStorage(db_path=db_path).is_revoked("del_r")) is True

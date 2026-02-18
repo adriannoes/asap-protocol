@@ -81,28 +81,32 @@ v1.3.0 is the **final infrastructure release** before v2.0 Marketplace:
 
 ### Tasks
 
-- [ ] 2.1 Design delegation token model
+- [x] 2.1 Design delegation token model
   - Goal: Token with scopes, constraints, signature
   - Note: Financial limits (`max_cost_usd`) optional/deferred to v3.0
-  - Deliverable: `src/asap/auth/delegation.py`
+  - Deliverable: `src/asap/economics/delegation.py`
 
-- [ ] 2.2 Implement token creation and signing
+- [x] 2.2 Implement token creation and signing
   - Goal: Create tokens signed by delegator (Ed25519 from v1.2)
   - Deliverable: CLI + API
 
-- [ ] 2.3 Implement token validation
+- [x] 2.3 Implement token validation
   - Goal: Verify chain, constraints, expiration
   - Deliverable: Middleware validation
 
-- [ ] 2.4 Implement token revocation
+- [x] 2.4 Implement token revocation
   - Goal: Revoke tokens with immediate effect
-  - Deliverable: Revocation list
+  - Deliverable: Revocation storage (SQLite), API, CLI, cascade
+
+- [x] 2.5 Observability for delegations
+  - Goal: List/inspect issued tokens (GET /delegations, GET /delegations/{id})
+  - Deliverable: delegation_api list/detail endpoints
 
 ### Definition of Done
-- [ ] Tokens created with scopes and limits
-- [ ] Validation rejects expired/revoked/over-limit
+- [x] Tokens created with scopes and limits
+- [x] Validation rejects expired/revoked/over-limit
 - [ ] <10ms validation overhead
-- [ ] Test coverage >95%
+- [x] Test coverage >95%
 
 ---
 

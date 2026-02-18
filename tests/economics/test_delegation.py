@@ -1,0 +1,566 @@
+"""Tests for delegation token model, scope vocabulary, and JWT creation (Tasks 2.1, 2.2)."""
+
+from datetime import datetime, timezone
+from typing import Any
+
+import pytest
+from joserfc import jwt as jose_jwt
+from joserfc.errors import JoseError
+from pydantic import ValidationError
+
+from asap.crypto.keys import generate_keypair
+from asap.economics.delegation import (
+    DELEGATION_SCOPES,
+    JWT_ALG_EDDSA,
+    WILDCARD_SCOPE,
+    DelegationConstraints,
+    DelegationToken,
+    X_ASAP_CONSTRAINTS_CLAIM,
+    create_delegation_jwt,
+    scope_includes_action,
+    validate_delegation,
+)
+from asap.economics.delegation import _ed25519_private_key_to_okp_key as ed25519_to_okp
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def future_expires_at() -> datetime:
+    """Expiration in the future for valid tokens."""
+    return datetime(2030, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+
+
+@pytest.fixture
+def sample_constraints(future_expires_at: datetime) -> DelegationConstraints:
+    """Valid DelegationConstraints for testing."""
+    return DelegationConstraints(
+        max_cost_usd=None,
+        max_tasks=100,
+        expires_at=future_expires_at,
+    )
+
+
+@pytest.fixture
+def sample_token(
+    sample_constraints: DelegationConstraints,
+) -> DelegationToken:
+    """Valid DelegationToken for testing."""
+    return DelegationToken(
+        id="del_abc123",
+        delegator="urn:asap:agent:principal",
+        delegate="urn:asap:agent:delegate",
+        scopes=["task.execute", "data.read"],
+        constraints=sample_constraints,
+        signature="fake_ed25519_signature_base64",
+        created_at=datetime(2026, 2, 17, 10, 0, 0, tzinfo=timezone.utc),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Model validation
+# ---------------------------------------------------------------------------
+
+
+class TestDelegationConstraintsValidation:
+    """Test DelegationConstraints model validation."""
+
+    def test_valid_constraints(
+        self,
+        sample_constraints: DelegationConstraints,
+        future_expires_at: datetime,
+    ) -> None:
+        """DelegationConstraints accepts valid fields."""
+        assert sample_constraints.max_cost_usd is None
+        assert sample_constraints.max_tasks == 100
+        assert sample_constraints.expires_at == future_expires_at
+
+    def test_optional_max_cost_and_max_tasks(
+        self,
+        future_expires_at: datetime,
+    ) -> None:
+        """DelegationConstraints allows both optional limits omitted."""
+        c = DelegationConstraints(expires_at=future_expires_at)
+        assert c.max_cost_usd is None
+        assert c.max_tasks is None
+        assert c.expires_at == future_expires_at
+
+    def test_rejects_negative_max_cost_usd(
+        self,
+        future_expires_at: datetime,
+    ) -> None:
+        """DelegationConstraints rejects negative max_cost_usd."""
+        with pytest.raises(ValidationError):
+            DelegationConstraints(
+                max_cost_usd=-1.0,
+                expires_at=future_expires_at,
+            )
+
+    def test_rejects_negative_max_tasks(
+        self,
+        future_expires_at: datetime,
+    ) -> None:
+        """DelegationConstraints rejects negative max_tasks."""
+        with pytest.raises(ValidationError):
+            DelegationConstraints(
+                max_tasks=-1,
+                expires_at=future_expires_at,
+            )
+
+    def test_rejects_extra_fields(
+        self,
+        future_expires_at: datetime,
+    ) -> None:
+        """DelegationConstraints forbids extra fields (ASAPBaseModel)."""
+        with pytest.raises(ValidationError):
+            DelegationConstraints.model_validate(
+                {
+                    "expires_at": future_expires_at.isoformat(),
+                    "unknown_field": "x",
+                },
+            )
+
+
+class TestDelegationTokenValidation:
+    """Test DelegationToken model validation."""
+
+    def test_valid_token(
+        self,
+        sample_token: DelegationToken,
+        sample_constraints: DelegationConstraints,
+    ) -> None:
+        """DelegationToken accepts valid fields."""
+        assert sample_token.id == "del_abc123"
+        assert sample_token.delegator == "urn:asap:agent:principal"
+        assert sample_token.delegate == "urn:asap:agent:delegate"
+        assert sample_token.scopes == ["task.execute", "data.read"]
+        assert sample_token.constraints == sample_constraints
+        assert sample_token.signature == "fake_ed25519_signature_base64"
+
+    def test_rejects_empty_scopes(
+        self,
+        sample_constraints: DelegationConstraints,
+    ) -> None:
+        """DelegationToken rejects empty scopes list."""
+        with pytest.raises(ValidationError):
+            DelegationToken(
+                id="del_1",
+                delegator="urn:asap:agent:a",
+                delegate="urn:asap:agent:b",
+                scopes=[],
+                constraints=sample_constraints,
+                signature="sig",
+                created_at=datetime.now(timezone.utc),
+            )
+
+    def test_accepts_single_scope(
+        self,
+        sample_constraints: DelegationConstraints,
+    ) -> None:
+        """DelegationToken accepts a single scope."""
+        token = DelegationToken(
+            id="del_1",
+            delegator="urn:asap:agent:a",
+            delegate="urn:asap:agent:b",
+            scopes=[WILDCARD_SCOPE],
+            constraints=sample_constraints,
+            signature="sig",
+            created_at=datetime.now(timezone.utc),
+        )
+        assert token.scopes == ["*"]
+
+    def test_rejects_extra_fields(
+        self,
+        sample_constraints: DelegationConstraints,
+        future_expires_at: datetime,
+    ) -> None:
+        """DelegationToken forbids extra fields (ASAPBaseModel)."""
+        with pytest.raises(ValidationError):
+            DelegationToken.model_validate(
+                {
+                    "id": "del_1",
+                    "delegator": "urn:asap:agent:a",
+                    "delegate": "urn:asap:agent:b",
+                    "scopes": ["task.execute"],
+                    "constraints": sample_constraints.model_dump()
+                    | {"expires_at": future_expires_at.isoformat()},
+                    "signature": "sig",
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "extra": "forbidden",
+                },
+            )
+
+
+# ---------------------------------------------------------------------------
+# Scope vocabulary and parsing
+# ---------------------------------------------------------------------------
+
+
+class TestScopeVocabulary:
+    """Test scope constants."""
+
+    def test_wildcard_scope_value(self) -> None:
+        """WILDCARD_SCOPE is '*'."""
+        assert WILDCARD_SCOPE == "*"
+
+    def test_delegation_scopes_contains_expected(self) -> None:
+        """DELEGATION_SCOPES includes task and data scopes."""
+        assert "task.execute" in DELEGATION_SCOPES
+        assert "task.cancel" in DELEGATION_SCOPES
+        assert "data.read" in DELEGATION_SCOPES
+        assert "data.write" in DELEGATION_SCOPES
+
+    def test_delegation_scopes_is_tuple(self) -> None:
+        """DELEGATION_SCOPES is a tuple (immutable)."""
+        assert isinstance(DELEGATION_SCOPES, tuple)
+
+
+class TestScopeIncludesAction:
+    """Test scope_includes_action (scope parsing)."""
+
+    def test_wildcard_allows_any_action(self) -> None:
+        """Scopes containing '*' allow any action."""
+        assert scope_includes_action([WILDCARD_SCOPE], "task.execute") is True
+        assert scope_includes_action([WILDCARD_SCOPE], "data.write") is True
+        assert scope_includes_action([WILDCARD_SCOPE], "unknown.action") is True
+        assert scope_includes_action(["*"], "anything") is True
+
+    def test_wildcard_with_others_still_allows_any(self) -> None:
+        """Wildcard in list with other scopes still allows any action."""
+        assert (
+            scope_includes_action(
+                ["task.execute", WILDCARD_SCOPE, "data.read"],
+                "data.write",
+            )
+            is True
+        )
+
+    def test_exact_match_allowed(self) -> None:
+        """Exact scope match is allowed."""
+        scopes = ["task.execute", "data.read"]
+        assert scope_includes_action(scopes, "task.execute") is True
+        assert scope_includes_action(scopes, "data.read") is True
+
+    def test_no_match_denied(self) -> None:
+        """Action not in scopes is denied."""
+        scopes = ["task.execute", "data.read"]
+        assert scope_includes_action(scopes, "task.cancel") is False
+        assert scope_includes_action(scopes, "data.write") is False
+        assert scope_includes_action(scopes, "other.scope") is False
+
+    def test_empty_scopes_deny_all(self) -> None:
+        """Empty scopes list denies every action."""
+        assert scope_includes_action([], "task.execute") is False
+        assert scope_includes_action([], "*") is False
+
+
+# ---------------------------------------------------------------------------
+# JWT token creation and signature (Task 2.2)
+# ---------------------------------------------------------------------------
+
+
+class TestCreateDelegationJwt:
+    """Test create_delegation_jwt and signature validity."""
+
+    def test_returns_three_part_jwt(
+        self,
+        sample_constraints: DelegationConstraints,
+    ) -> None:
+        """create_delegation_jwt returns a compact JWT (header.payload.signature)."""
+        private_key, _ = generate_keypair()
+        token = create_delegation_jwt(
+            delegator_urn="urn:asap:agent:a",
+            delegate_urn="urn:asap:agent:b",
+            scopes=["task.execute"],
+            constraints=sample_constraints,
+            private_key=private_key,
+        )
+        parts = token.split(".")
+        assert len(parts) == 3
+        assert all(len(p) > 0 for p in parts)
+
+    def test_decode_returns_expected_claims(
+        self,
+        sample_constraints: DelegationConstraints,
+    ) -> None:
+        """Decoding the JWT with the same key yields iss, aud, jti, scp, exp, iat."""
+        private_key, _ = generate_keypair()
+        token = create_delegation_jwt(
+            delegator_urn="urn:asap:agent:issuer",
+            delegate_urn="urn:asap:agent:delegate",
+            scopes=["task.execute", "data.read"],
+            constraints=sample_constraints,
+            private_key=private_key,
+            token_id="del_test_123",
+        )
+        okp_key = ed25519_to_okp(private_key)
+        decoded = jose_jwt.decode(token, okp_key, algorithms=[JWT_ALG_EDDSA])
+        claims = dict(decoded.claims)
+        assert claims["iss"] == "urn:asap:agent:issuer"
+        assert claims["aud"] == "urn:asap:agent:delegate"
+        assert claims["jti"] == "del_test_123"
+        assert claims["scp"] == ["task.execute", "data.read"]
+        assert "iat" in claims
+        assert "exp" in claims
+
+    def test_x_asap_constraints_in_claims_when_set(
+        self,
+        future_expires_at: datetime,
+    ) -> None:
+        """JWT includes x-asap-constraints when max_tasks or max_cost_usd set."""
+        private_key, _ = generate_keypair()
+        constraints = DelegationConstraints(
+            max_tasks=50,
+            max_cost_usd=None,
+            expires_at=future_expires_at,
+        )
+        token = create_delegation_jwt(
+            delegator_urn="urn:asap:agent:a",
+            delegate_urn="urn:asap:agent:b",
+            scopes=["*"],
+            constraints=constraints,
+            private_key=private_key,
+        )
+        okp_key = ed25519_to_okp(private_key)
+        decoded = jose_jwt.decode(token, okp_key, algorithms=[JWT_ALG_EDDSA])
+        claims = dict(decoded.claims)
+        assert X_ASAP_CONSTRAINTS_CLAIM in claims
+        assert claims[X_ASAP_CONSTRAINTS_CLAIM]["max_tasks"] == 50
+
+    def test_empty_scopes_raises(self, sample_constraints: DelegationConstraints) -> None:
+        """create_delegation_jwt raises ValueError for empty scopes."""
+        private_key, _ = generate_keypair()
+        with pytest.raises(ValueError, match="scopes must not be empty"):
+            create_delegation_jwt(
+                delegator_urn="urn:asap:agent:a",
+                delegate_urn="urn:asap:agent:b",
+                scopes=[],
+                constraints=sample_constraints,
+                private_key=private_key,
+            )
+
+    def test_signature_validity_wrong_key_fails(
+        self,
+        sample_constraints: DelegationConstraints,
+    ) -> None:
+        """Token signed by one key fails verification with a different key."""
+        private_key_a, _ = generate_keypair()
+        private_key_b, _ = generate_keypair()
+        token = create_delegation_jwt(
+            delegator_urn="urn:asap:agent:a",
+            delegate_urn="urn:asap:agent:b",
+            scopes=["task.execute"],
+            constraints=sample_constraints,
+            private_key=private_key_a,
+        )
+        okp_key_b = ed25519_to_okp(private_key_b)
+        with pytest.raises(JoseError):
+            jose_jwt.decode(token, okp_key_b, algorithms=[JWT_ALG_EDDSA])
+
+
+# ---------------------------------------------------------------------------
+# Token validation (Task 2.3)
+# ---------------------------------------------------------------------------
+
+
+class TestValidateDelegation:
+    """Test validate_delegation function."""
+
+    def test_valid_token_passes(
+        self,
+        sample_constraints: DelegationConstraints,
+    ) -> None:
+        """Valid token and allowed action return success."""
+        private_key, public_key = generate_keypair()
+        token = create_delegation_jwt(
+            delegator_urn="urn:asap:agent:a",
+            delegate_urn="urn:asap:agent:b",
+            scopes=["task.execute", "data.read"],
+            constraints=sample_constraints,
+            private_key=private_key,
+        )
+
+        def resolver(iss: str) -> Any:
+            assert iss == "urn:asap:agent:a"
+            return public_key
+
+        result = validate_delegation(
+            token,
+            "task.execute",
+            public_key_resolver=resolver,
+        )
+        assert result.success is True
+        assert result.delegator == "urn:asap:agent:a"
+        assert result.delegate == "urn:asap:agent:b"
+        assert "task.execute" in (result.scopes or [])
+
+    def test_expired_rejected(
+        self,
+        sample_constraints: DelegationConstraints,
+    ) -> None:
+        """Expired token returns success=False with 'expired' error."""
+        from datetime import timedelta
+
+        past = datetime.now(timezone.utc) - timedelta(hours=1)
+        constraints = DelegationConstraints(
+            max_tasks=sample_constraints.max_tasks,
+            max_cost_usd=None,
+            expires_at=past,
+        )
+        private_key, public_key = generate_keypair()
+        token = create_delegation_jwt(
+            delegator_urn="urn:asap:agent:a",
+            delegate_urn="urn:asap:agent:b",
+            scopes=["task.execute"],
+            constraints=constraints,
+            private_key=private_key,
+        )
+
+        def resolver(iss: str) -> Any:
+            return public_key
+
+        result = validate_delegation(
+            token,
+            "task.execute",
+            public_key_resolver=resolver,
+        )
+        assert result.success is False
+        assert "expired" in (result.error or "").lower()
+
+    def test_over_limit_rejected(
+        self,
+        sample_constraints: DelegationConstraints,
+    ) -> None:
+        """When usage_count >= max_tasks, validation fails."""
+        private_key, public_key = generate_keypair()
+        token = create_delegation_jwt(
+            delegator_urn="urn:asap:agent:a",
+            delegate_urn="urn:asap:agent:b",
+            scopes=["task.execute"],
+            constraints=sample_constraints,
+            private_key=private_key,
+            token_id="del_limit_test",
+        )
+
+        def resolver(iss: str) -> Any:
+            return public_key
+
+        def usage_count(jti: str) -> int:
+            assert jti == "del_limit_test"
+            return 100  # sample_constraints has max_tasks=100
+
+        result = validate_delegation(
+            token,
+            "task.execute",
+            public_key_resolver=resolver,
+            usage_count_for_token=usage_count,
+        )
+        assert result.success is False
+        assert "limit" in (result.error or "").lower()
+
+    def test_action_not_in_scope_rejected(
+        self,
+        sample_constraints: DelegationConstraints,
+    ) -> None:
+        """Action not in token scopes returns success=False."""
+        private_key, public_key = generate_keypair()
+        token = create_delegation_jwt(
+            delegator_urn="urn:asap:agent:a",
+            delegate_urn="urn:asap:agent:b",
+            scopes=["task.execute"],
+            constraints=sample_constraints,
+            private_key=private_key,
+        )
+
+        def resolver(iss: str) -> Any:
+            return public_key
+
+        result = validate_delegation(
+            token,
+            "data.write",
+            public_key_resolver=resolver,
+        )
+        assert result.success is False
+        assert "scope" in (result.error or "").lower() or "allowed" in (result.error or "").lower()
+
+    def test_malformed_token_rejected(self) -> None:
+        """Malformed token returns success=False."""
+
+        def resolver(iss: str) -> Any:
+            raise KeyError(iss)
+
+        result = validate_delegation(
+            "not.a.valid.jwt",
+            "task.execute",
+            public_key_resolver=resolver,
+        )
+        assert result.success is False
+        assert result.error is not None
+
+    def test_escalation_rejected(
+        self,
+        sample_constraints: DelegationConstraints,
+    ) -> None:
+        """When allowed_delegators is set, issuer not in set is rejected."""
+        private_key, public_key = generate_keypair()
+        token = create_delegation_jwt(
+            delegator_urn="urn:asap:agent:unauthorized",
+            delegate_urn="urn:asap:agent:b",
+            scopes=["task.execute"],
+            constraints=sample_constraints,
+            private_key=private_key,
+        )
+
+        def resolver(iss: str) -> Any:
+            return public_key
+
+        result = validate_delegation(
+            token,
+            "task.execute",
+            public_key_resolver=resolver,
+            allowed_delegators={"urn:asap:agent:root", "urn:asap:agent:a"},
+        )
+        assert result.success is False
+        assert (
+            "not allowed" in (result.error or "").lower()
+            or "delegat" in (result.error or "").lower()
+        )
+
+    def test_revoked_token_rejected(
+        self,
+        sample_constraints: DelegationConstraints,
+    ) -> None:
+        """When is_revoked returns True for the token jti, validation fails with 'Token revoked'."""
+        private_key, public_key = generate_keypair()
+        token_id = "del_revoked_123"
+        token = create_delegation_jwt(
+            delegator_urn="urn:asap:agent:a",
+            delegate_urn="urn:asap:agent:b",
+            scopes=["task.execute"],
+            constraints=sample_constraints,
+            private_key=private_key,
+            token_id=token_id,
+        )
+
+        def resolver(iss: str) -> Any:
+            return public_key
+
+        result_without_check = validate_delegation(
+            token,
+            "task.execute",
+            public_key_resolver=resolver,
+        )
+        assert result_without_check.success is True
+
+        revoked_ids: set[str] = {token_id}
+        result_revoked = validate_delegation(
+            token,
+            "task.execute",
+            public_key_resolver=resolver,
+            is_revoked=lambda jti: jti in revoked_ids,
+        )
+        assert result_revoked.success is False
+        assert result_revoked.error == "Token revoked"
