@@ -21,6 +21,7 @@
 - `tests/economics/test_sla.py` - SLA unit tests
 - `tests/economics/test_sla_storage.py` - SLAStorage tests
 - `tests/economics/test_sla_api.py` - SLA API integration tests (Task 3.4.6)
+- `tests/integration/test_v1_3_cross_feature.py` - Cross-feature integration tests (Task 3.5)
 - `tests/transport/test_sla_websocket.py` - SLA WebSocket subscribe/unsubscribe and broadcast tests (Task 3.3.5)
 
 ---
@@ -234,19 +235,19 @@ SLAs (Service Level Agreements) define guarantees agents commit to — availabil
 
 ### Sub-tasks
 
-- [ ] 3.5.1 Integration test: SLA + Metering
+- [x] 3.5.1 Integration test: SLA + Metering
   - SLA metrics derived from metering data
   - Latency p95 from task metrics matches SLA calculation
 
-- [ ] 3.5.2 Integration test: SLA + Health endpoint
+- [x] 3.5.2 Integration test: SLA + Health endpoint
   - Uptime calculation uses health check data
   - Simulated downtime triggers correct availability breach
 
-- [ ] 3.5.3 Integration test: SLA + Delegation
+- [x] 3.5.3 Integration test: SLA + Delegation
   - Delegated agent SLA tracked separately
   - Breach on delegated agent reflects on delegation context
 
-- [ ] 3.5.4 Full integration test: all v1.3 features
+- [x] 3.5.4 Full integration test: all v1.3 features
   - Create delegation → execute tasks (metering) → check SLA → trigger breach
   - End-to-end flow through API
 
@@ -254,7 +255,7 @@ SLAs (Service Level Agreements) define guarantees agents commit to — availabil
   - **Command**: `git commit -m "test: add cross-feature integration tests for v1.3.0"`
 
 **Acceptance Criteria**:
-- [ ] All integration tests pass
+- [x] All integration tests pass
 - [ ] Test coverage >95%
 
 ---
