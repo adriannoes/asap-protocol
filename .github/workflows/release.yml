@@ -114,6 +114,7 @@ jobs:
         with:
           verbose: true
           attestations: false  # Disable PEP 740 attestations if they cause failures
+          skip-existing: true  # Skip asap-compliance when unchanged (only asap-protocol bumped)
         # Publishes both asap-protocol and asap-compliance from dist/
         # Requires Trusted Publishing configured for BOTH projects on PyPI:
         #   - asap-protocol
