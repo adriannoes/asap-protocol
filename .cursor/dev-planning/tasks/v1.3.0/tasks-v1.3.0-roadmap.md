@@ -38,11 +38,11 @@ v1.3.0 is the **final infrastructure release** before v2.0 Marketplace:
 
 ---
 
-### Sprint E4: Security Hardening (Type Safety)
+### Sprint E4: Security Hardening (Type Safety) → v1.4.0
 
 - **Goal**: Tighten `dict[str, Any]` typing and improve validation
-- **Details**: [Sprint E4 Plan](./sprint-E4-type-safety.md)
-- **Status**: Pending (post-release, low priority)
+- **Details**: [Sprint S1 Type Safety](../v1.4.0/sprint-S1-type-safety.md)
+- **Status**: Deferred to v1.4.0
 
 ## Sprint E1: Observability Metering
 
@@ -178,7 +178,7 @@ v1.3.0 is the **final infrastructure release** before v2.0 Marketplace:
 
 ## Checkpoint: Post-v1.3.0 Review
 
-After releasing v1.3.0, conduct a checkpoint review:
+v1.3.0 released 2026-02-18. Conduct checkpoint review (see [checkpoints.md](../../checkpoints.md) CP-3):
 
 - [ ] Update v2.0.0 PRD with learnings
 - [ ] Review and update v2.0.0 sprint estimates
@@ -205,4 +205,4 @@ After releasing v1.3.0, conduct a checkpoint review:
 | 2026-02-17 | **Sprint E1 complete**: Metering API expanded (summary, batch, agents, consumers, stats, purge, validate, export); roadmap aligned with sprint sub-tasks |
 | 2026-02-17 | **Sprint E2 complete**: Delegation tokens (JWT/EdDSA), revocation (SQLite), observability endpoints, CLI commands. All tests pass |
 | 2026-02-18 | **Sprint E3 plan refined**: Renumbered to 7 tasks (added SLA API, Comprehensive Testing, split Showcase/Release). Added SLAStorage Protocol, SLADefinition in Manifest, /sla/* API paths, create_app integration. WebSocket breach alerts retained. Sprint E4 (Type Safety) tracked separately |
-| 2026-02-18 | **Sprint E3 complete**: SLA Framework (schema, storage, breach detection, API, WebSocket), v1.3.0 showcase, release prep (version bump, CHANGELOG, README). v1.3.0 ready for merge |
+| 2026-02-18 | **Sprint E3 complete**: SLA Framework (schema, storage, breach detection, API, WebSocket), v1.3.0 showcase, release prep (version bump, CHANGELOG, README). v1.3.0 released (tag pushed) |

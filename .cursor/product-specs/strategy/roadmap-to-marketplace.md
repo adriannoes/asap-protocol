@@ -215,7 +215,7 @@ Key architectural and business decisions made during planning. Each decision inc
 | **v1.0.0** | Foundation | Stable protocol | ✅ Released |
 | **v1.1.0** | Identity | Auth + Discovery + Real-time | OAuth2, WebSocket, Well-known URI, Lite Registry, MessageAck |
 | **v1.2.0** | Verified Identity | Signing + Compliance | Ed25519 signing, Compliance Harness, mTLS (opt) |
-| **v1.3.0** | Observability | Metering + SLAs + Delegation | Observability metering, SLA framework, delegation tokens |
+| **v1.3.0** | Observability | Metering + SLAs + Delegation | ✅ Released — Observability metering, SLA framework, delegation tokens |
 | **v1.4.0** | Hardening | Resilience + Scale | Type safety hardening, storage pagination |
 | **v2.0.0** | Marketplace | Full launch | Web App, Lite Registry integration, Verified Badge |
 
@@ -379,27 +379,6 @@ src/asap/
 ### SLA Framework
 
 SLAs define service guarantees as trust signals (not financial penalties in v1.3). The `SLADefinition` lives on the `Manifest` model; metrics are stored via a dedicated `SLAStorage` Protocol (InMemory + SQLite implementations). API endpoints use feature-centric paths (`/sla/*`).
-
-```
-
----
-
-## v1.4.0 "Hardening" — Resilience & Scale
-
-**Goal**: Prepare the codebase for marketplace scale by addressing technical debt and performance bottlenecks.
-
-### Features
-
-| Feature | Priority | Purpose |
-|---------|----------|---------|
-| Type Safety Hardening | P1 | Eliminate runtime type errors |
-| Storage Pagination | P1 | Scalable data access (SLA history, Metering) |
-
-### Why This Matters
-
-- **Type Safety**: Reduces regression risks as the codebase grows.
-- **Pagination**: Prevents OOM errors when users query large datasets (vital for the SLA dashboards in v2.0).
-
 
 ---
 
@@ -581,3 +560,4 @@ Strategic risks identified during the v1.1.0 planning review (2026-02-07):
 | 2026-02-12 | **Lean Marketplace pivot**: v1.2 renamed "Verified Identity" (removed Registry API, DeepEval), v1.3 renamed "Observability" (removed credit system, audit logging), v2.0 simplified to Web App + Lite Registry (removed backend services). Added deferred-backlog.md reference |
 | 2026-02-13 | **Security Hardening**: Updated SD-4 to include JCS (RFC 8785) and Strict Verification (RFC 8032) |
 | 2026-02-18 | **v1.3 SLA decisions**: Added SLAStorage to SD-9, expanded v1.3 section with SLA Framework details (/sla/* API, trust signals), updated migration guide |
+| 2026-02-18 | **v1.3.0 released**: Marked v1.3.0 as released in Release Timeline. Removed duplicate v1.4.0 section. |

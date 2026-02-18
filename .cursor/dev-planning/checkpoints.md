@@ -2,7 +2,7 @@
 
 > **Purpose**: Formal review points to update documentation with learnings
 > **Created**: 2026-02-06
-> **Updated**: 2026-02-18 (v1.3.0 release prep complete)
+> **Updated**: 2026-02-18 (v1.3.0 released)
 
 ---
 
@@ -69,7 +69,7 @@ Pre-release: Release materials (CHANGELOG, README, AGENTS.md, secure_agent examp
 
 **When**: After v1.3.0 ships
 
-**Status**: v1.3.0 release prep complete (2026-02-18). PR #50 open; Sprints E1–E3 done (Metering, Delegation, SLA Framework). Tag v1.3.0 pending merge.
+**Status**: v1.3.0 released (2026-02-18). Tag v1.3.0 pushed; Sprints E1–E3 done (Metering, Delegation, SLA Framework). Checkpoint review ready.
 
 **Review**:
 - [ ] Observability metering implementation lessons
@@ -176,3 +176,4 @@ Track actual vs estimated to improve future planning:
 | 2026-02-06 | Initial checkpoints document |
 | 2026-02-12 | **Lean Marketplace pivot**: Updated CP-2 (removed Registry API review), CP-3 (metering→observability), CP-4 (renamed from "Marketplace Core" to "Web App Features"), CP-5 (merged with CP-6, updated metrics). Reduced from 6 checkpoints to 5. Updated velocity estimates. |
 | 2026-02-18 | **v1.3.0 release prep**: CP-3 status updated (Sprints E1–E3 complete, PR #50 open). Velocity: v1.3.0 ~12 days actual vs 15–22 estimated. |
+| 2026-02-18 | **v1.3.0 released**: Tag v1.3.0 pushed. CP-3 checkpoint review ready. |
