@@ -1839,6 +1839,7 @@ def _mock_ws() -> MagicMock:
 # _do_connect: already connected (line 232)
 # ---------------------------------------------------------------------------
 
+
 class TestDoConnect:
     @pytest.mark.asyncio
     async def test_do_connect_already_connected_returns_early(self) -> None:
@@ -1872,6 +1873,7 @@ class TestDoConnect:
 # _recv_loop internal branches
 # ---------------------------------------------------------------------------
 
+
 class TestRecvLoopBranches:
     @pytest.mark.asyncio
     async def test_recv_loop_bytes_decode(self) -> None:
@@ -1881,15 +1883,19 @@ class TestRecvLoopBranches:
         transport._ws = ws
 
         # First recv: bytes message, then disconnect
-        response_frame = json.dumps({
-            "jsonrpc": "2.0",
-            "result": {"envelope": _sample_envelope_cov().model_dump(mode="json")},
-            "id": "ws-req-1",
-        })
-        ws.recv = AsyncMock(side_effect=[
-            response_frame.encode("utf-8"),  # bytes
-            asyncio.CancelledError(),
-        ])
+        response_frame = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "result": {"envelope": _sample_envelope_cov().model_dump(mode="json")},
+                "id": "ws-req-1",
+            }
+        )
+        ws.recv = AsyncMock(
+            side_effect=[
+                response_frame.encode("utf-8"),  # bytes
+                asyncio.CancelledError(),
+            ]
+        )
 
         future: asyncio.Future[Envelope] = asyncio.get_running_loop().create_future()
         transport._pending["ws-req-1"] = future
@@ -1909,16 +1915,20 @@ class TestRecvLoopBranches:
         ws = _mock_ws()
         transport._ws = ws
 
-        valid_response = json.dumps({
-            "jsonrpc": "2.0",
-            "result": {"envelope": _sample_envelope_cov().model_dump(mode="json")},
-            "id": "ws-req-1",
-        })
-        ws.recv = AsyncMock(side_effect=[
-            "not valid json!!!",
-            valid_response,
-            asyncio.CancelledError(),
-        ])
+        valid_response = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "result": {"envelope": _sample_envelope_cov().model_dump(mode="json")},
+                "id": "ws-req-1",
+            }
+        )
+        ws.recv = AsyncMock(
+            side_effect=[
+                "not valid json!!!",
+                valid_response,
+                asyncio.CancelledError(),
+            ]
+        )
 
         future: asyncio.Future[Envelope] = asyncio.get_running_loop().create_future()
         transport._pending["ws-req-1"] = future
@@ -1939,10 +1949,12 @@ class TestRecvLoopBranches:
         transport._ws = ws
 
         ping_frame = json.dumps({"type": HEARTBEAT_FRAME_TYPE_PING})
-        ws.recv = AsyncMock(side_effect=[
-            ping_frame,
-            asyncio.CancelledError(),
-        ])
+        ws.recv = AsyncMock(
+            side_effect=[
+                ping_frame,
+                asyncio.CancelledError(),
+            ]
+        )
 
         task = asyncio.create_task(transport._recv_loop())
         await asyncio.sleep(0.05)
@@ -1981,11 +1993,13 @@ class TestRecvLoopBranches:
                 status="received",
             ).model_dump(),
         )
-        ack_frame = json.dumps({
-            "jsonrpc": "2.0",
-            "method": ASAP_ACK_METHOD,
-            "params": {"envelope": ack_envelope.model_dump(mode="json")},
-        })
+        ack_frame = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": ASAP_ACK_METHOD,
+                "params": {"envelope": ack_envelope.model_dump(mode="json")},
+            }
+        )
         ws.recv = AsyncMock(side_effect=[ack_frame, asyncio.CancelledError()])
 
         task = asyncio.create_task(transport._recv_loop())
@@ -2003,11 +2017,13 @@ class TestRecvLoopBranches:
         ws = _mock_ws()
         transport._ws = ws
 
-        bad_ack_frame = json.dumps({
-            "jsonrpc": "2.0",
-            "method": ASAP_ACK_METHOD,
-            "params": {"envelope": {"invalid": "data"}},
-        })
+        bad_ack_frame = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": ASAP_ACK_METHOD,
+                "params": {"envelope": {"invalid": "data"}},
+            }
+        )
         ws.recv = AsyncMock(side_effect=[bad_ack_frame, asyncio.CancelledError()])
 
         task = asyncio.create_task(transport._recv_loop())
@@ -2024,11 +2040,13 @@ class TestRecvLoopBranches:
         ws = _mock_ws()
         transport._ws = ws
 
-        error_frame = json.dumps({
-            "jsonrpc": "2.0",
-            "error": {"code": -32600, "message": "Invalid request"},
-            "id": "ws-req-1",
-        })
+        error_frame = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "error": {"code": -32600, "message": "Invalid request"},
+                "id": "ws-req-1",
+            }
+        )
         ws.recv = AsyncMock(side_effect=[error_frame, asyncio.CancelledError()])
 
         future: asyncio.Future[Envelope] = asyncio.get_running_loop().create_future()
@@ -2051,11 +2069,13 @@ class TestRecvLoopBranches:
         ws = _mock_ws()
         transport._ws = ws
 
-        error_frame = json.dumps({
-            "jsonrpc": "2.0",
-            "error": {"code": -32600, "message": "Orphaned error"},
-            "id": "ws-req-999",
-        })
+        error_frame = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "error": {"code": -32600, "message": "Orphaned error"},
+                "id": "ws-req-999",
+            }
+        )
         ws.recv = AsyncMock(side_effect=[error_frame, asyncio.CancelledError()])
 
         task = asyncio.create_task(transport._recv_loop())
@@ -2072,11 +2092,13 @@ class TestRecvLoopBranches:
         ws = _mock_ws()
         transport._ws = ws
 
-        bad_frame = json.dumps({
-            "jsonrpc": "2.0",
-            "result": {},
-            "id": "ws-req-1",
-        })
+        bad_frame = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "result": {},
+                "id": "ws-req-1",
+            }
+        )
         ws.recv = AsyncMock(side_effect=[bad_frame, asyncio.CancelledError()])
 
         future: asyncio.Future[Envelope] = asyncio.get_running_loop().create_future()
@@ -2104,11 +2126,13 @@ class TestRecvLoopBranches:
         ws = _mock_ws()
         transport._ws = ws
 
-        pushed = json.dumps({
-            "jsonrpc": "2.0",
-            "result": {"envelope": _sample_envelope_cov().model_dump(mode="json")},
-            "id": "some-other-id",
-        })
+        pushed = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "result": {"envelope": _sample_envelope_cov().model_dump(mode="json")},
+                "id": "some-other-id",
+            }
+        )
         ws.recv = AsyncMock(side_effect=[pushed, asyncio.CancelledError()])
 
         task = asyncio.create_task(transport._recv_loop())
@@ -2131,11 +2155,13 @@ class TestRecvLoopBranches:
         ws = _mock_ws()
         transport._ws = ws
 
-        pushed = json.dumps({
-            "jsonrpc": "2.0",
-            "result": {"envelope": _sample_envelope_cov().model_dump(mode="json")},
-            "id": "unknown-req",
-        })
+        pushed = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "result": {"envelope": _sample_envelope_cov().model_dump(mode="json")},
+                "id": "unknown-req",
+            }
+        )
         ws.recv = AsyncMock(side_effect=[pushed, asyncio.CancelledError()])
 
         task = asyncio.create_task(transport._recv_loop())
@@ -2149,6 +2175,7 @@ class TestRecvLoopBranches:
     @pytest.mark.asyncio
     async def test_recv_loop_on_message_callback_error(self) -> None:
         """on_message callback error is caught (lines 425-429)."""
+
         def on_msg(env: Envelope) -> None:
             raise ValueError("callback boom")
 
@@ -2156,11 +2183,13 @@ class TestRecvLoopBranches:
         ws = _mock_ws()
         transport._ws = ws
 
-        pushed = json.dumps({
-            "jsonrpc": "2.0",
-            "result": {"envelope": _sample_envelope_cov().model_dump(mode="json")},
-            "id": "unknown-req",
-        })
+        pushed = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "result": {"envelope": _sample_envelope_cov().model_dump(mode="json")},
+                "id": "unknown-req",
+            }
+        )
         ws.recv = AsyncMock(side_effect=[pushed, asyncio.CancelledError()])
 
         task = asyncio.create_task(transport._recv_loop())
@@ -2198,6 +2227,7 @@ class TestRecvLoopBranches:
 # close() with pending futures (line 461)
 # ---------------------------------------------------------------------------
 
+
 class TestCloseCoverage:
     @pytest.mark.asyncio
     async def test_close_cancels_pending_futures(self) -> None:
@@ -2219,6 +2249,7 @@ class TestCloseCoverage:
 # __aenter__ / __aexit__ (lines 471, 474)
 # ---------------------------------------------------------------------------
 
+
 class TestAsyncContextManager:
     @pytest.mark.asyncio
     async def test_aenter_aexit(self) -> None:
@@ -2231,6 +2262,7 @@ class TestAsyncContextManager:
 # ---------------------------------------------------------------------------
 # _send_envelope_only: ws=None (line 502)
 # ---------------------------------------------------------------------------
+
 
 class TestSendEnvelopeOnly:
     @pytest.mark.asyncio
@@ -2246,6 +2278,7 @@ class TestSendEnvelopeOnly:
 # ---------------------------------------------------------------------------
 # _ack_check_loop: retransmit failure (lines 544-545)
 # ---------------------------------------------------------------------------
+
 
 class TestAckCheckLoop:
     @pytest.mark.asyncio
@@ -2284,6 +2317,7 @@ class TestAckCheckLoop:
 # send / send_and_receive: not connected (lines 564, 578, 588)
 # ---------------------------------------------------------------------------
 
+
 class TestSendNotConnected:
     @pytest.mark.asyncio
     async def test_send_ws_none_raises(self) -> None:
@@ -2304,6 +2338,7 @@ class TestSendNotConnected:
 # receive(): ws=None, bytes, result branch (lines 598, 601, 617)
 # ---------------------------------------------------------------------------
 
+
 class TestReceiveCoverage:
     @pytest.mark.asyncio
     async def test_receive_ws_none_raises(self) -> None:
@@ -2320,11 +2355,13 @@ class TestReceiveCoverage:
         transport._ws = ws
 
         env = _sample_envelope_cov()
-        response = json.dumps({
-            "jsonrpc": "2.0",
-            "result": {"envelope": env.model_dump(mode="json")},
-            "id": "ws-req-1",
-        })
+        response = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "result": {"envelope": env.model_dump(mode="json")},
+                "id": "ws-req-1",
+            }
+        )
         ws.recv = AsyncMock(return_value=response.encode("utf-8"))
 
         result = await transport.receive()
@@ -2338,11 +2375,13 @@ class TestReceiveCoverage:
         transport._ws = ws
 
         env = _sample_envelope_cov()
-        response = json.dumps({
-            "jsonrpc": "2.0",
-            "result": {"envelope": env.model_dump(mode="json")},
-            "id": "ws-req-1",
-        })
+        response = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "result": {"envelope": env.model_dump(mode="json")},
+                "id": "ws-req-1",
+            }
+        )
         ws.recv = AsyncMock(return_value=response)
 
         result = await transport.receive()
@@ -2352,6 +2391,7 @@ class TestReceiveCoverage:
 # ---------------------------------------------------------------------------
 # WebSocketConnectionPool: waiting path, release (lines 653-654, 668-677, 738)
 # ---------------------------------------------------------------------------
+
 
 class TestPoolCoverage:
     @pytest.mark.asyncio
@@ -2386,6 +2426,7 @@ class TestPoolCoverage:
         fresh_transport._ws = fresh_ws
 
         with patch.object(WebSocketTransport, "connect", new_callable=AsyncMock) as mock_connect:
+
             async def set_ws(url: str) -> None:
                 pool._available.task_done()  # no-op
                 # Simulate that the transport is now connected
@@ -2424,6 +2465,7 @@ class TestPoolCoverage:
 # ---------------------------------------------------------------------------
 # _heartbeat_loop: stale detection and error (lines 784-803)
 # ---------------------------------------------------------------------------
+
 
 class TestHeartbeatLoopCoverage:
     @pytest.mark.asyncio
@@ -2464,6 +2506,7 @@ class TestHeartbeatLoopCoverage:
 # _build_ack_notification_frame
 # ---------------------------------------------------------------------------
 
+
 class TestBuildAckFrame:
     def test_build_ack_frame_with_error(self) -> None:
         """_build_ack_notification_frame includes error field when set."""
@@ -2483,6 +2526,7 @@ class TestBuildAckFrame:
 # ---------------------------------------------------------------------------
 # connect() reconnect error path (lines 333, 338-345)
 # ---------------------------------------------------------------------------
+
 
 class TestConnectReconnect:
     @pytest.mark.asyncio
@@ -2515,6 +2559,7 @@ class TestConnectReconnect:
 # handle_websocket_connection: message processing error paths
 # ---------------------------------------------------------------------------
 
+
 class TestHandleWebSocketConnection:
     @pytest.mark.asyncio
     async def test_handle_message_error_sends_error_payload(self) -> None:
@@ -2529,14 +2574,17 @@ class TestHandleWebSocketConnection:
         ws.send_text = AsyncMock(side_effect=lambda t: sent_texts.append(t))
 
         env = _sample_envelope_cov()
-        valid_frame = json.dumps({
-            "jsonrpc": "2.0",
-            "method": "asap.send",
-            "params": {"envelope": env.model_dump(mode="json")},
-            "id": "1",
-        })
+        valid_frame = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": "asap.send",
+                "params": {"envelope": env.model_dump(mode="json")},
+                "id": "1",
+            }
+        )
 
         call_count = 0
+
         async def receive_text() -> str:
             nonlocal call_count
             call_count += 1
@@ -2573,14 +2621,17 @@ class TestHandleWebSocketConnection:
         ws.send_text = AsyncMock(side_effect=lambda t: sent_texts.append(t))
 
         env = _sample_envelope_cov(requires_ack=True)
-        valid_frame = json.dumps({
-            "jsonrpc": "2.0",
-            "method": "asap.send",
-            "params": {"envelope": env.model_dump(mode="json")},
-            "id": "1",
-        })
+        valid_frame = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": "asap.send",
+                "params": {"envelope": env.model_dump(mode="json")},
+                "id": "1",
+            }
+        )
 
         call_count = 0
+
         async def receive_text() -> str:
             nonlocal call_count
             call_count += 1
@@ -2614,6 +2665,7 @@ class TestHandleWebSocketConnection:
         ws.scope = {"headers": [], "path": "/asap/ws", "server": ("localhost", 8000)}
 
         send_count = 0
+
         async def send_text(t: str) -> None:
             nonlocal send_count
             send_count += 1
@@ -2623,14 +2675,17 @@ class TestHandleWebSocketConnection:
         ws.send_text = AsyncMock(side_effect=send_text)
 
         env = _sample_envelope_cov()
-        valid_frame = json.dumps({
-            "jsonrpc": "2.0",
-            "method": "asap.send",
-            "params": {"envelope": env.model_dump(mode="json")},
-            "id": "1",
-        })
+        valid_frame = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": "asap.send",
+                "params": {"envelope": env.model_dump(mode="json")},
+                "id": "1",
+            }
+        )
 
         call_count = 0
+
         async def receive_text() -> str:
             nonlocal call_count
             call_count += 1
@@ -2663,18 +2718,23 @@ class TestHandleWebSocketConnection:
         sent_texts: list[str] = []
         ws.send_text = AsyncMock(side_effect=lambda t: sent_texts.append(t))
 
-        subscribe_frame = json.dumps({
-            "jsonrpc": "2.0",
-            "method": "sla.subscribe",
-            "id": "sub-1",
-        })
-        unsubscribe_frame = json.dumps({
-            "jsonrpc": "2.0",
-            "method": "sla.unsubscribe",
-            "id": "unsub-1",
-        })
+        subscribe_frame = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": "sla.subscribe",
+                "id": "sub-1",
+            }
+        )
+        unsubscribe_frame = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": "sla.unsubscribe",
+                "id": "unsub-1",
+            }
+        )
 
         call_count = 0
+
         async def receive_text() -> str:
             nonlocal call_count
             call_count += 1

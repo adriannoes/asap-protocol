@@ -206,10 +206,7 @@ class TestRateLimiting:
         self,
         isolated_app_5_per_minute: "FastAPI",
     ) -> None:
-        """Test that rate limiting is applied per client IP.
-
-
-        """
+        """Test that rate limiting is applied per client IP."""
         client = TestClient(isolated_app_5_per_minute)
 
         # Make 5 requests (within limit)

@@ -392,7 +392,8 @@ class TestTokenIntrospectorCoverage:
 
         # Pre-fill with expired cache entry
         introspector._cache["tok1"] = _CacheEntry(
-            TokenInfo(active=True, sub="old"), ttl=0.0  # Already expired
+            TokenInfo(active=True, sub="old"),
+            ttl=0.0,  # Already expired
         )
 
         result = await introspector.introspect("tok1")

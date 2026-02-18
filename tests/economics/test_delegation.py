@@ -581,7 +581,9 @@ def ed25519_keypair() -> tuple[Ed25519PrivateKey, Any]:
 
 
 class TestValidateDelegationCoverage:
-    def test_allowed_delegators_rejection(self, ed25519_keypair: tuple[Ed25519PrivateKey, Any]) -> None:
+    def test_allowed_delegators_rejection(
+        self, ed25519_keypair: tuple[Ed25519PrivateKey, Any]
+    ) -> None:
         """iss not in allowed_delegators returns error (lines 148-152)."""
         priv, pub = ed25519_keypair
         constraints = DelegationConstraints(
@@ -730,7 +732,9 @@ class TestValidateDelegationCoverage:
         assert not result.success
         assert "malformed" in (result.error or "").lower()
 
-    def test_invalid_signature_coverage(self, ed25519_keypair: tuple[Ed25519PrivateKey, Any]) -> None:
+    def test_invalid_signature_coverage(
+        self, ed25519_keypair: tuple[Ed25519PrivateKey, Any]
+    ) -> None:
         """Invalid signature returns decode error (lines 169-170)."""
         priv, pub = ed25519_keypair
         # Create with one key, verify with a different key
