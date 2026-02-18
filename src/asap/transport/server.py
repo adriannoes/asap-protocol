@@ -111,6 +111,7 @@ from asap.transport.compression import (
 from asap.state.metering import MeteringStore
 from asap.state.snapshot import SnapshotStore
 from asap.economics.storage import MeteringStorage, metering_storage_adapter
+from asap.transport.delegation_api import create_delegation_router
 from asap.transport.usage_api import create_usage_router
 from asap.state.stores import create_snapshot_store
 from asap.transport.validators import (
@@ -1113,6 +1114,8 @@ def create_app(
     metering_storage: object | None = None,
     websocket_message_rate_limit: float | None = 10.0,
     mtls_config: MTLSConfig | None = None,
+    delegation_key_store: Callable[[str], Any] | None = None,
+    delegation_storage: object | None = None,
 ) -> FastAPI:
     """Create and configure a FastAPI application for ASAP protocol.
 
@@ -1164,6 +1167,12 @@ def create_app(
             and closed. Set to None to disable WebSocket message rate limiting.
         mtls_config: Optional mTLS config for server. When provided, store on app.state.mtls_config.
             Use asap.transport.mtls.mtls_config_to_uvicorn_kwargs() when running uvicorn.
+        delegation_key_store: Optional callable (delegator_urn: str) -> Ed25519PrivateKey for
+            signing delegation tokens. When provided together with oauth2_config, enables
+            POST /asap/delegations (creates JWT delegation token; authenticated agent is issuer).
+        delegation_storage: Optional DelegationStorage for revocation. When provided with
+            delegation_key_store, enables DELETE /asap/delegations/{id} and registers issued
+            token IDs so only the delegator can revoke.
 
     Returns:
         Configured FastAPI application ready to run
@@ -1355,6 +1364,16 @@ def create_app(
             "asap.server.mtls_enabled",
             manifest_id=manifest.id,
             cert_file=str(mtls_config.cert_file),
+        )
+
+    if oauth2_config is not None and delegation_key_store is not None:
+        app.state.delegation_key_store = delegation_key_store
+        if delegation_storage is not None:
+            app.state.delegation_storage = delegation_storage
+        app.include_router(create_delegation_router(), prefix="/asap")
+        logger.info(
+            "asap.server.delegation_api_enabled",
+            manifest_id=manifest.id,
         )
 
     # Add size limit middleware (runs before routing)
