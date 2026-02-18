@@ -15,13 +15,12 @@ JWT. App state must set delegation_public_key_resolver(iss) -> Ed25519PublicKey.
 
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Callable, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field
 
 from asap.auth.middleware import OAuth2Claims
 from asap.auth.scopes import SCOPE_EXECUTE, require_scope
@@ -31,6 +30,7 @@ from asap.economics.delegation import (
     get_jti_from_jwt,
 )
 from asap.economics.delegation_storage import DelegationStorage
+from asap.models.base import ASAPBaseModel
 from asap.observability import get_logger
 
 if TYPE_CHECKING:
@@ -42,30 +42,24 @@ logger = get_logger(__name__)
 X_ASAP_DELEGATION_HEADER = "X-ASAP-Delegation-Token"
 
 
-class DelegationTokenSummary(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
+class DelegationTokenSummary(ASAPBaseModel):
     id: str = Field(..., description="Token ID (jti).")
     delegator: str = Field(..., description="URN of the issuer.")
     delegate: str = Field(..., description="URN of the delegate (holder).")
-    created_at: str = Field(..., description="Creation time (ISO 8601).")
+    created_at: datetime = Field(..., description="Creation time (UTC).")
     active: bool = Field(..., description="True if not revoked.")
 
 
-class DelegationTokenDetail(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
+class DelegationTokenDetail(ASAPBaseModel):
     id: str = Field(..., description="Token ID (jti).")
     delegator: str = Field(..., description="URN of the issuer.")
     delegate: str = Field(..., description="URN of the delegate (holder).")
-    created_at: str = Field(..., description="Creation time (ISO 8601).")
+    created_at: datetime = Field(..., description="Creation time (UTC).")
     active: bool = Field(..., description="True if not revoked.")
-    revoked_at: str | None = Field(None, description="Revocation time (ISO 8601) if revoked.")
+    revoked_at: datetime | None = Field(None, description="Revocation time (UTC) if revoked.")
 
 
-class CreateDelegationRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
+class CreateDelegationRequest(ASAPBaseModel):
     delegate: str = Field(..., description="URN of the agent receiving the delegation.")
     scopes: list[str] = Field(
         ...,
@@ -88,7 +82,6 @@ class CreateDelegationRequest(BaseModel):
 def _get_delegation_key_store(
     request: Request,
 ) -> Callable[[str], "Ed25519PrivateKey"]:
-    """Return the delegation key store from app state. Raises 503 if not configured."""
     store = getattr(request.app.state, "delegation_key_store", None)
     if store is None:
         raise HTTPException(
@@ -99,7 +92,6 @@ def _get_delegation_key_store(
 
 
 def _get_delegation_storage(request: Request) -> DelegationStorage:
-    """Return delegation storage from app state. Raises 503 if not configured."""
     storage = getattr(request.app.state, "delegation_storage", None)
     if storage is None:
         raise HTTPException(
@@ -119,7 +111,6 @@ def create_delegation_router() -> APIRouter:
     @router.post(
         "",
         status_code=201,
-        dependencies=[Depends(require_scope(SCOPE_EXECUTE))],
     )
     async def post_delegation(
         request: Request,
@@ -171,7 +162,6 @@ def create_delegation_router() -> APIRouter:
     @router.delete(
         "/{token_id}",
         status_code=204,
-        dependencies=[Depends(require_scope(SCOPE_EXECUTE))],
     )
     async def delete_delegation(
         request: Request,
@@ -190,15 +180,11 @@ def create_delegation_router() -> APIRouter:
                 status_code=403,
                 detail="Only the delegator that issued this token can revoke it",
             )
-        if hasattr(storage, "revoke_cascade"):
-            await storage.revoke_cascade(token_id)
-        else:
-            await storage.revoke(token_id)
+        await storage.revoke_cascade(token_id)
 
     @router.get(
         "",
         status_code=200,
-        dependencies=[Depends(require_scope(SCOPE_EXECUTE))],
     )
     async def list_delegations(
         request: Request,
@@ -208,23 +194,22 @@ def create_delegation_router() -> APIRouter:
         storage = _get_delegation_storage(request)
         delegator_urn = claims.sub
         summaries = await storage.list_issued_summaries(delegator_urn)
-        revoked_flags = await asyncio.gather(*[storage.is_revoked(s.id) for s in summaries])
+        revoked_map = await storage.are_revoked([s.id for s in summaries])
         return [
             DelegationTokenSummary(
                 id=s.id,
                 delegator=delegator_urn,
                 delegate=s.delegate_urn or "",
-                created_at=s.created_at.isoformat(),
-                active=not rev,
+                created_at=s.created_at,
+                active=not revoked_map.get(s.id, False),
             )
-            for s, rev in zip(summaries, revoked_flags, strict=True)
-            if not (active and rev)
+            for s in summaries
+            if not (active and revoked_map.get(s.id, False))
         ]
 
     @router.get(
         "/{token_id}",
         status_code=200,
-        dependencies=[Depends(require_scope(SCOPE_EXECUTE))],
     )
     async def get_delegation(
         request: Request,
@@ -232,29 +217,25 @@ def create_delegation_router() -> APIRouter:
         claims: OAuth2Claims = Depends(require_scope(SCOPE_EXECUTE)),
     ) -> DelegationTokenDetail:
         storage = _get_delegation_storage(request)
-        delegator_urn = await storage.get_delegator(token_id)
-        if delegator_urn is None:
+        detail = await storage.get_token_detail(token_id)
+        if detail is None:
             raise HTTPException(
                 status_code=404,
                 detail="Delegation token not found",
             )
-        delegate_urn = await storage.get_delegate(token_id) or ""
-        if claims.sub != delegator_urn and claims.sub != delegate_urn:
+        delegate_urn = detail.delegate_urn or ""
+        if claims.sub != detail.delegator_urn and claims.sub != delegate_urn:
             raise HTTPException(
                 status_code=403,
                 detail="Only the issuer or holder of this token can view it",
             )
-        created_at = await storage.get_issued_at(token_id)
-        created_at_str = created_at.isoformat() if created_at else ""
-        revoked = await storage.is_revoked(token_id)
-        revoked_at_dt = await storage.get_revoked_at(token_id) if revoked else None
         return DelegationTokenDetail(
-            id=token_id,
-            delegator=delegator_urn,
+            id=detail.id,
+            delegator=detail.delegator_urn,
             delegate=delegate_urn,
-            created_at=created_at_str,
-            active=not revoked,
-            revoked_at=revoked_at_dt.isoformat() if revoked_at_dt else None,
+            created_at=detail.created_at,
+            active=not detail.is_revoked,
+            revoked_at=detail.revoked_at,
         )
 
     return router
