@@ -50,15 +50,7 @@ DELEGATION_SCOPES: tuple[str, ...] = (
 def scope_includes_action(scopes: list[str], action: str) -> bool:
     """Return True if the given scopes allow the requested action.
 
-    - If scopes contains WILDCARD_SCOPE (*), any action is allowed.
-    - Otherwise action must be an exact match of one of the token scopes.
-
-    Args:
-        scopes: List of scope strings from a delegation token.
-        action: Requested action (e.g. 'task.execute', 'data.read').
-
-    Returns:
-        True if the action is permitted by the scopes.
+    WILDCARD_SCOPE (*) permits any action; otherwise requires exact match.
     """
     if not scopes:
         return False
@@ -226,7 +218,6 @@ def validate_delegation(
 
 
 def _ed25519_private_key_to_okp_key(private_key: Ed25519PrivateKey) -> OKPKey:
-    """Convert cryptography Ed25519PrivateKey to joserfc OKPKey for JWT signing."""
     raw_private = private_key.private_bytes(
         encoding=serialization.Encoding.Raw,
         format=serialization.PrivateFormat.Raw,
@@ -261,19 +252,7 @@ def create_delegation_jwt(
     """Create a signed JWT delegation token (RFC 7519, EdDSA).
 
     Claims: iss (delegator), aud (delegate), jti (id), iat, exp, scp (scopes),
-    and x-asap-constraints (max_tasks, max_cost_usd). The delegator signs with
-    their Ed25519 key.
-
-    Args:
-        delegator_urn: URN of the agent granting the delegation.
-        delegate_urn: URN of the agent receiving the delegation.
-        scopes: Allowed permission scopes (e.g. task.execute, data.read).
-        constraints: Limits (expires_at required; max_tasks, max_cost_usd optional).
-        private_key: Delegator's Ed25519 private key (from asap.crypto.keys).
-        token_id: Optional unique token id; if omitted, generated as del_<ULID>.
-
-    Returns:
-        Compact JWT string (header.payload.signature).
+    and x-asap-constraints (max_tasks, max_cost_usd).
     """
     if not scopes:
         raise ValueError("scopes must not be empty")

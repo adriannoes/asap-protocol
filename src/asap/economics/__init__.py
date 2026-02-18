@@ -14,6 +14,7 @@ from asap.economics.delegation_storage import (
     DelegationStorage,
     InMemoryDelegationStorage,
     SQLiteDelegationStorage,
+    TokenDetail,
 )
 from asap.economics.metering import (
     BatchUsageRequest,
@@ -45,6 +46,7 @@ __all__ = [
     "SQLiteDelegationStorage",
     "SQLiteMeteringStorage",
     "StorageStats",
+    "TokenDetail",
     "UsageAggregateByAgent",
     "UsageAggregateByConsumer",
     "UsageAggregateByPeriod",
