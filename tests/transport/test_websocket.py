@@ -6,7 +6,7 @@ import json
 import threading
 import time
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -446,7 +446,7 @@ class TestWebSocketTransportCorrelation(NoRateLimitTestBase):
                 await asyncio.sleep(999)
                 return ""
 
-        transport._ws = FakeWs()
+        transport._ws = cast(Any, FakeWs())
         transport._recv_task = asyncio.create_task(transport._recv_loop())
         transport._ack_check_task = asyncio.create_task(transport._ack_check_loop())
         transport._closed = False
@@ -554,7 +554,7 @@ class TestWebSocketTransportCorrelation(NoRateLimitTestBase):
         )
         mock_ws = _MockWebSocket(recv_side_effect=[error_frame])
         transport = WebSocketTransport(receive_timeout=5.0)
-        transport._ws = mock_ws
+        transport._ws = cast(Any, mock_ws)
         with pytest.raises(WebSocketRemoteError) as exc_info:
             await transport.receive()
         assert exc_info.value.code == -32600
@@ -575,7 +575,7 @@ class TestWebSocketTransportCorrelation(NoRateLimitTestBase):
         )
         mock_ws = _MockWebSocket(recv_side_effect=[bad_result_frame])
         transport = WebSocketTransport(receive_timeout=5.0)
-        transport._ws = mock_ws
+        transport._ws = cast(Any, mock_ws)
         with pytest.raises(WebSocketRemoteError) as exc_info:
             await transport.receive()
         assert exc_info.value.code == -32603
@@ -599,7 +599,7 @@ class TestWebSocketTransportCorrelation(NoRateLimitTestBase):
         )
         mock_ws = _MockWebSocket(recv_side_effect=[error_frame])
         transport = WebSocketTransport(receive_timeout=5.0)
-        transport._ws = mock_ws
+        transport._ws = cast(Any, mock_ws)
         transport._recv_task = asyncio.create_task(transport._recv_loop())
         await asyncio.sleep(0.15)
         transport._recv_task.cancel()
@@ -623,7 +623,7 @@ class TestWebSocketTransportCorrelation(NoRateLimitTestBase):
         )
         mock_ws = _MockWebSocket(recv_side_effect=[bad_frame])
         transport = WebSocketTransport(receive_timeout=5.0)
-        transport._ws = mock_ws
+        transport._ws = cast(Any, mock_ws)
         transport._recv_task = asyncio.create_task(transport._recv_loop())
         with (
             patch.object(transport, "_next_request_id", return_value="ws-req-1"),
@@ -655,7 +655,7 @@ class TestWebSocketTransportCorrelation(NoRateLimitTestBase):
         """When recv() raises, pending futures get WebSocketRemoteError and are cleared."""
         mock_ws = _MockWebSocket(recv_side_effect=[Exception("network down")])
         transport = WebSocketTransport(receive_timeout=5.0)
-        transport._ws = mock_ws
+        transport._ws = cast(Any, mock_ws)
         future: asyncio.Future[Envelope] = asyncio.get_event_loop().create_future()
         transport._pending["req-1"] = future
         transport._recv_task = asyncio.create_task(transport._recv_loop())
@@ -697,7 +697,7 @@ class TestWebSocketTransportOnMessage(NoRateLimitTestBase):
             on_message=on_message,
         )
         mock_ws = _MockWebSocket(recv_side_effect=[push_frame])
-        transport._ws = mock_ws
+        transport._ws = cast(Any, mock_ws)
         transport._recv_task = asyncio.create_task(transport._recv_loop())
         await asyncio.sleep(0.15)
         transport._recv_task.cancel()
@@ -732,7 +732,7 @@ class TestWebSocketTransportOnMessage(NoRateLimitTestBase):
             on_message=on_message_async,
         )
         mock_ws = _MockWebSocket(recv_side_effect=[push_frame])
-        transport._ws = mock_ws
+        transport._ws = cast(Any, mock_ws)
         transport._recv_task = asyncio.create_task(transport._recv_loop())
         await asyncio.sleep(0.15)
         transport._recv_task.cancel()
@@ -800,7 +800,7 @@ class TestWebSocketHeartbeat(NoRateLimitTestBase):
             ping_interval=None,
             ping_timeout=None,
         )
-        transport._ws = mock_ws
+        transport._ws = cast(Any, mock_ws)
         transport._recv_task = asyncio.create_task(transport._recv_loop())
         await asyncio.sleep(0.1)
         transport._recv_task.cancel()
@@ -1126,7 +1126,7 @@ class TestWebSocketConnectionPool(NoRateLimitTestBase):
         async def close_raises() -> None:
             raise OSError("closed")
 
-        t1.close = close_raises
+        cast(Any, t1).close = close_raises
         await pool.release(t1)
         await pool.close()
 
@@ -1570,7 +1570,7 @@ class TestWebSocketAckHandling(NoRateLimitTestBase):
         )
         transport._ws = AsyncMock()
         # Mock _send_envelope_only to track calls
-        transport._send_envelope_only = AsyncMock()
+        setattr(transport, "_send_envelope_only", AsyncMock())
 
         envelope = Envelope(
             asap_version="0.1",
@@ -1611,7 +1611,7 @@ class TestWebSocketAckHandling(NoRateLimitTestBase):
             ack_check_interval=0.01,
         )
         transport._ws = AsyncMock()
-        transport._send_envelope_only = AsyncMock()
+        setattr(transport, "_send_envelope_only", AsyncMock())
 
         envelope = Envelope(
             asap_version="0.1",
@@ -1659,7 +1659,7 @@ class TestWebSocketCircuitBreakerIntegration(NoRateLimitTestBase):
             circuit_breaker=mock_cb,
         )
         transport._ws = AsyncMock()
-        transport._send_envelope_only = AsyncMock()
+        setattr(transport, "_send_envelope_only", AsyncMock())
 
         envelope = Envelope(
             asap_version="0.1",
@@ -1694,7 +1694,7 @@ class TestWebSocketTransportSend(NoRateLimitTestBase):
 
         transport = WebSocketTransport()
         transport._ws = AsyncMock()
-        transport._ws.send = AsyncMock()
+        cast(Any, transport._ws).send = AsyncMock()
 
         envelope = Envelope(
             asap_version="0.1",
@@ -1744,7 +1744,7 @@ class TestWebSocketServerExceptions(NoRateLimitTestBase):
     ) -> None:
         """If internal processing raises exception (e.g. fake request creation),
         websocket sends error frame and rejection ack if needed.
-        Note: The Registry/Handler catches exceptions inside handle_message,
+
         so we need to mock something outside handle_message to trigger the websocket exception handler.
         _make_fake_request is outside handle_message.
         """

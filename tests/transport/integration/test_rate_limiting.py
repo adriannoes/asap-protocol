@@ -3,8 +3,6 @@
 This module contains tests specifically for rate limiting behavior.
 These tests are isolated in a separate file to prevent interference with other tests.
 
-CRITICAL: All tests use aggressive monkeypatch to replace module-level limiters
-to ensure complete isolation.
 """
 
 import collections.abc
@@ -210,7 +208,7 @@ class TestRateLimiting:
     ) -> None:
         """Test that rate limiting is applied per client IP.
 
-        Note: The rate limiter uses IP address when envelope is not yet parsed.
+
         """
         client = TestClient(isolated_app_5_per_minute)
 
