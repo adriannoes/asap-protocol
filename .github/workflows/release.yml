@@ -111,6 +111,9 @@ jobs:
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          verbose: true
+          attestations: false  # Disable PEP 740 attestations if they cause failures
         # Publishes both asap-protocol and asap-compliance from dist/
         # Requires Trusted Publishing configured for BOTH projects on PyPI:
         #   - asap-protocol
