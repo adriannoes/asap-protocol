@@ -24,12 +24,13 @@
     },
     "auth": null,
     "signature": null,
+    "sla": null,
     "ttl_seconds": 300
   },
   "signature": {
     "alg": "ed25519",
-    "signature": "Lru6Cu0iVZBXvpbbdQ89eXyOPe5WYGVlukuEZD4Xfdc60XMU/ne4K4cDi8RkSrjwPej2usC6N59KaMvtwGp6CA==",
+    "signature": "xizXUwOppgzw6ouVABn0SL+gz1xy2ZZ14poDz5MIbN2t6M/+/Ce4w78r72Ck+EBPIuXpo9U/KdhW/X9pmRmYBQ==",
     "trust_level": "self-signed"
   },
-  "public_key": "1Jbha+3UAJWzIj8ekTZrn4gEud/M6JWW19Rqt5JUHAI="
+  "public_key": "8i0VRjIwLtgIVT38znc3+oEosonon47DFblrsskfxJE="
 }
