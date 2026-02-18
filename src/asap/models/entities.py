@@ -12,6 +12,7 @@ This module defines the fundamental entities used in agent-to-agent communicatio
 - Capability: Collection of an agent's features and supported operations
 - Endpoint: Network endpoints for agent communication
 - AuthScheme: Authentication configuration for agent access
+- SLADefinition: Service level agreement guarantees (availability, latency, error rate)
 """
 
 from datetime import datetime
@@ -172,6 +173,41 @@ class AuthScheme(ASAPBaseModel):
     )
 
 
+class SLADefinition(ASAPBaseModel):
+    """Service level agreement guarantees published by an agent.
+
+    SLAs define availability, latency, error rate, and support hours.
+    Used as trust signals in the marketplace (v2.0) and for breach detection.
+
+    Attributes:
+        availability: Target uptime as percentage string (e.g., "99.5%").
+        max_latency_p95_ms: Maximum 95th percentile latency in milliseconds.
+        max_error_rate: Maximum acceptable error rate as percentage string (e.g., "1%").
+        support_hours: Support coverage (e.g., "24/7", "business").
+
+    Example:
+        >>> sla = SLADefinition(
+        ...     availability="99.5%",
+        ...     max_latency_p95_ms=500,
+        ...     max_error_rate="1%",
+        ...     support_hours="24/7"
+        ... )
+    """
+
+    availability: str | None = Field(
+        default=None, description="Target uptime as percentage (e.g., '99.5%')"
+    )
+    max_latency_p95_ms: int | None = Field(
+        default=None, ge=0, description="Maximum p95 latency in milliseconds"
+    )
+    max_error_rate: str | None = Field(
+        default=None, description="Maximum error rate as percentage (e.g., '1%')"
+    )
+    support_hours: str | None = Field(
+        default=None, description="Support coverage (e.g., '24/7', 'business')"
+    )
+
+
 class Agent(ASAPBaseModel):
     """An autonomous entity capable of sending and receiving ASAP messages.
 
@@ -218,6 +254,7 @@ class Manifest(ASAPBaseModel):
         endpoints: Network endpoints for communication
         auth: Optional authentication configuration
         signature: Optional cryptographic signature for manifest verification
+        sla: Optional SLA guarantees (availability, latency, error rate)
         ttl_seconds: How long to consider agent alive without re-check (default 300)
 
     Example:
@@ -233,6 +270,25 @@ class Manifest(ASAPBaseModel):
         ...     ),
         ...     endpoints=Endpoint(asap="https://api.example.com/asap")
         ... )
+        >>> # With SLA (optional):
+        >>> manifest_with_sla = Manifest(
+        ...     id="urn:asap:agent:research-v1",
+        ...     name="Research Agent",
+        ...     version="1.0.0",
+        ...     description="Performs web research",
+        ...     capabilities=Capability(
+        ...         asap_version="0.1",
+        ...         skills=[Skill(id="web_research", description="Research skill")],
+        ...         state_persistence=True,
+        ...     ),
+        ...     endpoints=Endpoint(asap="https://api.example.com/asap"),
+        ...     sla=SLADefinition(
+        ...         availability="99.5%",
+        ...         max_latency_p95_ms=500,
+        ...         max_error_rate="1%",
+        ...         support_hours="24/7",
+        ...     ),
+        ... )
     """
 
     id: AgentURN = Field(..., description="Unique agent identifier (URN format)")
@@ -244,6 +300,9 @@ class Manifest(ASAPBaseModel):
     auth: AuthScheme | None = Field(default=None, description="Authentication configuration")
     signature: str | None = Field(
         default=None, description="Cryptographic signature for verification"
+    )
+    sla: SLADefinition | None = Field(
+        default=None, description="SLA guarantees (availability, latency, error rate)"
     )
     ttl_seconds: int = Field(
         default=DEFAULT_MANIFEST_TTL_SECONDS,

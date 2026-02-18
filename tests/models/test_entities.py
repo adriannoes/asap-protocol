@@ -3,7 +3,15 @@
 import pytest
 from pydantic import ValidationError
 
-from asap.models.entities import Agent, AuthScheme, Capability, Endpoint, Manifest, Skill
+from asap.models.entities import (
+    Agent,
+    AuthScheme,
+    Capability,
+    Endpoint,
+    Manifest,
+    Skill,
+    SLADefinition,
+)
 from asap.models.ids import generate_id
 
 
@@ -238,6 +246,71 @@ class TestAuthScheme:
         assert len(auth.oauth2["scopes"]) == 2
 
 
+class TestSLADefinition:
+    """Test suite for SLADefinition model (SLA schema in manifest)."""
+
+    def test_sla_definition_all_fields(self) -> None:
+        """SLADefinition accepts all fields."""
+        sla = SLADefinition(
+            availability="99.5%",
+            max_latency_p95_ms=500,
+            max_error_rate="1%",
+            support_hours="24/7",
+        )
+        assert sla.availability == "99.5%"
+        assert sla.max_latency_p95_ms == 500
+        assert sla.max_error_rate == "1%"
+        assert sla.support_hours == "24/7"
+
+    def test_sla_definition_optional_fields_default_none(self) -> None:
+        """SLADefinition has all fields optional; defaults are None."""
+        sla = SLADefinition()
+        assert sla.availability is None
+        assert sla.max_latency_p95_ms is None
+        assert sla.max_error_rate is None
+        assert sla.support_hours is None
+
+    def test_sla_definition_partial_fields(self) -> None:
+        """SLADefinition accepts a subset of fields."""
+        sla = SLADefinition(availability="99.9%", support_hours="business")
+        assert sla.availability == "99.9%"
+        assert sla.support_hours == "business"
+        assert sla.max_latency_p95_ms is None
+        assert sla.max_error_rate is None
+
+    def test_sla_definition_negative_latency_rejected(self) -> None:
+        """SLADefinition rejects negative max_latency_p95_ms."""
+        with pytest.raises(ValidationError):
+            SLADefinition(max_latency_p95_ms=-1)
+
+    def test_sla_definition_zero_latency_accepted(self) -> None:
+        """SLADefinition accepts zero max_latency_p95_ms (ge=0)."""
+        sla = SLADefinition(max_latency_p95_ms=0)
+        assert sla.max_latency_p95_ms == 0
+
+    def test_sla_definition_json_schema(self) -> None:
+        """SLADefinition generates JSON Schema with expected properties."""
+        schema = SLADefinition.model_json_schema()
+        assert schema["type"] == "object"
+        assert "availability" in schema["properties"]
+        assert "max_latency_p95_ms" in schema["properties"]
+        assert "max_error_rate" in schema["properties"]
+        assert "support_hours" in schema["properties"]
+
+    def test_sla_definition_serialization_roundtrip(self) -> None:
+        """SLADefinition round-trips via model_dump and model_validate."""
+        sla = SLADefinition(
+            availability="99.5%",
+            max_latency_p95_ms=200,
+            max_error_rate="0.5%",
+            support_hours="24/7",
+        )
+        data = sla.model_dump()
+        restored = SLADefinition.model_validate(data)
+        assert restored.availability == sla.availability
+        assert restored.max_latency_p95_ms == sla.max_latency_p95_ms
+
+
 class TestManifest:
     """Test suite for Manifest entity model."""
 
@@ -308,6 +381,7 @@ class TestManifest:
 
         assert manifest.auth is None
         assert manifest.signature is None
+        assert manifest.sla is None
 
     def test_manifest_urn_max_length_rejected(self) -> None:
         """Test that Manifest rejects agent id URN longer than MAX_URN_LENGTH (256)."""
@@ -400,6 +474,84 @@ class TestManifest:
         assert manifest.id == data["id"]
         assert manifest.name == data["name"]
         assert len(manifest.capabilities.skills) == 1
+        assert manifest.sla is None
+
+    def test_manifest_with_sla(self) -> None:
+        """Manifest accepts optional sla field (SLADefinition)."""
+        manifest = Manifest(
+            id="urn:asap:agent:with-sla",
+            name="Agent With SLA",
+            version="1.0.0",
+            description="Agent with SLA guarantees",
+            capabilities=Capability(asap_version="0.1", skills=[]),
+            endpoints=Endpoint(asap="https://api.example.com/asap"),
+            sla=SLADefinition(
+                availability="99.5%",
+                max_latency_p95_ms=500,
+                max_error_rate="1%",
+                support_hours="24/7",
+            ),
+        )
+        assert manifest.sla is not None
+        assert manifest.sla.availability == "99.5%"
+        assert manifest.sla.max_latency_p95_ms == 500
+        assert manifest.sla.support_hours == "24/7"
+
+    def test_manifest_deserialization_with_sla(self) -> None:
+        """Manifest deserializes from JSON including sla object."""
+        data = {
+            "id": "urn:asap:agent:test",
+            "name": "Test Agent",
+            "version": "1.0.0",
+            "description": "A test agent",
+            "capabilities": {
+                "asap_version": "0.1",
+                "skills": [{"id": "test_skill", "description": "Test skill"}],
+                "state_persistence": False,
+                "streaming": False,
+                "mcp_tools": [],
+            },
+            "endpoints": {"asap": "https://api.example.com/asap"},
+            "sla": {
+                "availability": "99.9%",
+                "max_latency_p95_ms": 200,
+                "max_error_rate": "0.5%",
+                "support_hours": "business",
+            },
+        }
+        manifest = Manifest.model_validate(data)
+        assert manifest.sla is not None
+        assert manifest.sla.availability == "99.9%"
+        assert manifest.sla.max_latency_p95_ms == 200
+        assert manifest.sla.support_hours == "business"
+
+    def test_manifest_json_schema_includes_sla(self) -> None:
+        """Manifest JSON Schema includes optional sla property."""
+        schema = Manifest.model_json_schema()
+        assert "sla" in schema["properties"]
+        assert "sla" not in schema.get("required", [])
+
+
+class TestManifestSLAFixture:
+    """Test manifest fixture with SLA (manifest_with_sla.json)."""
+
+    def test_manifest_with_sla_fixture_loads(self) -> None:
+        """Fixture manifest_with_sla.json parses as Manifest with SLA."""
+        import json
+        from pathlib import Path
+
+        fixtures_dir = Path(__file__).resolve().parent.parent / "fixtures"
+        path = fixtures_dir / "manifest_with_sla.json"
+        if not path.exists():
+            pytest.skip("Fixture manifest_with_sla.json not found")
+        data = json.loads(path.read_text(encoding="utf-8"))
+        manifest = Manifest.model_validate(data)
+        assert manifest.id == "urn:asap:agent:example-with-sla"
+        assert manifest.sla is not None
+        assert manifest.sla.availability == "99.5%"
+        assert manifest.sla.max_latency_p95_ms == 500
+        assert manifest.sla.max_error_rate == "1%"
+        assert manifest.sla.support_hours == "24/7"
 
 
 class TestConversation:

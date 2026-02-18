@@ -25,6 +25,7 @@ from asap.economics.metering import (
     UsageMetrics,
     UsageSummary,
 )
+from asap.economics.sla import SLADefinition
 from asap.economics.storage import (
     InMemoryMeteringStorage,
     MeteringQuery,
@@ -35,14 +36,15 @@ from asap.economics.storage import (
 __all__ = [
     "BatchUsageRequest",
     "DELEGATION_SCOPES",
-    "create_delegation_jwt",
     "DelegationConstraints",
     "DelegationStorage",
     "DelegationToken",
+    "create_delegation_jwt",
     "InMemoryDelegationStorage",
     "InMemoryMeteringStorage",
     "MeteringQuery",
     "MeteringStorage",
+    "SLADefinition",
     "SQLiteDelegationStorage",
     "SQLiteMeteringStorage",
     "StorageStats",
