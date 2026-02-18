@@ -110,8 +110,10 @@ from asap.transport.compression import (
 )
 from asap.state.metering import MeteringStore
 from asap.state.snapshot import SnapshotStore
+from asap.economics.sla_storage import SLAStorage
 from asap.economics.storage import MeteringStorage, metering_storage_adapter
 from asap.transport.delegation_api import create_delegation_router
+from asap.transport.sla_api import create_sla_router
 from asap.transport.usage_api import create_usage_router
 from asap.state.stores import create_snapshot_store
 from asap.transport.validators import (
@@ -1116,6 +1118,7 @@ def create_app(
     mtls_config: MTLSConfig | None = None,
     delegation_key_store: Callable[[str], Any] | None = None,
     delegation_storage: object | None = None,
+    sla_storage: object | None = None,
 ) -> FastAPI:
     """Create and configure a FastAPI application for ASAP protocol.
 
@@ -1173,6 +1176,8 @@ def create_app(
         delegation_storage: Optional DelegationStorage for revocation. When provided with
             delegation_key_store, enables DELETE /asap/delegations/{id} and registers issued
             token IDs so only the delegator can revoke.
+        sla_storage: Optional SLAStorage for SLA metrics and breaches. When provided,
+            enables GET /sla, /sla/history, /sla/breaches for querying SLA status.
 
     Returns:
         Configured FastAPI application ready to run
@@ -1369,6 +1374,18 @@ def create_app(
             "asap.server.mtls_enabled",
             manifest_id=manifest.id,
             cert_file=str(mtls_config.cert_file),
+        )
+
+    if sla_storage is not None and isinstance(sla_storage, SLAStorage):
+        app.state.sla_storage = sla_storage
+        app.state.manifest = manifest
+        app.include_router(create_sla_router())
+        logger.warning(
+            "asap.server.sla_api_unauthenticated",
+            message=(
+                "SLA API (/sla) is enabled but unauthenticated. "
+                "Intended for local/operator use only. Protect with OAuth2 or network controls when exposed."
+            ),
         )
 
     if oauth2_config is not None and delegation_key_store is not None:
