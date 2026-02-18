@@ -212,6 +212,18 @@ def delegation_create(
     """Create a signed delegation token (JWT, EdDSA). Output: raw JWT string."""
     if not key_file.exists():
         raise typer.BadParameter(f"Key file not found: {key_file}")
+    if not key_file.is_file():
+        raise typer.BadParameter(f"Key path is not a file: {key_file}")
+    try:
+        mode = key_file.stat().st_mode & 0o777
+        if mode & 0o077:
+            typer.echo(
+                f"Warning: key file {key_file} has open permissions ({oct(mode)}). "
+                "Consider restricting to 0600.",
+                err=True,
+            )
+    except OSError:
+        pass
     scope_list = [s.strip() for s in scopes.split(",") if s.strip()]
     if not scope_list:
         raise typer.BadParameter("At least one scope is required.")

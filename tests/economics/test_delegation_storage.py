@@ -101,6 +101,26 @@ class TestInMemoryDelegationStorage:
         assert await memory_storage.is_revoked("del_d1_d2") is True
         assert await memory_storage.is_revoked("del_d2_d3") is True
 
+    @pytest.mark.asyncio
+    async def test_revoke_cascade_circular_chain_terminates(
+        self,
+        memory_storage: InMemoryDelegationStorage,
+    ) -> None:
+        """Circular delegation chains terminate without RecursionError."""
+        await memory_storage.register_issued(
+            "t1",
+            "urn:asap:agent:A",
+            delegate_urn="urn:asap:agent:B",
+        )
+        await memory_storage.register_issued(
+            "t2",
+            "urn:asap:agent:B",
+            delegate_urn="urn:asap:agent:A",
+        )
+        await memory_storage.revoke_cascade("t1")
+        assert await memory_storage.is_revoked("t1") is True
+        assert await memory_storage.is_revoked("t2") is True
+
 
 # ---------------------------------------------------------------------------
 # SQLiteDelegationStorage
@@ -201,3 +221,23 @@ class TestSQLiteDelegationStorage:
         await sqlite_storage.revoke_cascade("del_root_mid")
         assert await sqlite_storage.is_revoked("del_root_mid") is True
         assert await sqlite_storage.is_revoked("del_mid_leaf") is True
+
+    @pytest.mark.asyncio
+    async def test_revoke_cascade_circular_chain_terminates(
+        self,
+        sqlite_storage: SQLiteDelegationStorage,
+    ) -> None:
+        """Circular delegation chains terminate without RecursionError."""
+        await sqlite_storage.register_issued(
+            "t1",
+            "urn:asap:agent:A",
+            delegate_urn="urn:asap:agent:B",
+        )
+        await sqlite_storage.register_issued(
+            "t2",
+            "urn:asap:agent:B",
+            delegate_urn="urn:asap:agent:A",
+        )
+        await sqlite_storage.revoke_cascade("t1")
+        assert await sqlite_storage.is_revoked("t1") is True
+        assert await sqlite_storage.is_revoked("t2") is True
