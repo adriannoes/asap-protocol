@@ -25,7 +25,21 @@ from asap.economics.metering import (
     UsageMetrics,
     UsageSummary,
 )
-from asap.economics.sla import SLADefinition
+from asap.economics.sla import (
+    SLADefinition,
+    SLAMetrics,
+    SLABreach,
+    aggregate_sla_metrics,
+    compute_error_rate_percent,
+    compute_latency_p95_ms,
+    compute_uptime_percent,
+    rolling_window_bounds,
+)
+from asap.economics.sla_storage import (
+    InMemorySLAStorage,
+    SLAStorage,
+    SQLiteSLAStorage,
+)
 from asap.economics.storage import (
     InMemoryMeteringStorage,
     MeteringQuery,
@@ -42,11 +56,16 @@ __all__ = [
     "create_delegation_jwt",
     "InMemoryDelegationStorage",
     "InMemoryMeteringStorage",
+    "InMemorySLAStorage",
     "MeteringQuery",
     "MeteringStorage",
     "SLADefinition",
+    "SLAMetrics",
+    "SLABreach",
+    "SLAStorage",
     "SQLiteDelegationStorage",
     "SQLiteMeteringStorage",
+    "SQLiteSLAStorage",
     "StorageStats",
     "TokenDetail",
     "UsageAggregateByAgent",
@@ -56,6 +75,11 @@ __all__ = [
     "UsageSummary",
     "ValidationResult",
     "WILDCARD_SCOPE",
+    "aggregate_sla_metrics",
+    "compute_error_rate_percent",
+    "compute_latency_p95_ms",
+    "compute_uptime_percent",
+    "rolling_window_bounds",
     "scope_includes_action",
     "validate_delegation",
 ]
