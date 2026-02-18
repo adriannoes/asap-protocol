@@ -1570,7 +1570,7 @@ class TestWebSocketAckHandling(NoRateLimitTestBase):
         )
         transport._ws = AsyncMock()
         # Mock _send_envelope_only to track calls
-        setattr(transport, "_send_envelope_only", AsyncMock())
+        transport._send_envelope_only = AsyncMock()
 
         envelope = Envelope(
             asap_version="0.1",
@@ -1611,7 +1611,7 @@ class TestWebSocketAckHandling(NoRateLimitTestBase):
             ack_check_interval=0.01,
         )
         transport._ws = AsyncMock()
-        setattr(transport, "_send_envelope_only", AsyncMock())
+        transport._send_envelope_only = AsyncMock()
 
         envelope = Envelope(
             asap_version="0.1",
@@ -1659,7 +1659,7 @@ class TestWebSocketCircuitBreakerIntegration(NoRateLimitTestBase):
             circuit_breaker=mock_cb,
         )
         transport._ws = AsyncMock()
-        setattr(transport, "_send_envelope_only", AsyncMock())
+        transport._send_envelope_only = AsyncMock()
 
         envelope = Envelope(
             asap_version="0.1",
