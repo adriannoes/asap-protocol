@@ -29,7 +29,7 @@ from asap.models.ids import generate_id
 # Ed25519 (RFC 9864). EdDSA accepted for legacy verify.
 JWT_ALG = "Ed25519"
 JWT_ALGS_VERIFY = [JWT_ALG, "EdDSA"]
-JWT_ALG_EDDSA = JWT_ALG  # deprecated alias
+
 # Custom claim key for delegation constraints (max_tasks, max_cost_usd).
 X_ASAP_CONSTRAINTS_CLAIM = "x-asap-constraints"
 
