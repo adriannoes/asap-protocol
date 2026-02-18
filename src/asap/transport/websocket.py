@@ -43,6 +43,7 @@ from asap.transport.rate_limit import (
 ASAP_ACK_METHOD = "asap.ack"
 
 if TYPE_CHECKING:
+    from asap.economics.sla import SLABreach
     from asap.transport.server import ASAPRequestHandler
     from websockets.legacy.client import WebSocketClientProtocol
 
@@ -124,6 +125,9 @@ __all__ = [
     "PendingAck",
     "RECONNECT_INITIAL_BACKOFF",
     "RECONNECT_MAX_BACKOFF",
+    "SLA_BREACH_NOTIFICATION_METHOD",
+    "SLA_SUBSCRIBE_METHOD",
+    "SLA_UNSUBSCRIBE_METHOD",
     "STALE_CONNECTION_TIMEOUT",
     "WebSocketConnectionPool",
     "WebSocketRemoteError",
@@ -131,6 +135,7 @@ __all__ = [
     "WS_CLOSE_GOING_AWAY",
     "WS_CLOSE_POLICY_VIOLATION",
     "WS_CLOSE_REASON_SHUTDOWN",
+    "broadcast_sla_breach",
     "decode_frame_to_json",
     "encode_envelope_frame",
     "handle_websocket_connection",
@@ -805,12 +810,47 @@ WS_CLOSE_REASON_SHUTDOWN = "Server shutting down"
 # Rate limit: close code when client exceeds message rate (RFC 6455 policy violation)
 WS_CLOSE_POLICY_VIOLATION = 1008
 
+# JSON-RPC methods for SLA breach subscription (v1.3)
+SLA_SUBSCRIBE_METHOD = "sla.subscribe"
+SLA_UNSUBSCRIBE_METHOD = "sla.unsubscribe"
+SLA_BREACH_NOTIFICATION_METHOD = "sla.breach"
+
+
+async def broadcast_sla_breach(
+    breach: "SLABreach",
+    subscribers: set[WebSocket],
+) -> None:
+    """Send an SLA breach notification to all subscribed WebSocket connections.
+
+    Each subscriber receives a JSON-RPC 2.0 notification (no id): method "sla.breach",
+    params.breach contains the breach payload (serialized from SLABreach).
+
+    Args:
+        breach: The breach to broadcast.
+        subscribers: Set of WebSocket connections subscribed to SLA breach events.
+    """
+    payload = {
+        "jsonrpc": "2.0",
+        "method": SLA_BREACH_NOTIFICATION_METHOD,
+        "params": {
+            "breach": breach.model_dump(mode="json"),
+        },
+    }
+    text = json.dumps(payload, default=str)
+    for ws in list(subscribers):
+        try:
+            await ws.send_text(text)
+        except (RuntimeError, OSError) as e:
+            logger.debug("asap.websocket.sla_breach_send_error", error=str(e))
+            subscribers.discard(ws)
+
 
 async def handle_websocket_connection(
     websocket: WebSocket,
     request_handler: "ASAPRequestHandler",
     active_connections: set[WebSocket] | None = None,
     ws_message_rate_limit: float | None = DEFAULT_WS_MESSAGES_PER_SECOND,
+    sla_breach_subscribers: set[WebSocket] | None = None,
 ) -> None:
     await websocket.accept()
     if active_connections is not None:
@@ -847,6 +887,32 @@ async def handle_websocket_connection(
                 continue
             if _is_heartbeat_pong(data):
                 continue
+            if isinstance(data, dict) and sla_breach_subscribers is not None:
+                method = data.get("method")
+                if method == SLA_SUBSCRIBE_METHOD:
+                    sla_breach_subscribers.add(websocket)
+                    await websocket.send_text(
+                        json.dumps(
+                            {
+                                "jsonrpc": "2.0",
+                                "result": {"subscribed": True},
+                                "id": data.get("id"),
+                            }
+                        )
+                    )
+                    continue
+                if method == SLA_UNSUBSCRIBE_METHOD:
+                    sla_breach_subscribers.discard(websocket)
+                    await websocket.send_text(
+                        json.dumps(
+                            {
+                                "jsonrpc": "2.0",
+                                "result": {"unsubscribed": True},
+                                "id": data.get("id"),
+                            }
+                        )
+                    )
+                    continue
             if bucket is not None and not bucket.consume(1):
                 rate_limited = True
                 logger.warning(
@@ -933,6 +999,8 @@ async def handle_websocket_connection(
                 await heartbeat_task
         if active_connections is not None:
             active_connections.discard(websocket)
+        if sla_breach_subscribers is not None:
+            sla_breach_subscribers.discard(websocket)
         try:
             await websocket.close(
                 code=WS_CLOSE_POLICY_VIOLATION if rate_limited else WS_CLOSE_GOING_AWAY

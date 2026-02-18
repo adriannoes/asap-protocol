@@ -1181,7 +1181,7 @@ def create_app(
         ValueError: If manifest requires authentication but no token_validator provided
 
     Example:
-        >>> from asap.models.entities import Manifest, Capability, Endpoint, Skill, AuthScheme
+        >>> from asap.models.entities import Manifest, Capability, Endpoint, Skill, AuthScheme, SLADefinition
         >>> from asap.transport.handlers import HandlerRegistry
         >>> manifest = Manifest(
         ...     id="urn:asap:agent:test",
@@ -1196,6 +1196,8 @@ def create_app(
         ...     endpoints=Endpoint(asap="http://localhost:8000/asap")
         ... )
         >>> app = create_app(manifest)
+        >>>
+        >>> # With SLA (optional): add sla=SLADefinition(availability="99.5%", max_latency_p95_ms=500)
         >>>
         >>> # With authentication:
         >>> manifest_with_auth = Manifest(
@@ -1326,6 +1328,8 @@ def create_app(
 
     # Track active WebSocket connections for graceful shutdown (close with reason)
     _active_websockets: set[WebSocket] = set()
+    # Subset of connections subscribed to SLA breach notifications (v1.3)
+    _sla_breach_subscribers: set[WebSocket] = set()
 
     @asynccontextmanager
     async def _lifespan(app: FastAPI) -> Any:
@@ -1347,6 +1351,7 @@ def create_app(
         lifespan=_lifespan,
     )
     app.state.websocket_connections = _active_websockets
+    app.state.sla_breach_subscribers = _sla_breach_subscribers
     app.state.websocket_message_rate_limit = websocket_message_rate_limit
     app.state.mtls_config = mtls_config
     if metering_storage is not None and isinstance(metering_storage, MeteringStorage):
@@ -1519,11 +1524,15 @@ def create_app(
     async def websocket_asap(websocket: WebSocket) -> None:
         """ASAP JSON-RPC over WebSocket; same handlers as POST /asap."""
         ws_rate_limit: float | None = getattr(app.state, "websocket_message_rate_limit", 10.0)
+        sla_subscribers: set[WebSocket] | None = getattr(
+            app.state, "sla_breach_subscribers", None
+        )
         await handle_websocket_connection(
             websocket,
             handler,
             app.state.websocket_connections,
             ws_message_rate_limit=ws_rate_limit,
+            sla_breach_subscribers=sla_subscribers,
         )
 
     return app
