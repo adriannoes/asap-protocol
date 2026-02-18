@@ -327,16 +327,16 @@ SLAs (Service Level Agreements) define guarantees agents commit to — availabil
   - Create PR for E3 sprint
   - Code review pass
 
-- [ ] 3.7.7 Git tag v1.3.0
+- [x] 3.7.7 Git tag v1.3.0
 
-- [ ] 3.7.8 Commit
+- [x] 3.7.8 Commit
   - **Command**: `git commit -m "chore: prepare v1.3.0 release"`
 
 **Acceptance Criteria**:
 - [x] v1.3.0 version in all files
 - [x] CHANGELOG complete
 - [x] CI passes
-- [ ] Tag created
+- [x] Tag created
 
 ---
 
@@ -349,6 +349,7 @@ SLAs (Service Level Agreements) define guarantees agents commit to — availabil
 - [x] Cross-feature integration tested
 - [x] End-to-End demo runs successfully
 - [x] v1.3.0 release prepared
+- [x] v1.3.0 tag pushed (release workflow triggered)
 - [x] Test coverage >95%
 
 **Total Sub-tasks**: ~37
