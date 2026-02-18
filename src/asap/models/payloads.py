@@ -33,14 +33,6 @@ class TaskRequest(ASAPBaseModel):
         skill_id: Identifier of the skill to execute
         input: Input data for the skill (JSON-serializable)
         config: Optional configuration (timeout, priority, streaming, etc.)
-
-    Example:
-        >>> request = TaskRequest(
-        ...     conversation_id="conv_01HX5K3MQVN8",
-        ...     skill_id="web_research",
-        ...     input={"query": "AI infrastructure market trends Q3 2025"},
-        ...     config={"timeout_seconds": 600, "streaming": True}
-        ... )
     """
 
     conversation_id: ConversationID = Field(..., description="Parent conversation ID")
@@ -64,14 +56,6 @@ class TaskResponse(ASAPBaseModel):
         result: Optional result data (summary, artifacts, etc.)
         final_state: Optional final state snapshot
         metrics: Optional execution metrics (duration, tokens used, etc.)
-
-    Example:
-        >>> response = TaskResponse(
-        ...     task_id="task_01HX5K4N",
-        ...     status="completed",
-        ...     result={"summary": "Analysis complete", "artifacts": ["art_123"]},
-        ...     metrics={"duration_ms": 45000, "tokens_used": 12500}
-        ... )
     """
 
     task_id: TaskID = Field(..., description="Task identifier")
@@ -97,23 +81,6 @@ class TaskUpdate(ASAPBaseModel):
         status: Current task status
         progress: Optional progress information (percent, message, ETA)
         input_request: Optional request for additional input from user
-
-    Example:
-        >>> # Progress update
-        >>> update = TaskUpdate(
-        ...     task_id="task_123",
-        ...     update_type="progress",
-        ...     status="working",
-        ...     progress={"percent": 65, "message": "Synthesizing findings..."}
-        ... )
-        >>>
-        >>> # Input required update
-        >>> update = TaskUpdate(
-        ...     task_id="task_123",
-        ...     update_type="input_required",
-        ...     status="input_required",
-        ...     input_request={"prompt": "Please clarify:", "options": [...]}
-        ... )
     """
 
     task_id: TaskID = Field(..., description="Task identifier")
@@ -147,12 +114,6 @@ class TaskCancel(ASAPBaseModel):
     Attributes:
         task_id: ID of the task to cancel
         reason: Optional reason for cancellation
-
-    Example:
-        >>> cancel = TaskCancel(
-        ...     task_id="task_123",
-        ...     reason="User requested cancellation"
-        ... )
     """
 
     task_id: TaskID = Field(..., description="Task identifier to cancel")
@@ -171,15 +132,6 @@ class MessageSend(ASAPBaseModel):
         sender: Agent URN of the message sender
         role: Message role (user, assistant, system)
         parts: List of part IDs that make up this message
-
-    Example:
-        >>> message = MessageSend(
-        ...     task_id="task_123",
-        ...     message_id="msg_456",
-        ...     sender="urn:asap:agent:coordinator",
-        ...     role="user",
-        ...     parts=["part_789"]
-        ... )
     """
 
     task_id: TaskID = Field(..., description="Parent task ID")
@@ -198,13 +150,6 @@ class StateQuery(ASAPBaseModel):
     Attributes:
         task_id: ID of the task to query state for
         version: Optional specific version number to retrieve
-
-    Example:
-        >>> # Query latest state
-        >>> query = StateQuery(task_id="task_123")
-        >>>
-        >>> # Query specific version
-        >>> query = StateQuery(task_id="task_123", version=5)
     """
 
     task_id: TaskID = Field(..., description="Task identifier")
@@ -220,12 +165,6 @@ class StateRestore(ASAPBaseModel):
     Attributes:
         task_id: ID of the task to restore
         snapshot_id: ID of the snapshot to restore from
-
-    Example:
-        >>> restore = StateRestore(
-        ...     task_id="task_123",
-        ...     snapshot_id="snap_456"
-        ... )
     """
 
     task_id: TaskID = Field(..., description="Task identifier")
@@ -242,13 +181,6 @@ class ArtifactNotify(ASAPBaseModel):
         artifact_id: ID of the artifact
         task_id: ID of the task that produced the artifact
         name: Optional human-readable artifact name
-
-    Example:
-        >>> notify = ArtifactNotify(
-        ...     artifact_id="art_123",
-        ...     task_id="task_456",
-        ...     name="Q3 Market Analysis Report"
-        ... )
     """
 
     artifact_id: ArtifactID = Field(..., description="Artifact identifier")
@@ -267,14 +199,6 @@ class McpToolCall(ASAPBaseModel):
         tool_name: Name of the MCP tool to invoke
         arguments: Arguments to pass to the tool (JSON-serializable)
         mcp_context: Optional MCP-specific context (server, session, etc.)
-
-    Example:
-        >>> tool_call = McpToolCall(
-        ...     request_id="req_123",
-        ...     tool_name="web_search",
-        ...     arguments={"query": "AI trends", "max_results": 10},
-        ...     mcp_context={"server": "mcp://tools.example.com"}
-        ... )
     """
 
     request_id: str = Field(..., description="Unique request identifier")
@@ -296,21 +220,6 @@ class McpToolResult(ASAPBaseModel):
         success: Whether the tool call succeeded
         result: Optional result data (if successful)
         error: Optional error message (if failed)
-
-    Example:
-        >>> # Successful result
-        >>> result = McpToolResult(
-        ...     request_id="req_123",
-        ...     success=True,
-        ...     result={"findings": ["finding1", "finding2"]}
-        ... )
-        >>>
-        >>> # Failed result
-        >>> result = McpToolResult(
-        ...     request_id="req_123",
-        ...     success=False,
-        ...     error="Tool execution failed: timeout"
-        ... )
     """
 
     request_id: str = Field(..., description="Original request identifier")
@@ -341,11 +250,6 @@ class McpResourceFetch(ASAPBaseModel):
 
     Attributes:
         resource_uri: URI of the MCP resource to fetch
-
-    Example:
-        >>> fetch = McpResourceFetch(
-        ...     resource_uri="mcp://server/resources/data_123"
-        ... )
     """
 
     resource_uri: str = Field(..., description="MCP resource URI to fetch")
@@ -359,12 +263,6 @@ class McpResourceData(ASAPBaseModel):
     Attributes:
         resource_uri: URI of the resource
         content: Resource content (JSON-serializable)
-
-    Example:
-        >>> data = McpResourceData(
-        ...     resource_uri="mcp://server/resources/data_123",
-        ...     content={"data": [1, 2, 3], "metadata": {"source": "api"}}
-        ... )
     """
 
     resource_uri: str = Field(..., description="MCP resource URI")
