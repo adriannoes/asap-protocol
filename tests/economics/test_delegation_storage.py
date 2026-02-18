@@ -241,3 +241,224 @@ class TestSQLiteDelegationStorage:
         await sqlite_storage.revoke_cascade("t1")
         assert await sqlite_storage.is_revoked("t1") is True
         assert await sqlite_storage.is_revoked("t2") is True
+
+
+# ---------------------------------------------------------------------------
+# InMemoryDelegationStorage — additional coverage
+# ---------------------------------------------------------------------------
+
+
+class TestInMemoryDelegationStorageCoverage:
+    """Cover list_issued_summaries, get_issued_at, get_revoked_at,
+    are_revoked, get_token_detail."""
+
+    @pytest.mark.asyncio
+    async def test_list_issued_summaries(self, memory_storage: InMemoryDelegationStorage) -> None:
+        await memory_storage.register_issued("t1", "urn:delegator:a", delegate_urn="urn:delegate:x")
+        await memory_storage.register_issued("t2", "urn:delegator:a")
+        await memory_storage.register_issued("t3", "urn:delegator:b")
+
+        summaries = await memory_storage.list_issued_summaries("urn:delegator:a")
+        assert len(summaries) == 2
+        ids = {s.id for s in summaries}
+        assert ids == {"t1", "t2"}
+        # Check delegate_urn populated
+        by_id = {s.id: s for s in summaries}
+        assert by_id["t1"].delegate_urn == "urn:delegate:x"
+        assert by_id["t2"].delegate_urn is None
+
+    @pytest.mark.asyncio
+    async def test_list_issued_summaries_empty(
+        self, memory_storage: InMemoryDelegationStorage
+    ) -> None:
+        summaries = await memory_storage.list_issued_summaries("urn:delegator:nobody")
+        assert summaries == []
+
+    @pytest.mark.asyncio
+    async def test_get_issued_at(self, memory_storage: InMemoryDelegationStorage) -> None:
+        await memory_storage.register_issued("tok1", "urn:d:a")
+        issued_at = await memory_storage.get_issued_at("tok1")
+        assert issued_at is not None
+        # Nonexistent token
+        assert await memory_storage.get_issued_at("nonexistent") is None
+
+    @pytest.mark.asyncio
+    async def test_get_revoked_at(self, memory_storage: InMemoryDelegationStorage) -> None:
+        await memory_storage.revoke("tok1", reason="test")
+        revoked_at = await memory_storage.get_revoked_at("tok1")
+        assert revoked_at is not None
+        # Not revoked
+        assert await memory_storage.get_revoked_at("tok2") is None
+
+    @pytest.mark.asyncio
+    async def test_are_revoked(self, memory_storage: InMemoryDelegationStorage) -> None:
+        await memory_storage.revoke("tok1")
+        result = await memory_storage.are_revoked(["tok1", "tok2", "tok3"])
+        assert result == {"tok1": True, "tok2": False, "tok3": False}
+
+    @pytest.mark.asyncio
+    async def test_are_revoked_empty_list(self, memory_storage: InMemoryDelegationStorage) -> None:
+        result = await memory_storage.are_revoked([])
+        assert result == {}
+
+    @pytest.mark.asyncio
+    async def test_get_token_detail_existing(
+        self, memory_storage: InMemoryDelegationStorage
+    ) -> None:
+        await memory_storage.register_issued("tok1", "urn:d:a", delegate_urn="urn:del:b")
+        detail = await memory_storage.get_token_detail("tok1")
+        assert detail is not None
+        assert detail.id == "tok1"
+        assert detail.delegator_urn == "urn:d:a"
+        assert detail.delegate_urn == "urn:del:b"
+        assert detail.is_revoked is False
+        assert detail.revoked_at is None
+
+    @pytest.mark.asyncio
+    async def test_get_token_detail_revoked(
+        self, memory_storage: InMemoryDelegationStorage
+    ) -> None:
+        await memory_storage.register_issued("tok1", "urn:d:a")
+        await memory_storage.revoke("tok1", reason="expired")
+        detail = await memory_storage.get_token_detail("tok1")
+        assert detail is not None
+        assert detail.is_revoked is True
+        assert detail.revoked_at is not None
+
+    @pytest.mark.asyncio
+    async def test_get_token_detail_not_found(
+        self, memory_storage: InMemoryDelegationStorage
+    ) -> None:
+        detail = await memory_storage.get_token_detail("nonexistent")
+        assert detail is None
+
+
+# ---------------------------------------------------------------------------
+# SQLiteDelegationStorage — additional coverage
+# ---------------------------------------------------------------------------
+
+
+class TestSQLiteDelegationStorageCoverage:
+    """Cover list_token_ids_issued_by, list_issued_summaries, get_issued_at,
+    get_revoked_at, are_revoked, get_token_detail in SQLite backend."""
+
+    @pytest.mark.asyncio
+    async def test_list_token_ids_issued_by(self, sqlite_storage: SQLiteDelegationStorage) -> None:
+        await sqlite_storage.register_issued("t1", "urn:d:a")
+        await sqlite_storage.register_issued("t2", "urn:d:a")
+        await sqlite_storage.register_issued("t3", "urn:d:b")
+
+        ids = await sqlite_storage.list_token_ids_issued_by("urn:d:a")
+        assert set(ids) == {"t1", "t2"}
+        assert await sqlite_storage.list_token_ids_issued_by("urn:d:nobody") == []
+
+    @pytest.mark.asyncio
+    async def test_list_issued_summaries(self, sqlite_storage: SQLiteDelegationStorage) -> None:
+        await sqlite_storage.register_issued("t1", "urn:d:a", delegate_urn="urn:del:x")
+        await sqlite_storage.register_issued("t2", "urn:d:a")
+        await sqlite_storage.register_issued("t3", "urn:d:b")
+
+        summaries = await sqlite_storage.list_issued_summaries("urn:d:a")
+        assert len(summaries) == 2
+        ids = {s.id for s in summaries}
+        assert ids == {"t1", "t2"}
+        by_id = {s.id: s for s in summaries}
+        assert by_id["t1"].delegate_urn == "urn:del:x"
+        assert by_id["t2"].delegate_urn is None
+        assert by_id["t1"].created_at is not None
+
+    @pytest.mark.asyncio
+    async def test_list_issued_summaries_empty(
+        self, sqlite_storage: SQLiteDelegationStorage
+    ) -> None:
+        summaries = await sqlite_storage.list_issued_summaries("urn:d:nobody")
+        assert summaries == []
+
+    @pytest.mark.asyncio
+    async def test_get_issued_at(self, sqlite_storage: SQLiteDelegationStorage) -> None:
+        await sqlite_storage.register_issued("tok1", "urn:d:a")
+        issued_at = await sqlite_storage.get_issued_at("tok1")
+        assert issued_at is not None
+        assert await sqlite_storage.get_issued_at("nonexistent") is None
+
+    @pytest.mark.asyncio
+    async def test_get_revoked_at(self, sqlite_storage: SQLiteDelegationStorage) -> None:
+        await sqlite_storage.revoke("tok1", reason="test")
+        revoked_at = await sqlite_storage.get_revoked_at("tok1")
+        assert revoked_at is not None
+        assert await sqlite_storage.get_revoked_at("not_revoked") is None
+
+    @pytest.mark.asyncio
+    async def test_are_revoked(self, sqlite_storage: SQLiteDelegationStorage) -> None:
+        await sqlite_storage.revoke("tok1")
+        await sqlite_storage.revoke("tok3")
+        result = await sqlite_storage.are_revoked(["tok1", "tok2", "tok3"])
+        assert result == {"tok1": True, "tok2": False, "tok3": True}
+
+    @pytest.mark.asyncio
+    async def test_are_revoked_empty_list(self, sqlite_storage: SQLiteDelegationStorage) -> None:
+        result = await sqlite_storage.are_revoked([])
+        assert result == {}
+
+    @pytest.mark.asyncio
+    async def test_get_token_detail_existing(self, sqlite_storage: SQLiteDelegationStorage) -> None:
+        await sqlite_storage.register_issued("tok1", "urn:d:a", delegate_urn="urn:del:b")
+        detail = await sqlite_storage.get_token_detail("tok1")
+        assert detail is not None
+        assert detail.id == "tok1"
+        assert detail.delegator_urn == "urn:d:a"
+        assert detail.delegate_urn == "urn:del:b"
+        assert detail.is_revoked is False
+        assert detail.revoked_at is None
+        assert detail.created_at is not None
+
+    @pytest.mark.asyncio
+    async def test_get_token_detail_revoked(self, sqlite_storage: SQLiteDelegationStorage) -> None:
+        await sqlite_storage.register_issued("tok1", "urn:d:a")
+        await sqlite_storage.revoke("tok1", reason="compromised")
+        detail = await sqlite_storage.get_token_detail("tok1")
+        assert detail is not None
+        assert detail.is_revoked is True
+        assert detail.revoked_at is not None
+
+    @pytest.mark.asyncio
+    async def test_get_token_detail_not_found(
+        self, sqlite_storage: SQLiteDelegationStorage
+    ) -> None:
+        detail = await sqlite_storage.get_token_detail("nonexistent")
+        assert detail is None
+
+    @pytest.mark.asyncio
+    async def test_get_delegate_returns_value(
+        self, sqlite_storage: SQLiteDelegationStorage
+    ) -> None:
+        await sqlite_storage.register_issued("tok1", "urn:d:a", delegate_urn="urn:del:x")
+        delegate = await sqlite_storage.get_delegate("tok1")
+        assert delegate == "urn:del:x"
+
+    @pytest.mark.asyncio
+    async def test_get_delegate_returns_none_when_absent(
+        self, sqlite_storage: SQLiteDelegationStorage
+    ) -> None:
+        await sqlite_storage.register_issued("tok1", "urn:d:a")
+        delegate = await sqlite_storage.get_delegate("tok1")
+        assert delegate is None
+
+    @pytest.mark.asyncio
+    async def test_get_delegator_returns_none_for_unknown(
+        self, sqlite_storage: SQLiteDelegationStorage
+    ) -> None:
+        delegator = await sqlite_storage.get_delegator("unknown_tok")
+        assert delegator is None
+
+    @pytest.mark.asyncio
+    async def test_parse_iso_datetime_edge_cases(
+        self, sqlite_storage: SQLiteDelegationStorage
+    ) -> None:
+        """_parse_iso_datetime handles None and invalid values."""
+        assert sqlite_storage._parse_iso_datetime(None) is None
+        assert sqlite_storage._parse_iso_datetime("") is None
+        assert sqlite_storage._parse_iso_datetime("not-a-date") is None
+        # Z suffix handled
+        result = sqlite_storage._parse_iso_datetime("2026-01-01T00:00:00Z")
+        assert result is not None

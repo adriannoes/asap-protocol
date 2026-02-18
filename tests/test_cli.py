@@ -2,10 +2,12 @@
 
 import asyncio
 import json
+import os
 import re
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from typer.testing import CliRunner
 
 from asap import __version__
@@ -13,6 +15,8 @@ from asap.cli import DEFAULT_SCHEMAS_DIR, app
 from asap.crypto.keys import generate_keypair, serialize_private_key
 from asap.economics.delegation_storage import SQLiteDelegationStorage
 from asap.schemas import TOTAL_SCHEMA_COUNT
+
+runner = CliRunner()
 
 # ANSI escape sequence pattern for stripping colors from output
 ANSI_ESCAPE_PATTERN = re.compile(r"\x1b\[[0-9;]*m")
@@ -774,3 +778,386 @@ class TestCliDelegationRevoke:
         )
         assert result.exit_code == 0
         assert asyncio.run(SQLiteDelegationStorage(db_path=db_path).is_revoked("del_r")) is True
+
+
+# ---------------------------------------------------------------------------
+# CLI Coverage Tests (merged from test_cli_coverage.py)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def keypair_files(tmp_path: Path) -> tuple[Path, Path]:
+    """Generate a keypair and write the private key PEM to tmp_path."""
+    priv, pub = generate_keypair()
+    key_file = tmp_path / "test_key.pem"
+    key_file.write_bytes(serialize_private_key(priv))
+    key_file.chmod(0o600)
+    return key_file, tmp_path
+
+
+# ---------------------------------------------------------------------------
+# manifest info
+# ---------------------------------------------------------------------------
+
+
+class TestManifestInfo:
+    """Cover manifest info command."""
+
+    def test_manifest_info_file_not_found(self) -> None:
+        result = runner.invoke(app, ["manifest", "info", "/nonexistent/file.json"])
+        assert result.exit_code != 0
+
+    def test_manifest_info_invalid_json(self, tmp_path: Path) -> None:
+        bad = tmp_path / "bad.json"
+        bad.write_text("not valid json", encoding="utf-8")
+        result = runner.invoke(app, ["manifest", "info", str(bad)])
+        assert result.exit_code != 0
+
+    def test_manifest_info_invalid_format(self, tmp_path: Path) -> None:
+        """Invalid signed manifest format triggers BadParameter (lines 148-149)."""
+        bad = tmp_path / "invalid_manifest.json"
+        bad.write_text('{"manifest": "not the right format"}', encoding="utf-8")
+        result = runner.invoke(app, ["manifest", "info", str(bad)])
+        assert result.exit_code != 0
+
+    def test_manifest_info_valid(self, keypair_files: tuple[Path, Path]) -> None:
+        """Full valid flow: sign then info."""
+        key_file, tmp_path = keypair_files
+        from asap.crypto.keys import load_private_key_from_file_sync
+        from asap.crypto.signing import sign_manifest
+        from asap.models.entities import Capability, Endpoint, Manifest, Skill
+
+        priv = load_private_key_from_file_sync(key_file)
+        manifest = Manifest(
+            id="urn:asap:agent:test-info",
+            name="Test Agent",
+            version="1.0.0",
+            description="A test agent",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="echo", description="Echo skill")],
+            ),
+            endpoints=Endpoint(asap="https://example.com"),
+        )
+        signed = sign_manifest(manifest, priv)
+        sm_file = tmp_path / "signed.json"
+        sm_file.write_text(json.dumps(signed.model_dump()), encoding="utf-8")
+
+        result = runner.invoke(app, ["manifest", "info", str(sm_file)])
+        assert result.exit_code == 0
+        assert "Manifest ID" in result.output
+
+
+# ---------------------------------------------------------------------------
+# manifest verify
+# ---------------------------------------------------------------------------
+
+
+class TestManifestVerify:
+    """Cover manifest verify error paths."""
+
+    def test_verify_file_not_found(self) -> None:
+        result = runner.invoke(app, ["manifest", "verify", "/nonexistent"])
+        assert result.exit_code != 0
+
+    def test_verify_invalid_json(self, tmp_path: Path) -> None:
+        bad = tmp_path / "bad.json"
+        bad.write_text("{not json}", encoding="utf-8")
+        result = runner.invoke(app, ["manifest", "verify", str(bad)])
+        assert result.exit_code != 0
+
+    def test_verify_invalid_format(self, tmp_path: Path) -> None:
+        """Invalid signed manifest format (line 184-185)."""
+        bad = tmp_path / "bad.json"
+        bad.write_text('{"x": 1}', encoding="utf-8")
+        result = runner.invoke(app, ["manifest", "verify", str(bad)])
+        assert result.exit_code != 0
+
+    def test_verify_public_key_not_found(self, keypair_files: tuple[Path, Path]) -> None:
+        """--public-key path does not exist (lines 188-189)."""
+        key_file, tmp_path = keypair_files
+        from asap.crypto.keys import load_private_key_from_file_sync
+        from asap.crypto.signing import sign_manifest
+        from asap.models.entities import Capability, Endpoint, Manifest, Skill
+
+        priv = load_private_key_from_file_sync(key_file)
+        manifest = Manifest(
+            id="urn:asap:agent:test-verify",
+            name="Test Agent",
+            version="1.0.0",
+            description="A test agent",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="echo", description="Echo skill")],
+            ),
+            endpoints=Endpoint(asap="https://example.com"),
+        )
+        signed = sign_manifest(manifest, priv)
+        sm_file = tmp_path / "signed.json"
+        sm_file.write_text(json.dumps(signed.model_dump()), encoding="utf-8")
+
+        result = runner.invoke(
+            app,
+            ["manifest", "verify", str(sm_file), "--public-key", "/nonexistent/key.pem"],
+        )
+        assert result.exit_code != 0
+
+    def test_verify_signature_invalid(self, keypair_files: tuple[Path, Path]) -> None:
+        """Signature verification failure (lines 194-196)."""
+        key_file, tmp_path = keypair_files
+        from asap.crypto.keys import load_private_key_from_file_sync
+        from asap.crypto.signing import sign_manifest
+        from asap.models.entities import Capability, Endpoint, Manifest, Skill
+
+        priv = load_private_key_from_file_sync(key_file)
+        manifest = Manifest(
+            id="urn:asap:agent:test-verify",
+            name="Test Agent",
+            version="1.0.0",
+            description="A test agent",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="echo", description="Echo skill")],
+            ),
+            endpoints=Endpoint(asap="https://example.com"),
+        )
+        signed = sign_manifest(manifest, priv)
+        # Tamper with signature
+        data = signed.model_dump()
+        data["signature"] = "aW52YWxpZA=="  # base64("invalid")
+        sm_file = tmp_path / "signed.json"
+        sm_file.write_text(json.dumps(data), encoding="utf-8")
+
+        result = runner.invoke(app, ["manifest", "verify", str(sm_file)])
+        assert result.exit_code != 0
+
+    def test_verify_valid_with_public_key(self, keypair_files: tuple[Path, Path]) -> None:
+        """Successful verification using --public-key (lines 190-191, 197-200)."""
+        key_file, tmp_path = keypair_files
+        from asap.crypto.keys import load_private_key_from_file_sync
+        from asap.crypto.signing import sign_manifest
+        from asap.models.entities import Capability, Endpoint, Manifest, Skill
+
+        priv = load_private_key_from_file_sync(key_file)
+        manifest = Manifest(
+            id="urn:asap:agent:test-verify2",
+            name="Test Agent 2",
+            version="1.0.0",
+            description="A test agent",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="echo", description="Echo skill")],
+            ),
+            endpoints=Endpoint(asap="https://example.com"),
+        )
+        signed = sign_manifest(manifest, priv)
+        sm_file = tmp_path / "signed2.json"
+        sm_file.write_text(json.dumps(signed.model_dump()), encoding="utf-8")
+
+        result = runner.invoke(
+            app,
+            ["manifest", "verify", str(sm_file), "--public-key", str(key_file)],
+        )
+        assert result.exit_code == 0
+        assert "Signature valid" in result.output
+
+
+# ---------------------------------------------------------------------------
+# delegation create
+# ---------------------------------------------------------------------------
+
+
+class TestDelegationCreate:
+    """Cover delegation create command (lines 213-245)."""
+
+    def test_delegation_create_key_not_found(self) -> None:
+        result = runner.invoke(
+            app,
+            [
+                "delegation",
+                "create",
+                "--delegate",
+                "urn:del:x",
+                "--scopes",
+                "scope1",
+                "--key",
+                "/nonexistent/key.pem",
+                "--delegator",
+                "urn:d:a",
+            ],
+        )
+        assert result.exit_code != 0
+
+    def test_delegation_create_key_is_dir(self, tmp_path: Path) -> None:
+        result = runner.invoke(
+            app,
+            [
+                "delegation",
+                "create",
+                "--delegate",
+                "urn:del:x",
+                "--scopes",
+                "scope1",
+                "--key",
+                str(tmp_path),
+                "--delegator",
+                "urn:d:a",
+            ],
+        )
+        assert result.exit_code != 0
+
+    def test_delegation_create_empty_scopes(self, keypair_files: tuple[Path, Path]) -> None:
+        key_file, _ = keypair_files
+        result = runner.invoke(
+            app,
+            [
+                "delegation",
+                "create",
+                "--delegate",
+                "urn:del:x",
+                "--scopes",
+                ",,,",
+                "--key",
+                str(key_file),
+                "--delegator",
+                "urn:d:a",
+            ],
+        )
+        assert result.exit_code != 0
+
+    def test_delegation_create_success(self, keypair_files: tuple[Path, Path]) -> None:
+        """Successful delegation token creation."""
+        key_file, _ = keypair_files
+        result = runner.invoke(
+            app,
+            [
+                "delegation",
+                "create",
+                "--delegate",
+                "urn:del:x",
+                "--scopes",
+                "task.request,task.response",
+                "--key",
+                str(key_file),
+                "--delegator",
+                "urn:d:a",
+                "--expires-in",
+                "3600",
+                "--max-tasks",
+                "10",
+            ],
+        )
+        assert result.exit_code == 0
+        # Output should be a JWT string (3 dot-separated parts)
+        token = result.output.strip()
+        assert token.count(".") == 2
+
+    def test_delegation_create_open_permissions_warning(
+        self, keypair_files: tuple[Path, Path]
+    ) -> None:
+        """Key file with open permissions emits warning (lines 218-224)."""
+        key_file, _ = keypair_files
+        key_file.chmod(0o644)  # Open permissions
+        result = runner.invoke(
+            app,
+            [
+                "delegation",
+                "create",
+                "--delegate",
+                "urn:del:x",
+                "--scopes",
+                "scope1",
+                "--key",
+                str(key_file),
+                "--delegator",
+                "urn:d:a",
+            ],
+        )
+        assert result.exit_code == 0
+
+
+# ---------------------------------------------------------------------------
+# _repl_namespace
+# ---------------------------------------------------------------------------
+
+
+class TestReplNamespace:
+    """Cover _repl_namespace and sample_envelope (line 471)."""
+
+    def test_namespace_contains_expected_keys(self) -> None:
+        from asap.cli import _repl_namespace
+
+        ns = _repl_namespace()
+        assert "Envelope" in ns
+        assert "TaskRequest" in ns
+        assert "Manifest" in ns
+        assert "generate_id" in ns
+        assert "sample_envelope" in ns
+
+    def test_sample_envelope_produces_valid_envelope(self) -> None:
+        from asap.cli import _repl_namespace
+
+        ns = _repl_namespace()
+        envelope = ns["sample_envelope"]()
+        assert envelope.payload_type == "task.request"
+        assert envelope.sender == "urn:asap:agent:repl-sender"
+
+
+# ---------------------------------------------------------------------------
+# trace command — env var and json format
+# ---------------------------------------------------------------------------
+
+
+class TestTraceEnvAndJson:
+    """Cover trace with ASAP_TRACE_LOG env var (line 543) and json format."""
+
+    def test_trace_json_format(self, tmp_path: Path) -> None:
+        log_lines = (
+            '{"event": "asap.request.received", "envelope_id": "e1", '
+            '"trace_id": "tr-1", "sender": "urn:asap:agent:a", '
+            '"recipient": "urn:asap:agent:b", "timestamp": "2026-01-31T12:00:00Z"}\n'
+            '{"event": "asap.request.processed", "envelope_id": "e1", '
+            '"trace_id": "tr-1", "duration_ms": 10}\n'
+        )
+        log_file = tmp_path / "trace.log"
+        log_file.write_text(log_lines, encoding="utf-8")
+
+        result = runner.invoke(
+            app, ["trace", "tr-1", "--log-file", str(log_file), "--format", "json"]
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["trace_id"] == "tr-1"
+
+    def test_trace_env_var_log_file(self, tmp_path: Path) -> None:
+        """ASAP_TRACE_LOG env var specifies default log file (line 543)."""
+        log_lines = (
+            '{"event": "asap.request.received", "envelope_id": "e1", '
+            '"trace_id": "tr-env", "sender": "urn:asap:agent:a", '
+            '"recipient": "urn:asap:agent:b", "timestamp": "2026-01-31T12:00:00Z"}\n'
+            '{"event": "asap.request.processed", "envelope_id": "e1", '
+            '"trace_id": "tr-env", "duration_ms": 5}\n'
+        )
+        log_file = tmp_path / "env_trace.log"
+        log_file.write_text(log_lines, encoding="utf-8")
+
+        with patch.dict(os.environ, {"ASAP_TRACE_LOG": str(log_file)}):
+            result = runner.invoke(app, ["trace", "tr-env"])
+        assert result.exit_code == 0
+        assert "a -> b" in result.output
+
+    def test_trace_invalid_format(self, tmp_path: Path) -> None:
+        """Invalid --format is rejected (line 554)."""
+        log_file = tmp_path / "t.log"
+        log_file.write_text("{}\n", encoding="utf-8")
+        result = runner.invoke(
+            app, ["trace", "tr-1", "--log-file", str(log_file), "--format", "xml"]
+        )
+        assert result.exit_code != 0
+
+    def test_trace_not_found(self, tmp_path: Path) -> None:
+        """No matching trace exits with code 1."""
+        log_file = tmp_path / "empty.log"
+        log_file.write_text("", encoding="utf-8")
+        result = runner.invoke(app, ["trace", "nonexistent", "--log-file", str(log_file)])
+        assert result.exit_code != 0

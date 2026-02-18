@@ -1,6 +1,6 @@
 # Sprint E3: SLA Framework
 
-> **Goal**: Service guarantees and breach detection
+> **Goal**: Service guarantees, breach detection, and v1.3.0 release
 > **Prerequisites**: Sprints E1-E2 completed (Metering, Delegation)
 > **Parent Roadmap**: [tasks-v1.3.0-roadmap.md](./tasks-v1.3.0-roadmap.md)
 
@@ -8,15 +8,33 @@
 
 ## Relevant Files
 
-- `src/asap/economics/sla.py` - SLA implementation
-- `src/asap/models/manifest.py` - SLA schema addition
-- `tests/economics/test_sla.py` - SLA tests
+- `src/asap/examples/v1_3_0_showcase.py` - v1.3.0 E2E showcase (Task 3.6.1)
+- `src/asap/models/entities.py` - SLADefinition model (Task 3.1.1)
+- `tests/fixtures/manifest_with_sla.json` - Example manifest with SLA (Task 3.1.5)
+- `tests/models/test_entities.py` - TestSLADefinition, TestManifest SLA tests, TestManifestSLAFixture (Task 3.1.6)
+- `src/asap/economics/sla.py` - SLAMetrics, SLABreach, metrics collection, rolling windows, breach conditions (BreachConditionResult, parse_percentage, evaluate_breach_conditions) (Task 3.2, 3.3.1)
+- `src/asap/economics/sla_storage.py` - SLAStorage Protocol, InMemorySLAStorage, SQLiteSLAStorage (Task 3.2)
+- `tests/economics/test_sla.py` - SLA models, helpers, and breach condition tests (Task 3.2.9, 3.3.1)
+- `tests/economics/test_sla_storage.py` - SLAStorage InMemory + SQLite tests (Task 3.2.9)
+- `src/asap/models/entities.py` - SLADefinition model (added to Manifest)
+- `src/asap/transport/sla_api.py` - SLA REST API routes (create_sla_router) (Task 3.4)
+- `src/asap/transport/server.py` - create_app(..., sla_storage=...) (Task 3.4.5)
+- `tests/economics/test_sla.py` - SLA unit tests
+- `tests/economics/test_sla_storage.py` - SLAStorage tests
+- `tests/economics/test_sla_api.py` - SLA API integration tests (Task 3.4.6)
+- `tests/integration/test_v1_3_cross_feature.py` - Cross-feature integration tests (Task 3.5)
+- `tests/transport/test_sla_websocket.py` - SLA WebSocket subscribe/unsubscribe and broadcast tests (Task 3.3.5)
+- `pyproject.toml` - B008 ignore for sla_api, ASYNC210 for examples; ruff format (Task 3.7.5)
+- `tests/test_version.py` - Version assertion updated to 1.3.0 (Task 3.7.5)
+- `tests/test_cli_coverage.py` - Removed unused MagicMock import (Task 3.7.5)
+- `tests/economics/test_storage_coverage.py` - Removed unused timedelta import (Task 3.7.5)
+- `src/asap/transport/sla_api.py` - Mypy fixes (Literal cast, dict[str, Any]) (Task 3.7.5)
 
 ---
 
 ## Context
 
-SLAs (Service Level Agreements) define guarantees agents commit to - availability, latency, error rates. In the "Lean Marketplace" (v2.0), these serve as **Trust Signals** to help users separate high-quality agents from experimental ones. Breach detection alerts usage, but does not trigger financial penalties in v2.0.
+SLAs (Service Level Agreements) define guarantees agents commit to — availability, latency, error rates. In the "Lean Marketplace" (v2.0), these serve as **Trust Signals** to help users separate high-quality agents from experimental ones. Breach detection alerts usage, but does not trigger financial penalties in v2.0.
 
 ---
 
@@ -26,47 +44,51 @@ SLAs (Service Level Agreements) define guarantees agents commit to - availabilit
 
 ### Sub-tasks
 
-- [ ] 3.1.1 Create SLA module
-  - **File**: `src/asap/economics/sla.py`
-
-- [ ] 3.1.2 Define SLADefinition model
+- [x] 3.1.1 Define SLADefinition model in `src/asap/models/entities.py`
   ```python
-  class SLADefinition(BaseModel):
-      availability: Optional[str]  # "99.5%"
-      max_latency_p95_ms: Optional[int]
-      max_error_rate: Optional[str]  # "1%"
-      support_hours: Optional[str]  # "24/7", "business"
+  class SLADefinition(ASAPBaseModel):
+      availability: str | None = None  # "99.5%"
+      max_latency_p95_ms: int | None = None
+      max_error_rate: str | None = None  # "1%"
+      support_hours: str | None = None  # "24/7", "business"
   ```
+  - Lives in `entities.py` alongside Manifest (same pattern as AuthScheme)
 
-- [ ] 3.1.3 Add SLA field to Manifest
-  - Optional field
+- [x] 3.1.2 Add SLA field to Manifest
+  - `sla: SLADefinition | None = Field(default=None, ...)`
   - Validated on manifest parse
 
-- [ ] 3.1.4 Update manifest examples
+- [x] 3.1.3 Create SLA module `src/asap/economics/sla.py`
+
+- [x] 3.1.4 Export SLADefinition in `src/asap/economics/__init__.py`
+
+- [x] 3.1.5 Update manifest examples
   - Add SLA to example manifests
 
-- [ ] 3.1.5 Write tests
+- [x] 3.1.6 Write tests
   - Schema validation
   - Optional field handling
+  - Manifest with and without SLA
 
-- [ ] 3.1.6 Commit
+- [x] 3.1.7 Commit
   - **Command**: `git commit -m "feat(economics): add SLA schema to manifest"`
 
 **Acceptance Criteria**:
-- [ ] SLA schema in manifest
+- [x] SLA schema defined in Manifest
+- [x] SLADefinition exported from economics module
 
 ---
 
-## Task 3.2: SLA Tracking
+## Task 3.2: SLA Tracking & Storage
 
-**Goal**: Measure actual vs promised SLA
+**Goal**: Measure actual vs promised SLA, with persistent storage
 
 ### Sub-tasks
 
-- [ ] 3.2.1 Define SLAMetrics model
+- [x] 3.2.1 Define SLAMetrics model
   ```python
   class SLAMetrics(BaseModel):
-      agent: str
+      agent_id: str
       period_start: datetime
       period_end: datetime
       uptime_percent: float
@@ -76,133 +98,260 @@ SLAs (Service Level Agreements) define guarantees agents commit to - availabilit
       tasks_failed: int
   ```
 
-- [ ] 3.2.2 Implement metrics collection
-  - Calculate uptime from health checks
-  - Calculate latency from task metrics
-  - Calculate error rate from outcomes
+- [x] 3.2.2 Define SLABreach model
+  ```python
+  class SLABreach(BaseModel):
+      id: str
+      agent_id: str
+      breach_type: str  # "availability", "latency", "error_rate"
+      threshold: str
+      actual: str
+      severity: str  # "warning", "critical"
+      detected_at: datetime
+      resolved_at: datetime | None = None
+  ```
 
-- [ ] 3.2.3 Implement rolling windows
+- [x] 3.2.3 Implement `SLAStorage` Protocol
+  - **File**: `src/asap/economics/sla_storage.py`
+  ```python
+  class SLAStorage(Protocol):
+      async def record_metrics(self, metrics: SLAMetrics) -> None: ...
+      async def query_metrics(self, agent_id: str | None, start: datetime | None, end: datetime | None) -> list[SLAMetrics]: ...
+      async def record_breach(self, breach: SLABreach) -> None: ...
+      async def query_breaches(self, agent_id: str | None, start: datetime | None, end: datetime | None) -> list[SLABreach]: ...
+      async def stats(self) -> StorageStats: ...
+  ```
+  - Follows same pattern as `MeteringStorage` and `DelegationStorage`
+
+- [x] 3.2.4 Implement `InMemorySLAStorage`
+  - For development/testing
+  - Async-safe via `asyncio.Lock`
+
+- [x] 3.2.5 Implement `SQLiteSLAStorage`
+  - Tables: `sla_metrics`, `sla_breaches`
+  - Indexed by agent_id, period_start, detected_at
+  - Same SQLite file (`asap_state.db`) shared with metering/delegation
+
+- [x] 3.2.6 Implement metrics collection
+  - Calculate uptime from health checks (uses `health.py`)
+  - Calculate latency from task metrics (uses `MeteringStorage`)
+  - Calculate error rate from task outcomes
+
+- [x] 3.2.7 Implement rolling windows
   - Last hour, day, week, month
   - Efficient calculation
 
-- [ ] 3.2.4 Store SLA history
-  - Use metering storage pattern
-  - Indexed by agent, period
+- [x] 3.2.8 Export SLAStorage, SLAMetrics, SLABreach in `__init__.py`
 
-- [ ] 3.2.5 Write tests
+- [x] 3.2.9 Write tests
+  - Storage operations (InMemory + SQLite)
   - Metrics calculation accuracy
   - Rolling window correctness
 
-- [ ] 3.2.6 Commit
-  - **Command**: `git commit -m "feat(economics): implement SLA metrics tracking"`
+- [x] 3.2.10 Commit
+  - **Command**: `git commit -m "feat(economics): implement SLA metrics tracking and storage"`
 
 **Acceptance Criteria**:
-- [ ] SLA metrics tracked accurately
+- [x] SLA metrics tracked accurately
+- [x] Storage persistent via SQLite
 
 ---
 
 ## Task 3.3: SLA Breach Detection
 
-**Goal**: Real-time breach alerts
+**Goal**: Real-time breach alerts with WebSocket notifications
 
 ### Sub-tasks
 
-- [ ] 3.3.1 Define breach conditions
+- [x] 3.3.1 Define breach conditions
   - Uptime below threshold
   - Latency above threshold
   - Error rate above threshold
 
-- [ ] 3.3.2 Implement breach detector
+- [x] 3.3.2 Implement breach detector
   - Compare actual vs defined SLA
   - Trigger on threshold cross
 
-- [ ] 3.3.3 Implement alert hooks
+- [x] 3.3.3 Implement alert hooks (callback interface)
   - Callback interface for alerts
   - Default: log warning
 
-- [ ] 3.3.4 Add WebSocket notification
-  - Real-time breach events
-  - Optional subscription
+- [x] 3.3.4 Add WebSocket notification for breach alerts
+  - Real-time breach events via WebSocket
+  - Subscribe/unsubscribe mechanism
+  - Integration with existing `/asap/ws` transport
 
-- [ ] 3.3.5 Write tests
+- [x] 3.3.5 Write tests
   - Breach detection accuracy
-  - Alert delivery
+  - Alert delivery (callback)
+  - WebSocket notification delivery
 
-- [ ] 3.3.6 Commit
+- [x] 3.3.6 Commit
   - **Command**: `git commit -m "feat(economics): add SLA breach detection and alerts"`
 
 **Acceptance Criteria**:
-- [ ] Breach detection working
+- [x] Breach detection working
+- [x] Alerts delivered via callback and WebSocket
 
 ---
 
 ## Task 3.4: SLA API
 
-**Goal**: Query SLA history and current status
+**Goal**: Query SLA history and current status via REST API
 
 ### Sub-tasks
 
-- [ ] 3.4.1 Implement GET /agents/{id}/sla
-  - Current SLA status
+- [x] 3.4.1 Implement `create_sla_router()` in `src/asap/transport/sla_api.py`
+  - Follows same pattern as `create_usage_router()` and `create_delegation_router()`
+
+- [x] 3.4.2 Implement GET /sla
+  - Current SLA status per agent
+  - Query params: `agent_id`
   - Compliance percentage
 
-- [ ] 3.4.2 Implement GET /agents/{id}/sla/history
+- [x] 3.4.3 Implement GET /sla/history
   - Historical SLA data
-  - Pagination, time filtering
+  - Query params: `agent_id`, `start`, `end`
+  - Pagination support
 
-- [ ] 3.4.3 Implement GET /agents/{id}/sla/breaches
+- [x] 3.4.4 Implement GET /sla/breaches
   - List of breaches
-  - Severity, timestamp, duration
+  - Query params: `agent_id`, `severity`, `start`, `end`
 
-- [ ] 3.4.4 Add SLA to Registry search
-  - Filter by min_availability
-  - Sort by SLA score
+- [x] 3.4.5 Integrate SLA router with `create_app`
+  - Add `sla_storage: object | None = None` parameter to `create_app`
+  - `app.state.sla_storage = sla_storage`
+  - `app.include_router(create_sla_router())`
+  - Log warning for unauthenticated access (same pattern as usage API)
 
-- [ ] 3.4.5 Write integration tests
+- [x] 3.4.6 Write integration tests
 
-- [ ] 3.4.6 Commit
+- [x] 3.4.7 Commit
   - **Command**: `git commit -m "feat(economics): expose SLA metrics via API"`
 
 **Acceptance Criteria**:
-- [ ] SLA API functional
+- [x] SLA API functional with feature-centric paths (`/sla/*`)
+- [x] Integrated with `create_app`
 
 ---
 
-## Task 3.5: End-to-End Showcase (Verify "It Works")
+## Task 3.5: Comprehensive Testing (Cross-Feature Integration)
+
+**Goal**: Validate SLA integrates correctly with Metering (E1), Delegation (E2), and Health (v1.1)
+
+### Sub-tasks
+
+- [x] 3.5.1 Integration test: SLA + Metering
+  - SLA metrics derived from metering data
+  - Latency p95 from task metrics matches SLA calculation
+
+- [x] 3.5.2 Integration test: SLA + Health endpoint
+  - Uptime calculation uses health check data
+  - Simulated downtime triggers correct availability breach
+
+- [x] 3.5.3 Integration test: SLA + Delegation
+  - Delegated agent SLA tracked separately
+  - Breach on delegated agent reflects on delegation context
+
+- [x] 3.5.4 Full integration test: all v1.3 features
+  - Create delegation → execute tasks (metering) → check SLA → trigger breach
+  - End-to-end flow through API
+
+- [x] 3.5.5 Commit
+  - **Command**: `git commit -m "test: add cross-feature integration tests for v1.3.0"`
+
+**Acceptance Criteria**:
+- [x] All integration tests pass
+- [x] Test coverage >95%
+
+---
+
+## Task 3.6: End-to-End Showcase (Verify "It Works")
 
 **Goal**: A runnable script demonstrating all v1.3.0 features working together.
 
 ### Sub-tasks
 
-- [ ] 3.5.1 Create `examples/v1_3_0_showcase.py`
+- [x] 3.6.1 Create `examples/v1_3_0_showcase.py`
   - Scenario:
     1. **Delegation**: Agent A generates a token for Agent B with `max_tasks=5`.
     2. **Metering**: Agent B performs tasks; usage is logged locally.
     3. **Transparency**: Agent A queries `GET /usage` to see Agent B's consumption.
-    4. **Trust/SLA**: Agent B artificially injects a delay -> Agent A receives an SLA breach alert.
+    4. **Trust/SLA**: Agent B artificially injects a delay -> Agent A receives an SLA breach alert (via WebSocket).
 
-- [ ] 3.5.2 Verify Output
+- [x] 3.6.2 Verify Output
   - Ensure updated `README` instructions work.
   - "One command to run them all".
 
-- [ ] 3.5.3 Commit
+- [x] 3.6.3 Commit
   - **Command**: `git commit -m "docs: add v1.3.0 end-to-end showcase"`
 
 **Acceptance Criteria**:
-- [ ] Demo script runs without errors
-- [ ] Prints clear, narrative output for the user
+- [x] Demo script runs without errors
+- [x] Prints clear, narrative output for the user
+- [x] WebSocket breach alert visible in showcase output
 
 ---
 
-## Task 3.6: Release Preparation
+## Task 3.7: Release Preparation
 
-- [ ] SLA schema in manifests
-- [ ] Metrics tracking accurate
-- [ ] Breach detection working
-- [ ] API endpoints functional
-- [ ] Test coverage >95%
+**Goal**: CHANGELOG, docs, version bump, v1.3.0 release
 
-**Total Sub-tasks**: ~27
+### Sub-tasks
+
+- [x] 3.7.1 Version bump
+  - `pyproject.toml` version field
+  - `src/asap/__init__.py` __version__
+
+- [x] 3.7.2 CHANGELOG.md update
+  - List all features from E1, E2, E3
+  - Breaking changes (if any)
+  - Migration notes
+
+- [x] 3.7.3 README.md update
+  - Add SLA section
+  - Update feature list
+  - Ensure example commands work
+
+- [x] 3.7.4 Update v1.3.0 Roadmap
+  - Mark all E3 tasks as [x]
+  - Update progress counter
+  - Add change log entry
+
+- [x] 3.7.5 CI verification
+  - All tests pass
+  - Linting clean
+  - Type checking clean
+
+- [x] 3.7.6 PR creation
+  - Create PR for E3 sprint
+  - Code review pass
+
+- [ ] 3.7.7 Git tag v1.3.0
+
+- [ ] 3.7.8 Commit
+  - **Command**: `git commit -m "chore: prepare v1.3.0 release"`
+
+**Acceptance Criteria**:
+- [x] v1.3.0 version in all files
+- [x] CHANGELOG complete
+- [x] CI passes
+- [ ] Tag created
+
+---
+
+## Sprint E3 Definition of Done
+
+- [x] SLA schema in manifests
+- [x] SLA metrics tracked accurately (with SLAStorage)
+- [x] Breaches detected and alerted (callback + WebSocket)
+- [x] API endpoints functional (`/sla/*`)
+- [x] Cross-feature integration tested
+- [x] End-to-End demo runs successfully
+- [x] v1.3.0 release prepared
+- [x] Test coverage >95%
+
+**Total Sub-tasks**: ~37
 
 ## Documentation Updates
-- [ ] **Update Roadmap**: Mark completed items in [v1.3.0 Roadmap](./tasks-v1.3.0-roadmap.md)
+- [x] **Update Roadmap**: Mark completed items in [v1.3.0 Roadmap](./tasks-v1.3.0-roadmap.md)

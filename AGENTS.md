@@ -1,150 +1,64 @@
 # AGENTS.md
 
-> Instructions for AI coding agents working on ASAP Protocol.
-> Compatible with Cursor, Copilot, Codex, Gemini CLI, Windsurf and other AI tools.
+> **Context Map for AI Agents**. Use this file to locate project knowledge.
+> **Rules Enforcement**: Strictly follow all active `.cursor/rules/*.mdc`.
 
-## Project Overview
+## Project Context
 
-ASAP (Async Simple Agent Protocol) is a production-ready protocol for agent-to-agent communication and task coordination. Built with Python 3.13+, Pydantic v2 and FastAPI.
+**ASAP Protocol** (Async Simple Agent Protocol) is a production-ready standard for agent-to-agent communication.
+- **Stack**: Python 3.13+, FastAPI, Pydantic v2.
+- **Transport**: JSON-RPC 2.0 over HTTP/WebSocket.
+- **Status**: v1.3.0 (Released).
 
-- **Core**: Protocol models, state machines, and handlers
-- **Transport**: HTTP client/server with compression, rate limiting, observability
-- **CLI**: `asap` command for serving, validation, and tooling
-
-## Setup Commands
+## Quick Start
 
 ```bash
-# Install dependencies
-uv sync
-
-# Run tests
-uv run pytest
-
-# Run tests with coverage
-uv run pytest --cov=src/asap --cov-report=term-missing
-
-# Start dev server
-uv run asap serve --reload
-
-# Type checking
-uv run mypy src/
-
-# Linting and formatting
-uv run ruff check src/ tests/
-uv run ruff format src/ tests/
+uv sync                                     # Install dependencies
+uv run pytest                               # Run tests (add -v for verbose)
+uv run asap serve --reload                  # Start dev server
+uv run mypy src/ && uv run ruff check src/  # Verify quality
 ```
 
-## Code Style
+## Knowledge Map
 
-- **Python**: 3.13+ required (see `pyproject.toml`)
-- **Type hints**: Required on all functions (mypy strict mode)
-- **Formatting**: Ruff (double quotes, 100 char line length)
-- **Async**: Use `async/await` for I/O operations
-- **Models**: Pydantic v2 for all data models
-- **Imports**: Use absolute imports from `asap.*`
+### 1. Product & Architecture (Read First)
+- **Vision & Roadmap**: `.cursor/product-specs/strategy/`
+- **Feature Specs (PRDs)**: `.cursor/product-specs/prd/`
+- **Arch Decisions (ADRs)**: `.cursor/product-specs/decision-records/`
+- **Tech Stack**: `.cursor/dev-planning/architecture/tech-stack-decisions.md`
 
-## Project Structure
-
-```
-src/asap/
-├── models/        # Pydantic models (Envelope, TaskRequest, etc.)
-├── crypto/        # Ed25519 keys, signing, trust levels (v1.2)
-├── auth/          # OAuth2 client/server, OIDC discovery, middleware (v1.1)
-├── discovery/     # Well-known manifest, health, Lite Registry (v1.1)
-├── state/         # SnapshotStore, MeteringStore; stores/ (memory, sqlite) (v1.1)
-├── transport/     # HTTP client, server, middleware, WebSocket, webhook, mTLS (v1.2)
-├── handlers/      # Task processing logic
-├── observability/ # Logging, tracing, metrics
-└── cli.py         # CLI entry point (keys, manifest sign/verify in v1.2)
-tests/             # pytest tests mirroring src/ structure
-asap-compliance/   # Compliance harness package (v1.2, separate PyPI)
-```
-
-For v1.1 capabilities (OAuth2, WebSocket, Discovery, State Storage, Webhooks) and v1.2 (crypto, compliance harness, mTLS) see README and [docs index](docs/index.md).
-
-## Architecture & Design Decisions
-
-- **ADR**: `.cursor/product-specs/decision-records/README.md` - All architecture decisions
-- **Tech Stack**: `.cursor/dev-planning/architecture/tech-stack-decisions.md` - Rationale for technology choices
-- **Vision**: `.cursor/product-specs/strategy/vision-agent-marketplace.md` - Future roadmap
-- **Roadmap**: `.cursor/product-specs/strategy/roadmap-to-marketplace.md` - v1.0 → v2.0 path
-- **Best Practices**: `docs/best-practices/agent-failover-migration.md` - Agent failover & state migration patterns
-
-## Development Planning
-
-- **Task Templates**: `.cursor/dev-planning/templates/task-template.md`
-- **Sprint Tasks**: `.cursor/dev-planning/tasks/` (by version)
+### 2. Development Status
+- **Active Sprint**: `.cursor/dev-planning/tasks/`
+- **Checkpoints**: `.cursor/dev-planning/checkpoints.md`
 - **Code Reviews**: `.cursor/dev-planning/code-review/`
 
-## AI Governance Matrix
+## Organization
 
-We use a layered approach to guide AI Agents:
-
-| Layer | Type | Directory | Purpose |
-|-------|------|-----------|---------|
-| **1. Law** | **Rules** | `.cursor/rules/` | **Context**. Passive instructions that must ALWAYS be followed (e.g. "Use Pydantic v2"). |
-| **2. Actions** | **Commands** | `.cursor/commands/` | **Workflows**. Specific prompts for complex tasks (e.g. "Create PRD"). |
-| **3. Tools** | **Skills** | `.cursor/skills/` | **Capabilities**. Agents defined with scripts and resources (e.g. "Security Review"). |
-
-### 1. Rules (Context)
-Files ending in `.mdc` indexed by Cursor.
--   `architecture-principles.mdc`: Core patterns.
--   `security-standards.mdc`: Zero Trust & Secrets.
--   `frontend-best-practices.mdc`: Next.js 15 & Tailwind v4.
-
-### 2. Commands (Workflows)
-Markdown prompts for standard procedures.
--   `create-prd.md`: Interactive interview to generate specs.
--   `generate-tasks.md`: Create Jira-like markdown tasks.
-
-### 3. Skills (Capabilities)
-Directories containing `SKILL.md` and `scripts/`.
--   `code-quality-review`: Conducts deep code analysis.
--   `security-review`: Conducts security audit.
--   `skill-creator`: Generates new Skills with standard structure.
-
-## Testing
-
-```bash
-# All tests
-uv run pytest
-
-# Specific module
-uv run pytest tests/transport/
-
-# With verbose output
-uv run pytest -v
-
-# Parallel (faster)
-uv run pytest -n auto
+### Project Structure
+```text
+src/asap/
+├── models/        # Data models (Envelope, TaskRequest)
+├── auth/          # OAuth2/OIDC & Auth Middleware
+├── transport/     # HTTP Client/Server, WebSocket, Webhook
+├── state/         # Persistence interfaces (SQLite/Memory)
+├── handlers/      # Task processing logic
+└── discovery/     # Manifests, Health, Lite Registry
 ```
 
-**Test patterns**:
-- Use `pytest-asyncio` for async tests
-- Mock external services (never hit real APIs in tests)
-- Rate limiters need isolation (see `testing-rate-limiting.mdc`)
+### AI Toolbox (Available Capabilities)
+- **Rules**: `.cursor/rules/*.mdc` (Auto-loaded context)
+- **Commands**: `.cursor/commands/` (Workflows like `create-prd`, `generate-tasks`)
+- **Skills**: `.cursor/skills/` (Specialized agents for Security, Reviews)
 
-## Important Patterns
+## Key Architectural Patterns
 
-1. **State Machine**: Tasks follow `PENDING → RUNNING → COMPLETED/FAILED`
-2. **Envelope Protocol**: All messages wrapped in `Envelope[T]`
-3. **Handler Registration**: `@server.handler("task_type")` decorator
-4. **Circuit Breaker**: Client has retry + circuit breaker logic
+1.  **Envelope Protocol**: All messages wrapped in `Envelope[T]` (`models/envelope.py`).
+2.  **State Machine**: Tasks strictly follow `PENDING → RUNNING → COMPLETED` (`models/files.py`).
+3.  **Circuit Breaker**: Transport reliability logic (`transport/http_client.py`).
 
-## Security Notes
+## Security Context
 
-- Never commit secrets or API keys
-- Use environment variables for configuration
-- Rate limiting enabled by default
-- **mTLS** (v1.2): Optional mutual TLS via `MTLSConfig`; see `asap.transport.mtls`
-- **Signed manifests** (v1.2): Ed25519 signing for verifiable agent identity; see `asap.crypto`
-- **Compliance harness** (v1.2): `asap-compliance` package validates protocol compliance
-- **v1.1 trust model**: OAuth2 provides authentication and authorization, not identity verification. See [v1.1 Security Model](docs/security/v1.1-security-model.md) (ADR-17) for Custom Claims, allowlist, and limitations.
-
-## PR Guidelines
-
-- Follow commit format in `.cursor/rules/git-commits.mdc`
-- Review the [PR Template](.github/PULL_REQUEST_TEMPLATE.md) for self-review checklist
-- All tests must pass
-- Type checking clean (`mypy src/`)
-- Coverage should not decrease
+- **Auth**: OAuth2/OIDC for agent-to-agent (ADR-17).
+- **Identity**: Ed25519 Signed Manifests (v1.2).
+- **Transport**: mTLS optional (v1.2).
+- **Compliance**: `asap-compliance` package validates specs.

@@ -5,7 +5,7 @@
 > **Status**: STRATEGIC PLANNING
 > **Horizon**: Incremental sprints post-v1.0.0
 > **Created**: 2026-01-30
-> **Updated**: 2026-02-05
+> **Updated**: 2026-02-18
 
 ---
 
@@ -20,16 +20,16 @@ This roadmap defines the evolution from v1.0.0 (stable protocol) to v2.0.0 (Agen
 │                    ROADMAP TO AGENT MARKETPLACE                         │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
-│  v1.0.0          v1.1           v1.2           v1.3           v2.0      │
-│  ═══════        ═══════        ═══════        ═══════        ═══════    │
-│    │              │              │              │              │        │
-│    │ ┌──────────┐ │ ┌──────────┐ │ ┌──────────┐ │ ┌──────────┐ │        │
-│    ├─│ Stable   │─┼─│ Identity │─┼─│ Verified │─┼─│ Observe  │─┼─→ 🏪   │
-│    │ │ Protocol │ │ │ +Discov  │ │ │ Identity │ │ │ +Deleg   │ │        │
-│    │ └──────────┘ │ └──────────┘ │ └──────────┘ │ └──────────┘ │        │
-│    │              │              │              │              │        │
-│    ▼              ▼              ▼              ▼              ▼        │
-│  Released     Identity       Verified     Observability   Marketplace   │
+│  v1.0.0          v1.1           v1.2           v1.3           v1.4           v2.0      │
+│  ═══════        ═══════        ═══════        ═══════        ═══════        ═══════    │
+│    │              │              │              │              │              │        │
+│    │ ┌──────────┐ │ ┌──────────┐ │ ┌──────────┐ │ ┌──────────┐ │ ┌──────────┐ │        │
+│    ├─│ Stable   │─┼─│ Identity │─┼─│ Verified │─┼─│ Observe  │─┼─│ Scale    │─┼─→ 🏪   │
+│    │ │ Protocol │ │ │ +Discov  │ │ │ Identity │ │ │ +Deleg   │ │ │ +Types   │ │        │
+│    │ └──────────┘ │ └──────────┘ │ └──────────┘ │ └──────────┘ │ └──────────┘ │        │
+│    │              │              │              │              │              │        │
+│    ▼              ▼              ▼              ▼              ▼              ▼        │
+│  Released     Identity       Verified     Observability    Hardening     Marketplace   │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -156,7 +156,7 @@ Key architectural and business decisions made during planning. Each decision inc
 
 | Layer | Data | Owner |
 |-------|------|-------|
-| **Protocol Interface** | `SnapshotStore`, `MeteringStore` | ASAP SDK (open source) |
+| **Protocol Interface** | `SnapshotStore`, `MeteringStore`, `SLAStorage` | ASAP SDK (open source) |
 | **Reference Impls** | SQLite, Redis adapters | Separate packages |
 | **Marketplace Metadata** | Manifests, trust scores, SLA | ASAP centrally (v2.0) |
 | **Agent Task State** | Snapshots, artifacts | Agent developer's choice |
@@ -216,6 +216,7 @@ Key architectural and business decisions made during planning. Each decision inc
 | **v1.1.0** | Identity | Auth + Discovery + Real-time | OAuth2, WebSocket, Well-known URI, Lite Registry, MessageAck |
 | **v1.2.0** | Verified Identity | Signing + Compliance | Ed25519 signing, Compliance Harness, mTLS (opt) |
 | **v1.3.0** | Observability | Metering + SLAs + Delegation | Observability metering, SLA framework, delegation tokens |
+| **v1.4.0** | Hardening | Resilience + Scale | Type safety hardening, storage pagination |
 | **v2.0.0** | Marketplace | Full launch | Web App, Lite Registry integration, Verified Badge |
 
 ---
@@ -375,6 +376,49 @@ src/asap/
 }
 ```
 
+### SLA Framework
+
+SLAs define service guarantees as trust signals (not financial penalties in v1.3). The `SLADefinition` lives on the `Manifest` model; metrics are stored via a dedicated `SLAStorage` Protocol (InMemory + SQLite implementations). API endpoints use feature-centric paths (`/sla/*`).
+
+```
+
+---
+
+## v1.4.0 "Hardening" — Resilience & Scale
+
+**Goal**: Prepare the codebase for marketplace scale by addressing technical debt and performance bottlenecks.
+
+### Features
+
+| Feature | Priority | Purpose |
+|---------|----------|---------|
+| Type Safety Hardening | P1 | Eliminate runtime type errors |
+| Storage Pagination | P1 | Scalable data access (SLA history, Metering) |
+
+### Why This Matters
+
+- **Type Safety**: Reduces regression risks as the codebase grows.
+- **Pagination**: Prevents OOM errors when users query large datasets (vital for the SLA dashboards in v2.0).
+
+
+---
+
+## v1.4.0 "Hardening" — Resilience & Scale
+
+**Goal**: Prepare the codebase for marketplace scale by addressing technical debt and performance bottlenecks.
+
+### Features
+
+| Feature | Priority | Purpose |
+|---------|----------|---------|
+| Type Safety Hardening | P1 | Eliminate runtime type errors |
+| Storage Pagination | P1 | Scalable data access (SLA history, Metering) |
+
+### Why This Matters
+
+- **Type Safety**: Reduces regression risks as the codebase grows.
+- **Pagination**: Prevents OOM errors when users query large datasets (vital for the SLA dashboards in v2.0).
+
 ---
 
 ## v2.0.0 "Marketplace" — The End Goal
@@ -434,7 +478,7 @@ Human interface for marketplace interactions:
 |---------|-----------------|
 | v1.0 → v1.1 | Add OAuth2 config (with Custom Claims), expose well-known + health endpoints, choose storage backend, register in Lite Registry |
 | v1.1 → v1.2 | Sign manifest with Ed25519, run compliance harness |
-| v1.2 → v1.3 | Define SLAs, add metering hooks (using `MeteringStore` interface), configure delegation |
+| v1.2 → v1.3 | Define SLAs in manifest, add metering hooks (using `MeteringStore` interface), configure delegation, set up `SLAStorage` |
 | v1.3 → v2.0 | Register in marketplace Web App, consider Verified badge (Free) |
 
 ### Backward Compatibility
@@ -536,3 +580,4 @@ Strategic risks identified during the v1.1.0 planning review (2026-02-07):
 | 2026-02-07 | Added SD-11 (Lite Registry), resolved SQ-10/11/12, updated v1.1 features |
 | 2026-02-12 | **Lean Marketplace pivot**: v1.2 renamed "Verified Identity" (removed Registry API, DeepEval), v1.3 renamed "Observability" (removed credit system, audit logging), v2.0 simplified to Web App + Lite Registry (removed backend services). Added deferred-backlog.md reference |
 | 2026-02-13 | **Security Hardening**: Updated SD-4 to include JCS (RFC 8785) and Strict Verification (RFC 8032) |
+| 2026-02-18 | **v1.3 SLA decisions**: Added SLAStorage to SD-9, expanded v1.3 section with SLA Framework details (/sla/* API, trust signals), updated migration guide |

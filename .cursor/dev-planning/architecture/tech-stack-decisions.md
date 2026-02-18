@@ -35,6 +35,9 @@ The foundation required stability, developer experience (DX), and strict correct
     -   **Transport Agnostic**: JSON-RPC works equally well over HTTP, WebSockets, or stdio (MCP).
     -   **Standard**: It is a stable, boring standard. Agents don't need creative URL schemes.
 -   **Alternatives rejected**: REST (paradigm mismatch for agent actions), gRPC (limited browser support, heavier tooling). See [ADR-2](../../product-specs/decision-records/02-protocol.md).
+-   > **Note:** JSON-RPC 2.0 applies to agent-to-agent transport (`POST /asap`, `WS /asap/ws`).
+    Operator-facing APIs (health, metrics, usage, SLA, delegations) use standard REST
+    for compatibility with dashboards, Prometheus, and Kubernetes probes.
 
 ### 1.4 API Framework: FastAPI
 -   **Decision**: **FastAPI**
