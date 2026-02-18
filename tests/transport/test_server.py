@@ -536,7 +536,8 @@ class TestASAPRequestHandlerHelpers:
             sender="urn:asap:agent:test-server",
             recipient="urn:asap:agent:client",
             payload_type="task.response",
-            payload={"status": "completed"},
+            payload={"task_id": "t1", "status": "completed"},
+            correlation_id="req-7",
         )
 
         rpc_request = JsonRpcRequest(

@@ -68,6 +68,7 @@ def task_response_envelope(sample_manifest: Manifest) -> Envelope:
             status="completed",
             result={"echoed": {"test": "data"}},
         ).model_dump(),
+        correlation_id="req_01",
     )
 
 
@@ -120,12 +121,9 @@ class TestRecordTaskUsage:
                 task_id="task_456",
                 status="completed",
                 result={},
-                metrics={
-                    "tokens_in": 1500,
-                    "tokens_out": 2300,
-                    "api_calls": 5,
-                },
+                metrics={"tokens_in": 1500, "tokens_out": 2300, "api_calls": 5},
             ).model_dump(),
+            correlation_id="req_02",
         )
 
         await record_task_usage(
@@ -217,7 +215,7 @@ class TestHandlerRegistryMetering:
         response = await registry.dispatch_async(task_request_envelope, sample_manifest)
 
         assert response.payload_type == "task.response"
-        task_id = response.payload.get("task_id")
+        task_id = response.payload_dict.get("task_id")
         assert task_id is not None
 
         start = datetime(2020, 1, 1, tzinfo=timezone.utc)
@@ -334,6 +332,7 @@ class TestWrapHandlerWithMetering:
                 recipient=env.sender,
                 payload_type="task.response",
                 payload={"task_id": "t1", "status": "completed", "result": {}},
+                correlation_id=env.id,
             )
 
         wrapped = wrap_handler_with_metering(my_handler, metering_store, sample_manifest)
@@ -378,6 +377,7 @@ class TestWrapHandlerWithMetering:
                 recipient=env.sender,
                 payload_type="task.response",
                 payload={"task_id": "t1", "status": "completed", "result": {}},
+                correlation_id=env.id,
             )
 
         wrapped = wrap_handler_with_metering(my_sync_handler, metering_store, sample_manifest)
@@ -461,6 +461,7 @@ class TestRecordTaskUsageEdgeCases:
                     "api_calls": None,
                 },
             },
+            correlation_id="req-01",
         )
 
         await record_task_usage(metering_store, envelope, response, 100, sample_manifest)
@@ -499,6 +500,7 @@ class TestRecordTaskUsageEdgeCases:
                 "status": "completed",
                 "result": {},
             },
+            correlation_id="req-01",
         )
 
         await record_task_usage(metering_store, envelope, response, 100, sample_manifest)
@@ -538,6 +540,7 @@ class TestRecordTaskUsageEdgeCases:
                     "tokens_used": 55,  # Should be used as fallback
                 },
             },
+            correlation_id="req-01",
         )
 
         await record_task_usage(metering_store, envelope, response, 100, sample_manifest)
@@ -569,6 +572,7 @@ class TestRecordTaskUsageEdgeCases:
             recipient="urn:asap:agent:consumer",
             payload_type="task.response",
             payload={"task_id": "t1", "status": "completed"},
+            correlation_id="req-01",
         )
 
         await record_task_usage(metering_store, envelope, response, -50.0, sample_manifest)

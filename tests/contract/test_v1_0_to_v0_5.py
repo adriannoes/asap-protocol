@@ -285,7 +285,7 @@ def create_v05_server() -> tuple[Manifest, HandlerRegistry, TestClient]:
     async def echo_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
         """Handle task requests by echoing input as result (v0.5.0 style response)."""
         _ = manifest
-        payload = envelope.payload
+        payload = envelope.payload_dict
         task_id = f"task_{payload.get('conversation_id', 'unknown')}"
 
         response_payload = TaskResponse(
@@ -313,7 +313,7 @@ def create_v05_server() -> tuple[Manifest, HandlerRegistry, TestClient]:
     async def cancel_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
         """Handle task cancellation requests (v0.5.0 style)."""
         _ = manifest
-        payload = envelope.payload
+        payload = envelope.payload_dict
         task_id = payload.get("task_id", "unknown")
 
         response_payload = TaskResponse(
@@ -375,7 +375,7 @@ def create_v05_server_with_auth() -> tuple[Manifest, HandlerRegistry, TestClient
     async def echo_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
         """Handle task requests with v0.5.0 response format."""
         _ = manifest
-        payload = envelope.payload
+        payload = envelope.payload_dict
         task_id = f"task_{payload.get('conversation_id', 'unknown')}"
 
         response_payload = TaskResponse(

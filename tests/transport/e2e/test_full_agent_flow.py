@@ -137,7 +137,7 @@ class TestFullRoundTrip(NoRateLimitTestBase):
         response_envelope = Envelope(**json_rpc_response["result"]["envelope"])
 
         # Parse and verify TaskResponse
-        task_response = TaskResponse(**response_envelope.payload)
+        task_response = TaskResponse(**response_envelope.payload_dict)
         assert task_response.task_id is not None
         assert task_response.status == TaskStatus.COMPLETED
 
@@ -157,7 +157,7 @@ class TestFullRoundTrip(NoRateLimitTestBase):
         response = test_app.post("/asap", json=json_rpc_request)
         json_rpc_response = response.json()
         response_envelope = Envelope(**json_rpc_response["result"]["envelope"])
-        task_response = TaskResponse(**response_envelope.payload)
+        task_response = TaskResponse(**response_envelope.payload_dict)
 
         # Verify echo result
         assert task_response.result is not None
@@ -363,7 +363,7 @@ class TestAsyncClientIntegration(NoRateLimitTestBase):
             payload=TaskResponse(
                 task_id="task_async_001",
                 status=TaskStatus.COMPLETED,
-                result={"echoed": sample_task_request_envelope.payload.get("input", {})},
+                result={"echoed": sample_task_request_envelope.payload_dict.get("input", {})},
             ).model_dump(),
             correlation_id=sample_task_request_envelope.id,
             trace_id=sample_task_request_envelope.trace_id,
@@ -454,6 +454,6 @@ class TestHandlerRegistryIntegration(NoRateLimitTestBase):
         response = registry.dispatch(sample_task_request_envelope, test_manifest)
 
         assert response.payload_type == "task.response"
-        task_response = TaskResponse(**response.payload)
+        task_response = TaskResponse(**response.payload_dict)
         assert task_response.status == TaskStatus.COMPLETED
         assert "echoed" in (task_response.result or {})

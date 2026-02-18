@@ -226,7 +226,7 @@ def create_v1_server() -> tuple[Manifest, HandlerRegistry, TestClient]:
     async def echo_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
         """Handle task requests by echoing input as result."""
         _ = manifest  # Unused but required by handler signature
-        payload = envelope.payload
+        payload = envelope.payload_dict
         task_id = f"task_{payload.get('conversation_id', 'unknown')}"
 
         response_payload = TaskResponse(
@@ -248,7 +248,7 @@ def create_v1_server() -> tuple[Manifest, HandlerRegistry, TestClient]:
     async def cancel_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
         """Handle task cancellation requests."""
         _ = manifest  # Unused but required by handler signature
-        payload = envelope.payload
+        payload = envelope.payload_dict
         task_id = payload.get("task_id", "unknown")
 
         response_payload = TaskResponse(

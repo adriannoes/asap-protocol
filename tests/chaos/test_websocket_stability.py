@@ -93,6 +93,7 @@ async def test_websocket_high_latency_resilience() -> None:
                 "sender": "urn:asap:agent:remote",
                 "recipient": "urn:asap:agent:local",
                 "payload": {"task_id": "t1", "status": "completed"},
+                "correlation_id": "req_1",
             }
         },
         "id": "req_1",

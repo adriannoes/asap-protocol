@@ -705,7 +705,7 @@ class TestWebSocketTransportOnMessage(NoRateLimitTestBase):
             await transport._recv_task
         assert len(received) == 1
         assert received[0].payload_type == "task.update"
-        assert received[0].payload.get("progress") == 50
+        assert received[0].payload_dict.get("progress") == 50
 
     @pytest.mark.asyncio
     async def test_on_message_async_callback_awaited(
@@ -739,7 +739,7 @@ class TestWebSocketTransportOnMessage(NoRateLimitTestBase):
         with contextlib.suppress(asyncio.CancelledError):
             await transport._recv_task
         assert len(received) == 1
-        assert received[0].payload.get("progress") == 99
+        assert received[0].payload_dict.get("progress") == 99
 
 
 def _free_port() -> int:
