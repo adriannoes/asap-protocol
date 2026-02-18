@@ -77,7 +77,7 @@ class TestOrchestrationExample:
             sender=orchestration.SUB_AGENT_A_ID,
             recipient=orchestration.ORCHESTRATOR_ID,
             payload_type="task.response",
-            payload={"result": "from_a"},
+            payload={"task_id": "t1", "status": "completed", "result": {"result": "from_a"}},
             correlation_id="req-a",
         )
         env_b = Envelope(
@@ -85,7 +85,7 @@ class TestOrchestrationExample:
             sender=orchestration.SUB_AGENT_B_ID,
             recipient=orchestration.ORCHESTRATOR_ID,
             payload_type="task.response",
-            payload={"result": "from_b"},
+            payload={"task_id": "t2", "status": "completed", "result": {"result": "from_b"}},
             correlation_id="req-b",
         )
         mock_client = MagicMock()
@@ -102,8 +102,8 @@ class TestOrchestrationExample:
             )
         assert state.completed is True
         assert state.step == "completed"
-        assert state.result_a == {"result": "from_a"}
-        assert state.result_b == {"result": "from_b"}
+        assert state.result_a is not None and state.result_a.get("result") == {"result": "from_a"}
+        assert state.result_b is not None and state.result_b.get("result") == {"result": "from_b"}
         assert state.error is None
 
     @pytest.mark.asyncio
@@ -135,7 +135,7 @@ class TestOrchestrationExample:
             sender=orchestration.SUB_AGENT_A_ID,
             recipient=orchestration.ORCHESTRATOR_ID,
             payload_type="task.response",
-            payload={"result": "from_a"},
+            payload={"task_id": "t1", "status": "completed", "result": {"result": "from_a"}},
             correlation_id="req-a",
         )
         mock_client = MagicMock()
@@ -153,7 +153,7 @@ class TestOrchestrationExample:
         assert state.completed is False
         assert state.step == "failed_at_b"
         assert state.error is not None and "worker_b" in state.error
-        assert state.result_a == {"result": "from_a"}
+        assert state.result_a is not None and state.result_a.get("result") == {"result": "from_a"}
         assert state.result_b is None
 
     @pytest.mark.asyncio
@@ -164,7 +164,7 @@ class TestOrchestrationExample:
             sender=orchestration.SUB_AGENT_A_ID,
             recipient=orchestration.ORCHESTRATOR_ID,
             payload_type="task.response",
-            payload={"echo": "custom_a"},
+            payload={"task_id": "t1", "status": "completed", "result": {"echo": "custom_a"}},
             correlation_id="req-a",
         )
         env_b = Envelope(
@@ -172,7 +172,7 @@ class TestOrchestrationExample:
             sender=orchestration.SUB_AGENT_B_ID,
             recipient=orchestration.ORCHESTRATOR_ID,
             payload_type="task.response",
-            payload={"echo": "custom_b"},
+            payload={"task_id": "t2", "status": "completed", "result": {"echo": "custom_b"}},
             correlation_id="req-b",
         )
         mock_client = MagicMock()
@@ -190,8 +190,8 @@ class TestOrchestrationExample:
                 input_b={"y": 2},
             )
         assert state.completed is True
-        assert state.result_a == {"echo": "custom_a"}
-        assert state.result_b == {"echo": "custom_b"}
+        assert state.result_a is not None and state.result_a.get("result") == {"echo": "custom_a"}
+        assert state.result_b is not None and state.result_b.get("result") == {"echo": "custom_b"}
 
     @pytest.mark.asyncio
     async def test_send_to_sub_agent_returns_response(self) -> None:
@@ -208,13 +208,13 @@ class TestOrchestrationExample:
             sender=orchestration.SUB_AGENT_A_ID,
             recipient=orchestration.ORCHESTRATOR_ID,
             payload_type="task.response",
-            payload={"task_id": "t1", "status": "completed", "result": "ok"},
+            payload={"task_id": "t1", "status": "completed", "result": {"value": "ok"}},
             correlation_id="req-1",
         )
         mock_client = MagicMock()
         mock_client.send = AsyncMock(return_value=resp)
         out = await orchestration.send_to_sub_agent(mock_client, req)
-        assert out.payload_dict.get("result") == "ok"
+        assert out.payload_dict.get("result", {}).get("value") == "ok"
         mock_client.send.assert_called_once_with(req)
 
     def test_orchestration_parse_args(self) -> None:

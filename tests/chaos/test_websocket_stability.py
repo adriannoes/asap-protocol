@@ -286,14 +286,14 @@ async def test_circuit_breaker_opens_on_ack_timeout(
         payload_type="task.request",
         sender="urn:asap:agent:a",
         recipient="urn:asap:agent:b",
-        payload={"task_id": "t1"},
+        payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
     )
     env2 = Envelope(
         asap_version="0.1",
         payload_type="task.request",
         sender="urn:asap:agent:a",
         recipient="urn:asap:agent:b",
-        payload={"task_id": "t2"},
+        payload={"conversation_id": "c2", "skill_id": "s1", "input": {}},
     )
 
     # Register pending acks manually (simulating what send() does)
@@ -348,7 +348,7 @@ async def test_circuit_breaker_opens_after_retransmission_exhaustion(
         payload_type="task.request",
         sender="urn:asap:agent:a",
         recipient="urn:asap:agent:b",
-        payload={"task_id": "t1"},
+        payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
     )
     transport._register_pending_ack(env)
 
@@ -374,7 +374,7 @@ async def test_circuit_breaker_opens_after_retransmission_exhaustion(
         payload_type="task.request",
         sender="urn:asap:agent:a",
         recipient="urn:asap:agent:b",
-        payload={"task_id": "t2"},
+        payload={"conversation_id": "c2", "skill_id": "s1", "input": {}},
     )
     transport._register_pending_ack(env2)
     await asyncio.sleep(0.15)
@@ -467,14 +467,14 @@ async def test_graceful_shutdown_clears_pending_acks() -> None:
         payload_type="task.request",
         sender="urn:asap:agent:a",
         recipient="urn:asap:agent:b",
-        payload={"task_id": "t1"},
+        payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
     )
     env2 = Envelope(
         asap_version="0.1",
         payload_type="task.request",
         sender="urn:asap:agent:a",
         recipient="urn:asap:agent:b",
-        payload={"task_id": "t2"},
+        payload={"conversation_id": "c2", "skill_id": "s1", "input": {}},
     )
     transport._register_pending_ack(env1)
     transport._register_pending_ack(env2)

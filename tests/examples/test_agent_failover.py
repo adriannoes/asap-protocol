@@ -12,6 +12,7 @@ import subprocess
 from unittest.mock import MagicMock, patch
 
 import httpx
+import pytest
 
 from datetime import datetime, timezone
 
@@ -193,41 +194,30 @@ class TestCreateStateRestoreHandler:
         assert payload["task_id"] == "task-100"
 
     def test_restore_fails_when_missing_task_id(self) -> None:
-        """Handler returns ok=False when task_id is missing."""
-        store = InMemorySnapshotStore()
-        handler = agent_failover._create_state_restore_handler(store)
-        envelope = Envelope(
-            asap_version="0.1",
-            sender=agent_failover.COORDINATOR_AGENT_ID,
-            recipient=agent_failover.WORKER_AGENT_ID,
-            payload_type="state_restore",
-            payload={"snapshot_id": "snap-001"},
-        )
-        manifest = self._make_manifest()
+        """Envelope with state_restore missing task_id raises ValidationError."""
+        from pydantic import ValidationError
 
-        response = handler(envelope, manifest)
-
-        payload = response.payload_dict
-        assert payload["ok"] is False
-        assert "missing" in payload["error"]
+        with pytest.raises(ValidationError):
+            Envelope(
+                asap_version="0.1",
+                sender=agent_failover.COORDINATOR_AGENT_ID,
+                recipient=agent_failover.WORKER_AGENT_ID,
+                payload_type="state_restore",
+                payload={"snapshot_id": "snap-001"},
+            )
 
     def test_restore_fails_when_missing_snapshot_id(self) -> None:
-        """Handler returns ok=False when snapshot_id is missing."""
-        store = InMemorySnapshotStore()
-        handler = agent_failover._create_state_restore_handler(store)
-        envelope = Envelope(
-            asap_version="0.1",
-            sender=agent_failover.COORDINATOR_AGENT_ID,
-            recipient=agent_failover.WORKER_AGENT_ID,
-            payload_type="state_restore",
-            payload={"task_id": "task-100"},
-        )
-        manifest = self._make_manifest()
+        """Envelope with state_restore missing snapshot_id raises ValidationError."""
+        from pydantic import ValidationError
 
-        response = handler(envelope, manifest)
-
-        payload = response.payload_dict
-        assert payload["ok"] is False
+        with pytest.raises(ValidationError):
+            Envelope(
+                asap_version="0.1",
+                sender=agent_failover.COORDINATOR_AGENT_ID,
+                recipient=agent_failover.WORKER_AGENT_ID,
+                payload_type="state_restore",
+                payload={"task_id": "task-100"},
+            )
 
     def test_restore_fails_when_snapshot_not_found(self) -> None:
         """Handler returns ok=False when snapshot does not exist in store."""
@@ -275,24 +265,18 @@ class TestCreateStateRestoreHandler:
         payload = response.payload_dict
         assert payload["ok"] is False
 
-    def test_restore_handles_empty_payload(self) -> None:
-        """Handler handles empty payload gracefully (no task_id/snapshot_id)."""
-        store = InMemorySnapshotStore()
-        handler = agent_failover._create_state_restore_handler(store)
-        envelope = Envelope(
-            asap_version="0.1",
-            sender=agent_failover.COORDINATOR_AGENT_ID,
-            recipient=agent_failover.WORKER_AGENT_ID,
-            payload_type="state_restore",
-            payload={},
-        )
-        manifest = self._make_manifest()
+    def test_restore_rejects_empty_payload(self) -> None:
+        """Envelope with state_restore empty payload raises ValidationError."""
+        from pydantic import ValidationError
 
-        response = handler(envelope, manifest)
-
-        payload = response.payload_dict
-        assert payload["ok"] is False
-        assert "missing" in payload["error"]
+        with pytest.raises(ValidationError):
+            Envelope(
+                asap_version="0.1",
+                sender=agent_failover.COORDINATOR_AGENT_ID,
+                recipient=agent_failover.WORKER_AGENT_ID,
+                payload_type="state_restore",
+                payload={},
+            )
 
 
 class TestCreateWorkerApp:

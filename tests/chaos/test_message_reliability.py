@@ -530,8 +530,9 @@ class TestPartialCorruption:
             payload_type="task.update",  # Wrong type - expected task.response
             payload={
                 "task_id": "task_wrong_type",
-                "status": "submitted",
-                "progress": 0.5,
+                "update_type": "progress",
+                "status": "working",
+                "progress": {"percent": 50},
             },
         )
 

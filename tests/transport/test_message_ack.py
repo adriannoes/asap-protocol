@@ -91,7 +91,7 @@ class TestEnvelopeRequiresAck:
             sender="urn:asap:agent:a",
             recipient="urn:asap:agent:b",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
         )
         assert envelope.requires_ack is False
 
@@ -101,7 +101,7 @@ class TestEnvelopeRequiresAck:
             sender="urn:asap:agent:a",
             recipient="urn:asap:agent:b",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
             requires_ack=True,
         )
         data = envelope.model_dump(mode="json")

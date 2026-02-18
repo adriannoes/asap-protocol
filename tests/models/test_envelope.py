@@ -254,3 +254,18 @@ class TestEnvelope:
             correlation_id="req_123",
         )
         assert envelope.correlation_id == "req_123"
+
+    def test_malformed_task_request_raises_error(self) -> None:
+        """Missing required TaskRequest fields raises ValidationError."""
+        from asap.models.envelope import Envelope
+
+        data = {
+            "id": "env_1",
+            "asap_version": "1.0",
+            "sender": "urn:asap:agent:a",
+            "recipient": "urn:asap:agent:b",
+            "payload_type": "task.request",
+            "payload": {"conversation_id": "conv_1", "input": {}},
+        }
+        with pytest.raises(ValidationError):
+            Envelope.model_validate(data)

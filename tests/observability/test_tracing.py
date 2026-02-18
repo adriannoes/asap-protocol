@@ -33,7 +33,7 @@ def _make_envelope(
         sender="urn:asap:agent:sender",
         recipient="urn:asap:agent:recipient",
         payload_type="task.request",
-        payload={},
+        payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
         trace_id=trace_id,
         extensions=extensions,
     )

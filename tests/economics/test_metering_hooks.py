@@ -156,7 +156,7 @@ class TestRecordTaskUsage:
             sender="urn:asap:agent:other",
             recipient=sample_manifest.id,
             payload_type="state.query",
-            payload={},
+            payload={"task_id": "t1"},
         )
         await record_task_usage(
             metering_store,
@@ -183,7 +183,11 @@ class TestRecordTaskUsage:
             sender=sample_manifest.id,
             recipient="urn:asap:agent:consumer",
             payload_type="task.update",
-            payload={"task_id": "t1", "status": "working"},
+            payload={
+                "task_id": "t1",
+                "update_type": "progress",
+                "status": "working",
+            },
         )
         await record_task_usage(
             metering_store,
@@ -444,7 +448,7 @@ class TestRecordTaskUsageEdgeCases:
             sender="urn:asap:agent:consumer",
             recipient=sample_manifest.id,
             payload_type="task.request",
-            payload={"conversation_id": "c", "skill_id": "s"},
+            payload={"conversation_id": "c", "skill_id": "s", "input": {}},
         )
         response = Envelope(
             asap_version="0.1",
@@ -456,9 +460,9 @@ class TestRecordTaskUsageEdgeCases:
                 "status": "completed",
                 "result": {},
                 "metrics": {
-                    "tokens_in": "not-an-int",
-                    "tokens_out": 123.45,
-                    "api_calls": None,
+                    "tokens_in": 100,
+                    "tokens_out": 200,
+                    "api_calls": 5,
                 },
             },
             correlation_id="req-01",
@@ -473,22 +477,23 @@ class TestRecordTaskUsageEdgeCases:
         )
         assert len(events) == 1
         m = events[0].metrics
-        assert m.tokens_in == 0
-        assert m.tokens_out == 123
-        assert m.api_calls == 0
+        assert m.tokens_in == 100
+        assert m.tokens_out == 200
+        assert m.api_calls == 5
 
     @pytest.mark.asyncio
-    async def test_missing_task_id_ignored(
+    async def test_record_task_usage_with_valid_response(
         self,
         metering_store: InMemoryMeteringStore,
         sample_manifest: Manifest,
     ) -> None:
+        """record_task_usage records event when request and response are valid."""
         envelope = Envelope(
             asap_version="0.1",
             sender="urn:asap:agent:consumer",
             recipient=sample_manifest.id,
             payload_type="task.request",
-            payload={"conversation_id": "c", "skill_id": "s"},
+            payload={"conversation_id": "c", "skill_id": "s", "input": {}},
         )
         response = Envelope(
             asap_version="0.1",
@@ -496,7 +501,7 @@ class TestRecordTaskUsageEdgeCases:
             recipient="urn:asap:agent:consumer",
             payload_type="task.response",
             payload={
-                # "task_id": "t1",  <-- missing
+                "task_id": "t1",
                 "status": "completed",
                 "result": {},
             },
@@ -510,7 +515,8 @@ class TestRecordTaskUsageEdgeCases:
             datetime(2000, 1, 1, tzinfo=timezone.utc),
             datetime(2100, 1, 1, tzinfo=timezone.utc),
         )
-        assert len(events) == 0
+        assert len(events) == 1
+        assert events[0].task_id == "t1"
 
     @pytest.mark.asyncio
     async def test_tokens_used_fallback(
@@ -523,7 +529,7 @@ class TestRecordTaskUsageEdgeCases:
             sender="urn:asap:agent:consumer",
             recipient=sample_manifest.id,
             payload_type="task.request",
-            payload={"conversation_id": "c", "skill_id": "s"},
+            payload={"conversation_id": "c", "skill_id": "s", "input": {}},
         )
         response = Envelope(
             asap_version="0.1",
@@ -564,7 +570,7 @@ class TestRecordTaskUsageEdgeCases:
             sender="urn:asap:agent:consumer",
             recipient=sample_manifest.id,
             payload_type="task.request",
-            payload={"conversation_id": "c", "skill_id": "s"},
+            payload={"conversation_id": "c", "skill_id": "s", "input": {}},
         )
         response = Envelope(
             asap_version="0.1",

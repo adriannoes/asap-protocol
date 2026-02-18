@@ -545,14 +545,10 @@ class TestV010ErrorHandlingCompatibility:
         assert "code" in data["error"]
         assert "message" in data["error"]
 
-    def test_empty_payload_accepted_by_tolerant_handler(
+    def test_empty_task_request_payload_rejected_by_strict_validation(
         self, v1_server: TestClient, v010_client: V010Client
     ) -> None:
-        """Test that empty payload is accepted when handler doesn't validate.
-
-        This verifies backward compatibility: v1.0.0 servers are tolerant
-        and allow handlers to decide their own validation rules.
-        """
+        """Empty task.request payload is rejected (422) before handler."""
         request = {
             "jsonrpc": "2.0",
             "method": "asap.send",
@@ -562,7 +558,7 @@ class TestV010ErrorHandlingCompatibility:
                     "sender": v010_client.agent_urn,
                     "recipient": "urn:asap:agent:v1-server",
                     "payload_type": "task.request",
-                    "payload": {},  # Empty but valid JSON
+                    "payload": {},
                 }
             },
             "id": "empty-payload-test",
@@ -570,12 +566,11 @@ class TestV010ErrorHandlingCompatibility:
 
         response = v1_server.post("/asap", json=request)
 
-        # Server accepts and processes the request
         assert response.status_code == 200
         data = response.json()
-
-        # Should have result (handler processes it)
-        assert "result" in data
+        assert "error" in data
+        assert data["error"]["code"] == -32602
+        assert "Invalid envelope" in data["error"]["data"]["error"]
 
     def test_unknown_skill_handled(self, v1_server: TestClient, v010_client: V010Client) -> None:
         """Test that unknown skill requests are handled gracefully."""
