@@ -66,7 +66,7 @@ async def record_task_usage(
     if response_envelope.payload_type != "task.response":
         return
 
-    payload = response_envelope.payload
+    payload = response_envelope.payload_dict
     task_id = payload.get("task_id")
     if not task_id:
         return

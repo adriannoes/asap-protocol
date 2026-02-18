@@ -66,7 +66,7 @@ def _create_failover_work_handler(store: SnapshotStore) -> SyncHandler:
     """Create a task.request handler that does one step and saves a snapshot."""
 
     def handler(envelope: Envelope, manifest: Manifest) -> Envelope:
-        req = TaskRequest(**envelope.payload)
+        req = TaskRequest(**envelope.payload_dict)
         if req.skill_id != SKILL_FAILOVER_WORK:
             return Envelope(
                 asap_version=envelope.asap_version,
@@ -119,7 +119,7 @@ def _create_state_restore_handler(store: SnapshotStore) -> SyncHandler:
     """Create a state_restore handler that loads snapshot from store and returns ack."""
 
     def handler(envelope: Envelope, manifest: Manifest) -> Envelope:
-        payload = envelope.payload or {}
+        payload = envelope.payload_dict
         task_id = payload.get("task_id")
         snapshot_id = payload.get("snapshot_id")
         if not task_id or not snapshot_id:
@@ -273,7 +273,7 @@ async def run_demo() -> None:
                 response = await client.send(request_envelope)
             if response.payload_type != "task.response":
                 raise RuntimeError(f"Unexpected response type: {response.payload_type}")
-            result = (response.payload or {}).get("result") or {}
+            result = response.payload_dict.get("result") or {}
             snapshot_id = result.get("snapshot_id")
             if not snapshot_id:
                 raise RuntimeError("Primary did not return snapshot_id")
@@ -313,7 +313,7 @@ async def run_demo() -> None:
 
             async with ASAPClient(backup_base) as client:
                 ack = await client.send(restore_envelope)
-            ack_payload = ack.payload or {}
+            ack_payload = ack.payload_dict
             if ack_payload.get("ok") is not True:
                 raise RuntimeError(f"Backup state_restore failed: {ack_payload}")
 

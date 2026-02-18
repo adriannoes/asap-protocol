@@ -417,7 +417,7 @@ def create_echo_handler() -> SyncHandler:
     def echo_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
         """Echo handler implementation."""
         # Parse the TaskRequest payload
-        task_request = TaskRequest(**envelope.payload)
+        task_request = TaskRequest(**envelope.payload_dict)
 
         # Create response with echoed input
         response_payload = TaskResponse(
