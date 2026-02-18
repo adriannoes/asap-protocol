@@ -207,6 +207,15 @@ class SLADefinition(ASAPBaseModel):
         default=None, description="Support coverage (e.g., '24/7', 'business')"
     )
 
+    @field_validator("availability", "max_error_rate", mode="before")
+    @classmethod
+    def _validate_percentage_format(cls, v: str | None) -> str | None:
+        if v is not None:
+            from asap.models.validators import validate_percentage_format
+
+            validate_percentage_format(v)
+        return v
+
 
 class Agent(ASAPBaseModel):
     """An autonomous entity capable of sending and receiving ASAP messages.
