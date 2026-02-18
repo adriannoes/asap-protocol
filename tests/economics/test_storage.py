@@ -10,7 +10,7 @@ from asap.economics import (
     SQLiteMeteringStorage,
     UsageMetrics,
 )
-from asap.economics.storage import _period_to_metering_query
+from asap.economics.storage import _period_to_metering_query, metering_storage_adapter
 
 
 @pytest.fixture
@@ -685,3 +685,211 @@ class TestPeriodToMeteringQuery:
         assert q.agent_id == "agent-1"
         assert q.start is None
         assert q.end is None
+
+
+# ---------------------------------------------------------------------------
+# Helper for coverage tests
+# ---------------------------------------------------------------------------
+
+
+def _metric(
+    task_id: str = "t1",
+    agent_id: str = "a1",
+    consumer_id: str = "c1",
+    timestamp: datetime | None = None,
+    tokens_in: int = 10,
+    tokens_out: int = 20,
+    duration_ms: int = 100,
+    api_calls: int = 1,
+) -> UsageMetrics:
+    return UsageMetrics(
+        task_id=task_id,
+        agent_id=agent_id,
+        consumer_id=consumer_id,
+        tokens_in=tokens_in,
+        tokens_out=tokens_out,
+        duration_ms=duration_ms,
+        api_calls=api_calls,
+        timestamp=timestamp or datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+    )
+
+
+# ---------------------------------------------------------------------------
+# metering_storage_adapter
+# ---------------------------------------------------------------------------
+
+
+class TestMeteringStorageAdapter:
+    """Cover metering_storage_adapter -> MeteringStore bridge."""
+
+    @pytest.mark.asyncio
+    async def test_adapter_record_and_query(self) -> None:
+        """Adapter record() converts UsageEvent; query() returns UsageEvents."""
+        from asap.state.metering import UsageEvent
+        from asap.state.metering import UsageMetrics as StateUsageMetrics
+
+        backend = InMemoryMeteringStorage()
+        adapter = metering_storage_adapter(backend)
+
+        event = UsageEvent(
+            task_id="t1",
+            agent_id="a1",
+            consumer_id="c1",
+            metrics=StateUsageMetrics(
+                tokens_in=10,
+                tokens_out=20,
+                duration_ms=100,
+                api_calls=1,
+            ),
+            timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc),
+        )
+        await adapter.record(event)
+
+        results = await adapter.query(
+            agent_id="a1",
+            start=datetime(2026, 2, 17, 0, 0, 0, tzinfo=timezone.utc),
+            end=datetime(2026, 2, 18, 0, 0, 0, tzinfo=timezone.utc),
+        )
+        assert len(results) == 1
+        assert results[0].task_id == "t1"
+        assert results[0].metrics.tokens_in == 10
+
+    @pytest.mark.asyncio
+    async def test_adapter_aggregate_matching_agent(self) -> None:
+        """Adapter aggregate() returns StateUsageAggregate for matching agent."""
+        backend = InMemoryMeteringStorage()
+        adapter = metering_storage_adapter(backend)
+
+        now = datetime.now(timezone.utc)
+        m = _metric(agent_id="a1", tokens_in=10, tokens_out=20, api_calls=3, timestamp=now)
+        await backend.record(m)
+
+        agg = await adapter.aggregate(agent_id="a1", period="hour")
+        assert agg.agent_id == "a1"
+        assert agg.total_tokens == 30
+        assert agg.total_api_calls == 3
+
+    @pytest.mark.asyncio
+    async def test_adapter_aggregate_no_matching_agent(self) -> None:
+        """Adapter aggregate() returns empty StateUsageAggregate when no data."""
+        backend = InMemoryMeteringStorage()
+        adapter = metering_storage_adapter(backend)
+
+        agg = await adapter.aggregate(agent_id="nonexistent", period="day")
+        assert agg.agent_id == "nonexistent"
+        assert agg.total_tokens == 0
+
+    @pytest.mark.asyncio
+    async def test_adapter_aggregate_unknown_period(self) -> None:
+        """Adapter aggregate() with unknown period returns data (no time filter)."""
+        backend = InMemoryMeteringStorage()
+        adapter = metering_storage_adapter(backend)
+
+        await backend.record(_metric(agent_id="a1"))
+        agg = await adapter.aggregate(agent_id="a1", period="all")
+        assert agg.agent_id == "a1"
+        assert agg.total_tokens == 30
+
+
+# ---------------------------------------------------------------------------
+# SQLiteMeteringStorage — additional coverage
+# ---------------------------------------------------------------------------
+
+
+class TestSQLiteMeteringStorageCoverage:
+    """Cover SQLite paths not hit by existing tests."""
+
+    @pytest.mark.asyncio
+    async def test_aggregate_without_filters_consumer(
+        self, sqlite_storage: SQLiteMeteringStorage
+    ) -> None:
+        """aggregate('consumer') without filters uses full-table scan path."""
+        await sqlite_storage.record(_metric(consumer_id="c1"))
+        await sqlite_storage.record(
+            _metric(task_id="t2", consumer_id="c2", tokens_in=5, tokens_out=5)
+        )
+        aggs = await sqlite_storage.aggregate("consumer")
+        assert len(aggs) == 2
+        by_consumer = {a.consumer_id: a for a in aggs}
+        assert by_consumer["c1"].total_tokens == 30
+        assert by_consumer["c2"].total_tokens == 10
+
+    @pytest.mark.asyncio
+    async def test_aggregate_without_filters_day(
+        self, sqlite_storage: SQLiteMeteringStorage
+    ) -> None:
+        """aggregate('day') without filters groups by date."""
+        await sqlite_storage.record(
+            _metric(timestamp=datetime(2026, 2, 17, 10, 0, 0, tzinfo=timezone.utc))
+        )
+        await sqlite_storage.record(
+            _metric(
+                task_id="t2",
+                timestamp=datetime(2026, 2, 18, 10, 0, 0, tzinfo=timezone.utc),
+                tokens_in=5,
+                tokens_out=5,
+            )
+        )
+        aggs = await sqlite_storage.aggregate("day")
+        assert len(aggs) == 2
+
+    @pytest.mark.asyncio
+    async def test_aggregate_without_filters_week(
+        self, sqlite_storage: SQLiteMeteringStorage
+    ) -> None:
+        """aggregate('week') without filters groups by week."""
+        await sqlite_storage.record(
+            _metric(timestamp=datetime(2026, 2, 17, 10, 0, 0, tzinfo=timezone.utc))
+        )
+        aggs = await sqlite_storage.aggregate("week")
+        assert len(aggs) >= 1
+
+    @pytest.mark.asyncio
+    async def test_aggregate_invalid_group_by_raises(
+        self, sqlite_storage: SQLiteMeteringStorage
+    ) -> None:
+        """aggregate() with invalid group_by raises ValueError."""
+        with pytest.raises(ValueError, match="group_by must be one of"):
+            await sqlite_storage.aggregate("invalid")
+
+    @pytest.mark.asyncio
+    async def test_summary_without_filters(self, sqlite_storage: SQLiteMeteringStorage) -> None:
+        """summary() without filters uses full-table scan path."""
+        await sqlite_storage.record(_metric())
+        s = await sqlite_storage.summary()
+        assert s.total_tasks == 1
+        assert s.total_tokens == 30
+
+    @pytest.mark.asyncio
+    async def test_summary_with_filters(self, sqlite_storage: SQLiteMeteringStorage) -> None:
+        """summary() with filters scopes correctly."""
+        await sqlite_storage.record(
+            _metric(timestamp=datetime(2026, 2, 17, 12, 0, 0, tzinfo=timezone.utc))
+        )
+        await sqlite_storage.record(
+            _metric(
+                task_id="t2",
+                timestamp=datetime(2026, 2, 19, 12, 0, 0, tzinfo=timezone.utc),
+            )
+        )
+        s = await sqlite_storage.summary(
+            filters=MeteringQuery(
+                start=datetime(2026, 2, 17, 0, 0, 0, tzinfo=timezone.utc),
+                end=datetime(2026, 2, 18, 0, 0, 0, tzinfo=timezone.utc),
+            )
+        )
+        assert s.total_tasks == 1
+
+    @pytest.mark.asyncio
+    async def test_stats_empty(self, sqlite_storage: SQLiteMeteringStorage) -> None:
+        """stats() on empty table returns total_events=0."""
+        s = await sqlite_storage.stats()
+        assert s.total_events == 0
+        assert s.oldest_timestamp is None
+
+    @pytest.mark.asyncio
+    async def test_purge_no_retention(self, sqlite_storage: SQLiteMeteringStorage) -> None:
+        """purge_expired() with no retention configured returns 0."""
+        await sqlite_storage.record(_metric())
+        removed = await sqlite_storage.purge_expired()
+        assert removed == 0

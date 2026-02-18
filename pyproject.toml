@@ -1,6 +1,6 @@
 [project]
 name = "asap-protocol"
-version = "1.2.1"
+version = "1.3.0"
 description = "Async Simple Agent Protocol - A streamlined protocol for agent-to-agent communication"
 authors = [
     {name = "ASAP Protocol Contributors"}
@@ -119,11 +119,12 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/**" = ["T201"]
-"src/asap/examples/**" = ["T201"]
+"src/asap/examples/**" = ["T201", "ASYNC210"]
 "benchmarks/**" = ["T201"]
 "tests/**" = ["B008"]
 "src/asap/transport/usage_api.py" = ["B008"]
 "src/asap/transport/delegation_api.py" = ["B008"]
+"src/asap/transport/sla_api.py" = ["B008"]
 "src/asap/cli.py" = ["B008"]
 
 [tool.ruff.format]

@@ -17,6 +17,7 @@ import asyncio
 import json
 import threading
 import time
+from contextlib import suppress
 from datetime import datetime, timedelta, timezone
 from typing import Any, cast
 
@@ -34,7 +35,6 @@ from asap.economics import (
     UsageMetrics,
     compute_error_rate_percent,
     compute_latency_p95_ms,
-    compute_uptime_percent,
 )
 from asap.economics.sla import BreachDetector, SLAMetrics
 from asap.economics.sla_storage import SLAStorage
@@ -73,12 +73,10 @@ _OAUTH2_PRIVATE_KEY: jwk.RSAKey | None = None
 
 
 def _log(msg: str) -> None:
-    """Print narrative output for the user."""
     print(f"  {msg}")
 
 
 def _log_step(step: int, title: str) -> None:
-    """Print step header."""
     print(f"\n--- Step {step}: {title} ---")
 
 
@@ -89,7 +87,6 @@ def _usage_metrics_to_sla_metrics(
     period_end: datetime,
     uptime_percent: float = 100.0,
 ) -> SLAMetrics | None:
-    """Derive SLAMetrics from UsageMetrics (metering data)."""
     if not events:
         return None
     durations = [e.duration_ms for e in events]
@@ -108,7 +105,6 @@ def _usage_metrics_to_sla_metrics(
 
 
 def _make_bearer_token() -> str:
-    """Create a Bearer JWT for the delegator (Agent A)."""
     global _OAUTH2_PRIVATE_KEY
     if _OAUTH2_PRIVATE_KEY is None:
         raise RuntimeError("OAuth2 key not initialized")
@@ -123,7 +119,6 @@ def _make_bearer_token() -> str:
 
 
 def _create_showcase_app() -> Any:
-    """Create the Agent B (delegate) app with v1.3.0 features."""
     global _OAUTH2_KEY_SET
     if _OAUTH2_KEY_SET is None:
         raise RuntimeError("OAuth2 key set not initialized")
@@ -157,10 +152,9 @@ def _create_showcase_app() -> Any:
     def delegation_key_store(_delegator_urn: str) -> Any:
         return private_key
 
-    async def slow_echo_handler(envelope: Any, mf: Any) -> Any:
-        """Echo handler that sleeps to simulate high latency (SLA breach)."""
+    async def slow_echo_handler(envelope: Any, manifest: Any) -> Any:
         await asyncio.sleep(SLOW_HANDLER_DELAY_SECONDS)
-        return create_echo_handler()(envelope, mf)
+        return create_echo_handler()(envelope, manifest)
 
     registry = HandlerRegistry()
     registry.register("task.request", slow_echo_handler)
@@ -183,7 +177,6 @@ def _create_showcase_app() -> Any:
     # Demo-only endpoint: trigger SLA check from metering data and broadcast breaches
     @app.post("/_demo/trigger-sla-check")
     async def trigger_sla_check() -> dict[str, Any]:
-        """Collect metering data, compute SLA metrics, run breach detector, broadcast."""
         metering_storage = getattr(app.state, "metering_storage", None)
         sla_storage_obj = getattr(app.state, "sla_storage", None)
         manifest_obj = getattr(app.state, "manifest", None)
@@ -202,9 +195,7 @@ def _create_showcase_app() -> Any:
             limit=1000,
         )
         events = await metering_storage.query(query)
-        sla_metrics = _usage_metrics_to_sla_metrics(
-            AGENT_B_URN, events, period_start, period_end
-        )
+        sla_metrics = _usage_metrics_to_sla_metrics(AGENT_B_URN, events, period_start, period_end)
         if not sla_metrics:
             return {"ok": True, "breaches": 0, "reason": "no_usage_data"}
 
@@ -213,9 +204,7 @@ def _create_showcase_app() -> Any:
             storage=cast(SLAStorage, sla_storage_obj),
             on_breach=lambda b: broadcast_sla_breach(b, subscribers),
         )
-        breaches = await detector.check_and_record(
-            AGENT_B_URN, manifest_obj.sla, sla_metrics
-        )
+        breaches = await detector.check_and_record(AGENT_B_URN, manifest_obj.sla, sla_metrics)
         return {
             "ok": True,
             "breaches": len(breaches),
@@ -226,7 +215,6 @@ def _create_showcase_app() -> Any:
 
 
 def wait_for_ready(url: str, timeout_seconds: float) -> None:
-    """Wait for URL to respond with HTTP 200."""
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
         try:
@@ -240,7 +228,6 @@ def wait_for_ready(url: str, timeout_seconds: float) -> None:
 
 
 async def run_showcase() -> None:
-    """Execute the v1.3.0 showcase flow."""
     bearer = _make_bearer_token()
 
     _log_step(1, "Delegation — Agent A creates token for Agent B (max_tasks=5)")
@@ -255,9 +242,7 @@ async def run_showcase() -> None:
         timeout=10.0,
     )
     if create_resp.status_code != 201:
-        raise RuntimeError(
-            f"Delegation failed: {create_resp.status_code} {create_resp.text}"
-        )
+        raise RuntimeError(f"Delegation failed: {create_resp.status_code} {create_resp.text}")
     _log(f"Token created for {AGENT_B_URN} with max_tasks=5")
 
     _log_step(2, "Metering — Agent B performs tasks (slow handler simulates delay)")
@@ -294,34 +279,29 @@ async def run_showcase() -> None:
     usage_resp = httpx.get(f"{BASE_URL}/usage", timeout=5.0)
     if usage_resp.status_code != 200:
         raise RuntimeError(f"Usage API failed: {usage_resp.status_code}")
-    usage_data = usage_resp.json()
-    data = usage_data.get("data", [])
-    _log(f"Usage records: {len(data)} task(s) from Agent B")
-    for u in data[:3]:
-        _log(f"  - task_id={u.get('task_id', '?')} duration_ms={u.get('duration_ms', 0)}")
+    usage_records = usage_resp.json().get("data", [])
+    _log(f"Usage records: {len(usage_records)} task(s) from Agent B")
+    for record in usage_records[:3]:
+        _log(f"  - task_id={record.get('task_id', '?')} duration_ms={record.get('duration_ms', 0)}")
 
     _log_step(4, "Trust/SLA — Subscribe to WebSocket, trigger SLA check, receive breach")
-    breach_received: asyncio.Future[dict[str, Any]] = (
-        asyncio.get_running_loop().create_future()
-    )
+    breach_received: asyncio.Future[dict[str, Any]] = asyncio.get_running_loop().create_future()
 
     async def ws_listener(ws: Any) -> None:
         async for msg in ws:
-            if isinstance(msg, str):
-                try:
-                    data = json.loads(msg)
-                    if data.get("method") == SLA_BREACH_NOTIFICATION_METHOD:
-                        params = data.get("params", {})
-                        breach = params.get("breach", {})
-                        if not breach_received.done():
-                            breach_received.set_result(breach)
-                except json.JSONDecodeError:
-                    pass
+            if not isinstance(msg, str):
+                continue
+            try:
+                payload = json.loads(msg)
+            except json.JSONDecodeError:
+                continue
+            if payload.get("method") == SLA_BREACH_NOTIFICATION_METHOD:
+                breach = payload.get("params", {}).get("breach", {})
+                if not breach_received.done():
+                    breach_received.set_result(breach)
 
     async with ws_connect(WS_URL) as ws:
-        await ws.send(
-            json.dumps({"jsonrpc": "2.0", "method": SLA_SUBSCRIBE_METHOD, "id": 1})
-        )
+        await ws.send(json.dumps({"jsonrpc": "2.0", "method": SLA_SUBSCRIBE_METHOD, "id": 1}))
         recv = await asyncio.wait_for(ws.recv(), timeout=5.0)
         sub_result = json.loads(recv)
         if sub_result.get("result", {}).get("subscribed") is not True:
@@ -333,9 +313,7 @@ async def run_showcase() -> None:
         if trigger_resp.status_code != 200:
             raise RuntimeError(f"Trigger SLA check failed: {trigger_resp.status_code}")
         trigger_data = trigger_resp.json()
-        _log(
-            f"SLA check triggered: {trigger_data.get('breaches', 0)} breach(es) detected"
-        )
+        _log(f"SLA check triggered: {trigger_data.get('breaches', 0)} breach(es) detected")
 
         listener_task = asyncio.create_task(ws_listener(ws))
         try:
@@ -348,30 +326,23 @@ async def run_showcase() -> None:
             _log("(No breach notification within 5s — check trigger endpoint)")
         finally:
             listener_task.cancel()
-            try:
+            with suppress(asyncio.CancelledError):
                 await listener_task
-            except asyncio.CancelledError:
-                pass
 
     print("\n✅ v1.3.0 Showcase complete!\n")
 
 
 def main() -> None:
-    """Run the showcase: start server in thread, execute flow, shutdown."""
     global _OAUTH2_KEY_SET, _OAUTH2_PRIVATE_KEY
 
     print("\n🚀 ASAP v1.3.0 End-to-End Showcase\n")
     print("Demonstrating: Delegation → Metering → Transparency → SLA Breach Alert\n")
 
     key = jwk.RSAKey.generate_key(2048, private=True)
-    _OAUTH2_KEY_SET = jwk.KeySet.import_key_set(
-        {"keys": [key.as_dict(private=False)]}
-    )
+    _OAUTH2_KEY_SET = jwk.KeySet.import_key_set({"keys": [key.as_dict(private=False)]})
     _OAUTH2_PRIVATE_KEY = key
 
     app = _create_showcase_app()
-
-    server_ready = threading.Event()
     server_error: Exception | None = None
 
     def run_server() -> None:

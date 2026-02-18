@@ -185,7 +185,6 @@ class TestSlaHealthIntegration:
         """SLAMetrics with uptime below SLA threshold triggers availability breach."""
         from asap.economics.sla import evaluate_breach_conditions
 
-        sla_storage = InMemorySLAStorage()
         period_start = datetime(2026, 2, 18, 0, 0, 0, tzinfo=timezone.utc)
         period_end = datetime(2026, 2, 18, 1, 0, 0, tzinfo=timezone.utc)
 

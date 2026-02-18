@@ -1,9 +1,11 @@
 """Tests for delegation token model, scope vocabulary, and JWT creation (Tasks 2.1, 2.2)."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from joserfc import jwt as jose_jwt
 from joserfc.errors import JoseError
 from pydantic import ValidationError
@@ -564,3 +566,239 @@ class TestValidateDelegation:
         )
         assert result_revoked.success is False
         assert result_revoked.error == "Token revoked"
+
+
+# ---------------------------------------------------------------------------
+# Delegation Coverage Tests (merged from test_misc_coverage.py)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def ed25519_keypair() -> tuple[Ed25519PrivateKey, Any]:
+    priv = Ed25519PrivateKey.generate()
+    pub = priv.public_key()
+    return priv, pub
+
+
+class TestValidateDelegationCoverage:
+    def test_allowed_delegators_rejection(self, ed25519_keypair: tuple[Ed25519PrivateKey, Any]) -> None:
+        """iss not in allowed_delegators returns error (lines 148-152)."""
+        priv, pub = ed25519_keypair
+        constraints = DelegationConstraints(
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+        )
+        token = create_delegation_jwt(
+            delegator_urn="urn:asap:agent:delegator",
+            delegate_urn="urn:asap:agent:delegate",
+            scopes=["task.execute"],
+            constraints=constraints,
+            private_key=priv,
+        )
+
+        result = validate_delegation(
+            token,
+            "task.execute",
+            public_key_resolver=lambda _: pub,
+            allowed_delegators={"urn:asap:agent:other"},  # Doesn't include delegator
+        )
+        assert not result.success
+        assert "not allowed" in (result.error or "")
+
+    def test_key_resolver_error(self) -> None:
+        """public_key_resolver raising returns error (lines 155-160)."""
+        priv = Ed25519PrivateKey.generate()
+        constraints = DelegationConstraints(
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+        )
+        token = create_delegation_jwt(
+            delegator_urn="urn:asap:agent:delegator",
+            delegate_urn="urn:asap:agent:delegate",
+            scopes=["task.execute"],
+            constraints=constraints,
+            private_key=priv,
+        )
+
+        def bad_resolver(iss: str) -> Any:
+            raise KeyError("no such key")
+
+        result = validate_delegation(
+            token,
+            "task.execute",
+            public_key_resolver=bad_resolver,
+        )
+        assert not result.success
+        assert "key not found" in (result.error or "").lower()
+
+    def test_expired_token(self, ed25519_keypair: tuple[Ed25519PrivateKey, Any]) -> None:
+        """Expired token returns error (lines 179-180)."""
+        priv, pub = ed25519_keypair
+        constraints = DelegationConstraints(
+            expires_at=datetime.now(timezone.utc) - timedelta(hours=1),  # Already expired
+        )
+        token = create_delegation_jwt(
+            delegator_urn="urn:asap:agent:delegator",
+            delegate_urn="urn:asap:agent:delegate",
+            scopes=["task.execute"],
+            constraints=constraints,
+            private_key=priv,
+        )
+
+        result = validate_delegation(
+            token,
+            "task.execute",
+            public_key_resolver=lambda _: pub,
+        )
+        assert not result.success
+        assert "expired" in (result.error or "").lower()
+
+    def test_scope_mismatch(self, ed25519_keypair: tuple[Ed25519PrivateKey, Any]) -> None:
+        """Action not in token scopes returns error (lines 184-188)."""
+        priv, pub = ed25519_keypair
+        constraints = DelegationConstraints(
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+        )
+        token = create_delegation_jwt(
+            delegator_urn="urn:asap:agent:delegator",
+            delegate_urn="urn:asap:agent:delegate",
+            scopes=["data.read"],  # Only data.read
+            constraints=constraints,
+            private_key=priv,
+        )
+
+        result = validate_delegation(
+            token,
+            "task.execute",  # Wants task.execute
+            public_key_resolver=lambda _: pub,
+        )
+        assert not result.success
+        assert "not allowed" in (result.error or "").lower()
+
+    def test_max_tasks_exceeded(self, ed25519_keypair: tuple[Ed25519PrivateKey, Any]) -> None:
+        """max_tasks limit exceeded returns error (lines 198-209)."""
+        priv, pub = ed25519_keypair
+        constraints = DelegationConstraints(
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+            max_tasks=5,
+        )
+        token = create_delegation_jwt(
+            delegator_urn="urn:asap:agent:delegator",
+            delegate_urn="urn:asap:agent:delegate",
+            scopes=["task.execute"],
+            constraints=constraints,
+            private_key=priv,
+        )
+
+        result = validate_delegation(
+            token,
+            "task.execute",
+            public_key_resolver=lambda _: pub,
+            usage_count_for_token=lambda _: 5,  # Already at limit
+        )
+        assert not result.success
+        assert "limit exceeded" in (result.error or "").lower()
+
+    def test_revoked_token_coverage(self, ed25519_keypair: tuple[Ed25519PrivateKey, Any]) -> None:
+        """Revoked token returns error (lines 192-193)."""
+        priv, pub = ed25519_keypair
+        constraints = DelegationConstraints(
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+        )
+        token = create_delegation_jwt(
+            delegator_urn="urn:asap:agent:delegator",
+            delegate_urn="urn:asap:agent:delegate",
+            scopes=["task.execute"],
+            constraints=constraints,
+            private_key=priv,
+        )
+
+        result = validate_delegation(
+            token,
+            "task.execute",
+            public_key_resolver=lambda _: pub,
+            is_revoked=lambda _: True,  # Always revoked
+        )
+        assert not result.success
+        assert "revoked" in (result.error or "").lower()
+
+    def test_malformed_token_coverage(self) -> None:
+        """Malformed token (not 3 parts) returns error (line 146)."""
+        result = validate_delegation(
+            "not-a-jwt",
+            "task.execute",
+            public_key_resolver=lambda _: MagicMock(),
+        )
+        assert not result.success
+        assert "malformed" in (result.error or "").lower()
+
+    def test_invalid_signature_coverage(self, ed25519_keypair: tuple[Ed25519PrivateKey, Any]) -> None:
+        """Invalid signature returns decode error (lines 169-170)."""
+        priv, pub = ed25519_keypair
+        # Create with one key, verify with a different key
+        other_priv = Ed25519PrivateKey.generate()
+        other_pub = other_priv.public_key()
+
+        constraints = DelegationConstraints(
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+        )
+        token = create_delegation_jwt(
+            delegator_urn="urn:asap:agent:delegator",
+            delegate_urn="urn:asap:agent:delegate",
+            scopes=["task.execute"],
+            constraints=constraints,
+            private_key=priv,
+        )
+
+        result = validate_delegation(
+            token,
+            "task.execute",
+            public_key_resolver=lambda _: other_pub,
+        )
+        assert not result.success
+
+
+class TestCreateDelegationJWTCoverage:
+    def test_create_with_max_cost_usd(self) -> None:
+        """max_cost_usd constraint is included in JWT (line 270-271)."""
+        priv = Ed25519PrivateKey.generate()
+        constraints = DelegationConstraints(
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+            max_cost_usd=50.0,
+        )
+        token = create_delegation_jwt(
+            delegator_urn="urn:asap:agent:delegator",
+            delegate_urn="urn:asap:agent:delegate",
+            scopes=["task.execute"],
+            constraints=constraints,
+            private_key=priv,
+        )
+        assert token.count(".") == 2
+
+    def test_create_with_no_constraints(self) -> None:
+        """No max_tasks/max_cost_usd (line 263, 271 uncovered branch)."""
+        priv = Ed25519PrivateKey.generate()
+        constraints = DelegationConstraints(
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+        )
+        token = create_delegation_jwt(
+            delegator_urn="urn:asap:agent:delegator",
+            delegate_urn="urn:asap:agent:delegate",
+            scopes=["task.execute"],
+            constraints=constraints,
+            private_key=priv,
+        )
+        assert token.count(".") == 2
+
+    def test_create_empty_scopes_raises_coverage(self) -> None:
+        """Empty scopes raises ValueError (line 258)."""
+        priv = Ed25519PrivateKey.generate()
+        constraints = DelegationConstraints(
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+        )
+        with pytest.raises(ValueError, match="scopes must not be empty"):
+            create_delegation_jwt(
+                delegator_urn="urn:asap:agent:delegator",
+                delegate_urn="urn:asap:agent:delegate",
+                scopes=[],
+                constraints=constraints,
+                private_key=priv,
+            )

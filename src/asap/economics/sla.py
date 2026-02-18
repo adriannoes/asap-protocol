@@ -41,7 +41,11 @@ class SLAStorageProtocol(Protocol):
 BREACH_TYPE_AVAILABILITY: Literal["availability"] = "availability"
 BREACH_TYPE_LATENCY: Literal["latency"] = "latency"
 BREACH_TYPE_ERROR_RATE: Literal["error_rate"] = "error_rate"
-BREACH_TYPES: tuple[str, ...] = (BREACH_TYPE_AVAILABILITY, BREACH_TYPE_LATENCY, BREACH_TYPE_ERROR_RATE)
+BREACH_TYPES: tuple[str, ...] = (
+    BREACH_TYPE_AVAILABILITY,
+    BREACH_TYPE_LATENCY,
+    BREACH_TYPE_ERROR_RATE,
+)
 
 # Severity levels for breaches.
 SEVERITY_WARNING: Literal["warning"] = "warning"
@@ -181,7 +185,11 @@ def evaluate_breach_conditions(
         try:
             required_uptime = parse_percentage(sla.availability)
             if metrics.uptime_percent < required_uptime:
-                severity = SEVERITY_CRITICAL if metrics.uptime_percent < AVAILABILITY_CRITICAL_BELOW_PERCENT else SEVERITY_WARNING
+                severity = (
+                    SEVERITY_CRITICAL
+                    if metrics.uptime_percent < AVAILABILITY_CRITICAL_BELOW_PERCENT
+                    else SEVERITY_WARNING
+                )
                 results.append(
                     BreachConditionResult(
                         breach_type=BREACH_TYPE_AVAILABILITY,
@@ -214,10 +222,15 @@ def evaluate_breach_conditions(
         try:
             max_allowed = parse_percentage(sla.max_error_rate)
             if metrics.error_rate_percent > max_allowed:
-                severity = SEVERITY_CRITICAL if (
-                    metrics.error_rate_percent >= ERROR_RATE_CRITICAL_PERCENT
-                    or metrics.error_rate_percent >= max_allowed * ERROR_RATE_CRITICAL_MULTIPLIER
-                ) else SEVERITY_WARNING
+                severity = (
+                    SEVERITY_CRITICAL
+                    if (
+                        metrics.error_rate_percent >= ERROR_RATE_CRITICAL_PERCENT
+                        or metrics.error_rate_percent
+                        >= max_allowed * ERROR_RATE_CRITICAL_MULTIPLIER
+                    )
+                    else SEVERITY_WARNING
+                )
                 results.append(
                     BreachConditionResult(
                         breach_type=BREACH_TYPE_ERROR_RATE,
@@ -267,13 +280,6 @@ class BreachDetector:
         *,
         on_breach: BreachAlertCallback | None = None,
     ) -> None:
-        """Initialize the detector.
-
-        Args:
-            storage: Storage implementation for recording breaches.
-            on_breach: Optional callback invoked for each new breach.
-                If None, defaults to logging a warning.
-        """
         self._storage = storage
         self._on_breach: BreachAlertCallback = on_breach or _default_breach_alert
 
@@ -420,8 +426,14 @@ def aggregate_sla_metrics(metrics: list[SLAMetrics]) -> SLAMetrics | None:
     total_failed = sum(m.tasks_failed for m in metrics)
     total_tasks = total_completed + total_failed
     if total_tasks > 0:
-        uptime_weighted = sum(m.uptime_percent * (m.tasks_completed + m.tasks_failed) for m in metrics) / total_tasks
-        error_weighted = sum(m.error_rate_percent * (m.tasks_completed + m.tasks_failed) for m in metrics) / total_tasks
+        uptime_weighted = (
+            sum(m.uptime_percent * (m.tasks_completed + m.tasks_failed) for m in metrics)
+            / total_tasks
+        )
+        error_weighted = (
+            sum(m.error_rate_percent * (m.tasks_completed + m.tasks_failed) for m in metrics)
+            / total_tasks
+        )
     else:
         uptime_weighted = sum(m.uptime_percent for m in metrics) / len(metrics)
         error_weighted = sum(m.error_rate_percent for m in metrics) / len(metrics)

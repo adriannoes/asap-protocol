@@ -72,24 +72,24 @@ class SLAStorageBase(ABC):
     async def stats(self) -> StorageStats: ...
 
 
-def _metrics_matches(m: SLAMetrics, agent_id: str | None, start: datetime | None, end: datetime | None) -> bool:
+def _metrics_matches(
+    m: SLAMetrics, agent_id: str | None, start: datetime | None, end: datetime | None
+) -> bool:
     if agent_id is not None and m.agent_id != agent_id:
         return False
     if start is not None and m.period_end < start:
         return False
-    if end is not None and m.period_start > end:
-        return False
-    return True
+    return not (end is not None and m.period_start > end)
 
 
-def _breach_matches(b: SLABreach, agent_id: str | None, start: datetime | None, end: datetime | None) -> bool:
+def _breach_matches(
+    b: SLABreach, agent_id: str | None, start: datetime | None, end: datetime | None
+) -> bool:
     if agent_id is not None and b.agent_id != agent_id:
         return False
     if start is not None and b.detected_at < start:
         return False
-    if end is not None and b.detected_at > end:
-        return False
-    return True
+    return not (end is not None and b.detected_at > end)
 
 
 class InMemorySLAStorage(SLAStorageBase):
@@ -326,21 +326,13 @@ class SQLiteSLAStorage(SLAStorageBase):
     async def stats(self) -> StorageStats:
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
-            cursor = await conn.execute(
-                f"SELECT COUNT(*) FROM {_METRICS_TABLE}"
-            )
+            cursor = await conn.execute(f"SELECT COUNT(*) FROM {_METRICS_TABLE}")
             m_count = (await cursor.fetchone() or (0,))[0]
-            cursor = await conn.execute(
-                f"SELECT COUNT(*) FROM {_BREACHES_TABLE}"
-            )
+            cursor = await conn.execute(f"SELECT COUNT(*) FROM {_BREACHES_TABLE}")
             b_count = (await cursor.fetchone() or (0,))[0]
-            cursor = await conn.execute(
-                f"SELECT MIN(period_start) FROM {_METRICS_TABLE}"
-            )
+            cursor = await conn.execute(f"SELECT MIN(period_start) FROM {_METRICS_TABLE}")
             m_oldest = (await cursor.fetchone() or (None,))[0]
-            cursor = await conn.execute(
-                f"SELECT MIN(detected_at) FROM {_BREACHES_TABLE}"
-            )
+            cursor = await conn.execute(f"SELECT MIN(detected_at) FROM {_BREACHES_TABLE}")
             b_oldest = (await cursor.fetchone() or (None,))[0]
         oldest_ts: datetime | None = None
         for raw in (m_oldest, b_oldest):

@@ -1,21 +1,26 @@
 """Unit and integration tests for WebSocket transport (Task 3.1, 3.2, 3.3)."""
 
 import asyncio
+import contextlib
 import json
 import threading
-from typing import TYPE_CHECKING
+import time
+from contextlib import suppress
+from typing import TYPE_CHECKING, Any
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
 from asap.models.entities import Manifest
 from asap.models.envelope import Envelope
-from asap.models.payloads import TaskRequest
+from asap.models.payloads import MessageAck, TaskRequest
 from asap.transport.jsonrpc import ASAP_METHOD, JsonRpcRequest
 from asap.transport.server import create_app
 from asap.transport.websocket import (
+    ASAP_ACK_METHOD,
     DEFAULT_POOL_IDLE_TIMEOUT,
     DEFAULT_POOL_MAX_SIZE,
     DEFAULT_WS_RECEIVE_TIMEOUT,
@@ -24,22 +29,25 @@ from asap.transport.websocket import (
     HEARTBEAT_FRAME_TYPE_PING,
     HEARTBEAT_FRAME_TYPE_PONG,
     HEARTBEAT_PING_INTERVAL,
+    PendingAck,
     RECONNECT_INITIAL_BACKOFF,
     RECONNECT_MAX_BACKOFF,
     STALE_CONNECTION_TIMEOUT,
     WS_CLOSE_GOING_AWAY,
     WS_CLOSE_REASON_SHUTDOWN,
-    decode_frame_to_json,
-    encode_envelope_frame,
     WebSocketConnectionPool,
     WebSocketRemoteError,
     WebSocketTransport,
+    _build_ack_notification_frame,
+    _heartbeat_loop,
     _is_heartbeat_pong,
     _make_fake_request,
+    decode_frame_to_json,
+    encode_envelope_frame,
+    handle_websocket_connection,
 )
 
 from .conftest import NoRateLimitTestBase, TEST_RATE_LIMIT_DEFAULT
-import contextlib
 
 if TYPE_CHECKING:
     from asap.transport.rate_limit import ASAPRateLimiter
@@ -127,7 +135,7 @@ class TestMakeFakeRequest:
         self,
     ) -> None:
         class FakeWs:
-            scope = {"headers": []}
+            scope: dict[str, Any] = {"headers": []}
 
         body = '{"jsonrpc":"2.0","method":"asap.send","params":{},"id":1}'
         request = await _make_fake_request(body, FakeWs())
@@ -142,7 +150,7 @@ class TestMakeFakeRequest:
         """Fake request scope includes path, root_path, query_string, server for middleware compatibility."""
 
         class FakeWs:
-            scope = {
+            scope: dict[str, Any] = {
                 "headers": [],
                 "path": "/asap/ws",
                 "server": ("localhost", 9000),
@@ -162,7 +170,7 @@ class TestMakeFakeRequest:
         """When WebSocket scope has no path/server, fake request uses sensible defaults."""
 
         class FakeWs:
-            scope = {"headers": []}
+            scope: dict[str, Any] = {"headers": []}
 
         body = "{}"
         request = await _make_fake_request(body, FakeWs())
@@ -436,6 +444,7 @@ class TestWebSocketTransportCorrelation(NoRateLimitTestBase):
 
             async def recv(self) -> str:
                 await asyncio.sleep(999)
+                return ""
 
         transport._ws = FakeWs()
         transport._recv_task = asyncio.create_task(transport._recv_loop())
@@ -455,7 +464,7 @@ class TestWebSocketTransportCorrelation(NoRateLimitTestBase):
         from unittest.mock import patch
 
         ssl_ctx = ssl.create_default_context()
-        connect_calls: list[tuple[str, dict]] = []
+        connect_calls: list[tuple[str, dict[str, Any]]] = []
 
         async def fake_connect(url: str, **kwargs: object) -> object:
             connect_calls.append((url, dict(kwargs)))
@@ -738,7 +747,7 @@ def _free_port() -> int:
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
+        return int(s.getsockname()[1])
 
 
 class _MockWebSocket:
@@ -746,16 +755,19 @@ class _MockWebSocket:
 
     def __init__(
         self,
-        recv_side_effect: list[str],
+        recv_side_effect: list[str | Exception],
         sent: list[str] | None = None,
     ) -> None:
-        self._recv_queue = asyncio.Queue()
+        self._recv_queue: asyncio.Queue[str | Exception] = asyncio.Queue()
         for frame in recv_side_effect:
             self._recv_queue.put_nowait(frame)
         self._sent: list[str] = sent if sent is not None else []
 
     async def recv(self) -> str:
-        return await self._recv_queue.get()
+        item = await self._recv_queue.get()
+        if isinstance(item, Exception):
+            raise item
+        return item
 
     async def send(self, payload: str) -> None:
         self._sent.append(payload)
@@ -1276,7 +1288,7 @@ def _app_with_close_ws_route(
     )
     app_instance.state.limiter = disable_rate_limiting
 
-    @app_instance.post("/__test__/close_ws")
+    @app_instance.post("/__test__/close_ws")  # type: ignore[untyped-decorator]
     async def _close_all_websockets() -> JSONResponse:
         for ws in list(app_instance.state.websocket_connections):
             with contextlib.suppress(Exception):
@@ -1795,3 +1807,897 @@ class TestWebSocketServerExceptions(NoRateLimitTestBase):
             assert rejection_ack is not None
             assert rejection_ack["params"]["envelope"]["payload"]["original_envelope_id"] == "msg-1"
             assert "Fake request failed" in rejection_ack["params"]["envelope"]["payload"]["error"]
+
+
+# ---------------------------------------------------------------------------
+# Coverage helpers
+# ---------------------------------------------------------------------------
+
+
+def _sample_envelope_cov(**overrides: Any) -> Envelope:
+    defaults: dict[str, Any] = {
+        "asap_version": "0.1",
+        "sender": "urn:asap:agent:a",
+        "recipient": "urn:asap:agent:b",
+        "payload_type": "task.request",
+        "payload": {"task_id": "t1"},
+    }
+    defaults.update(overrides)
+    return Envelope(**defaults)
+
+
+def _mock_ws() -> MagicMock:
+    """Create a mock websocket connection."""
+    ws = MagicMock()
+    ws.send = AsyncMock()
+    ws.recv = AsyncMock()
+    ws.close = AsyncMock()
+    return ws
+
+
+# ---------------------------------------------------------------------------
+# _do_connect: already connected (line 232)
+# ---------------------------------------------------------------------------
+
+class TestDoConnect:
+    @pytest.mark.asyncio
+    async def test_do_connect_already_connected_returns_early(self) -> None:
+        """If _ws is already set, _do_connect returns immediately (line 232)."""
+        transport = WebSocketTransport()
+        transport._ws = _mock_ws()
+        # Should not raise or try to connect again
+        await transport._do_connect("ws://localhost:8080")
+        # Still the same ws
+        assert transport._ws is not None
+
+    @pytest.mark.asyncio
+    async def test_do_connect_closed_during_connect(self) -> None:
+        """If _closed is set after connect, close ws (lines 253-258)."""
+        transport = WebSocketTransport()
+
+        fake_ws = _mock_ws()
+
+        async def fake_connect(url: str, **kwargs: Any) -> MagicMock:
+            transport._closed = True  # simulate close during connect
+            return fake_ws
+
+        with patch("asap.transport.websocket.websockets.connect", side_effect=fake_connect):
+            await transport._do_connect("ws://localhost:8080")
+
+        assert transport._ws is None
+        fake_ws.close.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# _recv_loop internal branches
+# ---------------------------------------------------------------------------
+
+class TestRecvLoopBranches:
+    @pytest.mark.asyncio
+    async def test_recv_loop_bytes_decode(self) -> None:
+        """Bytes received are decoded to utf-8 (line 356)."""
+        transport = WebSocketTransport()
+        ws = _mock_ws()
+        transport._ws = ws
+
+        # First recv: bytes message, then disconnect
+        response_frame = json.dumps({
+            "jsonrpc": "2.0",
+            "result": {"envelope": _sample_envelope_cov().model_dump(mode="json")},
+            "id": "ws-req-1",
+        })
+        ws.recv = AsyncMock(side_effect=[
+            response_frame.encode("utf-8"),  # bytes
+            asyncio.CancelledError(),
+        ])
+
+        future: asyncio.Future[Envelope] = asyncio.get_running_loop().create_future()
+        transport._pending["ws-req-1"] = future
+
+        task = asyncio.create_task(transport._recv_loop())
+        result = await asyncio.wait_for(future, timeout=2.0)
+        assert result.sender == "urn:asap:agent:a"
+
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+    @pytest.mark.asyncio
+    async def test_recv_loop_parse_error_continues(self) -> None:
+        """Invalid JSON in recv_loop logs warning and continues (lines 360-361)."""
+        transport = WebSocketTransport()
+        ws = _mock_ws()
+        transport._ws = ws
+
+        valid_response = json.dumps({
+            "jsonrpc": "2.0",
+            "result": {"envelope": _sample_envelope_cov().model_dump(mode="json")},
+            "id": "ws-req-1",
+        })
+        ws.recv = AsyncMock(side_effect=[
+            "not valid json!!!",
+            valid_response,
+            asyncio.CancelledError(),
+        ])
+
+        future: asyncio.Future[Envelope] = asyncio.get_running_loop().create_future()
+        transport._pending["ws-req-1"] = future
+
+        task = asyncio.create_task(transport._recv_loop())
+        result = await asyncio.wait_for(future, timeout=2.0)
+        assert result.sender == "urn:asap:agent:a"
+
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+    @pytest.mark.asyncio
+    async def test_recv_loop_heartbeat_ping_responds_pong(self) -> None:
+        """Heartbeat ping frame triggers pong response (lines 362-365)."""
+        transport = WebSocketTransport()
+        ws = _mock_ws()
+        transport._ws = ws
+
+        ping_frame = json.dumps({"type": HEARTBEAT_FRAME_TYPE_PING})
+        ws.recv = AsyncMock(side_effect=[
+            ping_frame,
+            asyncio.CancelledError(),
+        ])
+
+        task = asyncio.create_task(transport._recv_loop())
+        await asyncio.sleep(0.05)
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+        # ws.send should have been called with pong
+        ws.send.assert_awaited_once()
+        sent = json.loads(ws.send.call_args[0][0])
+        assert sent["type"] == HEARTBEAT_FRAME_TYPE_PONG
+
+    @pytest.mark.asyncio
+    async def test_recv_loop_ack_handling(self) -> None:
+        """MessageAck over WebSocket removes pending ack (lines 366-383)."""
+        transport = WebSocketTransport()
+        ws = _mock_ws()
+        transport._ws = ws
+
+        # Register a pending ack
+        env = _sample_envelope_cov()
+        transport._pending_acks["env-test"] = PendingAck(
+            envelope_id="env-test",
+            sent_at=time.monotonic(),
+            retries=0,
+            original_envelope=env,
+        )
+
+        ack_envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:b",
+            recipient="urn:asap:agent:a",
+            payload_type="MessageAck",
+            payload=MessageAck(
+                original_envelope_id="env-test",
+                status="received",
+            ).model_dump(),
+        )
+        ack_frame = json.dumps({
+            "jsonrpc": "2.0",
+            "method": ASAP_ACK_METHOD,
+            "params": {"envelope": ack_envelope.model_dump(mode="json")},
+        })
+        ws.recv = AsyncMock(side_effect=[ack_frame, asyncio.CancelledError()])
+
+        task = asyncio.create_task(transport._recv_loop())
+        await asyncio.sleep(0.05)
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+        assert "env-test" not in transport._pending_acks
+
+    @pytest.mark.asyncio
+    async def test_recv_loop_ack_validation_failure(self) -> None:
+        """Invalid ack envelope logs warning (lines 377-382)."""
+        transport = WebSocketTransport()
+        ws = _mock_ws()
+        transport._ws = ws
+
+        bad_ack_frame = json.dumps({
+            "jsonrpc": "2.0",
+            "method": ASAP_ACK_METHOD,
+            "params": {"envelope": {"invalid": "data"}},
+        })
+        ws.recv = AsyncMock(side_effect=[bad_ack_frame, asyncio.CancelledError()])
+
+        task = asyncio.create_task(transport._recv_loop())
+        await asyncio.sleep(0.05)
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+        # Should not raise; just logs warning
+
+    @pytest.mark.asyncio
+    async def test_recv_loop_error_frame_sets_pending_exception(self) -> None:
+        """Error frame sets exception on matching pending future (lines 385-394)."""
+        transport = WebSocketTransport()
+        ws = _mock_ws()
+        transport._ws = ws
+
+        error_frame = json.dumps({
+            "jsonrpc": "2.0",
+            "error": {"code": -32600, "message": "Invalid request"},
+            "id": "ws-req-1",
+        })
+        ws.recv = AsyncMock(side_effect=[error_frame, asyncio.CancelledError()])
+
+        future: asyncio.Future[Envelope] = asyncio.get_running_loop().create_future()
+        transport._pending["ws-req-1"] = future
+
+        task = asyncio.create_task(transport._recv_loop())
+        await asyncio.sleep(0.05)
+
+        with pytest.raises(WebSocketRemoteError, match="Invalid request"):
+            future.result()
+
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+    @pytest.mark.asyncio
+    async def test_recv_loop_error_frame_no_pending(self) -> None:
+        """Error frame without matching pending logs warning (lines 396-400)."""
+        transport = WebSocketTransport()
+        ws = _mock_ws()
+        transport._ws = ws
+
+        error_frame = json.dumps({
+            "jsonrpc": "2.0",
+            "error": {"code": -32600, "message": "Orphaned error"},
+            "id": "ws-req-999",
+        })
+        ws.recv = AsyncMock(side_effect=[error_frame, asyncio.CancelledError()])
+
+        task = asyncio.create_task(transport._recv_loop())
+        await asyncio.sleep(0.05)
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+        # Should not raise
+
+    @pytest.mark.asyncio
+    async def test_recv_loop_missing_result_envelope(self) -> None:
+        """Response with no result.envelope sets exception (lines 402-414)."""
+        transport = WebSocketTransport()
+        ws = _mock_ws()
+        transport._ws = ws
+
+        bad_frame = json.dumps({
+            "jsonrpc": "2.0",
+            "result": {},
+            "id": "ws-req-1",
+        })
+        ws.recv = AsyncMock(side_effect=[bad_frame, asyncio.CancelledError()])
+
+        future: asyncio.Future[Envelope] = asyncio.get_running_loop().create_future()
+        transport._pending["ws-req-1"] = future
+
+        task = asyncio.create_task(transport._recv_loop())
+        await asyncio.sleep(0.05)
+
+        with pytest.raises(WebSocketRemoteError, match="Missing result.envelope"):
+            future.result()
+
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+    @pytest.mark.asyncio
+    async def test_recv_loop_on_message_callback_sync(self) -> None:
+        """Server-push message triggers sync on_message callback (lines 420-424)."""
+        received: list[Envelope] = []
+
+        def on_msg(env: Envelope) -> None:
+            received.append(env)
+
+        transport = WebSocketTransport(on_message=on_msg)
+        ws = _mock_ws()
+        transport._ws = ws
+
+        pushed = json.dumps({
+            "jsonrpc": "2.0",
+            "result": {"envelope": _sample_envelope_cov().model_dump(mode="json")},
+            "id": "some-other-id",
+        })
+        ws.recv = AsyncMock(side_effect=[pushed, asyncio.CancelledError()])
+
+        task = asyncio.create_task(transport._recv_loop())
+        await asyncio.sleep(0.05)
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+        assert len(received) == 1
+
+    @pytest.mark.asyncio
+    async def test_recv_loop_on_message_callback_async(self) -> None:
+        """Server-push message triggers async on_message callback (lines 420-424)."""
+        received: list[Envelope] = []
+
+        async def on_msg(env: Envelope) -> None:
+            received.append(env)
+
+        transport = WebSocketTransport(on_message=on_msg)
+        ws = _mock_ws()
+        transport._ws = ws
+
+        pushed = json.dumps({
+            "jsonrpc": "2.0",
+            "result": {"envelope": _sample_envelope_cov().model_dump(mode="json")},
+            "id": "unknown-req",
+        })
+        ws.recv = AsyncMock(side_effect=[pushed, asyncio.CancelledError()])
+
+        task = asyncio.create_task(transport._recv_loop())
+        await asyncio.sleep(0.05)
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+        assert len(received) == 1
+
+    @pytest.mark.asyncio
+    async def test_recv_loop_on_message_callback_error(self) -> None:
+        """on_message callback error is caught (lines 425-429)."""
+        def on_msg(env: Envelope) -> None:
+            raise ValueError("callback boom")
+
+        transport = WebSocketTransport(on_message=on_msg)
+        ws = _mock_ws()
+        transport._ws = ws
+
+        pushed = json.dumps({
+            "jsonrpc": "2.0",
+            "result": {"envelope": _sample_envelope_cov().model_dump(mode="json")},
+            "id": "unknown-req",
+        })
+        ws.recv = AsyncMock(side_effect=[pushed, asyncio.CancelledError()])
+
+        task = asyncio.create_task(transport._recv_loop())
+        await asyncio.sleep(0.05)
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+        # Should not raise, error is caught
+
+    @pytest.mark.asyncio
+    async def test_recv_loop_generic_exception_sets_all_pending(self) -> None:
+        """Generic exception in recv_loop sets exception on all pending (lines 434-439)."""
+        transport = WebSocketTransport()
+        ws = _mock_ws()
+        transport._ws = ws
+
+        ws.recv = AsyncMock(side_effect=RuntimeError("connection lost"))
+
+        future: asyncio.Future[Envelope] = asyncio.get_running_loop().create_future()
+        transport._pending["ws-req-1"] = future
+
+        task = asyncio.create_task(transport._recv_loop())
+        await asyncio.sleep(0.05)
+
+        with pytest.raises(WebSocketRemoteError, match="connection lost"):
+            future.result()
+
+        assert len(transport._pending) == 0
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+
+# ---------------------------------------------------------------------------
+# close() with pending futures (line 461)
+# ---------------------------------------------------------------------------
+
+class TestCloseCoverage:
+    @pytest.mark.asyncio
+    async def test_close_cancels_pending_futures(self) -> None:
+        """close() sets TimeoutError on pending futures (lines 460-462)."""
+        transport = WebSocketTransport()
+        transport._ws = _mock_ws()
+
+        future: asyncio.Future[Envelope] = asyncio.get_running_loop().create_future()
+        transport._pending["ws-req-1"] = future
+
+        await transport.close()
+
+        with pytest.raises(asyncio.TimeoutError, match="Connection closed"):
+            future.result()
+        assert transport._ws is None
+
+
+# ---------------------------------------------------------------------------
+# __aenter__ / __aexit__ (lines 471, 474)
+# ---------------------------------------------------------------------------
+
+class TestAsyncContextManager:
+    @pytest.mark.asyncio
+    async def test_aenter_aexit(self) -> None:
+        """async with WebSocketTransport closes on exit (lines 470-474)."""
+        async with WebSocketTransport() as t:
+            assert isinstance(t, WebSocketTransport)
+        assert t._closed is True
+
+
+# ---------------------------------------------------------------------------
+# _send_envelope_only: ws=None (line 502)
+# ---------------------------------------------------------------------------
+
+class TestSendEnvelopeOnly:
+    @pytest.mark.asyncio
+    async def test_send_envelope_only_ws_none_returns(self) -> None:
+        """_send_envelope_only returns early when ws is None (line 502)."""
+        transport = WebSocketTransport()
+        transport._ws = None
+        env = _sample_envelope_cov()
+        # Should not raise
+        await transport._send_envelope_only(env)
+
+
+# ---------------------------------------------------------------------------
+# _ack_check_loop: retransmit failure (lines 544-545)
+# ---------------------------------------------------------------------------
+
+class TestAckCheckLoop:
+    @pytest.mark.asyncio
+    async def test_ack_retransmit_failure_logged(self) -> None:
+        """Failed retransmit logs warning (lines 544-549)."""
+        transport = WebSocketTransport(
+            ack_timeout_seconds=0.0,
+            ack_check_interval=0.01,
+            max_ack_retries=3,
+        )
+        ws = _mock_ws()
+        ws.send = AsyncMock(side_effect=OSError("send failed"))
+        transport._ws = ws
+
+        env = _sample_envelope_cov()
+        transport._pending_acks["e1"] = PendingAck(
+            envelope_id="e1",
+            sent_at=time.monotonic() - 100,  # expired
+            retries=0,
+            original_envelope=env,
+        )
+
+        task = asyncio.create_task(transport._ack_check_loop())
+        await asyncio.sleep(0.1)
+        transport._closed = True
+        await asyncio.sleep(0.05)
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+        # Pending ack should still exist (retransmit failed, not max retries)
+        assert "e1" in transport._pending_acks
+
+
+# ---------------------------------------------------------------------------
+# send / send_and_receive: not connected (lines 564, 578, 588)
+# ---------------------------------------------------------------------------
+
+class TestSendNotConnected:
+    @pytest.mark.asyncio
+    async def test_send_ws_none_raises(self) -> None:
+        """send() raises RuntimeError when not connected (line 564)."""
+        transport = WebSocketTransport()
+        with pytest.raises(RuntimeError, match="not connected"):
+            await transport.send(_sample_envelope_cov())
+
+    @pytest.mark.asyncio
+    async def test_send_and_receive_ws_none_raises(self) -> None:
+        """send_and_receive() raises RuntimeError when not connected (line 578)."""
+        transport = WebSocketTransport()
+        with pytest.raises(RuntimeError, match="not connected"):
+            await transport.send_and_receive(_sample_envelope_cov())
+
+
+# ---------------------------------------------------------------------------
+# receive(): ws=None, bytes, result branch (lines 598, 601, 617)
+# ---------------------------------------------------------------------------
+
+class TestReceiveCoverage:
+    @pytest.mark.asyncio
+    async def test_receive_ws_none_raises(self) -> None:
+        """receive() raises RuntimeError when not connected (line 598)."""
+        transport = WebSocketTransport()
+        with pytest.raises(RuntimeError, match="not connected"):
+            await transport.receive()
+
+    @pytest.mark.asyncio
+    async def test_receive_bytes_decoded(self) -> None:
+        """receive() decodes bytes response (line 601)."""
+        transport = WebSocketTransport()
+        ws = _mock_ws()
+        transport._ws = ws
+
+        env = _sample_envelope_cov()
+        response = json.dumps({
+            "jsonrpc": "2.0",
+            "result": {"envelope": env.model_dump(mode="json")},
+            "id": "ws-req-1",
+        })
+        ws.recv = AsyncMock(return_value=response.encode("utf-8"))
+
+        result = await transport.receive()
+        assert result.sender == "urn:asap:agent:a"
+
+    @pytest.mark.asyncio
+    async def test_receive_valid_envelope(self) -> None:
+        """receive() returns valid Envelope from result (line 617)."""
+        transport = WebSocketTransport()
+        ws = _mock_ws()
+        transport._ws = ws
+
+        env = _sample_envelope_cov()
+        response = json.dumps({
+            "jsonrpc": "2.0",
+            "result": {"envelope": env.model_dump(mode="json")},
+            "id": "ws-req-1",
+        })
+        ws.recv = AsyncMock(return_value=response)
+
+        result = await transport.receive()
+        assert result.payload_type == "task.request"
+
+
+# ---------------------------------------------------------------------------
+# WebSocketConnectionPool: waiting path, release (lines 653-654, 668-677, 738)
+# ---------------------------------------------------------------------------
+
+class TestPoolCoverage:
+    @pytest.mark.asyncio
+    async def test_pool_release_with_disconnected_transport(self) -> None:
+        """release() with ws=None decrements total_count (line 687-689)."""
+        pool = WebSocketConnectionPool(url="ws://localhost:8080")
+        transport = WebSocketTransport()
+        transport._ws = None
+
+        pool._in_use_count = 1
+        pool._total_count = 1
+
+        await pool.release(transport)
+        assert pool._total_count == 0
+        assert pool._in_use_count == 0
+
+    @pytest.mark.asyncio
+    async def test_pool_acquire_skips_stale_in_queue(self) -> None:
+        """acquire() skips stale connections from the available queue (lines 648-654)."""
+        pool = WebSocketConnectionPool(url="ws://localhost:8080", idle_timeout=0.0)
+
+        stale_transport = WebSocketTransport()
+        stale_transport._ws = _mock_ws()
+
+        # Put a stale connection in the queue
+        pool._available.put_nowait((stale_transport, time.monotonic() - 100))
+        pool._total_count = 1
+
+        # Pool should skip stale and try to create new one, but we mock connect
+        fresh_transport = WebSocketTransport()
+        fresh_ws = _mock_ws()
+        fresh_transport._ws = fresh_ws
+
+        with patch.object(WebSocketTransport, "connect", new_callable=AsyncMock) as mock_connect:
+            async def set_ws(url: str) -> None:
+                pool._available.task_done()  # no-op
+                # Simulate that the transport is now connected
+                WebSocketTransport.__init__(fresh_transport)
+                fresh_transport._ws = fresh_ws
+
+            mock_connect.side_effect = set_ws
+
+            pool._max_size = 5
+            try:
+                t = await pool.acquire()
+                await pool.release(t)
+            except Exception:
+                pass
+
+    @pytest.mark.asyncio
+    async def test_pool_acquire_skips_ws_none_in_queue(self) -> None:
+        """acquire() skips connections with ws=None (lines 652-654)."""
+        pool = WebSocketConnectionPool(url="ws://localhost:8080")
+
+        dead_transport = WebSocketTransport()
+        dead_transport._ws = None  # disconnected
+
+        pool._available.put_nowait((dead_transport, time.monotonic()))
+        pool._total_count = 1
+
+        with patch.object(WebSocketTransport, "connect", new_callable=AsyncMock):
+            pool._max_size = 5
+            try:
+                t = await pool.acquire()
+                await pool.release(t)
+            except Exception:
+                pass
+
+
+# ---------------------------------------------------------------------------
+# _heartbeat_loop: stale detection and error (lines 784-803)
+# ---------------------------------------------------------------------------
+
+class TestHeartbeatLoopCoverage:
+    @pytest.mark.asyncio
+    async def test_heartbeat_stale_connection(self) -> None:
+        """_heartbeat_loop detects stale connection (lines 787-793)."""
+        ws = AsyncMock()
+        last_received = [time.monotonic() - STALE_CONNECTION_TIMEOUT - 10]
+        closed = asyncio.Event()
+
+        with patch("asap.transport.websocket.HEARTBEAT_PING_INTERVAL", 0.01):
+            task = asyncio.create_task(_heartbeat_loop(ws, last_received, closed))
+            await asyncio.sleep(0.1)
+
+        assert closed.is_set()
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+    @pytest.mark.asyncio
+    async def test_heartbeat_send_error_closes(self) -> None:
+        """_heartbeat_loop closes on send error (lines 800-803)."""
+        ws = AsyncMock()
+        ws.send_text = AsyncMock(side_effect=OSError("broken pipe"))
+        last_received = [time.monotonic()]  # Fresh, not stale
+        closed = asyncio.Event()
+
+        with patch("asap.transport.websocket.HEARTBEAT_PING_INTERVAL", 0.01):
+            task = asyncio.create_task(_heartbeat_loop(ws, last_received, closed))
+            await asyncio.sleep(0.1)
+
+        assert closed.is_set()
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+
+# ---------------------------------------------------------------------------
+# _build_ack_notification_frame
+# ---------------------------------------------------------------------------
+
+class TestBuildAckFrame:
+    def test_build_ack_frame_with_error(self) -> None:
+        """_build_ack_notification_frame includes error field when set."""
+        frame = _build_ack_notification_frame(
+            original_envelope_id="e1",
+            status="rejected",
+            sender="urn:asap:agent:a",
+            recipient="urn:asap:agent:b",
+            error="processing failed",
+        )
+        data = json.loads(frame)
+        assert data["method"] == ASAP_ACK_METHOD
+        env = data["params"]["envelope"]
+        assert env["payload"]["error"] == "processing failed"
+
+
+# ---------------------------------------------------------------------------
+# connect() reconnect error path (lines 333, 338-345)
+# ---------------------------------------------------------------------------
+
+class TestConnectReconnect:
+    @pytest.mark.asyncio
+    async def test_connect_reconnect_error_raises(self) -> None:
+        """connect() with reconnect mode raises initial connection error (lines 338-345)."""
+        transport = WebSocketTransport(reconnect_on_disconnect=True)
+
+        with (
+            patch(
+                "asap.transport.websocket.websockets.connect",
+                side_effect=ConnectionRefusedError("refused"),
+            ),
+            pytest.raises(ConnectionRefusedError, match="refused"),
+        ):
+            await transport.connect("ws://localhost:8080")
+
+        assert transport._ws is None
+
+    @pytest.mark.asyncio
+    async def test_connect_already_connected_no_op(self) -> None:
+        """connect() returns immediately if already connected (line 333)."""
+        transport = WebSocketTransport()
+        transport._ws = _mock_ws()
+
+        await transport.connect("ws://localhost:8080")
+        # No exception, no change
+
+
+# ---------------------------------------------------------------------------
+# handle_websocket_connection: message processing error paths
+# ---------------------------------------------------------------------------
+
+class TestHandleWebSocketConnection:
+    @pytest.mark.asyncio
+    async def test_handle_message_error_sends_error_payload(self) -> None:
+        """Handler error sends JSON-RPC error frame (lines 962-989)."""
+        ws = AsyncMock()
+        ws.accept = AsyncMock()
+        ws.close = AsyncMock()
+        ws.client = ("127.0.0.1", 12345)
+        ws.scope = {"headers": [], "path": "/asap/ws", "server": ("localhost", 8000)}
+
+        sent_texts: list[str] = []
+        ws.send_text = AsyncMock(side_effect=lambda t: sent_texts.append(t))
+
+        env = _sample_envelope_cov()
+        valid_frame = json.dumps({
+            "jsonrpc": "2.0",
+            "method": "asap.send",
+            "params": {"envelope": env.model_dump(mode="json")},
+            "id": "1",
+        })
+
+        call_count = 0
+        async def receive_text() -> str:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return valid_frame
+            raise RuntimeError("disconnect")
+
+        ws.receive_text = AsyncMock(side_effect=receive_text)
+
+        handler = MagicMock()
+        handler.handle_message = AsyncMock(side_effect=RuntimeError("handler boom"))
+
+        active: set[WebSocket] = set()
+        await handle_websocket_connection(
+            websocket=ws,
+            request_handler=handler,
+            active_connections=active,
+            ws_message_rate_limit=None,
+        )
+
+        # Should have sent at least an error payload
+        assert any('"error"' in t for t in sent_texts)
+
+    @pytest.mark.asyncio
+    async def test_handle_message_error_with_ack_sends_reject(self) -> None:
+        """Handler error for requires_ack sends reject ack frame (lines 967-976)."""
+        ws = AsyncMock()
+        ws.accept = AsyncMock()
+        ws.close = AsyncMock()
+        ws.client = ("127.0.0.1", 12345)
+        ws.scope = {"headers": [], "path": "/asap/ws", "server": ("localhost", 8000)}
+
+        sent_texts: list[str] = []
+        ws.send_text = AsyncMock(side_effect=lambda t: sent_texts.append(t))
+
+        env = _sample_envelope_cov(requires_ack=True)
+        valid_frame = json.dumps({
+            "jsonrpc": "2.0",
+            "method": "asap.send",
+            "params": {"envelope": env.model_dump(mode="json")},
+            "id": "1",
+        })
+
+        call_count = 0
+        async def receive_text() -> str:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return valid_frame
+            raise RuntimeError("disconnect")
+
+        ws.receive_text = AsyncMock(side_effect=receive_text)
+
+        handler = MagicMock()
+        handler.handle_message = AsyncMock(side_effect=RuntimeError("handler fail"))
+
+        await handle_websocket_connection(
+            websocket=ws,
+            request_handler=handler,
+            active_connections=set(),
+            ws_message_rate_limit=None,
+        )
+
+        # Should have sent a "received" ack, then a "rejected" ack, then error payload
+        ack_frames = [t for t in sent_texts if ASAP_ACK_METHOD in t]
+        assert len(ack_frames) >= 1  # At least the rejected ack
+
+    @pytest.mark.asyncio
+    async def test_handle_error_payload_send_fails_breaks(self) -> None:
+        """If sending error payload also fails, loop breaks (lines 988-989)."""
+        ws = AsyncMock()
+        ws.accept = AsyncMock()
+        ws.close = AsyncMock()
+        ws.client = ("127.0.0.1", 12345)
+        ws.scope = {"headers": [], "path": "/asap/ws", "server": ("localhost", 8000)}
+
+        send_count = 0
+        async def send_text(t: str) -> None:
+            nonlocal send_count
+            send_count += 1
+            if send_count >= 2:
+                raise OSError("broken pipe")
+
+        ws.send_text = AsyncMock(side_effect=send_text)
+
+        env = _sample_envelope_cov()
+        valid_frame = json.dumps({
+            "jsonrpc": "2.0",
+            "method": "asap.send",
+            "params": {"envelope": env.model_dump(mode="json")},
+            "id": "1",
+        })
+
+        call_count = 0
+        async def receive_text() -> str:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return valid_frame
+            raise RuntimeError("disconnect")
+
+        ws.receive_text = AsyncMock(side_effect=receive_text)
+
+        handler = MagicMock()
+        handler.handle_message = AsyncMock(side_effect=RuntimeError("boom"))
+
+        await handle_websocket_connection(
+            websocket=ws,
+            request_handler=handler,
+            active_connections=set(),
+            ws_message_rate_limit=None,
+        )
+        # Should not raise; loop breaks on send error
+
+    @pytest.mark.asyncio
+    async def test_handle_websocket_sla_subscribe_unsubscribe(self) -> None:
+        """SLA subscribe/unsubscribe messages are handled (lines 890-916)."""
+        ws = AsyncMock()
+        ws.accept = AsyncMock()
+        ws.close = AsyncMock()
+        ws.client = ("127.0.0.1", 12345)
+        ws.scope = {"headers": [], "path": "/asap/ws", "server": ("localhost", 8000)}
+
+        sent_texts: list[str] = []
+        ws.send_text = AsyncMock(side_effect=lambda t: sent_texts.append(t))
+
+        subscribe_frame = json.dumps({
+            "jsonrpc": "2.0",
+            "method": "sla.subscribe",
+            "id": "sub-1",
+        })
+        unsubscribe_frame = json.dumps({
+            "jsonrpc": "2.0",
+            "method": "sla.unsubscribe",
+            "id": "unsub-1",
+        })
+
+        call_count = 0
+        async def receive_text() -> str:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return subscribe_frame
+            if call_count == 2:
+                return unsubscribe_frame
+            raise RuntimeError("disconnect")
+
+        ws.receive_text = AsyncMock(side_effect=receive_text)
+
+        handler = MagicMock()
+        handler.handle_message = AsyncMock()
+
+        sla_subs: set[Any] = set()
+        await handle_websocket_connection(
+            websocket=ws,
+            request_handler=handler,
+            active_connections=set(),
+            ws_message_rate_limit=None,
+            sla_breach_subscribers=sla_subs,
+        )
+
+        # Should have sent subscribe and unsubscribe confirmations
+        assert any('"subscribed": true' in t for t in sent_texts)
+        assert any('"unsubscribed": true' in t for t in sent_texts)

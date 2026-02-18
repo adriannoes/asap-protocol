@@ -57,6 +57,7 @@ def test_canonicalize_same_content_different_key_order() -> None:
         "capabilities": payload["capabilities"],
         "endpoints": payload["endpoints"],
         "auth": payload["auth"],
+        "sla": payload["sla"],
     }
     from_canonicalize = canonicalize(manifest)
     from_jcs = jcs.canonicalize(reordered)

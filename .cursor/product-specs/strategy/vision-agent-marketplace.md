@@ -154,18 +154,27 @@ graph TD
 
 #### 3.2 SLA Framework
 
+> [!NOTE]
+> **v1.3 scope**: SLAs are trust signals (availability, latency, error rate). Financial compensation (refunds, credits) is deferred to v3.0+ marketplace economics.
+
 ```json
 {
   "sla": {
-    "max_response_time_ms": 5000,
-    "max_completion_time_ms": 60000,
-    "min_success_rate": 0.95,
-    "uptime_guarantee": 0.999,
-    "compensation": {
-      "missed_response": "50% refund",
-      "missed_completion": "100% refund",
-      "outage": "credit × 10"
-    }
+    "availability": "99.5%",
+    "max_latency_p95_ms": 5000,
+    "max_error_rate": "1%",
+    "support_hours": "business"
+  }
+}
+```
+
+**v3.0+ extension** (deferred):
+```json
+{
+  "compensation": {
+    "missed_response": "50% refund",
+    "missed_completion": "100% refund",
+    "outage": "credit × 10"
   }
 }
 ```
@@ -276,6 +285,7 @@ Auto-failover based on health checks
 | v1.2 | mTLS (optional) | Enterprise transport security |
 | v1.3 | Delegation Tokens | Trust chains |
 | v1.3 | Observability Metering | Usage visibility (uses MeteringStore from v1.1) |
+| v1.3 | SLA Framework | Service guarantees as trust signals (SLAStorage, /sla/* API) |
 | v2.0 | Marketplace Core | Web App + Lite Registry + Verified Badge |
 
 ### Architecture Layers
@@ -435,3 +445,4 @@ Monetization model (Subscription, % of transactions, or Hybrid) deferred until c
 | 2026-02-07 | Strategic review: added State Management strategy (SD-9), Storage Layer, updated building blocks with liveness (SD-10) |
 | 2026-02-12 | **Lean Marketplace pivot**: Removed DeepEval as mandatory (deferred v2.2+), simplified eval workflow to Shell-only, replaced Registry API with Compliance Harness in building blocks, updated v1.3 metering to "Observability", added deferred-backlog.md reference |
 | 2026-02-13 | **Security Hardening**: Added JCS/Strict Verification to building blocks |
+| 2026-02-18 | **v1.3 SLA decisions**: Updated SLA Framework (trust signals, no compensation in v1.3), added SLAStorage + /sla/* API to building blocks, aligned with sprint E3 plan |

@@ -1,6 +1,7 @@
 """Unit tests for OAuth2 token introspection (RFC 7662)."""
 
 import time
+from typing import Any
 
 import httpx
 import pytest
@@ -10,11 +11,12 @@ from asap.auth.introspection import (
     MAX_ACTIVE_CACHE_TTL_SECONDS,
     TokenInfo,
     TokenIntrospector,
+    _CacheEntry,
 )
 
 
 def _make_introspection_transport(
-    response_json: dict,
+    response_json: dict[str, Any],
     status_code: int = 200,
     expected_path: str = "/oauth/introspect",
 ) -> httpx.MockTransport:
@@ -277,3 +279,166 @@ async def test_introspect_cache_eviction_when_max_size_exceeded() -> None:
     # Cache size remains 2; one of token-2/token-3 may have been evicted when token-1
     # was re-added. Verify cache eviction occurred (4 unique fetches for 3+1 tokens).
     assert call_count == 4
+
+
+# ---------------------------------------------------------------------------
+# Introspection Coverage Tests (merged from test_misc_coverage.py)
+# ---------------------------------------------------------------------------
+
+
+class TestTokenInfoCacheTTL:
+    def test_inactive_token_ttl(self) -> None:
+        """Inactive token returns INACTIVE_TOKEN_CACHE_TTL (line 62)."""
+        info = TokenInfo(active=False)
+        assert info.cache_ttl_seconds() == INACTIVE_TOKEN_CACHE_TTL_SECONDS
+
+    def test_active_no_exp_ttl(self) -> None:
+        """Active token without exp returns INACTIVE_TOKEN_CACHE_TTL (line 64)."""
+        info = TokenInfo(active=True, exp=None)
+        assert info.cache_ttl_seconds() == INACTIVE_TOKEN_CACHE_TTL_SECONDS
+
+    def test_active_expired_ttl(self) -> None:
+        """Active token with past exp returns 0.0 (line 67)."""
+        info = TokenInfo(active=True, exp=int(time.time()) - 100)
+        assert info.cache_ttl_seconds() == 0.0
+
+
+class TestTokenIntrospectorCoverage:
+    @pytest.mark.asyncio
+    async def test_cache_hit_active(self) -> None:
+        """Cache hit returns active token (line 142-143)."""
+        introspector = TokenIntrospector(
+            introspection_url="https://auth.example.com/introspect",
+            client_id="c1",
+            client_secret="s1",
+        )
+        info = TokenInfo(active=True, sub="user1", exp=int(time.time()) + 3600)
+        entry = _CacheEntry(info, ttl=60.0)
+        introspector._cache["tok1"] = entry
+
+        result = await introspector.introspect("tok1")
+        assert result is not None
+        assert result.sub == "user1"
+
+    @pytest.mark.asyncio
+    async def test_cache_hit_inactive_returns_none(self) -> None:
+        """Cache hit for inactive token returns None (line 143)."""
+        introspector = TokenIntrospector(
+            introspection_url="https://auth.example.com/introspect",
+            client_id="c1",
+            client_secret="s1",
+        )
+        info = TokenInfo(active=False)
+        entry = _CacheEntry(info, ttl=60.0)
+        introspector._cache["tok2"] = entry
+
+        result = await introspector.introspect("tok2")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_cache_eviction_on_overflow_coverage(self) -> None:
+        """Cache evicts oldest entry when max_size reached (lines 151-153)."""
+        transport = httpx.MockTransport(
+            lambda req: httpx.Response(
+                200,
+                json={
+                    "active": True,
+                    "sub": "new_user",
+                    "exp": int(time.time()) + 3600,
+                },
+            )
+        )
+        introspector = TokenIntrospector(
+            introspection_url="https://auth.example.com/introspect",
+            client_id="c1",
+            client_secret="s1",
+            transport=transport,
+            max_cache_size=2,
+        )
+
+        # Pre-fill cache with 2 entries
+        introspector._cache["old1"] = _CacheEntry(
+            TokenInfo(active=True, sub="u1", exp=int(time.time()) + 3600), ttl=60.0
+        )
+        introspector._cache["old2"] = _CacheEntry(
+            TokenInfo(active=True, sub="u2", exp=int(time.time()) + 3600), ttl=60.0
+        )
+
+        # Introspect a new token — should evict "old1"
+        result = await introspector.introspect("new_tok")
+        assert result is not None
+        assert "old1" not in introspector._cache
+        assert "new_tok" in introspector._cache
+
+    @pytest.mark.asyncio
+    async def test_cache_update_existing(self) -> None:
+        """Re-introspecting same token updates cache entry (line 149-150)."""
+        transport = httpx.MockTransport(
+            lambda req: httpx.Response(
+                200,
+                json={
+                    "active": True,
+                    "sub": "updated",
+                    "exp": int(time.time()) + 3600,
+                },
+            )
+        )
+        introspector = TokenIntrospector(
+            introspection_url="https://auth.example.com/introspect",
+            client_id="c1",
+            client_secret="s1",
+            transport=transport,
+        )
+
+        # Pre-fill with expired cache entry
+        introspector._cache["tok1"] = _CacheEntry(
+            TokenInfo(active=True, sub="old"), ttl=0.0  # Already expired
+        )
+
+        result = await introspector.introspect("tok1")
+        assert result is not None
+        assert result.sub == "updated"
+
+    @pytest.mark.asyncio
+    async def test_do_introspect_active_false_non_bool(self) -> None:
+        """_do_introspect converts non-bool active to False (line 178-179)."""
+        transport = httpx.MockTransport(
+            lambda req: httpx.Response(
+                200,
+                json={
+                    "active": "yes",  # not a bool
+                    "sub": "user1",
+                },
+            )
+        )
+        introspector = TokenIntrospector(
+            introspection_url="https://auth.example.com/introspect",
+            client_id="c1",
+            client_secret="s1",
+            transport=transport,
+        )
+        result = await introspector.introspect("tok1")
+        assert result is None  # Treated as inactive
+
+    @pytest.mark.asyncio
+    async def test_do_introspect_exp_non_numeric(self) -> None:
+        """_do_introspect handles non-numeric exp gracefully (lines 190-191)."""
+        transport = httpx.MockTransport(
+            lambda req: httpx.Response(
+                200,
+                json={
+                    "active": True,
+                    "sub": "user1",
+                    "exp": "not-a-number",
+                },
+            )
+        )
+        introspector = TokenIntrospector(
+            introspection_url="https://auth.example.com/introspect",
+            client_id="c1",
+            client_secret="s1",
+            transport=transport,
+        )
+        result = await introspector.introspect("tok1")
+        assert result is not None
+        assert result.exp is None

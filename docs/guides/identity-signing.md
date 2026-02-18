@@ -55,7 +55,7 @@ Output includes Manifest ID, name, trust level, and ASAP version.
 ```python
 from asap.crypto.keys import generate_keypair, load_private_key_from_file_sync
 from asap.crypto.signing import sign_manifest, verify_manifest
-from asap.models.entities import Manifest, Capability, Endpoint, Skill
+from asap.models.entities import Manifest, Capability, Endpoint, Skill, SLADefinition
 
 manifest = Manifest(
     id="urn:asap:agent:my-agent",
@@ -68,6 +68,7 @@ manifest = Manifest(
         state_persistence=False,
     ),
     endpoints=Endpoint(asap="https://api.example.com/asap"),
+    sla=SLADefinition(availability="99.5%", max_latency_p95_ms=500, support_hours="24/7"),
 )
 
 # Sign

@@ -42,7 +42,7 @@ v1.3.0 is the **final infrastructure release** before v2.0 Marketplace:
 
 - **Goal**: Tighten `dict[str, Any]` typing and improve validation
 - **Details**: [Sprint E4 Plan](./sprint-E4-type-safety.md)
-- **Status**: Pending
+- **Status**: Pending (post-release, low priority)
 
 ## Sprint E1: Observability Metering
 
@@ -105,7 +105,7 @@ v1.3.0 is the **final infrastructure release** before v2.0 Marketplace:
 ### Definition of Done
 - [x] Tokens created with scopes and limits
 - [x] Validation rejects expired/revoked/over-limit
-- [ ] <10ms validation overhead
+- [x] <10ms validation overhead
 - [x] Test coverage >95%
 
 ---
@@ -116,56 +116,63 @@ v1.3.0 is the **final infrastructure release** before v2.0 Marketplace:
 
 ### Tasks
 
-- [ ] 3.1 Add SLA schema to manifest
-  - Goal: availability, latency, error_rate fields
+- [x] 3.1 Add SLA schema to manifest
+  - Goal: SLADefinition in entities.py + manifest field
   - Deliverable: Manifest schema extension
 
-- [ ] 3.2 Implement SLA tracking
-  - Goal: Measure actual vs promised SLA (uses health endpoint)
-  - Deliverable: SLA metrics collection
+- [x] 3.2 Implement SLA tracking & storage
+  - Goal: SLAStorage Protocol + metrics collection (uses health endpoint + metering)
+  - Deliverable: SLA metrics, SLAStorage (InMemory + SQLite)
 
-- [ ] 3.3 Implement breach detection
-  - Goal: Real-time breach alerts
-  - Deliverable: Alert hooks
+- [x] 3.3 Implement breach detection
+  - Goal: Real-time breach alerts (callback + WebSocket)
+  - Deliverable: Alert hooks + WebSocket notifications
 
-- [ ] 3.4 Comprehensive testing
-  - Goal: All tests pass, integration with v1.1/v1.2 features
-  - Deliverable: Test suite
+- [x] 3.4 Implement SLA API
+  - Goal: REST endpoints (GET /sla, /sla/history, /sla/breaches)
+  - Deliverable: sla_api router + create_app integration
 
-- [ ] 3.5 Create End-to-End Demo / Showcase
+- [x] 3.5 Comprehensive testing
+  - Goal: Cross-feature integration (SLA + Metering + Delegation + Health)
+  - Deliverable: Integration test suite
+
+- [x] 3.6 Create End-to-End Demo / Showcase
   - Goal: "See it working" - Script combining Metering, Delegation, and SLA
   - Deliverable: `examples/v1_3_0_showcase.py`
 
-- [ ] 3.6 Release preparation
-  - Goal: CHANGELOG, docs, version bump
-  - Deliverable: v1.3.0 release on PyPI
+- [x] 3.7 Release preparation
+  - Goal: Version bump, CHANGELOG, README, CI, tag v1.3.0
+  - Deliverable: v1.3.0 release
 
 ### Definition of Done
-- [ ] SLA defined in manifest
-- [ ] Breaches detected in real-time
-- [ ] End-to-End demo runs successfully
-- [ ] v1.3.0 published to PyPI
-- [ ] Test coverage >95%
+- [x] SLA defined in manifest
+- [x] Breaches detected in real-time (callback + WebSocket)
+- [x] API endpoints functional (/sla/*)
+- [x] Cross-feature integration tested
+- [x] End-to-End demo runs successfully
+- [x] v1.3.0 release prepared
+- [x] Test coverage >95%
 
 ---
 
 ## Summary
 
-| Sprint | Tasks | Focus | Estimated Days |
-|--------|-------|-------|----------------|
-| E1 | 4 | Observability Metering | 5-7 |
-| E2 | 4 | Delegation Tokens | 5-7 |
-| E3 | 6 | SLA, Demo & Release | 5-8 |
+| Sprint | Tasks | Focus | Estimated Days | Status |
+|--------|-------|-------|----------------|--------|
+| E1 | 4 | Observability Metering | 5-7 | ✅ Complete |
+| E2 | 5 | Delegation Tokens | 5-7 | ✅ Complete |
+| E3 | 7 | SLA, Testing, Demo & Release | 7-10 | ✅ Complete |
+| E4 | 1 | Type Safety (Optional) | 2-3 | Pending |
 
-**Total**: 14 high-level tasks across 3 sprints
+**Total**: 17 high-level tasks across 4 sprints (3 core + 1 optional)
 
 ---
 
 ## Progress Tracking
 
-**Overall Progress**: 2/13 tasks completed (15%)
+**Overall Progress**: 16/17 tasks completed (94%) — E1 ✅ E2 ✅ E3 ✅ E4 Pending
 
-**Last Updated**: 2026-02-17
+**Last Updated**: 2026-02-18
 
 ---
 
@@ -196,3 +203,6 @@ After releasing v1.3.0, conduct a checkpoint review:
 | 2026-02-06 | Initial task roadmap |
 | 2026-02-12 | **Lean Marketplace pivot**: Removed Audit Logging sprint (E4), reframed metering as observability, merged release into E3, reduced from 4 sprints (17 tasks) to 3 sprints (13 tasks) |
 | 2026-02-17 | **Sprint E1 complete**: Metering API expanded (summary, batch, agents, consumers, stats, purge, validate, export); roadmap aligned with sprint sub-tasks |
+| 2026-02-17 | **Sprint E2 complete**: Delegation tokens (JWT/EdDSA), revocation (SQLite), observability endpoints, CLI commands. All tests pass |
+| 2026-02-18 | **Sprint E3 plan refined**: Renumbered to 7 tasks (added SLA API, Comprehensive Testing, split Showcase/Release). Added SLAStorage Protocol, SLADefinition in Manifest, /sla/* API paths, create_app integration. WebSocket breach alerts retained. Sprint E4 (Type Safety) tracked separately |
+| 2026-02-18 | **Sprint E3 complete**: SLA Framework (schema, storage, breach detection, API, WebSocket), v1.3.0 showcase, release prep (version bump, CHANGELOG, README). v1.3.0 ready for merge |

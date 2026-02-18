@@ -208,6 +208,47 @@ Security-hardened release with comprehensive authentication, DoS protection, rep
 
 ---
 
+## [1.3.0] - 2026-02-18
+
+Economics Layer: Observability Metering, Delegation Tokens, and SLA Framework.
+Backward compatible with v1.2.1.
+
+### Added
+
+#### Observability Metering (E1)
+- **Usage tracking**: `MeteringStorage` protocol, `InMemoryMeteringStorage`, `SQLiteMeteringStorage`
+- **Usage API**: `GET /usage`, `/usage/aggregate`, `/usage/summary`, `/usage/agents`, `/usage/consumers`, `/usage/stats`, `/usage/export`; `POST /usage`, `/usage/batch`, `/usage/purge`, `/usage/validate`
+- **Task metrics**: Tokens, duration, API calls recorded per task via `MeteringStore` adapter
+- **Integration**: Middleware records usage on task completion; `create_app(metering_storage=...)`
+
+#### Delegation Tokens (E2)
+- **Delegation model**: `DelegationToken`, `DelegationConstraints` (max_tasks, expires_at); JWT with EdDSA
+- **Delegation API**: `POST /asap/delegations` (create token), `DELETE /asap/delegations/{id}` (revoke)
+- **Storage**: `DelegationStorage` protocol, `InMemoryDelegationStorage`, `SQLiteDelegationStorage`; revocation with cascade
+- **CLI**: `asap delegation create`, `asap delegation revoke`
+- **Validation**: `validate_delegation`, scope checks, max_tasks enforcement, revocation lookup
+
+#### SLA Framework (E3)
+- **SLA schema**: `SLADefinition` in manifest (availability, max_latency_p95_ms, max_error_rate, support_hours)
+- **SLA metrics**: `SLAMetrics`, `SLABreach`; `SLAStorage` protocol, `InMemorySLAStorage`, `SQLiteSLAStorage`
+- **Breach detection**: `BreachDetector`, `evaluate_breach_conditions`; callback + WebSocket broadcast
+- **SLA API**: `GET /sla`, `/sla/history`, `/sla/breaches`
+- **WebSocket**: `sla.subscribe` / `sla.unsubscribe` for real-time breach notifications
+- **Showcase**: `asap.examples.v1_3_0_showcase` — Delegation, Metering, SLA in one command
+
+### Changed
+
+- **README**: v1.3.0 showcase command; Economics Layer marked complete in roadmap
+- **create_app**: `metering_storage`, `delegation_key_store`, `delegation_storage`, `sla_storage` parameters
+
+### Technical Details
+
+- **Python**: 3.13+
+- **Tests**: 2200+ passing; cross-feature integration tests (SLA + Metering + Delegation + Health)
+- **Coverage**: >95%
+
+---
+
 ## [1.2.1] - 2026-02-15
 
 Security remediation pre-v1.3.0. Critical JWT fix + hardening. Backward compatible with v1.2.0.

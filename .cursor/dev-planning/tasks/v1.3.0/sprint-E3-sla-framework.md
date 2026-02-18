@@ -24,6 +24,11 @@
 - `tests/economics/test_sla_api.py` - SLA API integration tests (Task 3.4.6)
 - `tests/integration/test_v1_3_cross_feature.py` - Cross-feature integration tests (Task 3.5)
 - `tests/transport/test_sla_websocket.py` - SLA WebSocket subscribe/unsubscribe and broadcast tests (Task 3.3.5)
+- `pyproject.toml` - B008 ignore for sla_api, ASYNC210 for examples; ruff format (Task 3.7.5)
+- `tests/test_version.py` - Version assertion updated to 1.3.0 (Task 3.7.5)
+- `tests/test_cli_coverage.py` - Removed unused MagicMock import (Task 3.7.5)
+- `tests/economics/test_storage_coverage.py` - Removed unused timedelta import (Task 3.7.5)
+- `src/asap/transport/sla_api.py` - Mypy fixes (Literal cast, dict[str, Any]) (Task 3.7.5)
 
 ---
 
@@ -278,13 +283,13 @@ SLAs (Service Level Agreements) define guarantees agents commit to — availabil
   - Ensure updated `README` instructions work.
   - "One command to run them all".
 
-- [ ] 3.6.3 Commit
+- [x] 3.6.3 Commit
   - **Command**: `git commit -m "docs: add v1.3.0 end-to-end showcase"`
 
 **Acceptance Criteria**:
-- [ ] Demo script runs without errors
-- [ ] Prints clear, narrative output for the user
-- [ ] WebSocket breach alert visible in showcase output
+- [x] Demo script runs without errors
+- [x] Prints clear, narrative output for the user
+- [x] WebSocket breach alert visible in showcase output
 
 ---
 
@@ -294,26 +299,26 @@ SLAs (Service Level Agreements) define guarantees agents commit to — availabil
 
 ### Sub-tasks
 
-- [ ] 3.7.1 Version bump
+- [x] 3.7.1 Version bump
   - `pyproject.toml` version field
   - `src/asap/__init__.py` __version__
 
-- [ ] 3.7.2 CHANGELOG.md update
+- [x] 3.7.2 CHANGELOG.md update
   - List all features from E1, E2, E3
   - Breaking changes (if any)
   - Migration notes
 
-- [ ] 3.7.3 README.md update
+- [x] 3.7.3 README.md update
   - Add SLA section
   - Update feature list
   - Ensure example commands work
 
-- [ ] 3.7.4 Update v1.3.0 Roadmap
+- [x] 3.7.4 Update v1.3.0 Roadmap
   - Mark all E3 tasks as [x]
   - Update progress counter
   - Add change log entry
 
-- [ ] 3.7.5 CI verification
+- [x] 3.7.5 CI verification
   - All tests pass
   - Linting clean
   - Type checking clean
@@ -328,25 +333,25 @@ SLAs (Service Level Agreements) define guarantees agents commit to — availabil
   - **Command**: `git commit -m "chore: prepare v1.3.0 release"`
 
 **Acceptance Criteria**:
-- [ ] v1.3.0 version in all files
-- [ ] CHANGELOG complete
-- [ ] CI passes
+- [x] v1.3.0 version in all files
+- [x] CHANGELOG complete
+- [x] CI passes
 - [ ] Tag created
 
 ---
 
 ## Sprint E3 Definition of Done
 
-- [ ] SLA schema in manifests
-- [ ] SLA metrics tracked accurately (with SLAStorage)
-- [ ] Breaches detected and alerted (callback + WebSocket)
-- [ ] API endpoints functional (`/sla/*`)
-- [ ] Cross-feature integration tested
-- [ ] End-to-End demo runs successfully
-- [ ] v1.3.0 release prepared
-- [ ] Test coverage >95%
+- [x] SLA schema in manifests
+- [x] SLA metrics tracked accurately (with SLAStorage)
+- [x] Breaches detected and alerted (callback + WebSocket)
+- [x] API endpoints functional (`/sla/*`)
+- [x] Cross-feature integration tested
+- [x] End-to-End demo runs successfully
+- [x] v1.3.0 release prepared
+- [x] Test coverage >95%
 
 **Total Sub-tasks**: ~37
 
 ## Documentation Updates
-- [ ] **Update Roadmap**: Mark completed items in [v1.3.0 Roadmap](./tasks-v1.3.0-roadmap.md)
+- [x] **Update Roadmap**: Mark completed items in [v1.3.0 Roadmap](./tasks-v1.3.0-roadmap.md)

@@ -11,7 +11,7 @@ import collections.abc
 import time
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -27,7 +27,12 @@ from asap.transport.middleware import (
     ERROR_RATE_LIMIT_EXCEEDED,
     HTTP_TOO_MANY_REQUESTS,
 )
-from asap.transport.rate_limit import ASAPRateLimiter
+from asap.transport.rate_limit import (
+    ASAPRateLimiter,
+    create_limiter,
+    create_test_limiter,
+    get_remote_address,
+)
 from asap.transport.server import create_app
 
 
@@ -109,7 +114,7 @@ class TestRateLimiting:
         app = create_app(rate_limit_manifest, rate_limit="5/minute")
         app.state.limiter = limiter
 
-        return app  # type: ignore[return-value]
+        return app  # type: ignore[no-any-return]
 
     @pytest.fixture
     def isolated_app_1_per_second(
@@ -131,7 +136,7 @@ class TestRateLimiting:
         app = create_app(rate_limit_manifest, rate_limit="1/second")
         app.state.limiter = limiter
 
-        return app  # type: ignore[return-value]
+        return app  # type: ignore[no-any-return]
 
     @pytest.fixture
     def isolated_app_from_env_2_per_minute(
@@ -155,7 +160,7 @@ class TestRateLimiting:
             app = create_app(rate_limit_manifest, rate_limit=None)
         app.state.limiter = limiter
 
-        return app  # type: ignore[return-value]
+        return app  # type: ignore[no-any-return]
 
     def test_requests_within_limit_succeed(
         self,
@@ -284,3 +289,49 @@ class TestRateLimiting:
         assert "error" in data
         assert data["error"]["code"] == HTTP_TOO_MANY_REQUESTS
         assert ERROR_RATE_LIMIT_EXCEEDED in data["error"]["message"]
+
+
+# ---------------------------------------------------------------------------
+# Rate Limit Coverage Tests (merged from test_misc_coverage.py)
+# ---------------------------------------------------------------------------
+
+
+class TestGetRemoteAddress:
+    def test_get_remote_address_no_client(self) -> None:
+        """Return 127.0.0.1 when request has no client (line 215)."""
+        request = MagicMock()
+        request.client = None
+        assert get_remote_address(request) == "127.0.0.1"
+
+
+class TestCreateLimiter:
+    def test_create_limiter_default_storage(self) -> None:
+        """create_limiter with no storage_uri uses memory (line 99, 164-172)."""
+        limiter = create_limiter()
+        assert isinstance(limiter, ASAPRateLimiter)
+
+    def test_create_limiter_redis_not_installed(self) -> None:
+        """create_limiter with redis URI raises ImportError when redis not installed (lines 173-184)."""
+        with patch.dict("sys.modules", {"redis": None}), pytest.raises(ImportError, match="redis"):
+            create_limiter(storage_uri="redis://localhost:6379")
+
+
+class TestASAPRateLimiterTest:
+    def test_test_method_returns_true(self) -> None:
+        """test() returns True when under limit (lines 132-135)."""
+        limiter = create_test_limiter(limits=["100/second"])
+        request = MagicMock()
+        request.client = MagicMock()
+        request.client.host = "127.0.0.1"
+        assert limiter.test(request) is True
+
+    def test_test_method_returns_false_after_exhaustion(self) -> None:
+        """test() returns False when rate is exhausted (line 135)."""
+        limiter = create_test_limiter(limits=["1/second"])
+        request = MagicMock()
+        request.client = MagicMock()
+        request.client.host = "127.0.0.1"
+        # Consume the single allowed hit
+        limiter.check(request)
+        # Now test should return False
+        assert limiter.test(request) is False

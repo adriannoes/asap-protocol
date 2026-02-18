@@ -8,7 +8,7 @@ OAuth2 or network-level access controls. Rate limiting is applied per-client.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import cast
+from typing import Any, Literal, cast
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
@@ -91,7 +91,7 @@ def create_sla_router() -> APIRouter:
                 status_code=400,
                 detail="window must be one of: 1h, 24h, 7d, 30d",
             )
-        start, end = rolling_window_bounds(window)
+        start, end = rolling_window_bounds(cast(Literal["1h", "24h", "7d", "30d"], window))
         metrics_list = await storage.query_metrics(
             agent_id=agent_id,
             start=start,
@@ -107,7 +107,7 @@ def create_sla_router() -> APIRouter:
                 }
             )
         agents_seen: set[str] = set()
-        results: list[dict] = []
+        results: list[dict[str, Any]] = []
         for m in metrics_list:
             if m.agent_id in agents_seen:
                 continue

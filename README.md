@@ -7,7 +7,7 @@
 
 > A production-ready protocol for agent-to-agent communication and task coordination.
 
-**Quick Info**: `v1.2.1` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
+**Quick Info**: `v1.3.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
 
 ## Why ASAP?
 
@@ -28,6 +28,7 @@ For simple point-to-point communication, a basic HTTP API might suffice; ASAP sh
 - **MCP integration** — Tool execution and coordination in a single envelope.
 - **Observable** — `trace_id` and `correlation_id` for debugging.
 - **Security** — Bearer auth, OAuth2/JWT (v1.1), Ed25519 signed manifests (v1.2), optional mTLS, replay prevention, HTTPS, rate limiting. [v1.1 Security Model](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/v1.1-security-model.md) (trust limits, Custom Claims).
+- **Economics (v1.3)** — Usage metering, delegation tokens, SLA framework with breach alerts.
 
 ## Installation
 
@@ -115,7 +116,7 @@ See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/
 
 ## CLI
 
-**v1.1** adds OAuth2, WebSocket, Discovery (well-known + Lite Registry), State Storage (SQLite), and Webhooks. **v1.2** adds Ed25519 signed manifests, trust levels, optional mTLS, and the [Compliance Harness](https://github.com/adriannoes/asap-protocol/blob/main/asap-compliance/README.md).
+**v1.1** adds OAuth2, WebSocket, Discovery (well-known + Lite Registry), State Storage (SQLite), and Webhooks. **v1.2** adds Ed25519 signed manifests, trust levels, optional mTLS, and the [Compliance Harness](https://github.com/adriannoes/asap-protocol/blob/main/asap-compliance/README.md). **v1.3** adds delegation commands (`asap delegation create`, `asap delegation revoke`).
 
 ```bash
 asap --version                                    # Show version
@@ -137,7 +138,7 @@ ASAP is evolving toward an **Agent Marketplace** — an open ecosystem where AI 
 
 - **v1.1**: Identity Layer (OAuth2, WebSocket, Discovery) ✅
 - **v1.2**: Trust Layer (Signed Manifests, Compliance Harness, mTLS) ✅
-- **v1.3**: Economics Layer (Metering, SLAs, Delegation)
+- **v1.3**: Economics Layer (Metering, SLAs, Delegation) ✅
 - **v2.0**: Agent Marketplace with Web App
 
 See our [vision document](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/strategy/vision-agent-marketplace.md) for the full roadmap.
