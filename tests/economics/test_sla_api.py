@@ -217,6 +217,55 @@ class TestSLAAPIGetSla:
         assert len(data["data"]) == 1
         assert data["data"][0]["compliance_percent"] == 100.0
 
+    def test_get_sla_compliance_null_for_agent_not_in_manifest(
+        self,
+        manifest_with_sla: Manifest,
+        sla_storage: InMemorySLAStorage,
+    ) -> None:
+        """GET /sla returns compliance_percent null when agent does not match manifest.id."""
+        _run(sla_storage.record_metrics(_metrics(agent_id="urn:asap:agent:other-agent")))
+        app = create_app(
+            manifest_with_sla,
+            sla_storage=sla_storage,
+            rate_limit="999999/minute",
+        )
+        client = TestClient(app)
+        resp = client.get("/sla", params={"agent_id": "urn:asap:agent:other-agent"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["data"]) == 1
+        assert data["data"][0]["compliance_percent"] is None
+
+    def test_get_sla_compliance_below_100_when_breach(
+        self,
+        manifest_with_sla: Manifest,
+        sla_storage: InMemorySLAStorage,
+    ) -> None:
+        """GET /sla returns compliance < 100 when metrics breach SLA (e.g. high latency)."""
+        breach_metrics = SLAMetrics(
+            agent_id="urn:asap:agent:test-server",
+            period_start=datetime(2026, 2, 18, 0, 0, 0, tzinfo=timezone.utc),
+            period_end=datetime(2026, 2, 18, 1, 0, 0, tzinfo=timezone.utc),
+            uptime_percent=99.5,
+            latency_p95_ms=600,
+            error_rate_percent=0.5,
+            tasks_completed=100,
+            tasks_failed=0,
+        )
+        _run(sla_storage.record_metrics(breach_metrics))
+        app = create_app(
+            manifest_with_sla,
+            sla_storage=sla_storage,
+            rate_limit="999999/minute",
+        )
+        client = TestClient(app)
+        resp = client.get("/sla", params={"agent_id": "urn:asap:agent:test-server"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["data"]) == 1
+        assert data["data"][0]["compliance_percent"] is not None
+        assert data["data"][0]["compliance_percent"] < 100.0
+
 
 class TestSLAAPIGetHistory:
     """Test GET /sla/history endpoint."""
