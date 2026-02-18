@@ -7,6 +7,7 @@ OAuth2 or network-level access controls. Rate limiting is applied per-client.
 
 from __future__ import annotations
 
+from collections import defaultdict
 from datetime import datetime
 from typing import Any, Literal, cast
 
@@ -106,21 +107,19 @@ def create_sla_router() -> APIRouter:
                     "period_end": end.isoformat(),
                 }
             )
-        agents_seen: set[str] = set()
-        results: list[dict[str, Any]] = []
+        by_agent: defaultdict[str, list[SLAMetrics]] = defaultdict(list)
         for m in metrics_list:
-            if m.agent_id in agents_seen:
-                continue
-            agents_seen.add(m.agent_id)
-            agent_metrics = [x for x in metrics_list if x.agent_id == m.agent_id]
+            by_agent[m.agent_id].append(m)
+        results: list[dict[str, Any]] = []
+        for agent_id, agent_metrics in by_agent.items():
             aggregated = aggregate_sla_metrics(agent_metrics)
             if aggregated is None:
                 continue
-            sla = manifest.sla if manifest and manifest.id == m.agent_id else None
+            sla = manifest.sla if manifest and manifest.id == agent_id else None
             compliance = _compute_compliance_percent(sla, aggregated)
             results.append(
                 {
-                    "agent_id": m.agent_id,
+                    "agent_id": agent_id,
                     "metrics": aggregated.model_dump(mode="json"),
                     "compliance_percent": compliance,
                 }
