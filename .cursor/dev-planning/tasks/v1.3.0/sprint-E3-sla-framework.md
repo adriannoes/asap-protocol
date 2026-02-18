@@ -323,7 +323,7 @@ SLAs (Service Level Agreements) define guarantees agents commit to — availabil
   - Linting clean
   - Type checking clean
 
-- [ ] 3.7.6 PR creation
+- [x] 3.7.6 PR creation
   - Create PR for E3 sprint
   - Code review pass
 
