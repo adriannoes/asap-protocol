@@ -26,8 +26,10 @@ from pydantic import Field
 from asap.models.base import ASAPBaseModel
 from asap.models.ids import generate_id
 
-# JWT algorithm for delegation tokens (RFC 8037 EdDSA with Ed25519).
-JWT_ALG_EDDSA = "EdDSA"
+# Ed25519 (RFC 9864). EdDSA accepted for legacy verify.
+JWT_ALG = "Ed25519"
+JWT_ALGS_VERIFY = [JWT_ALG, "EdDSA"]
+JWT_ALG_EDDSA = JWT_ALG  # deprecated alias
 # Custom claim key for delegation constraints (max_tasks, max_cost_usd).
 X_ASAP_CONSTRAINTS_CLAIM = "x-asap-constraints"
 
@@ -164,7 +166,7 @@ def validate_delegation(
         decoded = jose_jwt.decode(
             token,
             okp_key,
-            algorithms=[JWT_ALG_EDDSA],
+            algorithms=JWT_ALGS_VERIFY,
         )
     except JoseError as e:
         return ValidationResult(success=False, error=f"Invalid or expired token: {e!s}")
@@ -281,13 +283,13 @@ def create_delegation_jwt(
     if x_constraints:
         claims[X_ASAP_CONSTRAINTS_CLAIM] = x_constraints
 
-    header = {"alg": JWT_ALG_EDDSA, "typ": "JWT"}
+    header = {"alg": JWT_ALG, "typ": "JWT"}
     okp_key = _ed25519_private_key_to_okp_key(private_key)
     return jose_jwt.encode(
         header,
         claims,
         okp_key,
-        algorithms=[JWT_ALG_EDDSA],
+        algorithms=[JWT_ALG],
     )
 
 

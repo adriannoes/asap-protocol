@@ -200,6 +200,8 @@ filterwarnings = [
     "ignore:websockets.legacy is deprecated:DeprecationWarning",
     "ignore:websockets.server.WebSocketServerProtocol is deprecated:DeprecationWarning",
     "ignore:remove second argument of ws_handler:DeprecationWarning",
+    "ignore:EdDSA is deprecated:joserfc.errors.SecurityWarning",
+    "ignore:coroutine .* was never awaited:RuntimeWarning",
 ]
 
 [tool.coverage.run]
