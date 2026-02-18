@@ -589,8 +589,8 @@ class TestConversation:
         )
 
         assert conversation.metadata is not None
-        assert conversation.metadata["purpose"] == "quarterly_report_research"
-        assert conversation.metadata["ttl_hours"] == 72
+        assert conversation.metadata.purpose == "quarterly_report_research"
+        assert conversation.metadata.ttl_hours == 72
 
     def test_conversation_json_schema(self):
         """Test that Conversation generates valid JSON Schema."""

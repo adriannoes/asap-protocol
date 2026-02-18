@@ -53,6 +53,7 @@ def _make_success_response(envelope: Envelope) -> httpx.Response:
             task_id="task_1",
             status=TaskStatus.COMPLETED,
         ).model_dump(),
+        correlation_id="req_1",
     )
     body = {
         "jsonrpc": "2.0",

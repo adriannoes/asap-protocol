@@ -29,7 +29,7 @@ class TestTimestampValidation:
             sender="urn:asap:agent:test",
             recipient="urn:asap:agent:test",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
             timestamp=datetime.now(timezone.utc),
         )
 
@@ -43,7 +43,7 @@ class TestTimestampValidation:
             sender="urn:asap:agent:test",
             recipient="urn:asap:agent:test",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
             timestamp=datetime.now(timezone.utc) - timedelta(minutes=10),
         )
 
@@ -61,7 +61,7 @@ class TestTimestampValidation:
             sender="urn:asap:agent:test",
             recipient="urn:asap:agent:test",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
             timestamp=datetime.now(timezone.utc) + timedelta(hours=1),
         )
 
@@ -80,7 +80,7 @@ class TestTimestampValidation:
             sender="urn:asap:agent:test",
             recipient="urn:asap:agent:test",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
             timestamp=datetime.now(timezone.utc) - timedelta(minutes=4),
         )
         validate_envelope_timestamp(envelope_old)  # Should not raise
@@ -91,7 +91,7 @@ class TestTimestampValidation:
             sender="urn:asap:agent:test",
             recipient="urn:asap:agent:test",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
             timestamp=datetime.now(timezone.utc) + timedelta(seconds=20),
         )
         validate_envelope_timestamp(envelope_future)  # Should not raise
@@ -104,7 +104,7 @@ class TestTimestampValidation:
             sender="urn:asap:agent:test",
             recipient="urn:asap:agent:test",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
         )
 
         # Auto-generated timestamp should be recent and pass validation
@@ -123,7 +123,7 @@ class TestNonceValidation:
             sender="urn:asap:agent:test",
             recipient="urn:asap:agent:test",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
         )
 
         # Should not raise
@@ -136,7 +136,7 @@ class TestNonceValidation:
             sender="urn:asap:agent:test",
             recipient="urn:asap:agent:test",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
             extensions={"nonce": "test-nonce-123"},
         )
 
@@ -151,7 +151,7 @@ class TestNonceValidation:
             sender="urn:asap:agent:test",
             recipient="urn:asap:agent:test",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
             extensions={"nonce": "unique-nonce-123"},
         )
 
@@ -169,7 +169,7 @@ class TestNonceValidation:
             sender="urn:asap:agent:test",
             recipient="urn:asap:agent:test",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
             extensions={"nonce": "duplicate-nonce-456"},
         )
 
@@ -178,7 +178,7 @@ class TestNonceValidation:
             sender="urn:asap:agent:test",
             recipient="urn:asap:agent:test",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
             extensions={"nonce": "duplicate-nonce-456"},
         )
 
@@ -202,7 +202,7 @@ class TestNonceValidation:
             sender="urn:asap:agent:test",
             recipient="urn:asap:agent:test",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
             extensions={"nonce": "expiring-nonce-789"},
         )
 
@@ -233,7 +233,7 @@ class TestNonceValidation:
             sender="urn:asap:agent:test",
             recipient="urn:asap:agent:test",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
             extensions={"nonce": 12345},  # Invalid: nonce should be string
         )
 
@@ -250,7 +250,7 @@ class TestNonceValidation:
             sender="urn:asap:agent:test",
             recipient="urn:asap:agent:test",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
             extensions={"nonce": ""},  # Invalid: empty string
         )
 
@@ -281,7 +281,7 @@ class TestNonceValidation:
             sender="urn:asap:agent:test",
             recipient="urn:asap:agent:test",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
             extensions={"nonce": "ttl-test-nonce"},
         )
 

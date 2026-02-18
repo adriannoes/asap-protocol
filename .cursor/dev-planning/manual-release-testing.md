@@ -1,14 +1,14 @@
-# Manual Release Testing Checklist (v1.2.1)
+# Manual Release Testing Checklist (v1.3.0)
 
 Simulates a real user validating the ASAP Protocol before release.
 
-**Last run**: 2026-02-15 — All checks passed ✅  
-**v1.2.1 released**: PyPI, GitHub, Docker ✅
+**Last run**: 2026-02-18 — All checks passed ✅  
+**v1.3.0 released**: PyPI, GitHub, Docker ✅
 
 ## 1. Installation & Environment
 
 - [x] `uv sync` succeeds
-- [x] `asap --version` shows 1.2.1
+- [x] `asap --version` shows 1.3.0
 - [x] Python 3.13+ detected
 
 ## 2. CLI Commands
@@ -42,11 +42,11 @@ Simulates a real user validating the ASAP Protocol before release.
 
 ## 7. Full Test Suite
 
-- [x] `uv run pytest -n auto --tb=short` — 1940 passed, 5 skipped
+- [x] `uv run pytest -n auto --tb=short` — 2335 passed, 5 skipped
 - [x] `uv run pytest --cov=src/asap --cov-report=term-missing` (optional)
 
 ## 8. Lint & Type Check
 
 - [x] `uv run ruff check .` — All checks passed
-- [x] `uv run ruff format --check .` — 258 files formatted
+- [x] `uv run ruff format --check .` — 284 files formatted
 - [x] `uv run mypy src/` — Success

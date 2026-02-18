@@ -211,7 +211,7 @@ class TestMessageDuplication:
             # All responses should be valid and consistent
             for resp in responses:
                 assert resp.payload_type == "task.response"
-                assert resp.payload["status"] == TaskStatus.COMPLETED.value
+                assert resp.payload.status == TaskStatus.COMPLETED
 
         assert call_count == 3
 
@@ -444,7 +444,7 @@ class TestOutOfOrderDelivery:
             # Each response should have correct correlation
             for i, resp in enumerate(responses):
                 assert resp.payload_type == "task.response"
-                assert resp.payload["result"]["call"] == i + 1
+                assert resp.payload.result["call"] == i + 1
 
 
 class TestPartialCorruption:
@@ -530,8 +530,9 @@ class TestPartialCorruption:
             payload_type="task.update",  # Wrong type - expected task.response
             payload={
                 "task_id": "task_wrong_type",
-                "status": "submitted",
-                "progress": 0.5,
+                "update_type": "progress",
+                "status": "working",
+                "progress": {"percent": 50},
             },
         )
 

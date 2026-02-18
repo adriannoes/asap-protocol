@@ -454,28 +454,28 @@ def st_message_ack(draw: st.DrawFn) -> MessageAck:
 _RESPONSE_PAYLOAD_TYPES = {"TaskResponse", "McpToolResult", "McpResourceData"}
 
 
+_PAYLOAD_TYPE_TO_STRATEGY = {
+    "TaskRequest": st_task_request,
+    "TaskResponse": st_task_response,
+    "TaskUpdate": st_task_update,
+    "TaskCancel": st_task_cancel,
+    "MessageSend": st_message_send,
+    "StateQuery": st_state_query,
+    "StateRestore": st_state_restore,
+    "ArtifactNotify": st_artifact_notify,
+    "McpToolCall": st_mcp_tool_call,
+    "McpToolResult": st_mcp_tool_result,
+    "McpResourceFetch": st_mcp_resource_fetch,
+    "McpResourceData": st_mcp_resource_data,
+}
+
+
 @st.composite
 def st_envelope(draw: st.DrawFn) -> Envelope:
-    """Strategy for Envelope (correlation_id set when payload_type is response type)."""
-    payload_type = draw(
-        st.sampled_from(
-            [
-                "TaskRequest",
-                "TaskResponse",
-                "TaskUpdate",
-                "TaskCancel",
-                "MessageSend",
-                "StateQuery",
-                "StateRestore",
-                "ArtifactNotify",
-                "McpToolCall",
-                "McpToolResult",
-                "McpResourceFetch",
-                "McpResourceData",
-            ]
-        )
-    )
-    payload = draw(st_json_dict())
+    """Strategy for Envelope (payload matches payload_type for strict validation)."""
+    payload_type = draw(st.sampled_from(list(_PAYLOAD_TYPE_TO_STRATEGY.keys())))
+    payload_model = draw(_PAYLOAD_TYPE_TO_STRATEGY[payload_type]())
+    payload = payload_model.model_dump()
     correlation_id = (
         draw(st.none() | st_ulid_like())
         if payload_type not in _RESPONSE_PAYLOAD_TYPES

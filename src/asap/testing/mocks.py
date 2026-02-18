@@ -76,20 +76,8 @@ class MockAgent:
         self._failure = exception
 
     def requests_for_skill(self, skill_id: str) -> list[Envelope]:
-        """Return recorded requests whose payload has the given skill_id.
-
-        Args:
-            skill_id: Skill id to filter by.
-
-        Returns:
-            List of envelopes that requested this skill.
-        """
-        result: list[Envelope] = []
-        for env in self.requests:
-            payload = env.payload if isinstance(env.payload, dict) else {}
-            if payload.get("skill_id") == skill_id:
-                result.append(env)
-        return result
+        """Return envelopes that requested this skill."""
+        return [e for e in self.requests if e.payload_dict.get("skill_id") == skill_id]
 
     def handle(self, envelope: Envelope) -> Envelope | None:
         """Handle an incoming envelope and return a response envelope.
@@ -114,9 +102,7 @@ class MockAgent:
             self._failure = None
             raise exc
 
-        skill_id = (
-            (envelope.payload or {}).get("skill_id") if isinstance(envelope.payload, dict) else None
-        )
+        skill_id = envelope.payload_dict.get("skill_id")
         payload = (self._responses.get(skill_id) if skill_id else None) or self._default_response
         if payload is None:
             return None

@@ -7,10 +7,12 @@ All functions are tested in-process with mocked subprocesses and HTTP calls.
 
 from __future__ import annotations
 
+import asyncio
 import subprocess
 from unittest.mock import MagicMock, patch
 
 import httpx
+import pytest
 
 from datetime import datetime, timezone
 
@@ -76,7 +78,7 @@ class TestCreateFailoverWorkHandler:
         response = handler(envelope, manifest)
 
         assert response.payload_type == "task.response"
-        payload = response.payload or {}
+        payload = response.payload_dict
         assert payload["status"] == "completed"
         assert payload["result"]["step"] == 3
         # Snapshot was persisted
@@ -103,7 +105,7 @@ class TestCreateFailoverWorkHandler:
 
         response = handler(envelope, manifest)
 
-        payload = response.payload or {}
+        payload = response.payload_dict
         assert payload["status"] == "completed"
         # task_id was auto-generated (non-empty)
         assert payload["task_id"]
@@ -117,7 +119,7 @@ class TestCreateFailoverWorkHandler:
 
         response = handler(envelope, manifest)
 
-        payload = response.payload or {}
+        payload = response.payload_dict
         assert payload["status"] == "failed"
         assert payload["result"]["error"] == "unknown_skill"
 
@@ -187,46 +189,35 @@ class TestCreateStateRestoreHandler:
 
         response = handler(envelope, manifest)
 
-        payload = response.payload or {}
+        payload = response.payload_dict
         assert payload["ok"] is True
         assert payload["task_id"] == "task-100"
 
     def test_restore_fails_when_missing_task_id(self) -> None:
-        """Handler returns ok=False when task_id is missing."""
-        store = InMemorySnapshotStore()
-        handler = agent_failover._create_state_restore_handler(store)
-        envelope = Envelope(
-            asap_version="0.1",
-            sender=agent_failover.COORDINATOR_AGENT_ID,
-            recipient=agent_failover.WORKER_AGENT_ID,
-            payload_type="state_restore",
-            payload={"snapshot_id": "snap-001"},
-        )
-        manifest = self._make_manifest()
+        """Envelope with state_restore missing task_id raises ValidationError."""
+        from pydantic import ValidationError
 
-        response = handler(envelope, manifest)
-
-        payload = response.payload or {}
-        assert payload["ok"] is False
-        assert "missing" in payload["error"]
+        with pytest.raises(ValidationError):
+            Envelope(
+                asap_version="0.1",
+                sender=agent_failover.COORDINATOR_AGENT_ID,
+                recipient=agent_failover.WORKER_AGENT_ID,
+                payload_type="state_restore",
+                payload={"snapshot_id": "snap-001"},
+            )
 
     def test_restore_fails_when_missing_snapshot_id(self) -> None:
-        """Handler returns ok=False when snapshot_id is missing."""
-        store = InMemorySnapshotStore()
-        handler = agent_failover._create_state_restore_handler(store)
-        envelope = Envelope(
-            asap_version="0.1",
-            sender=agent_failover.COORDINATOR_AGENT_ID,
-            recipient=agent_failover.WORKER_AGENT_ID,
-            payload_type="state_restore",
-            payload={"task_id": "task-100"},
-        )
-        manifest = self._make_manifest()
+        """Envelope with state_restore missing snapshot_id raises ValidationError."""
+        from pydantic import ValidationError
 
-        response = handler(envelope, manifest)
-
-        payload = response.payload or {}
-        assert payload["ok"] is False
+        with pytest.raises(ValidationError):
+            Envelope(
+                asap_version="0.1",
+                sender=agent_failover.COORDINATOR_AGENT_ID,
+                recipient=agent_failover.WORKER_AGENT_ID,
+                payload_type="state_restore",
+                payload={"task_id": "task-100"},
+            )
 
     def test_restore_fails_when_snapshot_not_found(self) -> None:
         """Handler returns ok=False when snapshot does not exist in store."""
@@ -243,7 +234,7 @@ class TestCreateStateRestoreHandler:
 
         response = handler(envelope, manifest)
 
-        payload = response.payload or {}
+        payload = response.payload_dict
         assert payload["ok"] is False
         assert "not found" in payload["error"]
 
@@ -271,27 +262,21 @@ class TestCreateStateRestoreHandler:
 
         response = handler(envelope, manifest)
 
-        payload = response.payload or {}
+        payload = response.payload_dict
         assert payload["ok"] is False
 
-    def test_restore_handles_empty_payload(self) -> None:
-        """Handler handles empty payload gracefully (no task_id/snapshot_id)."""
-        store = InMemorySnapshotStore()
-        handler = agent_failover._create_state_restore_handler(store)
-        envelope = Envelope(
-            asap_version="0.1",
-            sender=agent_failover.COORDINATOR_AGENT_ID,
-            recipient=agent_failover.WORKER_AGENT_ID,
-            payload_type="state_restore",
-            payload={},
-        )
-        manifest = self._make_manifest()
+    def test_restore_rejects_empty_payload(self) -> None:
+        """Envelope with state_restore empty payload raises ValidationError."""
+        from pydantic import ValidationError
 
-        response = handler(envelope, manifest)
-
-        payload = response.payload or {}
-        assert payload["ok"] is False
-        assert "missing" in payload["error"]
+        with pytest.raises(ValidationError):
+            Envelope(
+                asap_version="0.1",
+                sender=agent_failover.COORDINATOR_AGENT_ID,
+                recipient=agent_failover.WORKER_AGENT_ID,
+                payload_type="state_restore",
+                payload={},
+            )
 
 
 class TestCreateWorkerApp:
@@ -436,7 +421,21 @@ class TestMain:
 
     def test_main_demo_calls_asyncio_run(self) -> None:
         """main() without subcommand calls asyncio.run(run_demo())."""
-        with patch("asap.examples.agent_failover.asyncio.run") as mock_run:
+
+        async def noop() -> None:
+            pass
+
+        real_run = asyncio.run
+        with (
+            patch(
+                "asap.examples.agent_failover.run_demo",
+                return_value=noop(),
+            ),
+            patch(
+                "asap.examples.agent_failover.asyncio.run",
+                side_effect=lambda coro: real_run(coro),
+            ) as mock_run,
+        ):
             agent_failover.main([])
             mock_run.assert_called_once()
 
@@ -492,6 +491,7 @@ class TestRunDemo:
     def _make_task_response_envelope(
         task_id: str,
         snapshot_id: str,
+        correlation_id: str | None = None,
     ) -> Envelope:
         """Build a task.response envelope with snapshot_id."""
         from asap.models.payloads import TaskResponse
@@ -507,6 +507,7 @@ class TestRunDemo:
                 status=TaskStatus.COMPLETED,
                 result={"step": 1, "snapshot_id": snapshot_id},
             ).model_dump(),
+            correlation_id=correlation_id,
         )
 
     @staticmethod
@@ -554,12 +555,14 @@ class TestRunDemo:
             nonlocal saved_snapshot_id
             if envelope.payload_type == "task.request":
                 # First call: primary handles task
-                task_id = (envelope.payload or {}).get("input", {}).get("task_id", "t1")
+                task_id = envelope.payload_dict.get("input", {}).get("task_id", "t1")
                 saved_snapshot_id = f"snap-{task_id}"
-                return TestRunDemo._make_task_response_envelope(task_id, saved_snapshot_id)
+                return TestRunDemo._make_task_response_envelope(
+                    task_id, saved_snapshot_id, correlation_id=envelope.id
+                )
             if envelope.payload_type == "state_restore":
                 # Second call: backup handles restore
-                payload = envelope.payload or {}
+                payload = envelope.payload_dict
                 return TestRunDemo._make_state_restore_ack_envelope(
                     payload.get("task_id", ""),
                     payload.get("snapshot_id", ""),

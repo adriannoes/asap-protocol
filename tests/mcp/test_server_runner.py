@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -52,12 +52,22 @@ def test_server_runner_main_keyboard_interrupt_exit_zero() -> None:
 
 def test_server_runner_main_registers_echo_tool() -> None:
     """main() builds MCPServer and registers the echo tool."""
+    real_run = asyncio.run
+
+    def _run_coro(coro: object) -> None:
+        if asyncio.iscoroutine(coro):
+            real_run(coro)
+
     with (
-        patch("asap.mcp.server_runner.asyncio.run"),
+        patch(
+            "asap.mcp.server_runner.asyncio.run",
+            side_effect=_run_coro,
+        ),
         patch("asap.mcp.server_runner.sys.exit"),
         patch("asap.mcp.server.MCPServer") as mock_server_class,
     ):
         mock_server = mock_server_class.return_value
+        mock_server.run_stdio = AsyncMock(return_value=None)
         main()
         mock_server_class.assert_called_once()
         call_kw = mock_server_class.call_args[1]

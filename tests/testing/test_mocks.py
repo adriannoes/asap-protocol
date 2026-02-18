@@ -30,7 +30,7 @@ class TestMockAgent:
         assert out.payload_type == "TaskResponse"
         assert out.sender == agent.agent_id
         assert out.recipient == "urn:asap:agent:a"
-        assert out.payload == resp_payload
+        assert out.payload_dict == resp_payload
         assert len(agent.requests) == 1
         assert agent.requests[0] is req
 
@@ -62,7 +62,7 @@ class TestMockAgent:
         )
         out = agent.handle(req)
         assert out is not None
-        assert out.payload == default
+        assert out.payload_dict == default
 
     def test_requests_for_skill_filters_recorded_requests(self) -> None:
         """requests_for_skill returns only envelopes requesting that skill."""

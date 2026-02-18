@@ -51,7 +51,7 @@ def _create_app_with_auth(
             payload=TaskResponse(
                 task_id="task-123",
                 status=TaskStatus.COMPLETED,
-                result={"echo": envelope.payload.get("input", {})},
+                result={"echo": envelope.payload_dict.get("input", {})},
             ).model_dump(),
             correlation_id=envelope.id,
         )
@@ -120,7 +120,7 @@ class TestBatchWithAuthentication(NoRateLimitTestBase):
             for result in results:
                 assert isinstance(result, Envelope)
                 assert result.payload_type == "task.response"
-                response = TaskResponse(**result.payload)
+                response = TaskResponse(**result.payload_dict)
                 assert response.status == TaskStatus.COMPLETED
 
     @pytest.mark.asyncio
@@ -294,7 +294,7 @@ class TestBatchPartialFailures(NoRateLimitTestBase):
         registry = HandlerRegistry()
 
         def mixed_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
-            message = envelope.payload.get("input", {}).get("message", "")
+            message = envelope.payload_dict.get("input", {}).get("message", "")
             if "fail" in message:
                 raise ValueError(f"Intentional failure for: {message}")
             return Envelope(

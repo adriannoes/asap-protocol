@@ -13,7 +13,7 @@ from pydantic import ValidationError
 from asap.crypto.keys import generate_keypair
 from asap.economics.delegation import (
     DELEGATION_SCOPES,
-    JWT_ALG_EDDSA,
+    JWT_ALGS_VERIFY,
     WILDCARD_SCOPE,
     DelegationConstraints,
     DelegationToken,
@@ -299,7 +299,7 @@ class TestCreateDelegationJwt:
             token_id="del_test_123",
         )
         okp_key = ed25519_to_okp(private_key)
-        decoded = jose_jwt.decode(token, okp_key, algorithms=[JWT_ALG_EDDSA])
+        decoded = jose_jwt.decode(token, okp_key, algorithms=JWT_ALGS_VERIFY)
         claims = dict(decoded.claims)
         assert claims["iss"] == "urn:asap:agent:issuer"
         assert claims["aud"] == "urn:asap:agent:delegate"
@@ -327,7 +327,7 @@ class TestCreateDelegationJwt:
             private_key=private_key,
         )
         okp_key = ed25519_to_okp(private_key)
-        decoded = jose_jwt.decode(token, okp_key, algorithms=[JWT_ALG_EDDSA])
+        decoded = jose_jwt.decode(token, okp_key, algorithms=JWT_ALGS_VERIFY)
         claims = dict(decoded.claims)
         assert X_ASAP_CONSTRAINTS_CLAIM in claims
         assert claims[X_ASAP_CONSTRAINTS_CLAIM]["max_tasks"] == 50
@@ -360,7 +360,7 @@ class TestCreateDelegationJwt:
         )
         okp_key_b = ed25519_to_okp(private_key_b)
         with pytest.raises(JoseError):
-            jose_jwt.decode(token, okp_key_b, algorithms=[JWT_ALG_EDDSA])
+            jose_jwt.decode(token, okp_key_b, algorithms=JWT_ALGS_VERIFY)
 
 
 # ---------------------------------------------------------------------------

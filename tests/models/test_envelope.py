@@ -33,7 +33,7 @@ class TestEnvelope:
         assert envelope.sender == "urn:asap:agent:coordinator"
         assert envelope.recipient == "urn:asap:agent:research-v1"
         assert envelope.payload_type == "TaskRequest"
-        assert envelope.payload["skill_id"] == "research"
+        assert envelope.payload.skill_id == "research"
 
     def test_envelope_auto_generates_id(self):
         """Test that Envelope auto-generates id if not provided."""
@@ -46,7 +46,7 @@ class TestEnvelope:
             sender="urn:asap:agent:a",
             recipient="urn:asap:agent:b",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
         )
 
         assert envelope.id is not None
@@ -65,7 +65,7 @@ class TestEnvelope:
             sender="urn:asap:agent:a",
             recipient="urn:asap:agent:b",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
         )
         after = datetime.now(timezone.utc)
 
@@ -101,7 +101,7 @@ class TestEnvelope:
             sender="urn:asap:agent:a",
             recipient="urn:asap:agent:b",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
             trace_id="trace_01HX5K...",
         )
 
@@ -120,7 +120,7 @@ class TestEnvelope:
             sender="urn:asap:agent:a",
             recipient="urn:asap:agent:b",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
             extensions=extensions,
         )
 
@@ -201,7 +201,7 @@ class TestEnvelope:
             sender="urn:asap:agent:a",
             recipient="urn:asap:agent:b",
             payload_type="TaskRequest",
-            payload={"test": "data"},
+            payload={"conversation_id": "conv_1", "skill_id": "s1", "input": {"test": "data"}},
         )
 
         data = envelope.model_dump()
@@ -210,7 +210,7 @@ class TestEnvelope:
         assert data["sender"] == "urn:asap:agent:a"
         assert data["recipient"] == "urn:asap:agent:b"
         assert data["payload_type"] == "TaskRequest"
-        assert data["payload"]["test"] == "data"
+        assert data["payload"]["input"]["test"] == "data"
 
     def test_response_payload_requires_correlation_id(self) -> None:
         """Test that response payloads must have correlation_id."""
@@ -223,7 +223,7 @@ class TestEnvelope:
                 sender="urn:asap:agent:a",
                 recipient="urn:asap:agent:b",
                 payload_type="TaskResponse",
-                payload={"result": "success"},
+                payload={"task_id": "t1", "status": "completed", "result": {"ok": True}},
                 # correlation_id is missing - should fail
             )
 
@@ -237,7 +237,7 @@ class TestEnvelope:
                 sender="urn:asap:agent:a",
                 recipient="urn:asap:agent:b",
                 payload_type="McpToolResult",
-                payload={"result": "success"},
+                payload={"request_id": "r1", "success": True, "result": {"ok": True}},
                 # correlation_id is missing - should fail
             )
 
@@ -250,7 +250,22 @@ class TestEnvelope:
             sender="urn:asap:agent:a",
             recipient="urn:asap:agent:b",
             payload_type="TaskResponse",
-            payload={"result": "success"},
+            payload={"task_id": "t1", "status": "completed", "result": {"ok": True}},
             correlation_id="req_123",
         )
         assert envelope.correlation_id == "req_123"
+
+    def test_malformed_task_request_raises_error(self) -> None:
+        """Missing required TaskRequest fields raises ValidationError."""
+        from asap.models.envelope import Envelope
+
+        data = {
+            "id": "env_1",
+            "asap_version": "1.0",
+            "sender": "urn:asap:agent:a",
+            "recipient": "urn:asap:agent:b",
+            "payload_type": "task.request",
+            "payload": {"conversation_id": "conv_1", "input": {}},
+        }
+        with pytest.raises(ValidationError):
+            Envelope.model_validate(data)

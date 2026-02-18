@@ -5,14 +5,28 @@ routing, correlation, tracing, and versioning.
 """
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, cast
 
 from pydantic import Field, field_validator, model_validator
 
 from asap.models.base import ASAPBaseModel
 from asap.models.ids import generate_id
+from asap.models.payloads import PAYLOAD_TYPE_REGISTRY, PayloadType
 from asap.models.types import AgentURN
 from asap.models.validators import validate_agent_urn
+
+
+def _normalize_payload_type(pt: str) -> str:
+    """Lowercase alphanumeric key for payload_type lookup (e.g. task.request -> taskrequest)."""
+    return "".join(c for c in pt.lower() if c.isalnum())
+
+
+def _parse_payload(payload_type: str, payload: dict[str, Any]) -> PayloadType | dict[str, Any]:
+    key = _normalize_payload_type(payload_type)
+    payload_class = PAYLOAD_TYPE_REGISTRY.get(key)
+    if payload_class is None:
+        return payload
+    return cast(PayloadType, payload_class.model_validate(payload))
 
 
 class Envelope(ASAPBaseModel):
@@ -58,7 +72,9 @@ class Envelope(ASAPBaseModel):
     sender: AgentURN = Field(..., description="Sender agent URN")
     recipient: AgentURN = Field(..., description="Recipient agent URN")
     payload_type: str = Field(..., description="Payload type discriminator")
-    payload: dict[str, Any] = Field(..., description="Message payload")
+    payload: PayloadType | dict[str, Any] = Field(
+        ..., description="Message payload (typed when payload_type known, else dict)"
+    )
     correlation_id: str | None = Field(
         default=None, description="Optional correlation ID for request/response pairing"
     )
@@ -105,11 +121,31 @@ class Envelope(ASAPBaseModel):
         """Validate sender/recipient URN format and length."""
         return validate_agent_urn(v)
 
+    @model_validator(mode="before")
+    @classmethod
+    def parse_payload_from_dict(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        payload = data.get("payload")
+        payload_type = data.get("payload_type")
+        if isinstance(payload, dict) and payload_type:
+            data = dict(data)
+            data["payload"] = _parse_payload(payload_type, payload)
+        return data
+
     @model_validator(mode="after")
     def validate_response_correlation(self) -> "Envelope":
-        """Validate that response payloads have correlation_id for request tracking."""
-        response_types = {"TaskResponse", "McpToolResult", "McpResourceData"}
+        response_type_keys = {"taskresponse", "mcptoolresult", "mcpresourcedata"}
 
-        if self.payload_type in response_types and not self.correlation_id:
+        if (
+            _normalize_payload_type(self.payload_type) in response_type_keys
+            and not self.correlation_id
+        ):
             raise ValueError(f"{self.payload_type} must have correlation_id for request tracking")
         return self
+
+    @property
+    def payload_dict(self) -> dict[str, Any]:
+        if isinstance(self.payload, ASAPBaseModel):
+            return self.payload.model_dump()
+        return self.payload

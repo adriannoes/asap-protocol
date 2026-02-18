@@ -369,10 +369,8 @@ class WebSocketTransport:
                     if isinstance(env_dict, dict):
                         try:
                             ack_env = Envelope.model_validate(env_dict)
-                            if ack_env.payload_type == "MessageAck" and isinstance(
-                                ack_env.payload, dict
-                            ):
-                                ack = MessageAck.model_validate(ack_env.payload)
+                            if ack_env.payload_type == "MessageAck":
+                                ack = MessageAck.model_validate(ack_env.payload_dict)
                                 self._pending_acks.pop(ack.original_envelope_id, None)
                         except ValidationError as e:
                             logger.warning(

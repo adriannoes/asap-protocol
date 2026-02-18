@@ -106,7 +106,7 @@ class TestCreateEchoApp:
         result_envelope = Envelope.model_validate(data["result"]["envelope"])
         assert_envelope_valid(result_envelope, allowed_payload_types=["task.response"])
         assert_task_completed(result_envelope)
-        assert result_envelope.payload["result"]["echoed"] == {"message": "Hello, Echo!"}
+        assert result_envelope.payload_dict["result"]["echoed"] == {"message": "Hello, Echo!"}
 
 
 class TestParseArgs:

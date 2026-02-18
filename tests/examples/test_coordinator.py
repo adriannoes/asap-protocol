@@ -124,7 +124,7 @@ class TestBuildTaskEnvelope:
         input_data = {"message": "Hello", "count": 42}
         envelope = build_task_envelope(input_data)
 
-        assert envelope.payload["input"] == input_data
+        assert envelope.payload_dict["input"] == input_data
 
 
 # Tests for dispatch_task, parse_args, and main functions
@@ -187,7 +187,7 @@ class TestDispatchTask:
             )
 
         assert response.payload_type == "task.result"
-        assert response.payload["result"] == "echoed"
+        assert response.payload_dict["result"] == "echoed"
         mock_client.send.assert_called_once()
 
     @pytest.mark.asyncio

@@ -206,7 +206,7 @@ async def run_orchestration(
             )
             try:
                 response_a = await send_to_sub_agent(client_a, envelope_a)
-                state.result_a = response_a.payload
+                state.result_a = response_a.payload_dict
                 state.step = "received_from_a"
             except Exception as e:  # noqa: BLE001
                 state.error = f"worker_a: {e!s}"
@@ -229,7 +229,7 @@ async def run_orchestration(
             )
             try:
                 response_b = await send_to_sub_agent(client_b, envelope_b)
-                state.result_b = response_b.payload
+                state.result_b = response_b.payload_dict
                 state.step = "received_from_b"
             except Exception as e:  # noqa: BLE001
                 state.error = f"worker_b: {e!s}"

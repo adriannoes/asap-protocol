@@ -55,9 +55,9 @@ class TestTaskRequest:
         )
 
         assert request.config is not None
-        assert request.config["timeout_seconds"] == 600
-        assert request.config["streaming"] is True
-        assert request.config["persist_state"] is True
+        assert request.config.timeout_seconds == 600
+        assert request.config.streaming is True
+        assert request.config.persist_state is True
 
     def test_task_request_json_schema(self):
         """Test that TaskRequest generates valid JSON Schema."""
@@ -126,8 +126,8 @@ class TestTaskResponse:
         response = TaskResponse(task_id="task_123", status=TaskStatus.COMPLETED, metrics=metrics)
 
         assert response.metrics is not None
-        assert response.metrics["duration_ms"] == 45000
-        assert response.metrics["tokens_used"] == 12500
+        assert response.metrics.duration_ms == 45000
+        assert response.metrics.tokens_used == 12500
 
     def test_task_response_json_schema(self):
         """Test that TaskResponse generates valid JSON Schema."""

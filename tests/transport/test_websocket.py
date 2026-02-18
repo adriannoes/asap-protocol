@@ -429,7 +429,7 @@ class TestWebSocketTransportCorrelation(NoRateLimitTestBase):
                     sender="urn:asap:agent:a",
                     recipient="urn:asap:agent:b",
                     payload_type="task.request",
-                    payload={},
+                    payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
                 )
             )
 
@@ -682,7 +682,12 @@ class TestWebSocketTransportOnMessage(NoRateLimitTestBase):
             "sender": "urn:asap:agent:server",
             "recipient": "urn:asap:agent:client",
             "payload_type": "task.update",
-            "payload": {"progress": 50},
+            "payload": {
+                "task_id": "t1",
+                "update_type": "progress",
+                "status": "working",
+                "progress": {"percent": 50},
+            },
         }
         push_frame = json.dumps(
             {"jsonrpc": "2.0", "result": {"envelope": push_envelope}, "id": None}
@@ -705,7 +710,7 @@ class TestWebSocketTransportOnMessage(NoRateLimitTestBase):
             await transport._recv_task
         assert len(received) == 1
         assert received[0].payload_type == "task.update"
-        assert received[0].payload.get("progress") == 50
+        assert received[0].payload_dict.get("progress", {}).get("percent") == 50
 
     @pytest.mark.asyncio
     async def test_on_message_async_callback_awaited(
@@ -717,7 +722,12 @@ class TestWebSocketTransportOnMessage(NoRateLimitTestBase):
             "sender": "urn:asap:agent:server",
             "recipient": "urn:asap:agent:client",
             "payload_type": "task.update",
-            "payload": {"progress": 99},
+            "payload": {
+                "task_id": "t1",
+                "update_type": "progress",
+                "status": "working",
+                "progress": {"percent": 99},
+            },
         }
         push_frame = json.dumps(
             {"jsonrpc": "2.0", "result": {"envelope": push_envelope}, "id": None}
@@ -739,7 +749,7 @@ class TestWebSocketTransportOnMessage(NoRateLimitTestBase):
         with contextlib.suppress(asyncio.CancelledError):
             await transport._recv_task
         assert len(received) == 1
-        assert received[0].payload.get("progress") == 99
+        assert received[0].payload_dict.get("progress", {}).get("percent") == 99
 
 
 def _free_port() -> int:
@@ -1577,7 +1587,7 @@ class TestWebSocketAckHandling(NoRateLimitTestBase):
             sender="urn:asap:agent:a",
             recipient="urn:asap:agent:b",
             payload_type="TaskRequest",
-            payload={"task_id": "t1"},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
             id="env-1",
             requires_ack=True,
         )
@@ -1618,7 +1628,7 @@ class TestWebSocketAckHandling(NoRateLimitTestBase):
             sender="urn:asap:agent:a",
             recipient="urn:asap:agent:b",
             payload_type="TaskRequest",
-            payload={"task_id": "t1"},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
             id="env-1",
             requires_ack=True,
         )
@@ -1666,7 +1676,7 @@ class TestWebSocketCircuitBreakerIntegration(NoRateLimitTestBase):
             sender="urn:asap:agent:a",
             recipient="urn:asap:agent:b",
             payload_type="TaskRequest",
-            payload={"task_id": "t1"},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
             id="env-cb",
             requires_ack=True,
         )
@@ -1701,7 +1711,7 @@ class TestWebSocketTransportSend(NoRateLimitTestBase):
             sender="urn:asap:agent:a",
             recipient="urn:asap:agent:b",
             payload_type="TaskRequest",
-            payload={"task_id": "t1"},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
             id="env-send",
             requires_ack=True,
         )
@@ -1724,7 +1734,7 @@ class TestWebSocketTransportSend(NoRateLimitTestBase):
             sender="urn:asap:agent:a",
             recipient="urn:asap:agent:b",
             payload_type="TaskRequest",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
         )
 
         # Mock encode_envelope_frame to return bytes
@@ -1820,7 +1830,7 @@ def _sample_envelope_cov(**overrides: Any) -> Envelope:
         "sender": "urn:asap:agent:a",
         "recipient": "urn:asap:agent:b",
         "payload_type": "task.request",
-        "payload": {"task_id": "t1"},
+        "payload": {"conversation_id": "c1", "skill_id": "s1", "input": {}},
     }
     defaults.update(overrides)
     return Envelope(**defaults)

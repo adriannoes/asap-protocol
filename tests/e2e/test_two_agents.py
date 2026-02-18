@@ -43,6 +43,6 @@ async def test_two_agents_echo_flow() -> None:
 
     assert_envelope_valid(response, allowed_payload_types=["task.response"])
     assert_task_completed(response)
-    assert response.payload["result"]["echoed"] == payload
+    assert response.payload_dict["result"]["echoed"] == payload
     assert response.trace_id == envelope.trace_id
     assert_response_correlates(envelope, response)

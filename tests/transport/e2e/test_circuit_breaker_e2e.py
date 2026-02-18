@@ -54,7 +54,7 @@ def create_success_response(request_envelope: Envelope) -> dict:
                 "payload": {
                     "task_id": "task-123",
                     "status": "completed",
-                    "result": {"echoed": request_envelope.payload.get("input", {})},
+                    "result": {"echoed": request_envelope.payload_dict.get("input", {})},
                 },
                 "correlation_id": request_envelope.id,
                 "timestamp": "2026-02-04T22:00:00Z",

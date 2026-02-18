@@ -40,7 +40,7 @@ def _create_asap_app(manifest: Manifest) -> FastAPI:
     registry = HandlerRegistry()
 
     def echo_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
-        input_data = envelope.payload.get("input", {})
+        input_data = envelope.payload_dict.get("input", {})
         return Envelope(
             asap_version="0.1",
             sender=manifest.id,
@@ -92,7 +92,7 @@ class TestMCPToolsInvokingASAP:
                 return {
                     "status": "success",
                     "response_type": response.payload_type,
-                    "result": response.payload.get("result", {}),
+                    "result": response.payload_dict.get("result", {}),
                 }
 
         mcp_server.register_tool(
@@ -237,9 +237,9 @@ class TestMCPExposingASAPPrimitives:
                 )
                 response = await client.send(envelope)
                 return {
-                    "task_id": response.payload.get("task_id"),
-                    "status": response.payload.get("status"),
-                    "result": response.payload.get("result"),
+                    "task_id": response.payload_dict.get("task_id"),
+                    "status": response.payload_dict.get("status"),
+                    "result": response.payload_dict.get("result"),
                 }
 
         mcp_server.register_tool(
@@ -436,7 +436,7 @@ class TestMCPDispatchWithASAPTools:
                     ).model_dump(),
                 )
                 response = await client.send(envelope)
-                result = response.payload.get("result", {})
+                result = response.payload_dict.get("result", {})
                 return f"ASAP echoed: {result.get('echo', {}).get('message', '')}"
 
         mcp_server.register_tool(
@@ -504,7 +504,7 @@ class TestMCPDispatchWithASAPTools:
                 response = await client.send(envelope)
                 return {
                     "message": message,
-                    "status": response.payload.get("status"),
+                    "status": response.payload_dict.get("status"),
                 }
 
         mcp_server.register_tool(

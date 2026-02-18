@@ -454,7 +454,11 @@ class TestCliValidateSchema:
             "sender": "urn:asap:agent:test-agent",
             "recipient": "urn:asap:agent:target-agent",
             "payload_type": "TaskRequest",
-            "payload": {"task_id": "01JGQXYZ1234567890123456"},
+            "payload": {
+                "conversation_id": "conv-01",
+                "skill_id": "echo",
+                "input": {},
+            },
         }
         json_file = tmp_path / "envelope.json"
         json_file.write_text(json.dumps(envelope_json), encoding="utf-8")
@@ -537,7 +541,11 @@ class TestCliValidateSchema:
             "sender": "urn:asap:agent:test-agent",
             "recipient": "urn:asap:agent:target-agent",
             "payload_type": "TaskRequest",
-            "payload": {"task_id": "01JGQXYZ1234567890123456"},
+            "payload": {
+                "conversation_id": "conv-01",
+                "skill_id": "echo",
+                "input": {},
+            },
         }
         json_file = tmp_path / "envelope.json"
         json_file.write_text(json.dumps(envelope_json), encoding="utf-8")

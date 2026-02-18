@@ -172,7 +172,7 @@ def run_demo_local() -> None:
         "asap.mcp_integration.tool_call_envelope",
         envelope_id=call_envelope.id,
         payload_type=call_envelope.payload_type,
-        tool_name=call_envelope.payload.get("tool_name"),
+        tool_name=call_envelope.payload_dict.get("tool_name"),
     )
 
     result_envelope = build_mcp_tool_result_envelope(
@@ -185,7 +185,7 @@ def run_demo_local() -> None:
         "asap.mcp_integration.tool_result_envelope",
         envelope_id=result_envelope.id,
         payload_type=result_envelope.payload_type,
-        success=result_envelope.payload.get("success"),
+        success=result_envelope.payload_dict.get("success"),
     )
 
 

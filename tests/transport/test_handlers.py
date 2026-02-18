@@ -501,7 +501,7 @@ class TestTaskRequestHandler:
         raw = handler(sample_task_request_envelope, sample_manifest)
         result = cast(Envelope, raw)
 
-        response_payload = TaskResponse(**result.payload)
+        response_payload = TaskResponse(**result.payload_dict)
         assert response_payload.status == TaskStatus.COMPLETED
         assert response_payload.result is not None
         assert "echoed" in response_payload.result
@@ -540,7 +540,7 @@ class TestTaskRequestHandler:
         raw = handler(sample_task_request_envelope, sample_manifest)
         result = cast(Envelope, raw)
 
-        response_payload = TaskResponse(**result.payload)
+        response_payload = TaskResponse(**result.payload_dict)
         assert response_payload.task_id is not None
         assert len(response_payload.task_id) > 0
 
@@ -834,7 +834,7 @@ class TestDispatchAsync:
 
         assert handler_called["count"] == 1
         assert response.payload_type == "task.response"
-        assert response.payload["result"]["sync"] is True
+        assert response.payload_dict["result"]["sync"] is True
 
     @pytest.mark.asyncio
     async def test_dispatch_async_with_async_handler(
@@ -867,7 +867,7 @@ class TestDispatchAsync:
 
         assert handler_called["count"] == 1
         assert response.payload_type == "task.response"
-        assert response.payload["result"]["async"] is True
+        assert response.payload_dict["result"]["async"] is True
 
     @pytest.mark.asyncio
     async def test_dispatch_async_detects_coroutine_function(
@@ -1017,4 +1017,4 @@ class TestDispatchAsync:
 
         assert handler_called["count"] == 1
         assert response.payload_type == "task.response"
-        assert response.payload["result"]["callable"] is True
+        assert response.payload_dict["result"]["callable"] is True

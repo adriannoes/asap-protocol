@@ -450,7 +450,7 @@ class TestASAPRequestHandlerHelpers:
                 sender=manifest.id,
                 recipient=envelope.sender,
                 payload_type="task.response",
-                payload={"status": "completed"},
+                payload={"task_id": "t1", "status": "completed", "result": {}},
                 correlation_id=envelope.id,
                 trace_id=envelope.trace_id,
             )
@@ -536,7 +536,8 @@ class TestASAPRequestHandlerHelpers:
             sender="urn:asap:agent:test-server",
             recipient="urn:asap:agent:client",
             payload_type="task.response",
-            payload={"status": "completed"},
+            payload={"task_id": "t1", "status": "completed", "result": {}},
+            correlation_id="req-7",
         )
 
         rpc_request = JsonRpcRequest(
@@ -630,7 +631,7 @@ class TestASAPRequestHandlerHelpers:
             sender="urn:asap:agent:client",
             recipient="urn:asap:agent:test-server",
             payload_type="task.request",
-            payload={},
+            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
         )
 
         rpc_request = JsonRpcRequest(

@@ -37,7 +37,7 @@ def create_secure_handler() -> Handler:
 
     def secure_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
         try:
-            task_request = TaskRequest(**envelope.payload)
+            task_request = TaskRequest(**envelope.payload_dict)
         except ValidationError as e:
             raise MalformedEnvelopeError(
                 reason="Invalid TaskRequest payload",
@@ -47,7 +47,7 @@ def create_secure_handler() -> Handler:
         logger.debug(
             "secure_handler.request",
             payload_type=envelope.payload_type,
-            payload=sanitize_for_logging(envelope.payload),
+            payload=sanitize_for_logging(envelope.payload_dict),
         )
 
         validated_uris: list[str] = []

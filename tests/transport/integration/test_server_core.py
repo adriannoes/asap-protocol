@@ -324,7 +324,7 @@ class TestHandlerRegistryIntegration(NoRateLimitTestBase):
                 payload=TaskResponse(
                     task_id="custom-task-123",
                     status=TaskStatus.COMPLETED,
-                    result={"custom": True, "original_input": envelope.payload},
+                    result={"custom": True, "original_input": envelope.payload_dict},
                 ).model_dump(),
                 correlation_id=envelope.id,
             )
@@ -359,7 +359,7 @@ class TestHandlerRegistryIntegration(NoRateLimitTestBase):
         # Verify custom response
         rpc_response = JsonRpcResponse(**response.json())
         response_envelope = Envelope(**rpc_response.result["envelope"])
-        response_payload = TaskResponse(**response_envelope.payload)
+        response_payload = TaskResponse(**response_envelope.payload_dict)
         assert response_payload.task_id == "custom-task-123"
         assert response_payload.result is not None
         assert response_payload.result.get("custom") is True

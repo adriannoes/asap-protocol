@@ -68,7 +68,7 @@ def assert_task_completed(
         AssertionError: If payload does not indicate completion.
     """
     if isinstance(payload, Envelope):
-        payload = payload.payload or {}
+        payload = payload.payload_dict
     assert isinstance(payload, dict), "payload must be a dict or Envelope"  # nosec B101
     actual = payload.get(status_key)
     assert actual == completed_value, f"Expected task status {completed_value!r}, got {actual!r}"  # nosec B101

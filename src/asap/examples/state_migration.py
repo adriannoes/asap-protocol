@@ -191,7 +191,7 @@ def run_demo() -> None:
     logger.info(
         "asap.state_migration.state_query_envelope",
         payload_type=query_envelope.payload_type,
-        task_id=query_envelope.payload.get("task_id"),
+        task_id=query_envelope.payload_dict.get("task_id"),
     )
 
     # Move state from A to B (in-process: get from source, save to target)
@@ -208,8 +208,8 @@ def run_demo() -> None:
     logger.info(
         "asap.state_migration.state_restore_envelope",
         payload_type=restore_envelope.payload_type,
-        task_id=restore_envelope.payload.get("task_id"),
-        snapshot_id=restore_envelope.payload.get("snapshot_id"),
+        task_id=restore_envelope.payload_dict.get("task_id"),
+        snapshot_id=restore_envelope.payload_dict.get("snapshot_id"),
     )
 
     restored = target_store.get(migrated.task_id, version=migrated.version)

@@ -6,7 +6,7 @@ like task requests, responses, updates, state management, and MCP integration.
 
 from typing import Any, Literal, Union
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import ConfigDict, Field, field_validator, model_validator
 
 from asap.models.base import ASAPBaseModel
 from asap.models.enums import MessageRole, TaskStatus, UpdateType
@@ -19,6 +19,42 @@ from asap.models.types import (
     SnapshotID,
     TaskID,
 )
+
+
+class TaskRequestConfig(ASAPBaseModel):
+    """TaskRequest.config (extra allowed)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    timeout_seconds: int | None = Field(
+        default=None, ge=1, description="Maximum execution time in seconds"
+    )
+    priority: str | None = Field(
+        default=None, description="Task priority (e.g., 'low', 'normal', 'high')"
+    )
+    idempotency_key: str | None = Field(default=None, description="Key for idempotent execution")
+    streaming: bool | None = Field(default=None, description="Whether to stream progress updates")
+    persist_state: bool | None = Field(
+        default=None, description="Whether to persist state snapshots"
+    )
+    model: str | None = Field(default=None, description="LLM model identifier")
+    temperature: float | None = Field(default=None, ge=0, le=2, description="LLM temperature (0-2)")
+
+
+class TaskMetrics(ASAPBaseModel):
+    """TaskResponse.metrics (extra allowed)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    duration_ms: int | None = Field(
+        default=None, ge=0, description="Execution duration in milliseconds"
+    )
+    tokens_in: int | None = Field(default=None, ge=0, description="Input token count")
+    tokens_out: int | None = Field(default=None, ge=0, description="Output token count")
+    tokens_used: int | None = Field(
+        default=None, ge=0, description="Total tokens (fallback for tokens_out)"
+    )
+    api_calls: int | None = Field(default=None, ge=0, description="Number of API calls")
 
 
 class TaskRequest(ASAPBaseModel):
@@ -38,8 +74,8 @@ class TaskRequest(ASAPBaseModel):
     conversation_id: ConversationID = Field(..., description="Parent conversation ID")
     parent_task_id: TaskID | None = Field(default=None, description="Parent task ID for subtasks")
     skill_id: str = Field(..., description="Skill identifier to execute")
-    input: dict[str, Any] = Field(..., description="Input data for the skill")
-    config: dict[str, Any] | None = Field(
+    input: dict[str, Any] = Field(..., description="Input data for the skill (skill-specific)")
+    config: TaskRequestConfig | None = Field(
         default=None, description="Optional configuration (timeout, priority, streaming, etc.)"
     )
 
@@ -64,7 +100,7 @@ class TaskResponse(ASAPBaseModel):
         default=None, description="Result data (summary, artifacts, etc.)"
     )
     final_state: dict[str, Any] | None = Field(default=None, description="Final state snapshot")
-    metrics: dict[str, Any] | None = Field(
+    metrics: TaskMetrics | None = Field(
         default=None, description="Execution metrics (duration, tokens, etc.)"
     )
 
@@ -276,6 +312,23 @@ class MessageAck(ASAPBaseModel):
     status: Literal["received", "processed", "rejected"] = Field(...)
     error: str | None = Field(default=None, description="Reason when rejected")
 
+
+# Normalized payload_type -> PayloadType class (Envelope strict validation).
+PAYLOAD_TYPE_REGISTRY: dict[str, type[ASAPBaseModel]] = {
+    "taskrequest": TaskRequest,
+    "taskresponse": TaskResponse,
+    "taskupdate": TaskUpdate,
+    "taskcancel": TaskCancel,
+    "messagesend": MessageSend,
+    "statequery": StateQuery,
+    "staterestore": StateRestore,
+    "artifactnotify": ArtifactNotify,
+    "mcptoolcall": McpToolCall,
+    "mcptoolresult": McpToolResult,
+    "mcpresourcefetch": McpResourceFetch,
+    "mcpresourcedata": McpResourceData,
+    "messageack": MessageAck,
+}
 
 # Union type for all payload types
 # Note: The discriminator (payload_type) will be in the Envelope, not in individual payloads
