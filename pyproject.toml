@@ -123,6 +123,8 @@ ignore = [
 "benchmarks/**" = ["T201"]
 "tests/**" = ["B008"]
 "src/asap/transport/usage_api.py" = ["B008"]
+"src/asap/transport/delegation_api.py" = ["B008"]
+"src/asap/cli.py" = ["B008"]
 
 [tool.ruff.format]
 quote-style = "double"
