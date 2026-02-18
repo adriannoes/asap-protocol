@@ -5,62 +5,28 @@ routing, correlation, tracing, and versioning.
 """
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, cast
 
-from pydantic import Field, ValidationError, field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from asap.models.base import ASAPBaseModel
 from asap.models.ids import generate_id
-from asap.models.payloads import (
-    ArtifactNotify,
-    McpResourceData,
-    McpResourceFetch,
-    McpToolCall,
-    McpToolResult,
-    MessageAck,
-    MessageSend,
-    PayloadType,
-    StateQuery,
-    StateRestore,
-    TaskCancel,
-    TaskRequest,
-    TaskResponse,
-    TaskUpdate,
-)
+from asap.models.payloads import PAYLOAD_TYPE_REGISTRY, PayloadType
 from asap.models.types import AgentURN
 from asap.models.validators import validate_agent_urn
 
-# Mapping from normalized payload_type to PayloadType class
-_PAYLOAD_TYPE_TO_CLASS: dict[str, type[PayloadType]] = {
-    "taskrequest": TaskRequest,
-    "taskresponse": TaskResponse,
-    "taskupdate": TaskUpdate,
-    "taskcancel": TaskCancel,
-    "messagesend": MessageSend,
-    "statequery": StateQuery,
-    "staterestore": StateRestore,
-    "artifactnotify": ArtifactNotify,
-    "mcptoolcall": McpToolCall,
-    "mcptoolresult": McpToolResult,
-    "mcpresourcefetch": McpResourceFetch,
-    "mcpresourcedata": McpResourceData,
-    "messageack": MessageAck,
-}
-
 
 def _normalize_payload_type(pt: str) -> str:
-    return pt.replace(".", "").replace("_", "").lower()
+    """Lowercase alphanumeric key for payload_type lookup (e.g. task.request -> taskrequest)."""
+    return "".join(c for c in pt.lower() if c.isalnum())
 
 
 def _parse_payload(payload_type: str, payload: dict[str, Any]) -> PayloadType | dict[str, Any]:
     key = _normalize_payload_type(payload_type)
-    payload_class = _PAYLOAD_TYPE_TO_CLASS.get(key)
+    payload_class = PAYLOAD_TYPE_REGISTRY.get(key)
     if payload_class is None:
-        return payload  # Unknown type: keep as dict for backward compatibility
-    try:
-        return payload_class.model_validate(payload)
-    except ValidationError:
         return payload
+    return cast(PayloadType, payload_class.model_validate(payload))
 
 
 class Envelope(ASAPBaseModel):
@@ -180,4 +146,6 @@ class Envelope(ASAPBaseModel):
 
     @property
     def payload_dict(self) -> dict[str, Any]:
-        return self.payload.model_dump() if hasattr(self.payload, "model_dump") else self.payload
+        if isinstance(self.payload, ASAPBaseModel):
+            return self.payload.model_dump()
+        return self.payload

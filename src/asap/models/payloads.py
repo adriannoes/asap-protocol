@@ -313,6 +313,23 @@ class MessageAck(ASAPBaseModel):
     error: str | None = Field(default=None, description="Reason when rejected")
 
 
+# Normalized payload_type -> PayloadType class (Envelope strict validation).
+PAYLOAD_TYPE_REGISTRY: dict[str, type[ASAPBaseModel]] = {
+    "taskrequest": TaskRequest,
+    "taskresponse": TaskResponse,
+    "taskupdate": TaskUpdate,
+    "taskcancel": TaskCancel,
+    "messagesend": MessageSend,
+    "statequery": StateQuery,
+    "staterestore": StateRestore,
+    "artifactnotify": ArtifactNotify,
+    "mcptoolcall": McpToolCall,
+    "mcptoolresult": McpToolResult,
+    "mcpresourcefetch": McpResourceFetch,
+    "mcpresourcedata": McpResourceData,
+    "messageack": MessageAck,
+}
+
 # Union type for all payload types
 # Note: The discriminator (payload_type) will be in the Envelope, not in individual payloads
 PayloadType = Union[
