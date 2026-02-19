@@ -8,7 +8,7 @@ import json
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 import aiosqlite
 
@@ -231,7 +231,7 @@ class SQLiteSnapshotStore:
         version: int | None = None,
     ) -> StateSnapshot | None:
         """Get snapshot by task_id and optional version (sync wrapper)."""
-        return cast(Optional[StateSnapshot], _run_sync(self._get_impl(task_id, version)))
+        return cast(StateSnapshot | None, _run_sync(self._get_impl(task_id, version)))
 
     def list_versions(self, task_id: TaskID) -> list[int]:
         """List versions for task (sync wrapper)."""
@@ -364,6 +364,8 @@ class SQLiteMeteringStore:
         offset: int = 0,
     ) -> list[UsageEvent]:
         """Query events in range."""
+        if offset < 0:
+            raise ValueError("offset must be non-negative")
         return await self._query_impl(agent_id, start, end, limit, offset)
 
     async def aggregate(self, agent_id: str, period: str) -> UsageAggregate:
