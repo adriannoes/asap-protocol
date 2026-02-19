@@ -22,7 +22,7 @@ import time
 from collections.abc import AsyncIterator, Awaitable, Callable, MutableMapping
 from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, Union, cast
 
 import websockets
 from fastapi import WebSocket
@@ -182,7 +182,7 @@ def decode_frame_to_json(raw: str | bytes) -> dict[str, Any]:
 
 
 # Type for optional callback on server-push messages (sync or async)
-OnMessageCallback = Callable[[Envelope], None] | Callable[[Envelope], Awaitable[None]]
+OnMessageCallback = Union[Callable[[Envelope], None], Callable[[Envelope], Awaitable[None]]]
 
 
 class WebSocketTransport:

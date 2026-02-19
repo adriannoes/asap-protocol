@@ -5,6 +5,8 @@ including timestamp validation for replay attack prevention and optional
 nonce validation for duplicate detection.
 """
 
+from __future__ import annotations
+
 import random
 import threading
 import time

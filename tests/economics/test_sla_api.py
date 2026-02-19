@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Coroutine, TypeVar
 
 import pytest
@@ -27,8 +27,9 @@ def _metrics(
     period_start: datetime | None = None,
     period_end: datetime | None = None,
 ) -> SLAMetrics:
-    start = period_start or datetime(2026, 2, 18, 0, 0, 0, tzinfo=timezone.utc)
-    end = period_end or datetime(2026, 2, 18, 1, 0, 0, tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
+    start = period_start or (now - timedelta(hours=1))
+    end = period_end or now
     return SLAMetrics(
         agent_id=agent_id,
         period_start=start,
@@ -53,19 +54,17 @@ def _breach(
         threshold="500ms",
         actual="600ms",
         severity=severity,
-        detected_at=datetime(2026, 2, 18, 12, 0, 0, tzinfo=timezone.utc),
+        detected_at=datetime.now(timezone.utc),
     )
 
 
 @pytest.fixture
 def sla_storage() -> InMemorySLAStorage:
-    """Fresh InMemorySLAStorage for SLA API tests."""
     return InMemorySLAStorage()
 
 
 @pytest.fixture
 def sample_manifest() -> Manifest:
-    """Sample manifest for create_app."""
     return Manifest(
         id="urn:asap:agent:test-server",
         name="Test Server",
@@ -82,7 +81,6 @@ def sample_manifest() -> Manifest:
 
 @pytest.fixture
 def manifest_with_sla() -> Manifest:
-    """Manifest with SLA definition for compliance tests."""
     return Manifest(
         id="urn:asap:agent:test-server",
         name="Test Server",
@@ -110,7 +108,6 @@ class TestSLAAPIGetSla:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-        """GET /sla returns empty data when storage is empty."""
         app = create_app(
             sample_manifest,
             sla_storage=sla_storage,
@@ -129,7 +126,6 @@ class TestSLAAPIGetSla:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-        """GET /sla returns aggregated metrics when storage has data."""
         _run(sla_storage.record_metrics(_metrics()))
         app = create_app(
             sample_manifest,
@@ -151,7 +147,6 @@ class TestSLAAPIGetSla:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-        """GET /sla?agent_id=... filters by agent."""
         _run(sla_storage.record_metrics(_metrics(agent_id="urn:asap:agent:a")))
         _run(sla_storage.record_metrics(_metrics(agent_id="urn:asap:agent:b")))
         app = create_app(
@@ -171,7 +166,6 @@ class TestSLAAPIGetSla:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-        """GET /sla?window=1h uses 1h rolling window."""
         _run(sla_storage.record_metrics(_metrics()))
         app = create_app(
             sample_manifest,
@@ -188,7 +182,6 @@ class TestSLAAPIGetSla:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-        """GET /sla?window=invalid returns 400."""
         app = create_app(
             sample_manifest,
             sla_storage=sla_storage,
@@ -203,7 +196,6 @@ class TestSLAAPIGetSla:
         manifest_with_sla: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-        """GET /sla returns compliance_percent when manifest has SLA and agent matches."""
         _run(sla_storage.record_metrics(_metrics(agent_id="urn:asap:agent:test-server")))
         app = create_app(
             manifest_with_sla,
@@ -222,7 +214,6 @@ class TestSLAAPIGetSla:
         manifest_with_sla: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-        """GET /sla returns compliance_percent null when agent does not match manifest.id."""
         _run(sla_storage.record_metrics(_metrics(agent_id="urn:asap:agent:other-agent")))
         app = create_app(
             manifest_with_sla,
@@ -241,11 +232,11 @@ class TestSLAAPIGetSla:
         manifest_with_sla: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-        """GET /sla returns compliance < 100 when metrics breach SLA (e.g. high latency)."""
+        now = datetime.now(timezone.utc)
         breach_metrics = SLAMetrics(
             agent_id="urn:asap:agent:test-server",
-            period_start=datetime(2026, 2, 18, 0, 0, 0, tzinfo=timezone.utc),
-            period_end=datetime(2026, 2, 18, 1, 0, 0, tzinfo=timezone.utc),
+            period_start=now - timedelta(hours=1),
+            period_end=now,
             uptime_percent=99.5,
             latency_p95_ms=600,
             error_rate_percent=0.5,
@@ -275,7 +266,6 @@ class TestSLAAPIGetHistory:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-        """GET /sla/history returns empty when storage is empty."""
         app = create_app(
             sample_manifest,
             sla_storage=sla_storage,
@@ -294,7 +284,6 @@ class TestSLAAPIGetHistory:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-        """GET /sla/history returns metrics from storage."""
         _run(sla_storage.record_metrics(_metrics()))
         app = create_app(
             sample_manifest,
@@ -315,13 +304,13 @@ class TestSLAAPIGetHistory:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-        """GET /sla/history respects limit and offset."""
+        now = datetime.now(timezone.utc)
         for i in range(5):
             _run(
                 sla_storage.record_metrics(
                     _metrics(
-                        period_start=datetime(2026, 2, 18, i, 0, 0, tzinfo=timezone.utc),
-                        period_end=datetime(2026, 2, 18, i + 1, 0, 0, tzinfo=timezone.utc),
+                        period_start=now - timedelta(hours=5 - i),
+                        period_end=now - timedelta(hours=4 - i),
                     )
                 )
             )
@@ -349,7 +338,6 @@ class TestSLAAPIGetBreaches:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-        """GET /sla/breaches returns empty when no breaches."""
         app = create_app(
             sample_manifest,
             sla_storage=sla_storage,
@@ -367,7 +355,6 @@ class TestSLAAPIGetBreaches:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-        """GET /sla/breaches returns breaches from storage."""
         _run(sla_storage.record_breach(_breach()))
         app = create_app(
             sample_manifest,
@@ -388,7 +375,6 @@ class TestSLAAPIGetBreaches:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-        """GET /sla/breaches?agent_id=... filters by agent."""
         _run(sla_storage.record_breach(_breach(agent_id="urn:asap:agent:a")))
         _run(sla_storage.record_breach(_breach(breach_id="b2", agent_id="urn:asap:agent:b")))
         app = create_app(
@@ -408,7 +394,6 @@ class TestSLAAPIGetBreaches:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-        """GET /sla/breaches?severity=critical filters by severity."""
         _run(sla_storage.record_breach(_breach(breach_id="b1", severity="warning")))
         _run(sla_storage.record_breach(_breach(breach_id="b2", severity="critical")))
         app = create_app(
@@ -428,7 +413,6 @@ class TestSLAAPIGetBreaches:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-        """GET /sla/breaches?severity=invalid returns 400."""
         app = create_app(
             sample_manifest,
             sla_storage=sla_storage,
@@ -446,7 +430,6 @@ class TestSLAAPIMisc:
         self,
         sample_manifest: Manifest,
     ) -> None:
-        """SLA endpoints return 503 if sla_storage is not configured on app state."""
         app = create_app(sample_manifest, rate_limit="999999/minute")
         from asap.transport.sla_api import create_sla_router
 
@@ -460,7 +443,6 @@ class TestSLAAPIMisc:
         self,
         sample_manifest: Manifest,
     ) -> None:
-        """GET /sla returns 404 when sla_storage not set (route not registered)."""
         app = create_app(sample_manifest, rate_limit="999999/minute")
         client = TestClient(app)
         resp = client.get("/sla")

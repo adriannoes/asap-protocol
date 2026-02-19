@@ -26,13 +26,15 @@ Example:
     >>> response = registry.dispatch(envelope, manifest)
 """
 
+from __future__ import annotations
+
 import asyncio
 import inspect
 import time
 from collections.abc import Awaitable
 from concurrent.futures import Executor
 from threading import RLock
-from typing import TYPE_CHECKING, Callable, Protocol, cast
+from typing import TYPE_CHECKING, Callable, Protocol, Union, cast
 
 if TYPE_CHECKING:
     from asap.state.metering import MeteringStore  # noqa: F401
@@ -64,7 +66,7 @@ class AsyncHandler(Protocol):
 
 
 # Type alias for handler functions (supports both sync and async)
-Handler = SyncHandler | AsyncHandler
+Handler = Union[SyncHandler, AsyncHandler]
 
 # Type alias for factories that return a sync handler (useful in tests)
 SyncHandlerFactory = Callable[[], SyncHandler]

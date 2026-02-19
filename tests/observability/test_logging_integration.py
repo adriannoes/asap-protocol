@@ -1,9 +1,6 @@
-"""Integration tests for log sanitization in production-like scenarios.
+"""Unit tests for logging integration."""
 
-This module validates that sensitive data (tokens, nonces, URLs with credentials)
-is redacted in logs across the full request/response cycle, and that debug mode
-controls whether full data is logged.
-"""
+from __future__ import annotations
 
 import contextlib
 import logging

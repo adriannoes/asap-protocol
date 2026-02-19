@@ -1,7 +1,10 @@
 """Tests for SLAStorage implementations (InMemory, SQLite)."""
 
-from datetime import datetime, timezone
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -20,8 +23,9 @@ def _metrics(
     period_start: datetime | None = None,
     period_end: datetime | None = None,
 ) -> SLAMetrics:
-    start = period_start or datetime(2026, 2, 18, 0, 0, 0, tzinfo=timezone.utc)
-    end = period_end or datetime(2026, 2, 18, 1, 0, 0, tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
+    start = period_start or (now - timedelta(hours=1))
+    end = period_end or now
     return SLAMetrics(
         agent_id=agent_id,
         period_start=start,
@@ -47,7 +51,7 @@ def _breach(
         threshold="500ms",
         actual="600ms",
         severity="warning",
-        detected_at=detected_at or datetime(2026, 2, 18, 12, 0, 0, tzinfo=timezone.utc),
+        detected_at=detected_at or datetime.now(timezone.utc),
         resolved_at=resolved_at,
     )
 
@@ -68,12 +72,10 @@ class TestSLAStorageProtocol:
     """SLAStorage protocol conformance."""
 
     def test_in_memory_implements_protocol(self) -> None:
-        """InMemorySLAStorage conforms to SLAStorage."""
         store = InMemorySLAStorage()
         assert isinstance(store, SLAStorage)
 
     def test_sqlite_implements_protocol(self, sqlite_sla_storage: SQLiteSLAStorage) -> None:
-        """SQLiteSLAStorage conforms to SLAStorage."""
         assert isinstance(sqlite_sla_storage, SLAStorage)
 
 
@@ -84,7 +86,6 @@ class TestInMemorySLAStorage:
     async def test_record_and_query_metrics(
         self, in_memory_sla_storage: InMemorySLAStorage
     ) -> None:
-        """Record metrics; query returns them."""
         m = _metrics()
         await in_memory_sla_storage.record_metrics(m)
         results = await in_memory_sla_storage.query_metrics()
@@ -96,7 +97,6 @@ class TestInMemorySLAStorage:
     async def test_query_metrics_filter_agent(
         self, in_memory_sla_storage: InMemorySLAStorage
     ) -> None:
-        """query_metrics filters by agent_id."""
         await in_memory_sla_storage.record_metrics(_metrics(agent_id="urn:asap:agent:a"))
         await in_memory_sla_storage.record_metrics(_metrics(agent_id="urn:asap:agent:b"))
         results = await in_memory_sla_storage.query_metrics(agent_id="urn:asap:agent:a")
@@ -107,26 +107,52 @@ class TestInMemorySLAStorage:
     async def test_query_metrics_filter_time(
         self, in_memory_sla_storage: InMemorySLAStorage
     ) -> None:
-        """query_metrics filters by start/end (overlapping periods included)."""
-        start1 = datetime(2026, 2, 18, 0, 0, 0, tzinfo=timezone.utc)
-        end1 = datetime(2026, 2, 18, 1, 0, 0, tzinfo=timezone.utc)
-        start2 = datetime(2026, 2, 18, 2, 0, 0, tzinfo=timezone.utc)
-        end2 = datetime(2026, 2, 18, 3, 0, 0, tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        start1 = now - timedelta(hours=5)
+        end1 = now - timedelta(hours=4)
+        start2 = now - timedelta(hours=3)
+        end2 = now - timedelta(hours=2)
         await in_memory_sla_storage.record_metrics(_metrics(period_start=start1, period_end=end1))
         await in_memory_sla_storage.record_metrics(_metrics(period_start=start2, period_end=end2))
         # Query window 4:00-5:00: no metric overlaps (both periods end before 4:00) -> 0 results
         results_none = await in_memory_sla_storage.query_metrics(
-            start=datetime(2026, 2, 18, 4, 0, 0, tzinfo=timezone.utc),
-            end=datetime(2026, 2, 18, 5, 0, 0, tzinfo=timezone.utc),
+            start=now - timedelta(hours=1),
+            end=now,
         )
         assert len(results_none) == 0
         # Query window 0:30-1:30: only first period (0:00-1:00) overlaps
         results_one = await in_memory_sla_storage.query_metrics(
-            start=datetime(2026, 2, 18, 0, 30, 0, tzinfo=timezone.utc),
-            end=datetime(2026, 2, 18, 1, 30, 0, tzinfo=timezone.utc),
+            start=now - timedelta(hours=4, minutes=30),
+            end=now - timedelta(hours=3, minutes=30),
         )
         assert len(results_one) == 1
         assert results_one[0].period_start == start1
+
+    @pytest.mark.asyncio
+    async def test_query_metrics_pagination(
+        self, in_memory_sla_storage: InMemorySLAStorage
+    ) -> None:
+        now = datetime.now(timezone.utc)
+        for i in range(5):
+            await in_memory_sla_storage.record_metrics(
+                _metrics(period_start=now - timedelta(hours=5 - i))
+            )
+
+        # Page 1: limit=2, offset=0
+        page1 = await in_memory_sla_storage.query_metrics(limit=2, offset=0)
+        assert len(page1) == 2
+        # Verify order: oldest first (now-5h, now-4h)
+        assert page1[0].period_start < page1[1].period_start
+
+        # Page 2: limit=2, offset=2
+        page2 = await in_memory_sla_storage.query_metrics(limit=2, offset=2)
+        assert len(page2) == 2
+        assert page2[0].period_start > page1[1].period_start
+
+        # Page 3: limit=2, offset=4 (partial page)
+        page3 = await in_memory_sla_storage.query_metrics(limit=2, offset=4)
+        assert len(page3) == 1
+        assert page3[0].period_start > page2[1].period_start
 
     @pytest.mark.asyncio
     async def test_record_and_query_breaches(
@@ -144,7 +170,6 @@ class TestInMemorySLAStorage:
     async def test_query_breaches_filter_agent(
         self, in_memory_sla_storage: InMemorySLAStorage
     ) -> None:
-        """query_breaches filters by agent_id."""
         await in_memory_sla_storage.record_breach(
             _breach(breach_id="b1", agent_id="urn:asap:agent:x")
         )
@@ -157,7 +182,6 @@ class TestInMemorySLAStorage:
 
     @pytest.mark.asyncio
     async def test_stats(self, in_memory_sla_storage: InMemorySLAStorage) -> None:
-        """stats returns total_events and oldest_timestamp."""
         await in_memory_sla_storage.record_metrics(_metrics())
         await in_memory_sla_storage.record_breach(_breach())
         s = await in_memory_sla_storage.stats()
@@ -165,8 +189,26 @@ class TestInMemorySLAStorage:
         assert s.oldest_timestamp is not None
 
     @pytest.mark.asyncio
+    async def test_count_metrics(self, in_memory_sla_storage: InMemorySLAStorage) -> None:
+        await in_memory_sla_storage.record_metrics(_metrics(agent_id="a"))
+        await in_memory_sla_storage.record_metrics(_metrics(agent_id="b"))
+        assert await in_memory_sla_storage.count_metrics() == 2
+        assert await in_memory_sla_storage.count_metrics(agent_id="a") == 1
+
+    @pytest.mark.asyncio
+    async def test_query_metrics_offset_only(
+        self, in_memory_sla_storage: InMemorySLAStorage
+    ) -> None:
+        now = datetime.now(timezone.utc)
+        for i in range(5):
+            await in_memory_sla_storage.record_metrics(
+                _metrics(period_start=now - timedelta(hours=5 - i))
+            )
+        results = await in_memory_sla_storage.query_metrics(offset=2)
+        assert len(results) == 3
+
+    @pytest.mark.asyncio
     async def test_stats_empty(self, in_memory_sla_storage: InMemorySLAStorage) -> None:
-        """stats with no data returns zeros."""
         s = await in_memory_sla_storage.stats()
         assert s.total_events == 0
         assert s.oldest_timestamp is None
@@ -177,12 +219,34 @@ class TestSQLiteSLAStorage:
 
     @pytest.mark.asyncio
     async def test_record_and_query_metrics(self, sqlite_sla_storage: SQLiteSLAStorage) -> None:
-        """Record metrics; query returns them."""
         m = _metrics()
         await sqlite_sla_storage.record_metrics(m)
         results = await sqlite_sla_storage.query_metrics()
         assert len(results) == 1
         assert results[0].agent_id == m.agent_id
+
+    @pytest.mark.asyncio
+    async def test_query_metrics_pagination(self, sqlite_sla_storage: SQLiteSLAStorage) -> None:
+        now = datetime.now(timezone.utc)
+        for i in range(5):
+            await sqlite_sla_storage.record_metrics(
+                _metrics(period_start=now - timedelta(hours=5 - i))
+            )
+
+        # Page 1: limit=2, offset=0
+        page1 = await sqlite_sla_storage.query_metrics(limit=2, offset=0)
+        assert len(page1) == 2
+        assert page1[0].period_start < page1[1].period_start
+
+        # Page 2: limit=2, offset=2
+        page2 = await sqlite_sla_storage.query_metrics(limit=2, offset=2)
+        assert len(page2) == 2
+        assert page2[0].period_start > page1[1].period_start
+
+        # Page 3: limit=2, offset=4 (partial page)
+        page3 = await sqlite_sla_storage.query_metrics(limit=2, offset=4)
+        assert len(page3) == 1
+        assert page3[0].period_start > page2[1].period_start
 
     @pytest.mark.asyncio
     async def test_record_and_query_breaches(self, sqlite_sla_storage: SQLiteSLAStorage) -> None:
@@ -197,7 +261,6 @@ class TestSQLiteSLAStorage:
     async def test_persistence_across_connections(
         self, sqlite_sla_storage: SQLiteSLAStorage
     ) -> None:
-        """Data persists; new instance sees same data (same db path)."""
         await sqlite_sla_storage.record_metrics(_metrics(agent_id="urn:asap:agent:persist"))
         # Same path, new instance
         store2 = SQLiteSLAStorage(db_path=sqlite_sla_storage._db_path)
@@ -207,12 +270,46 @@ class TestSQLiteSLAStorage:
 
     @pytest.mark.asyncio
     async def test_stats(self, sqlite_sla_storage: SQLiteSLAStorage) -> None:
-        """stats returns counts and oldest timestamp."""
         await sqlite_sla_storage.record_metrics(_metrics())
         await sqlite_sla_storage.record_breach(_breach())
         s = await sqlite_sla_storage.stats()
         assert s.total_events == 2
         assert s.oldest_timestamp is not None
+
+    @pytest.mark.asyncio
+    async def test_count_metrics(self, sqlite_sla_storage: SQLiteSLAStorage) -> None:
+        await sqlite_sla_storage.record_metrics(_metrics(agent_id="a"))
+        await sqlite_sla_storage.record_metrics(_metrics(agent_id="b"))
+        assert await sqlite_sla_storage.count_metrics() == 2
+        assert await sqlite_sla_storage.count_metrics(agent_id="a") == 1
+
+        # Test time filters
+        now = datetime.now(timezone.utc)
+        # Filter that excludes everything (start in future)
+        assert await sqlite_sla_storage.count_metrics(start=now + timedelta(hours=1)) == 0
+        # Filter that includes everything
+        assert await sqlite_sla_storage.count_metrics(end=now + timedelta(hours=1)) == 2
+
+    @pytest.mark.asyncio
+    async def test_query_metrics_offset_only(self, sqlite_sla_storage: SQLiteSLAStorage) -> None:
+        now = datetime.now(timezone.utc)
+        for i in range(5):
+            await sqlite_sla_storage.record_metrics(
+                _metrics(period_start=now - timedelta(hours=5 - i))
+            )
+
+        # skip first 2, expect remaining 3
+        results = await sqlite_sla_storage.query_metrics(offset=2)
+        assert len(results) == 3
+
+    @pytest.mark.asyncio
+    async def test_db_connection_error(self, sqlite_sla_storage: SQLiteSLAStorage) -> None:
+        # Patch the aiosqlite.connect being used in sla_storage module
+        with (
+            patch("asap.economics.sla_storage.aiosqlite.connect", side_effect=OSError("DB Error")),
+            pytest.raises(OSError, match="DB Error"),
+        ):
+            await sqlite_sla_storage.record_metrics(_metrics())
 
 
 # ---------------------------------------------------------------------------
@@ -235,18 +332,18 @@ class TestSQLiteSLAStorageCoverage:
     async def test_query_metrics_filter_time_range(
         self, sqlite_sla_storage: SQLiteSLAStorage
     ) -> None:
-        """query_metrics with start and end filters by overlapping periods."""
-        s1 = datetime(2026, 2, 18, 0, 0, 0, tzinfo=timezone.utc)
-        e1 = datetime(2026, 2, 18, 1, 0, 0, tzinfo=timezone.utc)
-        s2 = datetime(2026, 2, 18, 4, 0, 0, tzinfo=timezone.utc)
-        e2 = datetime(2026, 2, 18, 5, 0, 0, tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        s1 = now - timedelta(hours=5)
+        e1 = now - timedelta(hours=4)
+        s2 = now - timedelta(hours=2)
+        e2 = now - timedelta(hours=1)
         await sqlite_sla_storage.record_metrics(_metrics(period_start=s1, period_end=e1))
         await sqlite_sla_storage.record_metrics(_metrics(period_start=s2, period_end=e2))
 
         # Query window 0:30-1:30 should only match first period
         results = await sqlite_sla_storage.query_metrics(
-            start=datetime(2026, 2, 18, 0, 30, 0, tzinfo=timezone.utc),
-            end=datetime(2026, 2, 18, 1, 30, 0, tzinfo=timezone.utc),
+            start=now - timedelta(hours=4, minutes=30),
+            end=now - timedelta(hours=3, minutes=30),
         )
         assert len(results) == 1
 
@@ -254,15 +351,15 @@ class TestSQLiteSLAStorageCoverage:
     async def test_query_breaches_filter_time_range(
         self, sqlite_sla_storage: SQLiteSLAStorage
     ) -> None:
-        """query_breaches with start and end filters by detected_at."""
-        early = datetime(2026, 2, 18, 6, 0, 0, tzinfo=timezone.utc)
-        late = datetime(2026, 2, 18, 18, 0, 0, tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        early = now - timedelta(hours=12)
+        late = now - timedelta(hours=1)
         await sqlite_sla_storage.record_breach(_breach(breach_id="b1", detected_at=early))
         await sqlite_sla_storage.record_breach(_breach(breach_id="b2", detected_at=late))
 
         results = await sqlite_sla_storage.query_breaches(
-            start=datetime(2026, 2, 18, 5, 0, 0, tzinfo=timezone.utc),
-            end=datetime(2026, 2, 18, 12, 0, 0, tzinfo=timezone.utc),
+            start=now - timedelta(hours=13),
+            end=now - timedelta(hours=6),
         )
         assert len(results) == 1
         assert results[0].id == "b1"
@@ -283,8 +380,7 @@ class TestSQLiteSLAStorageCoverage:
 
     @pytest.mark.asyncio
     async def test_breach_with_resolved_at(self, sqlite_sla_storage: SQLiteSLAStorage) -> None:
-        """Breach with resolved_at persists and roundtrips correctly."""
-        resolved = datetime(2026, 2, 18, 14, 0, 0, tzinfo=timezone.utc)
+        resolved = datetime.now(timezone.utc)
         await sqlite_sla_storage.record_breach(_breach(breach_id="b1", resolved_at=resolved))
         results = await sqlite_sla_storage.query_breaches()
         assert len(results) == 1
@@ -294,13 +390,13 @@ class TestSQLiteSLAStorageCoverage:
     async def test_query_breaches_filter_start_only(
         self, sqlite_sla_storage: SQLiteSLAStorage
     ) -> None:
-        """query_breaches with only start filter."""
-        early = datetime(2026, 2, 18, 6, 0, 0, tzinfo=timezone.utc)
-        late = datetime(2026, 2, 18, 18, 0, 0, tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        early = now - timedelta(hours=12)
+        late = now - timedelta(hours=1)
         await sqlite_sla_storage.record_breach(_breach(breach_id="b1", detected_at=early))
         await sqlite_sla_storage.record_breach(_breach(breach_id="b2", detected_at=late))
         results = await sqlite_sla_storage.query_breaches(
-            start=datetime(2026, 2, 18, 12, 0, 0, tzinfo=timezone.utc),
+            start=now - timedelta(hours=6),
         )
         assert len(results) == 1
         assert results[0].id == "b2"
@@ -309,15 +405,15 @@ class TestSQLiteSLAStorageCoverage:
     async def test_query_metrics_filter_start_only(
         self, sqlite_sla_storage: SQLiteSLAStorage
     ) -> None:
-        """query_metrics with only start filter."""
-        s1 = datetime(2026, 2, 18, 0, 0, 0, tzinfo=timezone.utc)
-        e1 = datetime(2026, 2, 18, 1, 0, 0, tzinfo=timezone.utc)
-        s2 = datetime(2026, 2, 18, 4, 0, 0, tzinfo=timezone.utc)
-        e2 = datetime(2026, 2, 18, 5, 0, 0, tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        s1 = now - timedelta(hours=6)
+        e1 = now - timedelta(hours=5)
+        s2 = now - timedelta(hours=2)
+        e2 = now - timedelta(hours=1)
         await sqlite_sla_storage.record_metrics(_metrics(period_start=s1, period_end=e1))
         await sqlite_sla_storage.record_metrics(_metrics(period_start=s2, period_end=e2))
         results = await sqlite_sla_storage.query_metrics(
-            start=datetime(2026, 2, 18, 3, 0, 0, tzinfo=timezone.utc),
+            start=now - timedelta(hours=3),
         )
         assert len(results) == 1
 
@@ -354,19 +450,18 @@ class TestParseIso:
 
 
 class TestInMemorySLAStorageCoverage:
-    """Cover query_breaches with time filters (start/end)."""
-
     @pytest.mark.asyncio
     async def test_query_breaches_filter_time_range(self) -> None:
         store = InMemorySLAStorage()
-        early = datetime(2026, 2, 18, 6, 0, 0, tzinfo=timezone.utc)
-        late = datetime(2026, 2, 18, 18, 0, 0, tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        early = now - timedelta(hours=12)
+        late = now - timedelta(hours=1)
         await store.record_breach(_breach(breach_id="b1", detected_at=early))
         await store.record_breach(_breach(breach_id="b2", detected_at=late))
 
         results = await store.query_breaches(
-            start=datetime(2026, 2, 18, 5, 0, 0, tzinfo=timezone.utc),
-            end=datetime(2026, 2, 18, 12, 0, 0, tzinfo=timezone.utc),
+            start=now - timedelta(hours=5),
+            end=now,
         )
         assert len(results) == 1
-        assert results[0].id == "b1"
+        assert results[0].id == "b2"

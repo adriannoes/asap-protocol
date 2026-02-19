@@ -1,5 +1,7 @@
 """Tests for delegation token model, scope vocabulary, and JWT creation (Tasks 2.1, 2.2)."""
 
+from __future__ import annotations
+
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from unittest.mock import MagicMock

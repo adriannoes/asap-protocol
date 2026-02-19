@@ -14,6 +14,8 @@ Example:
     >>> # asap repl  # Interactive REPL with ASAP models
 """
 
+from __future__ import annotations
+
 import asyncio
 import code
 import json

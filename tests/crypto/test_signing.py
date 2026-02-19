@@ -1,10 +1,11 @@
-"""Unit tests for manifest signing (JCS canonicalization and Ed25519)."""
+"""Tests for signing utilities and related features."""
 
+from __future__ import annotations
 import base64
-
 import jcs
 import pytest
 from pydantic import ValidationError
+
 
 from asap.crypto.keys import generate_keypair, public_key_to_base64
 

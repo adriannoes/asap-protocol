@@ -1,4 +1,6 @@
-"""Tests for ASAPBaseModel configuration."""
+"""Unit tests for base models."""
+
+from __future__ import annotations
 
 import pytest
 from pydantic import Field, ValidationError

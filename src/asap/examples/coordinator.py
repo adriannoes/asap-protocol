@@ -4,6 +4,8 @@ This module defines a coordinator agent with a manifest and FastAPI app.
 The coordinator will dispatch tasks to other agents in later steps.
 """
 
+from __future__ import annotations
+
 import argparse
 import asyncio
 from typing import Any, Sequence

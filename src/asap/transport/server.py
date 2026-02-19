@@ -40,6 +40,8 @@ Example:
     >>> # Run with: uvicorn asap.transport.server:app --host 0.0.0.0 --port 8000
 """
 
+from __future__ import annotations
+
 import importlib
 import json
 import os
@@ -50,7 +52,7 @@ import traceback
 from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, TypeVar, cast
+from typing import Any, Callable, Optional, TypeVar, cast
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
@@ -134,7 +136,7 @@ logger = get_logger(__name__)
 
 # Type variable for handler result pattern
 T = TypeVar("T")
-HandlerResult = tuple[T | None, JSONResponse | None]
+HandlerResult = tuple[Optional[T], Optional[JSONResponse]]
 
 # Environment variable to enable handler hot reload (development)
 ENV_HOT_RELOAD = "ASAP_HOT_RELOAD"

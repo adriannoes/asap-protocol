@@ -18,7 +18,7 @@ import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol, TypeAlias, Union, cast, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, Union, cast, runtime_checkable
 
 if TYPE_CHECKING:
     from asap.state.metering import MeteringStore, UsageAggregate as StateUsageAggregate, UsageEvent
@@ -36,7 +36,7 @@ from asap.economics.metering import (
 )
 from asap.models.base import ASAPBaseModel
 
-UsageAggregate: TypeAlias = Union[
+UsageAggregate = Union[
     UsageAggregateByAgent,
     UsageAggregateByConsumer,
     UsageAggregateByPeriod,
@@ -348,8 +348,16 @@ def metering_storage_adapter(storage: MeteringStorage) -> "MeteringStore":
             agent_id: str,
             start: datetime,
             end: datetime,
+            limit: int | None = None,
+            offset: int = 0,
         ) -> list["UsageEvent"]:
-            filters = MeteringQuery(agent_id=agent_id, start=start, end=end)
+            filters = MeteringQuery(
+                agent_id=agent_id,
+                start=start,
+                end=end,
+                limit=limit,
+                offset=offset,
+            )
             events = await self._storage.query(filters)
             return [m.to_usage_event() for m in events]
 

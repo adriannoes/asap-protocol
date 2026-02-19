@@ -32,6 +32,8 @@ class SLAStorage(Protocol):
         agent_id: str | None = None,
         start: datetime | None = None,
         end: datetime | None = None,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[SLAMetrics]: ...
     async def record_breach(self, breach: SLABreach) -> None: ...
     async def query_breaches(
@@ -40,6 +42,12 @@ class SLAStorage(Protocol):
         start: datetime | None = None,
         end: datetime | None = None,
     ) -> list[SLABreach]: ...
+    async def count_metrics(
+        self,
+        agent_id: str | None = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
+    ) -> int: ...
     async def stats(self) -> StorageStats: ...
 
 
@@ -55,7 +63,17 @@ class SLAStorageBase(ABC):
         agent_id: str | None = None,
         start: datetime | None = None,
         end: datetime | None = None,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[SLAMetrics]: ...
+
+    @abstractmethod
+    async def count_metrics(
+        self,
+        agent_id: str | None = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
+    ) -> int: ...
 
     @abstractmethod
     async def record_breach(self, breach: SLABreach) -> None: ...
@@ -109,10 +127,24 @@ class InMemorySLAStorage(SLAStorageBase):
         agent_id: str | None = None,
         start: datetime | None = None,
         end: datetime | None = None,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[SLAMetrics]:
+        if offset < 0:
+            raise ValueError("offset must be non-negative")
         async with self._lock:
             out = [m for m in self._metrics if _metrics_matches(m, agent_id, start, end)]
-        return sorted(out, key=lambda m: m.period_start)
+        out = sorted(out, key=lambda m: m.period_start)
+        return out[offset : offset + limit] if limit is not None else out[offset:]
+
+    async def count_metrics(
+        self,
+        agent_id: str | None = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
+    ) -> int:
+        async with self._lock:
+            return sum(1 for m in self._metrics if _metrics_matches(m, agent_id, start, end))
 
     async def record_breach(self, breach: SLABreach) -> None:
         async with self._lock:
@@ -235,7 +267,11 @@ class SQLiteSLAStorage(SLAStorageBase):
         agent_id: str | None = None,
         start: datetime | None = None,
         end: datetime | None = None,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[SLAMetrics]:
+        if offset < 0:
+            raise ValueError("offset must be non-negative")
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
             query = f"SELECT agent_id, period_start, period_end, uptime_percent, latency_p95_ms, error_rate_percent, tasks_completed, tasks_failed FROM {_METRICS_TABLE} WHERE 1=1"
@@ -250,6 +286,12 @@ class SQLiteSLAStorage(SLAStorageBase):
                 query += " AND period_start <= ?"
                 params.append(end.isoformat())
             query += " ORDER BY period_start"
+            if limit is not None:
+                query += " LIMIT ? OFFSET ?"
+                params.extend([limit, offset])
+            elif offset > 0:
+                query += " LIMIT -1 OFFSET ?"
+                params.append(offset)
             cursor = await conn.execute(query, params)
             rows = await cursor.fetchall()
         return [
@@ -265,6 +307,29 @@ class SQLiteSLAStorage(SLAStorageBase):
             )
             for r in rows
         ]
+
+    async def count_metrics(
+        self,
+        agent_id: str | None = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
+    ) -> int:
+        async with aiosqlite.connect(self._db_path) as conn:
+            await self._ensure_tables(conn)
+            query = f"SELECT COUNT(*) FROM {_METRICS_TABLE} WHERE 1=1"
+            params: list[object] = []
+            if agent_id is not None:
+                query += " AND agent_id = ?"
+                params.append(agent_id)
+            if start is not None:
+                query += " AND period_end >= ?"
+                params.append(start.isoformat())
+            if end is not None:
+                query += " AND period_start <= ?"
+                params.append(end.isoformat())
+            cursor = await conn.execute(query, params)
+            row = await cursor.fetchone()
+            return int(row[0]) if row else 0
 
     async def record_breach(self, breach: SLABreach) -> None:
         async with aiosqlite.connect(self._db_path) as conn:

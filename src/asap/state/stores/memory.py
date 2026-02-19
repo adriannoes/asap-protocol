@@ -4,6 +4,8 @@ InMemorySnapshotStore lives here; InMemoryMeteringStore is re-exported from
 metering.py so that metering models stay in one place and avoid circular imports.
 """
 
+from __future__ import annotations
+
 import threading
 
 from asap.models.entities import StateSnapshot

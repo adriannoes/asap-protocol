@@ -4,6 +4,8 @@ JSON-RPC 2.0 and MCP message types for initialize, tools/list, and tools/call.
 Models use extra="ignore" for forward compatibility with future spec fields.
 """
 
+from __future__ import annotations
+
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field

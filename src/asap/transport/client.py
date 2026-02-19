@@ -29,6 +29,8 @@ Example:
     ...     response = await client.send(large_envelope)  # Compressed automatically
 """
 
+from __future__ import annotations
+
 import asyncio
 import itertools
 import json

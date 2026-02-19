@@ -37,9 +37,11 @@ Example:
     >>> middleware = AuthenticationMiddleware(manifest, validator)
 """
 
+from __future__ import annotations
+
 import asyncio
 import inspect
-from typing import Any, Awaitable, Callable, Protocol, cast
+from typing import Any, Awaitable, Callable, Optional, Protocol, cast
 
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -417,15 +419,15 @@ class AuthenticationMiddleware:
             )
         if inspect.iscoroutinefunction(self.validator.__call__):
             result = self.validator(token)
-            agent_id = await cast(Awaitable[str | None], result)
+            agent_id = await cast(Awaitable[Optional[str]], result)
         else:
             # Cast: to_thread expects Callable[..., T]; TokenValidator may return Awaitable
             # but we handle that below (BearerTokenValidator wrapping async func)
             agent_id = await asyncio.to_thread(
-                cast("Callable[[str], str | None]", self.validator), token
+                cast("Callable[[str], Optional[str]]", self.validator), token
             )
             if inspect.isawaitable(agent_id):
-                agent_id = await cast(Awaitable[str | None], agent_id)
+                agent_id = await cast(Awaitable[Optional[str]], agent_id)
 
         if agent_id is None:
             # Log sanitized token to avoid exposing full token data

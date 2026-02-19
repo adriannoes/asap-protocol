@@ -5,6 +5,8 @@ typed Pydantic models for the registry schema and helpers to fetch, parse, and f
 listed agents.
 """
 
+from __future__ import annotations
+
 import asyncio
 import threading
 import time

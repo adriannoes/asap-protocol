@@ -113,6 +113,8 @@ class MeteringStore(Protocol):
         agent_id: str,
         start: datetime,
         end: datetime,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> Awaitable[list["UsageEvent"]]:
         """Query usage events for an agent in a time range.
 
@@ -120,6 +122,8 @@ class MeteringStore(Protocol):
             agent_id: Agent identifier.
             start: Start of the time range (inclusive).
             end: End of the time range (inclusive).
+            limit: Maximum number of events to return (None = no limit).
+            offset: Number of events to skip (default 0).
 
         Returns:
             List of usage events in the range, ordered by timestamp.
@@ -169,13 +173,18 @@ class InMemoryMeteringStore:
         agent_id: str,
         start: datetime,
         end: datetime,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[UsageEvent]:
         """Return events for the agent in [start, end], sorted by timestamp."""
+        if offset < 0:
+            raise ValueError("offset must be non-negative")
         async with self._lock:
             out = [
                 e for e in self._events if e.agent_id == agent_id and start <= e.timestamp <= end
             ]
-        return sorted(out, key=lambda e: e.timestamp)
+        out = sorted(out, key=lambda e: e.timestamp)
+        return out[offset : offset + limit] if limit is not None else out[offset:]
 
     async def aggregate(self, agent_id: str, period: str) -> UsageAggregate:
         """Aggregate all stored events for the agent into one UsageAggregate."""

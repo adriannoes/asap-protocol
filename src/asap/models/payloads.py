@@ -4,6 +4,8 @@ Payloads define the content of protocol messages for different operations
 like task requests, responses, updates, state management, and MCP integration.
 """
 
+from __future__ import annotations
+
 from typing import Any, Literal, Union
 
 from pydantic import ConfigDict, Field, field_validator, model_validator

@@ -15,6 +15,8 @@ This module defines the fundamental entities used in agent-to-agent communicatio
 - SLADefinition: Service level agreement guarantees (availability, latency, error rate)
 """
 
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Any
 

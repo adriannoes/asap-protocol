@@ -4,10 +4,11 @@ This module provides reusable pytest fixtures for transport layer tests, includi
 - Isolated rate limiter creation (isolated_limiter_factory)
 - Aggressive monkeypatch fixtures (replace_global_limiter)
 - App creation helpers (create_isolated_app)
-- Base test classes (NoRateLimitTestBase)
 
 See docs/testing.md for detailed usage guide and testing strategies.
 """
+
+from __future__ import annotations
 
 import collections.abc
 from collections.abc import Callable, Sequence

@@ -9,6 +9,8 @@ Example:
     []
 """
 
+from __future__ import annotations
+
 from typing import Protocol, runtime_checkable
 
 from asap.models.entities import StateSnapshot

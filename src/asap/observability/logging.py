@@ -27,6 +27,8 @@ Example:
     >>> logger.info("request.received", envelope_id="env_123")
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import sys

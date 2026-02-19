@@ -22,7 +22,7 @@ from __future__ import annotations
 import re
 import uuid
 from datetime import datetime, timezone
-from typing import Awaitable, Callable, Literal, Protocol, runtime_checkable
+from typing import Awaitable, Callable, Literal, Protocol, Union, runtime_checkable
 
 from pydantic import Field
 
@@ -264,7 +264,7 @@ def _default_breach_alert(breach: SLABreach) -> None:
     )
 
 
-BreachAlertCallback = Callable[[SLABreach], Awaitable[None] | None]
+BreachAlertCallback = Union[Callable[[SLABreach], Awaitable[None]], Callable[[SLABreach], None]]
 
 
 class BreachDetector:

@@ -5,6 +5,8 @@ They support different content types including text, structured data,
 files, MCP resources, and parameterized templates.
 """
 
+from __future__ import annotations
+
 import base64
 import re
 from typing import Annotated, Any, Literal, Union

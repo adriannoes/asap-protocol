@@ -296,20 +296,27 @@ class SQLiteMeteringStore:
         agent_id: str,
         start: datetime,
         end: datetime,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[UsageEvent]:
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_usage_table(conn)
             start_s = start.isoformat()
             end_s = end.isoformat()
-            cursor = await conn.execute(
-                f"""
+            query = f"""
                 SELECT id, task_id, agent_id, consumer_id, metrics, timestamp
                 FROM {USAGE_EVENTS_TABLE}
                 WHERE agent_id = ? AND timestamp >= ? AND timestamp <= ?
                 ORDER BY timestamp
-                """,
-                (agent_id, start_s, end_s),
-            )
+            """
+            params: list[Any] = [agent_id, start_s, end_s]
+            if limit is not None:
+                query += " LIMIT ? OFFSET ?"
+                params.extend([limit, offset])
+            elif offset > 0:
+                query += " LIMIT -1 OFFSET ?"
+                params.append(offset)
+            cursor = await conn.execute(query, params)
             rows = await cursor.fetchall()
             return [_row_to_event(tuple(r)) for r in rows]
 
@@ -353,9 +360,13 @@ class SQLiteMeteringStore:
         agent_id: str,
         start: datetime,
         end: datetime,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[UsageEvent]:
         """Query events in range."""
-        return await self._query_impl(agent_id, start, end)
+        if offset < 0:
+            raise ValueError("offset must be non-negative")
+        return await self._query_impl(agent_id, start, end, limit, offset)
 
     async def aggregate(self, agent_id: str, period: str) -> UsageAggregate:
         """Aggregate usage for agent."""
