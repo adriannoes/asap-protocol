@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import pytest
@@ -239,10 +239,11 @@ class TestSlaDelegationIntegration:
         delegation_storage = InMemoryDelegationStorage()
         sla_storage = InMemorySLAStorage()
 
+        now = datetime.now(timezone.utc)
         delegate_metrics = SLAMetrics(
             agent_id="urn:asap:agent:delegate",
-            period_start=datetime(2026, 2, 18, 0, 0, 0, tzinfo=timezone.utc),
-            period_end=datetime(2026, 2, 18, 1, 0, 0, tzinfo=timezone.utc),
+            period_start=now - timedelta(hours=1),
+            period_end=now,
             uptime_percent=99.5,
             latency_p95_ms=150,
             error_rate_percent=0.5,

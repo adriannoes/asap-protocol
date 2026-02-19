@@ -28,6 +28,7 @@ Example:
     >>> async with ASAPClient("http://agent.example.com", compression=True) as client:
     ...     response = await client.send(large_envelope)  # Compressed automatically
 """
+from __future__ import annotations
 
 import asyncio
 import itertools

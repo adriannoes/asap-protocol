@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 import aiosqlite
+from typing import Optional
 
 from asap.economics.metering import StorageStats
 from asap.economics.sla import SLABreach, SLAMetrics
@@ -32,6 +33,8 @@ class SLAStorage(Protocol):
         agent_id: str | None = None,
         start: datetime | None = None,
         end: datetime | None = None,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[SLAMetrics]: ...
     async def record_breach(self, breach: SLABreach) -> None: ...
     async def query_breaches(
@@ -40,6 +43,12 @@ class SLAStorage(Protocol):
         start: datetime | None = None,
         end: datetime | None = None,
     ) -> list[SLABreach]: ...
+    async def count_metrics(
+        self,
+        agent_id: str | None = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
+    ) -> int: ...
     async def stats(self) -> StorageStats: ...
 
 
@@ -55,7 +64,17 @@ class SLAStorageBase(ABC):
         agent_id: str | None = None,
         start: datetime | None = None,
         end: datetime | None = None,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[SLAMetrics]: ...
+
+    @abstractmethod
+    async def count_metrics(
+        self,
+        agent_id: str | None = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
+    ) -> int: ...
 
     @abstractmethod
     async def record_breach(self, breach: SLABreach) -> None: ...
@@ -96,12 +115,18 @@ class InMemorySLAStorage(SLAStorageBase):
     """In-memory SLA storage for development and testing. Async-safe via asyncio.Lock."""
 
     def __init__(self) -> None:
-        self._lock = asyncio.Lock()
+        self._lock: Optional[asyncio.Lock] = None
         self._metrics: list[SLAMetrics] = []
         self._breaches: list[SLABreach] = []
 
+    @property
+    def lock(self) -> asyncio.Lock:
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        return self._lock
+
     async def record_metrics(self, metrics: SLAMetrics) -> None:
-        async with self._lock:
+        async with self.lock:
             self._metrics.append(metrics)
 
     async def query_metrics(
@@ -109,13 +134,25 @@ class InMemorySLAStorage(SLAStorageBase):
         agent_id: str | None = None,
         start: datetime | None = None,
         end: datetime | None = None,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[SLAMetrics]:
-        async with self._lock:
+        async with self.lock:
             out = [m for m in self._metrics if _metrics_matches(m, agent_id, start, end)]
-        return sorted(out, key=lambda m: m.period_start)
+        out = sorted(out, key=lambda m: m.period_start)
+        return out[offset : offset + limit] if limit is not None else out[offset:]
+
+    async def count_metrics(
+        self,
+        agent_id: str | None = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
+    ) -> int:
+        async with self.lock:
+            return sum(1 for m in self._metrics if _metrics_matches(m, agent_id, start, end))
 
     async def record_breach(self, breach: SLABreach) -> None:
-        async with self._lock:
+        async with self.lock:
             self._breaches.append(breach)
 
     async def query_breaches(
@@ -124,12 +161,12 @@ class InMemorySLAStorage(SLAStorageBase):
         start: datetime | None = None,
         end: datetime | None = None,
     ) -> list[SLABreach]:
-        async with self._lock:
+        async with self.lock:
             out = [b for b in self._breaches if _breach_matches(b, agent_id, start, end)]
         return sorted(out, key=lambda b: b.detected_at)
 
     async def stats(self) -> StorageStats:
-        async with self._lock:
+        async with self.lock:
             total = len(self._metrics) + len(self._breaches)
             all_ts: list[datetime] = []
             for m in self._metrics:
@@ -235,6 +272,8 @@ class SQLiteSLAStorage(SLAStorageBase):
         agent_id: str | None = None,
         start: datetime | None = None,
         end: datetime | None = None,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[SLAMetrics]:
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
@@ -250,6 +289,12 @@ class SQLiteSLAStorage(SLAStorageBase):
                 query += " AND period_start <= ?"
                 params.append(end.isoformat())
             query += " ORDER BY period_start"
+            if limit is not None:
+                query += " LIMIT ? OFFSET ?"
+                params.extend([limit, offset])
+            elif offset > 0:
+                query += " LIMIT -1 OFFSET ?"
+                params.append(offset)
             cursor = await conn.execute(query, params)
             rows = await cursor.fetchall()
         return [
@@ -265,6 +310,29 @@ class SQLiteSLAStorage(SLAStorageBase):
             )
             for r in rows
         ]
+
+    async def count_metrics(
+        self,
+        agent_id: str | None = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
+    ) -> int:
+        async with aiosqlite.connect(self._db_path) as conn:
+            await self._ensure_tables(conn)
+            query = f"SELECT COUNT(*) FROM {_METRICS_TABLE} WHERE 1=1"
+            params: list[object] = []
+            if agent_id is not None:
+                query += " AND agent_id = ?"
+                params.append(agent_id)
+            if start is not None:
+                query += " AND period_end >= ?"
+                params.append(start.isoformat())
+            if end is not None:
+                query += " AND period_start <= ?"
+                params.append(end.isoformat())
+            cursor = await conn.execute(query, params)
+            row = await cursor.fetchone()
+            return int(row[0]) if row else 0
 
     async def record_breach(self, breach: SLABreach) -> None:
         async with aiosqlite.connect(self._db_path) as conn:

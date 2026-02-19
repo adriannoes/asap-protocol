@@ -49,7 +49,7 @@ When implementing tasks, follow these clean code principles:
 ### Smart Comments
 - Don't comment on what the code does - make the code self-documenting
 - Use comments to explain why something is done a certain way
-- Document APIs, complex algorithms, and non-obvious side effects
+- Document APIs, complex algorithms and non-obvious side effects
 
 ### Single Responsibility
 - Each function should do exactly one thing
@@ -83,5 +83,5 @@ When implementing tasks, follow these clean code principles:
 
 ### Version Control
 - Write clear commit messages
-- Make small, focused commits
+- Make small, atomic, focused commits
 - Use meaningful branch names

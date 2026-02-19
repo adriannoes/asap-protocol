@@ -9,6 +9,7 @@ Example:
     >>> executor = BoundedExecutor(max_threads=10)
     >>> result = await loop.run_in_executor(executor, sync_handler, arg1, arg2)
 """
+from __future__ import annotations
 
 import os
 from concurrent.futures import Executor, Future, ThreadPoolExecutor

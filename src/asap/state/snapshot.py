@@ -8,6 +8,7 @@ Example:
     >>> store.list_versions("task_01HX5K4N...")
     []
 """
+from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 

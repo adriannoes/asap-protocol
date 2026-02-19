@@ -26,6 +26,7 @@ Example:
     >>> logger = get_logger("asap.transport.server")
     >>> logger.info("request.received", envelope_id="env_123")
 """
+from __future__ import annotations
 
 import logging
 import os

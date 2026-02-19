@@ -3,6 +3,7 @@
 The Envelope wraps all ASAP protocol messages, providing metadata for
 routing, correlation, tracing, and versioning.
 """
+from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any, cast

@@ -143,17 +143,23 @@ def create_sla_router() -> APIRouter:
         storage: SLAStorage = Depends(get_sla_storage),
     ) -> JSONResponse:
         """Historical SLA metrics with pagination."""
+        # Ideally, we should add a count method to SLAStorage.
         metrics = await storage.query_metrics(
             agent_id=agent_id,
             start=start,
             end=end,
+            limit=limit,
+            offset=offset,
         )
-        total = len(metrics)
-        paginated = metrics[offset : offset + (limit or 100)]
+        total = await storage.count_metrics(
+            agent_id=agent_id,
+            start=start,
+            end=end,
+        )
         return JSONResponse(
             content={
-                "data": [m.model_dump(mode="json") for m in paginated],
-                "count": len(paginated),
+                "data": [m.model_dump(mode="json") for m in metrics],
+                "count": len(metrics),
                 "total": total,
                 "offset": offset,
                 "limit": limit or 100,

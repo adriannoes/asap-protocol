@@ -18,10 +18,10 @@
     - Introduce `TypedDict` for known schemas.
 - **Reference**: `sprint-S1-type-safety.md`
 
-### Sprint S2: Storage Pagination
+### Sprint S2: Storage Pagination (Completed)
 - **Objective**: Prevent OOM errors and improve query performance.
 - **Key Tasks**:
-    - Add `LIMIT`/`OFFSET` to `SLAStorage` and `MeteringStorage` protocols.
-    - Implement pagination in `SQLite` backends.
-    - Update `sla_api` and `usage_api` to use storage-level pagination.
+    - [x] Add `LIMIT`/`OFFSET` to `SLAStorage` and `MeteringStorage` protocols.
+    - [x] Implement pagination in `SQLite` backends.
+    - [x] Update `sla_api` and `usage_api` to use storage-level pagination.
 - **Reference**: `sprint-S2-pagination.md`

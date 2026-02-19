@@ -22,6 +22,7 @@ Example:
     >>> # Decompress received payload
     >>> original = decompress_payload(compressed, encoding)
 """
+from __future__ import annotations
 
 import gzip
 from enum import Enum

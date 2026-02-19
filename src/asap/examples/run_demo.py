@@ -3,6 +3,7 @@
 This script starts the echo agent as a subprocess, then demonstrates
 communication by sending a task request from the coordinator logic.
 """
+from __future__ import annotations
 
 import asyncio
 import signal

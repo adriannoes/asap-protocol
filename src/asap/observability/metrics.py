@@ -14,6 +14,7 @@ Example:
     >>> collector.observe_histogram("asap_request_duration_seconds", 0.125, {"status": "success"})
     >>> print(collector.export_prometheus())
 """
+from __future__ import annotations
 
 import threading
 import time

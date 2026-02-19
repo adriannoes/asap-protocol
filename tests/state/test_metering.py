@@ -131,7 +131,42 @@ class TestInMemoryMeteringStoreRecordAndQuery:
         events = await metering_store.query("a1", start, end)
         assert len(events) == 2
         assert events[0].task_id == "t1" and events[1].task_id == "t2"
+    @pytest.mark.asyncio
+    async def test_query_pagination(
+        self,
+        metering_store: InMemoryMeteringStore,
+    ) -> None:
+        """Query respects limit and offset."""
+        for i in range(5):
+            await metering_store.record(
+                UsageEvent(
+                    task_id=f"t{i}",
+                    agent_id="a1",
+                    consumer_id="c1",
+                    metrics=UsageMetrics(),
+                    timestamp=datetime(2025, 2, 8, 12, i, 0, tzinfo=timezone.utc),
+                )
+            )
 
+        start = datetime(2025, 2, 8, 10, 0, 0, tzinfo=timezone.utc)
+        end = datetime(2025, 2, 8, 14, 0, 0, tzinfo=timezone.utc)
+
+        # Page 1: limit=2, offset=0
+        page1 = await metering_store.query("a1", start, end, limit=2, offset=0)
+        assert len(page1) == 2
+        assert page1[0].task_id == "t0"
+        assert page1[1].task_id == "t1"
+
+        # Page 2: limit=2, offset=2
+        page2 = await metering_store.query("a1", start, end, limit=2, offset=2)
+        assert len(page2) == 2
+        assert page2[0].task_id == "t2"
+        assert page2[1].task_id == "t3"
+
+        # Page 3: limit=2, offset=4
+        page3 = await metering_store.query("a1", start, end, limit=2, offset=4)
+        assert len(page3) == 1
+        assert page3[0].task_id == "t4"
 
 class TestInMemoryMeteringStoreAggregate:
     """Test aggregation by period."""

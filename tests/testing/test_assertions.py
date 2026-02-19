@@ -1,5 +1,8 @@
 """Unit tests for asap.testing assertions."""
 
+from __future__ import annotations
+
+
 import pytest
 
 from asap.models.envelope import Envelope

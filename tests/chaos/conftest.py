@@ -1,10 +1,6 @@
-"""Shared fixtures for chaos engineering tests.
+"""Unit tests for chaos module."""
 
-This module provides reusable fixtures and helpers for tests in tests/chaos/:
-- sample_request_envelope: Canonical request envelope for chaos scenarios
-- sample_response_envelope: Response envelope correlated with request
-- create_mock_response: Helper to build httpx responses from envelopes
-"""
+from __future__ import annotations
 
 import httpx
 import pytest

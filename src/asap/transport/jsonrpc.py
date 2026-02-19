@@ -34,6 +34,7 @@ Example:
     ...     id="req-1"
     ... )
 """
+from __future__ import annotations
 
 from typing import Any, Literal
 

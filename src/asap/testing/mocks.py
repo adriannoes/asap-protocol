@@ -8,6 +8,7 @@ Features:
     - Request recording (incoming envelopes) for later assertion.
     - Configurable delay or failure for error-path tests.
 """
+from __future__ import annotations
 
 import time
 from datetime import datetime, timezone
