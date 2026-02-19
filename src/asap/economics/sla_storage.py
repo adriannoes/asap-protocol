@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 import aiosqlite
-from typing import Optional
 
 from asap.economics.metering import StorageStats
 from asap.economics.sla import SLABreach, SLAMetrics
@@ -115,18 +114,12 @@ class InMemorySLAStorage(SLAStorageBase):
     """In-memory SLA storage for development and testing. Async-safe via asyncio.Lock."""
 
     def __init__(self) -> None:
-        self._lock: Optional[asyncio.Lock] = None
+        self._lock = asyncio.Lock()
         self._metrics: list[SLAMetrics] = []
         self._breaches: list[SLABreach] = []
 
-    @property
-    def lock(self) -> asyncio.Lock:
-        if self._lock is None:
-            self._lock = asyncio.Lock()
-        return self._lock
-
     async def record_metrics(self, metrics: SLAMetrics) -> None:
-        async with self.lock:
+        async with self._lock:
             self._metrics.append(metrics)
 
     async def query_metrics(
@@ -137,7 +130,9 @@ class InMemorySLAStorage(SLAStorageBase):
         limit: int | None = None,
         offset: int = 0,
     ) -> list[SLAMetrics]:
-        async with self.lock:
+        if offset < 0:
+            raise ValueError("offset must be non-negative")
+        async with self._lock:
             out = [m for m in self._metrics if _metrics_matches(m, agent_id, start, end)]
         out = sorted(out, key=lambda m: m.period_start)
         return out[offset : offset + limit] if limit is not None else out[offset:]
@@ -148,11 +143,11 @@ class InMemorySLAStorage(SLAStorageBase):
         start: datetime | None = None,
         end: datetime | None = None,
     ) -> int:
-        async with self.lock:
+        async with self._lock:
             return sum(1 for m in self._metrics if _metrics_matches(m, agent_id, start, end))
 
     async def record_breach(self, breach: SLABreach) -> None:
-        async with self.lock:
+        async with self._lock:
             self._breaches.append(breach)
 
     async def query_breaches(
@@ -161,12 +156,12 @@ class InMemorySLAStorage(SLAStorageBase):
         start: datetime | None = None,
         end: datetime | None = None,
     ) -> list[SLABreach]:
-        async with self.lock:
+        async with self._lock:
             out = [b for b in self._breaches if _breach_matches(b, agent_id, start, end)]
         return sorted(out, key=lambda b: b.detected_at)
 
     async def stats(self) -> StorageStats:
-        async with self.lock:
+        async with self._lock:
             total = len(self._metrics) + len(self._breaches)
             all_ts: list[datetime] = []
             for m in self._metrics:
@@ -275,6 +270,8 @@ class SQLiteSLAStorage(SLAStorageBase):
         limit: int | None = None,
         offset: int = 0,
     ) -> list[SLAMetrics]:
+        if offset < 0:
+            raise ValueError("offset must be non-negative")
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
             query = f"SELECT agent_id, period_start, period_end, uptime_percent, latency_p95_ms, error_rate_percent, tasks_completed, tasks_failed FROM {_METRICS_TABLE} WHERE 1=1"
