@@ -155,7 +155,9 @@ async def run_showcase() -> None:
     if page2.status_code != 200:
         raise RuntimeError(f"Usage API failed: {page2.status_code}")
     j2 = page2.json()
-    _log(f"Page 2: count={j2['count']}, offset={PAGE_SIZE} — task_ids: {[d['task_id'] for d in j2['data']]}")
+    _log(
+        f"Page 2: count={j2['count']}, offset={PAGE_SIZE} — task_ids: {[d['task_id'] for d in j2['data']]}"
+    )
 
     _log_step(3, "Pagination on GET /sla/history (limit=2, total in response)")
     hist1 = httpx.get(f"{BASE_URL}/sla/history?limit={PAGE_SIZE}&offset=0", timeout=5.0)
@@ -165,7 +167,9 @@ async def run_showcase() -> None:
     _log(
         f"Page 1: count={h1['count']}, total={h1['total']}, offset={h1['offset']}, limit={h1['limit']}"
     )
-    _log(f"  First period: {h1['data'][0]['period_start'][:19]} — {h1['data'][0]['period_end'][:19]}")
+    _log(
+        f"  First period: {h1['data'][0]['period_start'][:19]} — {h1['data'][0]['period_end'][:19]}"
+    )
 
     hist2 = httpx.get(f"{BASE_URL}/sla/history?limit={PAGE_SIZE}&offset={PAGE_SIZE}", timeout=5.0)
     if hist2.status_code != 200:
