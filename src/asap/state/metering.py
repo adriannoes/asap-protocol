@@ -14,7 +14,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable
 from datetime import datetime
-from typing import Optional, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from pydantic import Field
 
@@ -122,6 +122,8 @@ class MeteringStore(Protocol):
             agent_id: Agent identifier.
             start: Start of the time range (inclusive).
             end: End of the time range (inclusive).
+            limit: Maximum number of events to return (None = no limit).
+            offset: Number of events to skip (default 0).
 
         Returns:
             List of usage events in the range, ordered by timestamp.
@@ -158,18 +160,12 @@ class InMemoryMeteringStore:
 
     def __init__(self) -> None:
         """Initialize the in-memory metering store."""
-        self._lock: Optional[asyncio.Lock] = None
+        self._lock = asyncio.Lock()
         self._events: list[UsageEvent] = []
-
-    @property
-    def lock(self) -> asyncio.Lock:
-        if self._lock is None:
-            self._lock = asyncio.Lock()
-        return self._lock
 
     async def record(self, event: UsageEvent) -> None:
         """Append a usage event to the store (async-safe)."""
-        async with self.lock:
+        async with self._lock:
             self._events.append(event)
 
     async def query(
@@ -181,7 +177,9 @@ class InMemoryMeteringStore:
         offset: int = 0,
     ) -> list[UsageEvent]:
         """Return events for the agent in [start, end], sorted by timestamp."""
-        async with self.lock:
+        if offset < 0:
+            raise ValueError("offset must be non-negative")
+        async with self._lock:
             out = [
                 e for e in self._events if e.agent_id == agent_id and start <= e.timestamp <= end
             ]
@@ -190,7 +188,7 @@ class InMemoryMeteringStore:
 
     async def aggregate(self, agent_id: str, period: str) -> UsageAggregate:
         """Aggregate all stored events for the agent into one UsageAggregate."""
-        async with self.lock:
+        async with self._lock:
             agent_events = [e for e in self._events if e.agent_id == agent_id]
         total_tokens = sum(e.metrics.tokens_in + e.metrics.tokens_out for e in agent_events)
         total_duration = sum(e.metrics.duration_ms for e in agent_events)
