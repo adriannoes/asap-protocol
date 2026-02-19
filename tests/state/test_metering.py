@@ -131,6 +131,7 @@ class TestInMemoryMeteringStoreRecordAndQuery:
         events = await metering_store.query("a1", start, end)
         assert len(events) == 2
         assert events[0].task_id == "t1" and events[1].task_id == "t2"
+
     @pytest.mark.asyncio
     async def test_query_pagination(
         self,
@@ -167,6 +168,7 @@ class TestInMemoryMeteringStoreRecordAndQuery:
         page3 = await metering_store.query("a1", start, end, limit=2, offset=4)
         assert len(page3) == 1
         assert page3[0].task_id == "t4"
+
 
 class TestInMemoryMeteringStoreAggregate:
     """Test aggregation by period."""

@@ -3,6 +3,7 @@
 This module provides the CircuitBreaker pattern implementation and a registry
 for sharing circuit breaker state across multiple client instances.
 """
+
 from __future__ import annotations
 
 import threading

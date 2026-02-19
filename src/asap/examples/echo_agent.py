@@ -3,6 +3,7 @@
 This module defines a minimal echo agent with a manifest and FastAPI app.
 It uses the default handler registry to echo task input as output.
 """
+
 from __future__ import annotations
 
 import argparse

@@ -25,6 +25,7 @@ Example:
     >>> # Dispatch envelope to handler
     >>> response = registry.dispatch(envelope, manifest)
 """
+
 from __future__ import annotations
 
 import asyncio

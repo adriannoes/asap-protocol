@@ -4,6 +4,7 @@ The Lite Registry is a static JSON file (e.g. on GitHub Pages). This module prov
 typed Pydantic models for the registry schema and helpers to fetch, parse, and filter
 listed agents.
 """
+
 from __future__ import annotations
 
 import asyncio

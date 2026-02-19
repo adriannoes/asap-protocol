@@ -255,7 +255,7 @@ class TestSQLiteSLAStorage:
         await sqlite_sla_storage.record_metrics(_metrics(agent_id="b"))
         assert await sqlite_sla_storage.count_metrics() == 2
         assert await sqlite_sla_storage.count_metrics(agent_id="a") == 1
-        
+
         # Test time filters
         now = datetime.now(timezone.utc)
         # Filter that excludes everything (start in future)
@@ -267,10 +267,10 @@ class TestSQLiteSLAStorage:
     async def test_query_metrics_offset_only(self, sqlite_sla_storage: SQLiteSLAStorage) -> None:
         now = datetime.now(timezone.utc)
         for i in range(5):
-             await sqlite_sla_storage.record_metrics(
-                 _metrics(period_start=now - timedelta(hours=5 - i))
-             )
-        
+            await sqlite_sla_storage.record_metrics(
+                _metrics(period_start=now - timedelta(hours=5 - i))
+            )
+
         # skip first 2, expect remaining 3
         results = await sqlite_sla_storage.query_metrics(offset=2)
         assert len(results) == 3
@@ -278,8 +278,10 @@ class TestSQLiteSLAStorage:
     @pytest.mark.asyncio
     async def test_db_connection_error(self, sqlite_sla_storage: SQLiteSLAStorage) -> None:
         # Patch the aiosqlite.connect being used in sla_storage module
-        with patch("asap.economics.sla_storage.aiosqlite.connect", side_effect=OSError("DB Error")), \
-             pytest.raises(OSError, match="DB Error"):
+        with (
+            patch("asap.economics.sla_storage.aiosqlite.connect", side_effect=OSError("DB Error")),
+            pytest.raises(OSError, match="DB Error"),
+        ):
             await sqlite_sla_storage.record_metrics(_metrics())
 
 
@@ -421,7 +423,6 @@ class TestParseIso:
 
 
 class TestInMemorySLAStorageCoverage:
-
     @pytest.mark.asyncio
     async def test_query_breaches_filter_time_range(self) -> None:
         store = InMemorySLAStorage()

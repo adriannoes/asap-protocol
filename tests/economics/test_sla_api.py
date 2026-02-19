@@ -108,7 +108,6 @@ class TestSLAAPIGetSla:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-
         app = create_app(
             sample_manifest,
             sla_storage=sla_storage,
@@ -127,7 +126,6 @@ class TestSLAAPIGetSla:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-
         _run(sla_storage.record_metrics(_metrics()))
         app = create_app(
             sample_manifest,
@@ -149,7 +147,6 @@ class TestSLAAPIGetSla:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-
         _run(sla_storage.record_metrics(_metrics(agent_id="urn:asap:agent:a")))
         _run(sla_storage.record_metrics(_metrics(agent_id="urn:asap:agent:b")))
         app = create_app(
@@ -169,7 +166,6 @@ class TestSLAAPIGetSla:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-
         _run(sla_storage.record_metrics(_metrics()))
         app = create_app(
             sample_manifest,
@@ -186,7 +182,6 @@ class TestSLAAPIGetSla:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-
         app = create_app(
             sample_manifest,
             sla_storage=sla_storage,
@@ -201,7 +196,6 @@ class TestSLAAPIGetSla:
         manifest_with_sla: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-
         _run(sla_storage.record_metrics(_metrics(agent_id="urn:asap:agent:test-server")))
         app = create_app(
             manifest_with_sla,
@@ -220,7 +214,6 @@ class TestSLAAPIGetSla:
         manifest_with_sla: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-
         _run(sla_storage.record_metrics(_metrics(agent_id="urn:asap:agent:other-agent")))
         app = create_app(
             manifest_with_sla,
@@ -239,7 +232,6 @@ class TestSLAAPIGetSla:
         manifest_with_sla: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-
         now = datetime.now(timezone.utc)
         breach_metrics = SLAMetrics(
             agent_id="urn:asap:agent:test-server",
@@ -274,7 +266,6 @@ class TestSLAAPIGetHistory:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-
         app = create_app(
             sample_manifest,
             sla_storage=sla_storage,
@@ -293,7 +284,6 @@ class TestSLAAPIGetHistory:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-
         _run(sla_storage.record_metrics(_metrics()))
         app = create_app(
             sample_manifest,
@@ -314,7 +304,6 @@ class TestSLAAPIGetHistory:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-
         now = datetime.now(timezone.utc)
         for i in range(5):
             _run(
@@ -349,7 +338,6 @@ class TestSLAAPIGetBreaches:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-
         app = create_app(
             sample_manifest,
             sla_storage=sla_storage,
@@ -367,7 +355,6 @@ class TestSLAAPIGetBreaches:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-
         _run(sla_storage.record_breach(_breach()))
         app = create_app(
             sample_manifest,
@@ -388,7 +375,6 @@ class TestSLAAPIGetBreaches:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-
         _run(sla_storage.record_breach(_breach(agent_id="urn:asap:agent:a")))
         _run(sla_storage.record_breach(_breach(breach_id="b2", agent_id="urn:asap:agent:b")))
         app = create_app(
@@ -408,7 +394,6 @@ class TestSLAAPIGetBreaches:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-
         _run(sla_storage.record_breach(_breach(breach_id="b1", severity="warning")))
         _run(sla_storage.record_breach(_breach(breach_id="b2", severity="critical")))
         app = create_app(
@@ -428,7 +413,6 @@ class TestSLAAPIGetBreaches:
         sample_manifest: Manifest,
         sla_storage: InMemorySLAStorage,
     ) -> None:
-
         app = create_app(
             sample_manifest,
             sla_storage=sla_storage,
@@ -446,7 +430,6 @@ class TestSLAAPIMisc:
         self,
         sample_manifest: Manifest,
     ) -> None:
-
         app = create_app(sample_manifest, rate_limit="999999/minute")
         from asap.transport.sla_api import create_sla_router
 
@@ -460,7 +443,6 @@ class TestSLAAPIMisc:
         self,
         sample_manifest: Manifest,
     ) -> None:
-
         app = create_app(sample_manifest, rate_limit="999999/minute")
         client = TestClient(app)
         resp = client.get("/sla")

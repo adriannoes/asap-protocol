@@ -1,4 +1,5 @@
 """Ed25519 manifest signing with JCS canonicalization (RFC 8785)."""
+
 from __future__ import annotations
 
 import base64

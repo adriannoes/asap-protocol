@@ -4,6 +4,7 @@ This module defines the error hierarchy for the ASAP protocol,
 providing structured error handling with specific error codes
 and context information.
 """
+
 from __future__ import annotations
 
 from typing import Any

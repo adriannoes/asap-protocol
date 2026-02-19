@@ -13,6 +13,7 @@ Example:
     >>> # asap trace <trace-id> [--log-file asap.log] [--format ascii|json]
     >>> # asap repl  # Interactive REPL with ASAP models
 """
+
 from __future__ import annotations
 
 import asyncio

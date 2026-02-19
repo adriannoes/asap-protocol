@@ -4,6 +4,7 @@ Parts are atomic content units used within messages and artifacts.
 They support different content types including text, structured data,
 files, MCP resources, and parameterized templates.
 """
+
 from __future__ import annotations
 
 import base64

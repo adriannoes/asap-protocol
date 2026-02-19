@@ -36,6 +36,7 @@ Example:
     >>> validator = BearerTokenValidator(validate_token)
     >>> middleware = AuthenticationMiddleware(manifest, validator)
 """
+
 from __future__ import annotations
 
 import asyncio
