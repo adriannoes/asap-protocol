@@ -208,6 +208,39 @@ Security-hardened release with comprehensive authentication, DoS protection, rep
 
 ---
 
+## [1.4.0] - 2026-02-19
+
+Resilience & Scale: Type safety hardening and storage pagination. Backward compatible with v1.3.0.
+
+### Added
+
+#### Type Safety (S1)
+- **TaskRequest**: `TaskRequestConfig` model for `config` (timeout_seconds, priority, idempotency_key, streaming, persist_state, model, temperature)
+- **TaskResponse**: `TaskMetrics` model for `metrics` (duration_ms, tokens_in, tokens_out, tokens_used, api_calls)
+- **Entities**: `CommonMetadata` model for conversation metadata (purpose, ttl_hours, source, timestamp, tags; extra allowed)
+- **Envelope**: Payload typed as discriminated union; validator parses by `payload_type`; `payload_dict` property for backward compatibility
+
+#### Storage Pagination (S2)
+- **SLAStorage**: `query_metrics(..., limit, offset)` and `count_metrics(...)`; `GET /sla/history?limit=&offset=` with `total` in response
+- **MeteringStorage**: `query(..., limit, offset)`; `GET /usage?limit=&offset=` with paginated results
+- **APIs**: SLA history and Usage endpoints accept `limit` (default 100, max 1000) and `offset`; responses include `count` and (SLA) `total`
+
+#### Examples
+- **v1.4.0 Showcase**: `uv run python -m asap.examples.v1_4_0_showcase` — demonstrates pagination on Usage and SLA history APIs
+
+### Changed
+
+- **README**: v1.4.0 Quick Info and showcase command; v1.4 (Resilience & Scale) marked complete in roadmap
+- **AGENTS.md**: Status updated to v1.4.0
+
+### Technical Details
+
+- **Python**: 3.13+
+- **Tests**: 2335+ passing; type checker (mypy) and full test suite verified
+- **Coverage**: Maintained
+
+---
+
 ## [1.3.0] - 2026-02-18
 
 Economics Layer: Observability Metering, Delegation Tokens, and SLA Framework.

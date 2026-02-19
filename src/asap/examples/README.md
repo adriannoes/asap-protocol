@@ -24,6 +24,12 @@ Starts the echo agent on port 8001 and the coordinator on port 8000; the coordin
 uv run python -m asap.examples.run_demo
 ```
 
+**v1.4.0 Showcase** — Pagination on Usage and SLA history APIs:
+
+```bash
+uv run python -m asap.examples.v1_4_0_showcase
+```
+
 **v1.3.0 Showcase** — One command to run Delegation, Metering, and SLA together:
 
 ```bash
@@ -44,6 +50,7 @@ Run agents individually:
 | Module | Description | Usage |
 |--------|-------------|--------|
 | **run_demo** | Full demo: echo + coordinator, one TaskRequest round-trip | `uv run python -m asap.examples.run_demo` |
+| **v1_4_0_showcase** | v1.4.0 E2E: Pagination on Usage & SLA history APIs | `uv run python -m asap.examples.v1_4_0_showcase` |
 | **v1_3_0_showcase** | v1.3.0 E2E: Delegation, Metering, SLA breach via WebSocket | `uv run python -m asap.examples.v1_3_0_showcase` |
 | **echo_agent** | Minimal echo agent (FastAPI app, manifest, echo handler) | `uv run python -m asap.examples.echo_agent [--host H] [--port P]` |
 | **coordinator** | Coordinator that dispatches TaskRequest to echo agent | `uv run python -m asap.examples.coordinator [--echo-url URL] [--message MSG]` |

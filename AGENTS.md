@@ -8,7 +8,7 @@
 **ASAP Protocol** (Async Simple Agent Protocol) is a production-ready standard for agent-to-agent communication.
 - **Stack**: Python 3.13+, FastAPI, Pydantic v2.
 - **Transport**: JSON-RPC 2.0 over HTTP/WebSocket.
-- **Status**: v1.3.0 (Released).
+- **Status**: v1.4.0 (Released).
 
 ## Quick Start
 

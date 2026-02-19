@@ -7,7 +7,7 @@
 
 > A production-ready protocol for agent-to-agent communication and task coordination.
 
-**Quick Info**: `v1.3.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
+**Quick Info**: `v1.4.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
 
 ## Why ASAP?
 
@@ -52,6 +52,12 @@ pip install asap-protocol
 
 ```bash
 uv run python -m asap.examples.run_demo
+```
+
+**v1.4.0 showcase** (Pagination on Usage & SLA history):
+
+```bash
+uv run python -m asap.examples.v1_4_0_showcase
 ```
 
 **v1.3.0 showcase** (Delegation + Metering + SLA in one command):
@@ -139,6 +145,7 @@ ASAP is evolving toward an **Agent Marketplace** — an open ecosystem where AI 
 - **v1.1**: Identity Layer (OAuth2, WebSocket, Discovery) ✅
 - **v1.2**: Trust Layer (Signed Manifests, Compliance Harness, mTLS) ✅
 - **v1.3**: Economics Layer (Metering, SLAs, Delegation) ✅
+- **v1.4**: Resilience & Scale (Type Safety, Storage Pagination) ✅
 - **v2.0**: Agent Marketplace with Web App
 
 See our [vision document](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/strategy/vision-agent-marketplace.md) for the full roadmap.
