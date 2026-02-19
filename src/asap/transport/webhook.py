@@ -141,7 +141,7 @@ async def validate_callback_url(url: str, *, require_https: bool = True) -> None
     )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class WebhookResult:
     url: str
     status_code: int
@@ -299,7 +299,7 @@ DEFAULT_WEBHOOK_RATE_PER_SECOND = 10.0
 _NON_RETRYABLE_STATUS_RANGE = range(400, 500)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class RetryPolicy:
     """Webhook retry: max_retries, base_delay, max_delay, rate_per_second."""
 
@@ -313,7 +313,7 @@ class RetryPolicy:
         return float(min(self.base_delay * (2**attempt), self.max_delay))
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class DeadLetterEntry:
     """Permanently failed webhook: url, payload, last_result, attempts, created_at."""
 
