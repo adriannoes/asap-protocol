@@ -153,6 +153,11 @@ class TestInMemorySLAStorage:
         page3 = await in_memory_sla_storage.query_metrics(limit=2, offset=4)
         assert len(page3) == 1
         assert page3[0].period_start > page2[1].period_start
+
+    @pytest.mark.asyncio
+    async def test_record_and_query_breaches(
+        self, in_memory_sla_storage: InMemorySLAStorage
+    ) -> None:
         """Record breach; query_breaches returns it."""
         b = _breach()
         await in_memory_sla_storage.record_breach(b)
@@ -182,6 +187,25 @@ class TestInMemorySLAStorage:
         s = await in_memory_sla_storage.stats()
         assert s.total_events == 2
         assert s.oldest_timestamp is not None
+
+    @pytest.mark.asyncio
+    async def test_count_metrics(self, in_memory_sla_storage: InMemorySLAStorage) -> None:
+        await in_memory_sla_storage.record_metrics(_metrics(agent_id="a"))
+        await in_memory_sla_storage.record_metrics(_metrics(agent_id="b"))
+        assert await in_memory_sla_storage.count_metrics() == 2
+        assert await in_memory_sla_storage.count_metrics(agent_id="a") == 1
+
+    @pytest.mark.asyncio
+    async def test_query_metrics_offset_only(
+        self, in_memory_sla_storage: InMemorySLAStorage
+    ) -> None:
+        now = datetime.now(timezone.utc)
+        for i in range(5):
+            await in_memory_sla_storage.record_metrics(
+                _metrics(period_start=now - timedelta(hours=5 - i))
+            )
+        results = await in_memory_sla_storage.query_metrics(offset=2)
+        assert len(results) == 3
 
     @pytest.mark.asyncio
     async def test_stats_empty(self, in_memory_sla_storage: InMemorySLAStorage) -> None:
@@ -223,6 +247,9 @@ class TestSQLiteSLAStorage:
         page3 = await sqlite_sla_storage.query_metrics(limit=2, offset=4)
         assert len(page3) == 1
         assert page3[0].period_start > page2[1].period_start
+
+    @pytest.mark.asyncio
+    async def test_record_and_query_breaches(self, sqlite_sla_storage: SQLiteSLAStorage) -> None:
         """Record breach; query_breaches returns it."""
         b = _breach()
         await sqlite_sla_storage.record_breach(b)
