@@ -1,1 +1,13 @@
-[]
+[
+  {
+    "id": "urn:asap:test-agent-1771553585655",
+    "name": "test-agent",
+    "description": "Pre-M2 validation test",
+    "endpoints": {
+      "http": "https://example.com/asap"
+    },
+    "skills": [
+      "test"
+    ]
+  }
+]
