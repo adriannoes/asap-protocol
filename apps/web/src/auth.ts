@@ -2,10 +2,15 @@ import NextAuth from 'next-auth';
 import GitHub from 'next-auth/providers/github';
 import { EncryptJWT, jwtDecrypt } from 'jose';
 
-// Helper secret setup for JWT encryption
-const secretKey = new TextEncoder().encode(
-    (process.env.AUTH_SECRET || "default_secret_32_bytes_long_min").padEnd(32, '0').slice(0, 32)
-);
+// JWT secret; fail if unset (no default).
+const authSecret = process.env.AUTH_SECRET;
+if (!authSecret) {
+    throw new Error(
+        'AUTH_SECRET environment variable is required. ' +
+        'Generate one with: npx auth secret'
+    );
+}
+const secretKey = new TextEncoder().encode(authSecret.padEnd(32, '0').slice(0, 32));
 
 export async function encryptToken(token: string) {
     return await new EncryptJWT({ token })
@@ -45,7 +50,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 session.user.username = token.username;
             }
 
-            // SSRF/Data Exposure Fix: Encrypt the token instead of exposing plaintext in session
             if (typeof token.accessToken === "string") {
                 session.encryptedAccessToken = await encryptToken(token.accessToken);
             }

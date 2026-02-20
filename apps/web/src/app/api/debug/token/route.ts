@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getToken } from 'next-auth/jwt';
 
-/** Debug: verify access token in JWT. 404 in production; optional X-Debug-Token when DEBUG_TOKEN set. */
+/** Debug token check; 404 in production unless X-Debug-Token matches DEBUG_TOKEN. */
 export async function GET(request: NextRequest) {
   const isProduction =
     process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
@@ -11,11 +11,12 @@ export async function GET(request: NextRequest) {
   }
 
   const debugToken = process.env.DEBUG_TOKEN;
-  if (debugToken) {
-    const headerToken = request.headers.get('X-Debug-Token');
-    if (headerToken !== debugToken) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    }
+  if (!debugToken) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+  const headerToken = request.headers.get('X-Debug-Token');
+  if (headerToken !== debugToken) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
   const session = await auth();
