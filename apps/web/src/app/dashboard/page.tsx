@@ -18,12 +18,10 @@ export default async function DashboardPage() {
 
     const username = session.user.username || '';
 
-    // For M2 MVP, we'll fetch the registry and filter agents where the ID contains 
-    // the user's github username. This is a proxy for "ownership" until we have a real DB.
+    // Ownership: strict URN prefix urn:asap:agent:<username>: to avoid false positives.
     const allAgents = await fetchRegistry();
-    const myAgents = username
-        ? allAgents.filter(a => (a.id as string).toLowerCase().includes(username.toLowerCase()))
-        : [];
+    const prefix = username ? `urn:asap:agent:${username.toLowerCase()}:` : '';
+    const myAgents = prefix ? allAgents.filter(a => (a.id ?? '').toLowerCase().startsWith(prefix)) : [];
 
     return (
         <div className="container mx-auto py-10 px-4 max-w-6xl">
