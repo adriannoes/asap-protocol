@@ -6,12 +6,17 @@
 
 ---
 
-## Pre-M2 Validation (Recommended)
+## Pre-M2 Validation ✅ Complete (2026-02-19)
 
-Before starting Sprint M2, run the validation scripts to ensure registry fetch and GitHub PR flow work:
+All validation steps passed. Ready to start Sprint M2.
 
-- **Guide**: [pre-M2-validation-guide.md](./pre-M2-validation-guide.md)
-- **Scripts**: `apps/web/scripts/validate-registry-fetch.mjs`, `validate-github-pr-flow.mjs`
+| Check | Status |
+|-------|--------|
+| Registry fetch | ✅ `registry.json` at repo root, fetchable |
+| GitHub PR flow | ✅ Fork → Branch → File → PR (sha fix in script) |
+| OAuth token in JWT | ✅ `auth.ts` stores `access_token`; `/api/debug/token` verified |
+
+**Guide**: [pre-M2-validation-guide.md](./pre-M2-validation-guide.md)
 
 ---
 
@@ -34,21 +39,21 @@ This sprint adds the core features: browsing agents, viewing agent details, and 
 
 ### Sub-tasks
 
-- [ ] 4.1.1 /browse page layout
+- [x] 4.1.1 /browse page layout
   - **Strategy**: Incremental Static Regeneration (ISR) with `revalidate: 60`
-  - **Data Source**: Fetch `https://raw.githubusercontent.com/.../registry.json`
+  - **Data Source**: `lib/registry.ts` fetches `registry.json` from `NEXT_PUBLIC_REGISTRY_URL` (default: `adriannoes/asap-protocol/main`)
 
-- [ ] 4.1.2 Search input
+- [x] 4.1.2 Search input
   - Client-side filtering of the JSON list (registry is small < 1MB)
   - Debounced search (300ms)
 
-- [ ] 4.1.3 Skill filters
+- [x] 4.1.3 Skill filters
   - Extract unique skills from `registry.json`
   - Multi-select checkbox/badges
 
-- [ ] 4.1.4 Trust level filters
+- [x] 4.1.4 Trust level filters
 
-- [ ] 4.1.5 Agent cards grid
+- [x] 4.1.5 Agent cards grid
 
 - [ ] 4.1.7 Commit Browser
   - **Command**: `git commit -m "feat(web): implement registry browser and filters"`
@@ -120,13 +125,12 @@ This sprint adds the core features: browsing agents, viewing agent details, and 
 
 - [ ] 2.4.3 GitHub Automation (ADR-18)
   - **Library**: `octokit` (SDK)
-  - **Flow**:
-    1. **Fork**: `octokit.rest.repos.createFork({ owner: "asap-protocol", repo: "registry" })`
-    2. **Branch**: `octokit.rest.git.createRef(...)` -> `refs/heads/register/<agent>`
-    3. **File**: `octokit.rest.repos.createOrUpdateFileContents(...)` -> `registry.json`
-    4. **PR**: `octokit.rest.pulls.create(...)`
-      - **Title**: "Register Agent: <name>"
-      - **Body**: "Automated registration via Marketplace."
+  - **Token**: Use `getToken()` in Server Action; pass `accessToken` to Octokit
+  - **Flow** (validated in pre-M2; see `validate-github-pr-flow.mjs`):
+    1. **Fork**: `createFork({ owner, repo })` — use `GITHUB_REGISTRY_OWNER/REPO` env (default: `adriannoes/asap-protocol`)
+    2. **Branch**: `createRef(...)` -> `refs/heads/register/<agent>`
+    3. **File**: `createOrUpdateFileContents(...)` -> `registry.json` — **must pass `sha`** when updating existing file
+    4. **PR**: `pulls.create(...)` — Title: "Register Agent: <name>", Body: "Automated registration via Marketplace."
 
 - [ ] 2.4.4 Dashboard Status Updates
   - **Poll**: `SWR` or `React Query` to poll `/api/github/pr-status`
