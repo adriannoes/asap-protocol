@@ -38,35 +38,40 @@ v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Regi
 
 ### Tasks
 
-- [ ] 1.1 Design & Prototyping
+- [x] 1.1 Design & Prototyping
   - Goal: Wireframes and High-fidelity mockups for core pages
 
-- [ ] 1.2 Project setup
+- [x] 1.2 Project setup
   - Goal: Next.js 15 (App Router) + TailwindCSS + Shadcn/UI
   - Deliverable: `apps/web/` initialized
 
-- [ ] 1.2 Lite Registry data layer
+- [x] 1.2 Lite Registry data layer
   - Goal: Fetch and parse `registry.json` (SSG/ISR)
   - Deliverable: TypeScript types + data fetching utilities
 
-- [ ] 1.3 Landing page
+- [x] 1.3 Landing page
   - Goal: Hero, value prop, CTA
 
-- [ ] 1.4 OAuth2 login flow
+- [x] 1.4 OAuth2 login flow
   - Goal: Developer authentication (GitHub Sign-In)
 
-- [ ] 1.5 Base layout and navigation
+- [x] 1.5 Base layout and navigation
+
+- [x] 1.6 Vercel deployment
+  - Goal: Production deploy, env vars, CI/CD on push to main
 
 ### Definition of Done
-- [ ] Landing page live on Vercel
-- [ ] `registry.json` parsed and agents displayable
-- [ ] Login/logout working
+- [x] Landing page live on Vercel
+- [x] `registry.json` parsed and agents displayable
+- [x] Login/logout working
 
 ---
 
 ## Sprint M2: Web App Features
 
 **Goal**: Registry browser and developer dashboard
+
+**Pre-M2 Validation** (2026-02-19): ✅ Complete — registry fetch, GitHub PR flow, OAuth token in JWT. See [pre-M2-validation-guide.md](./pre-M2-validation-guide.md).
 
 ### Tasks
 
@@ -183,7 +188,7 @@ v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Regi
 
 | Sprint | Tasks | Focus | Est. Days |
 |--------|-------|-------|-----------|
-| M1 | 5 | Web Foundation + Lite Registry | 6-8 |
+| M1 | 6 | Web Foundation + Lite Registry + Deploy | 6-8 |
 | M2 | 4 | Web Features | 5-7 |
 | M3 | 5 | Verified Flow + IssueOps | 6-8 |
 | M4 | 6 | Launch Prep | 6-10 |
@@ -194,9 +199,9 @@ v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Regi
 
 ## Progress Tracking
 
-**Overall Progress**: 0/20 tasks (0%)
+**Overall Progress**: 6/20 tasks (30%) — Sprint M1 complete
 
-**Last Updated**: 2026-02-12
+**Last Updated**: 2026-02-20
 
 ---
 
@@ -215,3 +220,4 @@ v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Regi
 |------|--------|
 | 2026-02-06 | Initial task roadmap |
 | 2026-02-12 | **Lean Marketplace pivot**: Removed Production Registry sprints (M1/M2), removed Service Integration sprint, Web App reads from Lite Registry, reduced from 6 sprints (27 tasks) to 4 sprints (20 tasks), scale targets reduced to 100+ agents |
+| 2026-02-20 | **Sprint M1 complete**: All tasks 1.1–1.6 and Definition of Done marked done; roadmap progress 6/20 (30%) |

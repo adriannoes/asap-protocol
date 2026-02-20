@@ -146,6 +146,8 @@ A static `registry.json` hosted on GitHub Pages mirrors patterns that worked wel
 >
 > **Update (2026-02-12, Lean Marketplace Pivot)**: Lite Registry continues as the primary data source through v2.0 (Web App reads from `registry.json`). Full Registry API Backend deferred to v2.1. The Lite Registry proved sufficient and reduces infrastructure complexity. See [../strategy/deferred-backlog.md](../strategy/deferred-backlog.md#1-registry-api-backend-originally-v12-sprints-t3t4).
 >
+> **Update (2026-02-19, Registry Location)**: `registry.json` lives at the **repo root** of the main protocol repository (`asap-protocol/asap-protocol`), fetched via `raw.githubusercontent.com`. Single repo, no separate `asap-protocol/registry`. Migration to a dedicated registry repo deferred if scale or separation demands it. File is **public** — metadata only (endpoints, skills, description), no secrets.
+>
 > **Date**: 2026-02-07
 
 ---

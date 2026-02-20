@@ -13,6 +13,7 @@
 - `apps/web/app/layout.tsx` - Base layout
 - `apps/web/components/` - UI components
 - `.cursor/design/mobile-strategy.md` - Mobile responsive layouts strategy
+- `.cursor/dev-planning/tasks/v2.0.0/vercel-deploy-guide.md` - Step-by-step Vercel deploy guide (M1)
 
 ---
 
@@ -49,7 +50,7 @@ The web app is the human-facing marketplace interface. This sprint sets up the p
 - [x] Design mockups approved
 - [x] Mobile strategy defined
 
-- [-] 1.1.4 Commit Design Assets
+- [x] 1.1.4 Commit Design Assets
   - **Command**: `git commit -m "docs(design): add wireframes and mockups"`
 
 ---
@@ -88,7 +89,7 @@ The web app is the human-facing marketplace interface. This sprint sets up the p
   - **Script**: `scripts/generate_types.py` (reads `src/asap/schema/` -> `apps/web/src/types/protocol.d.ts`)
   - **CI**: Check for out-of-sync types on PRs.
 
-- [-] 1.2.7 Commit Setup
+- [x] 1.2.7 Commit Setup
   - **Command**: `git commit -m "chore(web): initialize Next.js project structure"`
 
 - [x] 1.2.8 Setup Testing Infrastructure
@@ -214,38 +215,40 @@ The web app is the human-facing marketplace interface. This sprint sets up the p
 
 ## Task 1.6: Vercel Deployment
 
+> **Step-by-step guide**: [Vercel Deploy Guide](./vercel-deploy-guide.md)
+
 ### Sub-tasks
 
-- [ ] 1.6.1 Connect GitHub repo to Vercel
+- [x] 1.6.1 Connect GitHub repo to Vercel
   - **Settings**: Root directory `apps/web`
   - **Framework**: Next.js
 
-- [ ] 1.6.2 Configure Environment Variables (Vercel)
+- [x] 1.6.2 Configure Environment Variables (Vercel)
   - **Production Keys**:
     - `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` (OAuth App)
     - `AUTH_SECRET` (generated via `openssl rand -hex 32`)
 
-- [ ] 1.6.3 Verify Production Build
+- [x] 1.6.3 Verify Production Build
   - Ensure `npm run build` passes on Vercel infrastructure
 
-- [ ] 1.6.4 Domain Configuration (Optional)
+- [x] 1.6.4 Domain Configuration (Optional)
   - Custom domain can be added here or later in M4.
 
 **Acceptance Criteria**:
-- [ ] Live URL accessible
-- [ ] CI/CD Deployment triggers on push to main
+- [x] Live URL accessible
+- [x] CI/CD Deployment triggers on push to main
 
 ---
 
 ## Sprint M1 Definition of Done
 
-- [ ] Design mockups approved
-- [ ] Next.js project running
-- [ ] Landing page live (URL verified)
-- [ ] Auth working
-- [ ] Base layout complete
+- [x] Design mockups approved
+- [x] Next.js project running
+- [x] Landing page live (URL verified)
+- [x] Auth working
+- [x] Base layout complete
 
 **Total Sub-tasks**: ~20
 
 ## Documentation Updates
-- [ ] **Update Roadmap**: Mark completed items in [v2.0.0 Roadmap](./tasks-v2.0.0-roadmap.md)
+- [x] **Update Roadmap**: Mark completed items in [v2.0.0 Roadmap](./tasks-v2.0.0-roadmap.md)

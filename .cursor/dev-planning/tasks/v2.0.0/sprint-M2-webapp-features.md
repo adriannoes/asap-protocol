@@ -152,22 +152,24 @@ This sprint adds the core features: browsing agents, viewing agent details, and 
   - **Display**: Badge (Yellow: Pending, Red: Changes Requested, Green: Merged)
   - **Admin Context**: Link to PR for user to see comments.
 
-- [ ] 2.4.5 Commit Registration
+- [x] 2.4.5 Commit Registration
   - **Command**: `git commit -m "feat(web): implement agent registration flow"`
 
 **Acceptance Criteria**:
-- [ ] Developer can register agent via form
-- [ ] Automated PR created on GitHub
-- [ ] Dashboard reflects PR status
+- [x] Developer can register agent via form
+- [x] Automated PR created on GitHub
+- [x] Dashboard reflects PR status
 
 ---
 
 ## Sprint M2 Definition of Done
 
-- [ ] Browse and search functional
-- [ ] Agent detail page working
-- [ ] Dashboard operational
-- [ ] Agent registration flow complete
+- [x] Web app builds (`npm run build`) without Next.js errors.
+- [x] User can browse the registry with filters working (client-side).
+- [x] User can view detailed Agent Information (Server-Rendered).
+- [x] User can log in via GitHub (OAuth).
+- [x] User can see a dashboard with their agents (filtered by username for MVP).
+- [x] User can submit a new Agent via a form -> creates a GitHub PR.in [v2.0.0 Roadmap](./tasks-v2.0.0-roadmap.md)
 
 **Total Sub-tasks**: ~20
 
