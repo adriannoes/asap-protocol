@@ -16,7 +16,7 @@ export default async function DashboardPage() {
         redirect('/');
     }
 
-    const username = (session.user as any).username || '';
+    const username = session.user.username || '';
 
     // For M2 MVP, we'll fetch the registry and filter agents where the ID contains 
     // the user's github username. This is a proxy for "ownership" until we have a real DB.

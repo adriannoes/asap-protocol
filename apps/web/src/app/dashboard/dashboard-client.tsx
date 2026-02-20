@@ -38,7 +38,7 @@ function AgentStatusBadge({ endpoint }: { endpoint: string }) {
                 if (isMounted) {
                     setStatus(res.ok ? 'online' : 'offline');
                 }
-            } catch (err) {
+            } catch {
                 if (isMounted) {
                     setStatus('offline');
                 }
@@ -108,7 +108,7 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
                     <div className="space-y-3 mb-6">
                         <h3 className="text-sm font-medium text-muted-foreground">Pending Registrations</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {pendingPrs.map((pr: any) => (
+                            {pendingPrs.map((pr: { id: number, title: string, status: string, url: string }) => (
                                 <Card key={pr.id} className="bg-muted/30 border-dashed">
                                     <CardContent className="p-4 flex items-center justify-between">
                                         <div className="flex items-center gap-3">
@@ -141,7 +141,7 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
                             <div className="max-w-md">
                                 <h3 className="font-semibold text-lg">No agents found</h3>
                                 <p className="text-sm text-muted-foreground mt-1 mb-4">
-                                    You haven't registered any agents under the username <span className="font-mono">{username}</span> yet.
+                                    You haven&apos;t registered any agents under the username <span className="font-mono">{username}</span> yet.
                                 </p>
                                 <Button asChild variant="outline">
                                     <Link href="/dashboard/register">Register your first agent</Link>
@@ -220,7 +220,7 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
                             <ShieldAlert className="w-12 h-12 text-muted-foreground mb-4 opacity-20" />
                             <h3 className="text-lg font-medium">No keys generated</h3>
                             <p className="text-sm text-muted-foreground mt-2 max-w-sm">
-                                You currently don't have any active API keys. Use OAuth via GitHub for CLI interactions right now.
+                                You currently don&apos;t have any active API keys. Use OAuth via GitHub for CLI interactions right now.
                             </p>
                             <Button className="mt-6" variant="outline" disabled>Generate New Key</Button>
                         </div>

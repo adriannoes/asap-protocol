@@ -10,8 +10,8 @@ export async function fetchUserPullRequests() {
             return { success: false, error: 'Unauthorized' };
         }
 
-        const username = (session.user as any).username;
-        const encryptedAccessToken = (session as any).encryptedAccessToken;
+        const username = session.user.username;
+        const encryptedAccessToken = session.encryptedAccessToken;
 
         if (!username || !encryptedAccessToken) {
             return { success: false, error: 'Missing GitHub credentials' };

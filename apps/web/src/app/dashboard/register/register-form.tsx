@@ -63,7 +63,7 @@ export function RegisterAgentForm() {
             } else {
                 setResult({ success: false, error: response.error });
             }
-        } catch (error) {
+        } catch {
             setResult({ success: false, error: "An unexpected error occurred during submission." });
         } finally {
             setIsSubmitting(false);
@@ -134,7 +134,7 @@ export function RegisterAgentForm() {
                                     <Input placeholder="https://api.myagent.com/asap/manifest" {...field} />
                                 </FormControl>
                                 <FormDescription>
-                                    Public URL to fetch your agent's manifest.json
+                                    Public URL to fetch your agent&apos;s manifest.json
                                 </FormDescription>
                                 <FormMessage />
                             </FormItem>

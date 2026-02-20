@@ -22,8 +22,8 @@ export async function submitAgentRegistration(values: z.infer<typeof formSchema>
             return { success: false, error: 'You must be logged in to register an agent.' };
         }
 
-        const username = (session.user as any).username;
-        const encryptedAccessToken = (session as any).encryptedAccessToken;
+        const username = session.user.username;
+        const encryptedAccessToken = session.encryptedAccessToken;
 
         if (!username || !encryptedAccessToken) {
             return { success: false, error: 'GitHub account link missing or invalid. Please re-login.' };
@@ -81,8 +81,9 @@ export async function submitAgentRegistration(values: z.infer<typeof formSchema>
             if (!manifestCheck.ok) {
                 return { success: false, error: `Manifest URL returned status ${manifestCheck.status}. Must be reachable.` };
             }
-        } catch (e: any) {
-            return { success: false, error: `Could not reach Manifest URL: ${e?.message || manifest_url}` };
+        } catch (e: unknown) {
+            const err = e as Error;
+            return { success: false, error: `Could not reach Manifest URL: ${err?.message || manifest_url}` };
         }
 
         // 3. GitHub Automation via Octokit (Task 2.4.3)
@@ -109,7 +110,7 @@ export async function submitAgentRegistration(values: z.infer<typeof formSchema>
             });
 
             // C. Fetch existing registry.json
-            let registryPath = 'registry.json';
+            const registryPath = 'registry.json';
             let fileSha: string | undefined;
             let currentRegistry: Manifest[] = [];
 
@@ -135,6 +136,7 @@ export async function submitAgentRegistration(values: z.infer<typeof formSchema>
                 id: agentId,
                 name: agentId.split(':').pop(), // Use slug name
                 description: description,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 version: "1.0.0" as any, // Type coercion to satisfy generated interface
                 endpoints: {
                     asap: endpoint_http,
@@ -142,6 +144,7 @@ export async function submitAgentRegistration(values: z.infer<typeof formSchema>
                 },
                 capabilities: {
                     asap_version: "0.1",
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     skills: skillsList as any
                 }
             };
@@ -175,11 +178,12 @@ export async function submitAgentRegistration(values: z.infer<typeof formSchema>
 
             return { success: true, prUrl: prData.html_url };
 
-        } catch (octoError: any) {
-            console.error("GitHub API Error", octoError);
+        } catch (octoError: unknown) {
+            const err = octoError as Error;
+            console.error("GitHub API Error", err);
             return {
                 success: false,
-                error: `Failed to create GitHub Pull Request: ${octoError.message || 'Unknown error'}`
+                error: `Failed to create GitHub Pull Request: ${err.message || 'Unknown error'}`
             };
         }
 
