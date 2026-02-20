@@ -1,6 +1,6 @@
 'use server';
 
-import { auth } from '@/auth';
+import { auth, decryptToken } from '@/auth';
 import { z } from 'zod';
 import { Octokit } from 'octokit';
 import { Manifest } from '@/types/protocol';
@@ -23,11 +23,13 @@ export async function submitAgentRegistration(values: z.infer<typeof formSchema>
         }
 
         const username = (session.user as any).username;
-        const accessToken = (session as any).accessToken; // Requires adding accessToken to session via auth.ts callbacks
+        const encryptedAccessToken = (session as any).encryptedAccessToken;
 
-        if (!username || !accessToken) {
+        if (!username || !encryptedAccessToken) {
             return { success: false, error: 'GitHub account link missing or invalid. Please re-login.' };
         }
+
+        const accessToken = await decryptToken(encryptedAccessToken);
 
         // 1. Validate Form Data
         const parsed = formSchema.safeParse(values);
@@ -47,14 +49,40 @@ export async function submitAgentRegistration(values: z.infer<typeof formSchema>
         }));
 
         // 2. Fetch remote manifest to test reachability (Mocking full validation for M2 MVP)
-        // In a strict implementation, we would verify Ed25519 signatures here.
+        // SSRF Mitigation added to prevent scanning internal networks
         try {
-            const manifestCheck = await fetch(manifest_url, { method: 'HEAD' });
+            const parsedUrl = new URL(manifest_url);
+            if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
+                return { success: false, error: 'Manifest URL must use HTTP or HTTPS.' };
+            }
+
+            const hostname = parsedUrl.hostname.toLowerCase();
+            const isLocalOrPrivate = hostname === 'localhost' ||
+                hostname === '127.0.0.1' ||
+                hostname === '::1' ||
+                hostname.startsWith('192.168.') ||
+                hostname.startsWith('10.') ||
+                hostname.startsWith('169.254.') ||
+                /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname);
+
+            if (isLocalOrPrivate) {
+                return { success: false, error: 'Internal/Private network addresses are not allowed for manifests.' };
+            }
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 seconds timeout
+
+            const manifestCheck = await fetch(manifest_url, {
+                method: 'HEAD',
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
             if (!manifestCheck.ok) {
                 return { success: false, error: `Manifest URL returned status ${manifestCheck.status}. Must be reachable.` };
             }
-        } catch (e) {
-            return { success: false, error: `Could not reach Manifest URL: ${manifest_url}` };
+        } catch (e: any) {
+            return { success: false, error: `Could not reach Manifest URL: ${e?.message || manifest_url}` };
         }
 
         // 3. GitHub Automation via Octokit (Task 2.4.3)

@@ -1,6 +1,6 @@
 'use server';
 
-import { auth } from '@/auth';
+import { auth, decryptToken } from '@/auth';
 import { Octokit } from 'octokit';
 
 export async function fetchUserPullRequests() {
@@ -11,11 +11,13 @@ export async function fetchUserPullRequests() {
         }
 
         const username = (session.user as any).username;
-        const accessToken = (session as any).accessToken;
+        const encryptedAccessToken = (session as any).encryptedAccessToken;
 
-        if (!username || !accessToken) {
+        if (!username || !encryptedAccessToken) {
             return { success: false, error: 'Missing GitHub credentials' };
         }
+
+        const accessToken = await decryptToken(encryptedAccessToken);
 
         const octokit = new Octokit({ auth: accessToken });
         const owner = process.env.GITHUB_REGISTRY_OWNER || 'adriannoes';
