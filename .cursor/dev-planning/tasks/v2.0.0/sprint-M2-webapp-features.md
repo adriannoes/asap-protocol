@@ -55,7 +55,7 @@ This sprint adds the core features: browsing agents, viewing agent details, and 
 
 - [x] 4.1.5 Agent cards grid
 
-- [ ] 4.1.7 Commit Browser
+- [x] 4.1.7 Commit Browser
   - **Command**: `git commit -m "feat(web): implement registry browser and filters"`
 
 ---
@@ -64,17 +64,32 @@ This sprint adds the core features: browsing agents, viewing agent details, and 
 
 ### Sub-tasks
 
-- [ ] 4.2.1 /agents/[id] route
+- [x] 4.2.1 `/agents/[id]` route
+  - Create dynamic route using App Router (`app/agents/[id]/page.tsx`)
+  - Server-side data fetching (`fetchAgentById`)
+  - Use ISR (`revalidate: 60`)
+  - Back to browse navigation link
 
-- [ ] 4.2.2 Manifest display
+- [x] 4.2.2 Manifest display
+  - Parse and display the agent's `manifest.json` data visually.
+  - Show name, version, ID, description.
+  - Explicitly list supported schemas, protocol compatibility (`capabilities.asap_version`), skills.
+  - Streaming and state persistence badges.
 
-- [ ] 4.2.3 SLA section
+- [x] 4.2.3 SLA section
+  - Dedicated section demonstrating the agent's `SLADefinition`.
+  - Include availability, latency (P95), and error rate promises.
 
-- [ ] 4.2.4 Reputation and reviews
+- [x] 4.2.4 Reputation and reviews
+  - *Note: Leave placeholder for future implementation as detailed in the PRD.*
+  - Just UI elements indicating future "Trust Score."
 
-- [ ] 4.2.5 "Connect" CTA
+- [x] 4.2.5 "Connect" CTA
+  - Button to connect to the agent
+  - Display the `asap` protocol endpoint clearly for developer reference (`endpoints.asap`)
+  - **Note**: Client-side fetch. Agents *must* support CORS or will show as unreachable.
 
-- [ ] 4.2.6 Commit Agent Detail
+- [x] 4.2.6 Commit Agent Detail
   - **Command**: `git commit -m "feat(web): implement agent detail page"`
 
 ---
