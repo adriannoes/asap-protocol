@@ -1,6 +1,110 @@
 {
+  "$defs": {
+    "TaskRequestConfig": {
+      "additionalProperties": false,
+      "description": "TaskRequest.config (extra allowed).",
+      "properties": {
+        "timeout_seconds": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Maximum execution time in seconds",
+          "title": "Timeout Seconds"
+        },
+        "priority": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Task priority (e.g., 'low', 'normal', 'high')",
+          "title": "Priority"
+        },
+        "idempotency_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Key for idempotent execution",
+          "title": "Idempotency Key"
+        },
+        "streaming": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether to stream progress updates",
+          "title": "Streaming"
+        },
+        "persist_state": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether to persist state snapshots",
+          "title": "Persist State"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "LLM model identifier",
+          "title": "Model"
+        },
+        "temperature": {
+          "anyOf": [
+            {
+              "maximum": 2,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "LLM temperature (0-2)",
+          "title": "Temperature"
+        }
+      },
+      "title": "TaskRequestConfig",
+      "type": "object"
+    }
+  },
   "additionalProperties": false,
-  "description": "Request to execute a task on an agent.\n\nTaskRequest initiates task execution, specifying the skill to invoke,\ninput data, and optional configuration parameters.\n\nAttributes:\n    conversation_id: ID of the conversation this task belongs to\n    parent_task_id: Optional ID of parent task (for subtasks)\n    skill_id: Identifier of the skill to execute\n    input: Input data for the skill (JSON-serializable)\n    config: Optional configuration (timeout, priority, streaming, etc.)\n\nExample:\n    >>> request = TaskRequest(\n    ...     conversation_id=\"conv_01HX5K3MQVN8\",\n    ...     skill_id=\"web_research\",\n    ...     input={\"query\": \"AI infrastructure market trends Q3 2025\"},\n    ...     config={\"timeout_seconds\": 600, \"streaming\": True}\n    ... )",
+  "description": "Request to execute a task on an agent.\n\nTaskRequest initiates task execution, specifying the skill to invoke,\ninput data, and optional configuration parameters.\n\nAttributes:\n    conversation_id: ID of the conversation this task belongs to\n    parent_task_id: Optional ID of parent task (for subtasks)\n    skill_id: Identifier of the skill to execute\n    input: Input data for the skill (JSON-serializable)\n    config: Optional configuration (timeout, priority, streaming, etc.)",
   "properties": {
     "conversation_id": {
       "description": "Parent conversation ID",
@@ -27,23 +131,21 @@
     },
     "input": {
       "additionalProperties": true,
-      "description": "Input data for the skill",
+      "description": "Input data for the skill (skill-specific)",
       "title": "Input",
       "type": "object"
     },
     "config": {
       "anyOf": [
         {
-          "additionalProperties": true,
-          "type": "object"
+          "$ref": "#/$defs/TaskRequestConfig"
         },
         {
           "type": "null"
         }
       ],
       "default": null,
-      "description": "Optional configuration (timeout, priority, streaming, etc.)",
-      "title": "Config"
+      "description": "Optional configuration (timeout, priority, streaming, etc.)"
     }
   },
   "required": [

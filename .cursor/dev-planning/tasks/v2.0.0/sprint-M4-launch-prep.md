@@ -107,7 +107,6 @@ This is the final sprint before v2.0.0 launch. Focus on security, performance, a
 
 - [ ] 4.5.1 Final checklist review
   - Domain DNS propagated?
-  - Stripe Production mode active?
   - GitHub OAuth Production App configured?
   - Sentry DSN active?
 

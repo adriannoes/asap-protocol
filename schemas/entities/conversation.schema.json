@@ -1,4 +1,83 @@
 {
+  "$defs": {
+    "CommonMetadata": {
+      "additionalProperties": false,
+      "description": "Common metadata keys (extra allowed).",
+      "properties": {
+        "purpose": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Conversation purpose",
+          "title": "Purpose"
+        },
+        "ttl_hours": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Time-to-live in hours",
+          "title": "Ttl Hours"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Source identifier",
+          "title": "Source"
+        },
+        "timestamp": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "ISO timestamp",
+          "title": "Timestamp"
+        },
+        "tags": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Tags for categorization",
+          "title": "Tags"
+        }
+      },
+      "title": "CommonMetadata",
+      "type": "object"
+    }
+  },
   "additionalProperties": false,
   "description": "A context for related interactions between agents.\n\nConversations enable shared context accumulation, task grouping,\nand state isolation between unrelated work.\n\nAttributes:\n    id: Unique conversation identifier (ULID format)\n    participants: List of agent URNs participating in the conversation\n    created_at: Timestamp when the conversation was created (UTC)\n    metadata: Optional metadata (e.g., purpose, TTL, tags)\n\nExample:\n    >>> from datetime import datetime, timezone\n    >>> conversation = Conversation(\n    ...     id=\"conv_01HX5K3MQVN8...\",\n    ...     participants=[\"urn:asap:agent:coordinator\", \"urn:asap:agent:research-v1\"],\n    ...     created_at=datetime.now(timezone.utc),\n    ...     metadata={\"purpose\": \"quarterly_report_research\", \"ttl_hours\": 72}\n    ... )",
   "properties": {
@@ -12,6 +91,7 @@
       "items": {
         "type": "string"
       },
+      "minItems": 1,
       "title": "Participants",
       "type": "array"
     },
@@ -24,16 +104,14 @@
     "metadata": {
       "anyOf": [
         {
-          "additionalProperties": true,
-          "type": "object"
+          "$ref": "#/$defs/CommonMetadata"
         },
         {
           "type": "null"
         }
       ],
       "default": null,
-      "description": "Optional metadata (purpose, TTL, etc.)",
-      "title": "Metadata"
+      "description": "Optional metadata (purpose, TTL, etc.)"
     }
   },
   "required": [

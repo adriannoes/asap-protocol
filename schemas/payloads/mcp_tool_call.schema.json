@@ -1,6 +1,6 @@
 {
   "additionalProperties": false,
-  "description": "Call an MCP tool.\n\nMcpToolCall invokes a tool provided by an MCP server, enabling\nagents to leverage external capabilities and integrations.\n\nAttributes:\n    request_id: Unique identifier for this tool call request\n    tool_name: Name of the MCP tool to invoke\n    arguments: Arguments to pass to the tool (JSON-serializable)\n    mcp_context: Optional MCP-specific context (server, session, etc.)\n\nExample:\n    >>> tool_call = McpToolCall(\n    ...     request_id=\"req_123\",\n    ...     tool_name=\"web_search\",\n    ...     arguments={\"query\": \"AI trends\", \"max_results\": 10},\n    ...     mcp_context={\"server\": \"mcp://tools.example.com\"}\n    ... )",
+  "description": "Call an MCP tool.\n\nMcpToolCall invokes a tool provided by an MCP server, enabling\nagents to leverage external capabilities and integrations.\n\nAttributes:\n    request_id: Unique identifier for this tool call request\n    tool_name: Name of the MCP tool to invoke\n    arguments: Arguments to pass to the tool (JSON-serializable)\n    mcp_context: Optional MCP-specific context (server, session, etc.)",
   "properties": {
     "request_id": {
       "description": "Unique request identifier",

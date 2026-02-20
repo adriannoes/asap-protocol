@@ -1,6 +1,6 @@
 {
   "additionalProperties": false,
-  "description": "Request a state snapshot for a task.\n\nStateQuery requests the current or a specific version of a task's\nstate snapshot for inspection or restoration.\n\nAttributes:\n    task_id: ID of the task to query state for\n    version: Optional specific version number to retrieve\n\nExample:\n    >>> # Query latest state\n    >>> query = StateQuery(task_id=\"task_123\")\n    >>>\n    >>> # Query specific version\n    >>> query = StateQuery(task_id=\"task_123\", version=5)",
+  "description": "Request a state snapshot for a task.\n\nStateQuery requests the current or a specific version of a task's\nstate snapshot for inspection or restoration.\n\nAttributes:\n    task_id: ID of the task to query state for\n    version: Optional specific version number to retrieve",
   "properties": {
     "task_id": {
       "description": "Task identifier",

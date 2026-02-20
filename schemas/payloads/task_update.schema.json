@@ -1,7 +1,7 @@
 {
   "$defs": {
     "TaskStatus": {
-      "description": "Task lifecycle states.\n\nTasks progress through these states during their lifecycle.\nTerminal states are: COMPLETED, FAILED, CANCELLED.",
+      "description": "Task lifecycle states.\n\nTasks progress through these states during their lifecycle.\nTerminal states are: COMPLETED, FAILED, CANCELLED.\n\nExample:\n    >>> TaskStatus.COMPLETED.is_terminal()\n    True\n    >>> TaskStatus.WORKING.is_terminal()\n    False",
       "enum": [
         "submitted",
         "working",
@@ -14,7 +14,7 @@
       "type": "string"
     },
     "UpdateType": {
-      "description": "Task update types.\n\nDefines the type of update being sent for a task.",
+      "description": "Task update types.\n\nDefines the type of update being sent for a task.\n\nExample:\n    >>> UpdateType.PROGRESS.value\n    'progress'",
       "enum": [
         "progress",
         "input_required",
@@ -25,7 +25,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Update on task execution progress or status.\n\nTaskUpdate provides real-time updates during task execution, including\nprogress information or requests for additional input.\n\nAttributes:\n    task_id: ID of the task being updated\n    update_type: Type of update (progress, input_required, etc.)\n    status: Current task status\n    progress: Optional progress information (percent, message, ETA)\n    input_request: Optional request for additional input from user\n\nExample:\n    >>> # Progress update\n    >>> update = TaskUpdate(\n    ...     task_id=\"task_123\",\n    ...     update_type=\"progress\",\n    ...     status=\"working\",\n    ...     progress={\"percent\": 65, \"message\": \"Synthesizing findings...\"}\n    ... )\n    >>>\n    >>> # Input required update\n    >>> update = TaskUpdate(\n    ...     task_id=\"task_123\",\n    ...     update_type=\"input_required\",\n    ...     status=\"input_required\",\n    ...     input_request={\"prompt\": \"Please clarify:\", \"options\": [...]}\n    ... )",
+  "description": "Update on task execution progress or status.\n\nTaskUpdate provides real-time updates during task execution, including\nprogress information or requests for additional input.\n\nAttributes:\n    task_id: ID of the task being updated\n    update_type: Type of update (progress, input_required, etc.)\n    status: Current task status\n    progress: Optional progress information (percent, message, ETA)\n    input_request: Optional request for additional input from user",
   "properties": {
     "task_id": {
       "description": "Task identifier",

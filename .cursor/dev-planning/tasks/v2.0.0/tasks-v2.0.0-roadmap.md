@@ -24,7 +24,7 @@
 v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Registry:
 - **Web App**: Next.js 15 frontend on Vercel (SSG/ISR from `registry.json`)
 - **Lite Registry**: GitHub Pages JSON as the sole data source (no backend API)
-- **Verified Badge**: Stripe-powered trust verification
+- **Verified Badge**: Operations-based trust verification (Manual Review)
 - **No Backend**: All dynamic features (write API, real-time search) deferred to v2.1
 
 > [!NOTE]
@@ -106,11 +106,16 @@ v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Regi
 - [ ] 3.3 Registration Action (GitHub Actions)
  - Goal: Parse Issue YAML, validate Zod schema, update `registry.json`, close issue
 
-- [ ] 3.4 Developer Dashboard
+- [ ] 3.4 Developer Dashboard (with Verified status)
  - Goal: "My Agents" list derived from `maintainers` field in registry
+ - Status: Listed, Pending, Verified
+
+- [ ] 3.5 Verified Badge Request (New)
+ - Goal: IssueOps flow for requesting verification (No payments)
 
 ### Definition of Done
 - [ ] User can register agent via Web Form -> GitHub Issue flow
+- [ ] User can request verification via Web Form -> GitHub Issue flow
 - [ ] Action automatically merges valid agents
 ---
 
@@ -142,7 +147,7 @@ v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Regi
 
 **Context**: [Issue #44](https://github.com/adriannoes/asap-protocol/issues/44) — `sign_with_ca` in `src/asap/crypto/trust.py` is a simulation (caller provides CA key). Acceptable for v1.2.0; must be integrated into a real flow for v2.0.
 
-**Resolved by**: Task 3.4 (ASAP CA Signing Automation) — GitHub Action + Stripe approval flow will use the CA key from secrets to sign manifests. When implementing 3.4, close #44 and add a comment linking to this task.
+**Resolved by**: Task 3.4 (ASAP CA Signing Automation) — GitHub Action + Admin approval flow will use the CA key from secrets to sign manifests. When implementing 3.4, close #44 and add a comment linking to this task.
 
 ### Consider: orjson for JSON Serialization
 
@@ -180,7 +185,7 @@ v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Regi
 |--------|-------|-------|-----------|
 | M1 | 5 | Web Foundation + Lite Registry | 6-8 |
 | M2 | 4 | Web Features | 5-7 |
-| M3 | 5 | Verified + Payments | 6-8 |
+| M3 | 5 | Verified Flow + IssueOps | 6-8 |
 | M4 | 6 | Launch Prep | 6-10 |
 
 **Total**: 20 tasks across 4 sprints

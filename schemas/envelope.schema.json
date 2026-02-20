@@ -1,4 +1,715 @@
 {
+  "$defs": {
+    "ArtifactNotify": {
+      "additionalProperties": false,
+      "description": "Notify about artifact creation or availability.\n\nArtifactNotify informs agents when a new artifact has been created\nor is available for retrieval.\n\nAttributes:\n    artifact_id: ID of the artifact\n    task_id: ID of the task that produced the artifact\n    name: Optional human-readable artifact name",
+      "properties": {
+        "artifact_id": {
+          "description": "Artifact identifier",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "task_id": {
+          "description": "Parent task ID",
+          "title": "Task Id",
+          "type": "string"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional human-readable artifact name",
+          "title": "Name"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "task_id"
+      ],
+      "title": "ArtifactNotify",
+      "type": "object"
+    },
+    "McpResourceData": {
+      "additionalProperties": false,
+      "description": "Data from an MCP resource.\n\nMcpResourceData provides the content of a fetched MCP resource.\n\nAttributes:\n    resource_uri: URI of the resource\n    content: Resource content (JSON-serializable)",
+      "properties": {
+        "resource_uri": {
+          "description": "MCP resource URI",
+          "title": "Resource Uri",
+          "type": "string"
+        },
+        "content": {
+          "additionalProperties": true,
+          "description": "Resource content (JSON-serializable)",
+          "title": "Content",
+          "type": "object"
+        }
+      },
+      "required": [
+        "resource_uri",
+        "content"
+      ],
+      "title": "McpResourceData",
+      "type": "object"
+    },
+    "McpResourceFetch": {
+      "additionalProperties": false,
+      "description": "Request to fetch an MCP resource.\n\nMcpResourceFetch requests retrieval of a resource from an MCP server,\nsuch as documentation, data, or other content.\n\nAttributes:\n    resource_uri: URI of the MCP resource to fetch",
+      "properties": {
+        "resource_uri": {
+          "description": "MCP resource URI to fetch",
+          "title": "Resource Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "resource_uri"
+      ],
+      "title": "McpResourceFetch",
+      "type": "object"
+    },
+    "McpToolCall": {
+      "additionalProperties": false,
+      "description": "Call an MCP tool.\n\nMcpToolCall invokes a tool provided by an MCP server, enabling\nagents to leverage external capabilities and integrations.\n\nAttributes:\n    request_id: Unique identifier for this tool call request\n    tool_name: Name of the MCP tool to invoke\n    arguments: Arguments to pass to the tool (JSON-serializable)\n    mcp_context: Optional MCP-specific context (server, session, etc.)",
+      "properties": {
+        "request_id": {
+          "description": "Unique request identifier",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "tool_name": {
+          "description": "MCP tool name to invoke",
+          "title": "Tool Name",
+          "type": "string"
+        },
+        "arguments": {
+          "additionalProperties": true,
+          "description": "Tool arguments (JSON-serializable)",
+          "title": "Arguments",
+          "type": "object"
+        },
+        "mcp_context": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional MCP context (server, session, etc.)",
+          "title": "Mcp Context"
+        }
+      },
+      "required": [
+        "request_id",
+        "tool_name",
+        "arguments"
+      ],
+      "title": "McpToolCall",
+      "type": "object"
+    },
+    "McpToolResult": {
+      "additionalProperties": false,
+      "description": "Result of an MCP tool call.\n\nMcpToolResult provides the outcome of an MCP tool invocation,\nincluding success status, result data, or error information.\n\nAttributes:\n    request_id: ID of the original tool call request\n    success: Whether the tool call succeeded\n    result: Optional result data (if successful)\n    error: Optional error message (if failed)",
+      "properties": {
+        "request_id": {
+          "description": "Original request identifier",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "success": {
+          "description": "Whether tool call succeeded",
+          "title": "Success",
+          "type": "boolean"
+        },
+        "result": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Result data (if successful)",
+          "title": "Result"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Error message (if failed)",
+          "title": "Error"
+        }
+      },
+      "required": [
+        "request_id",
+        "success"
+      ],
+      "title": "McpToolResult",
+      "type": "object"
+    },
+    "MessageAck": {
+      "additionalProperties": false,
+      "description": "Application-level ack for WebSocket state-changing messages (ADR-16).",
+      "properties": {
+        "original_envelope_id": {
+          "description": "Envelope ID being acknowledged",
+          "title": "Original Envelope Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "received",
+            "processed",
+            "rejected"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Reason when rejected",
+          "title": "Error"
+        }
+      },
+      "required": [
+        "original_envelope_id",
+        "status"
+      ],
+      "title": "MessageAck",
+      "type": "object"
+    },
+    "MessageRole": {
+      "description": "Message sender roles.\n\nDefines the role of the entity sending a message in a conversation.\n\nExample:\n    >>> MessageRole.USER.value\n    'user'",
+      "enum": [
+        "user",
+        "assistant",
+        "system"
+      ],
+      "title": "MessageRole",
+      "type": "string"
+    },
+    "MessageSend": {
+      "additionalProperties": false,
+      "description": "Send a message within a task conversation.\n\nMessageSend exchanges conversation turns between agents during\ntask execution, containing message content as parts.\n\nAttributes:\n    task_id: ID of the task this message belongs to\n    message_id: Unique identifier for this message\n    sender: Agent URN of the message sender\n    role: Message role (user, assistant, system)\n    parts: List of part IDs that make up this message",
+      "properties": {
+        "task_id": {
+          "description": "Parent task ID",
+          "title": "Task Id",
+          "type": "string"
+        },
+        "message_id": {
+          "description": "Unique message identifier",
+          "title": "Message Id",
+          "type": "string"
+        },
+        "sender": {
+          "description": "Sender agent URN",
+          "title": "Sender",
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/$defs/MessageRole",
+          "description": "Message role (user, assistant, system)"
+        },
+        "parts": {
+          "description": "Part IDs making up this message",
+          "items": {
+            "type": "string"
+          },
+          "title": "Parts",
+          "type": "array"
+        }
+      },
+      "required": [
+        "task_id",
+        "message_id",
+        "sender",
+        "role",
+        "parts"
+      ],
+      "title": "MessageSend",
+      "type": "object"
+    },
+    "StateQuery": {
+      "additionalProperties": false,
+      "description": "Request a state snapshot for a task.\n\nStateQuery requests the current or a specific version of a task's\nstate snapshot for inspection or restoration.\n\nAttributes:\n    task_id: ID of the task to query state for\n    version: Optional specific version number to retrieve",
+      "properties": {
+        "task_id": {
+          "description": "Task identifier",
+          "title": "Task Id",
+          "type": "string"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional specific version to retrieve",
+          "title": "Version"
+        }
+      },
+      "required": [
+        "task_id"
+      ],
+      "title": "StateQuery",
+      "type": "object"
+    },
+    "StateRestore": {
+      "additionalProperties": false,
+      "description": "Restore a task to a previous state snapshot.\n\nStateRestore requests restoration of a task to a previously saved\nstate snapshot, enabling rollback and recovery scenarios.\n\nAttributes:\n    task_id: ID of the task to restore\n    snapshot_id: ID of the snapshot to restore from",
+      "properties": {
+        "task_id": {
+          "description": "Task identifier",
+          "title": "Task Id",
+          "type": "string"
+        },
+        "snapshot_id": {
+          "description": "Snapshot ID to restore from",
+          "title": "Snapshot Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_id",
+        "snapshot_id"
+      ],
+      "title": "StateRestore",
+      "type": "object"
+    },
+    "TaskCancel": {
+      "additionalProperties": false,
+      "description": "Request to cancel a running task.\n\nTaskCancel requests cancellation of a task that is currently executing.\nThe agent should attempt graceful cancellation and cleanup.\n\nAttributes:\n    task_id: ID of the task to cancel\n    reason: Optional reason for cancellation",
+      "properties": {
+        "task_id": {
+          "description": "Task identifier to cancel",
+          "title": "Task Id",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional cancellation reason",
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "task_id"
+      ],
+      "title": "TaskCancel",
+      "type": "object"
+    },
+    "TaskMetrics": {
+      "additionalProperties": false,
+      "description": "TaskResponse.metrics (extra allowed).",
+      "properties": {
+        "duration_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Execution duration in milliseconds",
+          "title": "Duration Ms"
+        },
+        "tokens_in": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Input token count",
+          "title": "Tokens In"
+        },
+        "tokens_out": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Output token count",
+          "title": "Tokens Out"
+        },
+        "tokens_used": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Total tokens (fallback for tokens_out)",
+          "title": "Tokens Used"
+        },
+        "api_calls": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Number of API calls",
+          "title": "Api Calls"
+        }
+      },
+      "title": "TaskMetrics",
+      "type": "object"
+    },
+    "TaskRequest": {
+      "additionalProperties": false,
+      "description": "Request to execute a task on an agent.\n\nTaskRequest initiates task execution, specifying the skill to invoke,\ninput data, and optional configuration parameters.\n\nAttributes:\n    conversation_id: ID of the conversation this task belongs to\n    parent_task_id: Optional ID of parent task (for subtasks)\n    skill_id: Identifier of the skill to execute\n    input: Input data for the skill (JSON-serializable)\n    config: Optional configuration (timeout, priority, streaming, etc.)",
+      "properties": {
+        "conversation_id": {
+          "description": "Parent conversation ID",
+          "title": "Conversation Id",
+          "type": "string"
+        },
+        "parent_task_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Parent task ID for subtasks",
+          "title": "Parent Task Id"
+        },
+        "skill_id": {
+          "description": "Skill identifier to execute",
+          "title": "Skill Id",
+          "type": "string"
+        },
+        "input": {
+          "additionalProperties": true,
+          "description": "Input data for the skill (skill-specific)",
+          "title": "Input",
+          "type": "object"
+        },
+        "config": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TaskRequestConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional configuration (timeout, priority, streaming, etc.)"
+        }
+      },
+      "required": [
+        "conversation_id",
+        "skill_id",
+        "input"
+      ],
+      "title": "TaskRequest",
+      "type": "object"
+    },
+    "TaskRequestConfig": {
+      "additionalProperties": false,
+      "description": "TaskRequest.config (extra allowed).",
+      "properties": {
+        "timeout_seconds": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Maximum execution time in seconds",
+          "title": "Timeout Seconds"
+        },
+        "priority": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Task priority (e.g., 'low', 'normal', 'high')",
+          "title": "Priority"
+        },
+        "idempotency_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Key for idempotent execution",
+          "title": "Idempotency Key"
+        },
+        "streaming": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether to stream progress updates",
+          "title": "Streaming"
+        },
+        "persist_state": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether to persist state snapshots",
+          "title": "Persist State"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "LLM model identifier",
+          "title": "Model"
+        },
+        "temperature": {
+          "anyOf": [
+            {
+              "maximum": 2,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "LLM temperature (0-2)",
+          "title": "Temperature"
+        }
+      },
+      "title": "TaskRequestConfig",
+      "type": "object"
+    },
+    "TaskResponse": {
+      "additionalProperties": false,
+      "description": "Response to a task execution request.\n\nTaskResponse provides the final result of task execution, including\nstatus, result data, final state snapshot, and execution metrics.\n\nAttributes:\n    task_id: ID of the completed task\n    status: Final task status (completed, failed, cancelled, etc.)\n    result: Optional result data (summary, artifacts, etc.)\n    final_state: Optional final state snapshot\n    metrics: Optional execution metrics (duration, tokens used, etc.)",
+      "properties": {
+        "task_id": {
+          "description": "Task identifier",
+          "title": "Task Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/TaskStatus",
+          "description": "Final task status"
+        },
+        "result": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Result data (summary, artifacts, etc.)",
+          "title": "Result"
+        },
+        "final_state": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Final state snapshot",
+          "title": "Final State"
+        },
+        "metrics": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TaskMetrics"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Execution metrics (duration, tokens, etc.)"
+        }
+      },
+      "required": [
+        "task_id",
+        "status"
+      ],
+      "title": "TaskResponse",
+      "type": "object"
+    },
+    "TaskStatus": {
+      "description": "Task lifecycle states.\n\nTasks progress through these states during their lifecycle.\nTerminal states are: COMPLETED, FAILED, CANCELLED.\n\nExample:\n    >>> TaskStatus.COMPLETED.is_terminal()\n    True\n    >>> TaskStatus.WORKING.is_terminal()\n    False",
+      "enum": [
+        "submitted",
+        "working",
+        "completed",
+        "failed",
+        "cancelled",
+        "input_required"
+      ],
+      "title": "TaskStatus",
+      "type": "string"
+    },
+    "TaskUpdate": {
+      "additionalProperties": false,
+      "description": "Update on task execution progress or status.\n\nTaskUpdate provides real-time updates during task execution, including\nprogress information or requests for additional input.\n\nAttributes:\n    task_id: ID of the task being updated\n    update_type: Type of update (progress, input_required, etc.)\n    status: Current task status\n    progress: Optional progress information (percent, message, ETA)\n    input_request: Optional request for additional input from user",
+      "properties": {
+        "task_id": {
+          "description": "Task identifier",
+          "title": "Task Id",
+          "type": "string"
+        },
+        "update_type": {
+          "$ref": "#/$defs/UpdateType",
+          "description": "Update type (progress, input_required)"
+        },
+        "status": {
+          "$ref": "#/$defs/TaskStatus",
+          "description": "Current task status"
+        },
+        "progress": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Progress info (percent, message, ETA)",
+          "title": "Progress"
+        },
+        "input_request": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Request for additional input",
+          "title": "Input Request"
+        }
+      },
+      "required": [
+        "task_id",
+        "update_type",
+        "status"
+      ],
+      "title": "TaskUpdate",
+      "type": "object"
+    },
+    "UpdateType": {
+      "description": "Task update types.\n\nDefines the type of update being sent for a task.\n\nExample:\n    >>> UpdateType.PROGRESS.value\n    'progress'",
+      "enum": [
+        "progress",
+        "input_required",
+        "status_change"
+      ],
+      "title": "UpdateType",
+      "type": "string"
+    }
+  },
   "additionalProperties": false,
   "description": "ASAP protocol message envelope.\n\nEnvelope wraps all protocol messages with metadata for routing,\ncorrelation, tracing, and versioning. Auto-generates id and timestamp\nif not provided.\n\nAttributes:\n    id: Unique envelope identifier (auto-generated if not provided)\n    asap_version: ASAP protocol version (e.g., \"0.1\")\n    timestamp: Message timestamp in UTC (auto-generated if not provided)\n    sender: Sender agent URN\n    recipient: Recipient agent URN\n    payload_type: Type of payload (TaskRequest, TaskResponse, etc.)\n    payload: Actual message payload\n    correlation_id: Optional ID for correlating request/response pairs\n    trace_id: Optional ID for distributed tracing\n    extensions: Optional custom extensions\n\nExample:\n    >>> from datetime import datetime, timezone\n    >>> envelope = Envelope(\n    ...     asap_version=\"0.1\",\n    ...     sender=\"urn:asap:agent:coordinator\",\n    ...     recipient=\"urn:asap:agent:research-v1\",\n    ...     payload_type=\"TaskRequest\",\n    ...     payload={\"conversation_id\": \"conv_123\", \"skill_id\": \"research\", \"input\": {}}\n    ... )\n    >>> # id and timestamp are auto-generated\n    >>> assert envelope.id is not None\n    >>> assert envelope.timestamp is not None",
   "properties": {
@@ -50,10 +761,53 @@
       "type": "string"
     },
     "payload": {
-      "additionalProperties": true,
-      "description": "Message payload",
-      "title": "Payload",
-      "type": "object"
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TaskRequest"
+        },
+        {
+          "$ref": "#/$defs/TaskResponse"
+        },
+        {
+          "$ref": "#/$defs/TaskUpdate"
+        },
+        {
+          "$ref": "#/$defs/TaskCancel"
+        },
+        {
+          "$ref": "#/$defs/MessageSend"
+        },
+        {
+          "$ref": "#/$defs/StateQuery"
+        },
+        {
+          "$ref": "#/$defs/StateRestore"
+        },
+        {
+          "$ref": "#/$defs/ArtifactNotify"
+        },
+        {
+          "$ref": "#/$defs/McpToolCall"
+        },
+        {
+          "$ref": "#/$defs/McpToolResult"
+        },
+        {
+          "$ref": "#/$defs/McpResourceFetch"
+        },
+        {
+          "$ref": "#/$defs/McpResourceData"
+        },
+        {
+          "$ref": "#/$defs/MessageAck"
+        },
+        {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      ],
+      "description": "Message payload (typed when payload_type known, else dict)",
+      "title": "Payload"
     },
     "correlation_id": {
       "anyOf": [
@@ -81,6 +835,12 @@
       "description": "Optional trace ID for distributed tracing",
       "title": "Trace Id"
     },
+    "requires_ack": {
+      "default": false,
+      "description": "When True, receiver must send a MessageAck for this envelope (WebSocket). Over WebSocket, auto-set for state-changing payloads: TaskRequest, TaskCancel, StateRestore, MessageSend. HTTP transport uses response as implicit ack.",
+      "title": "Requires Ack",
+      "type": "boolean"
+    },
     "extensions": {
       "anyOf": [
         {
@@ -92,7 +852,7 @@
         }
       ],
       "default": null,
-      "description": "Optional custom extensions",
+      "description": "Optional custom extensions. Can include a 'nonce' field (string) for replay attack prevention. If provided, the nonce must be unique within the TTL window (typically 10 minutes). Duplicate nonces will be rejected by the validation layer.",
       "title": "Extensions"
     }
   },

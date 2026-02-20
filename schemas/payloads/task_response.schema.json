@@ -1,7 +1,85 @@
 {
   "$defs": {
+    "TaskMetrics": {
+      "additionalProperties": false,
+      "description": "TaskResponse.metrics (extra allowed).",
+      "properties": {
+        "duration_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Execution duration in milliseconds",
+          "title": "Duration Ms"
+        },
+        "tokens_in": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Input token count",
+          "title": "Tokens In"
+        },
+        "tokens_out": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Output token count",
+          "title": "Tokens Out"
+        },
+        "tokens_used": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Total tokens (fallback for tokens_out)",
+          "title": "Tokens Used"
+        },
+        "api_calls": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Number of API calls",
+          "title": "Api Calls"
+        }
+      },
+      "title": "TaskMetrics",
+      "type": "object"
+    },
     "TaskStatus": {
-      "description": "Task lifecycle states.\n\nTasks progress through these states during their lifecycle.\nTerminal states are: COMPLETED, FAILED, CANCELLED.",
+      "description": "Task lifecycle states.\n\nTasks progress through these states during their lifecycle.\nTerminal states are: COMPLETED, FAILED, CANCELLED.\n\nExample:\n    >>> TaskStatus.COMPLETED.is_terminal()\n    True\n    >>> TaskStatus.WORKING.is_terminal()\n    False",
       "enum": [
         "submitted",
         "working",
@@ -15,7 +93,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Response to a task execution request.\n\nTaskResponse provides the final result of task execution, including\nstatus, result data, final state snapshot, and execution metrics.\n\nAttributes:\n    task_id: ID of the completed task\n    status: Final task status (completed, failed, cancelled, etc.)\n    result: Optional result data (summary, artifacts, etc.)\n    final_state: Optional final state snapshot\n    metrics: Optional execution metrics (duration, tokens used, etc.)\n\nExample:\n    >>> response = TaskResponse(\n    ...     task_id=\"task_01HX5K4N\",\n    ...     status=\"completed\",\n    ...     result={\"summary\": \"Analysis complete\", \"artifacts\": [\"art_123\"]},\n    ...     metrics={\"duration_ms\": 45000, \"tokens_used\": 12500}\n    ... )",
+  "description": "Response to a task execution request.\n\nTaskResponse provides the final result of task execution, including\nstatus, result data, final state snapshot, and execution metrics.\n\nAttributes:\n    task_id: ID of the completed task\n    status: Final task status (completed, failed, cancelled, etc.)\n    result: Optional result data (summary, artifacts, etc.)\n    final_state: Optional final state snapshot\n    metrics: Optional execution metrics (duration, tokens used, etc.)",
   "properties": {
     "task_id": {
       "description": "Task identifier",
@@ -57,16 +135,14 @@
     "metrics": {
       "anyOf": [
         {
-          "additionalProperties": true,
-          "type": "object"
+          "$ref": "#/$defs/TaskMetrics"
         },
         {
           "type": "null"
         }
       ],
       "default": null,
-      "description": "Execution metrics (duration, tokens, etc.)",
-      "title": "Metrics"
+      "description": "Execution metrics (duration, tokens, etc.)"
     }
   },
   "required": [
