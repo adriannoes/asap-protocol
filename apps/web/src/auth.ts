@@ -42,14 +42,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 session.user.id = token.id;
             }
             if (typeof token.username === "string" && session.user) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                (session.user as any).username = token.username;
+                session.user.username = token.username;
             }
 
             // SSRF/Data Exposure Fix: Encrypt the token instead of exposing plaintext in session
             if (typeof token.accessToken === "string") {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                (session as any).encryptedAccessToken = await encryptToken(token.accessToken);
+                session.encryptedAccessToken = await encryptToken(token.accessToken);
             }
 
             return session;
