@@ -6,6 +6,15 @@
 
 ---
 
+## Pre-M2 Validation (Recommended)
+
+Before starting Sprint M2, run the validation scripts to ensure registry fetch and GitHub PR flow work:
+
+- **Guide**: [pre-M2-validation-guide.md](./pre-M2-validation-guide.md)
+- **Scripts**: `apps/web/scripts/validate-registry-fetch.mjs`, `validate-github-pr-flow.mjs`
+
+---
+
 ## Relevant Files
 
 - `apps/web/app/browse/page.tsx` - Browse page
