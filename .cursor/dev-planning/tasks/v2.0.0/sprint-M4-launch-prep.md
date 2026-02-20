@@ -81,45 +81,21 @@ This is the final sprint before v2.0.0 launch. Focus on security, performance, a
 
 ---
 
-## Task 4.4: Beta Program
+## Task 4.4: Launch
 
 ### Sub-tasks
 
-- [ ] 4.4.1 Invite beta developers
-
-- [ ] 4.4.2 Collect feedback
-
-- [ ] 4.4.3 Fix critical issues
-
-- [ ] 4.4.4 Reach 100+ registrations
-
-**Acceptance Criteria**:
-- [ ] 100+ beta agents
-
-- [ ] 4.4.5 Commit Beta Fixes
-  - **Command**: `git commit -m "fix: address beta feedback"`
-
----
-
-## Task 4.5: Launch
-
-### Sub-tasks
-
-- [ ] 4.5.1 Final checklist review
+- [ ] 4.4.1 Final checklist review
   - Domain DNS propagated?
   - GitHub OAuth Production App configured?
   - Sentry DSN active?
 
-- [ ] 4.5.2 Deploy to production (Promote Vercel Preview to Prod)
-
-- [ ] 4.5.3 Announce on social/blog (Twitter/LinkedIn)
-
-- [ ] 4.5.4 Monitor post-launch (Sentry + Vercel Analytics)
+- [ ] 4.4.2 Deploy to production (Promote Vercel Preview to Prod)
 
 **Acceptance Criteria**:
 - [ ] v2.0.0 launched!
 
-- [ ] 4.5.5 Tag Logic Release
+- [ ] 4.4.3 Tag Logic Release
   - **Command**: `git tag v2.0.0`
   - **Command**: `git push origin v2.0.0`
 

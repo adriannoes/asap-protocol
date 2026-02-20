@@ -6,12 +6,17 @@
 
 ---
 
-## Pre-M2 Validation (Recommended)
+## Pre-M2 Validation ✅ Complete (2026-02-19)
 
-Before starting Sprint M2, run the validation scripts to ensure registry fetch and GitHub PR flow work:
+All validation steps passed. Ready to start Sprint M2.
 
-- **Guide**: [pre-M2-validation-guide.md](./pre-M2-validation-guide.md)
-- **Scripts**: `apps/web/scripts/validate-registry-fetch.mjs`, `validate-github-pr-flow.mjs`
+| Check | Status |
+|-------|--------|
+| Registry fetch | ✅ `registry.json` at repo root, fetchable |
+| GitHub PR flow | ✅ Fork → Branch → File → PR (sha fix in script) |
+| OAuth token in JWT | ✅ `auth.ts` stores `access_token`; `/api/debug/token` verified |
+
+**Guide**: [pre-M2-validation-guide.md](./pre-M2-validation-guide.md)
 
 ---
 
@@ -34,23 +39,23 @@ This sprint adds the core features: browsing agents, viewing agent details, and 
 
 ### Sub-tasks
 
-- [ ] 4.1.1 /browse page layout
+- [x] 4.1.1 /browse page layout
   - **Strategy**: Incremental Static Regeneration (ISR) with `revalidate: 60`
-  - **Data Source**: Fetch `https://raw.githubusercontent.com/.../registry.json`
+  - **Data Source**: `lib/registry.ts` fetches `registry.json` from `NEXT_PUBLIC_REGISTRY_URL` (default: `adriannoes/asap-protocol/main`)
 
-- [ ] 4.1.2 Search input
+- [x] 4.1.2 Search input
   - Client-side filtering of the JSON list (registry is small < 1MB)
   - Debounced search (300ms)
 
-- [ ] 4.1.3 Skill filters
+- [x] 4.1.3 Skill filters
   - Extract unique skills from `registry.json`
   - Multi-select checkbox/badges
 
-- [ ] 4.1.4 Trust level filters
+- [x] 4.1.4 Trust level filters
 
-- [ ] 4.1.5 Agent cards grid
+- [x] 4.1.5 Agent cards grid
 
-- [ ] 4.1.7 Commit Browser
+- [x] 4.1.7 Commit Browser
   - **Command**: `git commit -m "feat(web): implement registry browser and filters"`
 
 ---
@@ -59,17 +64,32 @@ This sprint adds the core features: browsing agents, viewing agent details, and 
 
 ### Sub-tasks
 
-- [ ] 4.2.1 /agents/[id] route
+- [x] 4.2.1 `/agents/[id]` route
+  - Create dynamic route using App Router (`app/agents/[id]/page.tsx`)
+  - Server-side data fetching (`fetchAgentById`)
+  - Use ISR (`revalidate: 60`)
+  - Back to browse navigation link
 
-- [ ] 4.2.2 Manifest display
+- [x] 4.2.2 Manifest display
+  - Parse and display the agent's `manifest.json` data visually.
+  - Show name, version, ID, description.
+  - Explicitly list supported schemas, protocol compatibility (`capabilities.asap_version`), skills.
+  - Streaming and state persistence badges.
 
-- [ ] 4.2.3 SLA section
+- [x] 4.2.3 SLA section
+  - Dedicated section demonstrating the agent's `SLADefinition`.
+  - Include availability, latency (P95), and error rate promises.
 
-- [ ] 4.2.4 Reputation and reviews
+- [x] 4.2.4 Reputation and reviews
+  - *Note: Leave placeholder for future implementation as detailed in the PRD.*
+  - Just UI elements indicating future "Trust Score."
 
-- [ ] 4.2.5 "Connect" CTA
+- [x] 4.2.5 "Connect" CTA
+  - Button to connect to the agent
+  - Display the `asap` protocol endpoint clearly for developer reference (`endpoints.asap`)
+  - **Note**: Client-side fetch. Agents *must* support CORS or will show as unreachable.
 
-- [ ] 4.2.6 Commit Agent Detail
+- [x] 4.2.6 Commit Agent Detail
   - **Command**: `git commit -m "feat(web): implement agent detail page"`
 
 ---
@@ -78,18 +98,18 @@ This sprint adds the core features: browsing agents, viewing agent details, and 
 
 ### Sub-tasks
 
-- [ ] 4.3.1 /dashboard layout
+- [x] 4.3.1 /dashboard layout
 
-- [ ] 4.3.2 My agents list
+- [x] 4.3.2 My agents list
 
-- [ ] 4.3.3 Agent status (online/offline)
+- [x] 4.3.3 Agent status (online/offline)
   - **Note**: Client-side fetch. Agents *must* support CORS or will show as unreachable.
 
-- [ ] 4.3.4 Usage metrics
+- [x] 4.3.4 Usage metrics
 
-- [ ] 4.3.5 API keys management
+- [x] 4.3.5 API keys management
 
-- [ ] 4.3.6 Commit Dashboard
+- [x] 4.3.6 Commit Dashboard
   - **Command**: `git commit -m "feat(web): implement developer dashboard structure"`
 
 ---
@@ -98,11 +118,11 @@ This sprint adds the core features: browsing agents, viewing agent details, and 
 
 ### Sub-tasks
 
-- [ ] 2.4.1 /dashboard/register page
+- [x] 2.4.1 /dashboard/register page
   - **Form**: Name, Description, HTTP/WS endpoints, Manifest URL, Skills (tags)
   - **Auth**: Require GitHub Login (from Task 1.3)
 
-- [ ] 2.4.2 Validation Logic
+- [x] 2.4.2 Validation Logic
   - **Library**: `zod` + `react-hook-form`
   - **Schema**:
     ```typescript
@@ -118,39 +138,40 @@ This sprint adds the core features: browsing agents, viewing agent details, and 
   - **Security**: Verify Manifest Ed25519 Signature (prevent impersonation)
   - **Security**: Check `ttl_seconds` is valid
 
-- [ ] 2.4.3 GitHub Automation (ADR-18)
+- [x] 2.4.3 GitHub Automation (ADR-18)
   - **Library**: `octokit` (SDK)
-  - **Flow**:
-    1. **Fork**: `octokit.rest.repos.createFork({ owner: "asap-protocol", repo: "registry" })`
-    2. **Branch**: `octokit.rest.git.createRef(...)` -> `refs/heads/register/<agent>`
-    3. **File**: `octokit.rest.repos.createOrUpdateFileContents(...)` -> `registry.json`
-    4. **PR**: `octokit.rest.pulls.create(...)`
-      - **Title**: "Register Agent: <name>"
-      - **Body**: "Automated registration via Marketplace."
+  - **Token**: Use `getToken()` in Server Action; pass `accessToken` to Octokit
+  - **Flow** (validated in pre-M2; see `validate-github-pr-flow.mjs`):
+    1. **Fork**: `createFork({ owner, repo })` — use `GITHUB_REGISTRY_OWNER/REPO` env (default: `adriannoes/asap-protocol`)
+    2. **Branch**: `createRef(...)` -> `refs/heads/register/<agent>`
+    3. **File**: `createOrUpdateFileContents(...)` -> `registry.json` — **must pass `sha`** when updating existing file
+    4. **PR**: `pulls.create(...)` — Title: "Register Agent: <name>", Body: "Automated registration via Marketplace."
 
-- [ ] 2.4.4 Dashboard Status Updates
+- [x] 2.4.4 Dashboard Status Updates
   - **Poll**: `SWR` or `React Query` to poll `/api/github/pr-status`
   - **Display**: Badge (Yellow: Pending, Red: Changes Requested, Green: Merged)
   - **Admin Context**: Link to PR for user to see comments.
 
-- [ ] 2.4.5 Commit Registration
+- [x] 2.4.5 Commit Registration
   - **Command**: `git commit -m "feat(web): implement agent registration flow"`
 
 **Acceptance Criteria**:
-- [ ] Developer can register agent via form
-- [ ] Automated PR created on GitHub
-- [ ] Dashboard reflects PR status
+- [x] Developer can register agent via form
+- [x] Automated PR created on GitHub
+- [x] Dashboard reflects PR status
 
 ---
 
 ## Sprint M2 Definition of Done
 
-- [ ] Browse and search functional
-- [ ] Agent detail page working
-- [ ] Dashboard operational
-- [ ] Agent registration flow complete
+- [x] Web app builds (`npm run build`) without Next.js errors.
+- [x] User can browse the registry with filters working (client-side).
+- [x] User can view detailed Agent Information (Server-Rendered).
+- [x] User can log in via GitHub (OAuth).
+- [x] User can see a dashboard with their agents (filtered by username for MVP).
+- [x] User can submit a new Agent via a form -> creates a GitHub PR.in [v2.0.0 Roadmap](./tasks-v2.0.0-roadmap.md)
 
 **Total Sub-tasks**: ~20
 
 ## Documentation Updates
-- [ ] **Update Roadmap**: Mark completed items in [v2.0.0 Roadmap](./tasks-v2.0.0-roadmap.md)
+- [x] **Update Roadmap**: Mark completed items in [v2.0.0 Roadmap](./tasks-v2.0.0-roadmap.md)

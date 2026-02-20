@@ -9,11 +9,11 @@
 
 | Item | Status | Notes |
 |------|--------|-------|
-| `registry.json` | ✅ **Added** | Created at repo root; push to GitHub for fetch to work; update URL if using separate registry repo |
-| `asap-protocol/registry` repo | ⚠️ **Missing** | Sprint M2 assumes this repo exists for Fork → PR flow |
+| `registry.json` | ✅ **Live** | At repo root, pushed to `main`; public and fetchable |
+| Registry location | ✅ **Option A** | Lives in `asap-protocol/asap-protocol` (main repo) |
 | OAuth scope `public_repo` | ✅ OK | Already configured in `auth.ts` |
-| Access token in session | ⚠️ **Unverified** | NextAuth must expose `access_token` for Octokit (server-side only) |
-| `lib/registry.ts` fetch | ⚠️ **Returns []** | Falls back to empty array on 404; browse will show no agents |
+| Access token in JWT | ✅ **Done** | Stored in `auth.ts` JWT callback; verified via `/api/debug/token` |
+| `lib/registry.ts` fetch | ✅ **Ready** | URL points to `adriannoes/asap-protocol/main/registry.json` |
 
 ---
 
@@ -21,48 +21,20 @@
 
 ### 1. Registry Data Source
 
-**Decision needed**: Where does `registry.json` live?
+**Decision**: `registry.json` lives at repo root (Option A). Public and safe — contains only agent metadata (endpoints, skills, description), no secrets. See [ADR-15 Update (2026-02-19)](../../product-specs/decision-records/05-product-strategy.md#question-15-lite-registry-for-v11-discovery-gap).
 
-| Option | Repo | URL | Pros | Cons |
-|--------|------|-----|------|------|
-| A | `asap-protocol/asap-protocol` (main) | `.../main/registry.json` | Single repo, simple | Mixes protocol code with registry data |
-| B | `asap-protocol/registry` (new) | `.../registry/main/registry.json` | Clean separation, GitHub Pages | Repo must be created |
-| C | `adriannoes/asap-protocol` (fork) | Current `lib/registry.ts` default | Works for dev | Not canonical for production |
+| Option | Repo | URL | Status |
+|--------|------|-----|--------|
+| A | `adriannoes/asap-protocol` | `.../main/registry.json` | ✅ **Active** |
+| B | `asap-protocol/registry` (separate) | `.../registry/main/registry.json` | Deferred; can migrate later |
 
-**Recommendation**: Create `asap-protocol/registry` with a minimal `registry.json` (empty array `[]` or sample entry) and enable GitHub Pages. Update `lib/registry.ts` and `NEXT_PUBLIC_REGISTRY_URL` to point to it.
-
-**Minimal `registry.json`**:
-```json
-[]
-```
+**Current `registry.json`**: Array `[]` at repo root. Add entries via PR (Sprint M2 registration flow).
 
 ---
 
-### 2. Access Token for GitHub API
+### 2. Access Token for GitHub API ✅ Done
 
-The registration flow needs the user's GitHub token to create a fork and PR. NextAuth v5 does not include it by default.
-
-**Add to `auth.ts`** (JWT callback):
-```typescript
-jwt({ token, user, account, profile }) {
-  if (account?.access_token) {
-    token.accessToken = account.access_token;
-  }
-  // ... existing logic
-}
-```
-
-**Session callback** (optional, for type safety):
-```typescript
-session({ session, token }) {
-  if (token.accessToken && session.user) {
-    (session as any).accessToken = token.accessToken; // Server-side only
-  }
-  // ... existing logic
-}
-```
-
-**Usage**: In Server Actions / API routes, use `auth()` or `getToken()` to get the token and pass to Octokit.
+Implemented in `auth.ts`: JWT callback stores `account.access_token` in `token.accessToken`. Use `getToken()` in Server Actions / API routes to retrieve it for Octokit. Debug route: `/api/debug/token` (returns `hasToken` boolean — remove before production).
 
 ---
 
@@ -70,19 +42,11 @@ session({ session, token }) {
 
 ### Script 1: Registry Fetch (Smoke Test)
 
-Run from `apps/web`:
-
 ```bash
-cd apps/web && node -e "
-const url = process.env.NEXT_PUBLIC_REGISTRY_URL || 'https://raw.githubusercontent.com/adriannoes/asap-protocol/main/registry.json';
-fetch(url).then(r => {
-  console.log('Status:', r.status);
-  return r.json();
-}).then(d => console.log('Agents:', Array.isArray(d) ? d.length : 'not array')).catch(e => console.error(e));
-"
+node apps/web/scripts/validate-registry-fetch.mjs
 ```
 
-**Expected**: `Status: 200`, `Agents: N` (or 0). If 404, fix registry source first.
+**Expected**: `Status: 200`, `Agents: 0` (or N). If 404, check registry URL and branch.
 
 ---
 
@@ -93,16 +57,15 @@ fetch(url).then(r => {
 - Target repo exists (e.g. `asap-protocol/registry` or `asap-protocol/asap-protocol`)
 
 **Steps**:
-1. Script exists: `apps/web/scripts/validate-github-pr-flow.mjs`
-2. Run: `GITHUB_TOKEN=<pat> node apps/web/scripts/validate-github-pr-flow.mjs`
-3. To test against your fork (if `asap-protocol/registry` doesn't exist):  
+1. Run with current repo (registry in main):  
    `GITHUB_REGISTRY_OWNER=adriannoes GITHUB_REGISTRY_REPO=asap-protocol GITHUB_TOKEN=<pat> node apps/web/scripts/validate-github-pr-flow.mjs`
-4. Dry-run (repo check only): `DRY_RUN=1 ... GITHUB_TOKEN=<pat> node ...`
+2. Dry-run (repo check only):  
+   `DRY_RUN=1 GITHUB_REGISTRY_OWNER=adriannoes GITHUB_REGISTRY_REPO=asap-protocol GITHUB_TOKEN=<pat> node apps/web/scripts/validate-github-pr-flow.mjs`
 
-**Script** (`validate-github-pr-flow.mjs`):
+**Implementation note**: Script fetches `sha` of existing `registry.json` before `createOrUpdateFileContents` (GitHub API requires it when updating). See `apps/web/scripts/validate-github-pr-flow.mjs`. Octokit installed. PAT must have `repo` scope.
 
 ```javascript
-#!/usr/bin/env node
+// (abbreviated - see apps/web/scripts/validate-github-pr-flow.mjs)
 /**
  * Pre-M2 validation: Test GitHub API flow for agent registration.
  * Run: GITHUB_TOKEN=<pat> node apps/web/scripts/validate-github-pr-flow.mjs
@@ -209,38 +172,58 @@ async function main() {
 main();
 ```
 
-**Note**: Install Octokit first: `cd apps/web && npm install octokit`
-
 ---
 
-### Script 3: OAuth Token Flow (Post Auth Fix)
+### Script 3: OAuth Token Flow (Verify)
 
-After adding `accessToken` to the JWT:
-
-1. Log in via the app (local or Vercel preview)
-2. Add a temporary API route `/api/debug/token` that returns `!!token` (boolean) — never the actual token
-3. Verify it returns `true` when logged in
+1. **Log out** (if already logged in) — the token is stored only on sign-in
+2. **Log in** via the app (local or Vercel preview)
+3. **GET** `http://localhost:3000/api/debug/token` in the **browser** (curl won't send session cookie)
+4. **Expected**: `{ "hasToken": true, "username": "..." }`
 
 ---
 
 ## Checklist Before Starting Sprint M2
 
-- [ ] **Registry source defined**: `registry.json` exists and is fetchable (200)
-- [ ] **GitHub repo exists**: `asap-protocol/registry` (or chosen repo) is created
-- [ ] **Access token in session**: NextAuth exposes token for server-side Octokit
-- [ ] **Script 1 passes**: Registry fetch returns 200
-- [ ] **Script 2 passes**: Fork → Branch → File → PR flow works with PAT
-- [ ] **OAuth scopes**: `read:user public_repo` confirmed (already in `auth.ts`)
+- [x] **Registry source defined**: `registry.json` at repo root, fetchable (200)
+- [x] **Registry public**: Safe — metadata only, no secrets
+- [x] **Script 1 passes**: Registry fetch returns 200 ✅
+- [x] **Script 2 passes**: Fork → Branch → File → PR flow ✅
+- [x] **Access token in JWT**: NextAuth stores `access_token` for server-side Octokit
+- [x] **OAuth scopes**: `read:user public_repo` confirmed (already in `auth.ts`)
 
 ---
 
-## Recommended Order
+## Validation History (2026-02-19)
 
-1. **Create registry repo** (if using Option B) and add minimal `registry.json`
-2. **Run Script 1** to confirm fetch works
-3. **Run Script 2** with your PAT to validate full GitHub flow
-4. **Add access token to NextAuth** and verify with Script 3
-5. **Start Sprint M2** with confidence
+| Step | Action | Result |
+|------|--------|--------|
+| 1 | Created `registry.json` at repo root, pushed to `main` | ✅ Fetch returns 200 |
+| 2 | Added ADR-15 update (Registry Location) to decision records | ✅ Documented |
+| 3 | Script 1: `validate-registry-fetch.mjs` | ✅ Pass |
+| 4 | Script 2: `validate-github-pr-flow.mjs` — fixed `sha` required for `createOrUpdateFileContents` | ✅ Pass (PR #55) |
+| 5 | Added `access_token` to JWT in `auth.ts` | ✅ Done |
+| 6 | Created `/api/debug/token` for verification | ✅ Pass (`hasToken: true`) |
+| 7 | All pre-M2 checks complete | ✅ **Ready for Sprint M2** |
+
+---
+
+## Test Results (Latest Run)
+
+| Script | Result | Notes |
+|--------|--------|-------|
+| Script 1 (Registry fetch) | ✅ Pass | Status 200, Agents: 0 |
+| Script 2 (GitHub PR flow) | ✅ Pass | Fork → Branch → File → PR (sha fix applied) |
+| Script 3 (OAuth token) | ✅ Pass | `hasToken: true`, `username: adriannoes` |
+
+---
+
+## Before Production
+
+- `/api/debug/token` — protected:
+  - Returns 404 when `NODE_ENV === 'production'` or `VERCEL_ENV === 'production'`
+  - If `DEBUG_TOKEN` env var is set, requires `X-Debug-Token` header to match (defense in depth)
+  - Available in dev/preview only
 
 ---
 

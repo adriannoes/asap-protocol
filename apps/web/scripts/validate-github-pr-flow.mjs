@@ -1,10 +1,5 @@
 #!/usr/bin/env node
-/**
- * Pre-M2 validation: Test GitHub API flow for agent registration.
- * Run: GITHUB_TOKEN=<pat> node apps/web/scripts/validate-github-pr-flow.mjs
- * Optional: GITHUB_REGISTRY_OWNER=asap-protocol GITHUB_REGISTRY_REPO=registry
- * Requires: repo scope on PAT. Target repo must exist.
- */
+/** Pre-M2: test GitHub PR flow. Run: GITHUB_TOKEN=<pat> node apps/web/scripts/validate-github-pr-flow.mjs */
 import { Octokit } from 'octokit';
 
 const token = process.env.GITHUB_TOKEN;
@@ -71,7 +66,19 @@ async function main() {
     });
     console.log('✓ Branch created:', branchName);
 
-    // 5. Add/update registry.json
+    let fileSha = null;
+    try {
+      const { data: file } = await octokit.rest.repos.getContent({
+        owner: fork.owner.login,
+        repo: fork.name,
+        path: 'registry.json',
+        ref: branchName,
+      });
+      if ('sha' in file) fileSha = file.sha;
+    } catch (e) {
+      if (e.status !== 404) throw e;
+    }
+
     const newEntry = {
       id: 'urn:asap:test-agent-' + Date.now(),
       name: 'test-agent',
@@ -93,6 +100,7 @@ async function main() {
       message: 'chore: pre-M2 validation test',
       content: Buffer.from(newContent).toString('base64'),
       branch: branchName,
+      ...(fileSha && { sha: fileSha }),
     });
     console.log('✓ File updated');
 
