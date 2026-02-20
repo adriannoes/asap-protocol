@@ -17,6 +17,7 @@
       "items": {
         "type": "string"
       },
+      "minItems": 1,
       "title": "Capabilities",
       "type": "array"
     }

@@ -11,6 +11,7 @@
 - `.github/ISSUE_TEMPLATE/register_agent.yml` - Registration Form Definition
 - `.github/workflows/register-agent.yml` - Registration Action
 - `apps/web/app/register/page.tsx` - Web Registration Form
+- `apps/web/app/verify/page.tsx` - Verification Request Form
 - `apps/web/lib/github-issues.ts` - Issue Submission Logic
 
 ---
@@ -105,13 +106,38 @@ A **GitHub Action** then processes this Issue to validate the agent and automati
   - **Filter**: `registry.json` where `maintainers` includes current GitHub User
   - **Status**:
     - "Listed": Present in `registry.json`
-    - "Pending": Open Issue with `registration` label (via GitHub API)
+    - "Pending": Open Issue with `registration` label
+    - "Verified": Agent has `verification: "verified"` in registry
 
 - [ ] 3.4.2 Dashboard UI Updates
-  - Show "Pending Registration" cards linking to the Issue
+  - Show "Pending Registration" cards
+  - Show "Apply for Verified" button on eligible agents (Listed + Unverified)
 
 **Acceptance Criteria**:
-- [ ] Dashboard shows both Listed and Pending agents
+- [ ] Dashboard shows true status of all agents
+
+---
+
+## Task 3.5: Verified Badge Request (IssueOps)
+
+### Sub-tasks
+
+- [ ] 3.5.1 Create `request_verification.yml` Issue Template
+  - **Inputs**: Agent ID, Evidence of reliability (links, uptime stats), Contact info
+  - **Labels**: `verification-request`, `pending-review`
+
+- [ ] 3.5.2 Verification Form (Web)
+  - **Route**: `/dashboard/verify?agent_id=...`
+  - **Fields**: "Why should this agent be verified?", "How long has it been running?"
+  - **Action**: Redirects to pre-filled GitHub Issue
+
+- [ ] 3.5.3 Admin Review Process (Manual)
+  - **Documentation**: Guide for admins on how to vet agents (uptime check, code review if open source)
+  - **Action**: Admin manually edits `registry.json` to add `verification: "verified"` + `verified_at` date.
+
+**Acceptance Criteria**:
+- [ ] Users can submit verification request via Dashboard
+- [ ] Issue template specifically for verification exists
 
 ---
 

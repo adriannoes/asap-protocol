@@ -45,6 +45,14 @@ Before pushing to the repository, always run the full CI check suite locally to 
 4. **Tests**: `PYTHONPATH=src uv run pytest --cov=src --cov-report=xml` - Run full test suite with coverage
 5. **Security**: `uv run pip-audit` - Scan for known vulnerabilities in dependencies
 
+### Pre-Push CI Verification (Web App / TypeScript)
+
+If you modified files in `apps/web/`:
+1. **Linting**: `npm run lint` or `npx eslint .`
+2. **Type Checking**: `npx tsc --noEmit`
+3. **Tests**: `npx vitest run` (or `npm test`)
+4. **Build Verification**: `npm run build` (Ensures Next.js builds successfully)
+
 **Quick Fix Commands**:
 - Auto-fix linting issues: `uv run ruff check --fix .`
 - Auto-format code: `uv run ruff format .`

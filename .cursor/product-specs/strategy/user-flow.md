@@ -381,21 +381,117 @@ Agent status is derived from:
 - [ ] Shows all agents associated with the authenticated user
 - [ ] Status reflects real-time PR state via GitHub API
 - [ ] Quick actions (Edit, Remove, Verify) accessible per agent
-- [ ] Empty state for new developers: "No agents yet. Register your first agent!"
+- [ ] **Zero State**: If list is empty, big distinct CTA "Register Your First Agent" with value prop.
 - [ ] Responsive: works on mobile
 
 ---
 
-## F9: Verified Request (Manual)
+## F9: Verified Request (IssueOps)
 
 **Persona**: Agent Developer
-**Goal**: Request Verified status (No Payment)
+**Goal**: Request Verified status to increase trust (Merit-based, Free)
+**Requires**: Authenticated (F2), Agent is already "Listed" (F5)
 
 ### Journey
 
-1. Developer contacts Admins (Discord/Email) or submits "Verification Request" Issue.
-2. Admin manually reviews agent quality/trust.
-3. Admin manually updates `registry.json` to set `verification: "verified"`.
+```mermaid
+sequenceDiagram
+    actor Dev as Developer
+    participant Dash as Dashboard
+    participant GH as GitHub Issues
+    actor Admin as ASAP Admin
+
+    Dev->>Dash: Click "Apply for Verified" on Agent
+    Dash->>Dash: Check eligibility (must be Listed)
+    Dash->>GH: Redirect to New Issue (Template: verify_agent.yml)
+    
+    Dev->>GH: Fill "Evidence of Reliability" form
+    Dev->>GH: Submit Issue
+    
+    Note right of Admin: Manual Review Process
+    
+    Admin->>GH: Review Issue (Check uptime, docs, ID match)
+    alt Approved
+        Admin->>GH: Commit `verification: "verified"` to registry.json
+        Admin->>GH: Close Issue "Approved! Badge active."
+    else Rejected
+        Admin->>GH: Comment "Missing evidence X."
+    end
+```
+
+### Screens
+
+| Screen | Key Elements |
+|--------|-------------|
+| **Verification Intro** | "Get Verified": Explain benefits (badge, higher ranking). Explain criteria (uptime > 99%, active > 1 month). |
+| **Issue Form** | Pre-filled Agent ID. Fields: "Production URL", "Source Code (optional)", "Additional Context". |
+
+### Acceptance Criteria
+
+- [ ] "Apply" button only visible for Listed, Unverified agents
+- [ ] Issue template `verify_agent.yml` exists
+- [ ] User guided to GitHub Issue with correct pre-fills
+
+---
+
+## F13: Zero State & Onboarding
+
+**Persona**: New Agent Developer
+**Goal**: Reduce "Empty Dashboard" anxiety and drive first registration
+
+### Journey
+
+1.  **Login First Time**: User has 0 agents.
+2.  **Dashboard View**:
+    *   **Hero Image**: Illustration of a connected agent network.
+    *   **Welcome Message**: "Welcome, @user! Let's get your first agent discovered."
+    *   **Primary CTA**: "Register New Agent" (Pulse animation).
+    *   **Secondary CTA**: "Read Integration Guide".
+3.  **Register Click**: Goes to F5 (Registration Form).
+
+### Screens
+
+| State | Content |
+|-------|---------|
+| **Empty Dashboard** | "You haven't registered any agents yet." + Big "Register" Button + Link to "How to build an ASAP Agent" docs. |
+| **Pending First Agent** | "Your first agent is being reviewed! 🎉". Show timeline: "Submitted" -> "Review" -> "Live". |
+
+---
+
+## F14: Sad Paths (Error Handling)
+
+**Persona**: All
+**Goal**: Graceful failure recovery
+
+### Scenarios
+
+#### 14.1 Duplicate Name Registration
+-   **Step**: F5 (Register Form)
+-   **Condition**: User enters Name "EchoBot", but "EchoBot" exists in `registry.json`.
+-   **Response**:
+    -   **Client-side**: Zod validation checks `registry.json` (cached). Field turns red: "Name already taken."
+    -   **Action-side**: If race condition, GitHub Action fails. Comment on Issue: "Name collision. Please rename."
+
+#### 14.2 Manifest Unreachable
+-   **Step**: F5 (Register Form)
+-   **Condition**: `endpoints.manifest` returns 404 or timeout.
+-   **Response**:
+    -   **UI**: "Reachability Check" spinner -> Red X. "Could not reach manifest at [URL]. Is your agent online?"
+    -   **Blocker**: Cannot submit form until Reachability passes.
+
+#### 14.3 GitHub API Rate Limit
+-   **Step**: F5 or F8 (Dashboard load)
+-   **Condition**: User refreshed dashboard 50 times in 1 minute.
+-   **Response**:
+    -   **UI**: Toast notification: "GitHub API rate limit exceeded. Please wait a moment."
+    -   **Fallback**: Show cached data from last successful fetch.
+
+#### 14.4 Agent Offline
+-   **Step**: F4 (Agent Details)
+-   **Condition**: Client-side health check `/health` fails.
+-   **Response**:
+    -   **UI**: Status indicator turns Red (Offline).
+    -   **Context**: Tooltip "Agent did not respond to health check." (Do not hide the agent, just show status).
 
 ---
 
@@ -492,7 +588,7 @@ flowchart TD
 | F6: Update | ✅ GitHub PR | Direct API write | — |
 | F7: Remove | ✅ GitHub PR | Direct API write | — |
 | F8: Dashboard | ✅ Basic | + Usage analytics | + Revenue dashboard |
-| F9: Verified | ✅ Stripe | — | + Tiered plans |
+| F9: Verified | ✅ Manual (IssueOps) | — | + Tiered plans |
 | F10: Admin Review | ✅ Manual | Hybrid + CI | Full auto |
 | F11: Admin Verified | ✅ Manual | + Compliance auto-check | — |
 | F12: Integrate | ✅ Python snippet | + TypeScript, Go | + Playground |

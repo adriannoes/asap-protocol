@@ -1,7 +1,7 @@
 {
   "$defs": {
     "MessageRole": {
-      "description": "Message sender roles.\n\nDefines the role of the entity sending a message in a conversation.",
+      "description": "Message sender roles.\n\nDefines the role of the entity sending a message in a conversation.\n\nExample:\n    >>> MessageRole.USER.value\n    'user'",
       "enum": [
         "user",
         "assistant",

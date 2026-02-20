@@ -23,6 +23,13 @@ alwaysApply: false
    - **Small Functions**: Functions should do one thing and be relatively short.
    - **Avoid Deep Nesting**: Use early returns (guard clauses) to reduce indentation.
 
+## Product Architecture (v2.0.0+)
+
+The ASAP Protocol uses a **Lean Marketplace** polyglot architecture:
+1. **Core Protocol (`src/asap/`)**: Strict Python. Uses Pydantic for validation and `uv` for dependency management. No backend APIs.
+2. **Web App (`apps/web/`)**: Next.js 15 (React 19) + TypeScript + Tailwind v4. It acts as a static consumer (SSG/ISR) of the Lite Registry.
+3. **Lite Registry**: A single `registry.json` hosted on GitHub Pages acts as the database. Registration and updates happen via GitHub PRs (IssueOps), *not* via a write API.
+
 ## Response Format
 
 When providing code modifications:

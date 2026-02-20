@@ -36,6 +36,11 @@ alwaysApply: false
   <div className={cn("p-4", isActive && "bg-blue-500")}>
   ```
 - **No arbitrary values**: Avoid `w-[123px]`. Use theme tokens (e.g., `w-32`).
+- **Design Aesthetic ("The Clean Architect")**: 
+  - Follow a minimalism approach. 
+  - Use Pure Black (`#000`) or Dark Zinc backgrounds. 
+  - Rely on 1px subtle borders and high contrast text (White/Grey). 
+  - Strictly **NO** heavy neon glows or excessive gradients. Functional minimalism is key.
 
 ## 5. Component Architecture
 - **Shadcn**: Use `packages/ui` components (e.g., `<Button>`, `<Card>`) instead of HTML tags.

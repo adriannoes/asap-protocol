@@ -1,6 +1,6 @@
 {
   "additionalProperties": false,
-  "description": "Notify about artifact creation or availability.\n\nArtifactNotify informs agents when a new artifact has been created\nor is available for retrieval.\n\nAttributes:\n    artifact_id: ID of the artifact\n    task_id: ID of the task that produced the artifact\n    name: Optional human-readable artifact name\n\nExample:\n    >>> notify = ArtifactNotify(\n    ...     artifact_id=\"art_123\",\n    ...     task_id=\"task_456\",\n    ...     name=\"Q3 Market Analysis Report\"\n    ... )",
+  "description": "Notify about artifact creation or availability.\n\nArtifactNotify informs agents when a new artifact has been created\nor is available for retrieval.\n\nAttributes:\n    artifact_id: ID of the artifact\n    task_id: ID of the task that produced the artifact\n    name: Optional human-readable artifact name",
   "properties": {
     "artifact_id": {
       "description": "Artifact identifier",
