@@ -2,12 +2,18 @@
 
 import { auth, decryptToken } from '@/auth';
 import { Octokit } from 'octokit';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function fetchUserPullRequests() {
     try {
         const session = await auth();
         if (!session?.user) {
             return { success: false, error: 'Unauthorized' };
+        }
+
+        const userId = (session.user as { id?: string }).id ?? session.user.username ?? 'anonymous';
+        if (!checkRateLimit(userId, 30, 60_000)) {
+            return { success: false, error: 'Too many requests. Please try again in a minute.' };
         }
 
         const username = session.user.username;
