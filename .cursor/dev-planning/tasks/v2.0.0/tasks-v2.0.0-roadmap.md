@@ -134,8 +134,7 @@ v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Regi
 - [ ] 4.2 Performance testing (100+ agents in Lite Registry)
 - [ ] 4.3 Monitoring setup (Vercel analytics)
 - [ ] 4.4 Documentation complete
-- [ ] 4.5 Beta program (20+ registered agents)
-- [ ] 4.6 Launch!
+- [ ] 4.5 Launch!
 
 ### Definition of Done
 - [ ] All launch criteria met (per PRD)
