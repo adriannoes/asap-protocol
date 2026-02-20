@@ -75,24 +75,24 @@ v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Regi
 
 ### Tasks
 
-- [ ] 2.1 Registry browser page
+- [x] 2.1 Registry browser page
   - Goal: Search and filter agents from Lite Registry data
   - Note: Client-side filtering of static JSON
 
-- [ ] 2.2 Agent detail page
+- [x] 2.2 Agent detail page
   - Goal: Full agent info, skills, SLA, trust level
 
-- [ ] 2.3 Developer dashboard
+- [x] 2.3 Developer dashboard
   - Goal: My agents, metrics overview
 
-- [ ] 2.4 "Register agent" instructions
+- [x] 2.4 "Register agent" instructions
   - Goal: Guide developers to submit PR to Lite Registry
   - Note: No write API — registration is via GitHub PR
 
 ### Definition of Done
-- [ ] Browse and search working
-- [ ] Agent details page complete
-- [ ] PR submission flow documented
+- [x] Browse and search working
+- [x] Agent details page complete
+- [x] PR submission flow documented
 
 ---
 
@@ -199,7 +199,7 @@ v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Regi
 
 ## Progress Tracking
 
-**Overall Progress**: 6/20 tasks (30%) — Sprint M1 complete
+**Overall Progress**: 10/20 tasks (50%) — Sprints M1 & M2 complete
 
 **Last Updated**: 2026-02-20
 
@@ -221,3 +221,4 @@ v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Regi
 | 2026-02-06 | Initial task roadmap |
 | 2026-02-12 | **Lean Marketplace pivot**: Removed Production Registry sprints (M1/M2), removed Service Integration sprint, Web App reads from Lite Registry, reduced from 6 sprints (27 tasks) to 4 sprints (20 tasks), scale targets reduced to 100+ agents |
 | 2026-02-20 | **Sprint M1 complete**: All tasks 1.1–1.6 and Definition of Done marked done; roadmap progress 6/20 (30%) |
+| 2026-02-20 | **Sprint M2 complete**: All tasks 2.1–2.4 and Definition of Done marked done; roadmap progress 10/20 (50%) |
