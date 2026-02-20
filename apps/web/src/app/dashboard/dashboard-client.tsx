@@ -5,9 +5,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { TerminalSquare, PlusCircle, Activity, Key, BarChart3, Globe, ShieldAlert, Loader2 } from 'lucide-react';
+import { TerminalSquare, PlusCircle, Activity, Key, BarChart3, Globe, ShieldAlert, Loader2, GitPullRequest, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import useSWR from 'swr';
+import { fetchUserPullRequests } from './actions';
 
 interface DashboardClientProps {
     initialAgents: Manifest[];
@@ -71,6 +73,15 @@ function AgentStatusBadge({ endpoint }: { endpoint: string }) {
 }
 
 export function DashboardClient({ initialAgents, username }: DashboardClientProps) {
+    // SWR hook to poll for PR status every 10 seconds
+    const { data: prData } = useSWR('userPrs', async () => {
+        const res = await fetchUserPullRequests();
+        if (res.success && res.data) return res.data;
+        return [];
+    }, { refreshInterval: 10000 });
+
+    const pendingPrs = prData || [];
+
     return (
         <Tabs defaultValue="agents" className="space-y-6">
             <TabsList className="grid w-full grid-cols-3 max-w-md">
@@ -91,6 +102,35 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
                         </Link>
                     </Button>
                 </div>
+
+                {/* Display pending PRs (Task 2.4.4) */}
+                {pendingPrs.length > 0 && (
+                    <div className="space-y-3 mb-6">
+                        <h3 className="text-sm font-medium text-muted-foreground">Pending Registrations</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {pendingPrs.map((pr: any) => (
+                                <Card key={pr.id} className="bg-muted/30 border-dashed">
+                                    <CardContent className="p-4 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-indigo-500/10 text-indigo-500 rounded-full">
+                                                <GitPullRequest className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-medium line-clamp-1" title={pr.title}>{pr.title}</p>
+                                                <p className="text-xs text-muted-foreground">Status: <span className="text-yellow-500">{pr.status}</span></p>
+                                            </div>
+                                        </div>
+                                        <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                                            <a href={pr.url} target="_blank" rel="noopener noreferrer" title="View PR on GitHub">
+                                                <ExternalLink className="w-4 h-4" />
+                                            </a>
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {initialAgents.length === 0 ? (
                     <Card className="border-dashed bg-muted/30">

@@ -6,20 +6,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         GitHub({
             clientId: process.env.GITHUB_CLIENT_ID,
             clientSecret: process.env.GITHUB_CLIENT_SECRET,
-            // Provide an empty array for local and required for NextAuth GitHub provider typing
-            // We will only read public profile information and repo creation ability for registry PRs
             authorization: { params: { scope: 'read:user public_repo' } },
         }),
     ],
     callbacks: {
-        jwt({ token, user, profile }) {
+        jwt({ token, user, profile, account }) {
             if (user) {
                 token.id = user.id;
-                // Optionally attach GitHub username if we need it
                 if (profile?.login) {
                     token.username = profile.login;
                 }
             }
+            if (account?.access_token) token.accessToken = account.access_token;
             return token;
         },
         session({ session, token }) {
@@ -30,10 +28,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (session.user as any).username = token.username;
             }
+            if (typeof token.accessToken === "string") {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (session as any).accessToken = token.accessToken;
+            }
             return session;
         },
     },
-    pages: {
-        signIn: '/', // We will open a modal or direct login on the landing page/header
-    },
+    pages: { signIn: '/' },
 });

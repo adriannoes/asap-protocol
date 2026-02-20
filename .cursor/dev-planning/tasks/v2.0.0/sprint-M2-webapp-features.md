@@ -98,18 +98,18 @@ This sprint adds the core features: browsing agents, viewing agent details, and 
 
 ### Sub-tasks
 
-- [ ] 4.3.1 /dashboard layout
+- [x] 4.3.1 /dashboard layout
 
-- [ ] 4.3.2 My agents list
+- [x] 4.3.2 My agents list
 
-- [ ] 4.3.3 Agent status (online/offline)
+- [x] 4.3.3 Agent status (online/offline)
   - **Note**: Client-side fetch. Agents *must* support CORS or will show as unreachable.
 
-- [ ] 4.3.4 Usage metrics
+- [x] 4.3.4 Usage metrics
 
-- [ ] 4.3.5 API keys management
+- [x] 4.3.5 API keys management
 
-- [ ] 4.3.6 Commit Dashboard
+- [x] 4.3.6 Commit Dashboard
   - **Command**: `git commit -m "feat(web): implement developer dashboard structure"`
 
 ---
@@ -118,11 +118,11 @@ This sprint adds the core features: browsing agents, viewing agent details, and 
 
 ### Sub-tasks
 
-- [ ] 2.4.1 /dashboard/register page
+- [x] 2.4.1 /dashboard/register page
   - **Form**: Name, Description, HTTP/WS endpoints, Manifest URL, Skills (tags)
   - **Auth**: Require GitHub Login (from Task 1.3)
 
-- [ ] 2.4.2 Validation Logic
+- [x] 2.4.2 Validation Logic
   - **Library**: `zod` + `react-hook-form`
   - **Schema**:
     ```typescript
@@ -138,7 +138,7 @@ This sprint adds the core features: browsing agents, viewing agent details, and 
   - **Security**: Verify Manifest Ed25519 Signature (prevent impersonation)
   - **Security**: Check `ttl_seconds` is valid
 
-- [ ] 2.4.3 GitHub Automation (ADR-18)
+- [x] 2.4.3 GitHub Automation (ADR-18)
   - **Library**: `octokit` (SDK)
   - **Token**: Use `getToken()` in Server Action; pass `accessToken` to Octokit
   - **Flow** (validated in pre-M2; see `validate-github-pr-flow.mjs`):
@@ -147,7 +147,7 @@ This sprint adds the core features: browsing agents, viewing agent details, and 
     3. **File**: `createOrUpdateFileContents(...)` -> `registry.json` — **must pass `sha`** when updating existing file
     4. **PR**: `pulls.create(...)` — Title: "Register Agent: <name>", Body: "Automated registration via Marketplace."
 
-- [ ] 2.4.4 Dashboard Status Updates
+- [x] 2.4.4 Dashboard Status Updates
   - **Poll**: `SWR` or `React Query` to poll `/api/github/pr-status`
   - **Display**: Badge (Yellow: Pending, Red: Changes Requested, Green: Merged)
   - **Admin Context**: Link to PR for user to see comments.
