@@ -1,6 +1,6 @@
 ---
-description: 
-alwaysApply: false
+description: "Apply when generating git commit messages, performing commits, pushing to remote, or suggesting commit-related changes. Enforces Conventional Commits format and pre-push CI verification."
+alwaysApply: true
 ---
 
 # Git Conventional Commits
