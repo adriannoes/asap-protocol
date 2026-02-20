@@ -73,12 +73,17 @@ function AgentStatusBadge({ endpoint }: { endpoint: string }) {
 }
 
 export function DashboardClient({ initialAgents, username }: DashboardClientProps) {
-    // SWR hook to poll for PR status every 10 seconds
     const { data: prData } = useSWR('userPrs', async () => {
         const res = await fetchUserPullRequests();
         if (res.success && res.data) return res.data;
         return [];
-    }, { refreshInterval: 10000 });
+    }, {
+        refreshInterval: 60_000,
+        onErrorRetry: (error, _key, _config, revalidate, { retryCount }) => {
+            if (retryCount >= 3) return;
+            setTimeout(() => revalidate({ retryCount }), 5000 * (retryCount + 1));
+        },
+    });
 
     const pendingPrs = prData || [];
 
@@ -152,29 +157,29 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {initialAgents.map(agent => (
-                            <Card key={agent.id as string}>
+                            <Card key={agent.id ?? ''}>
                                 <CardHeader className="pb-4">
                                     <div className="flex justify-between items-start gap-4">
-                                        <CardTitle className="text-lg line-clamp-1" title={agent.name as string}>{agent.name}</CardTitle>
-                                        <AgentStatusBadge endpoint={agent.endpoints.asap as string} />
+                                        <CardTitle className="text-lg line-clamp-1" title={agent.name ?? ''}>{agent.name}</CardTitle>
+                                        <AgentStatusBadge endpoint={agent.endpoints.asap ?? ''} />
                                     </div>
-                                    <CardDescription className="text-xs font-mono truncate" title={agent.id as string}>{agent.id}</CardDescription>
+                                    <CardDescription className="text-xs font-mono truncate" title={agent.id ?? ''}>{agent.id}</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    <div className="text-sm text-muted-foreground line-clamp-2 min-h-10" title={agent.description as string}>
+                                    <div className="text-sm text-muted-foreground line-clamp-2 min-h-10" title={agent.description ?? ''}>
                                         {agent.description}
                                     </div>
-                                    <div className="flex items-center gap-1 text-xs bg-muted/50 p-2 rounded-md font-mono overflow-hidden" title={agent.endpoints.asap as string}>
+                                    <div className="flex items-center gap-1 text-xs bg-muted/50 p-2 rounded-md font-mono overflow-hidden" title={agent.endpoints.asap ?? ''}>
                                         <Globe className="w-3 h-3 shrink-0 text-muted-foreground" />
                                         <span className="truncate">{agent.endpoints.asap}</span>
                                     </div>
                                 </CardContent>
                                 <CardFooter className="pt-4 border-t flex gap-2">
                                     <Button variant="outline" size="sm" className="w-full text-xs" asChild>
-                                        <Link href={`/agents/${encodeURIComponent(agent.id as string)}`}>View Profile</Link>
+                                        <Link href={`/agents/${encodeURIComponent(agent.id ?? '')}`}>View Profile</Link>
                                     </Button>
                                     <Button variant="secondary" size="sm" className="w-full text-xs" asChild>
-                                        <Link href={`/dashboard/agents/${encodeURIComponent(agent.id as string)}/edit`}>Edit</Link>
+                                        <Link href={`/dashboard/agents/${encodeURIComponent(agent.id ?? '')}/edit`}>Edit</Link>
                                     </Button>
                                 </CardFooter>
                             </Card>
