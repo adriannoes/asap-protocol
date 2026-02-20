@@ -13,7 +13,7 @@ type Props = {
 export async function generateStaticParams() {
     const agents = await fetchRegistry();
     return agents.map((agent) => ({
-        id: encodeURIComponent(agent.id as string),
+        id: encodeURIComponent(agent.id ?? ''),
     }));
 }
 
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     return {
         title: `${agent.name} | ASAP Protocol Registry`,
-        description: agent.description as string,
+        description: agent.description ?? '',
     };
 }
 

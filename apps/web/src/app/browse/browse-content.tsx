@@ -171,7 +171,7 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
                 ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                         {filteredAgents.map((agent) => (
-                            <Card key={agent.id as string} className="flex flex-col transition-all hover:border-indigo-500/50 hover:shadow-md hover:-translate-y-1 duration-200">
+                            <Card key={agent.id ?? ''} className="flex flex-col transition-all hover:border-indigo-500/50 hover:shadow-md hover:-translate-y-1 duration-200">
                                 <CardHeader>
                                     <CardTitle className="text-lg line-clamp-1">{agent.name}</CardTitle>
                                     <CardDescription className="line-clamp-2 min-h-10 text-xs">
@@ -194,11 +194,11 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
                                     </div>
                                 </CardContent>
                                 <CardFooter className="pt-4 border-t flex justify-between">
-                                    <span className="text-xs text-muted-foreground truncate w-24" title={agent.id as string}>
+                                    <span className="text-xs text-muted-foreground truncate w-24" title={agent.id ?? ''}>
                                         {agent.id?.split(':').pop()}
                                     </span>
                                     <Button asChild size="sm" variant="outline">
-                                        <Link href={`/agents/${encodeURIComponent(agent.id as string)}`}>View Details</Link>
+                                        <Link href={`/agents/${encodeURIComponent(agent.id ?? '')}`}>View Details</Link>
                                     </Button>
                                 </CardFooter>
                             </Card>

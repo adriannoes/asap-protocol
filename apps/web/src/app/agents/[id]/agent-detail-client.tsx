@@ -167,7 +167,7 @@ export function AgentDetailClient({ agent }: AgentDetailClientProps) {
                                             <p>OAuth2 Setup available.</p>
                                             <p className="flex items-center gap-1 group">
                                                 <ExternalLink className="w-3 h-3 group-hover:text-indigo-400" />
-                                                <a href={agent.auth.oauth2.authorization_url as string} target="_blank" rel="noreferrer" className="group-hover:text-indigo-400 underline decoration-border underline-offset-2">Auth URL</a>
+                                                <a href={typeof agent.auth.oauth2.authorization_url === 'string' ? agent.auth.oauth2.authorization_url : '#'} target="_blank" rel="noreferrer" className="group-hover:text-indigo-400 underline decoration-border underline-offset-2">Auth URL</a>
                                             </p>
                                         </div>
                                     )}
