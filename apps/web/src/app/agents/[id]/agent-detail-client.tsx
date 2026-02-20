@@ -2,7 +2,7 @@
 
 import { Manifest } from '@/types/protocol';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, ExternalLink, ShieldAlert, ShieldCheck, TerminalSquare } from 'lucide-react';
@@ -97,7 +97,7 @@ export function AgentDetailClient({ agent }: AgentDetailClientProps) {
                                 <h3 className="font-semibold text-sm">Registered Skills</h3>
                                 {Array.isArray(agent.capabilities?.skills) && agent.capabilities.skills.length > 0 ? (
                                     <div className="space-y-4">
-                                        {agent.capabilities.skills.map((skill: any) => (
+                                        {agent.capabilities.skills.map((skill: { id: string, description: string }) => (
                                             <div key={skill.id} className="p-4 border rounded-lg bg-card/50">
                                                 <div className="flex justify-between items-start mb-2">
                                                     <h4 className="font-semibold text-sm font-mono text-indigo-400">{skill.id}</h4>

@@ -1,7 +1,6 @@
 import { Metadata } from 'next';
 import { fetchAgentById, fetchRegistry } from '@/lib/registry';
 import { notFound } from 'next/navigation';
-import { Manifest } from '@/types/protocol';
 import { AgentDetailClient } from './agent-detail-client';
 
 export const revalidate = 60; // ISR

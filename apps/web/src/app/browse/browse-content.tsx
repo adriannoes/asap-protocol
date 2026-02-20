@@ -5,7 +5,7 @@ import { Manifest } from '@/types/protocol';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Search } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -34,7 +34,7 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
         const skillsSet = new Set<string>();
         initialAgents.forEach((agent) => {
             if (Array.isArray(agent.capabilities?.skills)) {
-                agent.capabilities.skills.forEach((skill: any) => {
+                agent.capabilities.skills.forEach((skill: { id: string }) => {
                     if (skill.id) skillsSet.add(skill.id);
                 });
             }
@@ -69,7 +69,7 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
         if (selectedSkills.length > 0) {
             result = result.filter((agent) => {
                 const agentSkills = Array.isArray(agent.capabilities?.skills)
-                    ? agent.capabilities.skills.map((s: any) => s.id)
+                    ? agent.capabilities.skills.map((s: { id: string }) => s.id)
                     : [];
 
                 return selectedSkills.every((skill) => agentSkills.includes(skill));
@@ -181,7 +181,7 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
                                 <CardContent className="flex-1 space-y-4">
                                     <div className="flex flex-wrap gap-2">
                                         {/* Safe mapping for skills array which might be under capabilities */}
-                                        {(agent.capabilities?.skills as any[])?.slice(0, 3).map((skill) => (
+                                        {(agent.capabilities?.skills as { id: string }[])?.slice(0, 3).map((skill) => (
                                             <Badge key={skill.id} variant="secondary" className="text-xs">
                                                 {skill.id}
                                             </Badge>
