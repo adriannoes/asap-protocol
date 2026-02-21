@@ -294,3 +294,40 @@ Furthermore, integrating payments (Stripe) adds significant scope (webhooks, sub
 > **Rationale**: Prioritizes adoption and reduces MVP complexity ("Lean Marketplace").
 >
 > **Date**: 2026-02-16
+
+---
+
+## Question 22: Register-Agent Template and Registry Metadata (Trust, Discovery, “Other Platforms”)
+
+### The Question
+The IssueOps registration template (Task 3.1) collects only the minimal fields needed to build a `RegistryEntry` (name, description, manifest URL, endpoints, skills). Should we extend the template and registry schema with optional metadata for trust, discovery, and ecosystem visibility (e.g. “built with CrewAI”)?
+
+### Analysis
+
+**Gaps identified**:
+- **Trust**: No link to source code; harder for admins to review verification and for users to assess quality.
+- **Onboarding**: No documentation URL; consumers lack a clear “how to use” link.
+- **Discoverability**: Skills only; no category/tags or “framework” signal. Other ecosystems (CrewAI, OpenClaw, LangChain) could be represented.
+
+**“Other platforms” — two interpretations**:
+- **Option A (metadata)**: Agent still speaks ASAP; we record *which framework* was used to build it (e.g. CrewAI, OpenClaw). Single protocol, optional discovery filter.
+- **Option B (multi-protocol)**: Register agents that do *not* speak ASAP; marketplace would support multiple protocols. Large scope and product pivot.
+
+**Option A** aligns with the current product: ASAP remains the protocol; “built with” is discovery metadata only.
+
+### Decision
+
+> [!IMPORTANT]
+> **ADR-22**: The registration template and Lite Registry are extended with **optional metadata** for trust and discovery; **category/tags** are deferred to v2.1.
+>
+> 1. **Template** (`.github/ISSUE_TEMPLATE/register_agent.yml`):
+>    - Optional: **Repository URL**, **Documentation URL**, **Built with** (dropdown: CrewAI, OpenClaw, LangChain, AutoGen, Other).
+>    - Required: **Confirmation** checkbox (manifest publicly accessible, endpoints match).
+> 2. **RegistryEntry** (`src/asap/discovery/registry.py`):
+>    - Optional fields: `repository_url`, `documentation_url`, `built_with`. Persisted in `registry.json` by the registration Action (Task 3.3).
+> 3. **“Other platforms”**: We support **Option A** only — framework as metadata. Agents must speak ASAP; we do not register non-ASAP protocols in v2.0.
+> 4. **Category/tags**: Deferred to v2.1. Documented in [deferred-backlog.md](../strategy/deferred-backlog.md#6-categorytags-in-lite-registry-v21).
+>
+> **Rationale**: Low effort, backward-compatible, improves trust (repo/docs) and discoverability (built_with). Category/tags require schema + UI filters and are scoped for a follow-up once IssueOps is stable.
+>
+> **Date**: 2026-02-20

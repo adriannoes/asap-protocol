@@ -2,10 +2,10 @@
 
 > **Evolution Path**: v1.0.0 → v2.0.0 (Agent Marketplace)
 >
-> **Status**: STRATEGIC PLANNING
-> **Horizon**: Incremental sprints post-v1.0.0
+> **Status**: LAUNCH PREP — Sprints M1–M3 complete (80%)
+> **Horizon**: M4 launch prep, then v2.0.0 release
 > **Created**: 2026-01-30
-> **Updated**: 2026-02-18
+> **Updated**: 2026-02-21
 
 ---
 
@@ -217,7 +217,7 @@ Key architectural and business decisions made during planning. Each decision inc
 | **v1.2.0** | Verified Identity | Signing + Compliance | Ed25519 signing, Compliance Harness, mTLS (opt) |
 | **v1.3.0** | Observability | Metering + SLAs + Delegation | ✅ Released — Observability metering, SLA framework, delegation tokens |
 | **v1.4.0** | Hardening | Resilience + Scale | Type safety hardening, storage pagination |
-| **v2.0.0** | Marketplace | Full launch | Web App, Lite Registry integration, Verified Badge |
+| **v2.0.0** | Marketplace | Full launch | Web App, Lite Registry, Verified Badge, IssueOps registration — **M1–M3 ✅, M4 in progress** |
 
 ---
 
@@ -416,17 +416,21 @@ SLAs define service guarantees as trust signals (not financial penalties in v1.3
 > [!NOTE]
 > **Lean approach**: v2.0 reads from Lite Registry (`registry.json`) instead of a backend API. Registry API Backend is deferred to v2.1. See [deferred-backlog.md](./deferred-backlog.md).
 
+> [!TIP]
+> **Pre-launch (2026-02)**: Sprints M1–M3 complete. Registration and verification flows work via IssueOps (Web Form → GitHub Issue → Action). M4 (security audit, performance testing, docs) is the final gate before public launch.
+
 ### Web App (SD-8)
 
 Human interface for marketplace interactions:
 
-| Area | MVP Features |
-|------|-------------|
-| Landing | Hero, value prop, "Get Started" CTA |
-| Registry Browser | Search, filters (skill, trust level), agent details |
-| Developer Dashboard | My agents, analytics, API keys |
-| Verified Signup | Manual IssueOps request (Free), KYC minimal |
-| Auth | OAuth2 (dog-fooding ASAP auth) |
+| Area | MVP Features | Status |
+|------|-------------|--------|
+| Landing | Hero, value prop, "Get Started" CTA | ✅ M1 |
+| Registry Browser | Search, filters (skill, trust level), agent details | ✅ M2 |
+| Developer Dashboard | My agents, pending registrations, Listed/Pending/Verified | ✅ M3 |
+| Registration | Web Form → pre-filled GitHub Issue → Action auto-merge | ✅ M3 |
+| Verified Badge | Manual IssueOps request (Free), form → GitHub Issue | ✅ M3 |
+| Auth | OAuth2 (dog-fooding ASAP auth), `read:user` only | ✅ M1 |
 
 **Technical Stack**:
 
@@ -444,10 +448,11 @@ Human interface for marketplace interactions:
 ### Launch Criteria
 
 - [ ] Lite Registry has 100+ agents
-- [ ] Verified badge flow working (Manual IssueOps process)
-- [ ] Web App live with core features (browse, search, register)
-- [ ] Security audit passed
-- [ ] Documentation complete
+- [x] Verified badge flow working (Manual IssueOps process) — M3 complete
+- [x] Web App live with core features (browse, search, register) — M1–M2 complete
+- [x] Registration via Web Form → GitHub Issue → Action (IssueOps) — M3 complete
+- [ ] Security audit passed (M4)
+- [ ] Documentation complete (M4)
 
 ---
 
@@ -511,6 +516,20 @@ Strategic risks identified during the v1.1.0 planning review (2026-02-07):
 | SQ-11 | WebSocket message reliability? | Selective ack for state-changing messages + AckAwareClient | ADR-16 |
 | SQ-12 | Identity mapping (IdP sub → agent_id)? | Custom Claims + allowlist fallback | ADR-17 |
 
+## Open Source vs. Proprietary Boundary
+
+We follow an **Open Core + SaaS** model (LangChain-style). See [vision-agent-marketplace.md](./vision-agent-marketplace.md#55-open-source-vs-proprietary-boundary-langchain-style) for full details.
+
+| Phase | Public (repo) | Private (separate) |
+|-------|---------------|---------------------|
+| **v2.0 (now)** | SDK, Web App, Lite Registry | — |
+| **v2.1** | SDK, Web App frontend | Registry API Backend |
+| **v3.0** | SDK, Web App frontend | Registry API, Billing, Economy Settlement |
+
+**Decision point**: Start separating when building **v2.1 Registry API Backend**. Until then, everything stays public. Cloning the repo does not replace the product (network effect, trust, backend services).
+
+---
+
 ## Open Questions
 
 | ID | Question | Decide By |
@@ -561,3 +580,5 @@ Strategic risks identified during the v1.1.0 planning review (2026-02-07):
 | 2026-02-13 | **Security Hardening**: Updated SD-4 to include JCS (RFC 8785) and Strict Verification (RFC 8032) |
 | 2026-02-18 | **v1.3 SLA decisions**: Added SLAStorage to SD-9, expanded v1.3 section with SLA Framework details (/sla/* API, trust signals), updated migration guide |
 | 2026-02-18 | **v1.3.0 released**: Marked v1.3.0 as released in Release Timeline. Removed duplicate v1.4.0 section. |
+| 2026-02-21 | **Sprint M3 complete**: Status → LAUNCH PREP. Launch criteria updated (IssueOps, registration, verification done). Web App table with status. v2.0.0 timeline note. |
+| 2026-02-21 | **Open Core boundary**: Added Open Source vs. Proprietary section. Public until v2.1; Registry API Backend and billing become private. |

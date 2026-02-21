@@ -2,7 +2,7 @@
 
 > **Purpose**: Formal review points to update documentation with learnings
 > **Created**: 2026-02-06
-> **Updated**: 2026-02-18 (v1.3.0 released)
+> **Updated**: 2026-02-21 (Sprint M3 complete, launch prep)
 
 ---
 
@@ -101,18 +101,25 @@ Pre-release: Release materials (CHANGELOG, README, AGENTS.md, secure_agent examp
 
 ---
 
-### CP-5: Post v2.0.0 M2 (Web App Features)
+### CP-5: Post v2.0.0 M3 (Developer Experience)
 
-**When**: After completing sprints M1-M2
+**When**: After completing sprints M1–M3
+
+**Status**: M3 complete (2026-02-21). IssueOps registration + verification flows implemented. Ready for M4 launch prep.
 
 **Review**:
 - [ ] Lite Registry data layer — is `registry.json` SSG/ISR working well?
 - [ ] Web App performance with static registry data
 - [ ] Client-side search/filter UX
+- [ ] IssueOps flow — Web Form → GitHub Issue → Action: friction level acceptable?
+- [ ] Verification request flow — form → pre-filled Issue: working as expected?
+- [ ] NextAuth scope downgrade (`read:user` only) — any missing permissions?
 
 **Update**:
-- [ ] `sprint-M3-verified-payments.md` and `sprint-M4-launch-prep.md` — adjust estimates
+- [ ] `sprint-M4-launch-prep.md` — adjust estimates based on M3 velocity
 - [ ] Evaluate if Registry API Backend should be built for v2.1
+
+**Reference**: [sprint-M3-developer-experience.md](./tasks/v2.0.0/sprint-M3-developer-experience.md)
 
 ---
 
@@ -177,3 +184,4 @@ Track actual vs estimated to improve future planning:
 | 2026-02-12 | **Lean Marketplace pivot**: Updated CP-2 (removed Registry API review), CP-3 (metering→observability), CP-4 (renamed from "Marketplace Core" to "Web App Features"), CP-5 (merged with CP-6, updated metrics). Reduced from 6 checkpoints to 5. Updated velocity estimates. |
 | 2026-02-18 | **v1.3.0 release prep**: CP-3 status updated (Sprints E1–E3 complete, PR #50 open). Velocity: v1.3.0 ~12 days actual vs 15–22 estimated. |
 | 2026-02-18 | **v1.3.0 released**: Tag v1.3.0 pushed. CP-3 checkpoint review ready. |
+| 2026-02-21 | **Sprint M3 complete**: CP-5 updated for M1–M3 (IssueOps, verification flow). Launch prep next. |

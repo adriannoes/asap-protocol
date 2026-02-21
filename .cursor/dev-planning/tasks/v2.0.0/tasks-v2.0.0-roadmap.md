@@ -102,26 +102,29 @@ v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Regi
 
 ### Tasks
 
-- [ ] 3.1 GitHub Issue Template configured
+- [x] 3.1 GitHub Issue Template configured
   - Goal: YAML template for agent registration
 
-- [ ] 3.2 Registration Form (Web)
+- [x] 3.2 Registration Form (Web)
   - Goal: Web form that validates input and links to GitHub Issue creation
 
-- [ ] 3.3 Registration Action (GitHub Actions)
+- [x] 3.3 Registration Action (GitHub Actions)
  - Goal: Parse Issue YAML, validate Zod schema, update `registry.json`, close issue
 
-- [ ] 3.4 Developer Dashboard (with Verified status)
+- [x] 3.4 Developer Dashboard (with Verified status)
  - Goal: "My Agents" list derived from `maintainers` field in registry
  - Status: Listed, Pending, Verified
 
-- [ ] 3.5 Verified Badge Request (New)
+- [x] 3.5 Verified Badge Request (New)
  - Goal: IssueOps flow for requesting verification (No payments)
 
+- [x] 3.6 Update Protocol Schema (verification field)
+ - Goal: Python Manifest + RegistryEntry accept optional `verification`; TypeScript types regenerated
+
 ### Definition of Done
-- [ ] User can register agent via Web Form -> GitHub Issue flow
-- [ ] User can request verification via Web Form -> GitHub Issue flow
-- [ ] Action automatically merges valid agents
+- [x] User can register agent via Web Form -> GitHub Issue flow
+- [x] User can request verification via Web Form -> GitHub Issue flow
+- [x] Action automatically merges valid agents
 ---
 
 ## Sprint M4: Launch Preparation
@@ -198,9 +201,9 @@ v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Regi
 
 ## Progress Tracking
 
-**Overall Progress**: 10/20 tasks (50%) — Sprints M1 & M2 complete
+**Overall Progress**: 16/20 tasks (80%) — Sprints M1, M2 & M3 complete
 
-**Last Updated**: 2026-02-20
+**Last Updated**: 2026-02-21
 
 ---
 
@@ -221,3 +224,4 @@ v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Regi
 | 2026-02-12 | **Lean Marketplace pivot**: Removed Production Registry sprints (M1/M2), removed Service Integration sprint, Web App reads from Lite Registry, reduced from 6 sprints (27 tasks) to 4 sprints (20 tasks), scale targets reduced to 100+ agents |
 | 2026-02-20 | **Sprint M1 complete**: All tasks 1.1–1.6 and Definition of Done marked done; roadmap progress 6/20 (30%) |
 | 2026-02-20 | **Sprint M2 complete**: All tasks 2.1–2.4 and Definition of Done marked done; roadmap progress 10/20 (50%) |
+| 2026-02-21 | **Sprint M3 complete**: All tasks 3.1–3.6 and Definition of Done marked done; roadmap progress 16/20 (80%) |

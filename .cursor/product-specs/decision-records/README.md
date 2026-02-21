@@ -41,6 +41,7 @@ Product roadmap, feature prioritization, and ecosystem strategy.
 - **Q18**: Agent Registration Flow (GitHub PRs)
 - **Q19**: Design Strategy (Design-First)
 - **Q21**: Pricing Strategy (Free vs Paid)
+- **Q22**: Register-Agent Template and Registry Metadata (Trust, Discovery, “Other Platforms”)
 
 ### Planning Documents (dev-planning/)
 
