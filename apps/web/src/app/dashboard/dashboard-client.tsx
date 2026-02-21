@@ -5,11 +5,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { TerminalSquare, PlusCircle, Activity, Key, BarChart3, Globe, ShieldAlert, Loader2, GitPullRequest, ExternalLink } from 'lucide-react';
+import { TerminalSquare, PlusCircle, Activity, Key, BarChart3, Globe, ShieldAlert, Loader2, GitPullRequest, ExternalLink, ShieldCheck, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import useSWR from 'swr';
-import { fetchUserPullRequests } from './actions';
+import { fetchUserRegistrationIssues } from './actions';
+
+export type PendingRegistration = {
+    id: number;
+    number: number;
+    title: string;
+    url: string;
+    state: string;
+    status: string;
+};
 
 interface DashboardClientProps {
     initialAgents: Manifest[];
@@ -73,63 +83,84 @@ function AgentStatusBadge({ endpoint }: { endpoint: string }) {
 }
 
 export function DashboardClient({ initialAgents, username }: DashboardClientProps) {
-    const { data: prData } = useSWR('userPrs', async () => {
-        const res = await fetchUserPullRequests();
-        if (res.success && res.data) return res.data;
+    const router = useRouter();
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const { data: pendingIssuesData, mutate } = useSWR('userRegistrationIssues', async () => {
+        const res = await fetchUserRegistrationIssues();
+        if (res.success && res.data) return res.data as PendingRegistration[];
         return [];
     }, {
         refreshInterval: 60_000,
-        onErrorRetry: (error, _key, _config, revalidate, { retryCount }) => {
+        onErrorRetry: (_error, _key, _config, revalidate, { retryCount }) => {
             if (retryCount >= 3) return;
             setTimeout(() => revalidate({ retryCount }), 5000 * (retryCount + 1));
         },
     });
 
-    const pendingPrs = prData || [];
+    const pendingRegistrations = pendingIssuesData ?? [];
+
+    async function handleRefresh() {
+        setIsRefreshing(true);
+        await mutate();
+        router.refresh();
+        setIsRefreshing(false);
+    }
 
     return (
         <Tabs defaultValue="agents" className="space-y-6">
             <TabsList className="grid w-full grid-cols-3 max-w-md">
-                <TabsTrigger value="agents">My Agents</TabsTrigger>
+                <TabsTrigger value="agents">
+                    My Agents{pendingRegistrations.length > 0 ? ` (${pendingRegistrations.length} pending)` : ''}
+                </TabsTrigger>
                 <TabsTrigger value="metrics">Usage Metrics</TabsTrigger>
                 <TabsTrigger value="keys">API Keys</TabsTrigger>
             </TabsList>
 
             <TabsContent value="agents" className="space-y-6">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center flex-wrap gap-4">
                     <div>
                         <h2 className="text-xl font-semibold tracking-tight">Registered Agents</h2>
                         <p className="text-sm text-muted-foreground">Manage your published agents on the ASAP Protocol.</p>
                     </div>
-                    <Button asChild>
-                        <Link href="/dashboard/register" className="flex items-center gap-2">
-                            <PlusCircle className="w-4 h-4" /> Register New Agent
-                        </Link>
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing} className="gap-2">
+                            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} /> Refresh
+                        </Button>
+                        <Button asChild>
+                            <Link href="/dashboard/register" className="flex items-center gap-2">
+                                <PlusCircle className="w-4 h-4" /> Register New Agent
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
 
-                {/* Display pending PRs (Task 2.4.4) */}
-                {pendingPrs.length > 0 && (
+                {/* Pending registration issues (IssueOps): open issues with label "registration" by this user */}
+                {pendingRegistrations.length > 0 && (
                     <div className="space-y-3 mb-6">
                         <h3 className="text-sm font-medium text-muted-foreground">Pending Registrations</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {pendingPrs.map((pr: { id: number, title: string, status: string, url: string }) => (
-                                <Card key={pr.id} className="bg-muted/30 border-dashed">
-                                    <CardContent className="p-4 flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-indigo-500/10 text-indigo-500 rounded-full">
-                                                <GitPullRequest className="w-4 h-4" />
+                            {pendingRegistrations.map((issue) => (
+                                <Card key={issue.id} className="bg-muted/30 border-dashed">
+                                    <CardContent className="p-4 space-y-3">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className="p-2 bg-indigo-500/10 text-indigo-500 rounded-full shrink-0">
+                                                    <GitPullRequest className="w-4 h-4" />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-medium line-clamp-1" title={issue.title}>{issue.title}</p>
+                                                    <p className="text-xs text-muted-foreground">Status: <span className="text-yellow-500">{issue.status}</span></p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="text-sm font-medium line-clamp-1" title={pr.title}>{pr.title}</p>
-                                                <p className="text-xs text-muted-foreground">Status: <span className="text-yellow-500">{pr.status}</span></p>
-                                            </div>
+                                            <Button asChild variant="outline" size="sm" className="shrink-0 text-xs">
+                                                <a href={issue.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                                                    <ExternalLink className="w-3 h-3" /> View issue
+                                                </a>
+                                            </Button>
                                         </div>
-                                        <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                                            <a href={pr.url} target="_blank" rel="noopener noreferrer" title="View PR on GitHub">
-                                                <ExternalLink className="w-4 h-4" />
-                                            </a>
-                                        </Button>
+                                        <p className="text-xs text-muted-foreground">
+                                            If validation failed, the comment on the issue shows the reason. You can fix and re-edit the issue.
+                                        </p>
                                     </CardContent>
                                 </Card>
                             ))}
@@ -137,7 +168,17 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
                     </div>
                 )}
 
-                {initialAgents.length === 0 ? (
+                {initialAgents.length === 0 && pendingRegistrations.length > 0 ? (
+                    <Card className="border-dashed bg-muted/30">
+                        <CardContent className="flex flex-col items-center justify-center py-12 text-center space-y-4">
+                            <div className="max-w-md">
+                                <p className="text-sm text-muted-foreground">
+                                    You have pending registration(s). Open the issue link above to check if it was accepted or if there&apos;s feedback to fix.
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ) : initialAgents.length === 0 ? (
                     <Card className="border-dashed bg-muted/30">
                         <CardContent className="flex flex-col items-center justify-center py-16 text-center space-y-4">
                             <div className="p-4 bg-muted rounded-full">
@@ -159,9 +200,19 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
                         {initialAgents.map(agent => (
                             <Card key={agent.id ?? ''}>
                                 <CardHeader className="pb-4">
-                                    <div className="flex justify-between items-start gap-4">
-                                        <CardTitle className="text-lg line-clamp-1" title={agent.name ?? ''}>{agent.name}</CardTitle>
-                                        <AgentStatusBadge endpoint={agent.endpoints.asap ?? ''} />
+                                    <div className="flex justify-between items-start gap-2">
+                                        <CardTitle className="text-lg line-clamp-1 min-w-0" title={agent.name ?? ''}>{agent.name}</CardTitle>
+                                        <div className="flex flex-wrap items-center gap-1.5 shrink-0 justify-end">
+                                            <Badge variant="outline" className="text-[10px] bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20 px-2 py-0 font-normal">
+                                                Listed
+                                            </Badge>
+                                            {String(agent.verification?.status) === 'verified' && (
+                                                <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 px-2 py-0 flex items-center gap-0.5">
+                                                    <ShieldCheck className="w-3 h-3" /> Verified
+                                                </Badge>
+                                            )}
+                                            <AgentStatusBadge endpoint={agent.endpoints.asap ?? ''} />
+                                        </div>
                                     </div>
                                     <CardDescription className="text-xs font-mono truncate" title={agent.id ?? ''}>{agent.id}</CardDescription>
                                 </CardHeader>
@@ -174,13 +225,20 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
                                         <span className="truncate">{agent.endpoints.asap}</span>
                                     </div>
                                 </CardContent>
-                                <CardFooter className="pt-4 border-t flex gap-2">
-                                    <Button variant="outline" size="sm" className="w-full text-xs" asChild>
+                                <CardFooter className="pt-4 border-t flex flex-wrap gap-2">
+                                    <Button variant="outline" size="sm" className="text-xs" asChild>
                                         <Link href={`/agents/${encodeURIComponent(agent.id ?? '')}`}>View Profile</Link>
                                     </Button>
-                                    <Button variant="secondary" size="sm" className="w-full text-xs" asChild>
+                                    <Button variant="secondary" size="sm" className="text-xs" asChild>
                                         <Link href={`/dashboard/agents/${encodeURIComponent(agent.id ?? '')}/edit`}>Edit</Link>
                                     </Button>
+                                    {String(agent.verification?.status) !== 'verified' && (
+                                        <Button variant="outline" size="sm" className="text-xs border-amber-500/30 text-amber-600 dark:text-amber-400" asChild>
+                                            <Link href={`/dashboard/verify?agent_id=${encodeURIComponent(agent.id ?? '')}`} className="flex items-center gap-1">
+                                                <ShieldCheck className="w-3 h-3" /> Apply for Verified
+                                            </Link>
+                                        </Button>
+                                    )}
                                 </CardFooter>
                             </Card>
                         ))}

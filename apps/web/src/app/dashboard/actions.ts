@@ -4,7 +4,8 @@ import { auth, decryptToken } from '@/auth';
 import { Octokit } from 'octokit';
 import { checkRateLimit } from '@/lib/rate-limit';
 
-export async function fetchUserPullRequests() {
+/** Fetch open registration issues created by the current user (read-only). */
+export async function fetchUserRegistrationIssues() {
     try {
         const session = await auth();
         if (!session?.user) {
@@ -29,33 +30,31 @@ export async function fetchUserPullRequests() {
         const owner = process.env.GITHUB_REGISTRY_OWNER || 'adriannoes';
         const repo = process.env.GITHUB_REGISTRY_REPO || 'asap-protocol';
 
-        // Fetch open PRs created by the user targeting the registry
-        const { data: prs } = await octokit.rest.pulls.list({
+        // Fetch open issues with label "registration" (IssueOps flow)
+        const { data: issues } = await octokit.rest.issues.listForRepo({
             owner,
             repo,
             state: 'open',
+            labels: 'registration',
             sort: 'created',
             direction: 'desc',
         });
 
-        // Filter PRs that are specifically from this user for Agent Registration
-        const userRegistrationPrs = prs
-            .filter(pr => pr.user?.login === username && pr.title.startsWith('Register Agent:'))
-            .map(pr => ({
-                id: pr.id,
-                title: pr.title,
-                url: pr.html_url,
-                number: pr.number,
-                state: pr.state, // 'open'
-                createdAt: pr.created_at,
-                // Simple heuristic for status. In a real app we'd check CI checks and review states.
-                status: 'Pending Review',
+        // Only issues (not PRs), created by this user
+        const userRegistrationIssues = issues
+            .filter((issue) => !issue.pull_request && issue.user?.login === username)
+            .map((issue) => ({
+                id: issue.id,
+                number: issue.number,
+                title: issue.title,
+                url: issue.html_url ?? '',
+                state: issue.state,
+                status: 'Pending',
             }));
 
-        return { success: true, data: userRegistrationPrs };
-
+        return { success: true, data: userRegistrationIssues };
     } catch (error) {
-        console.error('Error fetching PRs:', error);
-        return { success: false, error: 'Failed to fetch pull requests' };
+        console.error('Error fetching registration issues:', error);
+        return { success: false, error: 'Failed to fetch registration issues' };
     }
 }
