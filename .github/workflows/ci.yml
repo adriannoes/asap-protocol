@@ -1,6 +1,5 @@
-# CI: lint, type-check (+ docs build), test, coverage, security.
-# Parallel jobs after lint for faster feedback. Path filters avoid unnecessary runs.
-# Branch protection can require: lint, type-check, test, coverage, security.
+# CI: quality (lint+typecheck), test, coverage, security.
+# 6 jobs total. Branch protection: require quality (python), quality (web), test (python), test (web), coverage, security.
 name: CI
 
 on:
@@ -36,10 +35,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint-python:
-    name: lint (python)
+  quality-python:
+    name: quality (python)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 14
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
@@ -48,11 +47,15 @@ jobs:
         run: |
           uv run ruff check . --output-format=github
           uv run ruff format --check .
+      - name: Type check with mypy
+        run: uv run mypy src/
+      - name: Build docs
+        run: uv run mkdocs build
 
-  lint-web:
-    name: lint (web)
+  quality-web:
+    name: quality (web)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 14
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node
@@ -67,43 +70,14 @@ jobs:
       - name: Lint
         run: npm run lint
         working-directory: apps/web
-
-  type-check-python:
-    name: type-check (python)
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Python
-        uses: ./.github/actions/setup-python
-      - name: Type check with mypy
-        run: uv run mypy src/
-      - name: Build docs
-        run: uv run mkdocs build
-
-  type-check-web:
-    name: type-check (web)
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: apps/web/package-lock.json
-      - name: Install dependencies
-        run: npm ci
-        working-directory: apps/web
       - name: Type check
-        run: npx tsc
+        run: npx tsc --noEmit
         working-directory: apps/web
 
   test-python:
     name: test (python)
     runs-on: ubuntu-latest
-    needs: [lint-python]
+    needs: [quality-python]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -122,7 +96,7 @@ jobs:
   test-web:
     name: test (web)
     runs-on: ubuntu-latest
-    needs: [lint-web]
+    needs: [quality-web]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -142,7 +116,7 @@ jobs:
   coverage:
     name: coverage
     runs-on: ubuntu-latest
-    needs: [lint-python]
+    needs: [quality-python]
     timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
@@ -164,7 +138,7 @@ jobs:
   security:
     name: security
     runs-on: ubuntu-latest
-    needs: [lint-python]
+    needs: [quality-python]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
