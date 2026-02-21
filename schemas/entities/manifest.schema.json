@@ -214,6 +214,28 @@
       ],
       "title": "Skill",
       "type": "object"
+    },
+    "VerificationStatus": {
+      "additionalProperties": false,
+      "description": "Verification status for marketplace trust badge (Task 3.6).\n\nWhen status is 'verified', the agent displays a Verified badge in the\nregistry UI. Admins add this after manual review of verification requests.\n\nAttributes:\n    status: Verification state (e.g., 'verified', 'pending', 'rejected').\n    verified_at: ISO timestamp when verification was granted (if status is 'verified').",
+      "properties": {
+        "status": {
+          "description": "Verification state (e.g., 'verified', 'pending')",
+          "title": "Status",
+          "type": "string"
+        },
+        "verified_at": {
+          "description": "ISO timestamp when verification was granted",
+          "title": "Verified At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "verified_at"
+      ],
+      "title": "VerificationStatus",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -283,6 +305,18 @@
       ],
       "default": null,
       "description": "SLA guarantees (availability, latency, error rate)"
+    },
+    "verification": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VerificationStatus"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Verification status for marketplace trust badge (Task 3.6)"
     },
     "ttl_seconds": {
       "default": 300,

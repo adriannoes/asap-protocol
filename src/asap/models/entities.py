@@ -187,6 +187,17 @@ class AuthScheme(ASAPBaseModel):
     )
 
 
+class VerificationStatus(ASAPBaseModel):
+    """Verification status for marketplace trust badge (Task 3.6).
+
+    When status is 'verified', the agent displays a Verified badge in the
+    registry UI. Admins add this after manual review of verification requests.
+    """
+
+    status: str = Field(..., description="Verification state (e.g., 'verified', 'pending')")
+    verified_at: str = Field(..., description="ISO timestamp when verification was granted")
+
+
 class SLADefinition(ASAPBaseModel):
     """Service level agreement guarantees published by an agent.
 
@@ -326,6 +337,10 @@ class Manifest(ASAPBaseModel):
     )
     sla: SLADefinition | None = Field(
         default=None, description="SLA guarantees (availability, latency, error rate)"
+    )
+    verification: VerificationStatus | None = Field(
+        default=None,
+        description="Verification status for marketplace trust badge (Task 3.6)",
     )
     ttl_seconds: int = Field(
         default=DEFAULT_MANIFEST_TTL_SECONDS,

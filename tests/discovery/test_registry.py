@@ -231,4 +231,31 @@ class TestGenerateRegistryEntry:
         assert entry.endpoints == endpoints
         assert entry.skills == ["skill_x", "skill_y"]
         assert entry.asap_version == "1.1.0"
+        assert entry.repository_url is None
+        assert entry.documentation_url is None
+        assert entry.built_with is None
         assert entry.model_dump_json()
+
+    def test_generates_entry_with_optional_metadata(self) -> None:
+        manifest = Manifest(
+            id="urn:asap:agent:my-agent",
+            name="My Agent",
+            version="1.0.0",
+            description="Does things",
+            capabilities=Capability(
+                asap_version="1.1.0",
+                skills=[Skill(id="skill_x", description="X")],
+            ),
+            endpoints=Endpoint(asap="https://example.com/asap", events=None),
+        )
+        endpoints = {"http": "https://example.com/asap", "manifest": "https://example.com/m.json"}
+        entry = generate_registry_entry(
+            manifest,
+            endpoints,
+            repository_url="https://github.com/me/agent",
+            documentation_url="https://docs.example.com/agent",
+            built_with="CrewAI",
+        )
+        assert entry.repository_url == "https://github.com/me/agent"
+        assert entry.documentation_url == "https://docs.example.com/agent"
+        assert entry.built_with == "CrewAI"
