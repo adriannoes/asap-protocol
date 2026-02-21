@@ -1,0 +1,98 @@
+name: Register Agent
+description: Register a new ASAP agent in the Lite Registry via IssueOps
+title: "Register: "
+labels: ["registration", "pending-review"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: "Use this form to register your ASAP agent. All fields marked with * are required. The registration will be validated by a GitHub Action; valid submissions are merged into the registry automatically."
+
+  - type: input
+    id: name
+    attributes:
+      label: Agent name (slug-friendly)
+      description: "Short identifier used in the registry (lowercase letters, numbers, hyphens only). Example: my-research-agent"
+      placeholder: my-agent-name
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What your agent does (one or two sentences).
+      placeholder: Performs web research and summarization for ASAP tasks.
+    validations:
+      required: true
+
+  - type: input
+    id: manifest_url
+    attributes:
+      label: Manifest URL
+      description: Public URL of your agent's ASAP manifest (JSON). Must be reachable via HTTPS.
+      placeholder: https://api.example.com/.well-known/asap-manifest.json
+    validations:
+      required: true
+
+  - type: input
+    id: http_endpoint
+    attributes:
+      label: HTTP Endpoint
+      description: "ASAP HTTP endpoint (e.g. where the agent receives JSON-RPC requests)."
+      placeholder: https://api.example.com/asap
+    validations:
+      required: true
+
+  - type: input
+    id: websocket_endpoint
+    attributes:
+      label: WebSocket Endpoint (optional)
+      description: "Optional WebSocket endpoint for streaming events (wss://)."
+      placeholder: wss://api.example.com/asap/events
+
+  - type: input
+    id: skills
+    attributes:
+      label: Skills
+      description: "Comma-separated list of skill identifiers your agent supports. Example: web_research, summarization"
+      placeholder: web_research, summarization
+    validations:
+      required: true
+
+  - type: dropdown
+    id: built_with
+    attributes:
+      label: Built with (framework)
+      description: "Framework or platform used to build this agent (optional). Helps discovery and ecosystem visibility."
+      options:
+        - ""
+        - CrewAI
+        - OpenClaw
+        - LangChain
+        - AutoGen
+        - Other
+      default: 0
+
+  - type: input
+    id: repository_url
+    attributes:
+      label: Repository URL (optional)
+      description: "Link to the agent source code (e.g. GitHub). Helps trust and verification."
+      placeholder: https://github.com/username/agent-repo
+
+  - type: input
+    id: documentation_url
+    attributes:
+      label: Documentation URL (optional)
+      description: "Link to docs on how to use this agent."
+      placeholder: https://docs.example.com/agent
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      description: "You must confirm before submitting."
+      options:
+        - label: "I confirm that the manifest URL is publicly accessible (no auth) and that the HTTP/WebSocket endpoints above match my manifest."
+          required: true
