@@ -1,11 +1,12 @@
-import { Manifest } from '../types/protocol';
+import type { RegistryAgent } from '../types/registry';
 
 /**
  * Fetch the ASAP Lite Registry.
  * We fetch this directly from GitHub Pages or the configured raw URL.
  * In a real Next.js App Router, we use `next: { revalidate: 60 }` for ISR.
+ * Normalizes registry format: endpoints.http -> endpoints.asap for UI compatibility.
  */
-export async function fetchRegistry(): Promise<Manifest[]> {
+export async function fetchRegistry(): Promise<RegistryAgent[]> {
   // During M1 we can just fetch from a public URL or default raw content
   // Future: the real `registry.json` will be hosted via GH Pages.
   const REGISTRY_URL =
@@ -26,14 +27,24 @@ export async function fetchRegistry(): Promise<Manifest[]> {
     }
 
     const data = await res.json();
-    return data as Manifest[];
+    const agents = Array.isArray(data) ? data : data?.agents ?? [];
+    return agents.map(normalizeRegistryAgent) as RegistryAgent[];
   } catch (error) {
     console.error('Error fetching registry:', error);
     return [];
   }
 }
 
-export async function fetchAgentById(id: string): Promise<Manifest | null> {
+function normalizeRegistryAgent(agent: Record<string, unknown>): Record<string, unknown> {
+    if (!agent || typeof agent !== 'object') return agent;
+    const endpoints = agent.endpoints as Record<string, string> | undefined;
+    if (endpoints && !endpoints.asap && endpoints.http) {
+        return { ...agent, endpoints: { ...endpoints, asap: endpoints.http } };
+    }
+    return agent;
+}
+
+export async function fetchAgentById(id: string): Promise<RegistryAgent | null> {
   const agents = await fetchRegistry();
   return agents.find((a) => a.id === id) || null;
 }

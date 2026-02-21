@@ -45,8 +45,8 @@ export type Payload =
   | McpResourceData
   | MessageAck
   | {
-    [k: string]: unknown;
-  };
+      [k: string]: unknown;
+    };
 /**
  * Parent conversation ID
  */
@@ -94,13 +94,7 @@ export type TaskId = string;
 /**
  * Final task status
  */
-export type TaskStatus =
-  | 'submitted'
-  | 'working'
-  | 'completed'
-  | 'failed'
-  | 'cancelled'
-  | 'input_required';
+export type TaskStatus = "submitted" | "working" | "completed" | "failed" | "cancelled" | "input_required";
 /**
  * Result data (summary, artifacts, etc.)
  */
@@ -140,17 +134,11 @@ export type TaskId1 = string;
 /**
  * Update type (progress, input_required)
  */
-export type UpdateType = 'progress' | 'input_required' | 'status_change';
+export type UpdateType = "progress" | "input_required" | "status_change";
 /**
  * Current task status
  */
-export type TaskStatus1 =
-  | 'submitted'
-  | 'working'
-  | 'completed'
-  | 'failed'
-  | 'cancelled'
-  | 'input_required';
+export type TaskStatus1 = "submitted" | "working" | "completed" | "failed" | "cancelled" | "input_required";
 /**
  * Progress info (percent, message, ETA)
  */
@@ -186,7 +174,7 @@ export type Sender1 = string;
 /**
  * Message role (user, assistant, system)
  */
-export type MessageRole = 'user' | 'assistant' | 'system';
+export type MessageRole = "user" | "assistant" | "system";
 /**
  * Part IDs making up this message
  */
@@ -263,7 +251,7 @@ export type ResourceUri1 = string;
  * Envelope ID being acknowledged
  */
 export type OriginalEnvelopeId = string;
-export type Status = 'received' | 'processed' | 'rejected';
+export type Status = "received" | "processed" | "rejected";
 /**
  * Reason when rejected
  */
@@ -719,13 +707,7 @@ export type TaskId = string;
 /**
  * Final task status
  */
-export type TaskStatus =
-  | 'submitted'
-  | 'working'
-  | 'completed'
-  | 'failed'
-  | 'cancelled'
-  | 'input_required';
+export type TaskStatus = "submitted" | "working" | "completed" | "failed" | "cancelled" | "input_required";
 /**
  * Result data (summary, artifacts, etc.)
  */
@@ -800,17 +782,11 @@ export type TaskId = string;
 /**
  * Update type (progress, input_required)
  */
-export type UpdateType = 'progress' | 'input_required' | 'status_change';
+export type UpdateType = "progress" | "input_required" | "status_change";
 /**
  * Current task status
  */
-export type TaskStatus =
-  | 'submitted'
-  | 'working'
-  | 'completed'
-  | 'failed'
-  | 'cancelled'
-  | 'input_required';
+export type TaskStatus = "submitted" | "working" | "completed" | "failed" | "cancelled" | "input_required";
 /**
  * Progress info (percent, message, ETA)
  */
@@ -1016,7 +992,7 @@ export type Sender = string;
 /**
  * Message role (user, assistant, system)
  */
-export type MessageRole = 'user' | 'assistant' | 'system';
+export type MessageRole = "user" | "assistant" | "system";
 /**
  * Part IDs making up this message
  */
@@ -1070,7 +1046,7 @@ export interface StateRestore {
 /**
  * Part type discriminator
  */
-export type Type = 'data';
+export type Type = "data";
 /**
  * Optional JSON Schema URI for validation
  */
@@ -1109,7 +1085,7 @@ export interface Data {
 /**
  * Part type discriminator
  */
-export type Type = 'text';
+export type Type = "text";
 /**
  * Text content
  */
@@ -1139,7 +1115,7 @@ export interface TextPart {
 /**
  * Part type discriminator
  */
-export type Type = 'resource';
+export type Type = "resource";
 /**
  * MCP resource URI
  */
@@ -1170,7 +1146,7 @@ export interface ResourcePart {
 /**
  * Part type discriminator
  */
-export type Type = 'file';
+export type Type = "file";
 /**
  * File URI (asap://, https://, data:; file:// and .. rejected)
  */
@@ -1221,7 +1197,7 @@ export interface FilePart {
 /**
  * Part type discriminator
  */
-export type Type = 'template';
+export type Type = "template";
 /**
  * Template string with {{variable}} syntax
  */
@@ -1502,7 +1478,7 @@ export type Sender = string;
 /**
  * Message role (user, assistant, system)
  */
-export type MessageRole = 'user' | 'assistant' | 'system';
+export type MessageRole = "user" | "assistant" | "system";
 /**
  * Part IDs or references
  */
@@ -1641,6 +1617,14 @@ export type MaxErrorRate = string | null;
  */
 export type SupportHours = string | null;
 /**
+ * Verification state (e.g., 'verified', 'pending')
+ */
+export type Status = string;
+/**
+ * ISO timestamp when verification was granted
+ */
+export type VerifiedAt = string;
+/**
  * How long to consider agent alive without re-check (seconds)
  */
 export type TtlSeconds = number;
@@ -1713,6 +1697,10 @@ export interface Manifest {
    * SLA guarantees (availability, latency, error rate)
    */
   sla?: SLADefinition | null;
+  /**
+   * Verification status for marketplace trust badge (Task 3.6)
+   */
+  verification?: VerificationStatus | null;
   ttl_seconds?: TtlSeconds;
 }
 /**
@@ -1808,6 +1796,20 @@ export interface SLADefinition {
   max_error_rate?: MaxErrorRate;
   support_hours?: SupportHours;
 }
+/**
+ * Verification status for marketplace trust badge (Task 3.6).
+ *
+ * When status is 'verified', the agent displays a Verified badge in the
+ * registry UI. Admins add this after manual review of verification requests.
+ *
+ * Attributes:
+ *     status: Verification state (e.g., 'verified', 'pending', 'rejected').
+ *     verified_at: ISO timestamp when verification was granted (if status is 'verified').
+ */
+export interface VerificationStatus {
+  status: Status;
+  verified_at: VerifiedAt;
+}
 
 /**
  * Unique task identifier (ULID)
@@ -1824,13 +1826,7 @@ export type ParentTaskId = string | null;
 /**
  * Task status (submitted, working, etc.)
  */
-export type TaskStatus =
-  | 'submitted'
-  | 'working'
-  | 'completed'
-  | 'failed'
-  | 'cancelled'
-  | 'input_required';
+export type TaskStatus = "submitted" | "working" | "completed" | "failed" | "cancelled" | "input_required";
 /**
  * Nesting depth for subtasks (0 = root); prevents infinite recursion
  */
@@ -1887,3 +1883,4 @@ export interface Task {
   created_at: CreatedAt;
   updated_at: UpdatedAt;
 }
+
