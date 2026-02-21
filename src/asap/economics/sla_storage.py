@@ -248,7 +248,7 @@ class SQLiteSLAStorage(SLAStorageBase):
                     uptime_percent, latency_p95_ms, error_rate_percent,
                     tasks_completed, tasks_failed
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
+                """,  # nosec B608 - table name is module constant, values parameterized
                 (
                     metrics.agent_id,
                     metrics.period_start.isoformat(),
@@ -274,7 +274,7 @@ class SQLiteSLAStorage(SLAStorageBase):
             raise ValueError("offset must be non-negative")
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
-            query = f"SELECT agent_id, period_start, period_end, uptime_percent, latency_p95_ms, error_rate_percent, tasks_completed, tasks_failed FROM {_METRICS_TABLE} WHERE 1=1"
+            query = f"SELECT agent_id, period_start, period_end, uptime_percent, latency_p95_ms, error_rate_percent, tasks_completed, tasks_failed FROM {_METRICS_TABLE} WHERE 1=1"  # nosec B608
             params: list[object] = []
             if agent_id is not None:
                 query += " AND agent_id = ?"
@@ -316,7 +316,7 @@ class SQLiteSLAStorage(SLAStorageBase):
     ) -> int:
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
-            query = f"SELECT COUNT(*) FROM {_METRICS_TABLE} WHERE 1=1"
+            query = f"SELECT COUNT(*) FROM {_METRICS_TABLE} WHERE 1=1"  # nosec B608
             params: list[object] = []
             if agent_id is not None:
                 query += " AND agent_id = ?"
@@ -360,7 +360,7 @@ class SQLiteSLAStorage(SLAStorageBase):
     ) -> list[SLABreach]:
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
-            query = f"SELECT id, agent_id, breach_type, threshold, actual, severity, detected_at, resolved_at FROM {_BREACHES_TABLE} WHERE 1=1"
+            query = f"SELECT id, agent_id, breach_type, threshold, actual, severity, detected_at, resolved_at FROM {_BREACHES_TABLE} WHERE 1=1"  # nosec B608
             params: list[object] = []
             if agent_id is not None:
                 query += " AND agent_id = ?"
@@ -391,13 +391,13 @@ class SQLiteSLAStorage(SLAStorageBase):
     async def stats(self) -> StorageStats:
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
-            cursor = await conn.execute(f"SELECT COUNT(*) FROM {_METRICS_TABLE}")
+            cursor = await conn.execute(f"SELECT COUNT(*) FROM {_METRICS_TABLE}")  # nosec B608
             m_count = (await cursor.fetchone() or (0,))[0]
-            cursor = await conn.execute(f"SELECT COUNT(*) FROM {_BREACHES_TABLE}")
+            cursor = await conn.execute(f"SELECT COUNT(*) FROM {_BREACHES_TABLE}")  # nosec B608
             b_count = (await cursor.fetchone() or (0,))[0]
-            cursor = await conn.execute(f"SELECT MIN(period_start) FROM {_METRICS_TABLE}")
+            cursor = await conn.execute(f"SELECT MIN(period_start) FROM {_METRICS_TABLE}")  # nosec B608
             m_oldest = (await cursor.fetchone() or (None,))[0]
-            cursor = await conn.execute(f"SELECT MIN(detected_at) FROM {_BREACHES_TABLE}")
+            cursor = await conn.execute(f"SELECT MIN(detected_at) FROM {_BREACHES_TABLE}")  # nosec B608
             b_oldest = (await cursor.fetchone() or (None,))[0]
         oldest_ts: datetime | None = None
         for raw in (m_oldest, b_oldest):

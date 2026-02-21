@@ -289,7 +289,7 @@ class SQLiteDelegationStorage(DelegationStorageBase):
             cursor = await conn.execute(
                 f"""
                 SELECT 1 FROM {_REVOCATIONS_TABLE} WHERE id = ?
-                """,
+                """,  # nosec B608 - table name is module constant, values parameterized
                 (token_id,),
             )
             row = await cursor.fetchone()
@@ -319,7 +319,7 @@ class SQLiteDelegationStorage(DelegationStorageBase):
             cursor = await conn.execute(
                 f"""
                 SELECT delegator_urn FROM {_ISSUED_TABLE} WHERE id = ?
-                """,
+                """,  # nosec B608 - table name is module constant, values parameterized
                 (token_id,),
             )
             row = await cursor.fetchone()
@@ -331,7 +331,7 @@ class SQLiteDelegationStorage(DelegationStorageBase):
             cursor = await conn.execute(
                 f"""
                 SELECT delegate_urn FROM {_ISSUED_TABLE} WHERE id = ?
-                """,
+                """,  # nosec B608 - table name is module constant, values parameterized
                 (token_id,),
             )
             row = await cursor.fetchone()
@@ -343,7 +343,7 @@ class SQLiteDelegationStorage(DelegationStorageBase):
             cursor = await conn.execute(
                 f"""
                 SELECT id FROM {_ISSUED_TABLE} WHERE delegator_urn = ?
-                """,
+                """,  # nosec B608 - table name is module constant, values parameterized
                 (delegator_urn,),
             )
             rows = await cursor.fetchall()
@@ -365,7 +365,7 @@ class SQLiteDelegationStorage(DelegationStorageBase):
                 SELECT id, delegate_urn, created_at FROM {_ISSUED_TABLE}
                 WHERE delegator_urn = ?
                 ORDER BY created_at DESC
-                """,
+                """,  # nosec B608 - table name is module constant, values parameterized
                 (delegator_urn,),
             )
             rows = await cursor.fetchall()
@@ -384,7 +384,7 @@ class SQLiteDelegationStorage(DelegationStorageBase):
             cursor = await conn.execute(
                 f"""
                 SELECT created_at FROM {_ISSUED_TABLE} WHERE id = ?
-                """,
+                """,  # nosec B608 - table name is module constant, values parameterized
                 (token_id,),
             )
             row = await cursor.fetchone()
@@ -396,7 +396,7 @@ class SQLiteDelegationStorage(DelegationStorageBase):
             cursor = await conn.execute(
                 f"""
                 SELECT revoked_at FROM {_REVOCATIONS_TABLE} WHERE id = ?
-                """,
+                """,  # nosec B608 - table name is module constant, values parameterized
                 (token_id,),
             )
             row = await cursor.fetchone()
@@ -410,7 +410,7 @@ class SQLiteDelegationStorage(DelegationStorageBase):
             await self._ensure_tables(conn)
             placeholders = ",".join("?" for _ in token_ids)
             cursor = await conn.execute(
-                f"SELECT id FROM {_REVOCATIONS_TABLE} WHERE id IN ({placeholders})",
+                f"SELECT id FROM {_REVOCATIONS_TABLE} WHERE id IN ({placeholders})",  # nosec B608
                 token_ids,
             )
             revoked_rows = await cursor.fetchall()
@@ -428,7 +428,7 @@ class SQLiteDelegationStorage(DelegationStorageBase):
                 FROM {_ISSUED_TABLE} i
                 LEFT JOIN {_REVOCATIONS_TABLE} r ON i.id = r.id
                 WHERE i.id = ?
-                """,
+                """,  # nosec B608 - table name is module constant, values parameterized
                 (token_id,),
             )
             row = await cursor.fetchone()

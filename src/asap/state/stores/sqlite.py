@@ -168,7 +168,7 @@ class SQLiteSnapshotStore:
                     SELECT task_id, id, version, data, checkpoint, created_at
                     FROM {SNAPSHOTS_TABLE}
                     WHERE task_id = ? AND version = ?
-                    """,
+                    """,  # nosec B608 - table name is module constant, values parameterized
                     (task_id, version),
                 )
                 row = await cursor.fetchone()
@@ -179,7 +179,7 @@ class SQLiteSnapshotStore:
                     FROM {SNAPSHOTS_TABLE}
                     WHERE task_id = ?
                     ORDER BY version DESC LIMIT 1
-                    """,
+                    """,  # nosec B608 - table name is module constant, values parameterized
                     (task_id,),
                 )
                 row = await cursor.fetchone()
@@ -195,7 +195,7 @@ class SQLiteSnapshotStore:
                 SELECT version FROM {SNAPSHOTS_TABLE}
                 WHERE task_id = ?
                 ORDER BY version
-                """,
+                """,  # nosec B608 - table name is module constant, values parameterized
                 (task_id,),
             )
             rows = await cursor.fetchall()
@@ -210,12 +210,12 @@ class SQLiteSnapshotStore:
             await self._ensure_snapshots_table(conn)
             if version is not None:
                 cursor = await conn.execute(
-                    f"DELETE FROM {SNAPSHOTS_TABLE} WHERE task_id = ? AND version = ?",
+                    f"DELETE FROM {SNAPSHOTS_TABLE} WHERE task_id = ? AND version = ?",  # nosec B608
                     (task_id, version),
                 )
             else:
                 cursor = await conn.execute(
-                    f"DELETE FROM {SNAPSHOTS_TABLE} WHERE task_id = ?",
+                    f"DELETE FROM {SNAPSHOTS_TABLE} WHERE task_id = ?",  # nosec B608
                     (task_id,),
                 )
             await conn.commit()
@@ -286,7 +286,7 @@ class SQLiteMeteringStore:
                 INSERT INTO {USAGE_EVENTS_TABLE}
                 (id, task_id, agent_id, consumer_id, metrics, timestamp)
                 VALUES (?, ?, ?, ?, ?, ?)
-                """,
+                """,  # nosec B608 - table name is module constant, values parameterized
                 row,
             )
             await conn.commit()
@@ -308,7 +308,7 @@ class SQLiteMeteringStore:
                 FROM {USAGE_EVENTS_TABLE}
                 WHERE agent_id = ? AND timestamp >= ? AND timestamp <= ?
                 ORDER BY timestamp
-            """
+            """  # nosec B608 - table name is module constant, values parameterized
             params: list[Any] = [agent_id, start_s, end_s]
             if limit is not None:
                 query += " LIMIT ? OFFSET ?"
@@ -332,7 +332,7 @@ class SQLiteMeteringStore:
                     SUM(CAST(json_extract(metrics, '$.api_calls') AS INTEGER))
                 FROM {USAGE_EVENTS_TABLE}
                 WHERE agent_id = ?
-                """,
+                """,  # nosec B608 - table name is module constant, values parameterized
                 (agent_id,),
             )
             row = await cursor.fetchone()

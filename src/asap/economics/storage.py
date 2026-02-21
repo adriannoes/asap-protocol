@@ -509,7 +509,7 @@ class SQLiteMeteringStorage(MeteringStorageBase):
                 INSERT INTO {_USAGE_EVENTS_TABLE}
                 (id, task_id, agent_id, consumer_id, metrics, timestamp)
                 VALUES (?, ?, ?, ?, ?, ?)
-                """,
+                """,  # nosec B608 - table name is module constant, values parameterized
                 row,
             )
             await conn.commit()
@@ -541,7 +541,7 @@ class SQLiteMeteringStorage(MeteringStorageBase):
                 WHERE {where}
                 ORDER BY timestamp
                 LIMIT ? OFFSET ?
-            """
+            """  # nosec B608 - table name is module constant, where built from fixed keys
             limit_val = filters.limit if filters.limit is not None else -1
             params.extend([limit_val, filters.offset])
             cursor = await conn.execute(sql, params)
@@ -572,7 +572,7 @@ class SQLiteMeteringStorage(MeteringStorageBase):
                     SELECT id, task_id, agent_id, consumer_id, metrics, timestamp
                     FROM {_USAGE_EVENTS_TABLE}
                     ORDER BY timestamp
-                    """,
+                    """,  # nosec B608 - table name is module constant
                 )
                 rows = await cursor.fetchall()
             events = [_row_to_metrics(tuple(r)) for r in rows]
@@ -625,7 +625,7 @@ class SQLiteMeteringStorage(MeteringStorageBase):
                     SELECT id, task_id, agent_id, consumer_id, metrics, timestamp
                     FROM {_USAGE_EVENTS_TABLE}
                     ORDER BY timestamp
-                    """,
+                    """,  # nosec B608 - table name is module constant
                 )
                 rows = await cursor.fetchall()
             events = [_row_to_metrics(tuple(r)) for r in rows]
@@ -643,7 +643,7 @@ class SQLiteMeteringStorage(MeteringStorageBase):
                 f"""
                 SELECT COUNT(*), MIN(timestamp)
                 FROM {_USAGE_EVENTS_TABLE}
-                """,
+                """,  # nosec B608 - table name is module constant
             )
             row = await cursor.fetchone()
         count = row[0] if row and row[0] is not None else 0
@@ -675,7 +675,7 @@ class SQLiteMeteringStorage(MeteringStorageBase):
                 f"""
                 DELETE FROM {_USAGE_EVENTS_TABLE}
                 WHERE timestamp < ?
-                """,
+                """,  # nosec B608 - table name is module constant, values parameterized
                 (cutoff_str,),
             )
             deleted = cursor.rowcount if cursor.rowcount is not None else 0
