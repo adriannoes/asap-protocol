@@ -62,8 +62,8 @@ export async function submitAgentRegistration(values: unknown) {
                 return { success: false, error: `Manifest URL returned status ${manifestFetch.status}. Must be reachable.` };
             }
         } catch (e: unknown) {
-            const err = e as Error;
-            return { success: false, error: `Could not reach Manifest URL: ${err?.message ?? manifest_url}` };
+            const message = e instanceof Error ? e.message : String(e);
+            return { success: false, error: `Could not reach Manifest URL: ${message}` };
         }
 
         const owner = process.env.GITHUB_REGISTRY_OWNER || DEFAULT_OWNER;
