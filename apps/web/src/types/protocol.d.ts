@@ -577,11 +577,9 @@ export interface MessageAck {
 /**
  * Task identifier
  */
-export type TaskId = string;
 /**
  * Optional specific version to retrieve
  */
-export type Version = number | null;
 
 /**
  * Request a state snapshot for a task.
@@ -601,11 +599,9 @@ export interface StateQuery {
 /**
  * Original request identifier
  */
-export type RequestId = string;
 /**
  * Whether tool call succeeded
  */
-export type Success = boolean;
 /**
  * Result data (if successful)
  */
@@ -615,7 +611,6 @@ export type Result = {
 /**
  * Error message (if failed)
  */
-export type Error = string | null;
 
 /**
  * Result of an MCP tool call.
@@ -639,11 +634,9 @@ export interface McpToolResult {
 /**
  * Task identifier to cancel
  */
-export type TaskId = string;
 /**
  * Optional cancellation reason
  */
-export type Reason = string | null;
 
 /**
  * Request to cancel a running task.
@@ -663,11 +656,9 @@ export interface TaskCancel {
 /**
  * Unique request identifier
  */
-export type RequestId = string;
 /**
  * MCP tool name to invoke
  */
-export type ToolName = string;
 /**
  * Optional MCP context (server, session, etc.)
  */
@@ -703,11 +694,9 @@ export interface Arguments {
 /**
  * Task identifier
  */
-export type TaskId = string;
 /**
  * Final task status
  */
-export type TaskStatus = "submitted" | "working" | "completed" | "failed" | "cancelled" | "input_required";
 /**
  * Result data (summary, artifacts, etc.)
  */
@@ -723,23 +712,18 @@ export type FinalState = {
 /**
  * Execution duration in milliseconds
  */
-export type DurationMs = number | null;
 /**
  * Input token count
  */
-export type TokensIn = number | null;
 /**
  * Output token count
  */
-export type TokensOut = number | null;
 /**
  * Total tokens (fallback for tokens_out)
  */
-export type TokensUsed = number | null;
 /**
  * Number of API calls
  */
-export type ApiCalls = number | null;
 
 /**
  * Response to a task execution request.
@@ -778,15 +762,12 @@ export interface TaskMetrics {
 /**
  * Task identifier
  */
-export type TaskId = string;
 /**
  * Update type (progress, input_required)
  */
-export type UpdateType = "progress" | "input_required" | "status_change";
 /**
  * Current task status
  */
-export type TaskStatus = "submitted" | "working" | "completed" | "failed" | "cancelled" | "input_required";
 /**
  * Progress info (percent, message, ETA)
  */
@@ -824,43 +805,33 @@ export interface TaskUpdate {
 /**
  * Parent conversation ID
  */
-export type ConversationId = string;
 /**
  * Parent task ID for subtasks
  */
-export type ParentTaskId = string | null;
 /**
  * Skill identifier to execute
  */
-export type SkillId = string;
 /**
  * Maximum execution time in seconds
  */
-export type TimeoutSeconds = number | null;
 /**
  * Task priority (e.g., 'low', 'normal', 'high')
  */
-export type Priority = string | null;
 /**
  * Key for idempotent execution
  */
-export type IdempotencyKey = string | null;
 /**
  * Whether to stream progress updates
  */
-export type Streaming = boolean | null;
 /**
  * Whether to persist state snapshots
  */
-export type PersistState = boolean | null;
 /**
  * LLM model identifier
  */
-export type Model = string | null;
 /**
  * LLM temperature (0-2)
  */
-export type Temperature = number | null;
 
 /**
  * Request to execute a task on an agent.
@@ -907,7 +878,6 @@ export interface TaskRequestConfig {
 /**
  * MCP resource URI
  */
-export type ResourceUri = string;
 
 /**
  * Data from an MCP resource.
@@ -932,7 +902,6 @@ export interface Content {
 /**
  * MCP resource URI to fetch
  */
-export type ResourceUri = string;
 
 /**
  * Request to fetch an MCP resource.
@@ -950,15 +919,12 @@ export interface McpResourceFetch {
 /**
  * Artifact identifier
  */
-export type ArtifactId = string;
 /**
  * Parent task ID
  */
-export type TaskId = string;
 /**
  * Optional human-readable artifact name
  */
-export type Name = string | null;
 
 /**
  * Notify about artifact creation or availability.
@@ -980,23 +946,18 @@ export interface ArtifactNotify {
 /**
  * Parent task ID
  */
-export type TaskId = string;
 /**
  * Unique message identifier
  */
-export type MessageId = string;
 /**
  * Sender agent URN
  */
-export type Sender = string;
 /**
  * Message role (user, assistant, system)
  */
-export type MessageRole = "user" | "assistant" | "system";
 /**
  * Part IDs making up this message
  */
-export type Parts = string[];
 
 /**
  * Send a message within a task conversation.
@@ -1022,11 +983,9 @@ export interface MessageSend {
 /**
  * Task identifier
  */
-export type TaskId = string;
 /**
  * Snapshot ID to restore from
  */
-export type SnapshotId = string;
 
 /**
  * Restore a task to a previous state snapshot.
@@ -1085,7 +1044,6 @@ export interface Data {
 /**
  * Part type discriminator
  */
-export type Type = "text";
 /**
  * Text content
  */
@@ -1115,11 +1073,9 @@ export interface TextPart {
 /**
  * Part type discriminator
  */
-export type Type = "resource";
 /**
  * MCP resource URI
  */
-export type ResourceUri = string;
 
 /**
  * Reference to an MCP resource.
@@ -1146,7 +1102,6 @@ export interface ResourcePart {
 /**
  * Part type discriminator
  */
-export type Type = "file";
 /**
  * File URI (asap://, https://, data:; file:// and .. rejected)
  */
@@ -1197,7 +1152,6 @@ export interface FilePart {
 /**
  * Part type discriminator
  */
-export type Type = "template";
 /**
  * Template string with {{variable}} syntax
  */
@@ -1236,15 +1190,12 @@ export interface Variables {
 /**
  * Unique snapshot identifier (ULID)
  */
-export type Id = string;
 /**
  * Parent task ID
  */
-export type TaskId = string;
 /**
  * Snapshot version number
  */
-export type Version = number;
 /**
  * Whether this is a significant checkpoint
  */
@@ -1298,23 +1249,18 @@ export interface Data {
 /**
  * Unique artifact identifier (ULID)
  */
-export type Id = string;
 /**
  * Parent task ID
  */
-export type TaskId = string;
 /**
  * Human-readable artifact name
  */
-export type Name = string;
 /**
  * Part IDs making up this artifact
  */
-export type Parts = string[];
 /**
  * Creation timestamp (UTC)
  */
-export type CreatedAt = string;
 
 /**
  * Concrete output produced by task execution.
@@ -1350,7 +1296,6 @@ export interface Artifact {
 /**
  * Unique conversation identifier (ULID)
  */
-export type Id = string;
 /**
  * Agent URNs in conversation
  *
@@ -1360,7 +1305,6 @@ export type Participants = [string, ...string[]];
 /**
  * Creation timestamp (UTC)
  */
-export type CreatedAt = string;
 /**
  * Conversation purpose
  */
@@ -1376,7 +1320,6 @@ export type Source = string | null;
 /**
  * ISO timestamp
  */
-export type Timestamp = string | null;
 /**
  * Tags for categorization
  */
@@ -1426,7 +1369,6 @@ export interface CommonMetadata {
 /**
  * Unique agent identifier (URN format)
  */
-export type Id = string;
 /**
  * URL to agent's manifest
  */
@@ -1466,27 +1408,21 @@ export interface Agent {
 /**
  * Unique message identifier (ULID)
  */
-export type Id = string;
 /**
  * Parent task ID
  */
-export type TaskId = string;
 /**
  * Sender agent URN
  */
-export type Sender = string;
 /**
  * Message role (user, assistant, system)
  */
-export type MessageRole = "user" | "assistant" | "system";
 /**
  * Part IDs or references
  */
-export type Parts = string[];
 /**
  * Message timestamp (UTC)
  */
-export type Timestamp = string;
 
 /**
  * A single communication turn containing one or more parts.
@@ -1525,15 +1461,12 @@ export interface Message {
 /**
  * Unique agent identifier (URN format)
  */
-export type Id = string;
 /**
  * Human-readable agent name
  */
-export type Name = string;
 /**
  * Semantic version (e.g., '1.0.0')
  */
-export type Version = string;
 /**
  * What the agent does
  */
@@ -1541,7 +1474,6 @@ export type Description = string;
 /**
  * ASAP protocol version
  */
-export type AsapVersion = string;
 /**
  * Unique skill identifier
  */
@@ -1573,7 +1505,6 @@ export type StatePersistence = boolean;
 /**
  * Supports streaming responses
  */
-export type Streaming = boolean;
 /**
  * Available MCP tools
  */
@@ -1617,13 +1548,13 @@ export type MaxErrorRate = string | null;
  */
 export type SupportHours = string | null;
 /**
- * Verification state (e.g., 'verified', 'pending')
+ * Verification state (verified, pending, rejected)
  */
-export type Status = string;
+export type VerificationState = "verified" | "pending" | "rejected";
 /**
- * ISO timestamp when verification was granted
+ * ISO timestamp when verification was granted (None when pending)
  */
-export type VerifiedAt = string;
+export type VerifiedAt = string | null;
 /**
  * How long to consider agent alive without re-check (seconds)
  */
@@ -1801,32 +1732,24 @@ export interface SLADefinition {
  *
  * When status is 'verified', the agent displays a Verified badge in the
  * registry UI. Admins add this after manual review of verification requests.
- *
- * Attributes:
- *     status: Verification state (e.g., 'verified', 'pending', 'rejected').
- *     verified_at: ISO timestamp when verification was granted (if status is 'verified').
  */
 export interface VerificationStatus {
-  status: Status;
-  verified_at: VerifiedAt;
+  status: VerificationState;
+  verified_at?: VerifiedAt;
 }
 
 /**
  * Unique task identifier (ULID)
  */
-export type Id = string;
 /**
  * Parent conversation ID
  */
-export type ConversationId = string;
 /**
  * Parent task ID for subtasks
  */
-export type ParentTaskId = string | null;
 /**
  * Task status (submitted, working, etc.)
  */
-export type TaskStatus = "submitted" | "working" | "completed" | "failed" | "cancelled" | "input_required";
 /**
  * Nesting depth for subtasks (0 = root); prevents infinite recursion
  */
@@ -1840,7 +1763,6 @@ export type Progress = {
 /**
  * Creation timestamp (UTC)
  */
-export type CreatedAt = string;
 /**
  * Last update timestamp (UTC)
  */
@@ -1883,4 +1805,3 @@ export interface Task {
   created_at: CreatedAt;
   updated_at: UpdatedAt;
 }
-
