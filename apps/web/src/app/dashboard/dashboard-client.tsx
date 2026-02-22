@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { TerminalSquare, PlusCircle, Activity, Key, BarChart3, Globe, ShieldAlert, Loader2, GitPullRequest, ExternalLink, ShieldCheck, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import useSWR from 'swr';
 import { fetchUserRegistrationIssues } from './actions';
 
@@ -26,27 +26,23 @@ interface DashboardClientProps {
     username: string;
 }
 
-// Client-side component to fetch and display agent status
+// Client-side component to fetch and display agent status via server proxy (avoids exposing user IP to agents)
 function AgentStatusBadge({ endpoint }: { endpoint: string }) {
     const [status, setStatus] = useState<'pending' | 'online' | 'offline'>('pending');
 
     useEffect(() => {
         let isMounted = true;
         const checkStatus = async () => {
+            if (!endpoint) {
+                if (isMounted) setStatus('offline');
+                return;
+            }
             try {
-                // Short timeout to avoid hanging on unreachable endpoints
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-                const res = await fetch(endpoint, {
-                    method: 'GET',
-                    signal: controller.signal
-                });
-
-                clearTimeout(timeoutId);
-
+                const proxyUrl = `/api/health-check?url=${encodeURIComponent(endpoint)}`;
+                const res = await fetch(proxyUrl);
+                const data = (await res.json()) as { ok?: boolean };
                 if (isMounted) {
-                    setStatus(res.ok ? 'online' : 'offline');
+                    setStatus(data.ok ? 'online' : 'offline');
                 }
             } catch {
                 if (isMounted) {
@@ -99,12 +95,12 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
 
     const pendingRegistrations = pendingIssuesData ?? [];
 
-    async function handleRefresh() {
+    const handleRefresh = useCallback(async () => {
         setIsRefreshing(true);
         await mutate();
         router.refresh();
         setIsRefreshing(false);
-    }
+    }, [mutate, router]);
 
     return (
         <Tabs defaultValue="agents" className="space-y-6">

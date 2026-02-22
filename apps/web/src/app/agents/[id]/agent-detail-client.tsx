@@ -147,7 +147,7 @@ export function AgentDetailClient({ agent }: AgentDetailClientProps) {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {agent.sla ? (
-                                <div className="space-y-3 test-sm">
+                                <div className="space-y-3 text-sm">
                                     <div className="flex justify-between items-center py-1 border-b border-border/50">
                                         <span className="text-muted-foreground">Availability</span>
                                         <span className="font-medium">{agent.sla.availability || 'N/A'}</span>
@@ -192,7 +192,23 @@ export function AgentDetailClient({ agent }: AgentDetailClientProps) {
                                             <p>OAuth2 Setup available.</p>
                                             <p className="flex items-center gap-1 group">
                                                 <ExternalLink className="w-3 h-3 group-hover:text-indigo-400" />
-                                                <a href={typeof agent.auth.oauth2.authorization_url === 'string' ? agent.auth.oauth2.authorization_url : '#'} target="_blank" rel="noreferrer" className="group-hover:text-indigo-400 underline decoration-border underline-offset-2">Auth URL</a>
+                                                <a
+                                                    href={(() => {
+                                                        const url = agent.auth.oauth2?.authorization_url;
+                                                        if (typeof url !== 'string') return '#';
+                                                        try {
+                                                            const u = new URL(url);
+                                                            return ['https:', 'http:'].includes(u.protocol) ? u.href : '#';
+                                                        } catch {
+                                                            return '#';
+                                                        }
+                                                    })()}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="group-hover:text-indigo-400 underline decoration-border underline-offset-2"
+                                                >
+                                                    Auth URL
+                                                </a>
                                             </p>
                                         </div>
                                     )}
