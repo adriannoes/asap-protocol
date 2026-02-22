@@ -50,7 +50,7 @@ jobs:
           uv run ruff check . --output-format=github
           uv run ruff format --check .
       - name: Type check with mypy
-        run: uv run mypy src/
+        run: uv run mypy src/ scripts/ tests/
       - name: Build docs
         run: uv run mkdocs build
 
