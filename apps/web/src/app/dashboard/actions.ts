@@ -4,7 +4,6 @@ import { auth, decryptToken } from '@/auth';
 import { Octokit } from 'octokit';
 import { checkRateLimit } from '@/lib/rate-limit';
 
-/** Fetch open registration issues created by the current user (read-only). */
 export async function fetchUserRegistrationIssues() {
     try {
         const session = await auth();

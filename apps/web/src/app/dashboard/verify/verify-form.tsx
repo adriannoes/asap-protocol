@@ -21,8 +21,6 @@ import Link from 'next/link';
 import { submitVerificationRequest } from './actions';
 import { VerificationSchema, type VerificationFormValues } from '@/lib/github-issues';
 
-type VerificationFormInput = VerificationFormValues;
-
 interface VerifyFormProps {
     defaultAgentId: string;
 }
@@ -31,7 +29,7 @@ export function VerifyForm({ defaultAgentId }: VerifyFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [result, setResult] = useState<{ success?: boolean; error?: string; issueUrl?: string } | null>(null);
 
-    const form = useForm<VerificationFormInput>({
+    const form = useForm<VerificationFormValues>({
         resolver: zodResolver(VerificationSchema),
         defaultValues: {
             agent_id: defaultAgentId,
@@ -42,20 +40,18 @@ export function VerifyForm({ defaultAgentId }: VerifyFormProps) {
         },
     });
 
-    async function onSubmit(values: VerificationFormInput) {
+    async function onSubmit(values: VerificationFormValues) {
         setIsSubmitting(true);
         setResult(null);
 
         try {
-            const payload: VerificationFormValues = {
+            const response = await submitVerificationRequest({
                 agent_id: values.agent_id,
                 why_verified: values.why_verified,
                 running_since: values.running_since,
-            };
-            if (values.evidence) payload.evidence = values.evidence;
-            if (values.contact) payload.contact = values.contact;
-
-            const response = await submitVerificationRequest(payload);
+                ...(values.evidence && { evidence: values.evidence }),
+                ...(values.contact && { contact: values.contact }),
+            });
 
             if (response.success && response.issueUrl) {
                 setResult({ success: true, issueUrl: response.issueUrl });

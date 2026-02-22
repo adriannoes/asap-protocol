@@ -1,6 +1,7 @@
 'use client';
 
 import type { RegistryAgent } from '@/types/registry';
+import { isAllowedExternalUrl } from '@/lib/url-validator';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,11 @@ import Link from 'next/link';
 
 interface AgentDetailClientProps {
     agent: RegistryAgent;
+}
+
+function safeAuthHref(url: unknown): string {
+    if (typeof url !== 'string') return '#';
+    return isAllowedExternalUrl(url).valid ? url : '#';
 }
 
 export function AgentDetailClient({ agent }: AgentDetailClientProps) {
@@ -193,16 +199,7 @@ export function AgentDetailClient({ agent }: AgentDetailClientProps) {
                                             <p className="flex items-center gap-1 group">
                                                 <ExternalLink className="w-3 h-3 group-hover:text-indigo-400" />
                                                 <a
-                                                    href={(() => {
-                                                        const url = agent.auth.oauth2?.authorization_url;
-                                                        if (typeof url !== 'string') return '#';
-                                                        try {
-                                                            const u = new URL(url);
-                                                            return ['https:', 'http:'].includes(u.protocol) ? u.href : '#';
-                                                        } catch {
-                                                            return '#';
-                                                        }
-                                                    })()}
+                                                    href={safeAuthHref(agent.auth.oauth2?.authorization_url)}
                                                     target="_blank"
                                                     rel="noreferrer"
                                                     className="group-hover:text-indigo-400 underline decoration-border underline-offset-2"
