@@ -1,6 +1,6 @@
 # Registration Action (IssueOps): validate agent registration issues and update registry.json
 # Trigger: issues opened or edited with label "registration"
-# Valid submissions: add entry to registry.json, commit to main, close issue
+# Valid submissions: create PR for registry update (auto-merge), close issue
 # Invalid: comment with errors, leave issue open
 
 name: Register Agent
@@ -9,19 +9,24 @@ on:
   issues:
     types: [opened, edited]
 
+concurrency:
+  group: registry-update
+  cancel-in-progress: false
+
 jobs:
   process-registration:
     if: contains(github.event.issue.labels.*.name, 'registration')
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # required to push registry.json to main
-      issues: write      # required to comment and close issues
+      contents: write   # required to push branch and create PR
+      issues: write     # required to comment and close issues
+      pull-requests: write  # required for gh pr create and gh pr merge
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -49,21 +54,29 @@ jobs:
         run: |
           echo "valid=$(jq -r .valid result.json)" >> $GITHUB_OUTPUT
 
-      - name: Commit and push registry (valid registration)
+      - name: Create PR for registry update
         if: steps.result.outputs.valid == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          BRANCH="registry/issue-${{ github.event.issue.number }}"
+          git checkout -b "$BRANCH"
           git add registry.json
           git commit -m "feat(registry): register agent from issue #${{ github.event.issue.number }}"
-          git push origin main
+          git push origin "$BRANCH"
+          gh pr create --title "feat(registry): register agent #${{ github.event.issue.number }}" \
+            --body "Auto-generated from issue #${{ github.event.issue.number }}" \
+            --base main --head "$BRANCH"
+          gh pr merge "$BRANCH" --auto --squash
 
       - name: Comment and close on success
         if: steps.result.outputs.valid == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "✅ Registered successfully! Agent added to the registry."
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "✅ Registration validated! A PR has been created and will be merged when checks pass."
           gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}"
 
       - name: Comment on validation failure
