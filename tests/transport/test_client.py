@@ -575,7 +575,7 @@ class TestASAPClientRetryEdgeCases:
             "http://localhost:8000", transport=httpx.MockTransport(mock_transport)
         ) as client:
             with pytest.raises(ValueError, match="envelope cannot be None"):
-                await client.send(None)  # type: ignore[arg-type]
+                await client.send(None)
 
     async def test_send_raises_on_max_retries_exceeded(
         self, sample_request_envelope: Envelope

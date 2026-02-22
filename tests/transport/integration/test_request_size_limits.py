@@ -52,7 +52,7 @@ class TestPayloadSizeValidation(NoRateLimitTestBase):
 
         Rate limiting is automatically disabled via NoRateLimitTestBase.
         """
-        return create_app(manifest)  # type: ignore[no-any-return]
+        return create_app(manifest)
 
     @pytest.fixture
     def app_custom_size(self, manifest: Manifest) -> FastAPI:
@@ -60,7 +60,7 @@ class TestPayloadSizeValidation(NoRateLimitTestBase):
 
         Rate limiting is automatically disabled via NoRateLimitTestBase.
         """
-        return create_app(manifest, max_request_size=1 * 1024 * 1024)  # type: ignore[no-any-return]
+        return create_app(manifest, max_request_size=1 * 1024 * 1024)
 
     def test_request_under_limit_accepted(self, app_default_size: FastAPI) -> None:
         """Test that requests under 10MB are accepted."""

@@ -188,7 +188,7 @@ class TestRollingWindowBounds:
     def test_invalid_window_raises(self) -> None:
         """Invalid window name raises ValueError."""
         with pytest.raises(ValueError, match="window must be one of"):
-            rolling_window_bounds("2d")  # type: ignore[arg-type]
+            rolling_window_bounds("2d")
 
     def test_default_end_is_now(self) -> None:
         """When end is None, end is close to now (within 2s)."""

@@ -112,7 +112,7 @@ class TestRateLimiting:
         app = create_app(rate_limit_manifest, rate_limit="5/minute")
         app.state.limiter = limiter
 
-        return app  # type: ignore[no-any-return]
+        return app
 
     @pytest.fixture
     def isolated_app_1_per_second(
@@ -134,7 +134,7 @@ class TestRateLimiting:
         app = create_app(rate_limit_manifest, rate_limit="1/second")
         app.state.limiter = limiter
 
-        return app  # type: ignore[no-any-return]
+        return app
 
     @pytest.fixture
     def isolated_app_from_env_2_per_minute(
@@ -158,7 +158,7 @@ class TestRateLimiting:
             app = create_app(rate_limit_manifest, rate_limit=None)
         app.state.limiter = limiter
 
-        return app  # type: ignore[no-any-return]
+        return app
 
     def test_requests_within_limit_succeed(
         self,

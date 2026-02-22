@@ -49,7 +49,7 @@ class TestAssertEnvelopeValid:
     def test_none_envelope_raises(self) -> None:
         """None envelope raises AssertionError."""
         with pytest.raises(AssertionError, match="Envelope must not be None"):
-            assert_envelope_valid(None)  # type: ignore[arg-type]
+            assert_envelope_valid(None)
 
     def test_empty_id_raises_when_required(self) -> None:
         """Envelope with empty id raises when require_id=True."""

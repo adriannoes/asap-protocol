@@ -75,7 +75,7 @@ class TestThreadPoolExhaustion(NoRateLimitTestBase):
             )
 
         # Store lock in handler for later release
-        slow_sync_handler._lock = lock  # type: ignore[attr-defined]
+        slow_sync_handler._lock = lock
         return slow_sync_handler
 
     def test_thread_pool_exhaustion_returns_503(
@@ -150,7 +150,7 @@ class TestThreadPoolExhaustion(NoRateLimitTestBase):
             assert "max_threads" in error_data["details"]
 
             # Release locks to allow tasks to complete
-            lock = slow_handler._lock  # type: ignore[attr-defined]
+            lock = slow_handler._lock
             lock.release()
             lock.release()
 

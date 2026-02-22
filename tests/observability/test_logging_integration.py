@@ -104,7 +104,7 @@ class TestNonceReplayLogSanitization:
             ),
             endpoints=Endpoint(asap="http://localhost:8000/asap"),
         )
-        app = create_app(manifest, require_nonce=True)  # type: ignore[arg-type]
+        app = create_app(manifest, require_nonce=True)
         client = TestClient(app)
 
         full_nonce = "01HXAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"

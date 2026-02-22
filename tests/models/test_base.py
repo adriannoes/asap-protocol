@@ -33,10 +33,10 @@ class TestASAPBaseModel:
 
         # Attempting to modify should raise ValidationError
         with pytest.raises(ValidationError, match="frozen"):
-            model.name = "new_name"  # type: ignore[misc]
+            model.name = "new_name"
 
         with pytest.raises(ValidationError, match="frozen"):
-            model.count = 10  # type: ignore[misc]
+            model.count = 10
 
     def test_extra_fields_forbidden(self):
         """Test that extra fields are rejected."""
@@ -44,7 +44,7 @@ class TestASAPBaseModel:
             SampleModel(
                 name="test",
                 count=5,
-                extra_field="should_fail",  # type: ignore[call-arg]
+                extra_field="should_fail",
             )
 
     def test_default_values_validated(self):

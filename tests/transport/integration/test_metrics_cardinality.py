@@ -60,7 +60,7 @@ class TestMetricsCardinalityProtection(NoRateLimitTestBase):
         # Register only one handler
         registry.register("task.request", lambda e, m: e)  # Simple echo
         # Rate limiting is automatically disabled via NoRateLimitTestBase
-        return create_app(manifest, registry=registry, rate_limit="100000/minute")  # type: ignore[no-any-return]
+        return create_app(manifest, registry=registry, rate_limit="100000/minute")
 
     def test_metrics_cardinality_protection_against_dos(self, app_with_registry: FastAPI) -> None:
         """Test that sending many requests with random payload_types doesn't explode metrics."""

@@ -34,7 +34,7 @@ def app(
 
     app_instance = create_app(sample_manifest, rate_limit=TEST_RATE_LIMIT_DEFAULT)
     app_instance.state.limiter = disable_rate_limiting
-    return app_instance  # type: ignore[no-any-return]
+    return app_instance
 
 
 @pytest.fixture
@@ -167,7 +167,7 @@ class TestWebSocketTaskRequestReceivesAck(NoRateLimitTestBase):
     ) -> None:
         from fastapi.testclient import TestClient
 
-        tc = client  # type: ignore[assignment]
+        tc = client
         assert isinstance(tc, TestClient)
         envelope = Envelope(
             asap_version="0.1",
@@ -218,7 +218,7 @@ class TestWebSocketTaskUpdateNoAck(NoRateLimitTestBase):
     ) -> None:
         from fastapi.testclient import TestClient
 
-        tc = client  # type: ignore[assignment]
+        tc = client
         assert isinstance(tc, TestClient)
         envelope = Envelope(
             asap_version="0.1",
@@ -259,7 +259,7 @@ class TestHttpNoMessageAck(NoRateLimitTestBase):
     ) -> None:
         from fastapi.testclient import TestClient
 
-        tc = client  # type: ignore[assignment]
+        tc = client
         assert isinstance(tc, TestClient)
         envelope = Envelope(
             asap_version="0.1",
@@ -302,7 +302,7 @@ class TestWebSocketRejectedSendsAck(NoRateLimitTestBase):
     ) -> None:
         from fastapi.testclient import TestClient
 
-        tc = client  # type: ignore[assignment]
+        tc = client
         assert isinstance(tc, TestClient)
         envelope_dict = {
             "id": "env-reject-1",

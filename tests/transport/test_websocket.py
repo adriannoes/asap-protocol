@@ -63,7 +63,7 @@ def app(
 ) -> FastAPI:
     app_instance = create_app(sample_manifest, rate_limit=TEST_RATE_LIMIT_DEFAULT)
     app_instance.state.limiter = disable_rate_limiting
-    return app_instance  # type: ignore[no-any-return]
+    return app_instance
 
 
 @pytest.fixture
@@ -1298,14 +1298,14 @@ def _app_with_close_ws_route(
     )
     app_instance.state.limiter = disable_rate_limiting
 
-    @app_instance.post("/__test__/close_ws")  # type: ignore[untyped-decorator]
+    @app_instance.post("/__test__/close_ws")
     async def _close_all_websockets() -> JSONResponse:
         for ws in list(app_instance.state.websocket_connections):
             with contextlib.suppress(Exception):
                 await ws.close()
         return JSONResponse(content={"ok": True})
 
-    return app_instance  # type: ignore[no-any-return]
+    return app_instance
 
 
 class TestWebSocketChaos(NoRateLimitTestBase):

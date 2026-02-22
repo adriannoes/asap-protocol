@@ -62,7 +62,7 @@ def app(
     app_instance = create_app(sample_manifest, rate_limit="999999/minute")
     if isolated_rate_limiter is not None:
         app_instance.state.limiter = isolated_rate_limiter
-    return app_instance  # type: ignore[no-any-return]
+    return app_instance
 
 
 @pytest.fixture
@@ -83,7 +83,7 @@ class TestAppFactory:
 
     def test_app_has_required_routes(self, app: FastAPI) -> None:
         """Test that app has all required routes."""
-        routes = [route.path for route in app.routes]  # type: ignore[attr-defined]
+        routes = [route.path for route in app.routes]
 
         # Required routes
         assert "/asap" in routes
@@ -93,21 +93,21 @@ class TestAppFactory:
 
     def test_app_has_correct_http_methods(self, app: FastAPI) -> None:
         """Test that routes have correct HTTP methods."""
-        routes_by_path = {route.path: route for route in app.routes}  # type: ignore[attr-defined]
+        routes_by_path = {route.path: route for route in app.routes}
 
         # /asap should accept POST
         asap_route = routes_by_path["/asap"]
-        assert "POST" in asap_route.methods  # type: ignore[attr-defined]
+        assert "POST" in asap_route.methods
 
         # manifest should accept GET
         manifest_route = routes_by_path["/.well-known/asap/manifest.json"]
-        assert "GET" in manifest_route.methods  # type: ignore[attr-defined]
+        assert "GET" in manifest_route.methods
 
         # health and ready should accept GET
         health_route = routes_by_path["/health"]
-        assert "GET" in health_route.methods  # type: ignore[attr-defined]
+        assert "GET" in health_route.methods
         ready_route = routes_by_path["/ready"]
-        assert "GET" in ready_route.methods  # type: ignore[attr-defined]
+        assert "GET" in ready_route.methods
 
     def test_create_app_with_hot_reload_returns_app(self, sample_manifest: Manifest) -> None:
         """Test that create_app(..., hot_reload=True) returns an app (watcher starts in background)."""
@@ -665,7 +665,7 @@ class TestASAPRequestHandlerHelpers:
         async def invalid_json_stream() -> collections.abc.AsyncGenerator[bytes, None]:
             yield b"{invalid json"
 
-        request.stream = lambda: invalid_json_stream()  # type: ignore[method-assign]
+        request.stream = lambda: invalid_json_stream()
 
         result = await handler._parse_and_validate_request(request)
 
@@ -692,7 +692,7 @@ class TestASAPRequestHandlerHelpers:
         async def array_json_stream() -> collections.abc.AsyncGenerator[bytes, None]:
             yield json.dumps(["not", "a", "dict"]).encode("utf-8")
 
-        request.stream = lambda: array_json_stream()  # type: ignore[method-assign]
+        request.stream = lambda: array_json_stream()
 
         result = await handler._parse_and_validate_request(request)
 
@@ -741,7 +741,7 @@ class TestASAPRequestHandlerHelpers:
         # Create a mock request with headers (required for compression detection)
         request = Request(scope={"type": "http", "method": "POST", "path": "/asap", "headers": []})
         # Make request.json() raise an exception that's not ValueError
-        request.json = AsyncMock(side_effect=RuntimeError("Unexpected error"))  # type: ignore[method-assign]
+        request.json = AsyncMock(side_effect=RuntimeError("Unexpected error"))
 
         response = await handler.handle_message(request)
 
@@ -770,7 +770,7 @@ class TestASAPRequestHandlerHelpers:
                 "utf-8"
             )
 
-        request.stream = lambda: valid_json_stream()  # type: ignore[method-assign]
+        request.stream = lambda: valid_json_stream()
 
         # Mock validate_jsonrpc_request to return (None, None) - edge case
         with patch.object(handler, "validate_jsonrpc_request", return_value=(None, None)):

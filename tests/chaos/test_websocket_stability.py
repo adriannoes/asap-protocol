@@ -69,7 +69,7 @@ class _DroppingWebSocket:
         pass
 
     async def recv(self) -> str:
-        raise websockets.ConnectionClosed(None, None)  # type: ignore[arg-type]
+        raise websockets.ConnectionClosed(None, None)
 
     async def close(self) -> None:
         pass
@@ -117,8 +117,8 @@ async def test_websocket_high_latency_resilience() -> None:
             pass
 
     transport = WebSocketTransport(receive_timeout=2.0)
-    transport._ws = MockLatencyWebSocket()  # type: ignore[assignment]
-    transport._next_request_id = lambda: "req_1"  # type: ignore[assignment]
+    transport._ws = MockLatencyWebSocket()
+    transport._next_request_id = lambda: "req_1"
     transport._recv_task = asyncio.create_task(transport._recv_loop())
 
     try:
@@ -153,7 +153,7 @@ async def test_websocket_circuit_breaker_class_integration(
     async def mock_fail_connect(*args: Any, **kwargs: Any) -> Any:
         raise OSError("Connection refused")
 
-    websockets.connect = mock_fail_connect  # type: ignore[assignment]
+    websockets.connect = mock_fail_connect
 
     try:
         with pytest.raises(OSError):
@@ -167,7 +167,7 @@ async def test_websocket_circuit_breaker_class_integration(
         assert cb.get_state() == CircuitState.OPEN
         assert not cb.can_attempt()
     finally:
-        websockets.connect = original_connect  # type: ignore[assignment]
+        websockets.connect = original_connect
         await transport.close()
 
 
@@ -275,7 +275,7 @@ async def test_circuit_breaker_opens_on_ack_timeout(
     )
 
     mock_ws = _SilentWebSocket()
-    transport._ws = mock_ws  # type: ignore[assignment]
+    transport._ws = mock_ws
     transport._ack_check_task = asyncio.create_task(transport._ack_check_loop())
 
     # Send 2 envelopes that require ack — since max_ack_retries=0,
@@ -340,7 +340,7 @@ async def test_circuit_breaker_opens_after_retransmission_exhaustion(
     )
 
     mock_ws = _SilentWebSocket()
-    transport._ws = mock_ws  # type: ignore[assignment]
+    transport._ws = mock_ws
     transport._ack_check_task = asyncio.create_task(transport._ack_check_loop())
 
     env = Envelope(
@@ -437,7 +437,7 @@ async def test_graceful_shutdown_during_reconnection() -> None:
 async def test_graceful_shutdown_cancels_pending_futures() -> None:
     transport = WebSocketTransport()
     mock_ws = _SilentWebSocket()
-    transport._ws = mock_ws  # type: ignore[assignment]
+    transport._ws = mock_ws
 
     # Create pending futures as if send_and_receive had been called
     loop = asyncio.get_running_loop()
@@ -460,7 +460,7 @@ async def test_graceful_shutdown_cancels_pending_futures() -> None:
 async def test_graceful_shutdown_clears_pending_acks() -> None:
     transport = WebSocketTransport()
     mock_ws = _SilentWebSocket()
-    transport._ws = mock_ws  # type: ignore[assignment]
+    transport._ws = mock_ws
 
     env1 = Envelope(
         asap_version="0.1",

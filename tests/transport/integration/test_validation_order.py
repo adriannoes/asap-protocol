@@ -55,7 +55,7 @@ def app_with_nonce_store(sample_manifest: Manifest) -> FastAPI:
     return create_app(
         sample_manifest,
         rate_limit=TEST_RATE_LIMIT_DEFAULT,
-        require_nonce=True,  # type: ignore[no-any-return]
+        require_nonce=True,
     )
 
 
