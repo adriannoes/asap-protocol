@@ -12,11 +12,16 @@ Usage (from GitHub Actions):
 from __future__ import annotations
 
 import argparse
-from typing import Any, cast
+import ipaddress
 import json
+import logging
+import os
 import re
 import sys
+import tempfile
 from pathlib import Path
+from typing import Any, cast
+from urllib.parse import urlparse
 
 import httpx
 from pydantic import ValidationError
@@ -28,6 +33,44 @@ if str(_REPO_ROOT / "src") not in sys.path:
 
 from asap.discovery.registry import generate_registry_entry  # noqa: E402
 from asap.models.entities import Manifest  # noqa: E402
+
+logger = logging.getLogger(__name__)
+
+# Blocked hosts for SSRF protection (CWE-918)
+_BLOCKED_HOSTS = frozenset(
+    {
+        "localhost",
+        "127.0.0.1",
+        "::1",
+        "0.0.0.0",
+        "metadata.google.internal",
+        "metadata.aws.internal",
+        "169.254.169.254",
+    }
+)
+
+
+def _is_safe_url(url: str) -> bool:
+    """Block private IPs, loopback, and cloud metadata endpoints (SSRF protection)."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return False
+    hostname = (parsed.hostname or "").lower()
+    if hostname in _BLOCKED_HOSTS:
+        return False
+    try:
+        addr = ipaddress.ip_address(hostname)
+        if addr.is_private or addr.is_loopback or addr.is_link_local:
+            return False
+    except ValueError:
+        pass
+    return True
+
+
+def _write_validation_result(output_path: str, *, valid: bool = False, errors: str = "") -> None:
+    """Write validation result JSON to output path."""
+    Path(output_path).write_text(json.dumps({"valid": valid, "errors": errors}))
+
 
 # GitHub Issue Form body uses ### <label> as section headers; labels from register_agent.yml
 _HEADER_TO_FIELD = {
@@ -68,6 +111,22 @@ def parse_issue_body(body: str) -> dict[str, str]:
 
 
 def fetch_manifest(url: str, timeout: float = 15.0) -> Manifest:
+    """Fetch and validate an agent manifest from a URL.
+
+    Args:
+        url: Manifest URL (must pass SSRF validation).
+        timeout: Request timeout in seconds.
+
+    Returns:
+        Parsed Manifest.
+
+    Raises:
+        ValueError: If URL is blocked (private/metadata).
+        httpx.HTTPError: On network or HTTP errors.
+        ValidationError: If response is not valid Manifest JSON.
+    """
+    if not _is_safe_url(url):
+        raise ValueError(f"Blocked URL (private/metadata): {url}")
     with httpx.Client(timeout=timeout) as client:
         resp = client.get(url)
         resp.raise_for_status()
@@ -88,7 +147,18 @@ def load_registry(path: str) -> list[dict[str, Any]]:
 
 
 def save_registry(path: str, agents: list[dict[str, Any]]) -> None:
-    Path(path).write_text(json.dumps(agents, indent=2) + "\n")
+    """Write agents list to registry JSON file atomically."""
+    target = Path(path)
+    content = json.dumps(agents, indent=2) + "\n"
+    temp_dir = target.parent if target.parent != Path() else Path.cwd()
+    fd, tmp = tempfile.mkstemp(dir=temp_dir, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(content)
+        Path(tmp).replace(target)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
 
 
 def run(
@@ -120,7 +190,7 @@ def run(
         errors.append("Missing required field: skills")
 
     if errors:
-        Path(output_path).write_text(json.dumps({"valid": False, "errors": "; ".join(errors)}))
+        _write_validation_result(output_path, errors="; ".join(errors))
         return
 
     skills = [s.strip() for s in skills_str.split(",") if s.strip()]
@@ -131,13 +201,21 @@ def run(
 
     try:
         manifest = fetch_manifest(manifest_url)
-    except httpx.HTTPError as e:
-        errors.append(f"Manifest URL unreachable: {e}")
-        Path(output_path).write_text(json.dumps({"valid": False, "errors": "; ".join(errors)}))
+    except ValueError:
+        errors.append(f"Blocked URL (private/metadata): {manifest_url}")
+        _write_validation_result(output_path, errors="; ".join(errors))
+        return
+    except httpx.HTTPError:
+        errors.append(f"Manifest URL unreachable: {manifest_url}")
+        _write_validation_result(output_path, errors="; ".join(errors))
         return
     except ValidationError as e:
-        errors.append(f"Manifest invalid: {e}")
-        Path(output_path).write_text(json.dumps({"valid": False, "errors": "; ".join(errors)}))
+        error_count = e.error_count()
+        errors.append(
+            f"Manifest failed schema validation ({error_count} error(s)). "
+            "Ensure it follows the ASAP Manifest format."
+        )
+        _write_validation_result(output_path, errors="; ".join(errors))
         return
 
     if manifest.id != expected_id:
@@ -160,7 +238,7 @@ def run(
         )
 
     if errors:
-        Path(output_path).write_text(json.dumps({"valid": False, "errors": "; ".join(errors)}))
+        _write_validation_result(output_path, errors="; ".join(errors))
         return
 
     # Uniqueness: id must not already exist in registry
@@ -168,7 +246,7 @@ def run(
     existing_ids = {a.get("id") for a in agents if isinstance(a, dict)}
     if manifest.id in existing_ids:
         errors.append(f"Agent id {manifest.id!r} is already registered")
-        Path(output_path).write_text(json.dumps({"valid": False, "errors": "; ".join(errors)}))
+        _write_validation_result(output_path, errors="; ".join(errors))
         return
 
     endpoints = {
@@ -187,13 +265,17 @@ def run(
             built_with=built_with,
         )
     except ValidationError as e:
-        errors.append(f"Registry entry validation: {e}")
-        Path(output_path).write_text(json.dumps({"valid": False, "errors": "; ".join(errors)}))
+        error_count = e.error_count()
+        errors.append(
+            f"Registry entry validation failed ({error_count} error(s)). "
+            "Check manifest and endpoint format."
+        )
+        _write_validation_result(output_path, errors="; ".join(errors))
         return
 
     agents.append(entry.model_dump(mode="json"))
     save_registry(registry_path, agents)
-    Path(output_path).write_text(json.dumps({"valid": True}))
+    _write_validation_result(output_path, valid=True)
 
 
 def main() -> None:
@@ -216,11 +298,13 @@ def main() -> None:
             output_path=args.output,
             registry_path=args.registry,
         )
-    except Exception as e:  # noqa: BLE001
-        Path(args.output).write_text(
-            json.dumps({"valid": False, "errors": f"Unexpected error: {e!s}"})
-        )
-        sys.exit(0)
+    except Exception:
+        logger.exception("Unexpected error processing registration")
+        try:
+            _write_validation_result(args.output, errors="Internal processing error")
+        except OSError:
+            logger.exception("Failed to write error output")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
