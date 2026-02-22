@@ -14,6 +14,14 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -22,6 +30,7 @@ import { ManifestSchema, type ManifestFormValues } from "@/lib/register-schema";
 import { submitAgentRegistration } from "./actions";
 
 const BUILT_WITH_OPTIONS = ['', 'CrewAI', 'OpenClaw', 'LangChain', 'AutoGen', 'Other'] as const;
+const EMPTY_VALUE = '__none__'; // Radix Select disallows value=""
 
 export function RegisterAgentForm() {
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -208,18 +217,23 @@ export function RegisterAgentForm() {
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>Built with (framework)</FormLabel>
-                            <FormControl>
-                                <select
-                                    {...field}
-                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring md:text-sm"
-                                >
+                            <Select
+                                value={field.value || EMPTY_VALUE}
+                                onValueChange={(v) => field.onChange(v === EMPTY_VALUE ? "" : v)}
+                            >
+                                <FormControl>
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select framework (optional)" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
                                     {BUILT_WITH_OPTIONS.map((opt) => (
-                                        <option key={opt || 'none'} value={opt}>
-                                            {opt || '—'}
-                                        </option>
+                                        <SelectItem key={opt || "none"} value={opt || EMPTY_VALUE}>
+                                            {opt || "—"}
+                                        </SelectItem>
                                     ))}
-                                </select>
-                            </FormControl>
+                                </SelectContent>
+                            </Select>
                             <FormDescription>
                                 Framework or platform used to build this agent (optional). Helps discovery.
                             </FormDescription>
@@ -270,12 +284,12 @@ export function RegisterAgentForm() {
                         <FormItem>
                             <div className="flex items-start gap-3 rounded-lg border p-4">
                                 <FormControl>
-                                    <input
+                                    <Checkbox
                                         id="confirm-registration"
-                                        type="checkbox"
-                                        checked={Boolean(field.value)}
-                                        onChange={(e) => field.onChange(e.target.checked)}
-                                        className="h-4 w-4 rounded border-input mt-0.5"
+                                        checked={field.value}
+                                        onCheckedChange={(checked) =>
+                                            field.onChange(checked === true)
+                                        }
                                     />
                                 </FormControl>
                                 <div className="space-y-1">
