@@ -41,7 +41,7 @@ Before pushing to the repository, always run the full CI check suite locally to 
 
 1. **Linting**: `uv run ruff check .` - Verify code style and catch common errors
 2. **Formatting**: `uv run ruff format --check .` - Ensure consistent code formatting (or `uv run ruff format .` to auto-fix)
-3. **Type Checking**: `uv run mypy src/` - Validate type annotations with strict mode
+3. **Type Checking**: `uv run mypy src/ scripts/ tests/` - Validate type annotations (strict for src/scripts, relaxed for tests)
 4. **Tests**: `PYTHONPATH=src uv run pytest --cov=src --cov-report=xml` - Run full test suite with coverage
 5. **Security**: `uv run pip-audit` - Scan for known vulnerabilities in dependencies
 
