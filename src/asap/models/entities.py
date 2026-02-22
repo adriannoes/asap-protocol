@@ -32,7 +32,7 @@ from asap.models.constants import (
     SUPPORTED_AUTH_SCHEMES,
 )
 from asap.models.validators import validate_agent_urn
-from asap.models.enums import MessageRole, TaskStatus
+from asap.models.enums import MessageRole, TaskStatus, VerificationState
 from asap.models.types import (
     AgentURN,
     ArtifactID,
@@ -194,8 +194,13 @@ class VerificationStatus(ASAPBaseModel):
     registry UI. Admins add this after manual review of verification requests.
     """
 
-    status: str = Field(..., description="Verification state (e.g., 'verified', 'pending')")
-    verified_at: str = Field(..., description="ISO timestamp when verification was granted")
+    status: VerificationState = Field(
+        ..., description="Verification state (verified, pending, rejected)"
+    )
+    verified_at: datetime | None = Field(
+        default=None,
+        description="ISO timestamp when verification was granted (None when pending)",
+    )
 
 
 class SLADefinition(ASAPBaseModel):

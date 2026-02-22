@@ -215,24 +215,41 @@
       "title": "Skill",
       "type": "object"
     },
+    "VerificationState": {
+      "description": "Verification status for marketplace trust badge (Task 3.6).\n\nWhen status is VERIFIED, the agent displays a Verified badge in the registry UI.",
+      "enum": [
+        "verified",
+        "pending",
+        "rejected"
+      ],
+      "title": "VerificationState",
+      "type": "string"
+    },
     "VerificationStatus": {
       "additionalProperties": false,
-      "description": "Verification status for marketplace trust badge (Task 3.6).\n\nWhen status is 'verified', the agent displays a Verified badge in the\nregistry UI. Admins add this after manual review of verification requests.\n\nAttributes:\n    status: Verification state (e.g., 'verified', 'pending', 'rejected').\n    verified_at: ISO timestamp when verification was granted (if status is 'verified').",
+      "description": "Verification status for marketplace trust badge (Task 3.6).\n\nWhen status is 'verified', the agent displays a Verified badge in the\nregistry UI. Admins add this after manual review of verification requests.",
       "properties": {
         "status": {
-          "description": "Verification state (e.g., 'verified', 'pending')",
-          "title": "Status",
-          "type": "string"
+          "$ref": "#/$defs/VerificationState",
+          "description": "Verification state (verified, pending, rejected)"
         },
         "verified_at": {
-          "description": "ISO timestamp when verification was granted",
-          "title": "Verified At",
-          "type": "string"
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "ISO timestamp when verification was granted (None when pending)",
+          "title": "Verified At"
         }
       },
       "required": [
-        "status",
-        "verified_at"
+        "status"
       ],
       "title": "VerificationStatus",
       "type": "object"

@@ -69,3 +69,14 @@ class UpdateType(str, Enum):
     PROGRESS = "progress"
     INPUT_REQUIRED = "input_required"
     STATUS_CHANGE = "status_change"
+
+
+class VerificationState(str, Enum):
+    """Verification status for marketplace trust badge (Task 3.6).
+
+    When status is VERIFIED, the agent displays a Verified badge in the registry UI.
+    """
+
+    VERIFIED = "verified"
+    PENDING = "pending"
+    REJECTED = "rejected"
