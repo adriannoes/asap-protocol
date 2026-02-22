@@ -7,6 +7,7 @@ on:
     branches: [main]
     paths:
       - 'src/**'
+      - 'scripts/**'
       - 'tests/**'
       - 'asap-compliance/**'
       - 'docs/**'
@@ -20,6 +21,7 @@ on:
     branches: [main]
     paths:
       - 'src/**'
+      - 'scripts/**'
       - 'tests/**'
       - 'asap-compliance/**'
       - 'docs/**'
