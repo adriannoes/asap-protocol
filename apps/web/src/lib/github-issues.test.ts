@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { buildRegisterAgentIssueUrl } from './github-issues';
+import {
+    buildRegisterAgentIssueUrl,
+    buildVerificationRequestIssueUrl,
+} from './github-issues';
 import type { ManifestFormValues } from './register-schema';
 
 const baseValues: ManifestFormValues = {
@@ -46,5 +49,33 @@ describe('buildRegisterAgentIssueUrl', () => {
         const url = buildRegisterAgentIssueUrl(withOptionals, { owner: 'owner', repo: 'repo' });
         expect(url).toContain('repository_url=https%3A%2F%2Fgithub.com');
         expect(url).toContain('documentation_url=https%3A%2F%2Fdocs.example.com');
+    });
+});
+
+describe('buildVerificationRequestIssueUrl', () => {
+    it('builds URL with template and title', () => {
+        const values = {
+            agent_id: 'urn:asap:agent:user:my-agent',
+            why_verified: 'Running in production for 6 months',
+            running_since: '2024-01',
+            evidence: 'https://example.com/metrics',
+            contact: 'admin@example.com',
+        };
+        const url = buildVerificationRequestIssueUrl(values, { owner: 'o', repo: 'r' });
+        expect(url).toContain('https://github.com/o/r/issues/new');
+        expect(url).toContain('template=request_verification.yml');
+        expect(url).toContain('title=Verify%3A+urn%3Aasap%3Aagent%3Auser%3Amy-agent');
+    });
+
+    it('includes required and optional fields as query params', () => {
+        const values = {
+            agent_id: 'urn:asap:agent:test:agent',
+            why_verified: 'Stable for 3 months',
+            running_since: '2024-06',
+        };
+        const url = buildVerificationRequestIssueUrl(values, { owner: 'owner', repo: 'repo' });
+        expect(url).toContain('agent_id=urn%3Aasap%3Aagent%3Atest%3Aagent');
+        expect(url).toContain('why_verified=');
+        expect(url).toContain('running_since=2024-06');
     });
 });

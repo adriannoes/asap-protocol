@@ -6,7 +6,6 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
-from asap.discovery import registry as registry_module
 from asap.discovery.registry import (
     LiteRegistry,
     RegistryEntry,
@@ -14,6 +13,7 @@ from asap.discovery.registry import (
     find_by_id,
     find_by_skill,
     generate_registry_entry,
+    reset_registry_cache,
 )
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 
@@ -45,7 +45,7 @@ VALID_REGISTRY_JSON = """{
 @pytest.fixture(autouse=True)
 def clear_registry_cache() -> None:
     """Clear module-level registry cache before each test for isolation."""
-    registry_module._registry_cache.clear()
+    reset_registry_cache()
 
 
 class TestRegistrySchemaValidation:

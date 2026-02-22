@@ -6,9 +6,14 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from scripts.process_registration import (
+    fetch_manifest,
+    load_registry,
     parse_issue_body,
     run,
+    save_registry,
 )
 
 
@@ -131,6 +136,25 @@ class TestParseIssueBody:
         out = parse_issue_body(body)
         assert out.get("name") == "foo"
         assert "Unknown section" not in out
+
+
+class TestFetchManifestSSRF:
+    """Tests for fetch_manifest SSRF protection (RF-1)."""
+
+    def test_blocks_metadata_url(self) -> None:
+        """Block cloud metadata endpoints."""
+        with pytest.raises(ValueError, match="Blocked URL"):
+            fetch_manifest("http://169.254.169.254/latest/meta-data/")
+
+    def test_blocks_localhost(self) -> None:
+        """Block loopback addresses."""
+        with pytest.raises(ValueError, match="Blocked URL"):
+            fetch_manifest("http://localhost/manifest.json")
+
+    def test_blocks_private_ip(self) -> None:
+        """Block private IP ranges."""
+        with pytest.raises(ValueError, match="Blocked URL"):
+            fetch_manifest("http://192.168.1.1/manifest.json")
 
 
 def _mock_httpx_client(response_json: dict) -> MagicMock:
@@ -319,3 +343,80 @@ class TestProcessRegistrationRun:
         assert "already registered" in result["errors"].lower()
         # Registry unchanged
         assert json.loads(registry_path.read_text()) == existing
+
+    def test_blocks_ssrf_manifest_url(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Blocked manifest URL (SSRF) returns validation error (RF-1)."""
+        output_path = tmp_path / "result.json"
+        body = VALID_BODY_MINIMAL.replace(
+            "https://example.com/manifest.json",
+            "http://169.254.169.254/latest/meta-data/",
+        )
+        run(
+            body=body,
+            issue_number="7",
+            author="testuser",
+            output_path=str(output_path),
+            registry_path=str(tmp_path / "registry.json"),
+        )
+        result = json.loads(output_path.read_text())
+        assert result["valid"] is False
+        assert "Blocked" in result["errors"] or "private" in result["errors"].lower()
+
+
+class TestLoadRegistry:
+    """Tests for load_registry."""
+
+    def test_load_empty_missing_file(self, tmp_path: Path) -> None:
+        """Missing file returns empty list."""
+        assert load_registry(str(tmp_path / "nonexistent.json")) == []
+
+    def test_load_malformed_json_raises(self, tmp_path: Path) -> None:
+        """Malformed JSON raises json.JSONDecodeError."""
+        bad = tmp_path / "bad.json"
+        bad.write_text("{ invalid")
+        with pytest.raises(json.JSONDecodeError):
+            load_registry(str(bad))
+
+    def test_load_lite_registry_wrapper_format(self, tmp_path: Path) -> None:
+        """LiteRegistry wrapper format (agents key) is supported."""
+        data = {
+            "version": "1.0",
+            "agents": [{"id": "urn:asap:agent:test", "name": "Test"}],
+        }
+        path = tmp_path / "registry.json"
+        path.write_text(json.dumps(data))
+        result = load_registry(str(path))
+        assert len(result) == 1
+        assert result[0]["id"] == "urn:asap:agent:test"
+
+    def test_load_array_format(self, tmp_path: Path) -> None:
+        """Array format (direct list) is supported."""
+        data = [{"id": "urn:asap:agent:one", "name": "One"}]
+        path = tmp_path / "registry.json"
+        path.write_text(json.dumps(data))
+        result = load_registry(str(path))
+        assert len(result) == 1
+        assert result[0]["id"] == "urn:asap:agent:one"
+
+
+class TestSaveRegistry:
+    """Tests for save_registry atomic write."""
+
+    def test_save_registry_atomic(self, tmp_path: Path) -> None:
+        """save_registry writes atomically."""
+        path = tmp_path / "registry.json"
+        agents = [
+            {
+                "id": "urn:asap:agent:test",
+                "name": "Test",
+                "description": "Test agent",
+                "endpoints": {"http": "https://example.com/asap"},
+                "skills": ["skill1"],
+                "asap_version": "1.1.0",
+            }
+        ]
+        save_registry(str(path), agents)
+        assert json.loads(path.read_text()) == agents

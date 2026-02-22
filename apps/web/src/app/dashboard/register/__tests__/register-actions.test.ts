@@ -92,6 +92,18 @@ describe('submitAgentRegistration', () => {
         expect(result.error).toContain('Endpoint URL');
     });
 
+    it('returns error when WebSocket URL fails SSRF check', async () => {
+        const formWithWs = { ...validForm, endpoint_ws: 'wss://169.254.169.254/internal' };
+        isAllowedExternalUrl.mockImplementation((url: string) => {
+            if (url.includes('169.254') || url.includes('internal'))
+                return { valid: false, error: 'Internal/Private network addresses are not allowed.' };
+            return { valid: true };
+        });
+        const result = await submitAgentRegistration(formWithWs);
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('WebSocket URL');
+    });
+
     it('returns error when manifest URL is not reachable (HEAD returns non-ok)', async () => {
         const originalFetch = globalThis.fetch;
         globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 404 });
