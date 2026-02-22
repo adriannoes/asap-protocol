@@ -37,7 +37,7 @@ export async function fetchRegistry(): Promise<RegistryAgent[]> {
     }
     const rawAgents = Array.isArray(parsed.data) ? parsed.data : parsed.data.agents;
     return rawAgents.map((a) =>
-        normalizeRegistryAgent(a as { endpoints: Record<string, string>; [k: string]: unknown })
+      normalizeRegistryAgent(a as { endpoints: Record<string, string>;[k: string]: unknown })
     );
   } catch (error) {
     console.error('Error fetching registry:', error);
@@ -46,14 +46,14 @@ export async function fetchRegistry(): Promise<RegistryAgent[]> {
 }
 
 function normalizeRegistryAgent(agent: {
-    endpoints: Record<string, string>;
-    [k: string]: unknown;
+  endpoints: Record<string, string>;
+  [k: string]: unknown;
 }): RegistryAgent {
-    const endpoints = agent.endpoints ?? {};
-    if (!endpoints.asap && endpoints.http) {
-        return { ...agent, endpoints: { ...endpoints, asap: endpoints.http } } as unknown as RegistryAgent;
-    }
-    return agent as unknown as RegistryAgent;
+  const endpoints = agent.endpoints ?? {};
+  if (!endpoints.asap && endpoints.http) {
+    return { ...agent, endpoints: { ...endpoints, asap: endpoints.http } } as unknown as RegistryAgent;
+  }
+  return agent as unknown as RegistryAgent;
 }
 
 export async function fetchAgentById(id: string): Promise<RegistryAgent | null> {
