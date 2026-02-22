@@ -1,6 +1,7 @@
 'use client';
 
-import { Manifest } from '@/types/protocol';
+import type { RegistryAgent } from '@/types/registry';
+import { isAllowedExternalUrl } from '@/lib/url-validator';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,12 @@ import { ArrowLeft, ExternalLink, ShieldAlert, ShieldCheck, TerminalSquare } fro
 import Link from 'next/link';
 
 interface AgentDetailClientProps {
-    agent: Manifest;
+    agent: RegistryAgent;
+}
+
+function safeAuthHref(url: unknown): string {
+    if (typeof url !== 'string') return '#';
+    return isAllowedExternalUrl(url).valid ? url : '#';
 }
 
 export function AgentDetailClient({ agent }: AgentDetailClientProps) {
@@ -43,9 +49,16 @@ export function AgentDetailClient({ agent }: AgentDetailClientProps) {
                             <Badge variant="outline" className="text-xs font-mono py-1">
                                 {agent.id}
                             </Badge>
-                            <Badge variant="secondary" className="text-xs">
-                                v{agent.version}
-                            </Badge>
+                            {agent.version && (
+                                <Badge variant="secondary" className="text-xs">
+                                    v{agent.version}
+                                </Badge>
+                            )}
+                            {agent.built_with && (
+                                <Badge variant="outline" className="text-xs">
+                                    {agent.built_with}
+                                </Badge>
+                            )}
                             {agent.sla ? (
                                 <Badge variant="default" className="bg-emerald-600 hover:bg-emerald-700 flex items-center gap-1">
                                     <ShieldCheck className="w-3 h-3" />
@@ -66,8 +79,26 @@ export function AgentDetailClient({ agent }: AgentDetailClientProps) {
                             <TerminalSquare className="w-4 h-4" /> Connect Agent
                         </Button>
                         <div className="p-3 bg-muted/50 border rounded-md text-xs font-mono break-all selection:bg-indigo-500/30">
-                            {agent.endpoints.asap}
+                            {agent.endpoints?.asap ?? (agent.endpoints as { http?: string })?.http}
                         </div>
+                        {(agent.repository_url || agent.documentation_url) && (
+                            <div className="flex flex-wrap gap-2">
+                                {agent.repository_url && (
+                                    <Button variant="outline" size="sm" className="text-xs" asChild>
+                                        <a href={agent.repository_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                                            <ExternalLink className="w-3 h-3" /> Repository
+                                        </a>
+                                    </Button>
+                                )}
+                                {agent.documentation_url && (
+                                    <Button variant="outline" size="sm" className="text-xs" asChild>
+                                        <a href={agent.documentation_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                                            <ExternalLink className="w-3 h-3" /> Documentation
+                                        </a>
+                                    </Button>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -122,7 +153,7 @@ export function AgentDetailClient({ agent }: AgentDetailClientProps) {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {agent.sla ? (
-                                <div className="space-y-3 test-sm">
+                                <div className="space-y-3 text-sm">
                                     <div className="flex justify-between items-center py-1 border-b border-border/50">
                                         <span className="text-muted-foreground">Availability</span>
                                         <span className="font-medium">{agent.sla.availability || 'N/A'}</span>
@@ -167,7 +198,14 @@ export function AgentDetailClient({ agent }: AgentDetailClientProps) {
                                             <p>OAuth2 Setup available.</p>
                                             <p className="flex items-center gap-1 group">
                                                 <ExternalLink className="w-3 h-3 group-hover:text-indigo-400" />
-                                                <a href={typeof agent.auth.oauth2.authorization_url === 'string' ? agent.auth.oauth2.authorization_url : '#'} target="_blank" rel="noreferrer" className="group-hover:text-indigo-400 underline decoration-border underline-offset-2">Auth URL</a>
+                                                <a
+                                                    href={safeAuthHref(agent.auth.oauth2?.authorization_url)}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="group-hover:text-indigo-400 underline decoration-border underline-offset-2"
+                                                >
+                                                    Auth URL
+                                                </a>
                                             </p>
                                         </div>
                                     )}

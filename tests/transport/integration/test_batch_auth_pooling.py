@@ -61,7 +61,7 @@ def _create_app_with_auth(
         return echo_handler(envelope, manifest)
 
     if slow_handler:
-        registry.register("task.request", slow_echo_handler)  # type: ignore[arg-type]
+        registry.register("task.request", slow_echo_handler)
     else:
         registry.register("task.request", echo_handler)
 
@@ -108,7 +108,7 @@ class TestBatchWithAuthentication(NoRateLimitTestBase):
             require_https=False,
             transport=transport,
         ) as client:
-            client._client.headers["Authorization"] = "Bearer valid-token"  # type: ignore[union-attr]
+            client._client.headers["Authorization"] = "Bearer valid-token"
 
             envelopes = [
                 create_envelope(message=f"batch-{i}", conversation_id=f"conv-{i}") for i in range(5)
@@ -135,7 +135,7 @@ class TestBatchWithAuthentication(NoRateLimitTestBase):
             require_https=False,
             transport=transport,
         ) as client:
-            client._client.headers["Authorization"] = "Bearer invalid-token"  # type: ignore[union-attr]
+            client._client.headers["Authorization"] = "Bearer invalid-token"
 
             envelopes = [
                 create_envelope(message=f"batch-{i}", conversation_id=f"conv-{i}") for i in range(3)
@@ -206,7 +206,7 @@ class TestBatchWithPooling(NoRateLimitTestBase):
                 correlation_id=envelope.id,
             )
 
-        registry.register("task.request", slow_handler)  # type: ignore[arg-type]
+        registry.register("task.request", slow_handler)
         return create_app(slow_manifest, registry)
 
     @pytest.mark.asyncio
@@ -491,7 +491,7 @@ class TestBatchAuthPoolingCombined(NoRateLimitTestBase):
             pool_connections=2,
             pool_maxsize=5,
         ) as client:
-            client._client.headers["Authorization"] = "Bearer valid-token"  # type: ignore[union-attr]
+            client._client.headers["Authorization"] = "Bearer valid-token"
 
             envelopes = [
                 create_envelope(
@@ -529,7 +529,7 @@ class TestBatchAuthPoolingCombined(NoRateLimitTestBase):
             require_https=False,
             transport=transport,
         ) as client:
-            client._client.headers["Authorization"] = "Bearer valid-token"  # type: ignore[union-attr]
+            client._client.headers["Authorization"] = "Bearer valid-token"
 
             envelopes = [
                 create_envelope(

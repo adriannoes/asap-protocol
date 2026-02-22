@@ -2,10 +2,10 @@
 /**
  * Pre-M2 validation: Test registry.json fetch.
  * Run: node apps/web/scripts/validate-registry-fetch.mjs
- * Optional: NEXT_PUBLIC_REGISTRY_URL=https://... node ...
+ * Optional: REGISTRY_URL=https://... node ...
  */
 const url =
-  process.env.NEXT_PUBLIC_REGISTRY_URL ||
+  process.env.REGISTRY_URL ||
   'https://raw.githubusercontent.com/adriannoes/asap-protocol/main/registry.json';
 
 console.log('Fetching:', url);

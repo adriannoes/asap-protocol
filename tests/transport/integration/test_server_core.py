@@ -41,7 +41,7 @@ def app(
     """Create FastAPI app for testing (rate limiting disabled via NoRateLimitTestBase)."""
     app_instance = create_app(sample_manifest, rate_limit=TEST_RATE_LIMIT_DEFAULT)
     app_instance.state.limiter = disable_rate_limiting
-    return app_instance  # type: ignore[no-any-return]
+    return app_instance
 
 
 @pytest.fixture
@@ -441,7 +441,7 @@ class TestMetricsEndpoint(NoRateLimitTestBase):
 
     def test_metrics_endpoint_exists(self, app: FastAPI) -> None:
         """Test that metrics endpoint is registered."""
-        routes = [route.path for route in app.routes]  # type: ignore[attr-defined]
+        routes = [route.path for route in app.routes]
         assert "/asap/metrics" in routes
 
     def test_metrics_endpoint_returns_prometheus_format(self, client: TestClient) -> None:

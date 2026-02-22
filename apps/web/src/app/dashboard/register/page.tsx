@@ -20,8 +20,8 @@ export default async function RegisterAgentPage() {
             <div className="mb-8 border-b pb-6">
                 <h1 className="text-3xl font-bold tracking-tight">Register New Agent</h1>
                 <p className="text-muted-foreground mt-2">
-                    Publish your agent to the ASAP Protocol registry. This will open an automated pull request
-                    to the registry repository using your GitHub account.
+                    Publish your agent to the ASAP Protocol registry. You will be taken to GitHub to submit
+                    a pre-filled registration issue; a GitHub Action will validate and add your agent to the registry.
                 </p>
             </div>
 

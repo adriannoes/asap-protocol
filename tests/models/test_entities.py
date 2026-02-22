@@ -50,7 +50,7 @@ class TestAgent:
         )
 
         with pytest.raises(ValidationError, match="frozen"):
-            agent.id = "new_id"  # type: ignore[misc]
+            agent.id = "new_id"
 
     def test_agent_json_schema(self):
         """Test that Agent generates valid JSON Schema."""
@@ -414,7 +414,7 @@ class TestManifest:
         )
 
         with pytest.raises(ValidationError, match="frozen"):
-            manifest.name = "New Name"  # type: ignore[misc]
+            manifest.name = "New Name"
 
     def test_manifest_json_schema(self):
         """Test that Manifest generates valid JSON Schema."""

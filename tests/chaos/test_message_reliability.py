@@ -714,9 +714,9 @@ class TestMessageReliabilityEdgeCases:
                 await asyncio.sleep(0.05)  # Small delay
                 return create_mock_response(sample_response_envelope)
 
-            client._client.request = mock_request  # type: ignore[method-assign]
+            client._client.request = mock_request
 
             response = await client.send(sample_request_envelope)
             assert response.payload_type == "task.response"
 
-            client._client.request = original_request  # type: ignore[method-assign]
+            client._client.request = original_request

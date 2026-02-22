@@ -1,0 +1,57 @@
+name: Request Verification
+description: Request verified badge for an ASAP agent already listed in the registry
+title: "Verify: "
+labels: ["verification-request", "pending-review"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: "Use this form to request the **Verified** badge for an agent already in the ASAP registry. Submissions are reviewed manually; you will be notified via issue comments."
+
+  - type: input
+    id: agent_id
+    attributes:
+      label: Agent ID
+      description: "Full URN of the agent (e.g. urn:asap:agent:username:agent-name). Must already be listed in the registry."
+      placeholder: urn:asap:agent:username:agent-name
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence of reliability
+      description: "Links to uptime stats, monitoring dashboards, or other evidence that this agent is reliable and production-ready."
+      placeholder: |
+        - Uptime: https://status.example.com
+        - Running since: 2025-01-15
+        - SLA / metrics if applicable
+    validations:
+      required: true
+
+  - type: input
+    id: contact
+    attributes:
+      label: Contact info
+      description: "How maintainers can reach you (e.g. GitHub username, email, or team link)."
+      placeholder: @username or email@example.com
+    validations:
+      required: true
+
+  - type: textarea
+    id: why_verified
+    attributes:
+      label: Why should this agent be verified?
+      description: "Brief justification: use case, uptime, adoption, or other trust signals."
+      placeholder: This agent has been running in production for 3 months with 99.5% uptime...
+    validations:
+      required: true
+
+  - type: input
+    id: running_since
+    attributes:
+      label: How long has it been running?
+      description: "Approximate duration (e.g. '2 months', 'since 2025-01')."
+      placeholder: 2 months
+    validations:
+      required: true

@@ -177,6 +177,33 @@ module = "asap.auth.middleware"
 disable_error_code = ["misc"]
 # OAuth2Middleware subclasses BaseHTTPMiddleware (Starlette); same untyped base in CI
 
+[[tool.mypy.overrides]]
+module = "tests.*"
+# Relaxed profile for tests: mocks, fixtures, pytest patterns (ADR-23)
+disallow_untyped_defs = false
+warn_return_any = false
+disallow_any_generics = false
+disable_error_code = [
+    "no-any-return",
+    "misc",              # untyped decorators, monkey-patching
+    "attr-defined",      # dynamic pytest/fixture attributes
+    "arg-type",          # mock/fixture argument flexibility
+    "override",          # test doubles overriding base types
+    "no-untyped-def",    # pytest fixtures/callbacks often untyped
+    "return",            # async test helpers, fixtures
+    "index",             # test data structures
+    "call-arg",          # intentional invalid args in validation tests
+    "comparison-overlap", # enum comparison in tests
+    "union-attr",        # union narrowing in test assertions
+    "method-assign",     # monkey-patching methods in mocks
+    "assignment",        # mock/fixture assignment flexibility
+    "operator",          # test assertions with dynamic types
+    "return-value",      # async/sync handler return in tests
+    "redundant-cast",    # explicit casts in tests
+    "truthy-function",   # type() checks in tests
+    "name-defined",      # dynamic imports in example tests
+]
+
 [tool.pydantic-mypy]
 init_forbid_extra = true
 init_typed = true

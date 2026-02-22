@@ -1,16 +1,16 @@
+import { createHash } from 'crypto';
 import NextAuth from 'next-auth';
 import GitHub from 'next-auth/providers/github';
 import { EncryptJWT, jwtDecrypt } from 'jose';
 
-// JWT secret; fail if unset (no default).
+// JWT secret; fail if unset or too short (CWE-326: weak key derivation).
 const authSecret = process.env.AUTH_SECRET;
-if (!authSecret) {
+if (!authSecret || authSecret.length < 32) {
     throw new Error(
-        'AUTH_SECRET environment variable is required. ' +
-        'Generate one with: npx auth secret'
+        'AUTH_SECRET must be at least 32 characters. Generate one with: npx auth secret'
     );
 }
-const secretKey = new TextEncoder().encode(authSecret.padEnd(32, '0').slice(0, 32));
+const secretKey = createHash('sha256').update(authSecret).digest();
 
 export async function encryptToken(token: string) {
     return await new EncryptJWT({ token })
@@ -28,7 +28,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         GitHub({
             clientId: process.env.GITHUB_CLIENT_ID,
             clientSecret: process.env.GITHUB_CLIENT_SECRET,
-            authorization: { params: { scope: 'read:user public_repo' } },
+            authorization: { params: { scope: 'read:user' } },
         }),
     ],
     callbacks: {

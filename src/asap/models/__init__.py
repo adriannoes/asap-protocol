@@ -18,7 +18,7 @@ from asap.models.constants import (
 )
 
 # Enums
-from asap.models.enums import MessageRole, TaskStatus, UpdateType
+from asap.models.enums import MessageRole, TaskStatus, UpdateType, VerificationState
 
 # Type aliases
 from asap.models.types import (
@@ -101,6 +101,7 @@ __all__ = [
     "MessageRole",
     "TaskStatus",
     "UpdateType",
+    "VerificationState",
     # Type aliases
     "AgentURN",
     "ArtifactID",

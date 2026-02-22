@@ -416,7 +416,7 @@ class TestWrapHandlerWithMetering:
             return env
 
         # Pass None as store
-        wrapped = wrap_handler_with_metering(my_handler, None, None)  # type: ignore
+        wrapped = wrap_handler_with_metering(my_handler, None, None)
         assert wrapped is my_handler
 
 

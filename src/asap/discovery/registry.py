@@ -17,7 +17,7 @@ import httpx
 from pydantic import Field, field_validator
 
 from asap.models.base import ASAPBaseModel
-from asap.models.entities import Manifest
+from asap.models.entities import Manifest, VerificationStatus
 from asap.models.validators import validate_agent_urn
 from asap.models.types import AgentURN
 
@@ -59,6 +59,22 @@ class RegistryEntry(ASAPBaseModel):
         description="Skill identifiers the agent supports",
     )
     asap_version: str = Field(..., description="ASAP protocol version (e.g. 1.1.0)")
+    repository_url: str | None = Field(
+        default=None,
+        description="Optional link to source code (e.g. GitHub)",
+    )
+    documentation_url: str | None = Field(
+        default=None,
+        description="Optional link to usage documentation",
+    )
+    built_with: str | None = Field(
+        default=None,
+        description="Optional framework used to build the agent (e.g. CrewAI, LangChain)",
+    )
+    verification: VerificationStatus | None = Field(
+        default=None,
+        description="Verification status for marketplace trust badge (Task 3.6)",
+    )
 
     @field_validator("id")
     @classmethod
@@ -178,6 +194,10 @@ def find_by_id(registry: LiteRegistry, agent_id: str) -> RegistryEntry | None:
 def generate_registry_entry(
     manifest: Manifest,
     endpoints: dict[str, str],
+    *,
+    repository_url: str | None = None,
+    documentation_url: str | None = None,
+    built_with: str | None = None,
 ) -> RegistryEntry:
     """Build a RegistryEntry from an existing Manifest and endpoint map.
 
@@ -203,4 +223,7 @@ def generate_registry_entry(
         endpoints=endpoints,
         skills=skills,
         asap_version=manifest.capabilities.asap_version,
+        repository_url=repository_url or None,
+        documentation_url=documentation_url or None,
+        built_with=(built_with.strip() or None) if built_with else None,
     )

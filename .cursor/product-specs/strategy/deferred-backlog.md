@@ -138,6 +138,25 @@
 
 ---
 
+## 6. Category/Tags in Lite Registry (v2.1+)
+
+**What**: Optional category (e.g. Research, Coding, Productivity) and free-form tags on each registry entry; browse UI filters by category/tags.
+
+**Why deferred**: M3 adds optional metadata (repository_url, documentation_url, built_with) for trust and discovery. Category/tags require schema change, form updates, Action parsing, and UI filters — better as a focused follow-up once the IssueOps flow is stable.
+
+**Trigger to revisit**: When **browse/search UX** demands better filtering beyond skills and trust level, or when agent count makes categories useful.
+
+**Proposed milestone**: v2.1
+
+### Scope (when implemented)
+
+- Extend `RegistryEntry` with optional `category: str | None` and `tags: list[str]`.
+- Add to issue template (dropdown for category, input for tags).
+- Parsing script and Action write these to `registry.json`.
+- Web app: filter controls and display on agent cards/detail.
+
+---
+
 ## Summary
 
 | Feature | Original Version | Deferred To | Trigger |
@@ -147,6 +166,7 @@
 | Audit Logging | v1.3 | v2.1+ | Enterprise customer or billing disputes |
 | Economy Settlement | v2.0+ | v3.0 | Revenue > $5k/mo + user demand |
 | Payment Processing | v2.0 | v3.0 | 100+ Verified Agents |
+| Category/Tags in Registry | — | v2.1 | Browse/search UX or scale |
 
 ---
 
@@ -155,3 +175,4 @@
 | Date | Change |
 |------|--------|
 | 2026-02-12 | Initial document — Lean Marketplace pivot |
+| 2026-02-20 | Added §6 Category/Tags in Lite Registry (v2.1+) |

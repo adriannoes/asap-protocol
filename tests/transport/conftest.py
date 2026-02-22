@@ -200,7 +200,7 @@ def create_isolated_app(
         # Always replace app.state.limiter with isolated instance
         app.state.limiter = isolated_limiter
 
-        return app  # type: ignore[no-any-return]
+        return app
 
     return _create_app
 

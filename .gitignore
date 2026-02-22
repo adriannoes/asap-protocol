@@ -176,6 +176,8 @@ cython_debug/
 
 # Project specific
 !/.cursor/
+# Strategy docs (private — do not commit)
+.cursor/product-specs/strategy/
 node_modules/
 .github/wiki/
 

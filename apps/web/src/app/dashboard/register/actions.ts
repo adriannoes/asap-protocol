@@ -1,23 +1,15 @@
 'use server';
 
-import { auth, decryptToken } from '@/auth';
-import { z } from 'zod';
-import { Octokit } from 'octokit';
-import type { Manifest, Skill } from '@/types/protocol';
+import { auth } from '@/auth';
+import { ManifestSchema } from '@/lib/register-schema';
+import { buildRegisterAgentIssueUrl } from '@/lib/github-issues';
 import { isAllowedExternalUrl } from '@/lib/url-validator';
 import { checkRateLimit } from '@/lib/rate-limit';
 
-// Match the client schema
-const formSchema = z.object({
-    name: z.string().min(3).max(50).regex(/^[a-z0-9-]+$/),
-    description: z.string().min(10).max(200),
-    manifest_url: z.string().url(),
-    endpoint_http: z.string().url(),
-    endpoint_ws: z.string().url().optional().or(z.literal('')),
-    skills: z.string().min(1),
-});
+const DEFAULT_OWNER = 'adriannoes';
+const DEFAULT_REPO = 'asap-protocol';
 
-export async function submitAgentRegistration(values: z.infer<typeof formSchema>) {
+export async function submitAgentRegistration(values: unknown) {
     try {
         const session = await auth();
         if (!session?.user) {
@@ -25,10 +17,9 @@ export async function submitAgentRegistration(values: z.infer<typeof formSchema>
         }
 
         const username = session.user.username;
-        const encryptedAccessToken = session.encryptedAccessToken;
         const userId = (session.user as { id?: string }).id ?? username ?? 'anonymous';
 
-        if (!username || !encryptedAccessToken) {
+        if (!username) {
             return { success: false, error: 'GitHub account link missing or invalid. Please re-login.' };
         }
 
@@ -36,21 +27,13 @@ export async function submitAgentRegistration(values: z.infer<typeof formSchema>
             return { success: false, error: 'Too many registration attempts. Please try again in a minute.' };
         }
 
-        const accessToken = await decryptToken(encryptedAccessToken);
-
-        const parsed = formSchema.safeParse(values);
+        const parsed = ManifestSchema.safeParse(values);
         if (!parsed.success) {
             return { success: false, error: 'Invalid form data provided.' };
         }
 
-        const { name, description, manifest_url, endpoint_http, endpoint_ws, skills } = parsed.data;
-
-        const agentId = `urn:asap:agent:${username}:${name}`;
-
-        const skillsList: Skill[] = skills.split(',').map(s => s.trim()).filter(Boolean).map(s => ({
-            id: s,
-            description: `Capability: ${s}`,
-        }));
+        const data = parsed.data;
+        const { manifest_url, endpoint_http, endpoint_ws } = data;
 
         const manifestCheck = isAllowedExternalUrl(manifest_url);
         if (!manifestCheck.valid) {
@@ -79,115 +62,15 @@ export async function submitAgentRegistration(values: z.infer<typeof formSchema>
                 return { success: false, error: `Manifest URL returned status ${manifestFetch.status}. Must be reachable.` };
             }
         } catch (e: unknown) {
-            const err = e as Error;
-            return { success: false, error: `Could not reach Manifest URL: ${err?.message ?? manifest_url}` };
+            const message = e instanceof Error ? e.message : String(e);
+            return { success: false, error: `Could not reach Manifest URL: ${message}` };
         }
 
-        const octokit = new Octokit({ auth: accessToken });
-        const owner = process.env.GITHUB_REGISTRY_OWNER || 'adriannoes';
-        const repo = process.env.GITHUB_REGISTRY_REPO || 'asap-protocol';
-        const targetBranch = `register/${username}-${name}-${Date.now()}`;
-        const registryPath = 'registry.json';
+        const owner = process.env.GITHUB_REGISTRY_OWNER || DEFAULT_OWNER;
+        const repo = process.env.GITHUB_REGISTRY_REPO || DEFAULT_REPO;
+        const issueUrl = buildRegisterAgentIssueUrl(data, { owner, repo });
 
-        try {
-            let currentRegistry: Manifest[] = [];
-            try {
-                const { data: fileData } = await octokit.rest.repos.getContent({
-                    owner,
-                    repo,
-                    path: registryPath,
-                    ref: 'main',
-                });
-                if (!Array.isArray(fileData) && fileData.type === 'file' && fileData.content) {
-                    const contentStr = Buffer.from(fileData.content, 'base64').toString('utf-8');
-                    currentRegistry = JSON.parse(contentStr);
-                }
-            } catch (e) {
-                console.log('registry.json not found or error parsing, starting fresh.', e);
-            }
-
-            const { data: fork } = await octokit.rest.repos.createFork({ owner, repo });
-            await new Promise(resolve => setTimeout(resolve, 3000));
-
-            const defaultBranch = fork.default_branch || 'main';
-            const { data: refData } = await octokit.rest.git.getRef({
-                owner: fork.owner.login,
-                repo: fork.name,
-                ref: `heads/${defaultBranch}`,
-            });
-            await octokit.rest.git.createRef({
-                owner: fork.owner.login,
-                repo: fork.name,
-                ref: `refs/heads/${targetBranch}`,
-                sha: refData.object.sha,
-            });
-
-            let fileSha: string | undefined;
-            try {
-                const { data: fileData } = await octokit.rest.repos.getContent({
-                    owner: fork.owner.login,
-                    repo: fork.name,
-                    path: registryPath,
-                    ref: targetBranch,
-                });
-                if (!Array.isArray(fileData) && fileData.type === 'file' && fileData.sha) {
-                    fileSha = fileData.sha;
-                    const contentStr = Buffer.from(fileData.content, 'base64').toString('utf-8');
-                    currentRegistry = JSON.parse(contentStr);
-                }
-            } catch (e) {
-                if ((e as { status?: number })?.status !== 404) {
-                    console.log('Error reading registry from fork branch', e);
-                }
-            }
-
-            const newAgent: Omit<Manifest, 'ttl_seconds'> = {
-                id: agentId,
-                name: agentId.split(':').pop() ?? name,
-                description,
-                version: '1.0.0' as unknown as Manifest['version'],
-                endpoints: {
-                    asap: endpoint_http,
-                    ...(endpoint_ws ? { events: endpoint_ws } : {}),
-                },
-                capabilities: {
-                    asap_version: '0.1',
-                    skills: skillsList,
-                },
-            };
-
-            currentRegistry = currentRegistry.filter(a => a.id !== agentId);
-            currentRegistry.push(newAgent as Manifest);
-            const updatedContent = JSON.stringify(currentRegistry, null, 2);
-
-            await octokit.rest.repos.createOrUpdateFileContents({
-                owner: fork.owner.login,
-                repo: fork.name,
-                path: registryPath,
-                message: `register: add agent ${agentId}`,
-                content: Buffer.from(updatedContent).toString('base64'),
-                branch: targetBranch,
-                sha: fileSha,
-            });
-
-            const { data: prData } = await octokit.rest.pulls.create({
-                owner,
-                repo,
-                title: `Register Agent: ${agentId}`,
-                head: `${fork.owner.login}:${targetBranch}`,
-                base: 'main',
-                body: `Automated agent registration via Developer Dashboard.\n\n**Agent ID:** \`${agentId}\`\n**Submitted By:** @${username}\n**Manifest:** ${manifest_url}`,
-            });
-
-            return { success: true, prUrl: prData.html_url };
-        } catch (octoError: unknown) {
-            const err = octoError as Error;
-            console.error('GitHub API Error', err);
-            return {
-                success: false,
-                error: `Failed to create GitHub Pull Request: ${err.message || 'Unknown error'}`,
-            };
-        }
+        return { success: true, issueUrl };
     } catch (e) {
         console.error('Registration block error:', e);
         return { success: false, error: 'Internal server error processing registration.' };

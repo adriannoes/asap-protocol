@@ -414,7 +414,7 @@ class TestHandlerRegistry:
             return envelope
 
         def handler_returning_awaitable(envelope: Envelope, manifest: Manifest) -> "Envelope":
-            return async_impl(envelope, manifest)  # type: ignore[return-value]
+            return async_impl(envelope, manifest)
 
         registry = HandlerRegistry()
         registry.register("task.request", handler_returning_awaitable)

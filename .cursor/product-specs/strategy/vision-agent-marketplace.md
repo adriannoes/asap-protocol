@@ -423,6 +423,51 @@ Monetization model (Subscription, % of transactions, or Hybrid) deferred until c
 3.  **Enterprise Observability**:
     *   Analytics on agent interactions, costs, content safety.
 
+### 5.5 Open Source vs. Proprietary Boundary (LangChain-style)
+
+We follow an **Open Core + SaaS** model: open source drives adoption; proprietary services drive revenue. The boundary defines what stays public vs. private.
+
+#### What Stays Public (Forever)
+
+| Component | Rationale |
+|-----------|-----------|
+| **Protocol SDK** (`asap` Python package) | Standard, adoption, ecosystem lock-in |
+| **Web App frontend** (Next.js) | Thin client; value is in backend + network |
+| **Lite Registry** (`registry.json`) | Community asset, discoverability |
+| **Compliance Harness** | Protocol certification, trust in the standard |
+
+#### What Becomes Private (When Monetizing)
+
+| Component | When | Rationale |
+|-----------|------|-----------|
+| **Registry API Backend** | v2.1 (500+ agents) | Search, scale, rate limits — runs on our infra |
+| **Billing / Stripe integration** | v3.0 | Payment processing, subscription logic |
+| **Economy Settlement** | v3.0 | Credits, clearing house, payouts |
+| **ASAP Cloud** (managed storage) | Future | Hosted infrastructure |
+
+#### Why Cloning the Repo Does Not Replace the Product
+
+1. **Network effect**: Registry data, agent listings, reputation — maintained by us.
+2. **Trust**: Verified badge, CA signing — we are the trust anchor.
+3. **Backend services**: Registry API, billing — run on our infrastructure.
+4. **Support**: SLA, enterprise contracts — not replicable by code.
+
+#### Repository Strategy
+
+```
+PUBLIC REPO (asap-protocol)
+├── src/asap/           # Protocol SDK (MIT)
+├── apps/web/           # Frontend (can stay public)
+└── registry.json       # Lite Registry
+
+PRIVATE / SaaS (when v2.1+)
+├── Registry API Backend
+├── Billing / Stripe
+└── Economy Settlement
+```
+
+**Decision point**: Start separating when building **v2.1 Registry API Backend**. Until then, everything stays public.
+
 ---
 
 ## Related Documents
@@ -446,3 +491,4 @@ Monetization model (Subscription, % of transactions, or Hybrid) deferred until c
 | 2026-02-12 | **Lean Marketplace pivot**: Removed DeepEval as mandatory (deferred v2.2+), simplified eval workflow to Shell-only, replaced Registry API with Compliance Harness in building blocks, updated v1.3 metering to "Observability", added deferred-backlog.md reference |
 | 2026-02-13 | **Security Hardening**: Added JCS/Strict Verification to building blocks |
 | 2026-02-18 | **v1.3 SLA decisions**: Updated SLA Framework (trust signals, no compensation in v1.3), added SLAStorage + /sla/* API to building blocks, aligned with sprint E3 plan |
+| 2026-02-21 | **Open Core boundary**: Added §5.5 Open Source vs. Proprietary (LangChain-style). Public: SDK, frontend, Lite Registry. Private from v2.1: Registry API, billing, economy. |

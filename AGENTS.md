@@ -16,7 +16,7 @@
 uv sync                                     # Install dependencies
 uv run pytest                               # Run tests (add -v for verbose)
 uv run asap serve --reload                  # Start dev server
-uv run mypy src/ && uv run ruff check src/  # Verify quality
+uv run mypy src/ scripts/ tests/ && uv run ruff check src/  # Verify quality
 ```
 
 ## Knowledge Map

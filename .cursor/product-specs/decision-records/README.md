@@ -32,6 +32,7 @@ Implementation choices, libraries, and tech stack.
 - **Q9**: Implementation Language (Python)
 - **Q11**: Web App Stack (Next.js)
 - **Q12**: OAuth Library Selection (Authlib)
+- **Q23**: Mypy Strategy (src, scripts, tests)
 
 ### [05-product-strategy.md](./05-product-strategy.md)
 Product roadmap, feature prioritization, and ecosystem strategy.
@@ -41,6 +42,7 @@ Product roadmap, feature prioritization, and ecosystem strategy.
 - **Q18**: Agent Registration Flow (GitHub PRs)
 - **Q19**: Design Strategy (Design-First)
 - **Q21**: Pricing Strategy (Free vs Paid)
+- **Q22**: Register-Agent Template and Registry Metadata (Trust, Discovery, “Other Platforms”)
 
 ### Planning Documents (dev-planning/)
 

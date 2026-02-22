@@ -6,7 +6,6 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
-from asap.discovery import registry as registry_module
 from asap.discovery.registry import (
     LiteRegistry,
     RegistryEntry,
@@ -14,6 +13,7 @@ from asap.discovery.registry import (
     find_by_id,
     find_by_skill,
     generate_registry_entry,
+    reset_registry_cache,
 )
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 
@@ -45,7 +45,7 @@ VALID_REGISTRY_JSON = """{
 @pytest.fixture(autouse=True)
 def clear_registry_cache() -> None:
     """Clear module-level registry cache before each test for isolation."""
-    registry_module._registry_cache.clear()
+    reset_registry_cache()
 
 
 class TestRegistrySchemaValidation:
@@ -231,4 +231,31 @@ class TestGenerateRegistryEntry:
         assert entry.endpoints == endpoints
         assert entry.skills == ["skill_x", "skill_y"]
         assert entry.asap_version == "1.1.0"
+        assert entry.repository_url is None
+        assert entry.documentation_url is None
+        assert entry.built_with is None
         assert entry.model_dump_json()
+
+    def test_generates_entry_with_optional_metadata(self) -> None:
+        manifest = Manifest(
+            id="urn:asap:agent:my-agent",
+            name="My Agent",
+            version="1.0.0",
+            description="Does things",
+            capabilities=Capability(
+                asap_version="1.1.0",
+                skills=[Skill(id="skill_x", description="X")],
+            ),
+            endpoints=Endpoint(asap="https://example.com/asap", events=None),
+        )
+        endpoints = {"http": "https://example.com/asap", "manifest": "https://example.com/m.json"}
+        entry = generate_registry_entry(
+            manifest,
+            endpoints,
+            repository_url="https://github.com/me/agent",
+            documentation_url="https://docs.example.com/agent",
+            built_with="CrewAI",
+        )
+        assert entry.repository_url == "https://github.com/me/agent"
+        assert entry.documentation_url == "https://docs.example.com/agent"
+        assert entry.built_with == "CrewAI"

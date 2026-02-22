@@ -32,7 +32,7 @@ from asap.models.constants import (
     SUPPORTED_AUTH_SCHEMES,
 )
 from asap.models.validators import validate_agent_urn
-from asap.models.enums import MessageRole, TaskStatus
+from asap.models.enums import MessageRole, TaskStatus, VerificationState
 from asap.models.types import (
     AgentURN,
     ArtifactID,
@@ -187,6 +187,22 @@ class AuthScheme(ASAPBaseModel):
     )
 
 
+class VerificationStatus(ASAPBaseModel):
+    """Verification status for marketplace trust badge (Task 3.6).
+
+    When status is 'verified', the agent displays a Verified badge in the
+    registry UI. Admins add this after manual review of verification requests.
+    """
+
+    status: VerificationState = Field(
+        ..., description="Verification state (verified, pending, rejected)"
+    )
+    verified_at: datetime | None = Field(
+        default=None,
+        description="ISO timestamp when verification was granted (None when pending)",
+    )
+
+
 class SLADefinition(ASAPBaseModel):
     """Service level agreement guarantees published by an agent.
 
@@ -326,6 +342,10 @@ class Manifest(ASAPBaseModel):
     )
     sla: SLADefinition | None = Field(
         default=None, description="SLA guarantees (availability, latency, error rate)"
+    )
+    verification: VerificationStatus | None = Field(
+        default=None,
+        description="Verification status for marketplace trust badge (Task 3.6)",
     )
     ttl_seconds: int = Field(
         default=DEFAULT_MANIFEST_TTL_SECONDS,

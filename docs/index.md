@@ -84,6 +84,7 @@ See [Identity Signing](guides/identity-signing.md) for full CLI reference.
 - [Error Handling](error-handling.md)
 - [Testing](testing.md)
 - [v1.1 Security Model](security/v1.1-security-model.md) — OAuth2 trust limitations, Custom Claims, allowlist (ADR-17)
+- [Registry verification review (admin)](guides/registry-verification-review.md) — How to vet and approve Verified badge requests for the Lite Registry
 
 ### v1.1 features (API reference & guides)
 

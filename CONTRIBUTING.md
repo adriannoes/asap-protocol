@@ -20,7 +20,7 @@ Thanks for helping out! Here's how to get started quickly.
 ## Development Workflow
 
 -   **Linting & Formatting**: `uv run ruff check .` and `uv run ruff format .`
--   **Type Checking**: `uv run mypy src/`
+-   **Type Checking**: `uv run mypy src/ scripts/ tests/`
 -   **Testing**: `uv run pytest -n auto --tb=short` (same as CI test job, fast). For coverage: `uv run pytest --tb=short --cov=src --cov-report=xml` (same as CI coverage job; do not combine -n with --cov due to known xdist+cov bug).
 
 ## Pull Requests

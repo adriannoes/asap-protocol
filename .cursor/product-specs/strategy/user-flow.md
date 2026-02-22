@@ -2,7 +2,7 @@
 
 > **Type**: User Journey Specification
 > **Created**: 2026-02-12
-> **Last Updated**: 2026-02-12
+> **Last Updated**: 2026-02-21
 > **Status**: DRAFT — Iterating
 >
 > Maps every user-facing journey to guide front-end and back-end implementation.
@@ -352,17 +352,26 @@ flowchart TD
 
 | Screen | Key Elements |
 |--------|-------------|
-| **Dashboard Home** | "My Agents" table, quick stats (agent count, verified count), "Register New Agent" CTA |
-| **Agent Row** | Agent name, status badge (Listed / Pending / Rejected), health indicator, verified badge, actions (Edit, Remove, Apply for Verified) |
+| **Dashboard Home** | "My Agents" tab (with pending count when > 0, e.g. "My Agents (1 pending)"), quick stats (agent count, verified count), "Register New Agent" CTA, **Refresh** button |
+| **Agent Row (Listed)** | Agent name, **Listed** badge, **Verified** badge (if applicable), Online/Offline health indicator, actions (View Profile, Edit, Apply for Verified) |
+| **Pending Registration card** | Issue title, **direct link to GitHub issue** ("View issue" / "Open in GitHub"), short copy: *"If validation failed, the comment on the issue shows the reason. You can fix and re-edit the issue."* |
+
+### Dashboard UX (MVP – Sprint M3 Task 3.4)
+
+- **Status badges on cards**: Each listed agent shows a **Listed** badge (in registry); when verified (Task 3.6), show **Verified** badge (e.g. shield). Existing Online/Offline remains for health.
+- **Pending count in tab**: Tab label shows **My Agents (N pending)** when the user has open registration issues, so they see at a glance that something is awaiting validation.
+- **Pending cards → link to issue**: Each pending registration card has a direct link to the GitHub issue. Copy explains that success or validation errors appear as comments on that issue (user does not have to search GitHub).
+- **Empty state when only pending**: If user has pending issue(s) but zero listed agents, do not show generic "No agents found". Use: *"You have pending registration(s). Open the issue link above to check if it was accepted or if there's feedback to fix."* When there are neither pending nor listed: "No agents found" + "Register your first agent" CTA.
+- **Refresh button**: In the My Agents section, a **Refresh** button revalidates data (registry + pending issues). After closing an issue on GitHub, user can refresh to see the agent move from Pending to Listed without a full page reload.
 
 ### Agent Status States
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Pending: Submit registration
-    Pending --> Listed: PR approved & merged
-    Pending --> Rejected: PR rejected
-    Rejected --> Pending: Resubmit
+    [*] --> Pending: Submit registration (Issue)
+    Pending --> Listed: Action merged to registry
+    Pending --> Rejected: Validation failed (comment on issue)
+    Rejected --> Pending: Edit issue & re-submit
     Listed --> UpdatePending: Submit update
     UpdatePending --> Listed: Update merged
     Listed --> RemovalPending: Submit removal
@@ -372,16 +381,18 @@ stateDiagram-v2
 ### Data Source
 
 Agent status is derived from:
-1. **Listed**: Agent exists in `registry.json`
-2. **Pending**: Open PR exists (check via GitHub API)
-3. **Rejected**: Closed PR without merge (check via GitHub API)
+1. **Listed**: Agent exists in `registry.json` (filter by `urn:asap:agent:<github_username>:*`).
+2. **Pending**: Open issue in repo with label `registration` and author = current user (Octokit read-only).
+3. **Verified**: Agent has `verification.status === 'verified'` in `registry.json` (Task 3.6).
 
 ### Acceptance Criteria
 
-- [ ] Shows all agents associated with the authenticated user
-- [ ] Status reflects real-time PR state via GitHub API
-- [ ] Quick actions (Edit, Remove, Verify) accessible per agent
-- [ ] **Zero State**: If list is empty, big distinct CTA "Register Your First Agent" with value prop.
+- [ ] Shows all agents associated with the authenticated user (Listed + Pending)
+- [ ] Status reflects registry + open issues (IssueOps); tab shows pending count when > 0
+- [ ] Listed agent cards show Listed (and Verified when 3.6 is done) badges; pending cards show direct link to issue + feedback copy
+- [ ] Empty state: distinct copy when "pending but no listed" vs "no agents at all"; CTA "Register Your First Agent" when empty
+- [ ] Refresh button updates listed and pending data on demand
+- [ ] Quick actions (Edit, Apply for Verified) accessible per agent
 - [ ] Responsive: works on mobile
 
 ---
@@ -611,3 +622,4 @@ flowchart TD
 | Date | Version | Change |
 |------|---------|--------|
 | 2026-02-12 | 0.1.0 | Initial draft: 12 flows, 4 personas, Mermaid diagrams, acceptance criteria |
+| 2026-02-21 | 0.2.0 | F8 (Developer Dashboard): Dashboard UX for MVP (Sprint M3 Task 3.4)—pending count in tab, link to issue on pending cards, Listed/Verified badges, empty state when only pending, Refresh button; Data source updated to IssueOps (issues + registry) |
