@@ -2,6 +2,7 @@
  * Builds GitHub Issue URLs for agent registration and verification (IssueOps flow).
  * Query parameter keys match the issue form template ids in register_agent.yml and request_verification.yml.
  */
+import { z } from 'zod';
 import type { ManifestFormValues } from './register-schema';
 
 const REGISTER_TEMPLATE = 'register_agent.yml';
@@ -39,13 +40,15 @@ export function buildRegisterAgentIssueUrl(
     return query ? `${base}?${query}` : base;
 }
 
-export type VerificationFormValues = {
-    agent_id: string;
-    why_verified: string;
-    running_since: string;
-    evidence?: string;
-    contact?: string;
-};
+export const VerificationSchema = z.object({
+    agent_id: z.string().min(1, 'Agent ID is required').max(200),
+    why_verified: z.string().min(1, 'Please explain why this agent should be verified').max(2000),
+    running_since: z.string().min(1, 'Please indicate how long the agent has been running').max(100),
+    evidence: z.string().max(2000).optional(),
+    contact: z.string().max(200).optional(),
+});
+
+export type VerificationFormValues = z.infer<typeof VerificationSchema>;
 
 /**
  * Builds the new-issue URL for verification requests (template request_verification.yml).

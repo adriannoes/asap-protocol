@@ -2,7 +2,6 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import {
     Form,
@@ -20,17 +19,9 @@ import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
 import { submitVerificationRequest } from './actions';
-import type { VerificationFormValues } from '@/lib/github-issues';
+import { VerificationSchema, type VerificationFormValues } from '@/lib/github-issues';
 
-const VerificationSchema = z.object({
-    agent_id: z.string().min(1, 'Agent ID is required'),
-    why_verified: z.string().min(1, 'Please explain why this agent should be verified'),
-    running_since: z.string().min(1, 'Please indicate how long the agent has been running'),
-    evidence: z.string().optional(),
-    contact: z.string().optional(),
-});
-
-type VerificationFormInput = z.infer<typeof VerificationSchema>;
+type VerificationFormInput = VerificationFormValues;
 
 interface VerifyFormProps {
     defaultAgentId: string;
