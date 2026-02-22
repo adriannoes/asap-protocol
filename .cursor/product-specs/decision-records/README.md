@@ -32,6 +32,7 @@ Implementation choices, libraries, and tech stack.
 - **Q9**: Implementation Language (Python)
 - **Q11**: Web App Stack (Next.js)
 - **Q12**: OAuth Library Selection (Authlib)
+- **Q23**: Mypy Strategy (src, scripts, tests)
 
 ### [05-product-strategy.md](./05-product-strategy.md)
 Product roadmap, feature prioritization, and ecosystem strategy.
