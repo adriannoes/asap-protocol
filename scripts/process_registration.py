@@ -51,7 +51,7 @@ _BLOCKED_HOSTS = frozenset(
 
 
 def _is_safe_url(url: str) -> bool:
-    """Block private IPs, loopback, and cloud metadata endpoints (SSRF protection)."""
+    """SSRF protection: block private IPs, loopback, cloud metadata."""
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https"):
         return False
@@ -68,7 +68,6 @@ def _is_safe_url(url: str) -> bool:
 
 
 def _write_validation_result(output_path: str, *, valid: bool = False, errors: str = "") -> None:
-    """Write validation result JSON to output path."""
     Path(output_path).write_text(json.dumps({"valid": valid, "errors": errors}))
 
 
@@ -111,20 +110,7 @@ def parse_issue_body(body: str) -> dict[str, str]:
 
 
 def fetch_manifest(url: str, timeout: float = 15.0) -> Manifest:
-    """Fetch and validate an agent manifest from a URL.
-
-    Args:
-        url: Manifest URL (must pass SSRF validation).
-        timeout: Request timeout in seconds.
-
-    Returns:
-        Parsed Manifest.
-
-    Raises:
-        ValueError: If URL is blocked (private/metadata).
-        httpx.HTTPError: On network or HTTP errors.
-        ValidationError: If response is not valid Manifest JSON.
-    """
+    """Fetch and validate manifest from URL. Raises ValueError/httpx.HTTPError/ValidationError on failure."""
     if not _is_safe_url(url):
         raise ValueError(f"Blocked URL (private/metadata): {url}")
     with httpx.Client(timeout=timeout) as client:
