@@ -38,6 +38,8 @@ This guide covers deploying the Next.js app `apps/web` to Vercel, step by step.
 - [x] Framework = Next.js
 - [x] First deploy run (may fail due to env vars)
 
+**Note – gh-pages excluded**: The repo has a `gh-pages` branch used by MkDocs for docs (GitHub Pages). That branch contains only built static HTML, not `apps/web`. The root `vercel.json` sets `git.deploymentEnabled.gh-pages: false` so Vercel skips deploys for that branch and avoids "Root Directory apps/web does not exist" errors.
+
 ---
 
 ## 1.6.2 – Configure environment variables on Vercel
