@@ -83,9 +83,7 @@ def _write_validation_result(
     Path(output_path).write_text(json.dumps(out))
 
 
-def _fail_registration(
-    output_path: str, errors: list[str], issue_number: str
-) -> None:
+def _fail_registration(output_path: str, errors: list[str], issue_number: str) -> None:
     debug_id = generate_debug_id()
     err_str = "; ".join(errors)
     logger.info(

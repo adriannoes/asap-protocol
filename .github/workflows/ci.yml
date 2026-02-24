@@ -87,7 +87,7 @@ jobs:
         uses: ./.github/actions/setup-python
       - name: Run tests
         env:
-          PYTHONPATH: src
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}
         run: uv run pytest -n auto --tb=short
         timeout-minutes: 12
       - name: Run compliance tests
@@ -126,7 +126,7 @@ jobs:
         uses: ./.github/actions/setup-python
       - name: Run tests with coverage
         env:
-          PYTHONPATH: src
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}
         run: uv run pytest --tb=short --cov=src --cov-report=xml --cov-fail-under=85
         timeout-minutes: 15
       - name: Upload coverage to Codecov
