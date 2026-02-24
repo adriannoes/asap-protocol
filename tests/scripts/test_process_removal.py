@@ -1,0 +1,101 @@
+"""Unit tests for scripts/process_removal.py."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from scripts.process_removal import parse_issue_body, run
+
+VALID_BODY_REMOVE = """
+### Agent name (slug-friendly)
+my-agent
+
+### Confirmation
+- [x] I confirm that I want to remove this agent from the registry.
+"""
+
+
+class TestParseIssueBodyRemoval:
+    """Tests for parse_issue_body for removal."""
+
+    def test_parses_valid_body(self) -> None:
+        out = parse_issue_body(VALID_BODY_REMOVE)
+        assert out["name"] == "my-agent"
+
+    def test_parses_missing_name(self) -> None:
+        out = parse_issue_body("### Confirmation\n- [x] I confirm")
+        assert "name" not in out
+
+
+class TestProcessRemovalRun:
+    """Tests for run() agent removal logic."""
+
+    def test_valid_removal(self, tmp_path: Path) -> None:
+        """Agent is found and removed successfully."""
+        registry_path = tmp_path / "registry.json"
+
+        existing = [
+            {"id": "urn:asap:agent:testuser:my-agent", "name": "my-agent"},
+            {"id": "urn:asap:agent:other:their-agent", "name": "their-agent"},
+        ]
+        registry_path.write_text(json.dumps(existing))
+        output_path = tmp_path / "result.json"
+
+        run(
+            body=VALID_BODY_REMOVE,
+            issue_number="1",
+            author="testuser",
+            output_path=str(output_path),
+            registry_path=str(registry_path),
+        )
+
+        result = json.loads(output_path.read_text())
+        assert result["valid"] is True
+
+        new_registry = json.loads(registry_path.read_text())
+        assert len(new_registry) == 1
+        assert new_registry[0]["id"] == "urn:asap:agent:other:their-agent"
+
+    def test_invalid_removal_unauthorized(self, tmp_path: Path) -> None:
+        """Removal fails if the author does not own the agent."""
+        registry_path = tmp_path / "registry.json"
+        existing = [{"id": "urn:asap:agent:testuser:my-agent", "name": "my-agent"}]
+        registry_path.write_text(json.dumps(existing))
+        output_path = tmp_path / "result.json"
+
+        # "hacker" trying to delete "my-agent"
+        run(
+            body=VALID_BODY_REMOVE,
+            issue_number="2",
+            author="hacker",
+            output_path=str(output_path),
+            registry_path=str(registry_path),
+        )
+
+        result = json.loads(output_path.read_text())
+        assert result["valid"] is False
+        assert "not found in the registry" in result["errors"]
+
+        new_registry = json.loads(registry_path.read_text())
+        assert len(new_registry) == 1  # Still exists
+
+    def test_invalid_removal_missing_agent(self, tmp_path: Path) -> None:
+        """Removal fails if the agent does not exist."""
+        registry_path = tmp_path / "registry.json"
+        registry_path.write_text("[]")
+        output_path = tmp_path / "result.json"
+
+        run(
+            body=VALID_BODY_REMOVE,
+            issue_number="3",
+            author="testuser",
+            output_path=str(output_path),
+            registry_path=str(registry_path),
+        )
+
+        result = json.loads(output_path.read_text())
+        assert result["valid"] is False
+        assert "not found in the registry" in result["errors"]
+        assert "debug_id" in result
+        assert result["debug_id"].startswith("ASAP-")
