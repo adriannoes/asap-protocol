@@ -1,6 +1,11 @@
 # Deploys MkDocs to gh-pages on push to main only.
 # Doc build is verified in CI (type-check job); this workflow only deploys.
 # Path filters avoid redeploy when only code changed.
+#
+# Note: We inject vercel.json into the gh-pages output so Vercel finds it and
+# skips deployment (deploymentEnabled.gh-pages: false). Without this, Vercel
+# clones gh-pages, looks for Root Directory "apps/web", fails, and the
+# Ignored Build Step may not run early enough.
 name: Docs
 
 on:
@@ -9,6 +14,7 @@ on:
     paths:
       - 'docs/**'
       - 'mkdocs.yml'
+      - 'vercel.json'  # Injected into gh-pages to skip Vercel deployment
       - 'src/asap/**'  # API docs may reference source
 
 jobs:
@@ -28,5 +34,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Deploy docs
-        run: uv run mkdocs gh-deploy --force
+      - name: Build docs
+        run: uv run mkdocs build
+
+      - name: Add vercel.json to skip Vercel deployment of gh-pages
+        run: cp vercel.json site/vercel.json
+
+      - name: Deploy to gh-pages
+        run: uv run ghp-import -n -p site
