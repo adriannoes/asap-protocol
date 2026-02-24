@@ -1,9 +1,11 @@
+import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Database, ShieldCheck, Zap, Activity } from 'lucide-react';
+import { Database, ShieldCheck, Zap, Activity, ArrowRight } from 'lucide-react';
 
 const features = [
   {
     title: 'Lite Registry',
+    slug: 'lite-registry',
     description:
       'Built for speed and resilience. Pull agent manifests directly from a statically served JSON registry with zero database overhead.',
     icon: Database,
@@ -11,6 +13,7 @@ const features = [
   },
   {
     title: 'Verified Trust',
+    slug: 'verified-trust',
     description:
       'Manual operations-based verification processes to ensure quality and safety across the ecosystem.',
     icon: ShieldCheck,
@@ -18,6 +21,7 @@ const features = [
   },
   {
     title: '1-Click Integration',
+    slug: '1-click-integration',
     description:
       'Launch sub-agents through a standard protocol that orchestrates connections over WebSockets natively.',
     icon: Zap,
@@ -25,6 +29,7 @@ const features = [
   },
   {
     title: 'Full Observability',
+    slug: 'full-observability',
     description:
       'Real-time stream of agent events, state snapshots, and task updates standardized across the network.',
     icon: Activity,
@@ -49,25 +54,27 @@ export function FeaturesSection() {
           {features.map((feature, i) => {
             const Icon = feature.icon;
             return (
-              <Card
-                key={i}
-                className={`group relative overflow-hidden border-zinc-800 bg-zinc-950 transition-all duration-300 hover:border-indigo-500/50 ${feature.className}`}
-              >
-                {/* Hover gradient background effect */}
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-transparent opacity-0 transition-opacity delay-75 duration-500 group-hover:opacity-100" />
-
-                <CardHeader>
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 transition-colors group-hover:border-indigo-500/50 group-hover:bg-indigo-950/30">
-                    <Icon className="h-6 w-6 text-indigo-400" />
-                  </div>
-                  <CardTitle className="text-xl text-white">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-base text-zinc-400">
-                    {feature.description}
-                  </CardDescription>
-                </CardContent>
-              </Card>
+              <Link key={i} href={`/features/${feature.slug}`} className={`group ${feature.className}`}>
+                <Card
+                  className={`relative h-full overflow-hidden border-zinc-800 bg-zinc-950 transition-all duration-300 hover:border-indigo-500/50`}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-transparent opacity-0 transition-opacity delay-75 duration-500 group-hover:opacity-100" />
+                  <CardHeader>
+                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 transition-colors group-hover:border-indigo-500/50 group-hover:bg-indigo-950/30">
+                      <Icon className="h-6 w-6 text-indigo-400" />
+                    </div>
+                    <CardTitle className="text-xl text-white">{feature.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-4">
+                    <CardDescription className="text-base text-zinc-400">
+                      {feature.description}
+                    </CardDescription>
+                    <div className="mt-auto flex items-center pt-4 text-sm font-medium text-indigo-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                      Explore feature <ArrowRight className="ml-1 h-4 w-4" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
             );
           })}
         </div>

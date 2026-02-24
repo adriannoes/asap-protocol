@@ -10,7 +10,7 @@ on:
     types: [opened, edited]
 
 concurrency:
-  group: registry-update
+  group: register-agent
   cancel-in-progress: false
 
 jobs:
@@ -85,4 +85,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           ERRORS=$(jq -r '.errors // "Unknown error"' result.json)
-          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "❌ Validation failed: $ERRORS"
+          DEBUG_ID=$(jq -r '.debug_id // ""' result.json)
+          if [ -n "$DEBUG_ID" ]; then
+            BODY="❌ Validation failed: $ERRORS"$'\n\n'"Debug ID: \`$DEBUG_ID\` (use to correlate with GitHub Action logs)"
+          else
+            BODY="❌ Validation failed: $ERRORS"
+          fi
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "$BODY"

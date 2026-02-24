@@ -6,37 +6,40 @@ import { Terminal } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
-const CODE_LINES = [
-  'from asap import Agent\n\n',
-  '# Connect to the marketplace\n',
-  'agent = await Agent.connect()\n\n',
-  '# Discover high-trust agents\n',
-  'registry = await agent.get_registry()\n',
-  "trusted = registry.filter(trust_score='>90')\n\n",
-  '# Delegate task seamlessly\n',
-  'response = await trusted[0].send_task(\n',
-  "    'Analyze contract and extract terms'\n",
-  ')\n',
-  'print(response.result)\n',
+const TERMINAL_LINES = [
+  { text: '[SYSTEM] ASAP Bridge v2.0.0 init...', color: 'text-zinc-500', delay: 400 },
+  { text: '[LOOKUP] urn:asap:agent:secure-writer...', color: 'text-indigo-400', delay: 1000 },
+  { text: '[FOUND] Endpoint: https://api.asap-secure.io/asap', color: 'text-emerald-400', delay: 1800 },
+  { text: '-> CALL asap/deliver { "method": "capabilities.list" }', color: 'text-cyan-400', delay: 2800 },
+  { text: '<- RESP { "skills": ["text-gen", "audit"], "v": "1.1" }', color: 'text-purple-400', delay: 3800 },
+  { text: '[AUTH] Requested delegation token for requester_app_01', color: 'text-amber-400', delay: 4800 },
+  { text: '-> EXEC { "skill": "text-gen", "input": "[REDACTED]" }', color: 'text-indigo-400', delay: 6000 },
+  { text: '<- RECV [event]: { "status": "completed", "id": "tx_9a2" }', color: 'text-emerald-400', delay: 7200 },
+  { text: '[SYSTEM] Session closed. Latency: 42ms', color: 'text-zinc-500', delay: 8200 },
 ];
 
 export function HeroSection() {
-  const [typedCode, setTypedCode] = useState('');
-  const [lineIndex, setLineIndex] = useState(0);
+  const [visibleLines, setVisibleLines] = useState<number[]>([]);
+  const [tick, setTick] = useState(0);
 
-  // Simple typing effect for the code block
   useEffect(() => {
-    if (lineIndex < CODE_LINES.length) {
-      const timeout = setTimeout(
-        () => {
-          setTypedCode((prev) => prev + CODE_LINES[lineIndex]);
-          setLineIndex((prev) => prev + 1);
-        },
-        Math.random() * 400 + 200
-      ); // Random delay between 200ms and 600ms per line
-      return () => clearTimeout(timeout);
-    }
-  }, [lineIndex]);
+    const timeouts = TERMINAL_LINES.map((line, index) =>
+      setTimeout(() => {
+        setVisibleLines((prev) => [...prev, index]);
+      }, line.delay)
+    );
+
+    // Loop the animation after it finishes
+    const resetTimeout = setTimeout(() => {
+      setVisibleLines([]);
+      setTick((t) => t + 1);
+    }, 11000);
+
+    return () => {
+      timeouts.forEach(clearTimeout);
+      clearTimeout(resetTimeout);
+    };
+  }, [tick]); // Re-run when tick increments
 
   return (
     <section className="relative flex min-h-[90vh] w-full flex-col items-center justify-center overflow-hidden bg-zinc-950 py-24 lg:py-32">
@@ -70,23 +73,25 @@ export function HeroSection() {
             </div>
 
             <div className="flex flex-col justify-center gap-4 min-[400px]:flex-row lg:justify-start">
-              <Link href="/browse">
-                <Button
-                  size="lg"
-                  className="w-full bg-white text-black hover:bg-zinc-200 min-[400px]:w-auto"
-                >
+              <Button
+                asChild
+                size="lg"
+                className="w-full bg-white text-black hover:bg-zinc-200 min-[400px]:w-auto"
+              >
+                <Link href="/browse">
                   Explore Agents
-                </Button>
-              </Link>
-              <Link href="/docs/register">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="w-full border-zinc-800 text-zinc-300 hover:bg-zinc-900 hover:text-white min-[400px]:w-auto"
-                >
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="w-full border-zinc-800 text-zinc-300 hover:bg-zinc-900 hover:text-white min-[400px]:w-auto"
+              >
+                <Link href="/dashboard/register">
                   Register Agent
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </motion.div>
 
@@ -107,23 +112,30 @@ export function HeroSection() {
                 </div>
                 <div className="flex flex-1 items-center justify-center gap-2 font-mono text-xs text-zinc-500">
                   <Terminal size={14} />
-                  <span>integration.py</span>
+                  <span>asap-orchestrator</span>
                 </div>
               </div>
 
               {/* Terminal Body */}
-              <div className="overflow-x-auto p-6 font-mono text-sm leading-relaxed">
-                <pre className="text-zinc-300">
-                  <code>
-                    {/* Basic syntax coloring simulation using spans inside the typed string would be complex without a highlighter, so we keep it simple or apply basic regex replacements if needed. For now, monochromatic with a colored cursor */}
-                    {typedCode}
-                    <motion.span
-                      animate={{ opacity: [1, 0] }}
-                      transition={{ repeat: Infinity, duration: 0.8 }}
-                      className="ml-1 inline-block h-4 w-2 translate-y-1 bg-indigo-400"
-                    />
-                  </code>
-                </pre>
+              <div className="h-[320px] overflow-y-auto overflow-x-auto p-6 font-mono text-sm leading-relaxed">
+                <div className="flex flex-col space-y-2">
+                  {TERMINAL_LINES.map((line, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: visibleLines.includes(index) ? 1 : 0, x: visibleLines.includes(index) ? 0 : -10 }}
+                      transition={{ duration: 0.2 }}
+                      className={line.color}
+                    >
+                      {line.text}
+                    </motion.div>
+                  ))}
+                  <motion.div
+                    animate={{ opacity: [1, 0] }}
+                    transition={{ repeat: Infinity, duration: 0.8 }}
+                    className="mt-1 h-4 w-2 bg-indigo-400"
+                  />
+                </div>
               </div>
             </div>
           </motion.div>

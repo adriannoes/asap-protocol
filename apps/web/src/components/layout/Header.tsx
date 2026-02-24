@@ -30,11 +30,30 @@ export async function Header() {
                 </div>
 
                 {/* Center Nav */}
-                <nav className="hidden md:flex items-center gap-6">
-                    <Link href="/browse" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+                <nav className="hidden items-center gap-6 md:flex">
+                    <Link
+                        href="/browse"
+                        className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+                    >
                         Registry
                     </Link>
-                    <Link href="https://github.com/adriannoes/asap-protocol/tree/main/docs" target="_blank" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+                    <Link
+                        href="/demos"
+                        className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+                    >
+                        Demos
+                    </Link>
+                    <Link
+                        href="/developer-experience"
+                        className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+                    >
+                        Developers
+                    </Link>
+                    <Link
+                        href="https://github.com/adriannoes/asap-protocol/tree/main/docs"
+                        target="_blank"
+                        className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+                    >
                         Docs
                     </Link>
                 </nav>

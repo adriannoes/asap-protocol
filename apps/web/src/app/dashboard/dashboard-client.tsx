@@ -10,7 +10,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import useSWR from 'swr';
-import { fetchUserRegistrationIssues } from './actions';
+import {
+    fetchUserRegistrationIssues,
+    revalidateUserRegistrationIssues,
+} from './actions';
 
 export type PendingRegistration = {
     id: number;
@@ -27,10 +30,11 @@ interface DashboardClientProps {
 }
 
 // Client-side component to fetch and display agent status via server proxy (avoids exposing user IP to agents)
-function AgentStatusBadge({ endpoint }: { endpoint: string }) {
+function AgentStatusBadge({ endpoint, skipReachabilityCheck }: { endpoint: string; skipReachabilityCheck?: boolean }) {
     const [status, setStatus] = useState<'pending' | 'online' | 'offline'>('pending');
 
     useEffect(() => {
+        if (skipReachabilityCheck) return;
         let isMounted = true;
         const checkStatus = async () => {
             if (!endpoint) {
@@ -38,7 +42,7 @@ function AgentStatusBadge({ endpoint }: { endpoint: string }) {
                 return;
             }
             try {
-                const proxyUrl = `/api/health-check?url=${encodeURIComponent(endpoint)}`;
+                const proxyUrl = `/api/proxy/check?url=${encodeURIComponent(endpoint)}`;
                 const res = await fetch(proxyUrl);
                 const data = (await res.json()) as { ok?: boolean };
                 if (isMounted) {
@@ -53,8 +57,15 @@ function AgentStatusBadge({ endpoint }: { endpoint: string }) {
 
         checkStatus();
         return () => { isMounted = false; };
-    }, [endpoint]);
+    }, [endpoint, skipReachabilityCheck]);
 
+    if (skipReachabilityCheck) {
+        return (
+            <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground border-muted-foreground/30 px-2 py-0">
+                Demo
+            </Badge>
+        );
+    }
     if (status === 'pending') {
         return (
             <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground border-muted-foreground/30 px-2 py-0 flex items-center gap-1">
@@ -83,7 +94,7 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
     const [isRefreshing, setIsRefreshing] = useState(false);
     const { data: pendingIssuesData, mutate } = useSWR('userRegistrationIssues', async () => {
         const res = await fetchUserRegistrationIssues();
-        if (res.success && res.data) return res.data as PendingRegistration[];
+        if (res.success && 'data' in res) return res.data as PendingRegistration[];
         return [];
     }, {
         refreshInterval: 60_000,
@@ -97,6 +108,7 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
 
     const handleRefresh = useCallback(async () => {
         setIsRefreshing(true);
+        await revalidateUserRegistrationIssues();
         await mutate();
         router.refresh();
         setIsRefreshing(false);
@@ -207,7 +219,7 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
                                                     <ShieldCheck className="w-3 h-3" /> Verified
                                                 </Badge>
                                             )}
-                                            <AgentStatusBadge endpoint={agent.endpoints.asap ?? ''} />
+                                            <AgentStatusBadge endpoint={agent.endpoints.asap ?? ''} skipReachabilityCheck={(agent as { online_check?: boolean }).online_check === false} />
                                         </div>
                                     </div>
                                     <CardDescription className="text-xs font-mono truncate" title={agent.id ?? ''}>{agent.id}</CardDescription>
