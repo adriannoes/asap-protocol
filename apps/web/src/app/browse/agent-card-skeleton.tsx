@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Skeleton that matches Agent Card dimensions exactly to prevent CLS (Task 4.2.2).
  * Must mirror the layout of the Card in browse-content.tsx.

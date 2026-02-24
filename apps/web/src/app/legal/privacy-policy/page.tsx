@@ -1,4 +1,11 @@
+import type { Metadata } from 'next';
 import { Terminal } from 'lucide-react';
+
+export const metadata: Metadata = {
+    title: 'Privacy Policy | ASAP Protocol',
+    description:
+        'Privacy policy for the ASAP Protocol network regarding registry telemetry and GitHub App authorizations.',
+};
 
 export default function PrivacyPolicyPage() {
     return (

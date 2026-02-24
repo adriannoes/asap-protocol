@@ -1,6 +1,5 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Terminal } from 'lucide-react';
 import Link from 'next/link';
@@ -49,11 +48,8 @@ export function HeroSection() {
       <div className="relative z-10 container mx-auto px-4 md:px-6">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-8">
           {/* Left Column: Copy & Actions */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: 'easeOut' }}
-            className="flex flex-col justify-center space-y-8 text-center lg:text-left"
+          <div
+            className="flex flex-col justify-center space-y-8 text-center lg:text-left animate-in fade-in slide-in-from-bottom-5 duration-700 ease-out"
           >
             <div className="space-y-4">
               <div className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-sm font-medium text-indigo-300 backdrop-blur-sm">
@@ -93,14 +89,11 @@ export function HeroSection() {
                 </Link>
               </Button>
             </div>
-          </motion.div>
+          </div>
 
           {/* Right Column: Terminal Centerpiece */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1, delay: 0.2, ease: 'easeOut' }}
-            className="mx-auto w-full max-w-[500px] lg:max-w-none"
+          <div
+            className="mx-auto w-full max-w-[500px] lg:max-w-none animate-in fade-in zoom-in-95 duration-1000 delay-200 ease-out"
           >
             <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/50 shadow-2xl shadow-indigo-500/10 backdrop-blur-xl">
               {/* Terminal Header */}
@@ -120,25 +113,22 @@ export function HeroSection() {
               <div className="h-[320px] overflow-y-auto overflow-x-auto p-6 font-mono text-sm leading-relaxed">
                 <div className="flex flex-col space-y-2">
                   {TERMINAL_LINES.map((line, index) => (
-                    <motion.div
+                    <div
                       key={index}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: visibleLines.includes(index) ? 1 : 0, x: visibleLines.includes(index) ? 0 : -10 }}
-                      transition={{ duration: 0.2 }}
-                      className={line.color}
+                      className={`${line.color} transition-all duration-200 ${
+                        visibleLines.includes(index)
+                          ? 'opacity-100 translate-x-0'
+                          : 'opacity-0 -translate-x-2.5'
+                      }`}
                     >
                       {line.text}
-                    </motion.div>
+                    </div>
                   ))}
-                  <motion.div
-                    animate={{ opacity: [1, 0] }}
-                    transition={{ repeat: Infinity, duration: 0.8 }}
-                    className="mt-1 h-4 w-2 bg-indigo-400"
-                  />
+                  <div className="mt-1 h-4 w-2 bg-indigo-400 animate-[caret-blink_0.8s_ease-in-out_infinite]" />
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>

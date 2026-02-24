@@ -65,7 +65,7 @@ export async function Header() {
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="relative h-9 w-9 rounded-full ring-1 ring-zinc-800 hover:ring-indigo-500/50 transition-all">
                                     <Avatar className="h-9 w-9">
-                                        <AvatarImage src={session.user.image!} alt={session.user.name || "User"} />
+                                        <AvatarImage src={session.user.image ?? undefined} alt={session.user.name || "User"} />
                                         <AvatarFallback className="bg-zinc-900 text-zinc-400">
                                             {session.user.name?.charAt(0) || "U"}
                                         </AvatarFallback>

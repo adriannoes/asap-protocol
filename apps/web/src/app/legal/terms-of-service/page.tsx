@@ -1,4 +1,11 @@
+import type { Metadata } from 'next';
 import { Terminal } from 'lucide-react';
+
+export const metadata: Metadata = {
+    title: 'Terms of Service | ASAP Protocol',
+    description:
+        'Terms of Service for the ASAP Protocol network regarding usage, SLA guarantees, and liability limitations.',
+};
 
 export default function TermsOfServicePage() {
     return (

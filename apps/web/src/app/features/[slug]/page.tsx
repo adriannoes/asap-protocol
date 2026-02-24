@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { ArrowLeft, Database, ShieldCheck, Zap, Activity } from 'lucide-react';
 import { notFound } from 'next/navigation';
 
@@ -114,6 +115,20 @@ const FEATURE_CONTENT: Record<
         ),
     },
 };
+
+export async function generateMetadata({
+    params,
+}: {
+    params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+    const { slug } = await params;
+    const feature = FEATURE_CONTENT[slug];
+    if (!feature) return { title: 'Feature Not Found | ASAP Protocol' };
+    return {
+        title: `${feature.title} | ASAP Protocol`,
+        description: feature.description,
+    };
+}
 
 export default async function FeatureDetail({ params }: { params: Promise<{ slug: string }> }) {
     const p = await params;
