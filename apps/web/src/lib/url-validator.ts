@@ -18,6 +18,8 @@ function isBlockedHostname(hostname: string): boolean {
     return false;
 }
 
+
+
 export interface AllowedUrlResult {
     valid: boolean;
     error?: string;
@@ -38,3 +40,24 @@ export function isAllowedExternalUrl(url: string): AllowedUrlResult {
         return { valid: false, error: 'Invalid URL.' };
     }
 }
+
+/**
+ * Stricter validation for proxy/check: HTTPS only, blocks private IPs (RFC 1918).
+ * Sync check: hostname literal only (no DNS). Use isAllowedProxyUrlAsync for SSRF-safe validation.
+ */
+export function isAllowedProxyUrl(url: string): AllowedUrlResult {
+    try {
+        const parsed = new URL(url);
+        if (parsed.protocol !== 'https:') {
+            return { valid: false, error: 'URL must use HTTPS only.' };
+        }
+        const hostname = parsed.hostname.toLowerCase();
+        if (isBlockedHostname(hostname)) {
+            return { valid: false, error: 'Internal/Private network addresses are not allowed.' };
+        }
+        return { valid: true };
+    } catch {
+        return { valid: false, error: 'Invalid URL.' };
+    }
+}
+

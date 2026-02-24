@@ -1,0 +1,100 @@
+# Removal Action (IssueOps): validate agent removal issues and update registry.json
+# Trigger: issues opened or edited with label "remove-agent"
+# Valid submissions: create PR for registry update (auto-merge), close issue
+# Invalid: comment with errors, leave issue open
+
+name: Remove Agent
+
+on:
+  issues:
+    types: [opened, edited]
+
+concurrency:
+  group: register-agent  # Sharing the same concurrency group as register-agent to prevent race conditions on registry.json
+  cancel-in-progress: false
+
+jobs:
+  process-removal:
+    if: contains(github.event.issue.labels.*.name, 'remove-agent')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write   # required to push branch and create PR
+      issues: write     # required to comment and close issues
+      pull-requests: write  # required for gh pr create and gh pr merge
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Process removal
+        id: process
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          uv run python scripts/process_removal.py \
+            --body "$ISSUE_BODY" \
+            --issue-number "$ISSUE_NUMBER" \
+            --author "$GITHUB_ACTOR" \
+            --output result.json
+
+      - name: Set process result output
+        id: result
+        run: |
+          echo "valid=$(jq -r .valid result.json)" >> $GITHUB_OUTPUT
+
+      - name: Create PR for registry update
+        if: steps.result.outputs.valid == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          BRANCH="registry/removal-${{ github.event.issue.number }}"
+          git checkout -b "$BRANCH"
+          git add registry.json
+          git commit -m "chore(registry): remove agent from issue #${{ github.event.issue.number }}"
+          git push origin "$BRANCH"
+          gh pr create --title "chore(registry): remove agent #${{ github.event.issue.number }}" \
+            --body "Auto-generated from issue #${{ github.event.issue.number }}" \
+            --base main --head "$BRANCH"
+          gh pr merge "$BRANCH" --auto --squash
+
+      - name: Comment and close on success
+        if: steps.result.outputs.valid == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "✅ Removal validated! A PR has been created and will be merged when checks pass."
+          gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}"
+
+      - name: Comment on validation failure
+        if: steps.result.outputs.valid == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ERRORS=$(jq -r '.errors // "Unknown error"' result.json)
+          DEBUG_ID=$(jq -r '.debug_id // ""' result.json)
+          if [ -n "$DEBUG_ID" ]; then
+            BODY="❌ Validation failed: $ERRORS"$'\n\n'"Debug ID: \`$DEBUG_ID\` (use to correlate with GitHub Action logs)"
+          else
+            BODY="❌ Validation failed: $ERRORS"
+          fi
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "$BODY"
+
+      - name: Comment on script crash
+        if: always() && steps.process.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "❌ Removal script crashed. Please check the issue format and try again. Debug via the failed workflow run."

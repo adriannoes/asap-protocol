@@ -1,0 +1,29 @@
+# Validate registry.json against the Pydantic schema so manual edits don't break the Next.js ISR build.
+name: Validate Registry
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'registry.json'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'registry.json'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: validate registry.json
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python
+
+      - name: Validate registry.json
+        run: uv run python scripts/validate_registry.py registry.json

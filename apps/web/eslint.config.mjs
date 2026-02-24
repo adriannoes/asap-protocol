@@ -12,8 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Auto-generated, do not lint:
+    // Auto-generated / artifacts, do not lint:
     "src/types/protocol.d.ts",
+    "playwright-report/**",
+    "test-results/**",
   ]),
 ]);
 

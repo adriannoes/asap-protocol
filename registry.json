@@ -1,1 +1,2398 @@
-[]
+{
+  "version": "1.0",
+  "updated_at": "2026-02-23T01:41:26.140621Z",
+  "agents": [
+    {
+      "id": "urn:asap:agent:seed:agent-0",
+      "name": "Alpha Seed Agent 1",
+      "description": "ASAP-compliant agent for code_review tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/0/asap",
+        "manifest": "https://example.com/seed/0/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "code_review",
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-1",
+      "name": "Beta Seed Agent 2",
+      "description": "Demo agent showcasing summarize capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/1/asap",
+        "manifest": "https://example.com/seed/1/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-2",
+      "name": "Gamma Seed Agent 3",
+      "description": "Reference implementation for protocol translate.",
+      "endpoints": {
+        "http": "https://example.com/seed/2/asap",
+        "manifest": "https://example.com/seed/2/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "translate",
+        "search"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-3",
+      "name": "Delta Seed Agent 4",
+      "description": "ASAP-compliant agent for search tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/3/asap",
+        "manifest": "https://example.com/seed/3/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "search",
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-4",
+      "name": "Epsilon Seed Agent 5",
+      "description": "Demo agent showcasing analyze capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/4/asap",
+        "manifest": "https://example.com/seed/4/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-5",
+      "name": "Zeta Seed Agent 6",
+      "description": "Reference implementation for protocol synthesize.",
+      "endpoints": {
+        "http": "https://example.com/seed/5/asap",
+        "manifest": "https://example.com/seed/5/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "synthesize",
+        "planning"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-6",
+      "name": "Eta Seed Agent 7",
+      "description": "ASAP-compliant agent for planning tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/6/asap",
+        "manifest": "https://example.com/seed/6/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "planning",
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-7",
+      "name": "Theta Seed Agent 8",
+      "description": "Demo agent showcasing qa capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/7/asap",
+        "manifest": "https://example.com/seed/7/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-8",
+      "name": "Iota Seed Agent 9",
+      "description": "Reference implementation for protocol documentation.",
+      "endpoints": {
+        "http": "https://example.com/seed/8/asap",
+        "manifest": "https://example.com/seed/8/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "documentation",
+        "code_review"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-9",
+      "name": "Kappa Seed Agent 10",
+      "description": "ASAP-compliant agent for code_review tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/9/asap",
+        "manifest": "https://example.com/seed/9/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "code_review",
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-10",
+      "name": "Alpha Seed Agent 1",
+      "description": "Demo agent showcasing summarize capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/10/asap",
+        "manifest": "https://example.com/seed/10/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-11",
+      "name": "Beta Seed Agent 2",
+      "description": "Reference implementation for protocol translate.",
+      "endpoints": {
+        "http": "https://example.com/seed/11/asap",
+        "manifest": "https://example.com/seed/11/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "translate",
+        "search"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-12",
+      "name": "Gamma Seed Agent 3",
+      "description": "ASAP-compliant agent for search tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/12/asap",
+        "manifest": "https://example.com/seed/12/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "search",
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-13",
+      "name": "Delta Seed Agent 4",
+      "description": "Demo agent showcasing analyze capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/13/asap",
+        "manifest": "https://example.com/seed/13/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-14",
+      "name": "Epsilon Seed Agent 5",
+      "description": "Reference implementation for protocol synthesize.",
+      "endpoints": {
+        "http": "https://example.com/seed/14/asap",
+        "manifest": "https://example.com/seed/14/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "synthesize",
+        "planning"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-15",
+      "name": "Zeta Seed Agent 6",
+      "description": "ASAP-compliant agent for planning tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/15/asap",
+        "manifest": "https://example.com/seed/15/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "planning",
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-16",
+      "name": "Eta Seed Agent 7",
+      "description": "Demo agent showcasing qa capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/16/asap",
+        "manifest": "https://example.com/seed/16/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-17",
+      "name": "Theta Seed Agent 8",
+      "description": "Reference implementation for protocol documentation.",
+      "endpoints": {
+        "http": "https://example.com/seed/17/asap",
+        "manifest": "https://example.com/seed/17/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "documentation",
+        "code_review"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-18",
+      "name": "Iota Seed Agent 9",
+      "description": "ASAP-compliant agent for code_review tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/18/asap",
+        "manifest": "https://example.com/seed/18/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "code_review",
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-19",
+      "name": "Kappa Seed Agent 10",
+      "description": "Demo agent showcasing summarize capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/19/asap",
+        "manifest": "https://example.com/seed/19/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-20",
+      "name": "Alpha Seed Agent 1",
+      "description": "Reference implementation for protocol translate.",
+      "endpoints": {
+        "http": "https://example.com/seed/20/asap",
+        "manifest": "https://example.com/seed/20/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "translate",
+        "search"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-21",
+      "name": "Beta Seed Agent 2",
+      "description": "ASAP-compliant agent for search tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/21/asap",
+        "manifest": "https://example.com/seed/21/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "search",
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-22",
+      "name": "Gamma Seed Agent 3",
+      "description": "Demo agent showcasing analyze capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/22/asap",
+        "manifest": "https://example.com/seed/22/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-23",
+      "name": "Delta Seed Agent 4",
+      "description": "Reference implementation for protocol synthesize.",
+      "endpoints": {
+        "http": "https://example.com/seed/23/asap",
+        "manifest": "https://example.com/seed/23/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "synthesize",
+        "planning"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-24",
+      "name": "Epsilon Seed Agent 5",
+      "description": "ASAP-compliant agent for planning tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/24/asap",
+        "manifest": "https://example.com/seed/24/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "planning",
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-25",
+      "name": "Zeta Seed Agent 6",
+      "description": "Demo agent showcasing qa capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/25/asap",
+        "manifest": "https://example.com/seed/25/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-26",
+      "name": "Eta Seed Agent 7",
+      "description": "Reference implementation for protocol documentation.",
+      "endpoints": {
+        "http": "https://example.com/seed/26/asap",
+        "manifest": "https://example.com/seed/26/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "documentation",
+        "code_review"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-27",
+      "name": "Theta Seed Agent 8",
+      "description": "ASAP-compliant agent for code_review tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/27/asap",
+        "manifest": "https://example.com/seed/27/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "code_review",
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-28",
+      "name": "Iota Seed Agent 9",
+      "description": "Demo agent showcasing summarize capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/28/asap",
+        "manifest": "https://example.com/seed/28/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-29",
+      "name": "Kappa Seed Agent 10",
+      "description": "Reference implementation for protocol translate.",
+      "endpoints": {
+        "http": "https://example.com/seed/29/asap",
+        "manifest": "https://example.com/seed/29/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "translate",
+        "search"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-30",
+      "name": "Alpha Seed Agent 1",
+      "description": "ASAP-compliant agent for search tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/30/asap",
+        "manifest": "https://example.com/seed/30/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "search",
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-31",
+      "name": "Beta Seed Agent 2",
+      "description": "Demo agent showcasing analyze capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/31/asap",
+        "manifest": "https://example.com/seed/31/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-32",
+      "name": "Gamma Seed Agent 3",
+      "description": "Reference implementation for protocol synthesize.",
+      "endpoints": {
+        "http": "https://example.com/seed/32/asap",
+        "manifest": "https://example.com/seed/32/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "synthesize",
+        "planning"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-33",
+      "name": "Delta Seed Agent 4",
+      "description": "ASAP-compliant agent for planning tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/33/asap",
+        "manifest": "https://example.com/seed/33/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "planning",
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-34",
+      "name": "Epsilon Seed Agent 5",
+      "description": "Demo agent showcasing qa capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/34/asap",
+        "manifest": "https://example.com/seed/34/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-35",
+      "name": "Zeta Seed Agent 6",
+      "description": "Reference implementation for protocol documentation.",
+      "endpoints": {
+        "http": "https://example.com/seed/35/asap",
+        "manifest": "https://example.com/seed/35/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "documentation",
+        "code_review"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-36",
+      "name": "Eta Seed Agent 7",
+      "description": "ASAP-compliant agent for code_review tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/36/asap",
+        "manifest": "https://example.com/seed/36/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "code_review",
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-37",
+      "name": "Theta Seed Agent 8",
+      "description": "Demo agent showcasing summarize capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/37/asap",
+        "manifest": "https://example.com/seed/37/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-38",
+      "name": "Iota Seed Agent 9",
+      "description": "Reference implementation for protocol translate.",
+      "endpoints": {
+        "http": "https://example.com/seed/38/asap",
+        "manifest": "https://example.com/seed/38/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "translate",
+        "search"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-39",
+      "name": "Kappa Seed Agent 10",
+      "description": "ASAP-compliant agent for search tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/39/asap",
+        "manifest": "https://example.com/seed/39/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "search",
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-40",
+      "name": "Alpha Seed Agent 1",
+      "description": "Demo agent showcasing analyze capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/40/asap",
+        "manifest": "https://example.com/seed/40/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-41",
+      "name": "Beta Seed Agent 2",
+      "description": "Reference implementation for protocol synthesize.",
+      "endpoints": {
+        "http": "https://example.com/seed/41/asap",
+        "manifest": "https://example.com/seed/41/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "synthesize",
+        "planning"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-42",
+      "name": "Gamma Seed Agent 3",
+      "description": "ASAP-compliant agent for planning tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/42/asap",
+        "manifest": "https://example.com/seed/42/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "planning",
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-43",
+      "name": "Delta Seed Agent 4",
+      "description": "Demo agent showcasing qa capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/43/asap",
+        "manifest": "https://example.com/seed/43/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-44",
+      "name": "Epsilon Seed Agent 5",
+      "description": "Reference implementation for protocol documentation.",
+      "endpoints": {
+        "http": "https://example.com/seed/44/asap",
+        "manifest": "https://example.com/seed/44/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "documentation",
+        "code_review"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-45",
+      "name": "Zeta Seed Agent 6",
+      "description": "ASAP-compliant agent for code_review tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/45/asap",
+        "manifest": "https://example.com/seed/45/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "code_review",
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-46",
+      "name": "Eta Seed Agent 7",
+      "description": "Demo agent showcasing summarize capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/46/asap",
+        "manifest": "https://example.com/seed/46/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-47",
+      "name": "Theta Seed Agent 8",
+      "description": "Reference implementation for protocol translate.",
+      "endpoints": {
+        "http": "https://example.com/seed/47/asap",
+        "manifest": "https://example.com/seed/47/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "translate",
+        "search"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-48",
+      "name": "Iota Seed Agent 9",
+      "description": "ASAP-compliant agent for search tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/48/asap",
+        "manifest": "https://example.com/seed/48/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "search",
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-49",
+      "name": "Kappa Seed Agent 10",
+      "description": "Demo agent showcasing analyze capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/49/asap",
+        "manifest": "https://example.com/seed/49/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-50",
+      "name": "Alpha Seed Agent 1",
+      "description": "Reference implementation for protocol synthesize.",
+      "endpoints": {
+        "http": "https://example.com/seed/50/asap",
+        "manifest": "https://example.com/seed/50/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "synthesize",
+        "planning"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-51",
+      "name": "Beta Seed Agent 2",
+      "description": "ASAP-compliant agent for planning tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/51/asap",
+        "manifest": "https://example.com/seed/51/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "planning",
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-52",
+      "name": "Gamma Seed Agent 3",
+      "description": "Demo agent showcasing qa capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/52/asap",
+        "manifest": "https://example.com/seed/52/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-53",
+      "name": "Delta Seed Agent 4",
+      "description": "Reference implementation for protocol documentation.",
+      "endpoints": {
+        "http": "https://example.com/seed/53/asap",
+        "manifest": "https://example.com/seed/53/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "documentation",
+        "code_review"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-54",
+      "name": "Epsilon Seed Agent 5",
+      "description": "ASAP-compliant agent for code_review tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/54/asap",
+        "manifest": "https://example.com/seed/54/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "code_review",
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-55",
+      "name": "Zeta Seed Agent 6",
+      "description": "Demo agent showcasing summarize capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/55/asap",
+        "manifest": "https://example.com/seed/55/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-56",
+      "name": "Eta Seed Agent 7",
+      "description": "Reference implementation for protocol translate.",
+      "endpoints": {
+        "http": "https://example.com/seed/56/asap",
+        "manifest": "https://example.com/seed/56/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "translate",
+        "search"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-57",
+      "name": "Theta Seed Agent 8",
+      "description": "ASAP-compliant agent for search tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/57/asap",
+        "manifest": "https://example.com/seed/57/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "search",
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-58",
+      "name": "Iota Seed Agent 9",
+      "description": "Demo agent showcasing analyze capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/58/asap",
+        "manifest": "https://example.com/seed/58/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-59",
+      "name": "Kappa Seed Agent 10",
+      "description": "Reference implementation for protocol synthesize.",
+      "endpoints": {
+        "http": "https://example.com/seed/59/asap",
+        "manifest": "https://example.com/seed/59/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "synthesize",
+        "planning"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-60",
+      "name": "Alpha Seed Agent 1",
+      "description": "ASAP-compliant agent for planning tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/60/asap",
+        "manifest": "https://example.com/seed/60/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "planning",
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-61",
+      "name": "Beta Seed Agent 2",
+      "description": "Demo agent showcasing qa capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/61/asap",
+        "manifest": "https://example.com/seed/61/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-62",
+      "name": "Gamma Seed Agent 3",
+      "description": "Reference implementation for protocol documentation.",
+      "endpoints": {
+        "http": "https://example.com/seed/62/asap",
+        "manifest": "https://example.com/seed/62/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "documentation",
+        "code_review"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-63",
+      "name": "Delta Seed Agent 4",
+      "description": "ASAP-compliant agent for code_review tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/63/asap",
+        "manifest": "https://example.com/seed/63/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "code_review",
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-64",
+      "name": "Epsilon Seed Agent 5",
+      "description": "Demo agent showcasing summarize capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/64/asap",
+        "manifest": "https://example.com/seed/64/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-65",
+      "name": "Zeta Seed Agent 6",
+      "description": "Reference implementation for protocol translate.",
+      "endpoints": {
+        "http": "https://example.com/seed/65/asap",
+        "manifest": "https://example.com/seed/65/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "translate",
+        "search"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-66",
+      "name": "Eta Seed Agent 7",
+      "description": "ASAP-compliant agent for search tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/66/asap",
+        "manifest": "https://example.com/seed/66/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "search",
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-67",
+      "name": "Theta Seed Agent 8",
+      "description": "Demo agent showcasing analyze capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/67/asap",
+        "manifest": "https://example.com/seed/67/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-68",
+      "name": "Iota Seed Agent 9",
+      "description": "Reference implementation for protocol synthesize.",
+      "endpoints": {
+        "http": "https://example.com/seed/68/asap",
+        "manifest": "https://example.com/seed/68/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "synthesize",
+        "planning"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-69",
+      "name": "Kappa Seed Agent 10",
+      "description": "ASAP-compliant agent for planning tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/69/asap",
+        "manifest": "https://example.com/seed/69/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "planning",
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-70",
+      "name": "Alpha Seed Agent 1",
+      "description": "Demo agent showcasing qa capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/70/asap",
+        "manifest": "https://example.com/seed/70/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-71",
+      "name": "Beta Seed Agent 2",
+      "description": "Reference implementation for protocol documentation.",
+      "endpoints": {
+        "http": "https://example.com/seed/71/asap",
+        "manifest": "https://example.com/seed/71/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "documentation",
+        "code_review"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-72",
+      "name": "Gamma Seed Agent 3",
+      "description": "ASAP-compliant agent for code_review tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/72/asap",
+        "manifest": "https://example.com/seed/72/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "code_review",
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-73",
+      "name": "Delta Seed Agent 4",
+      "description": "Demo agent showcasing summarize capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/73/asap",
+        "manifest": "https://example.com/seed/73/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-74",
+      "name": "Epsilon Seed Agent 5",
+      "description": "Reference implementation for protocol translate.",
+      "endpoints": {
+        "http": "https://example.com/seed/74/asap",
+        "manifest": "https://example.com/seed/74/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "translate",
+        "search"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-75",
+      "name": "Zeta Seed Agent 6",
+      "description": "ASAP-compliant agent for search tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/75/asap",
+        "manifest": "https://example.com/seed/75/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "search",
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-76",
+      "name": "Eta Seed Agent 7",
+      "description": "Demo agent showcasing analyze capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/76/asap",
+        "manifest": "https://example.com/seed/76/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-77",
+      "name": "Theta Seed Agent 8",
+      "description": "Reference implementation for protocol synthesize.",
+      "endpoints": {
+        "http": "https://example.com/seed/77/asap",
+        "manifest": "https://example.com/seed/77/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "synthesize",
+        "planning"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-78",
+      "name": "Iota Seed Agent 9",
+      "description": "ASAP-compliant agent for planning tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/78/asap",
+        "manifest": "https://example.com/seed/78/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "planning",
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-79",
+      "name": "Kappa Seed Agent 10",
+      "description": "Demo agent showcasing qa capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/79/asap",
+        "manifest": "https://example.com/seed/79/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-80",
+      "name": "Alpha Seed Agent 1",
+      "description": "Reference implementation for protocol documentation.",
+      "endpoints": {
+        "http": "https://example.com/seed/80/asap",
+        "manifest": "https://example.com/seed/80/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "documentation",
+        "code_review"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-81",
+      "name": "Beta Seed Agent 2",
+      "description": "ASAP-compliant agent for code_review tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/81/asap",
+        "manifest": "https://example.com/seed/81/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "code_review",
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-82",
+      "name": "Gamma Seed Agent 3",
+      "description": "Demo agent showcasing summarize capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/82/asap",
+        "manifest": "https://example.com/seed/82/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-83",
+      "name": "Delta Seed Agent 4",
+      "description": "Reference implementation for protocol translate.",
+      "endpoints": {
+        "http": "https://example.com/seed/83/asap",
+        "manifest": "https://example.com/seed/83/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "translate",
+        "search"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-84",
+      "name": "Epsilon Seed Agent 5",
+      "description": "ASAP-compliant agent for search tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/84/asap",
+        "manifest": "https://example.com/seed/84/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "search",
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-85",
+      "name": "Zeta Seed Agent 6",
+      "description": "Demo agent showcasing analyze capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/85/asap",
+        "manifest": "https://example.com/seed/85/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-86",
+      "name": "Eta Seed Agent 7",
+      "description": "Reference implementation for protocol synthesize.",
+      "endpoints": {
+        "http": "https://example.com/seed/86/asap",
+        "manifest": "https://example.com/seed/86/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "synthesize",
+        "planning"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-87",
+      "name": "Theta Seed Agent 8",
+      "description": "ASAP-compliant agent for planning tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/87/asap",
+        "manifest": "https://example.com/seed/87/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "planning",
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-88",
+      "name": "Iota Seed Agent 9",
+      "description": "Demo agent showcasing qa capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/88/asap",
+        "manifest": "https://example.com/seed/88/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-89",
+      "name": "Kappa Seed Agent 10",
+      "description": "Reference implementation for protocol documentation.",
+      "endpoints": {
+        "http": "https://example.com/seed/89/asap",
+        "manifest": "https://example.com/seed/89/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "documentation",
+        "code_review"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-90",
+      "name": "Alpha Seed Agent 1",
+      "description": "ASAP-compliant agent for code_review tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/90/asap",
+        "manifest": "https://example.com/seed/90/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "code_review",
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-91",
+      "name": "Beta Seed Agent 2",
+      "description": "Demo agent showcasing summarize capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/91/asap",
+        "manifest": "https://example.com/seed/91/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-92",
+      "name": "Gamma Seed Agent 3",
+      "description": "Reference implementation for protocol translate.",
+      "endpoints": {
+        "http": "https://example.com/seed/92/asap",
+        "manifest": "https://example.com/seed/92/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "translate",
+        "search"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-93",
+      "name": "Delta Seed Agent 4",
+      "description": "ASAP-compliant agent for search tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/93/asap",
+        "manifest": "https://example.com/seed/93/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "search",
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-94",
+      "name": "Epsilon Seed Agent 5",
+      "description": "Demo agent showcasing analyze capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/94/asap",
+        "manifest": "https://example.com/seed/94/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-95",
+      "name": "Zeta Seed Agent 6",
+      "description": "Reference implementation for protocol synthesize.",
+      "endpoints": {
+        "http": "https://example.com/seed/95/asap",
+        "manifest": "https://example.com/seed/95/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "synthesize",
+        "planning"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-96",
+      "name": "Eta Seed Agent 7",
+      "description": "ASAP-compliant agent for planning tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/96/asap",
+        "manifest": "https://example.com/seed/96/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "planning",
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-97",
+      "name": "Theta Seed Agent 8",
+      "description": "Demo agent showcasing qa capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/97/asap",
+        "manifest": "https://example.com/seed/97/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-98",
+      "name": "Iota Seed Agent 9",
+      "description": "Reference implementation for protocol documentation.",
+      "endpoints": {
+        "http": "https://example.com/seed/98/asap",
+        "manifest": "https://example.com/seed/98/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "documentation",
+        "code_review"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-99",
+      "name": "Kappa Seed Agent 10",
+      "description": "ASAP-compliant agent for code_review tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/99/asap",
+        "manifest": "https://example.com/seed/99/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "code_review",
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-100",
+      "name": "Alpha Seed Agent 1",
+      "description": "Demo agent showcasing summarize capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/100/asap",
+        "manifest": "https://example.com/seed/100/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-101",
+      "name": "Beta Seed Agent 2",
+      "description": "Reference implementation for protocol translate.",
+      "endpoints": {
+        "http": "https://example.com/seed/101/asap",
+        "manifest": "https://example.com/seed/101/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "translate",
+        "search"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-102",
+      "name": "Gamma Seed Agent 3",
+      "description": "ASAP-compliant agent for search tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/102/asap",
+        "manifest": "https://example.com/seed/102/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "search",
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-103",
+      "name": "Delta Seed Agent 4",
+      "description": "Demo agent showcasing analyze capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/103/asap",
+        "manifest": "https://example.com/seed/103/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-104",
+      "name": "Epsilon Seed Agent 5",
+      "description": "Reference implementation for protocol synthesize.",
+      "endpoints": {
+        "http": "https://example.com/seed/104/asap",
+        "manifest": "https://example.com/seed/104/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "synthesize",
+        "planning"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-105",
+      "name": "Zeta Seed Agent 6",
+      "description": "ASAP-compliant agent for planning tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/105/asap",
+        "manifest": "https://example.com/seed/105/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "planning",
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-106",
+      "name": "Eta Seed Agent 7",
+      "description": "Demo agent showcasing qa capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/106/asap",
+        "manifest": "https://example.com/seed/106/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-107",
+      "name": "Theta Seed Agent 8",
+      "description": "Reference implementation for protocol documentation.",
+      "endpoints": {
+        "http": "https://example.com/seed/107/asap",
+        "manifest": "https://example.com/seed/107/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "documentation",
+        "code_review"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-108",
+      "name": "Iota Seed Agent 9",
+      "description": "ASAP-compliant agent for code_review tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/108/asap",
+        "manifest": "https://example.com/seed/108/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "code_review",
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-109",
+      "name": "Kappa Seed Agent 10",
+      "description": "Demo agent showcasing summarize capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/109/asap",
+        "manifest": "https://example.com/seed/109/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-110",
+      "name": "Alpha Seed Agent 1",
+      "description": "Reference implementation for protocol translate.",
+      "endpoints": {
+        "http": "https://example.com/seed/110/asap",
+        "manifest": "https://example.com/seed/110/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "translate",
+        "search"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-111",
+      "name": "Beta Seed Agent 2",
+      "description": "ASAP-compliant agent for search tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/111/asap",
+        "manifest": "https://example.com/seed/111/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "search",
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-112",
+      "name": "Gamma Seed Agent 3",
+      "description": "Demo agent showcasing analyze capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/112/asap",
+        "manifest": "https://example.com/seed/112/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "analyze",
+        "synthesize"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-113",
+      "name": "Delta Seed Agent 4",
+      "description": "Reference implementation for protocol synthesize.",
+      "endpoints": {
+        "http": "https://example.com/seed/113/asap",
+        "manifest": "https://example.com/seed/113/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "synthesize",
+        "planning"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-114",
+      "name": "Epsilon Seed Agent 5",
+      "description": "ASAP-compliant agent for planning tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/114/asap",
+        "manifest": "https://example.com/seed/114/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "planning",
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-115",
+      "name": "Zeta Seed Agent 6",
+      "description": "Demo agent showcasing qa capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/115/asap",
+        "manifest": "https://example.com/seed/115/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "qa",
+        "documentation"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "CrewAI",
+      "verification": {
+        "status": "verified",
+        "verified_at": null
+      },
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-116",
+      "name": "Eta Seed Agent 7",
+      "description": "Reference implementation for protocol documentation.",
+      "endpoints": {
+        "http": "https://example.com/seed/116/asap",
+        "manifest": "https://example.com/seed/116/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "documentation",
+        "code_review"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": "https://github.com/asap-protocol/examples",
+      "documentation_url": null,
+      "built_with": "LangChain",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-117",
+      "name": "Theta Seed Agent 8",
+      "description": "ASAP-compliant agent for code_review tasks.",
+      "endpoints": {
+        "http": "https://example.com/seed/117/asap",
+        "manifest": "https://example.com/seed/117/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "code_review",
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "AutoGen",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-118",
+      "name": "Iota Seed Agent 9",
+      "description": "Demo agent showcasing summarize capability.",
+      "endpoints": {
+        "http": "https://example.com/seed/118/asap",
+        "manifest": "https://example.com/seed/118/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "summarize",
+        "translate"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": "Custom",
+      "verification": null,
+      "online_check": false
+    },
+    {
+      "id": "urn:asap:agent:seed:agent-119",
+      "name": "Kappa Seed Agent 10",
+      "description": "Reference implementation for protocol translate.",
+      "endpoints": {
+        "http": "https://example.com/seed/119/asap",
+        "manifest": "https://example.com/seed/119/.well-known/asap/manifest.json"
+      },
+      "skills": [
+        "translate",
+        "search"
+      ],
+      "asap_version": "1.1.0",
+      "repository_url": null,
+      "documentation_url": null,
+      "built_with": null,
+      "verification": null,
+      "online_check": false
+    }
+  ]
+}

@@ -1,16 +1,20 @@
 'use client';
 
-import { Manifest } from '@/types/protocol';
+import type { RegistryAgent } from '@/types/registry';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { TerminalSquare, PlusCircle, Activity, Key, BarChart3, Globe, ShieldAlert, Loader2, GitPullRequest, ExternalLink, ShieldCheck, RefreshCw } from 'lucide-react';
+import { TerminalSquare, PlusCircle, Activity, Key, BarChart3, Globe, ShieldAlert, GitPullRequest, ExternalLink, ShieldCheck, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import useSWR from 'swr';
-import { fetchUserRegistrationIssues } from './actions';
+import {
+    fetchUserRegistrationIssues,
+    revalidateUserRegistrationIssues,
+} from './actions';
+import { AgentStatusBadge } from '@/components/agent/agent-status-badge';
 
 export type PendingRegistration = {
     id: number;
@@ -22,60 +26,8 @@ export type PendingRegistration = {
 };
 
 interface DashboardClientProps {
-    initialAgents: Manifest[];
+    initialAgents: RegistryAgent[];
     username: string;
-}
-
-// Client-side component to fetch and display agent status via server proxy (avoids exposing user IP to agents)
-function AgentStatusBadge({ endpoint }: { endpoint: string }) {
-    const [status, setStatus] = useState<'pending' | 'online' | 'offline'>('pending');
-
-    useEffect(() => {
-        let isMounted = true;
-        const checkStatus = async () => {
-            if (!endpoint) {
-                if (isMounted) setStatus('offline');
-                return;
-            }
-            try {
-                const proxyUrl = `/api/health-check?url=${encodeURIComponent(endpoint)}`;
-                const res = await fetch(proxyUrl);
-                const data = (await res.json()) as { ok?: boolean };
-                if (isMounted) {
-                    setStatus(data.ok ? 'online' : 'offline');
-                }
-            } catch {
-                if (isMounted) {
-                    setStatus('offline');
-                }
-            }
-        };
-
-        checkStatus();
-        return () => { isMounted = false; };
-    }, [endpoint]);
-
-    if (status === 'pending') {
-        return (
-            <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground border-muted-foreground/30 px-2 py-0 flex items-center gap-1">
-                <Loader2 className="w-3 h-3 animate-spin" /> Checking
-            </Badge>
-        );
-    }
-
-    if (status === 'online') {
-        return (
-            <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-500 border-emerald-500/20 px-2 py-0">
-                Online
-            </Badge>
-        );
-    }
-
-    return (
-        <Badge variant="outline" className="text-[10px] bg-red-500/10 text-red-500 border-red-500/20 px-2 py-0">
-            Offline
-        </Badge>
-    );
 }
 
 export function DashboardClient({ initialAgents, username }: DashboardClientProps) {
@@ -83,7 +35,7 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
     const [isRefreshing, setIsRefreshing] = useState(false);
     const { data: pendingIssuesData, mutate } = useSWR('userRegistrationIssues', async () => {
         const res = await fetchUserRegistrationIssues();
-        if (res.success && res.data) return res.data as PendingRegistration[];
+        if (res.success && 'data' in res) return res.data as PendingRegistration[];
         return [];
     }, {
         refreshInterval: 60_000,
@@ -97,6 +49,7 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
 
     const handleRefresh = useCallback(async () => {
         setIsRefreshing(true);
+        await revalidateUserRegistrationIssues();
         await mutate();
         router.refresh();
         setIsRefreshing(false);
@@ -207,7 +160,7 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
                                                     <ShieldCheck className="w-3 h-3" /> Verified
                                                 </Badge>
                                             )}
-                                            <AgentStatusBadge endpoint={agent.endpoints.asap ?? ''} />
+                                            <AgentStatusBadge endpoint={agent.endpoints?.asap ?? ''} skipReachabilityCheck={agent.online_check === false} size="sm" />
                                         </div>
                                     </div>
                                     <CardDescription className="text-xs font-mono truncate" title={agent.id ?? ''}>{agent.id}</CardDescription>

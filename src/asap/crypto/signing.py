@@ -1,4 +1,9 @@
-"""Ed25519 manifest signing with JCS canonicalization (RFC 8785)."""
+"""Ed25519 manifest signing with JCS canonicalization (RFC 8785).
+
+Verification enforces RFC 8032 Strict Mode (ADR-20):
+- Signature scalar `s` must satisfy s < l (group order) to prevent malleability.
+- JCS (RFC 8785) ensures deterministic JSON before signing/verifying.
+"""
 
 from __future__ import annotations
 
@@ -7,16 +12,20 @@ import binascii
 from typing import cast
 
 import jcs
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PrivateKey,
     Ed25519PublicKey,
 )
-from cryptography.exceptions import InvalidSignature
 
 from asap.crypto.keys import load_public_key_from_base64, public_key_to_base64
 from asap.crypto.models import SignatureBlock, SignedManifest
 from asap.errors import SignatureVerificationError
 from asap.models.entities import Manifest
+
+# Ed25519 group order: l = 2^252 + 27742317777372353535851937790883648493
+# Signatures (R, s) must have s < l per RFC 8032 strict verification.
+ED25519_ORDER = 2**252 + 27742317777372353535851937790883648493
 
 
 def canonicalize(manifest: Manifest) -> bytes:
@@ -30,7 +39,8 @@ def sign_manifest(
 ) -> SignedManifest:
     payload_bytes = canonicalize(manifest)
     raw_signature = private_key.sign(payload_bytes)
-    assert len(raw_signature) == 64, "Ed25519 signature must be 64 bytes"
+    if len(raw_signature) != 64:
+        raise ValueError(f"Ed25519 signature must be 64 bytes, got {len(raw_signature)}")
     signature_b64 = base64.b64encode(raw_signature).decode("ascii")
     block = SignatureBlock(alg="ed25519", signature=signature_b64)
     public_key_b64 = public_key_to_base64(private_key.public_key())
@@ -73,6 +83,7 @@ def verify_manifest(
             f"Ed25519 signature must be 64 bytes, got {len(raw_sig)}. Possible tampering.",
             details={"signature_length": len(raw_sig)},
         )
+    _enforce_strict_scalar(raw_sig)
     payload_bytes = canonicalize(signed_manifest.manifest)
     try:
         pk.verify(raw_sig, payload_bytes)
@@ -82,3 +93,13 @@ def verify_manifest(
             details={"cause": str(e)},
         ) from e
     return True
+
+
+def _enforce_strict_scalar(raw_sig: bytes) -> None:
+    # RFC 8032 strict: s < l (reject malleable s + l)
+    s_int = int.from_bytes(raw_sig[32:], "little")
+    if s_int >= ED25519_ORDER:
+        raise SignatureVerificationError(
+            "Signature malleability detected: scalar s >= group order l (RFC 8032 strict violation).",
+            details={"s_value_hex": hex(s_int)},
+        )

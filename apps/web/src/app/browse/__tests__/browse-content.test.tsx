@@ -111,8 +111,8 @@ describe('BrowseContent', () => {
         await waitFor(() => {
             expect(screen.queryByText('Search Bot')).not.toBeInTheDocument();
             expect(screen.queryByText('Secure Writer')).not.toBeInTheDocument();
-            expect(screen.getByText('No agents found')).toBeInTheDocument();
-            expect(screen.getByText('Try adjusting your search criteria.')).toBeInTheDocument();
+            expect(screen.getByText(/We couldn't find any agents matching/)).toBeInTheDocument();
+            expect(screen.getByText(/be the first to build and monetize this capability/)).toBeInTheDocument();
         }, { timeout: 1000 });
     });
 });

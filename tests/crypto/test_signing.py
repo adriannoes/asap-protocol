@@ -277,13 +277,14 @@ def test_verify_manifest_tampered_signature_raises() -> None:
     )
     with pytest.raises(SignatureVerificationError) as exc_info:
         verify_manifest(bad_signed)
-    assert "tamper" in exc_info.value.message.lower() or "invalid" in exc_info.value.message.lower()
+    msg = exc_info.value.message.lower()
+    assert "tamper" in msg or "invalid" in msg or "malleability" in msg
 
 
 def test_verify_manifest_wrong_public_key_raises() -> None:
     manifest = _sample_manifest()
     signer_key, _ = generate_keypair()
-    other_private_key, other_public_key = generate_keypair()
+    _, other_public_key = generate_keypair()
     signed = sign_manifest(manifest, signer_key)
     signed_other_pk = SignedManifest(
         manifest=signed.manifest,
@@ -293,3 +294,93 @@ def test_verify_manifest_wrong_public_key_raises() -> None:
     with pytest.raises(SignatureVerificationError) as exc_info:
         verify_manifest(signed_other_pk)
     assert "tamper" in exc_info.value.message.lower() or "invalid" in exc_info.value.message.lower()
+
+
+# --- RFC 8032 Strict Verification (ADR-20) ---
+
+
+class TestRFC8032StrictVerification:
+    """RFC 8032 strict (s < l, canonical R, non-zero); ADR-20 malleability."""
+
+    def test_reject_malleable_signature_s_ge_l(self) -> None:
+        from asap.crypto.signing import ED25519_ORDER
+
+        manifest = _sample_manifest()
+        private_key, public_key = generate_keypair()
+        signed = sign_manifest(manifest, private_key)
+
+        raw_sig = base64.b64decode(signed.signature.signature)
+        r_bytes = raw_sig[:32]
+        s_int = int.from_bytes(raw_sig[32:], "little")
+        s_malleable = s_int + ED25519_ORDER
+        s_malleable_bytes = s_malleable.to_bytes(32, "little")
+        malleable_sig = base64.b64encode(r_bytes + s_malleable_bytes).decode("ascii")
+
+        bad_block = SignatureBlock.model_construct(alg="ed25519", signature=malleable_sig)
+        bad_signed = SignedManifest(
+            manifest=signed.manifest,
+            signature=bad_block,
+            public_key=public_key_to_base64(public_key),
+        )
+        with pytest.raises(SignatureVerificationError) as exc_info:
+            verify_manifest(bad_signed)
+        assert "malleability" in exc_info.value.message.lower()
+
+    def test_reject_non_canonical_r_encoding(self) -> None:
+        manifest = _sample_manifest()
+        private_key, public_key = generate_keypair()
+        signed = sign_manifest(manifest, private_key)
+
+        raw_sig = bytearray(base64.b64decode(signed.signature.signature))
+        raw_sig[31] ^= 0x80
+        bad_sig_b64 = base64.b64encode(bytes(raw_sig)).decode("ascii")
+
+        bad_block = SignatureBlock.model_construct(alg="ed25519", signature=bad_sig_b64)
+        bad_signed = SignedManifest(
+            manifest=signed.manifest,
+            signature=bad_block,
+            public_key=public_key_to_base64(public_key),
+        )
+        with pytest.raises(SignatureVerificationError):
+            verify_manifest(bad_signed)
+
+    def test_reject_all_zero_signature(self) -> None:
+        manifest = _sample_manifest()
+        private_key, public_key = generate_keypair()
+        signed = sign_manifest(manifest, private_key)
+
+        zero_sig_b64 = base64.b64encode(b"\x00" * 64).decode("ascii")
+        bad_block = SignatureBlock.model_construct(alg="ed25519", signature=zero_sig_b64)
+        bad_signed = SignedManifest(
+            manifest=signed.manifest,
+            signature=bad_block,
+            public_key=public_key_to_base64(public_key),
+        )
+        with pytest.raises(SignatureVerificationError):
+            verify_manifest(bad_signed)
+
+    def test_valid_signature_s_below_l(self) -> None:
+        from asap.crypto.signing import ED25519_ORDER
+
+        manifest = _sample_manifest()
+        private_key, _ = generate_keypair()
+        signed = sign_manifest(manifest, private_key)
+
+        raw_sig = base64.b64decode(signed.signature.signature)
+        s_int = int.from_bytes(raw_sig[32:], "little")
+        assert s_int < ED25519_ORDER
+        assert verify_manifest(signed) is True
+
+    def test_jcs_canonicalization_rfc8785_compliance(self) -> None:
+        manifest = _sample_manifest()
+        canonical = canonicalize(manifest)
+        import json
+
+        parsed = json.loads(canonical)
+        keys = list(parsed.keys())
+        assert keys == sorted(keys), "JCS must produce sorted top-level keys"
+
+    def test_canonicalize_signature_field_excluded(self) -> None:
+        manifest = _sample_manifest(signature="fake-sig-value")
+        canonical = canonicalize(manifest)
+        assert b'"signature"' not in canonical

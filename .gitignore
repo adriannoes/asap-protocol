@@ -15,6 +15,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!scripts/lib/
 lib64/
 /parts/
 sdist/
@@ -188,3 +189,6 @@ node_modules/
 # Benchmark and cache artifacts
 .benchmarks/
 .uv-cache/
+
+# ESLint report (generated)
+eslint-report.json

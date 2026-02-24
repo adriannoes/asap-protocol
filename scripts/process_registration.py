@@ -15,24 +15,31 @@ import argparse
 import ipaddress
 import json
 import logging
-import os
 import re
+import socket
 import sys
-import tempfile
 from pathlib import Path
-from typing import Any, cast
 from urllib.parse import urlparse
 
 import httpx
 from pydantic import ValidationError
 
-# Ensure src is on path when run from repo root (e.g. in CI)
+# Ensure src and scripts/lib are on path when run from repo root (e.g. in CI)
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT / "src"))
+if str(_REPO_ROOT / "scripts") not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT / "scripts"))
 
 from asap.discovery.registry import generate_registry_entry  # noqa: E402
 from asap.models.entities import Manifest  # noqa: E402
+from lib.debug_id import generate_debug_id  # noqa: E402
+from lib.registry_io import (  # noqa: E402
+    load_registry,
+    sanitize_input,
+    save_registry,
+    write_validation_result,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +58,7 @@ _BLOCKED_HOSTS = frozenset(
 
 
 def _is_safe_url(url: str) -> bool:
-    """SSRF protection: block private IPs, loopback, cloud metadata."""
+    """SSRF protection: block private IPs, loopback, cloud metadata (with DNS resolution)."""
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https"):
         return False
@@ -64,11 +71,31 @@ def _is_safe_url(url: str) -> bool:
             return False
     except ValueError:
         pass
+    try:
+        resolved = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC)
+        for _, _, _, _, sockaddr in resolved:
+            addr = ipaddress.ip_address(sockaddr[0])
+            if addr.is_private or addr.is_loopback or addr.is_link_local:
+                return False
+    except (socket.gaierror, ValueError, OSError):
+        return False
     return True
 
 
-def _write_validation_result(output_path: str, *, valid: bool = False, errors: str = "") -> None:
-    Path(output_path).write_text(json.dumps({"valid": valid, "errors": errors}))
+def _fail_registration(output_path: str, errors: list[str], issue_number: str) -> None:
+    debug_id = generate_debug_id()
+    err_str = "; ".join(errors)
+    logger.info(
+        json.dumps(
+            {
+                "event": "registration.validation_failed",
+                "debug_id": debug_id,
+                "errors": err_str,
+                "issue_number": issue_number,
+            }
+        )
+    )
+    write_validation_result(output_path, errors=err_str, debug_id=debug_id)
 
 
 # GitHub Issue Form body uses ### <label> as section headers; labels from register_agent.yml
@@ -87,64 +114,38 @@ _HEADER_TO_FIELD = {
 
 
 def parse_issue_body(body: str) -> dict[str, str]:
-    """Extract form values from GitHub Issue Form markdown (### <label> sections)."""
     if not body or not body.strip():
         return {}
 
     fields: dict[str, str] = {}
-    # Split by ### and then by newline to get header and value
-    parts = re.split(r"\n### ", body.strip(), flags=re.IGNORECASE)
+
+    # Extract sections matching "### Header Name\n...content..."
+    # We split by '### ' and then safely process chunks.
+    parts = re.split(r"(?im)^###\s+", body)
     for part in parts:
         part = part.strip()
         if not part:
             continue
+
         first_line, _, rest = part.partition("\n")
         header = first_line.strip()
-        if header.startswith("###"):
-            header = header[3:].strip()
-        value = rest.split("\n### ")[0].strip() if rest else ""
+        value = rest.strip()
+
         field = _HEADER_TO_FIELD.get(header)
         if field:
-            fields[field] = value
+            max_len = 2000 if field == "description" else 500
+            fields[field] = sanitize_input(value, max_length=max_len)
+
     return fields
 
 
 def fetch_manifest(url: str, timeout: float = 15.0) -> Manifest:
-    """Fetch and validate manifest from URL. Raises ValueError/httpx.HTTPError/ValidationError on failure."""
     if not _is_safe_url(url):
         raise ValueError(f"Blocked URL (private/metadata): {url}")
-    with httpx.Client(timeout=timeout) as client:
+    with httpx.Client(timeout=timeout, follow_redirects=False) as client:
         resp = client.get(url)
         resp.raise_for_status()
     return Manifest.model_validate_json(resp.text)
-
-
-def load_registry(path: str) -> list[dict[str, Any]]:
-    """Load registry from JSON file. Supports array or LiteRegistry wrapper."""
-    p = Path(path)
-    if not p.exists():
-        return []
-    raw: Any = json.loads(p.read_text())
-    if isinstance(raw, list):
-        return cast(list[dict[str, Any]], raw)
-    if isinstance(raw, dict) and "agents" in raw:
-        return cast(list[dict[str, Any]], raw["agents"])
-    return []
-
-
-def save_registry(path: str, agents: list[dict[str, Any]]) -> None:
-    """Write agents list to registry JSON file atomically."""
-    target = Path(path)
-    content = json.dumps(agents, indent=2) + "\n"
-    temp_dir = target.parent if target.parent != Path() else Path.cwd()
-    fd, tmp = tempfile.mkstemp(dir=temp_dir, suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w") as f:
-            f.write(content)
-        Path(tmp).replace(target)
-    except BaseException:
-        Path(tmp).unlink(missing_ok=True)
-        raise
 
 
 def run(
@@ -176,7 +177,7 @@ def run(
         errors.append("Missing required field: skills")
 
     if errors:
-        _write_validation_result(output_path, errors="; ".join(errors))
+        _fail_registration(output_path, errors, issue_number)
         return
 
     skills = [s.strip() for s in skills_str.split(",") if s.strip()]
@@ -189,11 +190,11 @@ def run(
         manifest = fetch_manifest(manifest_url)
     except ValueError:
         errors.append(f"Blocked URL (private/metadata): {manifest_url}")
-        _write_validation_result(output_path, errors="; ".join(errors))
+        _fail_registration(output_path, errors, issue_number)
         return
     except httpx.HTTPError:
         errors.append(f"Manifest URL unreachable: {manifest_url}")
-        _write_validation_result(output_path, errors="; ".join(errors))
+        _fail_registration(output_path, errors, issue_number)
         return
     except ValidationError as e:
         error_count = e.error_count()
@@ -201,7 +202,7 @@ def run(
             f"Manifest failed schema validation ({error_count} error(s)). "
             "Ensure it follows the ASAP Manifest format."
         )
-        _write_validation_result(output_path, errors="; ".join(errors))
+        _fail_registration(output_path, errors, issue_number)
         return
 
     if manifest.id != expected_id:
@@ -224,7 +225,7 @@ def run(
         )
 
     if errors:
-        _write_validation_result(output_path, errors="; ".join(errors))
+        _fail_registration(output_path, errors, issue_number)
         return
 
     # Uniqueness: id must not already exist in registry
@@ -232,7 +233,7 @@ def run(
     existing_ids = {a.get("id") for a in agents if isinstance(a, dict)}
     if manifest.id in existing_ids:
         errors.append(f"Agent id {manifest.id!r} is already registered")
-        _write_validation_result(output_path, errors="; ".join(errors))
+        _fail_registration(output_path, errors, issue_number)
         return
 
     endpoints = {
@@ -256,12 +257,12 @@ def run(
             f"Registry entry validation failed ({error_count} error(s)). "
             "Check manifest and endpoint format."
         )
-        _write_validation_result(output_path, errors="; ".join(errors))
+        _fail_registration(output_path, errors, issue_number)
         return
 
     agents.append(entry.model_dump(mode="json"))
     save_registry(registry_path, agents)
-    _write_validation_result(output_path, valid=True)
+    write_validation_result(output_path, valid=True)
 
 
 def main() -> None:
@@ -285,9 +286,21 @@ def main() -> None:
             registry_path=args.registry,
         )
     except Exception:
+        debug_id = generate_debug_id()
+        logger.info(
+            json.dumps(
+                {
+                    "event": "registration.unexpected_error",
+                    "debug_id": debug_id,
+                    "issue_number": args.issue_number,
+                }
+            )
+        )
         logger.exception("Unexpected error processing registration")
         try:
-            _write_validation_result(args.output, errors="Internal processing error")
+            write_validation_result(
+                args.output, errors="Internal processing error", debug_id=debug_id
+            )
         except OSError:
             logger.exception("Failed to write error output")
         sys.exit(1)

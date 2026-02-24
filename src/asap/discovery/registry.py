@@ -75,6 +75,10 @@ class RegistryEntry(ASAPBaseModel):
         default=None,
         description="Verification status for marketplace trust badge (Task 3.6)",
     )
+    online_check: bool | None = Field(
+        default=None,
+        description="If False, UI skips reachability check (e.g. seeded/demo agents).",
+    )
 
     @field_validator("id")
     @classmethod

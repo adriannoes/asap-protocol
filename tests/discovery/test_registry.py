@@ -99,6 +99,20 @@ class TestRegistrySchemaValidation:
         with pytest.raises(ValidationError):
             RegistryEntry.model_validate(data)
 
+    def test_registry_entry_accepts_online_check_false(self) -> None:
+        """online_check=False accepted for seeded agents."""
+        data = {
+            "id": "urn:asap:agent:seed:agent-0",
+            "name": "Seed Agent",
+            "description": "Demo agent",
+            "endpoints": {"http": "https://example.com/seed/asap"},
+            "skills": ["code_review"],
+            "asap_version": "1.1.0",
+            "online_check": False,
+        }
+        entry = RegistryEntry.model_validate(data)
+        assert entry.online_check is False
+
 
 class TestDiscoverFromRegistry:
     """discover_from_registry fetches and parses from URL."""

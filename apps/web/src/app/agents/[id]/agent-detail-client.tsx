@@ -1,13 +1,13 @@
-'use client';
-
 import type { RegistryAgent } from '@/types/registry';
 import { isAllowedExternalUrl } from '@/lib/url-validator';
+import { AgentStatusBadge } from '@/components/agent/agent-status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, ExternalLink, ShieldAlert, ShieldCheck, TerminalSquare } from 'lucide-react';
 import Link from 'next/link';
+import { Code2 } from 'lucide-react';
 
 interface AgentDetailClientProps {
     agent: RegistryAgent;
@@ -19,6 +19,8 @@ function safeAuthHref(url: unknown): string {
 }
 
 export function AgentDetailClient({ agent }: AgentDetailClientProps) {
+    const agentEndpoint = agent.endpoints?.asap ?? (agent.endpoints as { http?: string })?.http;
+
     const renderBooleanBadge = (value: boolean | undefined | null, label: string) => {
         if (value === undefined || value === null) return null;
         return (
@@ -71,6 +73,7 @@ export function AgentDetailClient({ agent }: AgentDetailClientProps) {
                                     Auth Required
                                 </Badge>
                             ) : null}
+                            {agentEndpoint && <AgentStatusBadge endpoint={agentEndpoint} skipReachabilityCheck={agent.online_check === false} size="default" />}
                         </div>
                     </div>
 
@@ -85,14 +88,14 @@ export function AgentDetailClient({ agent }: AgentDetailClientProps) {
                             <div className="flex flex-wrap gap-2">
                                 {agent.repository_url && (
                                     <Button variant="outline" size="sm" className="text-xs" asChild>
-                                        <a href={agent.repository_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                                        <a href={safeAuthHref(agent.repository_url)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
                                             <ExternalLink className="w-3 h-3" /> Repository
                                         </a>
                                     </Button>
                                 )}
                                 {agent.documentation_url && (
                                     <Button variant="outline" size="sm" className="text-xs" asChild>
-                                        <a href={agent.documentation_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                                        <a href={safeAuthHref(agent.documentation_url)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
                                             <ExternalLink className="w-3 h-3" /> Documentation
                                         </a>
                                     </Button>
@@ -105,6 +108,35 @@ export function AgentDetailClient({ agent }: AgentDetailClientProps) {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-2 space-y-6">
+                    {/* Developer Quick Start */}
+                    <Card className="border-indigo-500/20 shadow-sm shadow-indigo-500/5">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <Code2 className="w-5 h-5 text-indigo-400" />
+                                Developer Quick Start
+                            </CardTitle>
+                            <CardDescription>
+                                Connect to this agent using the official ASAP Client.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="group relative rounded-md bg-zinc-950 p-4 font-mono text-sm text-zinc-300 border border-zinc-800 overflow-x-auto">
+                                <pre className="leading-relaxed">
+                                    <span className="text-zinc-500"># 1. Install the client</span>{'\n'}
+                                    <span className="text-indigo-400">npm</span> install @asap/client{'\n\n'}
+                                    <span className="text-zinc-500"># 2. Connect and route requests</span>{'\n'}
+                                    <span className="text-purple-400">import</span> {'{'} AsapClient {'}'} <span className="text-purple-400">from</span> <span className="text-emerald-300">&apos;@asap/client&apos;</span>;{'\n\n'}
+                                    <span className="text-purple-400">const</span> client = <span className="text-purple-400">new</span> AsapClient();{'\n'}
+                                    <span className="text-purple-400">await</span> client.connect(<span className="text-emerald-300">&apos;{agent.id}&apos;</span>);{'\n\n'}
+                                    <span className="text-purple-400">const</span> response = <span className="text-purple-400">await</span> client.sendTask({'{'}{'\n'}
+                                    {'  '}skill: <span className="text-emerald-300">&apos;{Array.isArray(agent.capabilities?.skills) && agent.capabilities.skills.length > 0 ? (agent.capabilities.skills[0] as { id: string }).id : 'example-skill'}&apos;</span>,{'\n'}
+                                    {'  '}input: {'{ /* payload */ }'}{'\n'}
+                                    {'}'});
+                                </pre>
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     {/* Skills and Capabilities */}
                     <Card>
                         <CardHeader>

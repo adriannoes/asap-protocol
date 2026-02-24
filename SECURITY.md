@@ -2,13 +2,26 @@
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are currently being supported with security updates.
+The following versions of the ASAP Protocol specification and reference implementation are currently supported with security updates.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.5.x   | :white_check_mark: |
-| 0.1.x   | :white_check_mark: |
-| < 0.1.0 | :x:                |
+| >= 2.0.0| :white_check_mark: |
+| 1.x.x   | :white_check_mark: |
+| < 1.0.0 | :x:                |
+
+## Scope of Coverage
+
+This security policy applies to the **ASAP Protocol** ecosystem. Vulnerabilities in the following components are considered **in-scope**:
+
+- **ASAP Protocol Reference Implementations** (`src/asap/` Python package)
+- **Marketplace & Registry API** (`apps/web/` Next.js frontend and IssueOps workflow)
+- **Cryptographic implementations** (Ed25519 signatures, RFC 8032/8785 handling)
+- **Agent Server/Client Tooling** (FastAPI routers, WebSocket handlers)
+
+**Out of Scope**:
+- Vulnerabilities within external agents listed in the `registry.json`. Each agent is maintained by its respective owner and must be reported directly to them.
+- Third-party dependencies (unless the vulnerability requires a change in how ASAP interacts with the dependency).
 
 ## Reporting a Vulnerability
 
@@ -79,6 +92,6 @@ We continuously monitor dependencies using:
 ### Version Update Schedule
 
 - **Security Updates**: Automatic and immediate (no schedule)
-- **Version Updates**: Monthly checks for non-security updates (see [Dependabot confThis project relies on [Dependabot](.github/dependabot.yml) to monitor security notes and bump dependency versions.ee [CONTRIBUTING.md](../CONTRIBUTING.md#reviewing-dependabot-prs).
+- **Version Updates**: Monthly checks for non-security updates. This project relies on [Dependabot](.github/dependabot.yml) to monitor and bump dependency versions.
 
 For more information on reviewing Dependabot PRs, see [CONTRIBUTING.md](../CONTRIBUTING.md#reviewing-dependabot-prs).
