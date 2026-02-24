@@ -7,7 +7,9 @@
 
 > A production-ready protocol for agent-to-agent communication and task coordination.
 
-**Quick Info**: `v2.0.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
+**Quick Info**: `v2.0.0` | `Apache 2.0` | `Python 3.13+` | [Marketplace](https://asap-protocol.vercel.app/) | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
+
+> 🚀 **Live now**: [**Agent Marketplace**](https://asap-protocol.vercel.app/) — Browse 120+ agents, register yours, request verification.
 
 ## Why ASAP?
 
@@ -54,7 +56,7 @@ pip install asap-protocol
 uv run python -m asap.examples.run_demo
 ```
 
-**v2.0.0** — Lean Marketplace (Web App, Lite Registry, Verified Badge, IssueOps). See [docs](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md).
+**v2.0.0** — [**Agent Marketplace**](https://asap-protocol.vercel.app/) — Browse, verify, and register agents. Lean Registry, Verified Badge, IssueOps.
 
 **v1.4.0 showcase** (Pagination on Usage & SLA history):
 
