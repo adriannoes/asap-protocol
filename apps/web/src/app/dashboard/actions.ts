@@ -1,6 +1,6 @@
 'use server';
 
-import { unstable_cache, updateTag } from 'next/cache';
+import { unstable_cache, revalidateTag } from 'next/cache';
 import { auth, decryptToken } from '@/auth';
 import { Octokit } from 'octokit';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -52,7 +52,7 @@ export async function revalidateUserRegistrationIssues() {
     if (!session?.user) return;
     const userId =
         (session.user as { id?: string }).id ?? session.user.username ?? 'anonymous';
-    updateTag(`${CACHE_TAG_PREFIX}-${userId}`);
+    revalidateTag(`${CACHE_TAG_PREFIX}-${userId}`, 'max');
 }
 
 export async function fetchUserRegistrationIssues() {

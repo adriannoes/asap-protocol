@@ -16,7 +16,7 @@ vi.mock('@/lib/rate-limit', () => ({
 
 vi.mock('next/cache', () => ({
     unstable_cache: (fn: () => Promise<unknown>) => fn,
-    updateTag: vi.fn(),
+    revalidateTag: vi.fn(),
 }));
 
 const mockListForRepo = vi.fn();
