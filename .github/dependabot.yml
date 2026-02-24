@@ -11,3 +11,23 @@ updates:
       - "security"
     # Note: Security updates are automatic and independent of schedule.
     # Version updates will be checked monthly to balance freshness with review overhead.
+
+  # npm dependencies (apps/web)
+  - package-ecosystem: "npm"
+    directory: "/apps/web"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security"
