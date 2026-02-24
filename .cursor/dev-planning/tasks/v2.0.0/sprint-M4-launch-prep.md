@@ -86,8 +86,8 @@ This is the final sprint before v2.0.0 launch. Focus on security of the IssueOps
 - [x] API calls to GitHub are aggressively cached to protect rate limits.
 - [x] `registry.json` is protected by a CI syntax guardrail.
 
-- [ ] 4.1.7 Commit: Security
-  - **Command**: `git commit -m "chore(security): apply audit fixes, guardrails, and API cache"`
+- [x] 4.1.7 Commit: Security
+  - **Done**: Consolidated in PR #61 (`feat(v2.0): Sprint M4 launch prep – security, registry, web polish`)
 
 ---
 
@@ -114,11 +114,13 @@ This is the final sprint before v2.0.0 launch. Focus on security of the IssueOps
   - **Done**: `/api/proxy/check` with `isAllowedProxyUrl` (HTTPS only), `checkProxyRateLimit` (30 req/min per IP), dashboard and agent detail use proxy; tests added.
 
 **Acceptance Criteria**:
-- [ ] UI remains responsive with 500+ agents and zero CLS during loading.
-- [ ] Agent HTTP reachability checks work regardless of agent CORS settings and proxy is secured against SSRF.
+- [x] UI remains responsive with 500+ agents and zero CLS during loading.
+  - **Verified** (2026-02-23): Playwright load test `browse-500.spec.ts` passes 6/6 (Chromium, Firefox, WebKit). Metrics: loadTimeMs ~200–220ms, timeToAgentsRenderedMs ~240–262ms, memoryMB 18 (Chrome). Skeleton grid in `loading.tsx` + `AgentCardSkeleton` prevent CLS.
+- [x] Agent HTTP reachability checks work regardless of agent CORS settings and proxy is secured against SSRF.
+  - **Verified**: `/api/proxy/check` with `isAllowedProxyUrl` (HTTPS only), `checkProxyRateLimit` (30 req/min), private IP block; tests in `apps/web/src/app/api/proxy/check/__tests__/route.test.ts`.
 
-- [ ] 4.2.5 Commit: Optimization
-  - **Command**: `git commit -m "perf(web): apply client load optimizations and proxy reachability"`
+- [x] 4.2.5 Commit: Optimization
+  - **Done**: Consolidated in PR #61
 
 ---
 
@@ -148,8 +150,8 @@ This is the final sprint before v2.0.0 launch. Focus on security of the IssueOps
 - [x] Structured errors map perfectly to GitHub Issue comments via a Debug ID.
 - [x] SEO metadata and social previews are fully functional.
 
-- [ ] 4.3.4 Commit: Polish
-  - **Command**: `git commit -m "feat(web): add vercel monitoring, log traceability, and SEO"`
+- [x] 4.3.4 Commit: Polish
+  - **Done**: Consolidated in PR #61
 
 ---
 
@@ -194,8 +196,8 @@ This is the final sprint before v2.0.0 launch. Focus on security of the IssueOps
     - Add "Privacy Policy" and "Terms of Service" placeholders (required for GitHub OAuth App validation).
     - Add "Manifesto / Vision" link based on our architecture documents.
 
-- [ ] 4.4.6 Commit Marketing Pages
-  - **Command**: `git commit -m "feat(web): add feature drill-downs, demos, quick-start, and PRD v2.1"`
+- [x] 4.4.6 Commit Marketing Pages
+  - **Done**: Consolidated in PR #61
 
 ---
 
@@ -209,35 +211,31 @@ This is the final sprint before v2.0.0 launch. Focus on security of the IssueOps
   - **Goal**: Serve as "social proof" for launch day and provide real data to validate the client-side load testing (Task 4.2.1).
   - **Done**: `scripts/seed_registry.py` added; `RegistryEntry.online_check` (optional bool) and UI skip when false; 120 agents seeded in `registry.json`; tests in `tests/scripts/test_seed_registry.py` and `tests/discovery/test_registry.py`.
 
-- [ ] 4.5.2 Final checklist review
-  - **Checklist**: Run through [launch-checklist-v2.0.md](./launch-checklist-v2.0.md) and confirm each item.
-  - [ ] Domain DNS propagated?
-  - [ ] GitHub OAuth Production App configured?
-  - [ ] Vercel Analytics tracking active?
-  - Mark 4.5.2 done when all items in the launch checklist are verified.
+- [x] 4.5.2 Final checklist review
+  - **Done**: Launch checklist verified (DNS, OAuth, Vercel Analytics).
 
-- [ ] 4.5.3 Deploy to production (Promote Vercel Preview to Prod)
+- [x] 4.5.3 Deploy to production (Promote Vercel Preview to Prod)
+  - **Done**: Deployed to production.
 
 **Acceptance Criteria**:
 - [x] 100+ agents seeded and successfully rendered in the Web App. (120 agents in registry.json; browse page shows count; seed agents use `online_check: false` so they show "Demo" instead of reachability check.)
-- [ ] v2.0.0 launched!
+- [x] v2.0.0 launched!
 
-- [ ] 4.5.4 Tag Logic Release
-  - **Command**: `git tag v2.0.0`
-  - **Command**: `git push origin v2.0.0`
+- [x] 4.5.4 Tag Logic Release
+  - **Done**: `git tag v2.0.0` + `git push origin v2.0.0`
 
 ---
 
 ## Sprint M4 Definition of Done
 
 - [x] Security audit passed — Task 4.1 done (audit, bandit CI, API cache, validate-registry, SECURITY.md, removal flow).
-- [ ] Frontend performance validated — 4.2 implementation done (load test, skeletons, proxy); AC (500+ responsive, zero CLS, proxy SSRF) left for you to confirm in testing.
+- [x] Frontend performance validated — Load test passed 6/6 (2026-02-23); skeletons prevent CLS; proxy SSRF-secured.
 - [x] Monitoring operational — Speed Insights + Analytics in layout; Debug ID in IssueOps logs; no Sentry.
 - [x] Landing page finalized — Features, demos, quick-start, DX page, footer, legal placeholders (4.4).
 - [x] 100+ beta agents — 120 seed agents in registry.json (4.5.1).
-- [ ] v2.0.0 launched! — Pending: your tests → open PR → merge → run [launch checklist](./launch-checklist-v2.0.md) (4.5.2) → deploy (4.5.3) → tag `v2.0.0` (4.5.4).
+- [x] v2.0.0 launched!
 
-**Total Sub-tasks**: ~22
+**Total Sub-tasks**: ~22 (100%)
 
 ## Documentation Updates
-- [ ] **Update Roadmap**: Mark completed items in [v2.0.0 Roadmap](./tasks-v2.0.0-roadmap.md)
+- [x] **Update Roadmap**: Mark completed items in [v2.0.0 Roadmap](./tasks-v2.0.0-roadmap.md) — Done 2026-02-23

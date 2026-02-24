@@ -133,16 +133,16 @@ v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Regi
 
 ### Tasks
 
-- [ ] 4.1 Security audit
-- [ ] 4.2 Performance testing (100+ agents in Lite Registry)
-- [ ] 4.3 Monitoring setup (Vercel analytics)
-- [ ] 4.4 Documentation complete
-- [ ] 4.5 Launch!
+- [x] 4.1 Security audit
+- [x] 4.2 Performance testing (100+ agents in Lite Registry)
+- [x] 4.3 Monitoring setup (Vercel analytics)
+- [x] 4.4 Documentation complete
+- [x] 4.5 Launch!
 
 ### Definition of Done
-- [ ] All launch criteria met (per PRD)
-- [ ] Security audit passed
-- [ ] Public launch
+- [x] All launch criteria met (per PRD)
+- [x] Security audit passed
+- [x] Public launch
 
 ---
 
@@ -201,9 +201,9 @@ v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Regi
 
 ## Progress Tracking
 
-**Overall Progress**: 16/20 tasks (80%) — Sprints M1, M2 & M3 complete
+**Overall Progress**: 20/20 tasks (100%) — Sprints M1–M4 complete; v2.0.0 launched
 
-**Last Updated**: 2026-02-21
+**Last Updated**: 2026-02-23
 
 ---
 
@@ -225,3 +225,4 @@ v2.0.0 launches the Lean Marketplace — a Web App that reads from the Lite Regi
 | 2026-02-20 | **Sprint M1 complete**: All tasks 1.1–1.6 and Definition of Done marked done; roadmap progress 6/20 (30%) |
 | 2026-02-20 | **Sprint M2 complete**: All tasks 2.1–2.4 and Definition of Done marked done; roadmap progress 10/20 (50%) |
 | 2026-02-21 | **Sprint M3 complete**: All tasks 3.1–3.6 and Definition of Done marked done; roadmap progress 16/20 (80%) |
+| 2026-02-23 | **Sprint M4 complete**: v2.0.0 launched; checklist, deploy, tag done |
