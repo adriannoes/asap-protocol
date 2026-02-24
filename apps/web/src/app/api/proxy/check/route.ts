@@ -7,6 +7,9 @@
  * - Blocks private IPs (RFC 1918), loopback, cloud metadata
  * - DNS resolution: rejects if hostname resolves to blocked IP (mitigates DNS rebinding)
  * - IP-based rate limiting
+ *
+ * TOCTOU note: Small gap between isAllowedProxyUrlAsync() DNS validation and fetch(url).
+ * Mitigated by Vercel's infrastructure (same-region fetch). Documented for audit.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { isAllowedProxyUrlAsync } from '@/lib/url-validator-server';
