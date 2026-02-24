@@ -1,69 +1,16 @@
-'use client';
-
 import type { RegistryAgent } from '@/types/registry';
 import { isAllowedExternalUrl } from '@/lib/url-validator';
+import { AgentStatusBadge } from '@/components/agent/agent-status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, ExternalLink, ShieldAlert, ShieldCheck, TerminalSquare, Loader2 } from 'lucide-react';
+import { ArrowLeft, ExternalLink, ShieldAlert, ShieldCheck, TerminalSquare } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import { Code2 } from 'lucide-react';
 
 interface AgentDetailClientProps {
     agent: RegistryAgent;
-}
-
-function AgentReachabilityBadge({ endpoint, skipReachabilityCheck }: { endpoint: string; skipReachabilityCheck?: boolean }) {
-    const [status, setStatus] = useState<'pending' | 'online' | 'offline'>('pending');
-
-    useEffect(() => {
-        if (skipReachabilityCheck) return;
-        let isMounted = true;
-        const check = async () => {
-            if (!endpoint) {
-                if (isMounted) setStatus('offline');
-                return;
-            }
-            try {
-                const res = await fetch(`/api/proxy/check?url=${encodeURIComponent(endpoint)}`);
-                const data = (await res.json()) as { ok?: boolean };
-                if (isMounted) setStatus(data.ok ? 'online' : 'offline');
-            } catch {
-                if (isMounted) setStatus('offline');
-            }
-        };
-        check();
-        return () => { isMounted = false };
-    }, [endpoint, skipReachabilityCheck]);
-
-    if (skipReachabilityCheck) {
-        return (
-            <Badge variant="outline" className="text-xs bg-muted text-muted-foreground border-muted-foreground/30">
-                Demo
-            </Badge>
-        );
-    }
-    if (status === 'pending') {
-        return (
-            <Badge variant="outline" className="text-xs bg-muted text-muted-foreground border-muted-foreground/30 gap-1">
-                <Loader2 className="w-3 h-3 animate-spin" /> Checking
-            </Badge>
-        );
-    }
-    if (status === 'online') {
-        return (
-            <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
-                Online
-            </Badge>
-        );
-    }
-    return (
-        <Badge variant="outline" className="text-xs bg-red-500/10 text-red-500 border-red-500/20">
-            Offline
-        </Badge>
-    );
 }
 
 function safeAuthHref(url: unknown): string {
@@ -126,7 +73,7 @@ export function AgentDetailClient({ agent }: AgentDetailClientProps) {
                                     Auth Required
                                 </Badge>
                             ) : null}
-                            {agentEndpoint && <AgentReachabilityBadge endpoint={agentEndpoint} skipReachabilityCheck={agent.online_check === false} />}
+                            {agentEndpoint && <AgentStatusBadge endpoint={agentEndpoint} skipReachabilityCheck={agent.online_check === false} size="default" />}
                         </div>
                     </div>
 
@@ -141,14 +88,14 @@ export function AgentDetailClient({ agent }: AgentDetailClientProps) {
                             <div className="flex flex-wrap gap-2">
                                 {agent.repository_url && (
                                     <Button variant="outline" size="sm" className="text-xs" asChild>
-                                        <a href={agent.repository_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                                        <a href={safeAuthHref(agent.repository_url)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
                                             <ExternalLink className="w-3 h-3" /> Repository
                                         </a>
                                     </Button>
                                 )}
                                 {agent.documentation_url && (
                                     <Button variant="outline" size="sm" className="text-xs" asChild>
-                                        <a href={agent.documentation_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                                        <a href={safeAuthHref(agent.documentation_url)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
                                             <ExternalLink className="w-3 h-3" /> Documentation
                                         </a>
                                     </Button>
