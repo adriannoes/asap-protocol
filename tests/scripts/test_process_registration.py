@@ -253,6 +253,8 @@ class TestProcessRegistrationRun:
         assert result["valid"] is False
         assert "errors" in result
         assert "Missing" in result["errors"] or "required" in result["errors"].lower()
+        assert "debug_id" in result
+        assert result["debug_id"].startswith("ASAP-")
 
     def test_invalid_manifest_id_mismatch(
         self,

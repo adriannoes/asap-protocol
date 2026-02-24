@@ -173,7 +173,7 @@ class InMemoryNonceStore:
         self._lock = threading.RLock()
 
     def _cleanup_expired(self) -> None:
-        if random.random() >= _CLEANUP_PROBABILITY:
+        if random.random() >= _CLEANUP_PROBABILITY:  # nosec: only for probabilistic cleanup
             return
         now = time.time()
         expired = [nonce for nonce, expiry in self._store.items() if expiry < now]
