@@ -11,8 +11,6 @@ from scripts.seed_registry import build_seed_agents, write_registry
 
 
 class TestBuildSeedAgents:
-    """build_seed_agents produces valid RegistryEntry instances."""
-
     def test_returns_at_least_requested_count(self) -> None:
         agents = build_seed_agents(100)
         assert len(agents) == 100
@@ -45,8 +43,6 @@ class TestBuildSeedAgents:
 
 
 class TestWriteRegistry:
-    """write_registry produces valid LiteRegistry JSON."""
-
     def test_written_file_validates_as_lite_registry(self, tmp_path: Path) -> None:
         agents = build_seed_agents(15)
         out = tmp_path / "registry.json"
@@ -68,8 +64,6 @@ class TestWriteRegistry:
 
 
 class TestSeedRegistryMain:
-    """CLI main() produces 100+ agents and valid registry."""
-
     def test_main_writes_at_least_100_agents(self, tmp_path: Path) -> None:
         import subprocess
         import sys

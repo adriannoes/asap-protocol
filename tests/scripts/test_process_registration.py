@@ -1,8 +1,9 @@
-"""Unit tests for scripts/process_registration.py (IssueOps registration parsing and validation)."""
+"""Tests for scripts/process_registration.py (IssueOps)."""
 
 from __future__ import annotations
 
 import json
+import socket
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -10,11 +11,22 @@ import pytest
 
 from scripts.process_registration import (
     fetch_manifest,
-    load_registry,
     parse_issue_body,
     run,
-    save_registry,
 )
+from lib.registry_io import load_registry, save_registry
+
+
+def _fake_getaddrinfo_public(
+    host: str,
+    port: object,
+    family: int = 0,
+    sock_type: int = 0,
+    proto: int = 0,
+    flags: int = 0,
+) -> list[tuple[int, int, int, str, tuple[str, int]]]:
+    """Return a public IP for any hostname (avoids DNS in tests)."""
+    return [(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 0))]
 
 
 # Sample GitHub Issue Form body (markdown with ### headers from register_agent.yml)
@@ -169,7 +181,11 @@ def _mock_httpx_client(response_json: dict) -> MagicMock:
 
 
 class TestProcessRegistrationRun:
-    """Tests for run() with mocked manifest fetch and temp files."""
+    @pytest.fixture(autouse=True)
+    def _patch_dns(self) -> None:
+        """Mock getaddrinfo so test URLs resolve to public IP."""
+        with patch("scripts.process_registration.socket.getaddrinfo", _fake_getaddrinfo_public):
+            yield
 
     def test_valid_issue_writes_registry_and_valid_result(
         self,

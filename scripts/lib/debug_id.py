@@ -11,7 +11,6 @@ import time
 
 
 def generate_debug_id() -> str:
-    """Return a unique debug identifier (e.g. ``ASAP-1708732800-a3f9b1``)."""
     ts = int(time.time())
     suffix = secrets.token_hex(3)
     return f"ASAP-{ts}-{suffix}"

@@ -1,4 +1,4 @@
-"""Unit tests for scripts/process_removal.py."""
+"""Tests for scripts/process_removal.py."""
 
 from __future__ import annotations
 
@@ -17,8 +17,6 @@ my-agent
 
 
 class TestParseIssueBodyRemoval:
-    """Tests for parse_issue_body for removal."""
-
     def test_parses_valid_body(self) -> None:
         out = parse_issue_body(VALID_BODY_REMOVE)
         assert out["name"] == "my-agent"
@@ -29,10 +27,7 @@ class TestParseIssueBodyRemoval:
 
 
 class TestProcessRemovalRun:
-    """Tests for run() agent removal logic."""
-
     def test_valid_removal(self, tmp_path: Path) -> None:
-        """Agent is found and removed successfully."""
         registry_path = tmp_path / "registry.json"
 
         existing = [
@@ -58,7 +53,6 @@ class TestProcessRemovalRun:
         assert new_registry[0]["id"] == "urn:asap:agent:other:their-agent"
 
     def test_invalid_removal_unauthorized(self, tmp_path: Path) -> None:
-        """Removal fails if the author does not own the agent."""
         registry_path = tmp_path / "registry.json"
         existing = [{"id": "urn:asap:agent:testuser:my-agent", "name": "my-agent"}]
         registry_path.write_text(json.dumps(existing))
@@ -81,7 +75,6 @@ class TestProcessRemovalRun:
         assert len(new_registry) == 1  # Still exists
 
     def test_invalid_removal_missing_agent(self, tmp_path: Path) -> None:
-        """Removal fails if the agent does not exist."""
         registry_path = tmp_path / "registry.json"
         registry_path.write_text("[]")
         output_path = tmp_path / "result.json"
