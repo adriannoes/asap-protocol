@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useEffect, useDeferredValue } from 'react';
+import { useState, useMemo, useDeferredValue, useRef, useEffect } from 'react';
+import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { Manifest } from '@/types/protocol';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,27 +11,33 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+/** Breakpoints aligned with Tailwind: sm 640, md 768, lg 1024, xl 1280. */
+function useColumns(): number {
+    const [columns, setColumns] = useState(1);
+    useEffect(() => {
+        const update = () => {
+            const w = typeof window !== 'undefined' ? window.innerWidth : 1280;
+            setColumns(w >= 1280 ? 3 : w >= 1024 ? 2 : 1);
+        };
+        update();
+        window.addEventListener('resize', update);
+        return () => window.removeEventListener('resize', update);
+    }, []);
+    return columns;
+}
+
 interface BrowseContentProps {
     initialAgents: Manifest[];
 }
 
 export function BrowseContent({ initialAgents }: BrowseContentProps) {
     const [searchQuery, setSearchQuery] = useState('');
-    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
     const [requireSla, setRequireSla] = useState(false);
     const [requireAuth, setRequireAuth] = useState(false);
 
-    // Debounce search query (Task 4.1.2)
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearch(searchQuery);
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [searchQuery]);
-
-    // Defer filter updates to keep UI responsive with 500+ entries (Task 4.2.2)
-    const deferredSearch = useDeferredValue(debouncedSearch);
+    // Defer filter updates to keep UI responsive with 500+ entries (avoids blocking input)
+    const deferredSearch = useDeferredValue(searchQuery);
 
     // Extract unique skills from all agents (Task 4.1.3)
     const availableSkills = useMemo(() => {
@@ -90,6 +97,37 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
 
         return result;
     }, [initialAgents, deferredSearch, selectedSkills, requireSla, requireAuth]);
+
+    const columns = useColumns();
+    const gridParentRef = useRef<HTMLDivElement>(null);
+    const [scrollMargin, setScrollMargin] = useState(0);
+
+    const hasRows = filteredAgents.length > 0;
+    useEffect(() => {
+        const el = gridParentRef.current;
+        if (!el) return;
+        const update = () => setScrollMargin(el.offsetTop);
+        update();
+        const ro = new ResizeObserver(update);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [hasRows]);
+
+    const rows = useMemo(
+        () =>
+            Array.from({ length: Math.ceil(filteredAgents.length / columns) }, (_, i) =>
+                filteredAgents.slice(i * columns, (i + 1) * columns)
+            ),
+        [filteredAgents, columns]
+    );
+
+    const rowVirtualizer = useWindowVirtualizer({
+        count: rows.length,
+        estimateSize: () => 280,
+        overscan: 3,
+        scrollMargin,
+        gap: 24,
+    });
 
     return (
         <div className="flex flex-col md:flex-row gap-6">
@@ -189,55 +227,90 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
                         </div>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {filteredAgents.map((agent) => (
-                            <Card key={agent.id ?? ''} className="flex flex-col transition-all hover:border-indigo-500/50 hover:shadow-md hover:-translate-y-1 duration-200">
-                                <CardHeader>
-                                    <div className="flex items-start justify-between gap-4">
-                                        <CardTitle className="text-lg line-clamp-1">{agent.name}</CardTitle>
-                                        {agent.verification?.status === 'verified' && (
-                                            <div className="shrink-0 flex items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5" title="Protocol Verified">
-                                                <ShieldCheck className="h-3.5 w-3.5 text-emerald-400 mr-1" />
-                                                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Verified</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <CardDescription className="line-clamp-2 min-h-10 text-xs">
-                                        {agent.description}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="flex-1 space-y-4">
-                                    <div className="flex flex-wrap gap-2">
-                                        {/* Safe mapping for skills array which might be under capabilities */}
-                                        {(agent.capabilities?.skills as { id: string }[])?.slice(0, 3).map((skill) => (
-                                            <Badge key={skill.id} variant="secondary" className="text-xs">
-                                                {skill.id}
-                                            </Badge>
-                                        )) || (
-                                                <span className="text-xs italic text-muted-foreground">No specific skills listed</span>
+                    <div ref={gridParentRef} className="flex-1">
+                        <div
+                            style={{
+                                height: `${rowVirtualizer.getTotalSize()}px`,
+                                width: '100%',
+                                position: 'relative',
+                            }}
+                        >
+                            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                                const rowAgents = rows[virtualRow.index] ?? [];
+                                return (
+                                    <div
+                                        key={virtualRow.key}
+                                        data-index={virtualRow.index}
+                                        ref={rowVirtualizer.measureElement}
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            width: '100%',
+                                            transform: `translateY(${virtualRow.start - rowVirtualizer.options.scrollMargin}px)`,
+                                        }}
+                                        className="pb-6"
+                                    >
+                                        <div
+                                            className={cn(
+                                                'grid gap-6',
+                                                columns === 1 && 'grid-cols-1',
+                                                columns === 2 && 'grid-cols-2',
+                                                columns === 3 && 'grid-cols-3'
                                             )}
-                                        {Array.isArray(agent.capabilities?.skills) && agent.capabilities.skills.length > 3 && (
-                                            <Badge variant="outline" className="text-xs">+{agent.capabilities.skills.length - 3} more</Badge>
-                                        )}
-                                    </div>
-                                </CardContent>
-                                <CardFooter className="pt-4 border-t flex flex-col items-start gap-4">
-                                    <div className="flex items-center justify-between w-full">
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-xs font-mono text-zinc-500 truncate w-32" title={agent.id ?? ''}>
-                                                {agent.id?.split(':').pop()}
-                                            </span>
-                                            <div className="flex gap-2 text-[10px] text-zinc-600 font-medium">
-                                                <span>v{agent.capabilities?.asap_version || '2.0'}</span>
-                                            </div>
+                                        >
+                                            {rowAgents.map((agent) => (
+                                                <Card key={agent.id ?? ''} className="flex flex-col transition-all hover:border-indigo-500/50 hover:shadow-md hover:-translate-y-1 duration-200">
+                                                    <CardHeader>
+                                                        <div className="flex items-start justify-between gap-4">
+                                                            <CardTitle className="text-lg line-clamp-1">{agent.name}</CardTitle>
+                                                            {agent.verification?.status === 'verified' && (
+                                                                <div className="shrink-0 flex items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5" title="Protocol Verified">
+                                                                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-400 mr-1" />
+                                                                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Verified</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <CardDescription className="line-clamp-2 min-h-10 text-xs">
+                                                            {agent.description}
+                                                        </CardDescription>
+                                                    </CardHeader>
+                                                    <CardContent className="flex-1 space-y-4">
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {(agent.capabilities?.skills as { id: string }[])?.slice(0, 3).map((skill) => (
+                                                                <Badge key={skill.id} variant="secondary" className="text-xs">
+                                                                    {skill.id}
+                                                                </Badge>
+                                                            )) || (
+                                                                <span className="text-xs italic text-muted-foreground">No specific skills listed</span>
+                                                            )}
+                                                            {Array.isArray(agent.capabilities?.skills) && agent.capabilities.skills.length > 3 && (
+                                                                <Badge variant="outline" className="text-xs">+{agent.capabilities.skills.length - 3} more</Badge>
+                                                            )}
+                                                        </div>
+                                                    </CardContent>
+                                                    <CardFooter className="pt-4 border-t flex flex-col items-start gap-4">
+                                                        <div className="flex items-center justify-between w-full">
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className="text-xs font-mono text-zinc-500 truncate w-32" title={agent.id ?? ''}>
+                                                                    {agent.id?.split(':').pop()}
+                                                                </span>
+                                                                <div className="flex gap-2 text-[10px] text-zinc-600 font-medium">
+                                                                    <span>v{agent.capabilities?.asap_version || '2.0'}</span>
+                                                                </div>
+                                                            </div>
+                                                            <Button asChild size="sm" variant="outline" className="shrink-0 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors">
+                                                                <Link href={`/agents/${encodeURIComponent(agent.id ?? '')}`}>View Details</Link>
+                                                            </Button>
+                                                        </div>
+                                                    </CardFooter>
+                                                </Card>
+                                            ))}
                                         </div>
-                                        <Button asChild size="sm" variant="outline" className="shrink-0 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors">
-                                            <Link href={`/agents/${encodeURIComponent(agent.id ?? '')}`}>View Details</Link>
-                                        </Button>
                                     </div>
-                                </CardFooter>
-                            </Card>
-                        ))}
+                                );
+                            })}
+                        </div>
                     </div>
                 )}
             </div>
