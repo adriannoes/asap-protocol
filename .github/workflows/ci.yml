@@ -127,7 +127,7 @@ jobs:
       - name: Run tests with coverage
         env:
           PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}
-        run: uv run pytest --tb=short --cov=src --cov-report=xml --cov-fail-under=85
+        run: uv run pytest --tb=short --cov=asap --cov-report=xml --cov-fail-under=85
         timeout-minutes: 15
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
