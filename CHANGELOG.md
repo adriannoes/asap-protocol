@@ -208,6 +208,54 @@ Security-hardened release with comprehensive authentication, DoS protection, rep
 
 ---
 
+## [2.0.0] - 2026-02-23
+
+Lean Marketplace: Web App, Lite Registry, Verified Badge, IssueOps. Major release with production-ready agent discovery and registration flow.
+
+### Added
+
+#### Web App (Next.js 15)
+- **Landing page**: Hero, value prop, protocol features, CTA
+- **Browse**: Registry browser with search/filter, 500+ agents load-tested; skeleton loading (zero CLS)
+- **Agent detail**: Full agent info, skills, SLA, trust level, OG images, sitemap
+- **Dashboard**: My agents, registration status (Listed, Pending, Verified)
+- **OAuth2**: GitHub Sign-In for developers
+
+#### Lite Registry & IssueOps
+- **Lite Registry**: `registry.json` on GitHub Pages as sole data source; no backend API
+- **IssueOps**: Web form → GitHub Issue → Action parses YAML, validates, updates registry
+- **Verified Badge**: 3-tier trust (Self-signed vs Verified); Manual vetting flow
+- **Remove-agent flow**: Issue with `remove-agent` label for deprecation
+
+#### Security & Hardening
+- **Ed25519**: RFC 8032 strict verification (s < l), JCS (RFC 8785) for manifest signatures
+- **Bandit**: CI security scanning
+- **validate-registry**: CI guardrail for `registry.json` schema
+- **Concurrency**: `register-agent` workflow queues rapid registrations (`cancel-in-progress: false`)
+- **Proxy**: `/api/proxy/check` for CORS-bypass reachability; SSRF prevention (HTTPS only, private IP block, rate limit)
+- **SECURITY.md**: Reporting policy, scope
+
+#### Monitoring & Polish
+- **Vercel**: Speed Insights + Web Analytics
+- **Debug ID**: `ASAP-{ts}-{6char}` in IssueOps logs and GitHub Issue comments
+- **SEO**: Dynamic OG images, sitemap (excludes mock/loadtest agents)
+
+#### Seed & Cold Start
+- **seed_registry.py**: 120 mock agents with `online_check: false` for launch social proof
+
+### Changed
+
+- **AGENTS.md**: Status updated to v2.0.0
+- **README**: v2.0.0 Quick Info; v2.0 marked complete in roadmap
+
+### Technical Details
+
+- **Python**: 3.13+
+- **Web**: Next.js 15, Tailwind, Shadcn/UI
+- **Load test**: Playwright browse-500.spec.ts (6/6 pass)
+
+---
+
 ## [1.4.0] - 2026-02-19
 
 Resilience & Scale: Type safety hardening and storage pagination. Backward compatible with v1.3.0.

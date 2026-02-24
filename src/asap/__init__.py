@@ -4,4 +4,4 @@ A streamlined, scalable, asynchronous protocol for agent-to-agent communication
 and task coordination.
 """
 
-__version__ = "1.4.0"
+__version__ = "2.0.0"
