@@ -1,0 +1,29 @@
+name: "🧹 Remove Agent"
+description: "Remove your agent from the ASAP Protocol registry"
+labels: ["remove-agent"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Agent Deprecation / Removal Request 🧹
+        
+        Use this form to remove your existing agent from the `registry.json`. 
+        **Note:** You can only remove agents that were registered under your GitHub account (`urn:asap:agent:<your_github_username>:<agent-name>`).
+
+  - type: input
+    id: name
+    attributes:
+      label: "Agent name (slug-friendly)"
+      description: "Extract the exact name you used when registering your agent. (E.g. if your ID was `urn:asap:agent:octocat:my-agent`, type `my-agent`)"
+      placeholder: "my-agent"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      description: "Please confirm you understand that this will permanently remove the agent from the marketplace."
+      options:
+        - label: "I confirm that I want to remove this agent from the registry."
+          required: true
