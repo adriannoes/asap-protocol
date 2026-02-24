@@ -17,6 +17,7 @@ jobs:
   process-registration:
     if: contains(github.event.issue.labels.*.name, 'registration')
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write   # required to push branch and create PR
       issues: write     # required to comment and close issues
@@ -24,14 +25,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           fetch-depth: 1
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+      - name: Setup Python
+        uses: ./.github/actions/setup-python
 
       - name: Install dependencies
         run: uv sync --frozen
@@ -92,3 +91,10 @@ jobs:
             BODY="❌ Validation failed: $ERRORS"
           fi
           gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "$BODY"
+
+      - name: Comment on script crash
+        if: always() && steps.process.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "❌ Registration script crashed. Please check the issue format and try again. Debug via the failed workflow run."
