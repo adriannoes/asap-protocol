@@ -130,9 +130,8 @@ async def run_client(agent_url: str) -> None:
     client_id = os.environ.get(ENV_CLIENT_ID)
     client_secret = os.environ.get(ENV_CLIENT_SECRET)
     token_url = os.environ.get(ENV_TOKEN_URL)
-    if not all((client_id, client_secret, token_url)):
+    if client_id is None or client_secret is None or token_url is None:
         raise ValueError("Missing OAuth2 configuration environment variables.")
-    assert client_id is not None and client_secret is not None and token_url is not None
 
     oauth2 = OAuth2ClientCredentials(
         client_id=client_id,
