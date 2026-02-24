@@ -25,6 +25,7 @@ export const RegistryAgentSchema = z.object({
     documentation_url: z.string().url().optional().nullable(),
     built_with: z.string().optional().nullable(),
     verification: VerificationStatusSchema,
+    online_check: z.boolean().optional().nullable(),
 }).passthrough();
 
 export const RegistryResponseSchema = z.union([

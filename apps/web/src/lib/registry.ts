@@ -2,15 +2,22 @@ import type { RegistryAgent } from '../types/registry';
 import { RegistryResponseSchema } from './registry-schema';
 
 /**
+ * ISR revalidate period (seconds) for registry data.
+ * Balances with upstream cache: GitHub Pages uses max-age=600 (10 min); raw.githubusercontent.com
+ * may vary. Next.js revalidates at this interval so listing visibility after a merged PR is
+ * at most this long from our side; upstream cache can extend delay if using GitHub Pages.
+ */
+export const REGISTRY_REVALIDATE_SECONDS = process.env.REGISTRY_REVALIDATE_SECONDS
+  ? Math.max(30, parseInt(process.env.REGISTRY_REVALIDATE_SECONDS, 10))
+  : 60;
+
+/**
  * Fetch the ASAP Lite Registry.
- * We fetch this directly from GitHub Pages or the configured raw URL.
- * In a real Next.js App Router, we use `next: { revalidate: 60 }` for ISR.
+ * We fetch from REGISTRY_URL (GitHub Pages or raw URL). Next.js ISR uses REGISTRY_REVALIDATE_SECONDS.
  * Normalizes registry format: endpoints.http -> endpoints.asap for UI compatibility.
  * Validates response with Zod (IMP-4).
  */
 export async function fetchRegistry(): Promise<RegistryAgent[]> {
-  // During M1 we can just fetch from a public URL or default raw content
-  // Future: the real `registry.json` will be hosted via GH Pages.
   // Server-side only: use REGISTRY_URL (not NEXT_PUBLIC_) to avoid leaking in client bundle.
   const REGISTRY_URL =
     process.env.REGISTRY_URL ||
@@ -18,7 +25,7 @@ export async function fetchRegistry(): Promise<RegistryAgent[]> {
 
   try {
     const res = await fetch(REGISTRY_URL, {
-      next: { revalidate: 60 }, // ISR every minute
+      next: { revalidate: REGISTRY_REVALIDATE_SECONDS },
     });
 
     if (!res.ok) {
