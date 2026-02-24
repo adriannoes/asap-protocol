@@ -3,7 +3,8 @@ import { fetchAgentById, fetchRegistry } from '@/lib/registry';
 import { notFound } from 'next/navigation';
 import { AgentDetailClient } from './agent-detail-client';
 
-export const revalidate = 60; // ISR
+/** Must be static for Next.js segment config. Fetch uses REGISTRY_REVALIDATE_SECONDS from registry.ts. */
+export const revalidate = 60;
 
 type Props = {
     params: Promise<{ id: string }>;
