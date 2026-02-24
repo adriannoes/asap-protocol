@@ -284,7 +284,7 @@ def test_verify_manifest_tampered_signature_raises() -> None:
 def test_verify_manifest_wrong_public_key_raises() -> None:
     manifest = _sample_manifest()
     signer_key, _ = generate_keypair()
-    other_private_key, other_public_key = generate_keypair()
+    _, other_public_key = generate_keypair()
     signed = sign_manifest(manifest, signer_key)
     signed_other_pk = SignedManifest(
         manifest=signed.manifest,

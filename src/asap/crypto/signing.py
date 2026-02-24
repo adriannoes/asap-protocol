@@ -39,7 +39,8 @@ def sign_manifest(
 ) -> SignedManifest:
     payload_bytes = canonicalize(manifest)
     raw_signature = private_key.sign(payload_bytes)
-    assert len(raw_signature) == 64, "Ed25519 signature must be 64 bytes"
+    if len(raw_signature) != 64:
+        raise ValueError(f"Ed25519 signature must be 64 bytes, got {len(raw_signature)}")
     signature_b64 = base64.b64encode(raw_signature).decode("ascii")
     block = SignatureBlock(alg="ed25519", signature=signature_b64)
     public_key_b64 = public_key_to_base64(private_key.public_key())
