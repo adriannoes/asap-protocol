@@ -52,7 +52,7 @@ ENV_CUSTOM_CLAIM = "ASAP_AUTH_CUSTOM_CLAIM"
 ENV_AUDIENCE = "ASAP_AUTH_AUDIENCE"
 # Client env vars
 ENV_CLIENT_ID = "ASAP_OAUTH2_CLIENT_ID"
-ENV_CLIENT_SECRET = "ASAP_OAUTH2_CLIENT_SECRET"
+ENV_CLIENT_SECRET = "ASAP_OAUTH2_CLIENT_SECRET"  # nosec
 ENV_TOKEN_URL = "ASAP_OAUTH2_TOKEN_URL"
 
 
@@ -131,11 +131,7 @@ async def run_client(agent_url: str) -> None:
     client_secret = os.environ.get(ENV_CLIENT_SECRET)
     token_url = os.environ.get(ENV_TOKEN_URL)
     if not all((client_id, client_secret, token_url)):
-        logger.error(
-            "secure_agent.client.missing_config",
-            message=f"Set {ENV_CLIENT_ID}, {ENV_CLIENT_SECRET}, and {ENV_TOKEN_URL} to run the client.",
-        )
-        sys.exit(1)
+        raise ValueError("Missing OAuth2 configuration environment variables.")
     assert client_id is not None and client_secret is not None and token_url is not None
 
     oauth2 = OAuth2ClientCredentials(
