@@ -1,5 +1,8 @@
 import type { RegistryAgent } from '../types/registry';
-import { RegistryResponseSchema } from './registry-schema';
+import {
+  RegistryResponseSchema,
+  type RegistryAgentValidated,
+} from './registry-schema';
 
 /**
  * ISR revalidate period (seconds) for registry data.
@@ -10,6 +13,29 @@ import { RegistryResponseSchema } from './registry-schema';
 export const REGISTRY_REVALIDATE_SECONDS = process.env.REGISTRY_REVALIDATE_SECONDS
   ? Math.max(30, parseInt(process.env.REGISTRY_REVALIDATE_SECONDS, 10))
   : 60;
+
+/**
+ * Normalizes validated registry agent to RegistryAgent (Manifest-compatible).
+ * Maps endpoints.http -> endpoints.asap for UI compatibility.
+ * Maps flat skills[] to capabilities.skills for Manifest shape.
+ * Type assertion required: registry.json format differs from Manifest (Version, Endpoint shapes).
+ */
+function normalizeRegistryAgent(agent: RegistryAgentValidated): RegistryAgent {
+  const endpoints = agent.endpoints ?? {};
+  const asap = endpoints.asap ?? endpoints.http ?? '';
+  const skills = agent.skills ?? [];
+  const capabilities = {
+    ...(agent.asap_version && { asap_version: agent.asap_version }),
+    skills: skills.map((id) => ({ id, description: '' })),
+  };
+  const normalized = {
+    ...agent,
+    version: agent.asap_version ?? '2.0',
+    endpoints: { ...endpoints, asap },
+    capabilities,
+  };
+  return normalized as unknown as RegistryAgent;
+}
 
 /**
  * Fetch the ASAP Lite Registry.
@@ -43,24 +69,11 @@ export async function fetchRegistry(): Promise<RegistryAgent[]> {
       return [];
     }
     const rawAgents = Array.isArray(parsed.data) ? parsed.data : parsed.data.agents;
-    return rawAgents.map((a) =>
-      normalizeRegistryAgent(a as { endpoints: Record<string, string>;[k: string]: unknown })
-    );
+    return rawAgents.map((a) => normalizeRegistryAgent(a));
   } catch (error) {
     console.error('Error fetching registry:', error);
     return [];
   }
-}
-
-function normalizeRegistryAgent(agent: {
-  endpoints: Record<string, string>;
-  [k: string]: unknown;
-}): RegistryAgent {
-  const endpoints = agent.endpoints ?? {};
-  if (!endpoints.asap && endpoints.http) {
-    return { ...agent, endpoints: { ...endpoints, asap: endpoints.http } } as unknown as RegistryAgent;
-  }
-  return agent as unknown as RegistryAgent;
 }
 
 export async function fetchAgentById(id: string): Promise<RegistryAgent | null> {
