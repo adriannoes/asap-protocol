@@ -559,7 +559,7 @@ class ASAPRequestHandler:
         ctx: RequestContext,
         payload_type: str,
         accept_lambda: bool = False,
-    ) -> JSONResponse | Response:
+    ) -> Response:
         response_envelope = inject_envelope_trace_context(response_envelope)
         duration_seconds = time.perf_counter() - ctx.start_time
         duration_ms = duration_seconds * 1000
@@ -674,7 +674,7 @@ class ASAPRequestHandler:
             request_dict = sanitize_for_logging(request_dict)
         logger.info("asap.request.debug_request", request_json=request_dict)
 
-    def _log_response_debug(self, response: JSONResponse | Response) -> None:
+    def _log_response_debug(self, response: Response) -> None:
         """Log full response when ASAP_DEBUG_LOG is enabled (structured JSON)."""
         if not is_debug_log_mode():
             return
@@ -956,7 +956,7 @@ class ASAPRequestHandler:
 
         return rpc_request, None
 
-    async def handle_message(self, request: Request) -> JSONResponse | Response:
+    async def handle_message(self, request: Request) -> Response:
         """Handle ASAP messages wrapped in JSON-RPC 2.0.
 
         This method:
@@ -1544,7 +1544,7 @@ def create_app(
     configure_tracing(service_name=manifest.id, app=app)
 
     @app.post("/asap")
-    async def handle_asap_message(request: Request) -> JSONResponse | Response:
+    async def handle_asap_message(request: Request) -> Response:
         """Handle ASAP messages wrapped in JSON-RPC 2.0.
 
         This endpoint:
