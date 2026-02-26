@@ -1,11 +1,11 @@
 # ASAP Protocol: Roadmap to Marketplace
 
-> **Evolution Path**: v1.0.0 → v2.0.0 (Agent Marketplace)
+> **Evolution Path**: v1.0.0 → v2.0.0 ✅ Released → v2.1.0 (next)
 >
-> **Status**: LAUNCH PREP — Sprints M1–M3 complete (80%)
-> **Horizon**: M4 launch prep, then v2.0.0 release
+> **Status**: v2.0.0 RELEASED — Planning v2.1.0
+> **Horizon**: v2.1.0 Ecosystem, then v2.2.0 Scale, then v3.0.0 Economy
 > **Created**: 2026-01-30
-> **Updated**: 2026-02-21
+> **Updated**: 2026-02-25
 
 ---
 
@@ -217,7 +217,10 @@ Key architectural and business decisions made during planning. Each decision inc
 | **v1.2.0** | Verified Identity | Signing + Compliance | Ed25519 signing, Compliance Harness, mTLS (opt) |
 | **v1.3.0** | Observability | Metering + SLAs + Delegation | ✅ Released — Observability metering, SLA framework, delegation tokens |
 | **v1.4.0** | Hardening | Resilience + Scale | Type safety hardening, storage pagination |
-| **v2.0.0** | Marketplace | Full launch | Web App, Lite Registry, Verified Badge, IssueOps registration — **M1–M3 ✅, M4 in progress** |
+| **v2.0.0** | Marketplace | Full launch | ✅ Released (2026-02-25) — Web App, Lite Registry (120+ agents), Verified Badge, IssueOps registration |
+| **v2.1.0** | Ecosystem | Demand-side activation | Consumer SDK, LangChain/CrewAI/MCP integrations, Category/Tags, Agent Revocation, PyPI — See [prd-v2.1-ecosystem.md](../prd/prd-v2.1-ecosystem.md) |
+| **v2.2.0** | Scale | Registry infrastructure | Registry API Backend (PostgreSQL), Auto-Registration, Audit Logging, DeepEval (conditional) — See [prd-v2.2-scale.md](../prd/prd-v2.2-scale.md) |
+| **v3.0.0** | Economy | Monetization | Stripe, Credits, Economy Settlement, Clearing House, ASAP Cloud — See [prd-v3.0-economy.md](../prd/prd-v3.0-economy.md) |
 
 ---
 
@@ -582,3 +585,4 @@ We follow an **Open Core + SaaS** model (LangChain-style). See [vision-agent-mar
 | 2026-02-18 | **v1.3.0 released**: Marked v1.3.0 as released in Release Timeline. Removed duplicate v1.4.0 section. |
 | 2026-02-21 | **Sprint M3 complete**: Status → LAUNCH PREP. Launch criteria updated (IssueOps, registration, verification done). Web App table with status. v2.0.0 timeline note. |
 | 2026-02-21 | **Open Core boundary**: Added Open Source vs. Proprietary section. Public until v2.1; Registry API Backend and billing become private. |
+| 2026-02-25 | **v2.0.0 Released**: Status → RELEASED. Release timeline updated with v2.1.0 (Ecosystem), v2.2.0 (Scale), v3.0.0 (Economy). PRDs created for each. Header updated. |
