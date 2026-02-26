@@ -106,6 +106,8 @@ from asap.transport.jsonrpc import (
     JsonRpcRequest,
     JsonRpcResponse,
 )
+from asap.transport.codecs import lambda_codec
+from asap.transport.codecs.lambda_codec import LAMBDA_CONTENT_TYPE
 from asap.transport.compression import (
     decompress_payload,
     get_supported_encodings,
@@ -556,7 +558,8 @@ class ASAPRequestHandler:
         response_envelope: Envelope,
         ctx: RequestContext,
         payload_type: str,
-    ) -> JSONResponse:
+        accept_lambda: bool = False,
+    ) -> JSONResponse | Response:
         response_envelope = inject_envelope_trace_context(response_envelope)
         duration_seconds = time.perf_counter() - ctx.start_time
         duration_ms = duration_seconds * 1000
@@ -596,6 +599,27 @@ class ASAPRequestHandler:
             result={"envelope": response_envelope.model_dump(mode="json")},
             id=response_id,
         )
+
+        if accept_lambda and lambda_codec.is_available():
+            try:
+                encoded_body = lambda_codec.encode(rpc_response.model_dump())
+                logger.debug(
+                    "asap.server.lambda_response",
+                    envelope_id=response_envelope.id,
+                    encoded_size=len(encoded_body),
+                )
+                return Response(
+                    status_code=200,
+                    content=encoded_body,
+                    media_type=LAMBDA_CONTENT_TYPE,
+                )
+            except Exception as e:
+                logger.warning(
+                    "asap.server.lambda_encode_failed",
+                    error=str(e),
+                    error_type=type(e).__name__,
+                )
+                # Fall through to JSON response
 
         return JSONResponse(
             status_code=200,
@@ -650,7 +674,7 @@ class ASAPRequestHandler:
             request_dict = sanitize_for_logging(request_dict)
         logger.info("asap.request.debug_request", request_json=request_dict)
 
-    def _log_response_debug(self, response: JSONResponse) -> None:
+    def _log_response_debug(self, response: JSONResponse | Response) -> None:
         """Log full response when ASAP_DEBUG_LOG is enabled (structured JSON)."""
         if not is_debug_log_mode():
             return
@@ -932,7 +956,7 @@ class ASAPRequestHandler:
 
         return rpc_request, None
 
-    async def handle_message(self, request: Request) -> JSONResponse:
+    async def handle_message(self, request: Request) -> JSONResponse | Response:
         """Handle ASAP messages wrapped in JSON-RPC 2.0.
 
         This method:
@@ -1076,7 +1100,13 @@ class ASAPRequestHandler:
                 response_envelope = response_or_none
                 payload_type = cast(str, result)
 
-                success_resp = self._build_success_response(response_envelope, ctx, payload_type)
+                # Check if client accepts Lambda-encoded responses
+                accept_header = request.headers.get("accept", "")
+                accept_lambda = LAMBDA_CONTENT_TYPE in accept_header
+
+                success_resp = self._build_success_response(
+                    response_envelope, ctx, payload_type, accept_lambda=accept_lambda
+                )
                 self._log_response_debug(success_resp)
                 return success_resp
             finally:
@@ -1514,7 +1544,7 @@ def create_app(
     configure_tracing(service_name=manifest.id, app=app)
 
     @app.post("/asap")
-    async def handle_asap_message(request: Request) -> JSONResponse:
+    async def handle_asap_message(request: Request) -> JSONResponse | Response:
         """Handle ASAP messages wrapped in JSON-RPC 2.0.
 
         This endpoint:
