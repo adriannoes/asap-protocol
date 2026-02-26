@@ -25,7 +25,7 @@ from asap.client.revocation import RevokedAgentsList  # noqa: E402
 
 
 def validate_revoked(path: Path) -> list[str]:
-    """Validate revoked_agents.json; returns error list (empty if valid)."""
+    """Return list of error strings; empty if valid."""
     if not path.exists():
         return [f"File not found: {path}"]
 

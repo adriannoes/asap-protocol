@@ -20,6 +20,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from pydantic import ValidationError
+
 # Ensure scripts/lib and src are on path when run from repo root (e.g. in CI)
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT / "scripts") not in sys.path:
@@ -36,6 +38,8 @@ from lib.registry_io import (  # noqa: E402
     write_validation_result,
 )
 
+from asap.client.revocation import RevokedAgentsList, RevokedEntry  # noqa: E402
+
 logger = logging.getLogger(__name__)
 
 # GitHub Issue Form body mapping (header label -> field name)
@@ -46,7 +50,6 @@ _HEADER_TO_FIELD = {
 
 
 def parse_issue_body(body: str) -> dict[str, str]:
-    """Extract form fields from ### headers in issue body."""
     if not body or not body.strip():
         return {}
 
@@ -95,9 +98,9 @@ def run(
 ) -> None:
     errors: list[str] = []
 
-    parsed = parse_issue_body(body)
-    urn = (parsed.get("urn") or "").strip()
-    reason = (parsed.get("reason") or "").strip()
+    form = parse_issue_body(body)
+    urn = (form.get("urn") or "").strip()
+    reason = (form.get("reason") or "").strip()
 
     if not urn:
         errors.append("Missing required field: Agent URN")
@@ -115,8 +118,7 @@ def run(
         return
 
     agents = load_registry(registry_path)
-    found_agent = next((a for a in agents if isinstance(a, dict) and a.get("id") == urn), None)
-    if not found_agent:
+    if not any(a.get("id") == urn for a in agents):
         errors.append(
             f"Agent {urn!r} not found in the registry. "
             "The agent must be registered before it can be revoked."
@@ -125,22 +127,21 @@ def run(
         return
 
     revoked_data = load_revoked(revoked_path)
-    revoked_list = revoked_data.get("revoked", [])
-    if not isinstance(revoked_list, list):
-        revoked_list = []
+    try:
+        revoked_list = RevokedAgentsList.model_validate(revoked_data)
+    except ValidationError as e:
+        errors.append(f"revoked_agents.json schema invalid: {e!s}")
+        _fail_revocation(output_path, errors, issue_number)
+        return
 
-    # Check if already revoked
-    if any(isinstance(e, dict) and e.get("urn") == urn for e in revoked_list):
+    if any(entry.urn == urn for entry in revoked_list.revoked):
         errors.append(f"Agent {urn!r} is already in the revocation list.")
         _fail_revocation(output_path, errors, issue_number)
         return
 
     revoked_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    revoked_list.append({"urn": urn, "reason": reason, "revoked_at": revoked_at})
-    revoked_data["revoked"] = revoked_list
-    revoked_data.setdefault("version", "1.0")
-
-    save_revoked(revoked_path, revoked_data)
+    revoked_list.revoked.append(RevokedEntry(urn=urn, reason=reason, revoked_at=revoked_at))
+    save_revoked(revoked_path, revoked_list.model_dump())
     write_validation_result(output_path, valid=True)
 
 
