@@ -1543,7 +1543,7 @@ def create_app(
     # OpenTelemetry tracing (zero-config via OTEL_* env vars)
     configure_tracing(service_name=manifest.id, app=app)
 
-    @app.post("/asap")
+    @app.post("/asap", response_model=None)
     async def handle_asap_message(request: Request) -> Response:
         """Handle ASAP messages wrapped in JSON-RPC 2.0.
 
