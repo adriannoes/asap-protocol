@@ -237,3 +237,66 @@ The CI runs `uv run mypy src/` and passes. Running mypy on the full repo (`mypy 
 > - Fixtures: `conftest.py` and shared test utilities remain strictly typed.
 >
 > **Date**: 2026-02-21
+
+---
+
+## Question 25: SDK Cache Strategy — Registry vs Revocation
+
+### The Question
+
+The v2.1.0 Consumer SDK (`asap.client.MarketClient`) resolves agent URNs by fetching `registry.json` and checks agent revocation against `revoked_agents.json` before every execution. Should these fetches be cached, and if so, with what strategy?
+
+### Analysis
+
+**Two data sources with different freshness tradeoffs**:
+
+| Data Source | Update Frequency | Staleness Risk |
+|-------------|-----------------|----------------|
+| `registry.json` | On every agent registration (rare) | Low — shows slightly stale discovery data |
+| `revoked_agents.json` | On agent revocation (rare, emergency) | **High** — stale data could allow execution of a revoked/malicious agent |
+
+**Options evaluated**:
+
+| Strategy | Registry TTL | Revocation TTL | Security Risk | Performance |
+|----------|-------------|---------------|--------------|-------------|
+| **No cache (always fresh)** | 0s | 0s | Zero | Slow in loops |
+| **Uniform cache (5 min)** | 300s | 300s | ⚠️ 5-min revocation window | Good |
+| **Bilateral (selected)** | 300s | 0s | ✅ Zero revocation delay | Good |
+| **Aggressive cache (1 hr)** | 3600s | 3600s | ❌ Unacceptable | Best |
+
+### Expert Assessment
+
+The two data sources have fundamentally different sensitivity profiles:
+
+- **Registry discovery** (`registry.json`): Stale data means a consumer might resolve an outdated endpoint. Acceptable for a 5-minute window — agents rarely change endpoints, and the consequence is a graceful connection failure, not a security incident.
+- **Revocation** (`revoked_agents.json`): Stale data means a consumer could **execute a revoked agent** whose cryptographic signature is still technically valid (this is why a CRL exists). Even a 5-minute window is too long for a security control.
+
+The bilateral approach treats these as distinct data types with distinct contracts, which is consistent with how TLS CRL/OCSP works in PKI infrastructure.
+
+### Decision
+
+> [!IMPORTANT]
+> **ADR-25**: The v2.1 Consumer SDK uses a **bilateral cache strategy**:
+>
+> | Source | TTL | Rationale |
+> |--------|-----|-----------|
+> | `registry.json` | **5 minutes** (configurable via `ASAP_REGISTRY_CACHE_TTL`) | Discovery data; stale is acceptable |
+> | `revoked_agents.json` | **No cache** (always fresh) | Security control; staleness is unacceptable |
+>
+> **Implementation**:
+> ```python
+> client = MarketClient(
+>     registry_cache_ttl=300,  # 5 min default; 0 disables
+> )
+> agent = await client.resolve("urn:asap:example:math-agent")
+> # resolve() steps:
+> # 1. Check registry.json (cached, TTL=5min)
+> # 2. Fetch manifest from endpoint
+> # 3. Validate Ed25519 signature
+> # 4. Check revoked_agents.json (NO cache — always fresh)
+> # 5. Return agent if all checks pass
+> ```
+>
+> **Rationale**: Aligns with PKI best practices (CRL must be fresh). Registry cache reduces load on GitHub CDN and improves UX for consumers running loops. Revocation is the last security gate before execution and must never be cached.
+>
+> **Date**: 2026-02-25

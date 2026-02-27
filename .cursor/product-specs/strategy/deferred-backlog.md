@@ -159,14 +159,17 @@
 
 ## Summary
 
-| Feature | Original Version | Deferred To | Trigger |
-|---------|-----------------|-------------|---------|
-| Registry API Backend | v1.2 | v2.1 | 500+ agents in Lite Registry |
-| DeepEval Intelligence | v1.2 | v2.2+ | User demand for quality filtering |
-| Audit Logging | v1.3 | v2.1+ | Enterprise customer or billing disputes |
-| Economy Settlement | v2.0+ | v3.0 | Revenue > $5k/mo + user demand |
-| Payment Processing | v2.0 | v3.0 | 100+ Verified Agents |
-| Category/Tags in Registry | — | v2.1 | Browse/search UX or scale |
+| Feature | Original Version | Deferred To | Trigger | PRD |
+|---------|-----------------|-------------|---------|----|
+| Registry API Backend | v1.2 | v2.2 | 500+ real agents in Lite Registry | [prd-v2.2-scale.md](../prd/prd-v2.2-scale.md) |
+| DeepEval Intelligence | v1.2 | v2.2+ (conditional) | User demand for quality filtering | [prd-v2.2-scale.md](../prd/prd-v2.2-scale.md) §4.4 |
+| Audit Logging | v1.3 | v2.2 | Enterprise customer or billing disputes | [prd-v2.2-scale.md](../prd/prd-v2.2-scale.md) §4.3 |
+| Economy Settlement | v2.0+ | v3.0 | Revenue > $5k/mo + user demand | [prd-v3.0-economy.md](../prd/prd-v3.0-economy.md) |
+| Payment Processing | v2.0 | v3.0 | 100+ Verified Agents | [prd-v3.0-economy.md](../prd/prd-v3.0-economy.md) §4.1 |
+| Category/Tags in Registry | — | **v2.1 ✅ IN PRD** | Browse/search UX — trigger met | [prd-v2.1-ecosystem.md](../prd/prd-v2.1-ecosystem.md) §4.5 |
+
+> [!NOTE]
+> **v2.1 scope decided (2026-02-25)**: Consumer SDK (demand-side), Framework Integrations (LangChain, CrewAI, MCP), Category/Tags, Agent Revocation, and PyPI distribution. See [prd-v2.1-ecosystem.md](../prd/prd-v2.1-ecosystem.md).
 
 ---
 
@@ -176,3 +179,4 @@
 |------|--------|
 | 2026-02-12 | Initial document — Lean Marketplace pivot |
 | 2026-02-20 | Added §6 Category/Tags in Lite Registry (v2.1+) |
+| 2026-02-25 | Updated summary table with PRD links; Category/Tags moved to v2.1 (trigger met); Registry API and Audit Logging moved to v2.2 PRD; Economy Settlement and Payment to v3.0 PRD |

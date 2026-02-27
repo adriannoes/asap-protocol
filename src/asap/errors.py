@@ -283,6 +283,19 @@ class WebhookURLValidationError(ASAPError):
         self.reason = reason
 
 
+class AgentRevokedException(ASAPError):
+    """Raised when agent URN is in revoked_agents.json."""
+
+    def __init__(self, urn: str, details: dict[str, Any] | None = None) -> None:
+        message = f"Agent revoked: {urn}"
+        super().__init__(
+            code="asap:agent/revoked",
+            message=message,
+            details={"urn": urn, **(details or {})},
+        )
+        self.urn = urn
+
+
 class SignatureVerificationError(ASAPError):
     """Tampering, wrong algorithm, or invalid/corrupted signature; see message for cause."""
 

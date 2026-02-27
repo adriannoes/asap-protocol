@@ -1,0 +1,113 @@
+# Revocation Action (IssueOps): validate agent revocation issues and update revoked_agents.json
+# Trigger: issues opened or edited with label "revoke-agent"
+# Valid submissions: create PR for revoked_agents.json update (auto-merge), close issue
+# Invalid: comment with errors, leave issue open
+
+name: Revoke Agent
+
+on:
+  issues:
+    types: [opened, edited]
+
+concurrency:
+  group: register-agent  # Sharing with register-agent to prevent race conditions on registry.json
+  cancel-in-progress: false
+
+jobs:
+  process-revocation:
+    if: contains(github.event.issue.labels.*.name, 'revoke-agent')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write   # required to push branch and create PR
+      issues: write     # required to comment and close issues
+      pull-requests: write  # required for gh pr create and gh pr merge
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+
+      - name: Check authorization
+        id: auth
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PERM=$(gh api "repos/${{ github.repository }}/collaborators/${{ github.actor }}/permission" --jq '.permission' 2>/dev/null || echo "none")
+          if [ "$PERM" = "admin" ] || [ "$PERM" = "write" ]; then
+            echo "authorized=true" >> $GITHUB_OUTPUT
+          else
+            echo "authorized=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Process revocation
+        id: process
+        if: steps.auth.outputs.authorized == 'true'
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          uv run python scripts/process_revocation.py \
+            --body "$ISSUE_BODY" \
+            --issue-number "$ISSUE_NUMBER" \
+            --output result.json
+
+      - name: Write unauthorized result
+        if: steps.auth.outputs.authorized == 'false'
+        run: |
+          echo '{"valid": false, "errors": "Only repository collaborators with write access can request agent revocation."}' > result.json
+
+      - name: Set process result output
+        id: result
+        run: |
+          echo "valid=$(jq -r .valid result.json)" >> $GITHUB_OUTPUT
+
+      - name: Create PR for revoked_agents.json update
+        if: steps.result.outputs.valid == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          BRANCH="registry/revoke-${{ github.event.issue.number }}"
+          git checkout -b "$BRANCH"
+          git add revoked_agents.json
+          git commit -m "chore(registry): revoke agent from issue #${{ github.event.issue.number }}"
+          git push origin "$BRANCH"
+          gh pr create --title "chore(registry): revoke agent #${{ github.event.issue.number }}" \
+            --body "Auto-generated from issue #${{ github.event.issue.number }}" \
+            --base main --head "$BRANCH"
+          gh pr merge "$BRANCH" --auto --squash
+
+      - name: Comment and close on success
+        if: steps.result.outputs.valid == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "✅ Revocation validated! A PR has been created and will be merged when checks pass."
+          gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}"
+
+      - name: Comment on validation failure
+        if: steps.result.outputs.valid == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          jq -r '
+            "❌ Validation failed: " + (.errors // "Unknown error") +
+            (if ((.debug_id // "") | length) > 0 then "\n\nDebug ID: `" + .debug_id + "` (use to correlate with GitHub Action logs)" else "" end)
+          ' result.json > comment_body.txt
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body-file comment_body.txt
+
+      - name: Comment on script crash
+        if: always() && steps.process.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "❌ Revocation script crashed. Please check the issue format and try again. Debug via the failed workflow run."

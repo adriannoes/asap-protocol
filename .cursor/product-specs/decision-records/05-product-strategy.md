@@ -331,3 +331,49 @@ The IssueOps registration template (Task 3.1) collects only the minimal fields n
 > **Rationale**: Low effort, backward-compatible, improves trust (repo/docs) and discoverability (built_with). Category/tags require schema + UI filters and are scoped for a follow-up once IssueOps is stable.
 >
 > **Date**: 2026-02-20
+
+---
+
+## Question 24: `asap-mcp-server` — Python (`pip`) or TypeScript (`npm`)?
+
+### The Question
+
+The v2.1.0 Consumer SDK includes `asap-mcp-server`, which exposes ASAP Marketplace agents as MCP Tools for desktop clients (Claude Desktop, Cursor IDE). Should this be a Python package (installable via `uvx`/`pip`) or a TypeScript/npm package (installable via `npx`)?
+
+### Analysis
+
+| Criterion | Python (`uvx asap-mcp-server`) | TypeScript (`npx @asap-protocol/mcp-server`) |
+|-----------|-------------------------------|----------------------------------------------|
+| **Codebase consistency** | ✅ Same repo, same SDK, reuses `asap.client` directly | ❌ Second language, different toolchain |
+| **MCP ecosystem norm** | ⚠️ Valid (`uvx` is MCP-supported), but less common | ✅ `npx` is the dominant install pattern |
+| **Primary audience fit** | ✅ Python devs using the ASAP SDK | ⚠️ Spans Python *and* JS devs |
+| **Maintenance burden** | ✅ One CI/lint/test stack | ❌ Doubles build infra |
+| **Trust logic reuse** | ✅ Directly calls `asap.client` trust validation | ❌ Must reimplement or call HTTP API |
+| **Distribution** | PyPI (`pip install asap-protocol[mcp]`) | npm (`@asap-protocol/mcp-server`) |
+
+**MCP precedent**: Both Python and JS MCP servers are official. Examples: `mcp-server-fetch`, `mcp-server-sqlite` (Python). Claude Desktop supports `uvx` natively.
+
+### Expert Assessment
+
+The primary consumers of `asap-mcp-server` in v2.1 are Python developers already using the SDK. The MCP server is a thin protocol adapter over `asap.client` — rewriting in TypeScript would duplicate trust validation (Ed25519, JCS) and registry resolution. Introducing a second language doubles CI configuration and creates risk of divergence between Python and JS trust implementations, delaying the release without proportional value.
+
+### Decision
+
+> [!IMPORTANT]
+> **ADR-24**: `asap-mcp-server` is implemented as a **Python package**, distributed via `pip install asap-protocol[mcp]` and installable with `uvx asap-mcp-server`.
+>
+> **Rationale**: Eliminates a second language in the repo, enables direct reuse of `asap.client` trust validation and registry resolution, and targets the primary v2.1 audience (Python SDK users). Claude Desktop and Cursor natively support `uvx`-installed Python MCP servers.
+>
+> **Install UX**:
+> ```bash
+> # Via uv (recommended for Claude Desktop / Cursor)
+> uvx asap-mcp-server
+>
+> # Via pip
+> pip install "asap-protocol[mcp]"
+> asap-mcp-server
+> ```
+>
+> **Future**: A TypeScript/npm wrapper may be added in v2.2+ if non-Python demand justifies the maintenance cost.
+>
+> **Date**: 2026-02-25

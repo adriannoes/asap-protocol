@@ -6,7 +6,16 @@ reducing duplication and ensuring consistency in test data.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
+from pathlib import Path
+
+# Fail Closed: Set ASAP_CA_PUBLIC_KEY for tests before any client/trust import.
+# Production requires this env var; tests use fixture CA key.
+if "ASAP_CA_PUBLIC_KEY" not in os.environ:
+    _ca_path = Path(__file__).parent / "fixtures" / "asap_ca" / "ca_public_b64.txt"
+    os.environ["ASAP_CA_PUBLIC_KEY"] = _ca_path.read_text().strip()
+
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 

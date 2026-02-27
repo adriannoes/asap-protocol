@@ -64,3 +64,29 @@ def save_registry(path: str, agents: list[dict[str, Any]]) -> None:
     except BaseException:
         Path(tmp).unlink(missing_ok=True)
         raise
+
+
+def load_revoked(path: str) -> dict[str, Any]:
+    """Load revoked_agents.json; returns default if missing or malformed."""
+    p = Path(path)
+    if not p.exists():
+        return {"revoked": [], "version": "1.0"}
+    raw: object = json.loads(p.read_text())
+    if isinstance(raw, dict) and "revoked" in raw:
+        return cast(dict[str, Any], raw)
+    return {"revoked": [], "version": "1.0"}
+
+
+def save_revoked(path: str, data: dict[str, Any]) -> None:
+    """Write revoked_agents.json atomically (temp + rename)."""
+    target = Path(path)
+    content = json.dumps(data, indent=2) + "\n"
+    temp_dir = target.parent if target.parent != Path() else Path.cwd()
+    fd, tmp = tempfile.mkstemp(dir=temp_dir, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(content)
+        Path(tmp).replace(target)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise

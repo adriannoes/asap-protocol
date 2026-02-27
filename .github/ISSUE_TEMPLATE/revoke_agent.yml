@@ -1,0 +1,38 @@
+name: "🚫 Revoke Agent"
+description: "Request revocation of an agent from the ASAP Protocol"
+labels: ["revoke-agent"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Agent Revocation Request 🚫
+        
+        Use this form to request revocation of an agent. Revoked agents are added to `revoked_agents.json` and will be rejected by the SDK before execution.
+        **Note:** The agent must exist in the registry. Typically used for compromised or deprecated agents.
+
+  - type: input
+    id: urn
+    attributes:
+      label: "Agent URN"
+      description: "Full agent URN (e.g. urn:asap:agent:octocat:my-agent)"
+      placeholder: "urn:asap:agent:owner:agent-name"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reason
+    attributes:
+      label: "Reason"
+      description: "Reason for revocation (e.g. compromised, deprecated, security incident)"
+      placeholder: "Agent compromised / keys leaked"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      description: "Please confirm you understand that this will add the agent to the revocation list."
+      options:
+        - label: "I confirm that this revocation request is valid and authorized."
+          required: true

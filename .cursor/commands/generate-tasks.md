@@ -15,14 +15,14 @@ To guide an AI assistant in creating a detailed, step-by-step task list in Markd
 
 1.  **Receive PRD Reference:** The user points the AI to a specific PRD file.
 2.  **Analyze PRD:** The AI reads and analyzes the functional requirements, user stories, and other sections of the specified PRD.
-3.  **Phase 1: Generate Parent Tasks:** Based on the PRD analysis, create the file and generate the main, high-level tasks required to implement the feature. Use your judgement on how many high-level tasks to use. It's likely to be about 5. Present these tasks to the user in the specified format (without sub-tasks yet). Inform the user: "I have generated the high-level tasks based on the PRD. Ready to generate the sub-tasks? Respond with 'Go' to proceed."
-4.  **Wait for Confirmation:** Pause and wait for the user to respond with "Go".
+3.  **Phase 1: Generate Parent Tasks:** Based on the PRD analysis, create the file and generate the main, high-level tasks required to implement the feature. Use your judgement on how many high-level tasks to use. It's likely to be about 5. Present these tasks to the user in the specified format (without sub-tasks yet). Inform the user: "I have generated the high-level tasks based on the PRD. Ready to generate the sub-tasks? Respond with 'LGTM' to proceed."
+4.  **Wait for Confirmation:** Pause and wait for the user to respond with "LGTM".
 5.  **Phase 2: Generate Sub-Tasks:** Once the user confirms, break down each parent task into smaller, actionable sub-tasks. **Use the detailed format** (see below) to ensure weaker AI models can execute correctly. For tasks that are part of a flow or have dependencies, add **Trigger/entry point**, **Enables**, and **Depends on** at the task level. Give each parent task its own **acceptance criteria** (verifiable, and specific to that task).
 6.  **Identify Relevant Files:** Based on the tasks and PRD, identify potential files that will need to be created or modified. List these under the `Relevant Files` section, including corresponding test files if applicable.
 7.  **Make dependencies explicit:** For any task that is part of a larger flow or has dependencies (user journey, pipeline step, API consumer, script that reads another task's output), add **Trigger/entry point**, **Enables**, and **Depends on** (see "Dependencies and integration" below). Ensure acceptance criteria belong to the task that delivers them—no AC from another task.
 8.  **Generate Final Output:** Combine the parent tasks, sub-tasks, relevant files, dependency notes, and acceptance criteria into the final Markdown structure.
 9.  **Post-generation checklist:** Before saving, verify: (a) tasks with dependencies have Trigger/Enables/Depends on where relevant; (b) each task has its own acceptance criteria and none describe another task's outcome; (c) integration points (where one task's output is another's input) are stated in sub-tasks or task notes.
-10. **Save Task List:** Save the generated document in the `/.cursor/dev-planning/tasks/` directory with the filename `tasks-[prd-file-name].md`.
+10. **Save Task List:** Save the generated document in the `/.cursor/dev-planning/tasks/` directory with the filename `tasks-[prd-file-name].md`. For large PRDs (e.g. multi-sprint releases), organize output in a versioned folder (e.g. `v2.1.0/`) with a roadmap file (`tasks-v2.1.0-roadmap.md`) and per-sprint files (`sprint-E1-*.md`, etc.); the PRD's Related Documents should link to the roadmap.
 
 ## Output Format
 
