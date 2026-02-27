@@ -73,6 +73,8 @@ from asap.observability import get_logger, get_metrics
 from asap.transport.cache import DEFAULT_MAX_SIZE, ManifestCache
 from asap.transport.mtls import MTLSConfig, create_ssl_context
 from asap.transport.circuit_breaker import CircuitBreaker, CircuitState, get_registry
+from asap.transport.codecs import lambda_codec
+from asap.transport.codecs.lambda_codec import LAMBDA_CONTENT_TYPE
 from asap.transport.compression import (
     COMPRESSION_THRESHOLD,
     CompressionAlgorithm,
@@ -305,6 +307,7 @@ class ASAPClient:
         circuit_breaker_enabled: bool | None = None,
         circuit_breaker_threshold: int | None = None,
         circuit_breaker_timeout: float | None = None,
+        lambda_codec_enabled: bool = False,
         manifest_cache_size: int | None = None,
         verify_signatures: bool = False,
         trusted_manifest_keys: Optional[Mapping[str, str]] = None,
@@ -425,6 +428,7 @@ class ASAPClient:
         self._http2 = http2
         self._compression = compression
         self._compression_threshold = compression_threshold
+        self._lambda_codec_enabled = lambda_codec_enabled
         self._on_message = on_message
         self._client: httpx.AsyncClient | None = None
         self._ws_transport: WebSocketTransport | None = None
@@ -758,8 +762,12 @@ class ASAPClient:
                 get_metrics().increment_counter("asap_transport_retries_total")
             try:
                 # Build headers
+                accept_value = "application/json"
+                if self._lambda_codec_enabled and lambda_codec.is_available():
+                    accept_value = f"{LAMBDA_CONTENT_TYPE}, application/json;q=0.9"
                 headers = {
                     "Content-Type": "application/json",
+                    "Accept": accept_value,
                     "X-Idempotency-Key": idempotency_key,
                     "Accept-Encoding": get_accept_encoding_header(),
                 }
@@ -942,11 +950,17 @@ class ASAPClient:
                         url=sanitize_url(self.base_url),
                     )
 
-                # Parse JSON response
+                # Parse response (Lambda or JSON)
+                response_content_type = response.headers.get("content-type", "")
                 try:
-                    json_response = response.json()
+                    if LAMBDA_CONTENT_TYPE in response_content_type:
+                        # Offload CPU-bound decoding to unblock the event loop
+                        json_str = await asyncio.to_thread(lambda_codec.decode, response.text)
+                        json_response = json.loads(json_str)
+                    else:
+                        json_response = response.json()
                 except Exception as e:
-                    raise ASAPRemoteError(-32700, f"Invalid JSON response: {e}") from e
+                    raise ASAPRemoteError(-32700, f"Invalid response: {e}") from e
 
                 if "error" in json_response:
                     if self._circuit_breaker is not None:
