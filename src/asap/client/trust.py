@@ -14,7 +14,6 @@ from asap.crypto.trust import verify_ca_signature
 
 
 def _get_ca_key_b64() -> str:
-    """CA key from env at call time (monkeypatch-safe). Fail closed if not set."""
     key = os.environ.get("ASAP_CA_PUBLIC_KEY")
     if not key:
         raise RuntimeError(
@@ -24,10 +23,11 @@ def _get_ca_key_b64() -> str:
     return key
 
 
-# Public alias for code that reads the key at import time (e.g. tests).
-ASAP_CA_PUBLIC_KEY_B64: str = _get_ca_key_b64()
+def __getattr__(name: str) -> str:
+    if name == "ASAP_CA_PUBLIC_KEY_B64":
+        return _get_ca_key_b64()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def verify_agent_trust(signed_manifest: SignedManifest) -> bool:
-    """Validate Ed25519 with embedded CA; raises SignatureVerificationError if invalid."""
     return verify_ca_signature(signed_manifest, known_cas=[_get_ca_key_b64()])
