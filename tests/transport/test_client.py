@@ -350,6 +350,28 @@ class TestASAPClientSend:
         assert captured_request is not None
         assert "application/json" in captured_request.headers.get("content-type", "")
 
+    async def test_send_includes_authorization_bearer_when_auth_token_set(
+        self, sample_request_envelope: Envelope, sample_response_envelope: Envelope
+    ) -> None:
+        from asap.transport.client import ASAPClient
+
+        captured_request: httpx.Request | None = None
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal captured_request
+            captured_request = request
+            return create_mock_response(sample_response_envelope)
+
+        async with ASAPClient(
+            "http://localhost:8000",
+            transport=httpx.MockTransport(mock_transport),
+            auth_token="secret-bearer-token",
+        ) as client:
+            await client.send(sample_request_envelope)
+
+        assert captured_request is not None
+        assert captured_request.headers.get("Authorization") == "Bearer secret-bearer-token"
+
 
 class TestASAPClientErrorHandling:
     """Tests for ASAPClient error handling."""
