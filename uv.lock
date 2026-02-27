@@ -88,6 +88,7 @@ dns-sd = [
     { name = "zeroconf" },
 ]
 docs = [
+    { name = "ghp-import" },
     { name = "mkdocs-material" },
     { name = "mkdocstrings", extra = ["python"] },
 ]
@@ -115,6 +116,7 @@ requires-dist = [
     { name = "brotli", marker = "extra == 'dev'", specifier = ">=1.1.0" },
     { name = "cryptography", specifier = ">=41.0" },
     { name = "fastapi", specifier = ">=0.128.0" },
+    { name = "ghp-import", marker = "extra == 'docs'", specifier = ">=2.1.0" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.28.1" },
     { name = "jcs", specifier = ">=0.2.0" },
     { name = "joserfc", specifier = ">=1.0" },

@@ -38,7 +38,8 @@ jobs:
         run: uv run mkdocs build
 
       - name: Add vercel.json to skip Vercel deployment of gh-pages
-        run: cp vercel.json site/vercel.json
+        run: |
+          if [ -f vercel.json ]; then cp vercel.json site/vercel.json; fi
 
       - name: Deploy to gh-pages
-        run: uv run ghp-import -n -p site
+        run: uv run python -m ghp_import -n -p site
