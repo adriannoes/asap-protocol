@@ -47,4 +47,9 @@ async def is_revoked(
         if to_close is not None:
             await to_close.aclose()
     payload = response.json()
-    return any(e.get("urn") == urn for e in payload.get("revoked", []))
+    if not isinstance(payload, dict):
+        return False
+    revoked_list = payload.get("revoked", [])
+    if not isinstance(revoked_list, list):
+        return False
+    return any(isinstance(e, dict) and e.get("urn") == urn for e in revoked_list)

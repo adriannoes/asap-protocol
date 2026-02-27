@@ -119,6 +119,22 @@ async def test_is_revoked_invalid_json_raises() -> None:
 
 
 @pytest.mark.asyncio
+async def test_is_revoked_non_dict_payload_returns_false() -> None:
+    """Resilience: JSON array or non-dict payload does not crash; returns False."""
+
+    def mock_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=[])
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(mock_handler)) as client:
+        result = await is_revoked(
+            "urn:asap:agent:any",
+            revoked_url="https://example.com/revoked.json",
+            http_client=client,
+        )
+    assert result is False
+
+
+@pytest.mark.asyncio
 async def test_is_revoked_creates_and_closes_client_when_none_passed() -> None:
     mock_response = MagicMock()
     mock_response.json.return_value = {"revoked": [], "version": "1.0"}
