@@ -172,7 +172,7 @@ def decode(encoded: str) -> str:
             f"Expected '{_VERSION_PREFIX}' at start of encoded string."
         )
 
-    json_str = encoded[len(_VERSION_PREFIX):]
+    json_str = encoded[len(_VERSION_PREFIX) :]
     json_str = _DECODE_PATTERN.sub(_decode_match, json_str)
 
     logger.debug(

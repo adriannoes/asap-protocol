@@ -955,9 +955,7 @@ class ASAPClient:
                 try:
                     if LAMBDA_CONTENT_TYPE in response_content_type:
                         # Offload CPU-bound decoding to unblock the event loop
-                        json_str = await asyncio.to_thread(
-                            lambda_codec.decode, response.text
-                        )
+                        json_str = await asyncio.to_thread(lambda_codec.decode, response.text)
                         json_response = json.loads(json_str)
                     else:
                         json_response = response.json()

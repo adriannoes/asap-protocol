@@ -602,9 +602,7 @@ class ASAPRequestHandler:
 
         if accept_lambda and lambda_codec.is_available():
             try:
-                encoded_body = lambda_codec.encode(
-                    rpc_response.model_dump_json(by_alias=True)
-                )
+                encoded_body = lambda_codec.encode(rpc_response.model_dump_json(by_alias=True))
                 logger.debug(
                     "asap.server.lambda_response",
                     envelope_id=response_envelope.id,
