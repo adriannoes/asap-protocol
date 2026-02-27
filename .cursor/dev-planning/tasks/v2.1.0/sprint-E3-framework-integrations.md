@@ -3,7 +3,6 @@
 > **Goal**: LangChain, CrewAI, PydanticAI tools; asap-mcp-server
 > **Prerequisite**: Sprint E2 (MarketClient)
 > **Parent Roadmap**: [tasks-v2.1.0-roadmap.md](./tasks-v2.1.0-roadmap.md)
-> **Estimated Duration**: 5–6 days
 
 ---
 

@@ -3,7 +3,6 @@
 > **Goal**: Publish asap-protocol 2.1.0 to PyPI; CI on tag
 > **Prerequisite**: Sprints E1–E4 complete
 > **Parent Roadmap**: [tasks-v2.1.0-roadmap.md](./tasks-v2.1.0-roadmap.md)
-> **Estimated Duration**: 2–3 days
 
 ---
 
