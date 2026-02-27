@@ -602,7 +602,9 @@ class ASAPRequestHandler:
 
         if accept_lambda and lambda_codec.is_available():
             try:
-                encoded_body = lambda_codec.encode(rpc_response.model_dump())
+                encoded_body = lambda_codec.encode(
+                    rpc_response.model_dump_json(by_alias=True)
+                )
                 logger.debug(
                     "asap.server.lambda_response",
                     envelope_id=response_envelope.id,
@@ -618,6 +620,7 @@ class ASAPRequestHandler:
                     "asap.server.lambda_encode_failed",
                     error=str(e),
                     error_type=type(e).__name__,
+                    exc_info=True,
                 )
                 # Fall through to JSON response
 

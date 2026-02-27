@@ -954,7 +954,11 @@ class ASAPClient:
                 response_content_type = response.headers.get("content-type", "")
                 try:
                     if LAMBDA_CONTENT_TYPE in response_content_type:
-                        json_response = lambda_codec.decode(response.text)
+                        # Offload CPU-bound decoding to unblock the event loop
+                        json_str = await asyncio.to_thread(
+                            lambda_codec.decode, response.text
+                        )
+                        json_response = json.loads(json_str)
                     else:
                         json_response = response.json()
                 except Exception as e:

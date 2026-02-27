@@ -8,6 +8,7 @@ Tests the full negotiation flow between client and server including:
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -70,7 +71,7 @@ class TestLambdaNegotiationHappyPath(NoRateLimitTestBase):
         )
         assert response.status_code == 200
         assert LAMBDA_CONTENT_TYPE in response.headers["content-type"]
-        decoded = decode(response.text)
+        decoded = json.loads(decode(response.text))
         assert "result" in decoded
         assert "envelope" in decoded["result"]
 
@@ -102,7 +103,7 @@ class TestLambdaNegotiationHappyPath(NoRateLimitTestBase):
             json=_make_jsonrpc_body(),
             headers={"Accept": LAMBDA_CONTENT_TYPE},
         )
-        lambda_data = decode(lambda_resp.text)
+        lambda_data = json.loads(decode(lambda_resp.text))
 
         assert "result" in json_data
         assert "result" in lambda_data

@@ -8,26 +8,27 @@ The codec is fully self-contained and does NOT depend on any external lambda-lan
 package. All atom mappings are defined inline based on the Lambda Lang specification.
 
 Encoding approach:
-    1. Serialize the Python dict to a JSON string
-    2. Apply deterministic token substitution for common JSON-RPC and ASAP keys
+    1. Accept a pre-serialized JSON string (leverage Pydantic's Rust core)
+    2. Apply single-pass regex substitution for common JSON-RPC and ASAP keys
     3. Prefix with a version marker for forward compatibility
 
-The encoded format is reversible with 100% fidelity — decode(encode(data)) == data.
+The encoded format is reversible with 100% fidelity — decode(encode(s)) reproduces
+the original JSON string.
 
 Content-Type: application/vnd.asap+lambda
 
 Example:
+    >>> import json
     >>> from asap.transport.codecs.lambda_codec import encode, decode
     >>>
-    >>> data = {"jsonrpc": "2.0", "method": "asap.message", "params": {}}
-    >>> encoded = encode(data)
-    >>> assert decode(encoded) == data
+    >>> json_str = json.dumps({"jsonrpc": "2.0", "method": "asap.message", "params": {}})
+    >>> encoded = encode(json_str)
+    >>> assert json.loads(decode(encoded)) == {"jsonrpc": "2.0", "method": "asap.message", "params": {}}
 """
 
 from __future__ import annotations
 
-import json
-from typing import Any
+import re
 
 from asap.observability import get_logger
 
@@ -40,7 +41,6 @@ LAMBDA_CONTENT_TYPE = "application/vnd.asap+lambda"
 _VERSION_PREFIX = "λ1:"
 
 # Substitution table: JSON string tokens -> Lambda atoms
-# Keys are ordered longest-first to ensure greedy matching is correct.
 # Each entry maps a literal JSON substring to a short Lambda atom token.
 # The atoms are wrapped in a unique delimiter (§…§) that cannot appear in
 # valid JSON to guarantee reversibility.
@@ -90,6 +90,18 @@ _ENCODE_MAP: dict[str, str] = {
 # Reverse map for decoding: Lambda atom -> original JSON token
 _DECODE_MAP: dict[str, str] = {v: k for k, v in _ENCODE_MAP.items()}
 
+# Pre-compiled regex patterns for single-pass substitution (C-level speed)
+_ENCODE_PATTERN = re.compile("|".join(map(re.escape, _ENCODE_MAP.keys())))
+_DECODE_PATTERN = re.compile("|".join(map(re.escape, _DECODE_MAP.keys())))
+
+
+def _encode_match(m: re.Match) -> str:  # type: ignore[type-arg]
+    return _ENCODE_MAP[m.group(0)]
+
+
+def _decode_match(m: re.Match) -> str:  # type: ignore[type-arg]
+    return _DECODE_MAP[m.group(0)]
+
 
 def is_available() -> bool:
     """Check if the Lambda codec is available.
@@ -103,59 +115,56 @@ def is_available() -> bool:
     return True
 
 
-def encode(data: dict[str, Any]) -> str:
-    """Encode a Python dict (JSON-RPC body) to a Lambda-compressed string.
+def encode(json_str: str) -> str:
+    """Encode a pre-serialized JSON string to a Lambda-compressed string.
 
-    Serializes the dict to JSON, then applies Lambda atom substitution
-    for common keys and values to reduce payload size.
+    Applies single-pass regex substitution for common keys and values
+    to reduce payload size. Accepts a pre-serialized JSON string to
+    avoid redundant serialization (use model_dump_json() upstream).
 
     Args:
-        data: Python dictionary to encode (typically a JSON-RPC request/response)
+        json_str: Pre-serialized JSON string (e.g. from model_dump_json())
 
     Returns:
         Lambda-encoded string prefixed with version marker
 
     Example:
-        >>> encoded = encode({"jsonrpc": "2.0", "method": "asap.message"})
+        >>> encoded = encode('{"jsonrpc":"2.0","method":"asap.message"}')
         >>> encoded.startswith("λ1:")
         True
     """
-    json_str = json.dumps(data, separators=(",", ":"), sort_keys=True)
-
-    # Apply substitutions (longest keys first for greedy correctness)
-    for token, atom in _ENCODE_MAP.items():
-        json_str = json_str.replace(token, atom)
-
-    encoded = _VERSION_PREFIX + json_str
+    encoded_str = _ENCODE_PATTERN.sub(_encode_match, json_str)
+    encoded = _VERSION_PREFIX + encoded_str
 
     logger.debug(
         "asap.lambda_codec.encoded",
-        original_size=len(json.dumps(data, separators=(",", ":"))),
+        original_size=len(json_str),
         encoded_size=len(encoded),
     )
 
     return encoded
 
 
-def decode(encoded: str) -> dict[str, Any]:
-    """Decode a Lambda-compressed string back to a Python dict.
+def decode(encoded: str) -> str:
+    """Decode a Lambda-compressed string back to a JSON string.
 
-    Reverses the Lambda atom substitution and parses the resulting
-    JSON string back into a Python dictionary.
+    Reverses the Lambda atom substitution and returns the resulting
+    JSON string. The caller is responsible for parsing the JSON.
 
     Args:
         encoded: Lambda-encoded string (must start with version prefix)
 
     Returns:
-        Original Python dictionary
+        Original JSON string
 
     Raises:
         ValueError: If the encoded string has an invalid format or version
 
     Example:
+        >>> import json
         >>> data = {"jsonrpc": "2.0", "method": "asap.message"}
-        >>> decoded = decode(encode(data))
-        >>> assert decoded == data
+        >>> decoded_str = decode(encode(json.dumps(data)))
+        >>> assert json.loads(decoded_str) == data
     """
     if not encoded.startswith(_VERSION_PREFIX):
         raise ValueError(
@@ -163,21 +172,13 @@ def decode(encoded: str) -> dict[str, Any]:
             f"Expected '{_VERSION_PREFIX}' at start of encoded string."
         )
 
-    json_str = encoded[len(_VERSION_PREFIX) :]
-
-    # Reverse substitutions
-    for atom, token in _DECODE_MAP.items():
-        json_str = json_str.replace(atom, token)
-
-    try:
-        result: dict[str, Any] = json.loads(json_str)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid Lambda codec payload: JSON decode failed: {e}") from e
+    json_str = encoded[len(_VERSION_PREFIX):]
+    json_str = _DECODE_PATTERN.sub(_decode_match, json_str)
 
     logger.debug(
         "asap.lambda_codec.decoded",
         encoded_size=len(encoded),
-        decoded_size=len(json.dumps(result, separators=(",", ":"))),
+        decoded_size=len(json_str),
     )
 
-    return result
+    return json_str

@@ -5,6 +5,8 @@ Tests encode/decode round-trips, atom mappings, and edge cases.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from asap.transport.codecs import lambda_codec
@@ -19,6 +21,14 @@ from asap.transport.codecs.lambda_codec import (
 )
 
 from ...transport.conftest import NoRateLimitTestBase
+
+
+def _roundtrip(data: dict) -> dict:
+    """Encode a dict through the codec and decode back to a dict."""
+    json_str = json.dumps(data, separators=(",", ":"), sort_keys=True)
+    encoded = encode(json_str)
+    decoded_str = decode(encoded)
+    return json.loads(decoded_str)
 
 
 class TestLambdaCodecAvailability(NoRateLimitTestBase):
@@ -41,7 +51,7 @@ class TestLambdaCodecRoundTrip(NoRateLimitTestBase):
             "params": {"envelope": {"sender": "agent-a", "recipient": "agent-b"}},
             "id": "req-1",
         }
-        assert decode(encode(data)) == data
+        assert _roundtrip(data) == data
 
     def test_jsonrpc_response(self) -> None:
         data = {
@@ -56,7 +66,7 @@ class TestLambdaCodecRoundTrip(NoRateLimitTestBase):
             },
             "id": "req-1",
         }
-        assert decode(encode(data)) == data
+        assert _roundtrip(data) == data
 
     def test_jsonrpc_error_response(self) -> None:
         data = {
@@ -64,7 +74,7 @@ class TestLambdaCodecRoundTrip(NoRateLimitTestBase):
             "error": {"code": -32600, "message": "Invalid Request", "data": None},
             "id": "req-1",
         }
-        assert decode(encode(data)) == data
+        assert _roundtrip(data) == data
 
     def test_nested_complex_payload(self) -> None:
         data = {
@@ -90,41 +100,41 @@ class TestLambdaCodecRoundTrip(NoRateLimitTestBase):
             },
             "id": "req-42",
         }
-        assert decode(encode(data)) == data
+        assert _roundtrip(data) == data
 
     def test_empty_params(self) -> None:
         data = {"jsonrpc": "2.0", "method": "asap.message", "params": {}, "id": "1"}
-        assert decode(encode(data)) == data
+        assert _roundtrip(data) == data
 
     def test_empty_dict(self) -> None:
         data: dict[str, object] = {}
-        assert decode(encode(data)) == data
+        assert _roundtrip(data) == data
 
     def test_payload_with_all_status_values(self) -> None:
         for status in ["success", "pending", "running", "completed", "failed", "cancelled"]:
             data = {"status": status}
-            assert decode(encode(data)) == data
+            assert _roundtrip(data) == data
 
     def test_payload_with_all_task_types(self) -> None:
         for pt in ["task.request", "task.response", "task.status", "task.cancel"]:
             data = {"payload_type": pt}
-            assert decode(encode(data)) == data
+            assert _roundtrip(data) == data
 
     def test_unicode_content(self) -> None:
         data = {"jsonrpc": "2.0", "params": {"text": "こんにちは 🌍"}, "id": "1"}
-        assert decode(encode(data)) == data
+        assert _roundtrip(data) == data
 
     def test_numeric_values(self) -> None:
         data = {"jsonrpc": "2.0", "params": {"int": 42, "float": 3.14, "neg": -1}, "id": "1"}
-        assert decode(encode(data)) == data
+        assert _roundtrip(data) == data
 
     def test_null_values(self) -> None:
         data = {"jsonrpc": "2.0", "result": None, "id": "1"}
-        assert decode(encode(data)) == data
+        assert _roundtrip(data) == data
 
     def test_boolean_values(self) -> None:
         data = {"params": {"a": True, "b": False}}
-        assert decode(encode(data)) == data
+        assert _roundtrip(data) == data
 
     def test_large_payload(self) -> None:
         data = {
@@ -132,7 +142,22 @@ class TestLambdaCodecRoundTrip(NoRateLimitTestBase):
             "result": {"envelope": {"payload": {"items": list(range(1000))}}},
             "id": "1",
         }
-        assert decode(encode(data)) == data
+        assert _roundtrip(data) == data
+
+    def test_encode_returns_string(self) -> None:
+        """encode() accepts a JSON string and returns a Lambda-encoded string."""
+        json_str = '{"jsonrpc":"2.0","id":"1"}'
+        encoded = encode(json_str)
+        assert isinstance(encoded, str)
+        assert encoded.startswith(_VERSION_PREFIX)
+
+    def test_decode_returns_string(self) -> None:
+        """decode() returns a JSON string, not a dict."""
+        json_str = '{"jsonrpc":"2.0","id":"1"}'
+        encoded = encode(json_str)
+        decoded = decode(encoded)
+        assert isinstance(decoded, str)
+        assert json.loads(decoded) == {"jsonrpc": "2.0", "id": "1"}
 
 
 class TestLambdaCodecAtomMappings(NoRateLimitTestBase):
@@ -147,7 +172,7 @@ class TestLambdaCodecAtomMappings(NoRateLimitTestBase):
         assert len(atoms) == len(set(atoms)), "Duplicate atoms in encode map"
 
     def test_version_prefix_present(self) -> None:
-        encoded = encode({"test": True})
+        encoded = encode('{"test":true}')
         assert encoded.startswith(_VERSION_PREFIX)
 
     def test_compression_effect(self) -> None:
@@ -167,10 +192,8 @@ class TestLambdaCodecAtomMappings(NoRateLimitTestBase):
             },
             "id": "req-1",
         }
-        import json
-
         original = json.dumps(data, separators=(",", ":"))
-        encoded = encode(data)
+        encoded = encode(original)
         assert len(encoded) < len(original)
 
 
@@ -185,30 +208,20 @@ class TestLambdaCodecEdgeCases(NoRateLimitTestBase):
         with pytest.raises(ValueError, match="missing version prefix"):
             decode("λ99:invalid")
 
-    def test_decode_malformed_json(self) -> None:
-        with pytest.raises(ValueError, match="JSON decode failed"):
-            decode(_VERSION_PREFIX + "{invalid json}")
-
     def test_decode_empty_after_prefix(self) -> None:
-        with pytest.raises(ValueError, match="JSON decode failed"):
-            decode(_VERSION_PREFIX)
+        """Decoding a prefix with no content returns an empty string."""
+        result = decode(_VERSION_PREFIX)
+        assert result == ""
 
     def test_unknown_atoms_passthrough(self) -> None:
         """Keys not in the substitution table should pass through unchanged."""
         data = {"custom_key": "custom_value", "another": [1, 2]}
-        assert decode(encode(data)) == data
+        assert _roundtrip(data) == data
 
     def test_value_containing_atom_delimiter(self) -> None:
         """Values that happen to contain § should still round-trip correctly."""
-        # The § delimiter is chosen because it cannot appear in standard JSON keys.
-        # However, it CAN appear in string values. Our substitution only replaces
-        # exact key patterns like "jsonrpc", not arbitrary substrings.
         data = {"jsonrpc": "2.0", "params": {"note": "section sign: §"}, "id": "1"}
-        # This is a known limitation: if a value contains an atom like §Jrpc§,
-        # it would be incorrectly decoded. In practice this is extremely unlikely
-        # for real ASAP payloads.
-        # We test the common case where § appears but not as an atom.
-        assert decode(encode(data)) == data
+        assert _roundtrip(data) == data
 
     def test_module_public_api(self) -> None:
         """Test that the public API is accessible from the package."""
