@@ -33,10 +33,19 @@ def _sample_manifest() -> Manifest:
 
 
 def test_asap_ca_public_key_constant_defined() -> None:
-    """CA key constant is defined and matches fixture."""
+    """CA key constant is defined and matches fixture (env set by conftest)."""
     ca_b64 = (ASAP_CA_DIR / "ca_public_b64.txt").read_text().strip()
     assert ca_b64 == ASAP_CA_PUBLIC_KEY_B64
     assert len(ASAP_CA_PUBLIC_KEY_B64) > 40
+
+
+def test_verify_agent_trust_missing_ca_env_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Fail Closed: verify_agent_trust raises when ASAP_CA_PUBLIC_KEY is not set."""
+    monkeypatch.delenv("ASAP_CA_PUBLIC_KEY", raising=False)
+    data = json.loads((FIXTURES_DIR / "verified_manifest.json").read_text())
+    signed_fixture = SignedManifest.model_validate(data)
+    with pytest.raises(RuntimeError, match="ASAP_CA_PUBLIC_KEY.*required"):
+        verify_agent_trust(signed_fixture)
 
 
 def test_verify_agent_trust_valid_verified_manifest_passes() -> None:
