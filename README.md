@@ -22,6 +22,9 @@ Building multi-agent systems today suffers from three core technical challenges 
 
 For simple point-to-point communication, a basic HTTP API might suffice; ASAP shines when you need orchestration, state management and multi-agent coordination. See the [spec](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/strategy/v0-original-specs.md) for details.
 
+### 🔌 Framework Ecosystem
+ASAP is built for interoperability. Seamlessly integrate your agents into **LangChain**, **CrewAI**, **LlamaIndex**, and **OpenClaw** workflows using our growing library of native adapters and standardized tool-calling schemas.
+
 ### Key Features
 
 - **Stateful orchestration** — Task state machine with snapshotting for resumable workflows.
