@@ -1,10 +1,7 @@
 'use server';
 
 import { unstable_cache, revalidateTag } from 'next/cache';
-import { cookies } from 'next/headers';
 import { auth } from '@/auth';
-import { getToken } from 'next-auth/jwt';
-import { NextRequest } from 'next/server';
 import { Octokit } from 'octokit';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -72,25 +69,7 @@ export async function fetchUserRegistrationIssues() {
         }
 
         const username = session.user.username;
-
-        const cookieStore = await cookies();
-        const secureCookieName = '__Secure-authjs.session-token';
-        const insecureCookieName = 'authjs.session-token';
-        const sessionToken = cookieStore.get(secureCookieName)?.value ?? cookieStore.get(insecureCookieName)?.value;
-        let accessToken: string | undefined = undefined;
-
-        if (sessionToken) {
-            const isSecure = !!cookieStore.get(secureCookieName);
-            const salt = isSecure ? secureCookieName : insecureCookieName;
-
-            // Reconstruct a dummy NextRequest to make getToken work
-            const req = new NextRequest(`http://localhost`, {
-                headers: { cookie: `${salt}=${sessionToken}` }
-            });
-
-            const decodedToken = await getToken({ req, secret: process.env.AUTH_SECRET! });
-            accessToken = decodedToken?.accessToken as string | undefined;
-        }
+        const accessToken = session.accessToken;
 
         if (!username || !accessToken) {
             return { success: false, error: 'Missing GitHub credentials' };

@@ -5,16 +5,6 @@ import {
 } from '../actions';
 import * as authModule from '@/auth';
 import * as rateLimit from '@/lib/rate-limit';
-import { cookies } from 'next/headers';
-import { getToken } from 'next-auth/jwt';
-
-vi.mock('next/headers', () => ({
-    cookies: vi.fn(),
-}));
-
-vi.mock('next-auth/jwt', () => ({
-    getToken: vi.fn(),
-}));
 
 vi.mock('@/auth', () => ({
     auth: vi.fn(),
@@ -41,21 +31,14 @@ vi.mock('octokit', () => ({
 
 const auth = vi.mocked(authModule.auth);
 const checkRateLimit = vi.mocked(rateLimit.checkRateLimit);
-const mockCookies = vi.mocked(cookies);
-const mockGetToken = vi.mocked(getToken);
 
 describe('fetchUserRegistrationIssues', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         auth.mockResolvedValue({
             user: { id: 'u1', username: 'testuser' },
+            accessToken: 'ghp_fake_token',
         } as never);
-
-        // @ts-expect-error type override for testing
-        mockCookies.mockResolvedValue({
-            get: vi.fn().mockReturnValue({ value: 'fake-session-cookie' })
-        });
-        mockGetToken.mockResolvedValue({ accessToken: 'ghp_fake_token' });
 
         checkRateLimit.mockReturnValue(true);
     });
@@ -74,8 +57,11 @@ describe('fetchUserRegistrationIssues', () => {
         if (!result.success) expect(result.error).toContain('Too many requests');
     });
 
-    it('returns error when username or encrypted token missing', async () => {
-        mockGetToken.mockResolvedValue(null);
+    it('returns error when username or access token missing', async () => {
+        auth.mockResolvedValue({
+            user: { id: 'u1', username: 'testuser' },
+            accessToken: undefined,
+        } as never);
         const result = await fetchUserRegistrationIssues();
         expect(result.success).toBe(false);
         if (!result.success) expect(result.error).toMatch(/Missing GitHub credentials/);
@@ -84,6 +70,7 @@ describe('fetchUserRegistrationIssues', () => {
     it('returns success with user registration issues (happy path)', async () => {
         auth.mockResolvedValue({
             user: { id: 'u1', username: 'testuser' },
+            accessToken: 'ghp_fake_token',
         } as never);
 
         mockListForRepo.mockResolvedValue({
