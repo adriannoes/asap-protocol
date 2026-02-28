@@ -3,6 +3,7 @@ import { HeroSection } from '@/components/landing/HeroSection';
 import { FeaturedAgents } from '@/components/landing/FeaturedAgents';
 import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
+import { fetchRegistry } from '@/lib/registry';
 
 export const metadata: Metadata = {
   title: 'ASAP Protocol | The Marketplace for Autonomous Agents',
@@ -16,11 +17,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Home() {
+export default async function Home() {
+  const allAgents = await fetchRegistry();
+  const featuredAgents = allAgents.slice(0, 6);
+
   return (
     <main className="flex min-h-screen flex-col bg-zinc-950 font-sans">
       <HeroSection />
-      <FeaturedAgents />
+      <FeaturedAgents agents={featuredAgents} />
       <FeaturesSection />
       <HowItWorksSection />
     </main>
