@@ -41,7 +41,18 @@ SKILLS_POOL = [
 FRAMEWORKS = ["CrewAI", "LangChain", "AutoGen", "Custom", "PydanticAI"]
 
 # New realistic name components
-NAME_ADJECTIVES = ["Global", "Secure", "Fast", "Elastic", "Open", "Prime", "Neural", "Deep", "Fluent", "Quick"]
+NAME_ADJECTIVES = [
+    "Global",
+    "Secure",
+    "Fast",
+    "Elastic",
+    "Open",
+    "Prime",
+    "Neural",
+    "Deep",
+    "Fluent",
+    "Quick",
+]
 SKILL_TO_NAME = {
     "code_review": "Reviewer",
     "summarize": "Summarist",
@@ -80,18 +91,18 @@ def build_seed_agents(count: int) -> list[RegistryEntry]:
         primary_skill = SKILLS_POOL[i % len(SKILLS_POOL)]
         adj = NAME_ADJECTIVES[i % len(NAME_ADJECTIVES)]
         base_name = SKILL_TO_NAME.get(primary_skill, "Agent")
-        
+
         # Make name unique but professional
-        name = f"{adj} {base_name} { (i // 10) + 1 if i >= 10 else ''}".strip()
+        name = f"{adj} {base_name} {(i // 10) + 1 if i >= 10 else ''}".strip()
         agent_id = f"urn:asap:agent:seed:agent-{i}"
-        
+
         skills = [primary_skill, SKILLS_POOL[(i + 1) % len(SKILLS_POOL)]]
         if i % 3 == 0:
             skills.append(SKILLS_POOL[(i + 2) % len(SKILLS_POOL)])
-            
+
         desc_tpl = DESCRIPTION_TEMPLATES[i % len(DESCRIPTION_TEMPLATES)]
         description = desc_tpl.format(skill=primary_skill.replace("_", " "))
-        
+
         category = SKILL_TO_CATEGORY.get(primary_skill, "Other")
         # Add some variety to tags
         tags = [primary_skill.replace("_", "-"), category.lower()]
