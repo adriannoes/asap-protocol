@@ -6,12 +6,15 @@ import asyncio
 import os
 import httpx
 
-from asap.client.http_client import MAX_429_RETRIES, delay_seconds_for_429
+from asap.client.http_client import MAX_429_RETRIES, _delay_seconds_for_429
 from asap.discovery.registry import (
     LiteRegistry,
     discover_from_registry,
     reset_registry_cache,
 )
+from asap.observability import get_logger
+
+logger = get_logger(__name__)
 
 # Default TTL in seconds (5 minutes) per ADR-25 / SDK-003.
 DEFAULT_REGISTRY_CACHE_TTL: int = 300
@@ -31,9 +34,11 @@ def _cache_ttl_seconds() -> int:
 async def get_registry(
     registry_url: str,
     *,
+    ttl_seconds: int | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> LiteRegistry:
-    ttl = _cache_ttl_seconds()
+    ttl = ttl_seconds if ttl_seconds is not None else _cache_ttl_seconds()
+    logger.debug("get_registry", registry_url=registry_url, ttl_seconds=ttl)
     registry: LiteRegistry | None = None
     for attempt in range(MAX_429_RETRIES + 1):
         try:
@@ -46,8 +51,15 @@ async def get_registry(
         except httpx.HTTPStatusError as e:
             if e.response.status_code != 429 or attempt == MAX_429_RETRIES:
                 raise
-            await asyncio.sleep(delay_seconds_for_429(e.response, attempt))
-    assert registry is not None, "loop always returns or raises"
+            logger.warning(
+                "retry_429",
+                registry_url=registry_url,
+                attempt=attempt,
+                status_code=429,
+            )
+            await asyncio.sleep(_delay_seconds_for_429(e.response, attempt))
+    if registry is None:
+        raise RuntimeError("Registry fetch loop completed without result or exception")
     return registry
 
 
