@@ -9,6 +9,7 @@ Usage:
     from asap.integrations import asap_tool_for_urn   # requires [pydanticai]
     from asap.integrations import LlamaIndexAsapTool  # requires [llamaindex]
     from asap.integrations import SmolAgentsAsapTool  # requires [smolagents]
+    from asap.integrations import OpenClawAsapBridge, get_result, is_error_result  # requires [openclaw]
     from asap.integrations import create_asap_tools_router  # FastAPI; deps in package
 """
 
@@ -20,6 +21,9 @@ __all__ = [
     "asap_tool_for_urn",
     "LlamaIndexAsapTool",
     "SmolAgentsAsapTool",
+    "OpenClawAsapBridge",
+    "is_error_result",
+    "get_result",
     "create_asap_tools_router",
 ]
 
@@ -45,6 +49,18 @@ def __getattr__(name: str) -> object:
         from asap.integrations.smolagents import SmolAgentsAsapTool
 
         return SmolAgentsAsapTool
+    if name == "OpenClawAsapBridge":
+        from asap.integrations.openclaw import OpenClawAsapBridge
+
+        return OpenClawAsapBridge
+    if name == "is_error_result":
+        from asap.integrations.openclaw import is_error_result
+
+        return is_error_result
+    if name == "get_result":
+        from asap.integrations.openclaw import get_result
+
+        return get_result
     if name == "create_asap_tools_router":
         from asap.integrations.vercel_ai import create_asap_tools_router
 
