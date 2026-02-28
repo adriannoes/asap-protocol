@@ -149,6 +149,13 @@ class TestParseIssueBody:
         assert out.get("name") == "foo"
         assert "Unknown section" not in out
 
+    def test_parse_body_with_category_and_tags(self) -> None:
+        """parse_issue_body extracts Category and Tags (Sprint E4)."""
+        body = "### Category\n\nCoding\n\n### Tags\n\nai, code_review, testing"
+        parsed = parse_issue_body(body)
+        assert parsed["category"] == "Coding"
+        assert parsed["tags"] == "ai, code_review, testing"
+
 
 class TestFetchManifestSSRF:
     """Tests for fetch_manifest SSRF protection (RF-1)."""
@@ -255,6 +262,35 @@ class TestProcessRegistrationRun:
         assert entry.get("repository_url") == "https://github.com/me/repo"
         assert entry.get("documentation_url") == "https://docs.example.com/agent"
         assert entry.get("built_with") == "LangChain"
+
+    def test_valid_issue_with_category_tags_writes_registry_entry(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Body with Category and Tags produces registry entry with category and tags (Sprint E4)."""
+        body_with_category_tags = (
+            VALID_BODY_MINIMAL + "\n\n### Category\n\nCoding\n\n### Tags\n\nai, code_review"
+        )
+        with patch(
+            "scripts.process_registration.httpx.Client",
+            return_value=_mock_httpx_client(VALID_MANIFEST_JSON),
+        ):
+            registry_path = tmp_path / "registry.json"
+            registry_path.write_text("[]")
+            output_path = tmp_path / "result.json"
+            run(
+                body=body_with_category_tags,
+                issue_number="8",
+                author="testuser",
+                output_path=str(output_path),
+                registry_path=str(registry_path),
+            )
+        result = json.loads(output_path.read_text())
+        assert result["valid"] is True
+        registry = json.loads(registry_path.read_text())
+        entry = registry[0]
+        assert entry.get("category") == "Coding"
+        assert entry.get("tags") == ["ai", "code_review"]
 
     def test_invalid_missing_required_fields(self, tmp_path: Path) -> None:
         output_path = tmp_path / "result.json"

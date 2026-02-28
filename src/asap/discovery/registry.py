@@ -26,6 +26,19 @@ DEFAULT_REGISTRY_URL: str = "https://asap-protocol.github.io/registry/registry.j
 # Default cache TTL in seconds (15 minutes).
 DEFAULT_REGISTRY_TTL_SECONDS: int = 900
 
+# Canonical category values (aligned with GitHub register_agent.yml). Used to normalize on parse.
+REGISTRY_CATEGORIES: tuple[str, ...] = (
+    "Research",
+    "Coding",
+    "Productivity",
+    "Data",
+    "Security",
+    "Infrastructure",
+    "Creative",
+    "Finance",
+    "Other",
+)
+
 # Module-level cache: registry_url -> (expiry_monotonic, LiteRegistry).
 _registry_cache: dict[str, tuple[float, "LiteRegistry"]] = {}
 _registry_locks: dict[str, asyncio.Lock] = {}
@@ -93,6 +106,18 @@ class RegistryEntry(ASAPBaseModel):
     def validate_urn_format(cls, v: str) -> str:
         """Validate agent ID URN format."""
         return validate_agent_urn(v)
+
+    @field_validator("category")
+    @classmethod
+    def normalize_category(cls, v: str | None) -> str | None:
+        """Normalize category to canonical form (e.g. 'coding' -> 'Coding') for consistency."""
+        if not v or not v.strip():
+            return None
+        v = v.strip()
+        for canonical in REGISTRY_CATEGORIES:
+            if v.lower() == canonical.lower():
+                return canonical
+        return v
 
 
 class LiteRegistry(ASAPBaseModel):
