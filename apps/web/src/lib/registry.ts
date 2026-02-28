@@ -15,6 +15,35 @@ export const REGISTRY_REVALIDATE_SECONDS = process.env.REGISTRY_REVALIDATE_SECON
   : 60;
 
 /**
+ * Fetch the list of revoked agent URNs.
+ * Returns a Set for efficient lookup.
+ */
+export async function fetchRevokedUrns(): Promise<Set<string>> {
+  const REVOKED_URL =
+    process.env.REVOKED_URL ||
+    'https://raw.githubusercontent.com/adriannoes/asap-protocol/main/revoked_agents.json';
+
+  try {
+    const res = await fetch(REVOKED_URL, {
+      next: { revalidate: REGISTRY_REVALIDATE_SECONDS },
+    });
+
+    if (!res.ok) {
+      if (res.status === 404) return new Set();
+      console.error(`Failed to fetch revoked list: ${res.statusText}`);
+      return new Set();
+    }
+
+    const data = await res.json();
+    const urns = (data.revoked || []).map((entry: { urn: string }) => entry.urn);
+    return new Set(urns);
+  } catch (error) {
+    console.error('Error fetching revoked list:', error);
+    return new Set();
+  }
+}
+
+/**
  * Normalizes validated registry agent to RegistryAgent (Manifest-compatible).
  * Maps endpoints.http -> endpoints.asap for UI compatibility.
  * Maps flat skills[] to capabilities.skills for Manifest shape.
