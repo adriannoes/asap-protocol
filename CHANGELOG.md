@@ -5,6 +5,17 @@ All notable changes to the ASAP Protocol will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+#### OpenClaw Integration (Sprint E5)
+- **OpenClaw Skill** (`packages/asap-openclaw-skill`): Node.js plugin that registers `asap_invoke` tool for OpenClaw agents to call ASAP agents by URN
+- **Python bridge** (`OpenClawAsapBridge`): Hybrid pipelines combining OpenClawClient with MarketClient; `run_asap()` and `run_asap_auto_skill()` methods
+- **Optional dependency** `[openclaw]`: `openclaw-sdk>=2.0` for Python integration
+- **Registry UX**: OpenClaw tab in agent detail Usage Snippets
+- **Documentation**: `docs/guides/openclaw-integration.md` with installation and usage
+
 ## [0.1.0] - 2026-01-23
 
 First alpha release of the ASAP Protocol Python implementation.

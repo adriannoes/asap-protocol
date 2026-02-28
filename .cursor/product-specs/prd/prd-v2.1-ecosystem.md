@@ -247,7 +247,7 @@ Reuse existing `src/asap/crypto/trust.py` — `verify_ca_signature` function. Th
 ## 9. Related Documents
 
 - **Supersedes**: The original `prd-v2.1-consumers.md` PRD scope.
-- **Tasks**: [tasks-v2.1.0-roadmap.md](../../dev-planning/tasks/v2.1.0/tasks-v2.1.0-roadmap.md) — 5 sprints (E1–E5), roadmap + detailed sprint files
+- **Tasks**: [tasks-v2.1.0-roadmap.md](../../dev-planning/tasks/v2.1.0/tasks-v2.1.0-roadmap.md) — 6 sprints (E1–E6), roadmap + detailed sprint files
 - **Decision Records**: [ADR-24](../decision-records/05-product-strategy.md) (MCP Python vs npm), [ADR-25](../decision-records/04-technology.md) (SDK cache strategy)
 - **Deferred Backlog**: [deferred-backlog.md](../strategy/deferred-backlog.md)
 - **Roadmap**: [roadmap-to-marketplace.md](../strategy/roadmap-to-marketplace.md)

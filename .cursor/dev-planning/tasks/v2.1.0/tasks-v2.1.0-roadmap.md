@@ -12,7 +12,8 @@
 > - [E2: Consumer SDK Core](./sprint-E2-consumer-sdk.md)
 > - [E3: Framework Integrations](./sprint-E3-framework-integrations.md)
 > - [E4: Registry UX (Category/Tags)](./sprint-E4-registry-ux.md)
-> - [E5: PyPI Distribution](./sprint-E5-pypi-distribution.md)
+> - [E5: OpenClaw Integration](./sprint-E5-openclaw-integration.md)
+> - [E6: PyPI Distribution](./sprint-E6-pypi-distribution.md)
 
 ---
 
@@ -110,22 +111,42 @@ v2.1.0 activates the **demand side** of the marketplace:
 
 ---
 
-## Sprint E5: PyPI Distribution
+## Sprint E5: OpenClaw Integration
 
-**Goal**: Publish asap-protocol 2.1.0 to PyPI; CI on tag
+**Goal**: Integrate ASAP Protocol with OpenClaw framework (Python bridge, Node.js plugin, Registry UX)
 
-**Depends on**: Sprints E1–E4 complete
+**Depends on**: Sprint E2 (MarketClient), Sprint E3 (Framework Integrations pattern)
 
 | Task | Sub-tasks | Est. |
 |------|-----------|------|
-| 5.1 | Bump version to 2.1.0 | 0.5d |
-| 5.2 | PyPI publish GitHub Action | 1d |
-| 5.3 | Verify optional dependency groups | 0.5d |
-| 5.4 | CHANGELOG and release notes | 0.5d |
+| 5.1 | Add optional dependency [openclaw] | 0.5d |
+| 5.2 | Create OpenClaw integration module | 1d |
+| 5.3 | Create OpenClaw Skill (Node.js plugin) | 1.5d |
+| 5.4 | Registry UX — Usage Snippets | 0.5d |
+| 5.5 | Documentation | 0.5d |
+
+**Definition of Done**: `pip install asap-protocol[openclaw]` works; OpenClaw plugin installable; usage snippets show OpenClaw.
+
+**Detail**: [sprint-E5-openclaw-integration.md](./sprint-E5-openclaw-integration.md)
+
+---
+
+## Sprint E6: PyPI Distribution
+
+**Goal**: Publish asap-protocol 2.1.0 to PyPI; CI on tag
+
+**Depends on**: Sprints E1–E5 complete
+
+| Task | Sub-tasks | Est. |
+|------|-----------|------|
+| 6.1 | Bump version to 2.1.0 | 0.5d |
+| 6.2 | PyPI publish GitHub Action | 1d |
+| 6.3 | Verify optional dependency groups | 0.5d |
+| 6.4 | CHANGELOG and release notes | 0.5d |
 
 **Definition of Done**: `pip install asap-protocol` and `pip install asap-protocol[mcp]` work; tag triggers publish.
 
-**Detail**: [sprint-E5-pypi-distribution.md](./sprint-E5-pypi-distribution.md)
+**Detail**: [sprint-E6-pypi-distribution.md](./sprint-E6-pypi-distribution.md)
 
 ---
 
@@ -137,9 +158,10 @@ v2.1.0 activates the **demand side** of the marketplace:
 | E2 | Consumer SDK Core | 11 | 4–5 |
 | E3 | Framework Integrations | 12 | 5–6 |
 | E4 | Registry UX | 13 | 4–5 |
-| E5 | PyPI Distribution | 6 | 2–3 |
+| E5 | OpenClaw Integration | 11 | 4 |
+| E6 | PyPI Distribution | 6 | 2–3 |
 
-**Total**: 55 sub-tasks across 5 sprints, ~19–24 days
+**Total**: 66 sub-tasks across 6 sprints, ~23–28 days
 
 ---
 
@@ -149,9 +171,10 @@ v2.1.0 activates the **demand side** of the marketplace:
 E1 (Trust & Revocation)
  ├── E2 (Consumer SDK)
  │    └── E3 (Framework Integrations)
+ │         └── E5 (OpenClaw Integration)
  └── E4 (Registry UX) — 4.6 needs E1 for revoked_agents.json
 
-E2, E3, E4 ──► E5 (PyPI)
+E2, E3, E4, E5 ──► E6 (PyPI)
 ```
 
 ---
