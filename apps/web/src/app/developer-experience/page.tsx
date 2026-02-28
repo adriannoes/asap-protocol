@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { ArrowRight, Terminal, Braces, Route, ShieldCheck, GitMerge } from 'lucide-react';
+import { ArrowRight, Terminal, Braces, Route, ShieldCheck, GitMerge, MessageSquare, Library, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
@@ -151,17 +151,30 @@ export default function DeveloperExperiencePage() {
 
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                         {[
-                            { name: 'LangChain', desc: 'Auto-discover ASAP agents as standard LangChain tools.' },
-                            { name: 'CrewAI', desc: 'Securely orchestrate multi-agent workflows with ASAP support.' },
-                            { name: 'PydanticAI', desc: 'Strict type-safe agent definitions powered by Pydantic.' },
-                            { name: 'LlamaIndex', desc: 'Data-to-agent pipelines with ASAP-compliant tool calling.' },
-                            { name: 'MCP', desc: 'Connect ASAP agents directly to Claude Desktop & IDEs.' },
-                            { name: 'SmolAgents', desc: 'Minimalist, high-performance agentic logic integration.' },
-                            { name: 'OpenClaw', desc: 'Interoperable chat-based agent patterns.' },
-                            { name: 'Node.js', desc: 'First-class SDK for building and consuming agents in JS.' },
+                            { name: 'LangChain', logo: 'langchain', desc: 'Auto-discover ASAP agents as standard LangChain tools.' },
+                            { name: 'CrewAI', logo: 'crewai', desc: 'Securely orchestrate multi-agent workflows with ASAP support.' },
+                            { name: 'PydanticAI', logo: 'pydantic', desc: 'Strict type-safe agent definitions powered by Pydantic.' },
+                            { name: 'LlamaIndex', icon: <Library className="w-4 h-4 text-indigo-400" />, desc: 'Data-to-agent pipelines with ASAP-compliant tool calling.' },
+                            { name: 'MCP', logo: 'anthropic', desc: 'Connect ASAP agents directly to Claude Desktop & IDEs.' },
+                            { name: 'SmolAgents', logo: 'huggingface', desc: 'Minimalist, high-performance agentic logic integration.' },
+                            { name: 'OpenClaw', icon: <MessageSquare className="w-4 h-4 text-indigo-400" />, desc: 'Interoperable chat-based agent patterns.' },
+                            { name: 'Vercel AI SDK', logo: 'vercel', desc: 'Bridge ASAP agents into Next.js/React apps with native tool-calling support.' },
                         ].map((fw) => (
-                            <div key={fw.name} className="p-5 rounded-lg border border-zinc-800 bg-zinc-900/20 hover:bg-zinc-900/40 transition-colors">
-                                <h3 className="text-white font-bold text-sm mb-2">{fw.name}</h3>
+                            <div key={fw.name} className="p-5 rounded-lg border border-zinc-800 bg-zinc-900/20 hover:bg-zinc-900/40 transition-all group">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="w-8 h-8 rounded border border-zinc-800 bg-zinc-950 flex items-center justify-center shrink-0 group-hover:border-zinc-700 transition-colors">
+                                        {fw.logo ? (
+                                            <img
+                                                src={`https://cdn.simpleicons.org/${fw.logo}/white`}
+                                                className="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity"
+                                                alt={fw.name}
+                                            />
+                                        ) : (
+                                            fw.icon
+                                        )}
+                                    </div>
+                                    <h3 className="text-white font-bold text-sm tracking-tight">{fw.name}</h3>
+                                </div>
                                 <p className="text-zinc-500 text-xs leading-relaxed">
                                     {fw.desc}
                                 </p>
