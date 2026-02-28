@@ -1,0 +1,42 @@
+{
+  "name": "asap-openclaw-skill",
+  "version": "1.0.0",
+  "description": "OpenClaw skill to invoke ASAP Protocol agents by URN",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "keywords": [
+    "openclaw",
+    "asap",
+    "agent",
+    "protocol",
+    "skill",
+    "clawskills"
+  ],
+  "openclaw": {
+    "extensions": [
+      "./dist/index.js"
+    ]
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@sinclair/typebox": "^0.34.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adriannoes/asap-protocol"
+  },
+  "license": "Apache-2.0"
+}
