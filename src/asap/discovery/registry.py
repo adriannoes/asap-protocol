@@ -58,6 +58,14 @@ class RegistryEntry(ASAPBaseModel):
         default_factory=list,
         description="Skill identifiers the agent supports",
     )
+    category: str | None = Field(
+        default=None,
+        description="Category of the agent (e.g. Coding, Research)",
+    )
+    tags: list[str] = Field(
+        default_factory=list,
+        description="Tags for better discovery",
+    )
     asap_version: str = Field(..., description="ASAP protocol version (e.g. 1.1.0)")
     repository_url: str | None = Field(
         default=None,
@@ -202,6 +210,8 @@ def generate_registry_entry(
     repository_url: str | None = None,
     documentation_url: str | None = None,
     built_with: str | None = None,
+    category: str | None = None,
+    tags: list[str] | None = None,
 ) -> RegistryEntry:
     """Build a RegistryEntry from an existing Manifest and endpoint map.
 
@@ -226,6 +236,8 @@ def generate_registry_entry(
         description=manifest.description,
         endpoints=endpoints,
         skills=skills,
+        category=category,
+        tags=tags or [],
         asap_version=manifest.capabilities.asap_version,
         repository_url=repository_url or None,
         documentation_url=documentation_url or None,

@@ -74,6 +74,31 @@ body:
         - Other
       default: 0
 
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: "Primary category for your agent (optional)."
+      options:
+        - ""
+        - Research
+        - Coding
+        - Productivity
+        - Data
+        - Security
+        - Infrastructure
+        - Creative
+        - Finance
+        - Other
+      default: 0
+
+  - type: input
+    id: tags
+    attributes:
+      label: Tags
+      description: "Comma-separated tags for discovery (e.g. web_research, summarization)."
+      placeholder: web_research, summarization
+
   - type: input
     id: repository_url
     attributes:

@@ -107,6 +107,8 @@ _HEADER_TO_FIELD = {
     "WebSocket Endpoint (optional)": "websocket_endpoint",
     "Skills": "skills",
     "Built with (framework)": "built_with",
+    "Category": "category",
+    "Tags": "tags",
     "Repository URL (optional)": "repository_url",
     "Documentation URL (optional)": "documentation_url",
     "Confirmation": "confirm",
@@ -164,6 +166,8 @@ def run(
     websocket_endpoint = (parsed.get("websocket_endpoint") or "").strip()
     skills_str = (parsed.get("skills") or "").strip()
     built_with = (parsed.get("built_with") or "").strip() or None
+    category = (parsed.get("category") or "").strip() or None
+    tags_str = (parsed.get("tags") or "").strip()
     repository_url = (parsed.get("repository_url") or "").strip() or None
     documentation_url = (parsed.get("documentation_url") or "").strip() or None
 
@@ -243,6 +247,8 @@ def run(
     if websocket_endpoint:
         endpoints["ws"] = websocket_endpoint
 
+    tags = [t.strip() for t in tags_str.split(",") if t.strip()] if tags_str else []
+
     try:
         entry = generate_registry_entry(
             manifest,
@@ -250,6 +256,8 @@ def run(
             repository_url=repository_url,
             documentation_url=documentation_url,
             built_with=built_with,
+            category=category,
+            tags=tags,
         )
     except ValidationError as e:
         error_count = e.error_count()
