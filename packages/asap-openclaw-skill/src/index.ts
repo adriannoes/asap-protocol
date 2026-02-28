@@ -25,7 +25,9 @@ const ASAP_JSONRPC_METHOD = "asap.send";
 const SENDER_URN = "urn:asap:agent:openclaw-skill";
 
 function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+  return typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
 interface RegistryEntry {
@@ -184,6 +186,9 @@ export default function (api: { registerTool: (tool: unknown, opts?: { optional?
             content: [{ type: "text", text }],
           };
         } catch (err) {
+          if (!(err instanceof Error)) {
+            console.warn("[asap-openclaw-skill] Non-Error thrown:", err);
+          }
           const message = err instanceof Error ? err.message : String(err);
           return {
             content: [{ type: "text", text: `Error: ${message}` }],

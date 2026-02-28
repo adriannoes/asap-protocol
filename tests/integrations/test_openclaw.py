@@ -306,6 +306,12 @@ def test_get_result_raises_on_error() -> None:
         get_result("Error: Agent not found")
 
 
+def test_get_result_raises_type_error_when_not_dict() -> None:
+    """get_result raises TypeError when result is not a dict (e.g. list)."""
+    with pytest.raises(TypeError, match="Expected dict result"):
+        get_result(["not", "a", "dict"])
+
+
 def test_openclaw_bridge_accepts_registry_url() -> None:
     """OpenClawAsapBridge can be constructed with registry_url without building MarketClient."""
     bridge = OpenClawAsapBridge(registry_url="https://custom.registry/registry.json")
