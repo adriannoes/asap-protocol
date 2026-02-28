@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import Image from 'next/image';
 import { ArrowRight, Terminal, Braces, Route, ShieldCheck, GitMerge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -151,39 +152,25 @@ export default function DeveloperExperiencePage() {
 
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                         {[
-                            { name: 'LangChain', logo: 'langchain', desc: 'Auto-discover ASAP agents as standard LangChain tools.' },
-                            { name: 'CrewAI', logo: 'crewai', desc: 'Securely orchestrate multi-agent workflows with ASAP support.' },
-                            { name: 'PydanticAI', logo: 'pydantic', desc: 'Strict type-safe agent definitions powered by Pydantic.' },
-                            { name: 'LlamaIndex', logo_url: 'https://apipie.ai/docs/img/Integrations/Llamaindex/LlamaSquareBlack.svg', desc: 'Data-to-agent pipelines with ASAP-compliant tool calling.' },
-                            { name: 'MCP', logo: 'anthropic', desc: 'Connect ASAP agents directly to Claude Desktop & IDEs.' },
-                            { name: 'SmolAgents', logo: 'huggingface', desc: 'Minimalist, high-performance agentic logic integration.' },
-                            { name: 'OpenClaw', logo_url: 'https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/openclaw.svg', desc: 'Interoperable chat-based agent patterns.' },
-                            { name: 'Vercel AI SDK', logo: 'vercel', desc: 'Bridge ASAP agents into Next.js/React apps with native tool-calling support.' },
+                            { name: 'LangChain', icon: 'langchain', desc: 'Auto-discover ASAP agents as standard LangChain tools.' },
+                            { name: 'CrewAI', icon: 'crewai', desc: 'Securely orchestrate multi-agent workflows with ASAP support.' },
+                            { name: 'PydanticAI', icon: 'pydantic', desc: 'Strict type-safe agent definitions powered by Pydantic.' },
+                            { name: 'LlamaIndex', icon: 'llamaindex', desc: 'Data-to-agent pipelines with ASAP-compliant tool calling.' },
+                            { name: 'MCP', icon: 'anthropic', desc: 'Connect ASAP agents directly to Claude Desktop & IDEs.' },
+                            { name: 'SmolAgents', icon: 'huggingface', desc: 'Minimalist, high-performance agentic logic integration.' },
+                            { name: 'OpenClaw', icon: 'openclaw', desc: 'Interoperable chat-based agent patterns.' },
+                            { name: 'Vercel AI SDK', icon: 'vercel', desc: 'Bridge ASAP agents into Next.js/React apps with native tool-calling support.' },
                         ].map((fw) => (
                             <div key={fw.name} className="p-5 rounded-lg border border-zinc-800 bg-zinc-900/20 hover:bg-zinc-900/40 transition-all group">
                                 <div className="flex items-center gap-3 mb-3">
-                                    <div className="w-8 h-8 rounded border border-zinc-800 bg-zinc-950 flex items-center justify-center shrink-0 group-hover:border-zinc-700 transition-colors overflow-hidden">
-                                        {'logo_url' in fw ? (
-                                            /* eslint-disable-next-line @next/next/no-img-element */
-                                            <img
-                                                src={fw.logo_url as string}
-                                                className="w-full h-full object-contain p-1 opacity-70 group-hover:opacity-100 transition-opacity"
-                                                alt={fw.name}
-                                                width={32}
-                                                height={32}
-                                            />
-                                        ) : fw.logo ? (
-                                            /* eslint-disable-next-line @next/next/no-img-element */
-                                            <img
-                                                src={`https://cdn.simpleicons.org/${fw.logo}/white`}
-                                                className="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity"
-                                                alt={fw.name}
-                                                width={16}
-                                                height={16}
-                                            />
-                                        ) : 'icon' in fw ? (
-                                            fw.icon as React.ReactNode
-                                        ) : null}
+                                    <div className="w-8 h-8 rounded border border-zinc-800 bg-zinc-950 flex items-center justify-center shrink-0 group-hover:border-zinc-700 transition-colors overflow-hidden relative">
+                                        <Image
+                                            src={`/icons/${fw.icon}.svg`}
+                                            alt={fw.name}
+                                            width={32}
+                                            height={32}
+                                            className="object-contain p-1 opacity-70 group-hover:opacity-100 transition-opacity"
+                                        />
                                     </div>
                                     <h3 className="text-white font-bold text-sm tracking-tight">{fw.name}</h3>
                                 </div>

@@ -8,6 +8,9 @@ export const metadata: Metadata = {
     description: 'Documentation on how to define your agent manifest and register it in the ASAP Protocol marketplace.',
 };
 
+/** Static content only; force static generation at build time. */
+export const dynamic = 'force-static';
+
 export default function DocsRegisterPage() {
     return (
         <div className="flex flex-col min-h-screen bg-zinc-950 font-sans text-zinc-300 selection:bg-indigo-500/30">
