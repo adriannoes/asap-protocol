@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { fetchAgentById, fetchRegistry } from '@/lib/registry';
+import { fetchAgentById, fetchRegistry, fetchRevokedUrns } from '@/lib/registry';
 import { notFound } from 'next/navigation';
 import { AgentDetailClient } from './agent-detail-client';
 
@@ -40,13 +40,16 @@ export default async function AgentDetailPage({ params }: Props) {
     const decodedId = decodeURIComponent(p.id);
     const agent = await fetchAgentById(decodedId);
 
+    const revokedUrns = await fetchRevokedUrns();
+    const isRevoked = revokedUrns.has(agent?.id || '');
+
     if (!agent) {
-        notFound();
+        return notFound();
     }
 
     return (
         <div className="container mx-auto py-10 px-4 max-w-5xl">
-            <AgentDetailClient agent={agent} />
+            <AgentDetailClient agent={agent} isRevoked={isRevoked} />
         </div>
     );
 }
