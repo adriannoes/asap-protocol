@@ -73,6 +73,25 @@ dns-sd = [
 redis = [
     "redis>=5.0.0",
 ]
+# Framework integrations (Sprint E3 — PKG-003).
+mcp = [
+    "mcp>=1.0.0",
+]
+langchain = [
+    "langchain-core>=0.2",
+]
+crewai = [
+    "crewai>=0.80",
+]
+llamaindex = [
+    "llama-index-core>=0.10",
+]
+smolagents = [
+    "smolagents>=1.0",
+]
+pydanticai = [
+    "pydantic-ai>=0.2",
+]
 
 [project.urls]
 Homepage = "https://github.com/adriannoes/asap-protocol"
@@ -83,6 +102,7 @@ Issues = "https://github.com/adriannoes/asap-protocol/issues"
 
 [project.scripts]
 asap = "asap.cli:main"
+asap-mcp-server = "asap.mcp.serve:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -164,9 +184,9 @@ disable_error_code = ["no-any-return"]
 # tracer.start_as_current_span returns Any (OpenTelemetry SDK)
 
 [[tool.mypy.overrides]]
-module = ["asap.cli", "asap.observability.trace_ui", "asap.transport.server"]
+module = ["asap.cli", "asap.observability.trace_ui", "asap.transport.server", "asap.mcp.serve"]
 disable_error_code = ["misc"]
-# Untyped decorators: Typer @app.command, FastAPI @app.get/@app.post
+# Untyped decorators: Typer @app.command, FastAPI @app.get/@app.post, FastMCP @tool
 
 [[tool.mypy.overrides]]
 module = "asap.transport.middleware"
