@@ -8,13 +8,17 @@ from email.utils import parsedate_to_datetime
 
 import httpx
 
+from asap.observability import get_logger
+
+logger = get_logger(__name__)
+
 # Retry up to 3 times on 429 (4 attempts total).
 MAX_429_RETRIES: int = 3
 # Exponential backoff: 1s, 2s, 4s when Retry-After is absent or invalid.
 BASE_DELAY_SECONDS: float = 1.0
 
 
-def delay_seconds_for_429(response: httpx.Response, attempt: int) -> float:
+def _delay_seconds_for_429(response: httpx.Response, attempt: int) -> float:
     """Retry-After header or exponential backoff; returns seconds (min 0.1)."""
     raw = response.headers.get("Retry-After")
     if raw:
@@ -29,6 +33,8 @@ def delay_seconds_for_429(response: httpx.Response, attempt: int) -> float:
             try:
                 retry_date = parsedate_to_datetime(raw)
                 if retry_date:
+                    # Use wall-clock time for HTTP date comparison; NTP drift may
+                    # yield negative delta — we fall back to exponential backoff.
                     delta = retry_date.timestamp() - time.time()
                     if delta > 0:
                         return float(max(0.1, min(delta, 300.0)))
@@ -44,11 +50,21 @@ async def get_with_429_retry(
     *,
     max_retries: int = MAX_429_RETRIES,
 ) -> httpx.Response:
+    """GET with 429 retry; raises on final 429."""
     resp = None
     for attempt in range(max_retries + 1):
         resp = await client.get(url)
-        if resp.status_code != 429 or attempt == max_retries:
+        if resp.status_code != 429:
             return resp
-        await asyncio.sleep(delay_seconds_for_429(resp, attempt))
+        if attempt == max_retries:
+            resp.raise_for_status()
+        logger.warning(
+            "retry_429",
+            url=url,
+            attempt=attempt,
+            max_retries=max_retries,
+        )
+        await asyncio.sleep(_delay_seconds_for_429(resp, attempt))
+    # Type narrowing for mypy only; unreachable (loop returns or raises on final 429).
     assert resp is not None
     return resp
