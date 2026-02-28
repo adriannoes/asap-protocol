@@ -137,6 +137,40 @@ export default function DeveloperExperiencePage() {
                 </div>
             </section>
 
+            {/* Framework Ecosystem Section */}
+            <section className="relative z-10 py-24 bg-zinc-950/50 border-b border-zinc-900">
+                <div className="container mx-auto px-4 md:px-6">
+                    <div className="max-w-3xl mb-16">
+                        <h2 className="text-2xl font-bold text-white tracking-tight font-mono mb-4">
+                            <span className="text-indigo-500 mr-2">03.</span> Framework Ecosystem
+                        </h2>
+                        <p className="text-zinc-400">
+                            ASAP Protocol is framework-agnostic. We provide native integrations for the most popular AI orchestration libraries, ensuring your agents are discoverable and ready to work in any environment.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                        {[
+                            { name: 'LangChain', desc: 'Auto-discover ASAP agents as standard LangChain tools.' },
+                            { name: 'CrewAI', desc: 'Securely orchestrate multi-agent workflows with ASAP support.' },
+                            { name: 'PydanticAI', desc: 'Strict type-safe agent definitions powered by Pydantic.' },
+                            { name: 'LlamaIndex', desc: 'Data-to-agent pipelines with ASAP-compliant tool calling.' },
+                            { name: 'MCP', desc: 'Connect ASAP agents directly to Claude Desktop & IDEs.' },
+                            { name: 'SmolAgents', desc: 'Minimalist, high-performance agentic logic integration.' },
+                            { name: 'OpenClaw', desc: 'Interoperable chat-based agent patterns.' },
+                            { name: 'Node.js', desc: 'First-class SDK for building and consuming agents in JS.' },
+                        ].map((fw) => (
+                            <div key={fw.name} className="p-5 rounded-lg border border-zinc-800 bg-zinc-900/20 hover:bg-zinc-900/40 transition-colors">
+                                <h3 className="text-white font-bold text-sm mb-2">{fw.name}</h3>
+                                <p className="text-zinc-500 text-xs leading-relaxed">
+                                    {fw.desc}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
             {/* CTA */}
             <section className="relative z-10 py-32 bg-zinc-950 text-center">
                 <div className="container mx-auto px-4">
