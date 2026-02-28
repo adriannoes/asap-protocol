@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import httpx
@@ -23,7 +24,10 @@ from asap.models.envelope import Envelope
 from asap.models.entities import Manifest
 from asap.models.ids import generate_id
 from asap.models.payloads import TaskRequest
+from asap.observability import get_logger
 from asap.transport.client import ASAPClient
+
+logger = get_logger(__name__)
 
 # Default sender URN when SDK consumer does not identify as an agent.
 DEFAULT_SENDER_URN: str = "urn:asap:agent:sdk-consumer"
@@ -43,41 +47,51 @@ def _manifest_url_from_entry(entry: RegistryEntry) -> str:
 
 
 class MarketClient:
+    """Resolve agent URNs from the Lite Registry (cached), validate manifests, check revocation, run tasks."""
+
     def __init__(
         self,
         registry_url: str = DEFAULT_REGISTRY_URL,
         revoked_url: str | None = None,
         auth_token: str | None = None,
+        sender_urn: str = DEFAULT_SENDER_URN,
+        registry_cache_ttl_seconds: int | None = None,
     ) -> None:
         self.registry_url = registry_url
         self.revoked_url = revoked_url
         self.auth_token = auth_token
+        self.sender_urn = sender_urn
+        self._registry_cache_ttl = registry_cache_ttl_seconds
 
     async def resolve(self, urn: str) -> "ResolvedAgent":
-        registry = await get_registry(self.registry_url)
+        """Fetch registry, manifest, validate trust and revocation; return ResolvedAgent. Raises ValueError, SignatureVerificationError, AgentRevokedException, or httpx.HTTPStatusError."""
+        logger.info("resolve_start", urn=urn, registry_url=self.registry_url)
+        registry = await get_registry(self.registry_url, ttl_seconds=self._registry_cache_ttl)
         entry = find_by_id(registry, urn)
         if entry is None:
             raise ValueError(f"Agent not found in registry: {urn}")
 
         manifest_url = _manifest_url_from_entry(entry)
-        client = httpx.AsyncClient()
-        try:
+        async with httpx.AsyncClient() as client:
             response = await get_with_429_retry(client, manifest_url)
             response.raise_for_status()
             signed = SignedManifest.model_validate_json(response.text)
-        finally:
-            await client.aclose()
 
-        verify_agent_trust(signed)
-
-        revoked = await is_revoked(urn, revoked_url=self.revoked_url)
+        _, revoked = await asyncio.gather(
+            asyncio.to_thread(verify_agent_trust, signed),
+            is_revoked(urn, revoked_url=self.revoked_url),
+        )
         if revoked:
+            logger.warning("agent_revoked", urn=urn)
             raise AgentRevokedException(urn)
 
+        logger.info("resolve_success", urn=urn, manifest_id=signed.manifest.id)
         return ResolvedAgent(manifest=signed.manifest, entry=entry, client=self)
 
 
 class ResolvedAgent:
+    """Verified agent from resolve(); use .run() to send task requests."""
+
     def __init__(
         self,
         manifest: Manifest,
@@ -93,8 +107,9 @@ class ResolvedAgent:
         payload: dict[str, Any],
         auth_token: str | None = None,
     ) -> dict[str, Any]:
+        """Send task.request; return result dict. Uses client sender_urn and auth_token (or override)."""
         task_request = TaskRequest.model_validate(payload)
-        sender = DEFAULT_SENDER_URN
+        sender = self.client.sender_urn
         envelope = Envelope(
             asap_version=ASAP_PROTOCOL_VERSION,
             sender=sender,
