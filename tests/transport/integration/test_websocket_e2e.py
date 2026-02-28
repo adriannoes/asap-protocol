@@ -29,6 +29,7 @@ def _free_port() -> int:
 def _wait_for_port(host: str, port: int, timeout: float = 10.0) -> bool:
     """Return True when the port is accepting connections, False on timeout."""
     import time as _time
+
     deadline = _time.monotonic() + timeout
     while _time.monotonic() < deadline:
         try:
