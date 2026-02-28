@@ -3,7 +3,6 @@
 > **Goal**: Trust validation wrapper, revoked_agents.json, IssueOps revoke flow
 > **Prerequisite**: v2.0.0; existing `asap.crypto.trust`, `SignatureVerificationError`
 > **Parent Roadmap**: [tasks-v2.1.0-roadmap.md](./tasks-v2.1.0-roadmap.md)
-> **Estimated Duration**: 4–5 days
 
 ---
 

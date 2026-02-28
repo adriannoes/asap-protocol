@@ -24,8 +24,10 @@ def _get_ca_key_b64() -> str:
     return key
 
 
-# Public alias for code that reads the key at import time (e.g. tests).
-ASAP_CA_PUBLIC_KEY_B64: str = _get_ca_key_b64()
+def __getattr__(name: str) -> str:
+    if name == "ASAP_CA_PUBLIC_KEY_B64":
+        return _get_ca_key_b64()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def verify_agent_trust(signed_manifest: SignedManifest) -> bool:

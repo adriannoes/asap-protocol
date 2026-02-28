@@ -3,7 +3,6 @@
 > **Goal**: Category/tags in RegistryEntry, Issue template, process_registration, Browse filters, Revoked badge
 > **Prerequisite**: Sprint E1 (for revoked_agents.json in Task 4.6)
 > **Parent Roadmap**: [tasks-v2.1.0-roadmap.md](./tasks-v2.1.0-roadmap.md)
-> **Estimated Duration**: 4–5 days
 
 ---
 

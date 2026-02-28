@@ -83,6 +83,7 @@ See [Identity Signing](guides/identity-signing.md) for full CLI reference.
 - [Observability](observability.md)
 - [Error Handling](error-handling.md)
 - [Testing](testing.md)
+- [Raw Fetch (non-Python)](raw-fetch.md) — Fetch registry.json and revoked_agents.json directly (curl, fetch); implement your own client in any language
 - [v1.1 Security Model](security/v1.1-security-model.md) — OAuth2 trust limitations, Custom Claims, allowlist (ADR-17)
 - [Registry verification review (admin)](guides/registry-verification-review.md) — How to vet and approve Verified badge requests for the Lite Registry
 

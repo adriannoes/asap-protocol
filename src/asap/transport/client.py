@@ -313,6 +313,7 @@ class ASAPClient:
         trusted_manifest_keys: Optional[Mapping[str, str]] = None,
         on_message: Optional[OnMessageCallback] = None,
         mtls_config: Optional[MTLSConfig] = None,
+        auth_token: str | None = None,
     ) -> None:
         # Extract retry config values
         if retry_config is not None:
@@ -456,6 +457,7 @@ class ASAPClient:
         self._verify_signatures = verify_signatures
         self._trusted_manifest_keys = dict(trusted_manifest_keys) if trusted_manifest_keys else {}
         self._mtls_config = mtls_config
+        self._auth_token = auth_token
 
     @staticmethod
     def _is_localhost(parsed_url: ParseResult) -> bool:
@@ -773,6 +775,8 @@ class ASAPClient:
                 }
                 if content_encoding:
                     headers["Content-Encoding"] = content_encoding
+                if self._auth_token:
+                    headers["Authorization"] = f"Bearer {self._auth_token}"
 
                 assert self._client is not None  # HTTP path: __aenter__ set it
                 response = await self._client.post(
