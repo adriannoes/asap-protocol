@@ -154,23 +154,29 @@ export default function DeveloperExperiencePage() {
                             { name: 'LangChain', logo: 'langchain', desc: 'Auto-discover ASAP agents as standard LangChain tools.' },
                             { name: 'CrewAI', logo: 'crewai', desc: 'Securely orchestrate multi-agent workflows with ASAP support.' },
                             { name: 'PydanticAI', logo: 'pydantic', desc: 'Strict type-safe agent definitions powered by Pydantic.' },
-                            { name: 'LlamaIndex', icon: <Library className="w-4 h-4 text-indigo-400" />, desc: 'Data-to-agent pipelines with ASAP-compliant tool calling.' },
+                            { name: 'LlamaIndex', logo_url: 'https://apipie.ai/docs/img/Integrations/Llamaindex/LlamaSquareBlack.svg', desc: 'Data-to-agent pipelines with ASAP-compliant tool calling.' },
                             { name: 'MCP', logo: 'anthropic', desc: 'Connect ASAP agents directly to Claude Desktop & IDEs.' },
                             { name: 'SmolAgents', logo: 'huggingface', desc: 'Minimalist, high-performance agentic logic integration.' },
-                            { name: 'OpenClaw', icon: <MessageSquare className="w-4 h-4 text-indigo-400" />, desc: 'Interoperable chat-based agent patterns.' },
+                            { name: 'OpenClaw', logo_url: 'https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/openclaw.svg', desc: 'Interoperable chat-based agent patterns.' },
                             { name: 'Vercel AI SDK', logo: 'vercel', desc: 'Bridge ASAP agents into Next.js/React apps with native tool-calling support.' },
                         ].map((fw) => (
                             <div key={fw.name} className="p-5 rounded-lg border border-zinc-800 bg-zinc-900/20 hover:bg-zinc-900/40 transition-all group">
                                 <div className="flex items-center gap-3 mb-3">
-                                    <div className="w-8 h-8 rounded border border-zinc-800 bg-zinc-950 flex items-center justify-center shrink-0 group-hover:border-zinc-700 transition-colors">
-                                        {fw.logo ? (
+                                    <div className="w-8 h-8 rounded border border-zinc-800 bg-zinc-950 flex items-center justify-center shrink-0 group-hover:border-zinc-700 transition-colors overflow-hidden">
+                                        {'logo_url' in fw ? (
+                                            <img
+                                                src={fw.logo_url as string}
+                                                className="w-full h-full object-contain p-1 opacity-70 group-hover:opacity-100 transition-opacity"
+                                                alt={fw.name}
+                                            />
+                                        ) : fw.logo ? (
                                             <img
                                                 src={`https://cdn.simpleicons.org/${fw.logo}/white`}
                                                 className="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity"
                                                 alt={fw.name}
                                             />
                                         ) : (
-                                            fw.icon
+                                            (fw as any).icon
                                         )}
                                     </div>
                                     <h3 className="text-white font-bold text-sm tracking-tight">{fw.name}</h3>
