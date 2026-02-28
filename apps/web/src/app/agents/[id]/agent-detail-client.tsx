@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, ExternalLink, ShieldAlert, ShieldCheck, TerminalSquare } from 'lucide-react';
 import Link from 'next/link';
-import { Code2 } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { UsageSnippets } from './usage-snippets';
 
 interface AgentDetailClientProps {
     agent: RegistryAgent;
@@ -117,114 +116,7 @@ export function AgentDetailClient({ agent, isRevoked }: AgentDetailClientProps) 
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-2 space-y-6">
-                    {/* Developer Quick Start / Usage Snippets */}
-                    <Card className="border-indigo-500/20 shadow-sm shadow-indigo-500/5">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-lg flex items-center gap-2">
-                                <Code2 className="w-5 h-5 text-indigo-400" />
-                                Usage Snippets
-                            </CardTitle>
-                            <CardDescription>
-                                Connect to this agent using your favorite framework.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Tabs defaultValue="node" className="w-full">
-                                <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-auto md:h-10">
-                                    <TabsTrigger value="node">Node.js</TabsTrigger>
-                                    <TabsTrigger value="langchain">LangChain</TabsTrigger>
-                                    <TabsTrigger value="crewai">CrewAI</TabsTrigger>
-                                    <TabsTrigger value="pydanticai">PydanticAI</TabsTrigger>
-                                    <TabsTrigger value="mcp">MCP</TabsTrigger>
-                                </TabsList>
-
-                                {/* Node.js Snippet */}
-                                <TabsContent value="node" className="mt-4">
-                                    <div className="group relative rounded-md bg-zinc-950 p-4 font-mono text-sm text-zinc-300 border border-zinc-800 overflow-x-auto">
-                                        <pre className="leading-relaxed">
-                                            <span className="text-zinc-500"># 1. Install the client</span>{'\n'}
-                                            <span className="text-indigo-400">npm</span> install @asap/client{'\n\n'}
-                                            <span className="text-zinc-500"># 2. Connect and route requests</span>{'\n'}
-                                            <span className="text-purple-400">import</span> {'{'} AsapClient {'}'} <span className="text-purple-400">from</span> <span className="text-emerald-300">&apos;@asap/client&apos;</span>;{'\n\n'}
-                                            <span className="text-purple-400">const</span> client = <span className="text-purple-400">new</span> AsapClient();{'\n'}
-                                            <span className="text-purple-400">await</span> client.connect(<span className="text-emerald-300">&apos;{agent.id}&apos;</span>);{'\n\n'}
-                                            <span className="text-purple-400">const</span> response = <span className="text-purple-400">await</span> client.sendTask({'{'}{'\n'}
-                                            {'  '}skill: <span className="text-emerald-300">&apos;{Array.isArray(agent.capabilities?.skills) && agent.capabilities.skills.length > 0 ? (agent.capabilities.skills[0] as { id: string }).id : 'example-skill'}&apos;</span>,{'\n'}
-                                            {'  '}input: {'{ /* payload */ }'}{'\n'}
-                                            {'}'});
-                                        </pre>
-                                    </div>
-                                </TabsContent>
-
-                                {/* LangChain Snippet */}
-                                <TabsContent value="langchain" className="mt-4">
-                                    <div className="group relative rounded-md bg-zinc-950 p-4 font-mono text-sm text-zinc-300 border border-zinc-800 overflow-x-auto">
-                                        <pre className="leading-relaxed">
-                                            <span className="text-zinc-500"># 1. Install the provider</span>{'\n'}
-                                            <span className="text-indigo-400">pip</span> install <span className="text-emerald-300">&quot;asap-protocol[langchain]&quot;</span>{'\n\n'}
-                                            <span className="text-zinc-500"># 2. Auto-discover tools</span>{'\n'}
-                                            <span className="text-purple-400">from</span> asap.integrations.langchain <span className="text-purple-400">import</span> AsapToolProvider{'\n\n'}
-                                            provider = AsapToolProvider(){'\n'}
-                                            tools = provider.get_tools(agent_id=<span className="text-emerald-300">&quot;{agent.id}&quot;</span>){'\n\n'}
-                                            <span className="text-zinc-500"># 3. Use with agent</span>{'\n'}
-                                            agent = initialize_agent(tools, llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION)
-                                        </pre>
-                                    </div>
-                                </TabsContent>
-
-                                {/* CrewAI Snippet */}
-                                <TabsContent value="crewai" className="mt-4">
-                                    <div className="group relative rounded-md bg-zinc-950 p-4 font-mono text-sm text-zinc-300 border border-zinc-800 overflow-x-auto">
-                                        <pre className="leading-relaxed">
-                                            <span className="text-zinc-500"># 1. Install the provider</span>{'\n'}
-                                            <span className="text-indigo-400">pip</span> install <span className="text-emerald-300">&quot;asap-protocol[crewai]&quot;</span>{'\n\n'}
-                                            <span className="text-zinc-500"># 2. Import and use</span>{'\n'}
-                                            <span className="text-purple-400">from</span> asap.integrations.crewai <span className="text-purple-400">import</span> get_crewai_tools{'\n\n'}
-                                            asap_tools = get_crewai_tools(agent_id=<span className="text-emerald-300">&quot;{agent.id}&quot;</span>){'\n\n'}
-                                            researcher = Agent({'\n'}
-                                            {'    '}role=<span className="text-emerald-300">&apos;Researcher&apos;</span>,{'\n'}
-                                            {'    '}tools=asap_tools{'\n'}
-                                            )
-                                        </pre>
-                                    </div>
-                                </TabsContent>
-
-                                {/* PydanticAI Snippet */}
-                                <TabsContent value="pydanticai" className="mt-4">
-                                    <div className="group relative rounded-md bg-zinc-950 p-4 font-mono text-sm text-zinc-300 border border-zinc-800 overflow-x-auto">
-                                        <pre className="leading-relaxed">
-                                            <span className="text-zinc-500"># 1. Install the provider</span>{'\n'}
-                                            <span className="text-indigo-400">pip</span> install <span className="text-emerald-300">&quot;asap-protocol[pydanticai]&quot;</span>{'\n\n'}
-                                            <span className="text-zinc-500"># 2. Connect via PydanticAI</span>{'\n'}
-                                            <span className="text-purple-400">from</span> pydantic_ai <span className="text-purple-400">import</span> Agent{'\n'}
-                                            <span className="text-purple-400">from</span> asap.integrations.pydanticai <span className="text-purple-400">import</span> register_asap_tools{'\n\n'}
-                                            agent = Agent(model=<span className="text-emerald-300">&apos;openai:gpt-4o&apos;</span>){'\n'}
-                                            register_asap_tools(agent, agent_id=<span className="text-emerald-300">&quot;{agent.id}&quot;</span>){'\n\n'}
-                                            result = agent.run_sync(<span className="text-emerald-300">&apos;Use the agent to solve this task&apos;</span>)
-                                        </pre>
-                                    </div>
-                                </TabsContent>
-
-                                {/* MCP Snippet */}
-                                <TabsContent value="mcp" className="mt-4">
-                                    <div className="group relative rounded-md bg-zinc-950 p-4 font-mono text-sm text-zinc-300 border border-zinc-800 overflow-x-auto">
-                                        <pre className="leading-relaxed">
-                                            <span className="text-zinc-500"># Use ASAP Protocol as an MCP Server (e.g. Claude Desktop)</span>{'\n'}
-                                            <span className="text-zinc-500"># Add to your claude_desktop_config.json:</span>{'\n'}
-                                            {'{'}{'\n'}
-                                            {'  '}<span className="text-emerald-300">&quot;mcpServers&quot;</span>: {'{'}{'\n'}
-                                            {'    '}<span className="text-emerald-300">&quot;asap-agent-{agent.id?.split(':').pop()}&quot;</span>: {'{'}{'\n'}
-                                            {'      '}<span className="text-emerald-300">&quot;command&quot;</span>: <span className="text-emerald-300">&quot;uvx&quot;</span>,{'\n'}
-                                            {'      '}<span className="text-emerald-300">&quot;args&quot;</span>: [<span className="text-emerald-300">&quot;asap-protocol&quot;</span>, <span className="text-emerald-300">&quot;mcp&quot;</span>, <span className="text-emerald-300">&quot;--agent-id&quot;</span>, <span className="text-emerald-300">&quot;{agent.id}&quot;</span>]{'\n'}
-                                            {'    '}{'}'}{'\n'}
-                                            {'  '}{'}'}{'\n'}
-                                            {'}'}
-                                        </pre>
-                                    </div>
-                                </TabsContent>
-                            </Tabs>
-                        </CardContent>
-                    </Card>
+                    <UsageSnippets agentId={agent.id ?? ''} agent={agent} />
 
                     {/* Skills and Capabilities */}
                     <Card>
