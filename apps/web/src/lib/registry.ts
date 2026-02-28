@@ -1,8 +1,13 @@
+import { z } from 'zod';
 import type { RegistryAgent } from '../types/registry';
 import {
   RegistryResponseSchema,
   type RegistryAgentValidated,
 } from './registry-schema';
+
+const RevokedResponseSchema = z.object({
+  revoked: z.array(z.object({ urn: z.string() })).default([]),
+});
 
 /**
  * ISR revalidate period (seconds) for registry data.
@@ -35,11 +40,12 @@ export async function fetchRevokedUrns(): Promise<Set<string>> {
     }
 
     const data = await res.json();
-    const urns = (data.revoked || []).map((entry: { urn: string }) => entry.urn);
+    const parsed = RevokedResponseSchema.safeParse(data);
+    const urns = parsed.success ? parsed.data.revoked.map((e) => e.urn) : [];
     return new Set(urns);
   } catch (error) {
     console.error('Error fetching revoked list:', error);
-    return new Set();
+    return new Set(); // resilient: allow listing to work when revoked list is unreachable
   }
 }
 

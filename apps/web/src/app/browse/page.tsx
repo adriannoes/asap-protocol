@@ -11,8 +11,10 @@ export const metadata: Metadata = {
 export const revalidate = 60;
 
 export default async function BrowsePage() {
-    const allAgents = await fetchRegistry();
-    const revokedUrns = await fetchRevokedUrns();
+    const [allAgents, revokedUrns] = await Promise.all([
+        fetchRegistry(),
+        fetchRevokedUrns(),
+    ]);
     const activeAgents = allAgents.filter((agent) => !revokedUrns.has(agent.id || ''));
 
     return (

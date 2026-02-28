@@ -38,14 +38,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function AgentDetailPage({ params }: Props) {
     const p = await params;
     const decodedId = decodeURIComponent(p.id);
-    const agent = await fetchAgentById(decodedId);
 
-    const revokedUrns = await fetchRevokedUrns();
-    const isRevoked = revokedUrns.has(agent?.id || '');
+    const [agent, revokedUrns] = await Promise.all([
+        fetchAgentById(decodedId),
+        fetchRevokedUrns(),
+    ]);
 
     if (!agent) {
         return notFound();
     }
+
+    const isRevoked = revokedUrns.has(agent.id || '');
 
     return (
         <div className="container mx-auto py-10 px-4 max-w-5xl">
