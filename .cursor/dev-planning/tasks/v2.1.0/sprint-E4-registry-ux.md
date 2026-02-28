@@ -144,9 +144,26 @@
 
 ---
 
+## Task 4.7: Web App — Agent Usage Snippets (Framework Integrations)
+
+- [ ] **4.7.1** Add "Usage" section to Agent Detail page
+  - **File**: `apps/web/src/app/agents/[id]/agent-detail-client.tsx` (modify) or new component `usage-snippets.tsx`
+  - **What**: Create a tabbed UI or code snippet block for the specific agent `id` (URN) showing how to consume it in:
+    - **Vanilla SDK**: `await MarketClient().resolve("{urn}"); await agent.run(...)` (Sprint E2)
+    - **LangChain**: `LangChainAsapTool("{urn}")` (Sprint E3)
+    - **LlamaIndex**: `LlamaIndexAsapTool("{urn}")` (Sprint E3)
+    - **CrewAI**: `CrewAIAsapTool("{urn}")` (Sprint E3)
+    - **SmolAgents**: `SmolAgentsAsapTool("{urn}")` (Sprint E3)
+    - **MCP**: `uvx asap-mcp-server` (Sprint E3)
+  - **Why**: DX-001 — Dramatically improves Developer Experience by allowing copy-pasting integration code directly from the registry.
+  - **Verify**: Manual: Navigate to agent detail, usage snippets render correct URN and framework syntax.
+
+---
+
 ## Definition of Done
 
 - [ ] Browse filterable by category and tags
 - [ ] Revoked agents excluded from Browse; Revoked badge on detail page
+- [ ] Agent detail page shows framework usage snippets (LangChain, LlamaIndex, etc.)
 - [ ] `validate_registry.py` passes with category/tags
 - [ ] `npm run build` in apps/web succeeds

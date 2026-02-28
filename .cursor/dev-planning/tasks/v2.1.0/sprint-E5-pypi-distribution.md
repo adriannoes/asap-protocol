@@ -27,7 +27,7 @@
 ## Acceptance Criteria
 
 - [ ] `asap-protocol` 2.1.0 published to PyPI
-- [ ] Optional groups `[mcp]`, `[langchain]`, `[crewai]` work
+- [ ] Optional groups `[mcp]`, `[langchain]`, `[crewai]`, `[llamaindex]`, `[smolagents]` work
 - [ ] CI publishes on tag push `v*`
 
 ---
@@ -69,9 +69,9 @@
 
 - [ ] **5.3.1** Validate extras install
   - **File**: `pyproject.toml` (verify)
-  - **What**: Ensure `[project.optional-dependencies]` has mcp, langchain, crewai. Run `uv pip install .[mcp]`, `.[langchain]`, `.[crewai]` in clean env. Fix any version conflicts.
-  - **Why**: PKG-003 — `pip install asap-protocol[mcp]` works.
-  - **Verify**: `uv pip install .[mcp]` and `uv pip install .[langchain]` succeed.
+  - **What**: Ensure `[project.optional-dependencies]` has mcp, langchain, crewai, llamaindex, smolagents. Run `uv pip install .[<extra>]` for each in a clean env. Fix any version conflicts.
+  - **Why**: PKG-003 — `pip install asap-protocol[<extra>]` works safely.
+  - **Verify**: `uv pip install .[mcp]`, `.[langchain]`, `.[llamaindex]`, `.[smolagents]`, `.[crewai]` all succeed.
 
 ---
 
@@ -79,7 +79,7 @@
 
 - [ ] **5.4.1** Add v2.1.0 section to CHANGELOG
   - **File**: `CHANGELOG.md` (modify)
-  - **What**: Add `## [2.1.0]` section with: Consumer SDK (MarketClient, ResolvedAgent), Framework Integrations (LangChain, CrewAI, MCP), Registry UX (category/tags), Agent Revocation, PyPI distribution. Follow Keep a Changelog format.
+  - **What**: Add `## [2.1.0]` section with: Consumer SDK (MarketClient, ResolvedAgent), Framework Integrations (LangChain, CrewAI, LlamaIndex, SmolAgents, Vercel AI SDK, MCP), Registry UX (category/tags, usage snippets), Agent Revocation, PyPI distribution. Follow Keep a Changelog format.
   - **Why**: Release documentation.
   - **Verify**: CHANGELOG reflects all v2.1 features; date and link to compare.
 
@@ -88,6 +88,6 @@
 ## Definition of Done
 
 - [ ] `pip install asap-protocol` works
-- [ ] `pip install asap-protocol[mcp]` works
+- [ ] `pip install asap-protocol[<extra>]` works for all frameworks
 - [ ] Tag `v2.1.0` triggers publish workflow
 - [ ] CHANGELOG updated
