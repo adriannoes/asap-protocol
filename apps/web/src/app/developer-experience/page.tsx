@@ -164,16 +164,22 @@ export default function DeveloperExperiencePage() {
                                 <div className="flex items-center gap-3 mb-3">
                                     <div className="w-8 h-8 rounded border border-zinc-800 bg-zinc-950 flex items-center justify-center shrink-0 group-hover:border-zinc-700 transition-colors overflow-hidden">
                                         {'logo_url' in fw ? (
+                                            /* eslint-disable-next-line @next/next/no-img-element */
                                             <img
                                                 src={fw.logo_url as string}
                                                 className="w-full h-full object-contain p-1 opacity-70 group-hover:opacity-100 transition-opacity"
                                                 alt={fw.name}
+                                                width={32}
+                                                height={32}
                                             />
                                         ) : fw.logo ? (
+                                            /* eslint-disable-next-line @next/next/no-img-element */
                                             <img
                                                 src={`https://cdn.simpleicons.org/${fw.logo}/white`}
                                                 className="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity"
                                                 alt={fw.name}
+                                                width={16}
+                                                height={16}
                                             />
                                         ) : 'icon' in fw ? (
                                             fw.icon as React.ReactNode

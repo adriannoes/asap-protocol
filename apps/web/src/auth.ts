@@ -50,10 +50,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 session.user.username = token.username;
             }
 
-            if (typeof token.accessToken === "string") {
-                session.encryptedAccessToken = await encryptToken(token.accessToken);
-            }
-
             return session;
         },
     },

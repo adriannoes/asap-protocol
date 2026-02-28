@@ -5,10 +5,19 @@ import {
 } from '../actions';
 import * as authModule from '@/auth';
 import * as rateLimit from '@/lib/rate-limit';
+import { cookies } from 'next/headers';
+import { getToken } from 'next-auth/jwt';
+
+vi.mock('next/headers', () => ({
+    cookies: vi.fn(),
+}));
+
+vi.mock('next-auth/jwt', () => ({
+    getToken: vi.fn(),
+}));
 
 vi.mock('@/auth', () => ({
     auth: vi.fn(),
-    decryptToken: vi.fn(),
 }));
 vi.mock('@/lib/rate-limit', () => ({
     checkRateLimit: vi.fn(() => true),
@@ -31,17 +40,23 @@ vi.mock('octokit', () => ({
 }));
 
 const auth = vi.mocked(authModule.auth);
-const decryptToken = vi.mocked(authModule.decryptToken);
 const checkRateLimit = vi.mocked(rateLimit.checkRateLimit);
+const mockCookies = vi.mocked(cookies);
+const mockGetToken = vi.mocked(getToken);
 
 describe('fetchUserRegistrationIssues', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         auth.mockResolvedValue({
             user: { id: 'u1', username: 'testuser' },
-            encryptedAccessToken: 'encrypted-token',
         } as never);
-        decryptToken.mockResolvedValue('ghp_fake_token');
+
+        // @ts-expect-error type override for testing
+        mockCookies.mockResolvedValue({
+            get: vi.fn().mockReturnValue({ value: 'fake-session-cookie' })
+        });
+        mockGetToken.mockResolvedValue({ accessToken: 'ghp_fake_token' });
+
         checkRateLimit.mockReturnValue(true);
     });
 
@@ -60,7 +75,7 @@ describe('fetchUserRegistrationIssues', () => {
     });
 
     it('returns error when username or encrypted token missing', async () => {
-        auth.mockResolvedValue({ user: { id: 'u1' }, encryptedAccessToken: null } as never);
+        mockGetToken.mockResolvedValue(null);
         const result = await fetchUserRegistrationIssues();
         expect(result.success).toBe(false);
         if (!result.success) expect(result.error).toMatch(/Missing GitHub credentials/);
@@ -69,9 +84,8 @@ describe('fetchUserRegistrationIssues', () => {
     it('returns success with user registration issues (happy path)', async () => {
         auth.mockResolvedValue({
             user: { id: 'u1', username: 'testuser' },
-            encryptedAccessToken: 'encrypted-token',
         } as never);
-        decryptToken.mockResolvedValue('ghp_fake_token');
+
         mockListForRepo.mockResolvedValue({
             data: [
                 {
@@ -109,7 +123,6 @@ describe('fetchUserRegistrationIssues', () => {
     it('revalidateUserRegistrationIssues does not throw when authenticated', async () => {
         auth.mockResolvedValue({
             user: { id: 'u1', username: 'testuser' },
-            encryptedAccessToken: 'encrypted-token',
         } as never);
         await expect(revalidateUserRegistrationIssues()).resolves.not.toThrow();
     });

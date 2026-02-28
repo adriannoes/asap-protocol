@@ -3,7 +3,9 @@
 import type { RegistryAgent } from '@/types/registry';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Code2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Code2, Copy, Check } from 'lucide-react';
+import { useState, useCallback } from 'react';
 
 interface UsageSnippetsProps {
     agentId: string;
@@ -17,7 +19,36 @@ const firstSkillId = (agent: RegistryAgent): string =>
 
 const agentSlug = (id: string) => id?.split(':').pop() ?? 'agent';
 
+function openclawSnippetText(agentId: string, firstSkill: string): string {
+    return `# 1. Install the ASAP skill
+npx clawskills@latest install asap-openclaw-skill
+
+# 2. Add to openclaw.json (allow asap_invoke and use this agent)
+{
+  "agents": {
+    "list": [
+      {
+        "id": "main",
+        "tools": {
+          "allow": ["asap_invoke"]
+        }
+      }
+    ]
+  }
+}
+
+# 3. Call asap_invoke with urn="${agentId}", skill="${firstSkill}", input={ ... }`;
+}
+
 export function UsageSnippets({ agentId, agent }: UsageSnippetsProps) {
+    const [openclawCopied, setOpenclawCopied] = useState(false);
+
+    const copyOpenclawSnippet = useCallback(async () => {
+        const text = openclawSnippetText(agentId, firstSkillId(agent));
+        await navigator.clipboard.writeText(text);
+        setOpenclawCopied(true);
+        setTimeout(() => setOpenclawCopied(false), 2000);
+    }, [agentId, agent]);
     return (
         <Card className="border-indigo-500/20 shadow-sm shadow-indigo-500/5">
             <CardHeader className="pb-3">
@@ -31,13 +62,14 @@ export function UsageSnippets({ agentId, agent }: UsageSnippetsProps) {
             </CardHeader>
             <CardContent>
                 <Tabs defaultValue="node" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7 h-auto md:h-10">
+                    <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8 h-auto md:h-10">
                         <TabsTrigger value="node">Node.js</TabsTrigger>
                         <TabsTrigger value="langchain">LangChain</TabsTrigger>
                         <TabsTrigger value="llamaindex">LlamaIndex</TabsTrigger>
                         <TabsTrigger value="crewai">CrewAI</TabsTrigger>
                         <TabsTrigger value="smolagents">SmolAgents</TabsTrigger>
                         <TabsTrigger value="pydanticai">PydanticAI</TabsTrigger>
+                        <TabsTrigger value="openclaw">OpenClaw</TabsTrigger>
                         <TabsTrigger value="mcp">MCP</TabsTrigger>
                     </TabsList>
 
@@ -128,6 +160,36 @@ export function UsageSnippets({ agentId, agent }: UsageSnippetsProps) {
                                 agent = Agent(model=<span className="text-emerald-300">&apos;openai:gpt-4o&apos;</span>){'\n'}
                                 register_asap_tools(agent, agent_id=<span className="text-emerald-300">&quot;{agentId}&quot;</span>){'\n\n'}
                                 result = agent.run_sync(<span className="text-emerald-300">&apos;Use the agent to solve this task&apos;</span>)
+                            </pre>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="openclaw" className="mt-4">
+                        <div className="group relative rounded-md bg-zinc-950 p-4 font-mono text-sm text-zinc-300 border border-zinc-800 overflow-x-auto">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-2 top-2 h-8 w-8 text-zinc-400 hover:text-zinc-200"
+                                onClick={copyOpenclawSnippet}
+                                aria-label={openclawCopied ? 'Copied' : 'Copy snippet'}
+                            >
+                                {openclawCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                            <pre className="leading-relaxed pr-10">
+                                <span className="text-zinc-500"># 1. Install the ASAP skill</span>{'\n'}
+                                <span className="text-indigo-400">npx</span> clawskills@latest install asap-openclaw-skill{'\n\n'}
+                                <span className="text-zinc-500"># 2. Add to openclaw.json (allow asap_invoke and use this agent)</span>{'\n'}
+                                {'{'}{'\n'}
+                                {'  '}<span className="text-emerald-300">&quot;agents&quot;</span>: {'{'}{'\n'}
+                                {'    '}<span className="text-emerald-300">&quot;list&quot;</span>: [{'\n'}
+                                {'      '}<span className="text-emerald-300">&quot;id&quot;</span>: <span className="text-emerald-300">&quot;main&quot;</span>,{'\n'}
+                                {'      '}<span className="text-emerald-300">&quot;tools&quot;</span>: {'{'}{'\n'}
+                                {'        '}<span className="text-emerald-300">&quot;allow&quot;</span>: [<span className="text-emerald-300">&quot;asap_invoke&quot;</span>]{'\n'}
+                                {'      '}{'}'}{'\n'}
+                                {'    '}]{'\n'}
+                                {'  '}{'}'}{'\n'}
+                                {'}'}{'\n\n'}
+                                <span className="text-zinc-500"># 3. Call asap_invoke with urn=&quot;{agentId}&quot;, skill=&quot;{firstSkillId(agent)}&quot;, input= {'{'} ... {'}'}</span>
                             </pre>
                         </div>
                     </TabsContent>
