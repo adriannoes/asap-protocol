@@ -1,11 +1,9 @@
 # Deploys MkDocs to gh-pages on push to main only.
-# Doc build is verified in CI (type-check job); this workflow only deploys.
+# Doc build is verified in CI (quality-python); this workflow only deploys.
 # Path filters avoid redeploy when only code changed.
 #
-# Note: We inject vercel.json into the gh-pages output so Vercel finds it and
-# skips deployment (deploymentEnabled.gh-pages: false). Without this, Vercel
-# clones gh-pages, looks for Root Directory "apps/web", fails, and the
-# Ignored Build Step may not run early enough.
+# Uses peaceiris/actions-gh-pages (no ghp-import) for reliable pushes.
+# We inject vercel.json into site/ so Vercel skips deploying gh-pages.
 name: Docs
 
 on:
@@ -14,8 +12,8 @@ on:
     paths:
       - 'docs/**'
       - 'mkdocs.yml'
-      - 'vercel.json'  # Injected into gh-pages to skip Vercel deployment
-      - 'src/asap/**'  # API docs may reference source
+      - 'vercel.json'
+      - 'src/asap/**'
 
 jobs:
   deploy:
@@ -29,11 +27,6 @@ jobs:
       - name: Setup Python
         uses: ./.github/actions/setup-python
 
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
       - name: Build docs
         run: uv run mkdocs build
 
@@ -42,4 +35,8 @@ jobs:
           if [ -f vercel.json ]; then cp vercel.json site/vercel.json; fi
 
       - name: Deploy to gh-pages
-        run: uv run python -m ghp_import -n -p site
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          force_orphan: true
