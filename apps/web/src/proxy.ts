@@ -5,12 +5,12 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth;
   const { pathname } = req.nextUrl;
 
-  // Apply CORS rules to /api routes
+  // Apply CORS rules to /api routes (strict: reject missing Origin to enforce allowlist).
   if (pathname.startsWith('/api/')) {
     const origin = req.headers.get('origin');
     const allowedOrigin = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-    if (origin && origin !== allowedOrigin) {
+    if (!origin || origin !== allowedOrigin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

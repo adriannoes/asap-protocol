@@ -12,7 +12,8 @@ declare module "next-auth" {
             email?: string;
             image?: string;
         };
-        encryptedAccessToken?: string;
+        /** GitHub OAuth access token; server-side only, from JWT callback. */
+        accessToken?: string;
     }
 
     interface Profile {

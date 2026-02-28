@@ -49,7 +49,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             if (typeof token.username === "string" && session.user) {
                 session.user.username = token.username;
             }
-
+            // Expose access token server-side only (idiomatic next-auth; no cookie reconstruction).
+            if (typeof token.accessToken === 'string') {
+                session.accessToken = token.accessToken;
+            }
             return session;
         },
     },
