@@ -9,6 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Search, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 /** Breakpoints aligned with Tailwind: sm 640, md 768, lg 1024, xl 1280. */
@@ -192,21 +199,25 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
                             />
                         </div>
 
-                        {/* Category Filter (Task 4.4.2) */}
+                        {/* Category Filter (Task 4.4.2) — Shadcn Select per tech-stack */}
                         <div className="pt-4 border-t">
                             <h3 className="text-sm font-medium mb-3">Category</h3>
-                            <select
-                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                value={selectedCategory}
-                                onChange={(e) => setSelectedCategory(e.target.value)}
+                            <Select
+                                value={selectedCategory || '__all__'}
+                                onValueChange={(v) => setSelectedCategory(v === '__all__' ? '' : v)}
                             >
-                                <option value="">All Categories</option>
-                                {availableCategories.map((cat) => (
-                                    <option key={cat} value={cat}>
-                                        {cat}
-                                    </option>
-                                ))}
-                            </select>
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="All Categories" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="__all__">All Categories</SelectItem>
+                                    {availableCategories.map((cat) => (
+                                        <SelectItem key={cat} value={cat}>
+                                            {cat}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         {/* Tags Filter (Task 4.4.3) */}
