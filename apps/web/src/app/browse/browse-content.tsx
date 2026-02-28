@@ -2,13 +2,20 @@
 
 import { useState, useMemo, useDeferredValue, useRef, useEffect } from 'react';
 import { useWindowVirtualizer } from '@tanstack/react-virtual';
-import { Manifest } from '@/types/protocol';
+import type { RegistryAgent } from '@/types/registry';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Search, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 /** Breakpoints aligned with Tailwind: sm 640, md 768, lg 1024, xl 1280. */
@@ -27,17 +34,41 @@ function useColumns(): number {
 }
 
 interface BrowseContentProps {
-    initialAgents: Manifest[];
+    initialAgents: RegistryAgent[];
 }
 
 export function BrowseContent({ initialAgents }: BrowseContentProps) {
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState<string>('');
+    const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
     const [requireSla, setRequireSla] = useState(false);
     const [requireAuth, setRequireAuth] = useState(false);
 
     // Defer filter updates to keep UI responsive with 500+ entries (avoids blocking input)
     const deferredSearch = useDeferredValue(searchQuery);
+
+    // Extract unique categories (Task 4.4.2)
+    const availableCategories = useMemo(() => {
+        const categoriesSet = new Set<string>();
+        initialAgents.forEach((agent) => {
+            if (agent.category) categoriesSet.add(agent.category);
+        });
+        return Array.from(categoriesSet).sort();
+    }, [initialAgents]);
+
+    // Extract unique tags (Task 4.4.3)
+    const availableTags = useMemo(() => {
+        const tagsSet = new Set<string>();
+        initialAgents.forEach((agent) => {
+            if (Array.isArray(agent.tags)) {
+                agent.tags.forEach((tag) => {
+                    if (tag) tagsSet.add(tag);
+                });
+            }
+        });
+        return Array.from(tagsSet).sort();
+    }, [initialAgents]);
 
     // Extract unique skills from all agents (Task 4.1.3)
     const availableSkills = useMemo(() => {
@@ -57,6 +88,14 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
             prev.includes(skill)
                 ? prev.filter((s) => s !== skill)
                 : [...prev, skill]
+        );
+    };
+
+    const toggleTag = (tag: string) => {
+        setSelectedTags((prev) =>
+            prev.includes(tag)
+                ? prev.filter((t) => t !== tag)
+                : [...prev, tag]
         );
     };
 
@@ -95,8 +134,21 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
             result = result.filter((agent) => Array.isArray(agent.auth?.schemes) && agent.auth.schemes.length > 0);
         }
 
+        // Apply Category Filter (Task 4.4.2)
+        if (selectedCategory) {
+            result = result.filter((agent) => agent.category === selectedCategory);
+        }
+
+        // Apply Tags Filter (Task 4.4.3)
+        if (selectedTags.length > 0) {
+            result = result.filter((agent) => {
+                const agentTags = Array.isArray(agent.tags) ? agent.tags : [];
+                return selectedTags.every((tag) => agentTags.includes(tag));
+            });
+        }
+
         return result;
-    }, [initialAgents, deferredSearch, selectedSkills, requireSla, requireAuth]);
+    }, [initialAgents, deferredSearch, selectedSkills, selectedCategory, selectedTags, requireSla, requireAuth]);
 
     const columns = useColumns();
     const gridParentRef = useRef<HTMLDivElement>(null);
@@ -145,6 +197,54 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
+                        </div>
+
+                        {/* Category Filter (Task 4.4.2) — Shadcn Select per tech-stack */}
+                        <div className="pt-4 border-t">
+                            <h3 className="text-sm font-medium mb-3">Category</h3>
+                            <Select
+                                value={selectedCategory || '__all__'}
+                                onValueChange={(v) => setSelectedCategory(v === '__all__' ? '' : v)}
+                            >
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="All Categories" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="__all__">All Categories</SelectItem>
+                                    {availableCategories.map((cat) => (
+                                        <SelectItem key={cat} value={cat}>
+                                            {cat}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Tags Filter (Task 4.4.3) */}
+                        <div className="pt-4 border-t">
+                            <h3 className="text-sm font-medium mb-3">Tags</h3>
+                            {availableTags.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                    {availableTags.map((tag) => {
+                                        const isSelected = selectedTags.includes(tag);
+                                        return (
+                                            <Badge
+                                                key={tag}
+                                                variant={isSelected ? 'default' : 'outline'}
+                                                className={cn(
+                                                    "cursor-pointer transition-colors",
+                                                    isSelected ? "hover:bg-primary/80" : "hover:bg-muted"
+                                                )}
+                                                onClick={() => toggleTag(tag)}
+                                            >
+                                                {tag}
+                                            </Badge>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-muted-foreground italic">No tags found.</p>
+                            )}
                         </div>
 
                         {/* Skill Filters (Task 4.1.3) */}
@@ -282,8 +382,8 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
                                                                     {skill.id}
                                                                 </Badge>
                                                             )) || (
-                                                                <span className="text-xs italic text-muted-foreground">No specific skills listed</span>
-                                                            )}
+                                                                    <span className="text-xs italic text-muted-foreground">No specific skills listed</span>
+                                                                )}
                                                             {Array.isArray(agent.capabilities?.skills) && agent.capabilities.skills.length > 3 && (
                                                                 <Badge variant="outline" className="text-xs">+{agent.capabilities.skills.length - 3} more</Badge>
                                                             )}

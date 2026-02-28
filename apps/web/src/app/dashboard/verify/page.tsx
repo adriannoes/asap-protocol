@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { VerifyForm } from './verify-form';
 
 export const metadata: Metadata = {
@@ -35,7 +36,7 @@ export default async function VerifyPage({ searchParams }: PageProps) {
             {!agentId ? (
                 <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700 dark:text-amber-400">
                     <p>No agent selected. Open this page from the dashboard by clicking &quot;Apply for Verified&quot; on a listed agent card, or add <code className="rounded bg-muted px-1">?agent_id=urn:asap:agent:username:name</code> to the URL.</p>
-                    <a href="/dashboard" className="mt-2 inline-block font-medium underline">Return to Dashboard</a>
+                    <Link href="/dashboard" className="mt-2 inline-block font-medium underline">Return to Dashboard</Link>
                 </div>
             ) : (
                 <VerifyForm defaultAgentId={agentId} />

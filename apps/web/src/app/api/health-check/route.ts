@@ -1,11 +1,29 @@
 /** Server-side proxy for agent health checks (avoids exposing client IP to agents). */
 import { NextRequest, NextResponse } from 'next/server';
 import { isAllowedExternalUrl } from '@/lib/url-validator';
+import { checkProxyRateLimit } from '@/lib/rate-limit';
+
+function getClientIp(request: NextRequest): string {
+    const forwarded = request.headers.get('x-forwarded-for');
+    if (forwarded) return forwarded.split(',')[0]?.trim() ?? 'unknown';
+    const realIp = request.headers.get('x-real-ip');
+    if (realIp) return realIp;
+    return 'unknown';
+}
 
 export async function GET(request: NextRequest) {
     const url = request.nextUrl.searchParams.get('url');
     if (!url || typeof url !== 'string') {
         return NextResponse.json({ error: 'Missing url parameter' }, { status: 400 });
+    }
+
+    const ip = getClientIp(request);
+    const rateCheck = checkProxyRateLimit(ip);
+    if (!rateCheck.allowed) {
+        return NextResponse.json(
+            { error: 'Too many requests', retryAfter: rateCheck.retryAfter },
+            { status: 429, headers: rateCheck.retryAfter ? { 'Retry-After': String(rateCheck.retryAfter) } : undefined }
+        );
     }
 
     const check = isAllowedExternalUrl(url);

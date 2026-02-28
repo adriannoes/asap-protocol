@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, ExternalLink, ShieldAlert, ShieldCheck, TerminalSquare } from 'lucide-react';
 import Link from 'next/link';
-import { Code2 } from 'lucide-react';
+import { UsageSnippets } from './usage-snippets';
 
 interface AgentDetailClientProps {
     agent: RegistryAgent;
+    isRevoked?: boolean;
 }
 
 function safeAuthHref(url: unknown): string {
@@ -18,7 +19,7 @@ function safeAuthHref(url: unknown): string {
     return isAllowedExternalUrl(url).valid ? url : '#';
 }
 
-export function AgentDetailClient({ agent }: AgentDetailClientProps) {
+export function AgentDetailClient({ agent, isRevoked }: AgentDetailClientProps) {
     const agentEndpoint = agent.endpoints?.asap ?? (agent.endpoints as { http?: string })?.http;
 
     const renderBooleanBadge = (value: boolean | undefined | null, label: string) => {
@@ -43,7 +44,14 @@ export function AgentDetailClient({ agent }: AgentDetailClientProps) {
 
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">{agent.name}</h1>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-3xl font-bold tracking-tight">{agent.name}</h1>
+                            {isRevoked && (
+                                <Badge variant="destructive" className="text-sm px-2 py-0.5">
+                                    Revoked
+                                </Badge>
+                            )}
+                        </div>
                         <p className="text-muted-foreground mt-2 max-w-2xl text-lg">
                             {agent.description}
                         </p>
@@ -108,34 +116,7 @@ export function AgentDetailClient({ agent }: AgentDetailClientProps) {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-2 space-y-6">
-                    {/* Developer Quick Start */}
-                    <Card className="border-indigo-500/20 shadow-sm shadow-indigo-500/5">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-lg flex items-center gap-2">
-                                <Code2 className="w-5 h-5 text-indigo-400" />
-                                Developer Quick Start
-                            </CardTitle>
-                            <CardDescription>
-                                Connect to this agent using the official ASAP Client.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="group relative rounded-md bg-zinc-950 p-4 font-mono text-sm text-zinc-300 border border-zinc-800 overflow-x-auto">
-                                <pre className="leading-relaxed">
-                                    <span className="text-zinc-500"># 1. Install the client</span>{'\n'}
-                                    <span className="text-indigo-400">npm</span> install @asap/client{'\n\n'}
-                                    <span className="text-zinc-500"># 2. Connect and route requests</span>{'\n'}
-                                    <span className="text-purple-400">import</span> {'{'} AsapClient {'}'} <span className="text-purple-400">from</span> <span className="text-emerald-300">&apos;@asap/client&apos;</span>;{'\n\n'}
-                                    <span className="text-purple-400">const</span> client = <span className="text-purple-400">new</span> AsapClient();{'\n'}
-                                    <span className="text-purple-400">await</span> client.connect(<span className="text-emerald-300">&apos;{agent.id}&apos;</span>);{'\n\n'}
-                                    <span className="text-purple-400">const</span> response = <span className="text-purple-400">await</span> client.sendTask({'{'}{'\n'}
-                                    {'  '}skill: <span className="text-emerald-300">&apos;{Array.isArray(agent.capabilities?.skills) && agent.capabilities.skills.length > 0 ? (agent.capabilities.skills[0] as { id: string }).id : 'example-skill'}&apos;</span>,{'\n'}
-                                    {'  '}input: {'{ /* payload */ }'}{'\n'}
-                                    {'}'});
-                                </pre>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <UsageSnippets agentId={agent.id ?? ''} agent={agent} />
 
                     {/* Skills and Capabilities */}
                     <Card>

@@ -13,6 +13,10 @@ export type RegistryAgent = Manifest & {
     documentation_url?: string | null;
     /** Optional framework used to build the agent (e.g. CrewAI, LangChain). From Lite Registry. */
     built_with?: string | null;
+    /** Category of the agent (e.g. Coding, Research). From Lite Registry. */
+    category?: string | null;
+    /** Tags for better discovery. From Lite Registry. */
+    tags?: string[];
     /** If false, UI skips reachability check (e.g. seeded/demo agents). */
     online_check?: boolean | null;
 };

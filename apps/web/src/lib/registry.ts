@@ -1,8 +1,13 @@
+import { z } from 'zod';
 import type { RegistryAgent } from '../types/registry';
 import {
   RegistryResponseSchema,
   type RegistryAgentValidated,
 } from './registry-schema';
+
+const RevokedResponseSchema = z.object({
+  revoked: z.array(z.object({ urn: z.string() })).default([]),
+});
 
 /**
  * ISR revalidate period (seconds) for registry data.
@@ -13,6 +18,36 @@ import {
 export const REGISTRY_REVALIDATE_SECONDS = process.env.REGISTRY_REVALIDATE_SECONDS
   ? Math.max(30, parseInt(process.env.REGISTRY_REVALIDATE_SECONDS, 10))
   : 60;
+
+/**
+ * Fetch the list of revoked agent URNs.
+ * Returns a Set for efficient lookup.
+ */
+export async function fetchRevokedUrns(): Promise<Set<string>> {
+  const REVOKED_URL =
+    process.env.REVOKED_URL ||
+    'https://raw.githubusercontent.com/adriannoes/asap-protocol/main/revoked_agents.json';
+
+  try {
+    const res = await fetch(REVOKED_URL, {
+      next: { revalidate: REGISTRY_REVALIDATE_SECONDS },
+    });
+
+    if (!res.ok) {
+      if (res.status === 404) return new Set();
+      console.error(`Failed to fetch revoked list: ${res.statusText}`);
+      return new Set();
+    }
+
+    const data = await res.json();
+    const parsed = RevokedResponseSchema.safeParse(data);
+    const urns = parsed.success ? parsed.data.revoked.map((e) => e.urn) : [];
+    return new Set(urns);
+  } catch (error) {
+    console.error('Error fetching revoked list:', error);
+    return new Set(); // resilient: allow listing to work when revoked list is unreachable
+  }
+}
 
 /**
  * Normalizes validated registry agent to RegistryAgent (Manifest-compatible).

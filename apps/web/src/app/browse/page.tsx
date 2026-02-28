@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { fetchRegistry } from '@/lib/registry';
+import { fetchRegistry, fetchRevokedUrns } from '@/lib/registry';
 import { BrowseContent } from './browse-content';
 
 export const metadata: Metadata = {
@@ -11,7 +11,11 @@ export const metadata: Metadata = {
 export const revalidate = 60;
 
 export default async function BrowsePage() {
-    const agents = await fetchRegistry();
+    const [allAgents, revokedUrns] = await Promise.all([
+        fetchRegistry(),
+        fetchRevokedUrns(),
+    ]);
+    const activeAgents = allAgents.filter((agent) => !revokedUrns.has(agent.id || ''));
 
     return (
         <div className="container mx-auto py-10 px-4 max-w-7xl">
@@ -19,11 +23,11 @@ export default async function BrowsePage() {
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Agent Registry</h1>
                     <p className="text-muted-foreground mt-2">
-                        Browse and connect with verified autonomous agents. Currently tracking {agents.length} agents.
+                        Browse and connect with verified autonomous agents. Currently tracking {activeAgents.length} agents.
                     </p>
                 </div>
 
-                <BrowseContent initialAgents={agents} />
+                <BrowseContent initialAgents={activeAgents} />
             </div>
         </div>
     );

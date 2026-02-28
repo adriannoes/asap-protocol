@@ -113,6 +113,48 @@ class TestRegistrySchemaValidation:
         entry = RegistryEntry.model_validate(data)
         assert entry.online_check is False
 
+    def test_registry_entry_with_category_tags(self) -> None:
+        """RegistryEntry parses category and tags from dict (Sprint E4)."""
+        data = {
+            "id": "urn:asap:agent:test:bot",
+            "name": "Test",
+            "description": "x",
+            "endpoints": {"http": "https://example.com"},
+            "asap_version": "2.0",
+            "category": "Coding",
+            "tags": ["ai", "code_review"],
+        }
+        entry = RegistryEntry.model_validate(data)
+        assert entry.category == "Coding"
+        assert entry.tags == ["ai", "code_review"]
+
+    def test_registry_entry_defaults_without_category_tags(self) -> None:
+        """RegistryEntry defaults category and tags when omitted (Sprint E4)."""
+        data = {
+            "id": "urn:asap:agent:test:bot",
+            "name": "Test",
+            "description": "x",
+            "endpoints": {"http": "https://example.com"},
+            "asap_version": "2.0",
+        }
+        entry = RegistryEntry.model_validate(data)
+        assert entry.category is None
+        assert entry.tags == []
+
+    def test_registry_entry_normalizes_category_case(self) -> None:
+        """RegistryEntry normalizes known category values to canonical form (e.g. coding -> Coding)."""
+        data = {
+            "id": "urn:asap:agent:test:bot",
+            "name": "Test",
+            "description": "x",
+            "endpoints": {"http": "https://example.com"},
+            "asap_version": "2.0",
+            "category": "coding",
+            "tags": [],
+        }
+        entry = RegistryEntry.model_validate(data)
+        assert entry.category == "Coding"
+
 
 class TestDiscoverFromRegistry:
     """discover_from_registry fetches and parses from URL."""
@@ -273,3 +315,27 @@ class TestGenerateRegistryEntry:
         assert entry.repository_url == "https://github.com/me/agent"
         assert entry.documentation_url == "https://docs.example.com/agent"
         assert entry.built_with == "CrewAI"
+
+    def test_generates_entry_with_category_tags(self) -> None:
+        """generate_registry_entry with category/tags produces valid entry (Sprint E4)."""
+        manifest = Manifest(
+            id="urn:asap:agent:my-agent",
+            name="My Agent",
+            version="1.0.0",
+            description="Does things",
+            capabilities=Capability(
+                asap_version="1.1.0",
+                skills=[Skill(id="skill_x", description="X")],
+            ),
+            endpoints=Endpoint(asap="https://example.com/asap", events=None),
+        )
+        endpoints = {"http": "https://example.com/asap"}
+        entry = generate_registry_entry(
+            manifest,
+            endpoints,
+            category="Coding",
+            tags=["ai", "code_review"],
+        )
+        assert entry.category == "Coding"
+        assert entry.tags == ["ai", "code_review"]
+        entry.model_dump_json()

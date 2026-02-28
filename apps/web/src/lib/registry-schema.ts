@@ -9,7 +9,7 @@ const EndpointsSchema = z.record(z.string(), z.string());
 const VerificationStatusSchema = z
     .object({
         status: z.string(),
-        verified_at: z.string().optional(),
+        verified_at: z.string().optional().nullable(),
     })
     .optional()
     .nullable();
@@ -24,6 +24,8 @@ export const RegistryAgentSchema = z.object({
     repository_url: z.string().url().optional().nullable(),
     documentation_url: z.string().url().optional().nullable(),
     built_with: z.string().optional().nullable(),
+    category: z.string().optional().nullable(),
+    tags: z.array(z.string()).default([]),
     verification: VerificationStatusSchema,
     online_check: z.boolean().optional().nullable(),
 }).strip();
