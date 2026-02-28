@@ -80,14 +80,16 @@ async def test_resolve_success_returns_resolved_agent() -> None:
         mock_verify.return_value = True
         mock_revoked.return_value = False
 
-        mock_http = AsyncMock()
         _resp = httpx.Response(
             200,
             text=_signed_manifest_json(),
             request=httpx.Request("GET", TEST_MANIFEST_URL),
         )
+        mock_http = AsyncMock()
         mock_http.get = AsyncMock(return_value=_resp)
         mock_http.aclose = AsyncMock()
+        mock_http.__aenter__ = AsyncMock(return_value=mock_http)
+        mock_http.__aexit__ = AsyncMock(return_value=None)
         with patch("asap.client.market.httpx.AsyncClient", return_value=mock_http):
             client = MarketClient(registry_url="https://reg.example/registry.json")
             agent = await client.resolve(TEST_URN)
@@ -134,6 +136,8 @@ async def test_resolve_invalid_signature_raises() -> None:
         mock_http = AsyncMock()
         mock_http.get = AsyncMock(return_value=_resp)
         mock_http.aclose = AsyncMock()
+        mock_http.__aenter__ = AsyncMock(return_value=mock_http)
+        mock_http.__aexit__ = AsyncMock(return_value=None)
         with patch("asap.client.market.httpx.AsyncClient", return_value=mock_http):
             client = MarketClient(registry_url="https://reg.example/registry.json")
             with pytest.raises(SignatureVerificationError, match="invalid signature"):
@@ -160,6 +164,8 @@ async def test_resolve_revoked_raises() -> None:
         mock_http = AsyncMock()
         mock_http.get = AsyncMock(return_value=_resp)
         mock_http.aclose = AsyncMock()
+        mock_http.__aenter__ = AsyncMock(return_value=mock_http)
+        mock_http.__aexit__ = AsyncMock(return_value=None)
         with patch("asap.client.market.httpx.AsyncClient", return_value=mock_http):
             client = MarketClient(registry_url="https://reg.example/registry.json")
             with pytest.raises(AgentRevokedException, match=TEST_URN):
@@ -270,6 +276,8 @@ async def test_resolve_429_then_200_succeeds() -> None:
     mock_http = AsyncMock()
     mock_http.get = AsyncMock(side_effect=[resp_429, resp_200])
     mock_http.aclose = AsyncMock()
+    mock_http.__aenter__ = AsyncMock(return_value=mock_http)
+    mock_http.__aexit__ = AsyncMock(return_value=None)
 
     with (
         patch("asap.client.market.get_registry", new_callable=AsyncMock) as mock_get,
@@ -297,6 +305,8 @@ async def test_resolve_429_four_times_raises() -> None:
     mock_http = AsyncMock()
     mock_http.get = AsyncMock(return_value=resp_429)
     mock_http.aclose = AsyncMock()
+    mock_http.__aenter__ = AsyncMock(return_value=mock_http)
+    mock_http.__aexit__ = AsyncMock(return_value=None)
 
     with (
         patch("asap.client.market.get_registry", new_callable=AsyncMock) as mock_get,
