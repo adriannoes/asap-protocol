@@ -1,11 +1,11 @@
 {
   "version": "1.0",
-  "updated_at": "2026-02-23T01:41:26.140621Z",
+  "updated_at": "2026-02-28T17:09:14.300070Z",
   "agents": [
     {
       "id": "urn:asap:agent:seed:agent-0",
-      "name": "Alpha Seed Agent 1",
-      "description": "ASAP-compliant agent for code_review tasks.",
+      "name": "Global Reviewer",
+      "description": "Professional code review assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/0/asap",
         "manifest": "https://example.com/seed/0/.well-known/asap/manifest.json"
@@ -14,6 +14,13 @@
         "code_review",
         "summarize",
         "translate"
+      ],
+      "category": "Coding",
+      "tags": [
+        "code-review",
+        "coding",
+        "enterprise",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -27,8 +34,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-1",
-      "name": "Beta Seed Agent 2",
-      "description": "Demo agent showcasing summarize capability.",
+      "name": "Secure Summarist",
+      "description": "Specialized agent for high-precision summarize.",
       "endpoints": {
         "http": "https://example.com/seed/1/asap",
         "manifest": "https://example.com/seed/1/.well-known/asap/manifest.json"
@@ -36,6 +43,11 @@
       "skills": [
         "summarize",
         "translate"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "summarize",
+        "productivity"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -46,8 +58,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-2",
-      "name": "Gamma Seed Agent 3",
-      "description": "Reference implementation for protocol translate.",
+      "name": "Fast Interpreter",
+      "description": "Reference translate node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/2/asap",
         "manifest": "https://example.com/seed/2/.well-known/asap/manifest.json"
@@ -55,6 +67,12 @@
       "skills": [
         "translate",
         "search"
+      ],
+      "category": "Other",
+      "tags": [
+        "translate",
+        "other",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -65,8 +83,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-3",
-      "name": "Delta Seed Agent 4",
-      "description": "ASAP-compliant agent for search tasks.",
+      "name": "Elastic Navigator",
+      "description": "High-performance search service.",
       "endpoints": {
         "http": "https://example.com/seed/3/asap",
         "manifest": "https://example.com/seed/3/.well-known/asap/manifest.json"
@@ -75,6 +93,11 @@
         "search",
         "analyze",
         "synthesize"
+      ],
+      "category": "Research",
+      "tags": [
+        "search",
+        "research"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -85,8 +108,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-4",
-      "name": "Epsilon Seed Agent 5",
-      "description": "Demo agent showcasing analyze capability.",
+      "name": "Open Analyst",
+      "description": "Professional analyze assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/4/asap",
         "manifest": "https://example.com/seed/4/.well-known/asap/manifest.json"
@@ -95,17 +118,23 @@
         "analyze",
         "synthesize"
       ],
+      "category": "Data",
+      "tags": [
+        "analyze",
+        "data",
+        "enterprise"
+      ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-5",
-      "name": "Zeta Seed Agent 6",
-      "description": "Reference implementation for protocol synthesize.",
+      "name": "Prime Architect",
+      "description": "Specialized agent for high-precision synthesize.",
       "endpoints": {
         "http": "https://example.com/seed/5/asap",
         "manifest": "https://example.com/seed/5/.well-known/asap/manifest.json"
@@ -113,6 +142,12 @@
       "skills": [
         "synthesize",
         "planning"
+      ],
+      "category": "Data",
+      "tags": [
+        "synthesize",
+        "data",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -126,8 +161,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-6",
-      "name": "Eta Seed Agent 7",
-      "description": "ASAP-compliant agent for planning tasks.",
+      "name": "Neural Strategist",
+      "description": "Reference planning node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/6/asap",
         "manifest": "https://example.com/seed/6/.well-known/asap/manifest.json"
@@ -136,6 +171,12 @@
         "planning",
         "qa",
         "documentation"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "planning",
+        "productivity",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -146,8 +187,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-7",
-      "name": "Theta Seed Agent 8",
-      "description": "Demo agent showcasing qa capability.",
+      "name": "Deep Validator",
+      "description": "High-performance qa service.",
       "endpoints": {
         "http": "https://example.com/seed/7/asap",
         "manifest": "https://example.com/seed/7/.well-known/asap/manifest.json"
@@ -155,6 +196,11 @@
       "skills": [
         "qa",
         "documentation"
+      ],
+      "category": "Coding",
+      "tags": [
+        "qa",
+        "coding"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -165,8 +211,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-8",
-      "name": "Iota Seed Agent 9",
-      "description": "Reference implementation for protocol documentation.",
+      "name": "Fluent Scribe",
+      "description": "Professional documentation assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/8/asap",
         "manifest": "https://example.com/seed/8/.well-known/asap/manifest.json"
@@ -174,6 +220,12 @@
       "skills": [
         "documentation",
         "code_review"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "documentation",
+        "productivity",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -184,8 +236,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-9",
-      "name": "Kappa Seed Agent 10",
-      "description": "ASAP-compliant agent for code_review tasks.",
+      "name": "Quick Reviewer",
+      "description": "Specialized agent for high-precision code review.",
       "endpoints": {
         "http": "https://example.com/seed/9/asap",
         "manifest": "https://example.com/seed/9/.well-known/asap/manifest.json"
@@ -195,17 +247,22 @@
         "summarize",
         "translate"
       ],
+      "category": "Coding",
+      "tags": [
+        "code-review",
+        "coding"
+      ],
       "asap_version": "1.1.0",
       "repository_url": null,
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-10",
-      "name": "Alpha Seed Agent 1",
-      "description": "Demo agent showcasing summarize capability.",
+      "name": "Global Summarist 2",
+      "description": "Reference summarize node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/10/asap",
         "manifest": "https://example.com/seed/10/.well-known/asap/manifest.json"
@@ -213,6 +270,13 @@
       "skills": [
         "summarize",
         "translate"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "summarize",
+        "productivity",
+        "enterprise",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -226,8 +290,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-11",
-      "name": "Beta Seed Agent 2",
-      "description": "Reference implementation for protocol translate.",
+      "name": "Secure Interpreter 2",
+      "description": "High-performance translate service.",
       "endpoints": {
         "http": "https://example.com/seed/11/asap",
         "manifest": "https://example.com/seed/11/.well-known/asap/manifest.json"
@@ -235,6 +299,11 @@
       "skills": [
         "translate",
         "search"
+      ],
+      "category": "Other",
+      "tags": [
+        "translate",
+        "other"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -245,8 +314,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-12",
-      "name": "Gamma Seed Agent 3",
-      "description": "ASAP-compliant agent for search tasks.",
+      "name": "Fast Navigator 2",
+      "description": "Professional search assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/12/asap",
         "manifest": "https://example.com/seed/12/.well-known/asap/manifest.json"
@@ -255,6 +324,12 @@
         "search",
         "analyze",
         "synthesize"
+      ],
+      "category": "Research",
+      "tags": [
+        "search",
+        "research",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -265,8 +340,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-13",
-      "name": "Delta Seed Agent 4",
-      "description": "Demo agent showcasing analyze capability.",
+      "name": "Elastic Analyst 2",
+      "description": "Specialized agent for high-precision analyze.",
       "endpoints": {
         "http": "https://example.com/seed/13/asap",
         "manifest": "https://example.com/seed/13/.well-known/asap/manifest.json"
@@ -274,6 +349,11 @@
       "skills": [
         "analyze",
         "synthesize"
+      ],
+      "category": "Data",
+      "tags": [
+        "analyze",
+        "data"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -284,8 +364,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-14",
-      "name": "Epsilon Seed Agent 5",
-      "description": "Reference implementation for protocol synthesize.",
+      "name": "Open Architect 2",
+      "description": "Reference synthesize node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/14/asap",
         "manifest": "https://example.com/seed/14/.well-known/asap/manifest.json"
@@ -294,17 +374,23 @@
         "synthesize",
         "planning"
       ],
+      "category": "Data",
+      "tags": [
+        "synthesize",
+        "data",
+        "enterprise"
+      ],
       "asap_version": "1.1.0",
       "repository_url": null,
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-15",
-      "name": "Zeta Seed Agent 6",
-      "description": "ASAP-compliant agent for planning tasks.",
+      "name": "Prime Strategist 2",
+      "description": "High-performance planning service.",
       "endpoints": {
         "http": "https://example.com/seed/15/asap",
         "manifest": "https://example.com/seed/15/.well-known/asap/manifest.json"
@@ -313,6 +399,12 @@
         "planning",
         "qa",
         "documentation"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "planning",
+        "productivity",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -326,8 +418,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-16",
-      "name": "Eta Seed Agent 7",
-      "description": "Demo agent showcasing qa capability.",
+      "name": "Neural Validator 2",
+      "description": "Professional qa assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/16/asap",
         "manifest": "https://example.com/seed/16/.well-known/asap/manifest.json"
@@ -335,6 +427,12 @@
       "skills": [
         "qa",
         "documentation"
+      ],
+      "category": "Coding",
+      "tags": [
+        "qa",
+        "coding",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -345,8 +443,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-17",
-      "name": "Theta Seed Agent 8",
-      "description": "Reference implementation for protocol documentation.",
+      "name": "Deep Scribe 2",
+      "description": "Specialized agent for high-precision documentation.",
       "endpoints": {
         "http": "https://example.com/seed/17/asap",
         "manifest": "https://example.com/seed/17/.well-known/asap/manifest.json"
@@ -354,6 +452,11 @@
       "skills": [
         "documentation",
         "code_review"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "documentation",
+        "productivity"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -364,8 +467,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-18",
-      "name": "Iota Seed Agent 9",
-      "description": "ASAP-compliant agent for code_review tasks.",
+      "name": "Fluent Reviewer 2",
+      "description": "Reference code review node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/18/asap",
         "manifest": "https://example.com/seed/18/.well-known/asap/manifest.json"
@@ -374,6 +477,12 @@
         "code_review",
         "summarize",
         "translate"
+      ],
+      "category": "Coding",
+      "tags": [
+        "code-review",
+        "coding",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -384,8 +493,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-19",
-      "name": "Kappa Seed Agent 10",
-      "description": "Demo agent showcasing summarize capability.",
+      "name": "Quick Summarist 2",
+      "description": "High-performance summarize service.",
       "endpoints": {
         "http": "https://example.com/seed/19/asap",
         "manifest": "https://example.com/seed/19/.well-known/asap/manifest.json"
@@ -394,17 +503,22 @@
         "summarize",
         "translate"
       ],
+      "category": "Productivity",
+      "tags": [
+        "summarize",
+        "productivity"
+      ],
       "asap_version": "1.1.0",
       "repository_url": null,
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-20",
-      "name": "Alpha Seed Agent 1",
-      "description": "Reference implementation for protocol translate.",
+      "name": "Global Interpreter 3",
+      "description": "Professional translate assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/20/asap",
         "manifest": "https://example.com/seed/20/.well-known/asap/manifest.json"
@@ -412,6 +526,13 @@
       "skills": [
         "translate",
         "search"
+      ],
+      "category": "Other",
+      "tags": [
+        "translate",
+        "other",
+        "enterprise",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -425,8 +546,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-21",
-      "name": "Beta Seed Agent 2",
-      "description": "ASAP-compliant agent for search tasks.",
+      "name": "Secure Navigator 3",
+      "description": "Specialized agent for high-precision search.",
       "endpoints": {
         "http": "https://example.com/seed/21/asap",
         "manifest": "https://example.com/seed/21/.well-known/asap/manifest.json"
@@ -435,6 +556,11 @@
         "search",
         "analyze",
         "synthesize"
+      ],
+      "category": "Research",
+      "tags": [
+        "search",
+        "research"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -445,8 +571,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-22",
-      "name": "Gamma Seed Agent 3",
-      "description": "Demo agent showcasing analyze capability.",
+      "name": "Fast Analyst 3",
+      "description": "Reference analyze node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/22/asap",
         "manifest": "https://example.com/seed/22/.well-known/asap/manifest.json"
@@ -454,6 +580,12 @@
       "skills": [
         "analyze",
         "synthesize"
+      ],
+      "category": "Data",
+      "tags": [
+        "analyze",
+        "data",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -464,8 +596,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-23",
-      "name": "Delta Seed Agent 4",
-      "description": "Reference implementation for protocol synthesize.",
+      "name": "Elastic Architect 3",
+      "description": "High-performance synthesize service.",
       "endpoints": {
         "http": "https://example.com/seed/23/asap",
         "manifest": "https://example.com/seed/23/.well-known/asap/manifest.json"
@@ -473,6 +605,11 @@
       "skills": [
         "synthesize",
         "planning"
+      ],
+      "category": "Data",
+      "tags": [
+        "synthesize",
+        "data"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -483,8 +620,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-24",
-      "name": "Epsilon Seed Agent 5",
-      "description": "ASAP-compliant agent for planning tasks.",
+      "name": "Open Strategist 3",
+      "description": "Professional planning assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/24/asap",
         "manifest": "https://example.com/seed/24/.well-known/asap/manifest.json"
@@ -494,17 +631,23 @@
         "qa",
         "documentation"
       ],
+      "category": "Productivity",
+      "tags": [
+        "planning",
+        "productivity",
+        "enterprise"
+      ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-25",
-      "name": "Zeta Seed Agent 6",
-      "description": "Demo agent showcasing qa capability.",
+      "name": "Prime Validator 3",
+      "description": "Specialized agent for high-precision qa.",
       "endpoints": {
         "http": "https://example.com/seed/25/asap",
         "manifest": "https://example.com/seed/25/.well-known/asap/manifest.json"
@@ -512,6 +655,12 @@
       "skills": [
         "qa",
         "documentation"
+      ],
+      "category": "Coding",
+      "tags": [
+        "qa",
+        "coding",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -525,8 +674,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-26",
-      "name": "Eta Seed Agent 7",
-      "description": "Reference implementation for protocol documentation.",
+      "name": "Neural Scribe 3",
+      "description": "Reference documentation node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/26/asap",
         "manifest": "https://example.com/seed/26/.well-known/asap/manifest.json"
@@ -534,6 +683,12 @@
       "skills": [
         "documentation",
         "code_review"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "documentation",
+        "productivity",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -544,8 +699,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-27",
-      "name": "Theta Seed Agent 8",
-      "description": "ASAP-compliant agent for code_review tasks.",
+      "name": "Deep Reviewer 3",
+      "description": "High-performance code review service.",
       "endpoints": {
         "http": "https://example.com/seed/27/asap",
         "manifest": "https://example.com/seed/27/.well-known/asap/manifest.json"
@@ -554,6 +709,11 @@
         "code_review",
         "summarize",
         "translate"
+      ],
+      "category": "Coding",
+      "tags": [
+        "code-review",
+        "coding"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -564,8 +724,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-28",
-      "name": "Iota Seed Agent 9",
-      "description": "Demo agent showcasing summarize capability.",
+      "name": "Fluent Summarist 3",
+      "description": "Professional summarize assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/28/asap",
         "manifest": "https://example.com/seed/28/.well-known/asap/manifest.json"
@@ -573,6 +733,12 @@
       "skills": [
         "summarize",
         "translate"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "summarize",
+        "productivity",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -583,8 +749,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-29",
-      "name": "Kappa Seed Agent 10",
-      "description": "Reference implementation for protocol translate.",
+      "name": "Quick Interpreter 3",
+      "description": "Specialized agent for high-precision translate.",
       "endpoints": {
         "http": "https://example.com/seed/29/asap",
         "manifest": "https://example.com/seed/29/.well-known/asap/manifest.json"
@@ -593,17 +759,22 @@
         "translate",
         "search"
       ],
+      "category": "Other",
+      "tags": [
+        "translate",
+        "other"
+      ],
       "asap_version": "1.1.0",
       "repository_url": null,
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-30",
-      "name": "Alpha Seed Agent 1",
-      "description": "ASAP-compliant agent for search tasks.",
+      "name": "Global Navigator 4",
+      "description": "Reference search node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/30/asap",
         "manifest": "https://example.com/seed/30/.well-known/asap/manifest.json"
@@ -612,6 +783,13 @@
         "search",
         "analyze",
         "synthesize"
+      ],
+      "category": "Research",
+      "tags": [
+        "search",
+        "research",
+        "enterprise",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -625,8 +803,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-31",
-      "name": "Beta Seed Agent 2",
-      "description": "Demo agent showcasing analyze capability.",
+      "name": "Secure Analyst 4",
+      "description": "High-performance analyze service.",
       "endpoints": {
         "http": "https://example.com/seed/31/asap",
         "manifest": "https://example.com/seed/31/.well-known/asap/manifest.json"
@@ -634,6 +812,11 @@
       "skills": [
         "analyze",
         "synthesize"
+      ],
+      "category": "Data",
+      "tags": [
+        "analyze",
+        "data"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -644,8 +827,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-32",
-      "name": "Gamma Seed Agent 3",
-      "description": "Reference implementation for protocol synthesize.",
+      "name": "Fast Architect 4",
+      "description": "Professional synthesize assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/32/asap",
         "manifest": "https://example.com/seed/32/.well-known/asap/manifest.json"
@@ -653,6 +836,12 @@
       "skills": [
         "synthesize",
         "planning"
+      ],
+      "category": "Data",
+      "tags": [
+        "synthesize",
+        "data",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -663,8 +852,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-33",
-      "name": "Delta Seed Agent 4",
-      "description": "ASAP-compliant agent for planning tasks.",
+      "name": "Elastic Strategist 4",
+      "description": "Specialized agent for high-precision planning.",
       "endpoints": {
         "http": "https://example.com/seed/33/asap",
         "manifest": "https://example.com/seed/33/.well-known/asap/manifest.json"
@@ -673,6 +862,11 @@
         "planning",
         "qa",
         "documentation"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "planning",
+        "productivity"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -683,8 +877,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-34",
-      "name": "Epsilon Seed Agent 5",
-      "description": "Demo agent showcasing qa capability.",
+      "name": "Open Validator 4",
+      "description": "Reference qa node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/34/asap",
         "manifest": "https://example.com/seed/34/.well-known/asap/manifest.json"
@@ -693,17 +887,23 @@
         "qa",
         "documentation"
       ],
+      "category": "Coding",
+      "tags": [
+        "qa",
+        "coding",
+        "enterprise"
+      ],
       "asap_version": "1.1.0",
       "repository_url": null,
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-35",
-      "name": "Zeta Seed Agent 6",
-      "description": "Reference implementation for protocol documentation.",
+      "name": "Prime Scribe 4",
+      "description": "High-performance documentation service.",
       "endpoints": {
         "http": "https://example.com/seed/35/asap",
         "manifest": "https://example.com/seed/35/.well-known/asap/manifest.json"
@@ -711,6 +911,12 @@
       "skills": [
         "documentation",
         "code_review"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "documentation",
+        "productivity",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -724,8 +930,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-36",
-      "name": "Eta Seed Agent 7",
-      "description": "ASAP-compliant agent for code_review tasks.",
+      "name": "Neural Reviewer 4",
+      "description": "Professional code review assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/36/asap",
         "manifest": "https://example.com/seed/36/.well-known/asap/manifest.json"
@@ -734,6 +940,12 @@
         "code_review",
         "summarize",
         "translate"
+      ],
+      "category": "Coding",
+      "tags": [
+        "code-review",
+        "coding",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -744,8 +956,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-37",
-      "name": "Theta Seed Agent 8",
-      "description": "Demo agent showcasing summarize capability.",
+      "name": "Deep Summarist 4",
+      "description": "Specialized agent for high-precision summarize.",
       "endpoints": {
         "http": "https://example.com/seed/37/asap",
         "manifest": "https://example.com/seed/37/.well-known/asap/manifest.json"
@@ -753,6 +965,11 @@
       "skills": [
         "summarize",
         "translate"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "summarize",
+        "productivity"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -763,8 +980,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-38",
-      "name": "Iota Seed Agent 9",
-      "description": "Reference implementation for protocol translate.",
+      "name": "Fluent Interpreter 4",
+      "description": "Reference translate node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/38/asap",
         "manifest": "https://example.com/seed/38/.well-known/asap/manifest.json"
@@ -772,6 +989,12 @@
       "skills": [
         "translate",
         "search"
+      ],
+      "category": "Other",
+      "tags": [
+        "translate",
+        "other",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -782,8 +1005,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-39",
-      "name": "Kappa Seed Agent 10",
-      "description": "ASAP-compliant agent for search tasks.",
+      "name": "Quick Navigator 4",
+      "description": "High-performance search service.",
       "endpoints": {
         "http": "https://example.com/seed/39/asap",
         "manifest": "https://example.com/seed/39/.well-known/asap/manifest.json"
@@ -793,17 +1016,22 @@
         "analyze",
         "synthesize"
       ],
+      "category": "Research",
+      "tags": [
+        "search",
+        "research"
+      ],
       "asap_version": "1.1.0",
       "repository_url": null,
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-40",
-      "name": "Alpha Seed Agent 1",
-      "description": "Demo agent showcasing analyze capability.",
+      "name": "Global Analyst 5",
+      "description": "Professional analyze assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/40/asap",
         "manifest": "https://example.com/seed/40/.well-known/asap/manifest.json"
@@ -811,6 +1039,13 @@
       "skills": [
         "analyze",
         "synthesize"
+      ],
+      "category": "Data",
+      "tags": [
+        "analyze",
+        "data",
+        "enterprise",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -824,8 +1059,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-41",
-      "name": "Beta Seed Agent 2",
-      "description": "Reference implementation for protocol synthesize.",
+      "name": "Secure Architect 5",
+      "description": "Specialized agent for high-precision synthesize.",
       "endpoints": {
         "http": "https://example.com/seed/41/asap",
         "manifest": "https://example.com/seed/41/.well-known/asap/manifest.json"
@@ -833,6 +1068,11 @@
       "skills": [
         "synthesize",
         "planning"
+      ],
+      "category": "Data",
+      "tags": [
+        "synthesize",
+        "data"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -843,8 +1083,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-42",
-      "name": "Gamma Seed Agent 3",
-      "description": "ASAP-compliant agent for planning tasks.",
+      "name": "Fast Strategist 5",
+      "description": "Reference planning node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/42/asap",
         "manifest": "https://example.com/seed/42/.well-known/asap/manifest.json"
@@ -853,6 +1093,12 @@
         "planning",
         "qa",
         "documentation"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "planning",
+        "productivity",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -863,8 +1109,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-43",
-      "name": "Delta Seed Agent 4",
-      "description": "Demo agent showcasing qa capability.",
+      "name": "Elastic Validator 5",
+      "description": "High-performance qa service.",
       "endpoints": {
         "http": "https://example.com/seed/43/asap",
         "manifest": "https://example.com/seed/43/.well-known/asap/manifest.json"
@@ -872,6 +1118,11 @@
       "skills": [
         "qa",
         "documentation"
+      ],
+      "category": "Coding",
+      "tags": [
+        "qa",
+        "coding"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -882,8 +1133,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-44",
-      "name": "Epsilon Seed Agent 5",
-      "description": "Reference implementation for protocol documentation.",
+      "name": "Open Scribe 5",
+      "description": "Professional documentation assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/44/asap",
         "manifest": "https://example.com/seed/44/.well-known/asap/manifest.json"
@@ -892,17 +1143,23 @@
         "documentation",
         "code_review"
       ],
+      "category": "Productivity",
+      "tags": [
+        "documentation",
+        "productivity",
+        "enterprise"
+      ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-45",
-      "name": "Zeta Seed Agent 6",
-      "description": "ASAP-compliant agent for code_review tasks.",
+      "name": "Prime Reviewer 5",
+      "description": "Specialized agent for high-precision code review.",
       "endpoints": {
         "http": "https://example.com/seed/45/asap",
         "manifest": "https://example.com/seed/45/.well-known/asap/manifest.json"
@@ -911,6 +1168,12 @@
         "code_review",
         "summarize",
         "translate"
+      ],
+      "category": "Coding",
+      "tags": [
+        "code-review",
+        "coding",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -924,8 +1187,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-46",
-      "name": "Eta Seed Agent 7",
-      "description": "Demo agent showcasing summarize capability.",
+      "name": "Neural Summarist 5",
+      "description": "Reference summarize node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/46/asap",
         "manifest": "https://example.com/seed/46/.well-known/asap/manifest.json"
@@ -933,6 +1196,12 @@
       "skills": [
         "summarize",
         "translate"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "summarize",
+        "productivity",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -943,8 +1212,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-47",
-      "name": "Theta Seed Agent 8",
-      "description": "Reference implementation for protocol translate.",
+      "name": "Deep Interpreter 5",
+      "description": "High-performance translate service.",
       "endpoints": {
         "http": "https://example.com/seed/47/asap",
         "manifest": "https://example.com/seed/47/.well-known/asap/manifest.json"
@@ -952,6 +1221,11 @@
       "skills": [
         "translate",
         "search"
+      ],
+      "category": "Other",
+      "tags": [
+        "translate",
+        "other"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -962,8 +1236,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-48",
-      "name": "Iota Seed Agent 9",
-      "description": "ASAP-compliant agent for search tasks.",
+      "name": "Fluent Navigator 5",
+      "description": "Professional search assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/48/asap",
         "manifest": "https://example.com/seed/48/.well-known/asap/manifest.json"
@@ -972,6 +1246,12 @@
         "search",
         "analyze",
         "synthesize"
+      ],
+      "category": "Research",
+      "tags": [
+        "search",
+        "research",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -982,8 +1262,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-49",
-      "name": "Kappa Seed Agent 10",
-      "description": "Demo agent showcasing analyze capability.",
+      "name": "Quick Analyst 5",
+      "description": "Specialized agent for high-precision analyze.",
       "endpoints": {
         "http": "https://example.com/seed/49/asap",
         "manifest": "https://example.com/seed/49/.well-known/asap/manifest.json"
@@ -992,17 +1272,22 @@
         "analyze",
         "synthesize"
       ],
+      "category": "Data",
+      "tags": [
+        "analyze",
+        "data"
+      ],
       "asap_version": "1.1.0",
       "repository_url": null,
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-50",
-      "name": "Alpha Seed Agent 1",
-      "description": "Reference implementation for protocol synthesize.",
+      "name": "Global Architect 6",
+      "description": "Reference synthesize node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/50/asap",
         "manifest": "https://example.com/seed/50/.well-known/asap/manifest.json"
@@ -1010,6 +1295,13 @@
       "skills": [
         "synthesize",
         "planning"
+      ],
+      "category": "Data",
+      "tags": [
+        "synthesize",
+        "data",
+        "enterprise",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1023,8 +1315,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-51",
-      "name": "Beta Seed Agent 2",
-      "description": "ASAP-compliant agent for planning tasks.",
+      "name": "Secure Strategist 6",
+      "description": "High-performance planning service.",
       "endpoints": {
         "http": "https://example.com/seed/51/asap",
         "manifest": "https://example.com/seed/51/.well-known/asap/manifest.json"
@@ -1033,6 +1325,11 @@
         "planning",
         "qa",
         "documentation"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "planning",
+        "productivity"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1043,8 +1340,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-52",
-      "name": "Gamma Seed Agent 3",
-      "description": "Demo agent showcasing qa capability.",
+      "name": "Fast Validator 6",
+      "description": "Professional qa assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/52/asap",
         "manifest": "https://example.com/seed/52/.well-known/asap/manifest.json"
@@ -1052,6 +1349,12 @@
       "skills": [
         "qa",
         "documentation"
+      ],
+      "category": "Coding",
+      "tags": [
+        "qa",
+        "coding",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -1062,8 +1365,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-53",
-      "name": "Delta Seed Agent 4",
-      "description": "Reference implementation for protocol documentation.",
+      "name": "Elastic Scribe 6",
+      "description": "Specialized agent for high-precision documentation.",
       "endpoints": {
         "http": "https://example.com/seed/53/asap",
         "manifest": "https://example.com/seed/53/.well-known/asap/manifest.json"
@@ -1071,6 +1374,11 @@
       "skills": [
         "documentation",
         "code_review"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "documentation",
+        "productivity"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1081,8 +1389,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-54",
-      "name": "Epsilon Seed Agent 5",
-      "description": "ASAP-compliant agent for code_review tasks.",
+      "name": "Open Reviewer 6",
+      "description": "Reference code review node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/54/asap",
         "manifest": "https://example.com/seed/54/.well-known/asap/manifest.json"
@@ -1092,17 +1400,23 @@
         "summarize",
         "translate"
       ],
+      "category": "Coding",
+      "tags": [
+        "code-review",
+        "coding",
+        "enterprise"
+      ],
       "asap_version": "1.1.0",
       "repository_url": null,
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-55",
-      "name": "Zeta Seed Agent 6",
-      "description": "Demo agent showcasing summarize capability.",
+      "name": "Prime Summarist 6",
+      "description": "High-performance summarize service.",
       "endpoints": {
         "http": "https://example.com/seed/55/asap",
         "manifest": "https://example.com/seed/55/.well-known/asap/manifest.json"
@@ -1110,6 +1424,12 @@
       "skills": [
         "summarize",
         "translate"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "summarize",
+        "productivity",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1123,8 +1443,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-56",
-      "name": "Eta Seed Agent 7",
-      "description": "Reference implementation for protocol translate.",
+      "name": "Neural Interpreter 6",
+      "description": "Professional translate assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/56/asap",
         "manifest": "https://example.com/seed/56/.well-known/asap/manifest.json"
@@ -1132,6 +1452,12 @@
       "skills": [
         "translate",
         "search"
+      ],
+      "category": "Other",
+      "tags": [
+        "translate",
+        "other",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -1142,8 +1468,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-57",
-      "name": "Theta Seed Agent 8",
-      "description": "ASAP-compliant agent for search tasks.",
+      "name": "Deep Navigator 6",
+      "description": "Specialized agent for high-precision search.",
       "endpoints": {
         "http": "https://example.com/seed/57/asap",
         "manifest": "https://example.com/seed/57/.well-known/asap/manifest.json"
@@ -1152,6 +1478,11 @@
         "search",
         "analyze",
         "synthesize"
+      ],
+      "category": "Research",
+      "tags": [
+        "search",
+        "research"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1162,8 +1493,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-58",
-      "name": "Iota Seed Agent 9",
-      "description": "Demo agent showcasing analyze capability.",
+      "name": "Fluent Analyst 6",
+      "description": "Reference analyze node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/58/asap",
         "manifest": "https://example.com/seed/58/.well-known/asap/manifest.json"
@@ -1171,6 +1502,12 @@
       "skills": [
         "analyze",
         "synthesize"
+      ],
+      "category": "Data",
+      "tags": [
+        "analyze",
+        "data",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1181,8 +1518,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-59",
-      "name": "Kappa Seed Agent 10",
-      "description": "Reference implementation for protocol synthesize.",
+      "name": "Quick Architect 6",
+      "description": "High-performance synthesize service.",
       "endpoints": {
         "http": "https://example.com/seed/59/asap",
         "manifest": "https://example.com/seed/59/.well-known/asap/manifest.json"
@@ -1191,17 +1528,22 @@
         "synthesize",
         "planning"
       ],
+      "category": "Data",
+      "tags": [
+        "synthesize",
+        "data"
+      ],
       "asap_version": "1.1.0",
       "repository_url": null,
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-60",
-      "name": "Alpha Seed Agent 1",
-      "description": "ASAP-compliant agent for planning tasks.",
+      "name": "Global Strategist 7",
+      "description": "Professional planning assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/60/asap",
         "manifest": "https://example.com/seed/60/.well-known/asap/manifest.json"
@@ -1210,6 +1552,13 @@
         "planning",
         "qa",
         "documentation"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "planning",
+        "productivity",
+        "enterprise",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -1223,8 +1572,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-61",
-      "name": "Beta Seed Agent 2",
-      "description": "Demo agent showcasing qa capability.",
+      "name": "Secure Validator 7",
+      "description": "Specialized agent for high-precision qa.",
       "endpoints": {
         "http": "https://example.com/seed/61/asap",
         "manifest": "https://example.com/seed/61/.well-known/asap/manifest.json"
@@ -1232,6 +1581,11 @@
       "skills": [
         "qa",
         "documentation"
+      ],
+      "category": "Coding",
+      "tags": [
+        "qa",
+        "coding"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1242,8 +1596,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-62",
-      "name": "Gamma Seed Agent 3",
-      "description": "Reference implementation for protocol documentation.",
+      "name": "Fast Scribe 7",
+      "description": "Reference documentation node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/62/asap",
         "manifest": "https://example.com/seed/62/.well-known/asap/manifest.json"
@@ -1251,6 +1605,12 @@
       "skills": [
         "documentation",
         "code_review"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "documentation",
+        "productivity",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1261,8 +1621,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-63",
-      "name": "Delta Seed Agent 4",
-      "description": "ASAP-compliant agent for code_review tasks.",
+      "name": "Elastic Reviewer 7",
+      "description": "High-performance code review service.",
       "endpoints": {
         "http": "https://example.com/seed/63/asap",
         "manifest": "https://example.com/seed/63/.well-known/asap/manifest.json"
@@ -1271,6 +1631,11 @@
         "code_review",
         "summarize",
         "translate"
+      ],
+      "category": "Coding",
+      "tags": [
+        "code-review",
+        "coding"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1281,8 +1646,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-64",
-      "name": "Epsilon Seed Agent 5",
-      "description": "Demo agent showcasing summarize capability.",
+      "name": "Open Summarist 7",
+      "description": "Professional summarize assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/64/asap",
         "manifest": "https://example.com/seed/64/.well-known/asap/manifest.json"
@@ -1291,17 +1656,23 @@
         "summarize",
         "translate"
       ],
+      "category": "Productivity",
+      "tags": [
+        "summarize",
+        "productivity",
+        "enterprise"
+      ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-65",
-      "name": "Zeta Seed Agent 6",
-      "description": "Reference implementation for protocol translate.",
+      "name": "Prime Interpreter 7",
+      "description": "Specialized agent for high-precision translate.",
       "endpoints": {
         "http": "https://example.com/seed/65/asap",
         "manifest": "https://example.com/seed/65/.well-known/asap/manifest.json"
@@ -1309,6 +1680,12 @@
       "skills": [
         "translate",
         "search"
+      ],
+      "category": "Other",
+      "tags": [
+        "translate",
+        "other",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1322,8 +1699,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-66",
-      "name": "Eta Seed Agent 7",
-      "description": "ASAP-compliant agent for search tasks.",
+      "name": "Neural Navigator 7",
+      "description": "Reference search node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/66/asap",
         "manifest": "https://example.com/seed/66/.well-known/asap/manifest.json"
@@ -1332,6 +1709,12 @@
         "search",
         "analyze",
         "synthesize"
+      ],
+      "category": "Research",
+      "tags": [
+        "search",
+        "research",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1342,8 +1725,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-67",
-      "name": "Theta Seed Agent 8",
-      "description": "Demo agent showcasing analyze capability.",
+      "name": "Deep Analyst 7",
+      "description": "High-performance analyze service.",
       "endpoints": {
         "http": "https://example.com/seed/67/asap",
         "manifest": "https://example.com/seed/67/.well-known/asap/manifest.json"
@@ -1351,6 +1734,11 @@
       "skills": [
         "analyze",
         "synthesize"
+      ],
+      "category": "Data",
+      "tags": [
+        "analyze",
+        "data"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1361,8 +1749,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-68",
-      "name": "Iota Seed Agent 9",
-      "description": "Reference implementation for protocol synthesize.",
+      "name": "Fluent Architect 7",
+      "description": "Professional synthesize assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/68/asap",
         "manifest": "https://example.com/seed/68/.well-known/asap/manifest.json"
@@ -1370,6 +1758,12 @@
       "skills": [
         "synthesize",
         "planning"
+      ],
+      "category": "Data",
+      "tags": [
+        "synthesize",
+        "data",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -1380,8 +1774,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-69",
-      "name": "Kappa Seed Agent 10",
-      "description": "ASAP-compliant agent for planning tasks.",
+      "name": "Quick Strategist 7",
+      "description": "Specialized agent for high-precision planning.",
       "endpoints": {
         "http": "https://example.com/seed/69/asap",
         "manifest": "https://example.com/seed/69/.well-known/asap/manifest.json"
@@ -1391,17 +1785,22 @@
         "qa",
         "documentation"
       ],
+      "category": "Productivity",
+      "tags": [
+        "planning",
+        "productivity"
+      ],
       "asap_version": "1.1.0",
       "repository_url": null,
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-70",
-      "name": "Alpha Seed Agent 1",
-      "description": "Demo agent showcasing qa capability.",
+      "name": "Global Validator 8",
+      "description": "Reference qa node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/70/asap",
         "manifest": "https://example.com/seed/70/.well-known/asap/manifest.json"
@@ -1409,6 +1808,13 @@
       "skills": [
         "qa",
         "documentation"
+      ],
+      "category": "Coding",
+      "tags": [
+        "qa",
+        "coding",
+        "enterprise",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1422,8 +1828,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-71",
-      "name": "Beta Seed Agent 2",
-      "description": "Reference implementation for protocol documentation.",
+      "name": "Secure Scribe 8",
+      "description": "High-performance documentation service.",
       "endpoints": {
         "http": "https://example.com/seed/71/asap",
         "manifest": "https://example.com/seed/71/.well-known/asap/manifest.json"
@@ -1431,6 +1837,11 @@
       "skills": [
         "documentation",
         "code_review"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "documentation",
+        "productivity"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1441,8 +1852,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-72",
-      "name": "Gamma Seed Agent 3",
-      "description": "ASAP-compliant agent for code_review tasks.",
+      "name": "Fast Reviewer 8",
+      "description": "Professional code review assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/72/asap",
         "manifest": "https://example.com/seed/72/.well-known/asap/manifest.json"
@@ -1451,6 +1862,12 @@
         "code_review",
         "summarize",
         "translate"
+      ],
+      "category": "Coding",
+      "tags": [
+        "code-review",
+        "coding",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -1461,8 +1878,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-73",
-      "name": "Delta Seed Agent 4",
-      "description": "Demo agent showcasing summarize capability.",
+      "name": "Elastic Summarist 8",
+      "description": "Specialized agent for high-precision summarize.",
       "endpoints": {
         "http": "https://example.com/seed/73/asap",
         "manifest": "https://example.com/seed/73/.well-known/asap/manifest.json"
@@ -1470,6 +1887,11 @@
       "skills": [
         "summarize",
         "translate"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "summarize",
+        "productivity"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1480,8 +1902,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-74",
-      "name": "Epsilon Seed Agent 5",
-      "description": "Reference implementation for protocol translate.",
+      "name": "Open Interpreter 8",
+      "description": "Reference translate node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/74/asap",
         "manifest": "https://example.com/seed/74/.well-known/asap/manifest.json"
@@ -1490,17 +1912,23 @@
         "translate",
         "search"
       ],
+      "category": "Other",
+      "tags": [
+        "translate",
+        "other",
+        "enterprise"
+      ],
       "asap_version": "1.1.0",
       "repository_url": null,
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-75",
-      "name": "Zeta Seed Agent 6",
-      "description": "ASAP-compliant agent for search tasks.",
+      "name": "Prime Navigator 8",
+      "description": "High-performance search service.",
       "endpoints": {
         "http": "https://example.com/seed/75/asap",
         "manifest": "https://example.com/seed/75/.well-known/asap/manifest.json"
@@ -1509,6 +1937,12 @@
         "search",
         "analyze",
         "synthesize"
+      ],
+      "category": "Research",
+      "tags": [
+        "search",
+        "research",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1522,8 +1956,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-76",
-      "name": "Eta Seed Agent 7",
-      "description": "Demo agent showcasing analyze capability.",
+      "name": "Neural Analyst 8",
+      "description": "Professional analyze assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/76/asap",
         "manifest": "https://example.com/seed/76/.well-known/asap/manifest.json"
@@ -1531,6 +1965,12 @@
       "skills": [
         "analyze",
         "synthesize"
+      ],
+      "category": "Data",
+      "tags": [
+        "analyze",
+        "data",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -1541,8 +1981,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-77",
-      "name": "Theta Seed Agent 8",
-      "description": "Reference implementation for protocol synthesize.",
+      "name": "Deep Architect 8",
+      "description": "Specialized agent for high-precision synthesize.",
       "endpoints": {
         "http": "https://example.com/seed/77/asap",
         "manifest": "https://example.com/seed/77/.well-known/asap/manifest.json"
@@ -1550,6 +1990,11 @@
       "skills": [
         "synthesize",
         "planning"
+      ],
+      "category": "Data",
+      "tags": [
+        "synthesize",
+        "data"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1560,8 +2005,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-78",
-      "name": "Iota Seed Agent 9",
-      "description": "ASAP-compliant agent for planning tasks.",
+      "name": "Fluent Strategist 8",
+      "description": "Reference planning node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/78/asap",
         "manifest": "https://example.com/seed/78/.well-known/asap/manifest.json"
@@ -1570,6 +2015,12 @@
         "planning",
         "qa",
         "documentation"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "planning",
+        "productivity",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1580,8 +2031,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-79",
-      "name": "Kappa Seed Agent 10",
-      "description": "Demo agent showcasing qa capability.",
+      "name": "Quick Validator 8",
+      "description": "High-performance qa service.",
       "endpoints": {
         "http": "https://example.com/seed/79/asap",
         "manifest": "https://example.com/seed/79/.well-known/asap/manifest.json"
@@ -1590,17 +2041,22 @@
         "qa",
         "documentation"
       ],
+      "category": "Coding",
+      "tags": [
+        "qa",
+        "coding"
+      ],
       "asap_version": "1.1.0",
       "repository_url": null,
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-80",
-      "name": "Alpha Seed Agent 1",
-      "description": "Reference implementation for protocol documentation.",
+      "name": "Global Scribe 9",
+      "description": "Professional documentation assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/80/asap",
         "manifest": "https://example.com/seed/80/.well-known/asap/manifest.json"
@@ -1608,6 +2064,13 @@
       "skills": [
         "documentation",
         "code_review"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "documentation",
+        "productivity",
+        "enterprise",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -1621,8 +2084,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-81",
-      "name": "Beta Seed Agent 2",
-      "description": "ASAP-compliant agent for code_review tasks.",
+      "name": "Secure Reviewer 9",
+      "description": "Specialized agent for high-precision code review.",
       "endpoints": {
         "http": "https://example.com/seed/81/asap",
         "manifest": "https://example.com/seed/81/.well-known/asap/manifest.json"
@@ -1631,6 +2094,11 @@
         "code_review",
         "summarize",
         "translate"
+      ],
+      "category": "Coding",
+      "tags": [
+        "code-review",
+        "coding"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1641,8 +2109,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-82",
-      "name": "Gamma Seed Agent 3",
-      "description": "Demo agent showcasing summarize capability.",
+      "name": "Fast Summarist 9",
+      "description": "Reference summarize node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/82/asap",
         "manifest": "https://example.com/seed/82/.well-known/asap/manifest.json"
@@ -1650,6 +2118,12 @@
       "skills": [
         "summarize",
         "translate"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "summarize",
+        "productivity",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1660,8 +2134,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-83",
-      "name": "Delta Seed Agent 4",
-      "description": "Reference implementation for protocol translate.",
+      "name": "Elastic Interpreter 9",
+      "description": "High-performance translate service.",
       "endpoints": {
         "http": "https://example.com/seed/83/asap",
         "manifest": "https://example.com/seed/83/.well-known/asap/manifest.json"
@@ -1669,6 +2143,11 @@
       "skills": [
         "translate",
         "search"
+      ],
+      "category": "Other",
+      "tags": [
+        "translate",
+        "other"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1679,8 +2158,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-84",
-      "name": "Epsilon Seed Agent 5",
-      "description": "ASAP-compliant agent for search tasks.",
+      "name": "Open Navigator 9",
+      "description": "Professional search assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/84/asap",
         "manifest": "https://example.com/seed/84/.well-known/asap/manifest.json"
@@ -1690,17 +2169,23 @@
         "analyze",
         "synthesize"
       ],
+      "category": "Research",
+      "tags": [
+        "search",
+        "research",
+        "enterprise"
+      ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-85",
-      "name": "Zeta Seed Agent 6",
-      "description": "Demo agent showcasing analyze capability.",
+      "name": "Prime Analyst 9",
+      "description": "Specialized agent for high-precision analyze.",
       "endpoints": {
         "http": "https://example.com/seed/85/asap",
         "manifest": "https://example.com/seed/85/.well-known/asap/manifest.json"
@@ -1708,6 +2193,12 @@
       "skills": [
         "analyze",
         "synthesize"
+      ],
+      "category": "Data",
+      "tags": [
+        "analyze",
+        "data",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1721,8 +2212,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-86",
-      "name": "Eta Seed Agent 7",
-      "description": "Reference implementation for protocol synthesize.",
+      "name": "Neural Architect 9",
+      "description": "Reference synthesize node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/86/asap",
         "manifest": "https://example.com/seed/86/.well-known/asap/manifest.json"
@@ -1730,6 +2221,12 @@
       "skills": [
         "synthesize",
         "planning"
+      ],
+      "category": "Data",
+      "tags": [
+        "synthesize",
+        "data",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1740,8 +2237,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-87",
-      "name": "Theta Seed Agent 8",
-      "description": "ASAP-compliant agent for planning tasks.",
+      "name": "Deep Strategist 9",
+      "description": "High-performance planning service.",
       "endpoints": {
         "http": "https://example.com/seed/87/asap",
         "manifest": "https://example.com/seed/87/.well-known/asap/manifest.json"
@@ -1750,6 +2247,11 @@
         "planning",
         "qa",
         "documentation"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "planning",
+        "productivity"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1760,8 +2262,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-88",
-      "name": "Iota Seed Agent 9",
-      "description": "Demo agent showcasing qa capability.",
+      "name": "Fluent Validator 9",
+      "description": "Professional qa assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/88/asap",
         "manifest": "https://example.com/seed/88/.well-known/asap/manifest.json"
@@ -1769,6 +2271,12 @@
       "skills": [
         "qa",
         "documentation"
+      ],
+      "category": "Coding",
+      "tags": [
+        "qa",
+        "coding",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -1779,8 +2287,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-89",
-      "name": "Kappa Seed Agent 10",
-      "description": "Reference implementation for protocol documentation.",
+      "name": "Quick Scribe 9",
+      "description": "Specialized agent for high-precision documentation.",
       "endpoints": {
         "http": "https://example.com/seed/89/asap",
         "manifest": "https://example.com/seed/89/.well-known/asap/manifest.json"
@@ -1789,17 +2297,22 @@
         "documentation",
         "code_review"
       ],
+      "category": "Productivity",
+      "tags": [
+        "documentation",
+        "productivity"
+      ],
       "asap_version": "1.1.0",
       "repository_url": null,
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-90",
-      "name": "Alpha Seed Agent 1",
-      "description": "ASAP-compliant agent for code_review tasks.",
+      "name": "Global Reviewer 10",
+      "description": "Reference code review node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/90/asap",
         "manifest": "https://example.com/seed/90/.well-known/asap/manifest.json"
@@ -1808,6 +2321,13 @@
         "code_review",
         "summarize",
         "translate"
+      ],
+      "category": "Coding",
+      "tags": [
+        "code-review",
+        "coding",
+        "enterprise",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1821,8 +2341,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-91",
-      "name": "Beta Seed Agent 2",
-      "description": "Demo agent showcasing summarize capability.",
+      "name": "Secure Summarist 10",
+      "description": "High-performance summarize service.",
       "endpoints": {
         "http": "https://example.com/seed/91/asap",
         "manifest": "https://example.com/seed/91/.well-known/asap/manifest.json"
@@ -1830,6 +2350,11 @@
       "skills": [
         "summarize",
         "translate"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "summarize",
+        "productivity"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1840,8 +2365,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-92",
-      "name": "Gamma Seed Agent 3",
-      "description": "Reference implementation for protocol translate.",
+      "name": "Fast Interpreter 10",
+      "description": "Professional translate assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/92/asap",
         "manifest": "https://example.com/seed/92/.well-known/asap/manifest.json"
@@ -1849,6 +2374,12 @@
       "skills": [
         "translate",
         "search"
+      ],
+      "category": "Other",
+      "tags": [
+        "translate",
+        "other",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -1859,8 +2390,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-93",
-      "name": "Delta Seed Agent 4",
-      "description": "ASAP-compliant agent for search tasks.",
+      "name": "Elastic Navigator 10",
+      "description": "Specialized agent for high-precision search.",
       "endpoints": {
         "http": "https://example.com/seed/93/asap",
         "manifest": "https://example.com/seed/93/.well-known/asap/manifest.json"
@@ -1869,6 +2400,11 @@
         "search",
         "analyze",
         "synthesize"
+      ],
+      "category": "Research",
+      "tags": [
+        "search",
+        "research"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1879,8 +2415,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-94",
-      "name": "Epsilon Seed Agent 5",
-      "description": "Demo agent showcasing analyze capability.",
+      "name": "Open Analyst 10",
+      "description": "Reference analyze node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/94/asap",
         "manifest": "https://example.com/seed/94/.well-known/asap/manifest.json"
@@ -1889,17 +2425,23 @@
         "analyze",
         "synthesize"
       ],
+      "category": "Data",
+      "tags": [
+        "analyze",
+        "data",
+        "enterprise"
+      ],
       "asap_version": "1.1.0",
       "repository_url": null,
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-95",
-      "name": "Zeta Seed Agent 6",
-      "description": "Reference implementation for protocol synthesize.",
+      "name": "Prime Architect 10",
+      "description": "High-performance synthesize service.",
       "endpoints": {
         "http": "https://example.com/seed/95/asap",
         "manifest": "https://example.com/seed/95/.well-known/asap/manifest.json"
@@ -1907,6 +2449,12 @@
       "skills": [
         "synthesize",
         "planning"
+      ],
+      "category": "Data",
+      "tags": [
+        "synthesize",
+        "data",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1920,8 +2468,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-96",
-      "name": "Eta Seed Agent 7",
-      "description": "ASAP-compliant agent for planning tasks.",
+      "name": "Neural Strategist 10",
+      "description": "Professional planning assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/96/asap",
         "manifest": "https://example.com/seed/96/.well-known/asap/manifest.json"
@@ -1930,6 +2478,12 @@
         "planning",
         "qa",
         "documentation"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "planning",
+        "productivity",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -1940,8 +2494,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-97",
-      "name": "Theta Seed Agent 8",
-      "description": "Demo agent showcasing qa capability.",
+      "name": "Deep Validator 10",
+      "description": "Specialized agent for high-precision qa.",
       "endpoints": {
         "http": "https://example.com/seed/97/asap",
         "manifest": "https://example.com/seed/97/.well-known/asap/manifest.json"
@@ -1949,6 +2503,11 @@
       "skills": [
         "qa",
         "documentation"
+      ],
+      "category": "Coding",
+      "tags": [
+        "qa",
+        "coding"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1959,8 +2518,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-98",
-      "name": "Iota Seed Agent 9",
-      "description": "Reference implementation for protocol documentation.",
+      "name": "Fluent Scribe 10",
+      "description": "Reference documentation node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/98/asap",
         "manifest": "https://example.com/seed/98/.well-known/asap/manifest.json"
@@ -1968,6 +2527,12 @@
       "skills": [
         "documentation",
         "code_review"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "documentation",
+        "productivity",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -1978,8 +2543,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-99",
-      "name": "Kappa Seed Agent 10",
-      "description": "ASAP-compliant agent for code_review tasks.",
+      "name": "Quick Reviewer 10",
+      "description": "High-performance code review service.",
       "endpoints": {
         "http": "https://example.com/seed/99/asap",
         "manifest": "https://example.com/seed/99/.well-known/asap/manifest.json"
@@ -1989,17 +2554,22 @@
         "summarize",
         "translate"
       ],
+      "category": "Coding",
+      "tags": [
+        "code-review",
+        "coding"
+      ],
       "asap_version": "1.1.0",
       "repository_url": null,
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-100",
-      "name": "Alpha Seed Agent 1",
-      "description": "Demo agent showcasing summarize capability.",
+      "name": "Global Summarist 11",
+      "description": "Professional summarize assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/100/asap",
         "manifest": "https://example.com/seed/100/.well-known/asap/manifest.json"
@@ -2007,6 +2577,13 @@
       "skills": [
         "summarize",
         "translate"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "summarize",
+        "productivity",
+        "enterprise",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -2020,8 +2597,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-101",
-      "name": "Beta Seed Agent 2",
-      "description": "Reference implementation for protocol translate.",
+      "name": "Secure Interpreter 11",
+      "description": "Specialized agent for high-precision translate.",
       "endpoints": {
         "http": "https://example.com/seed/101/asap",
         "manifest": "https://example.com/seed/101/.well-known/asap/manifest.json"
@@ -2029,6 +2606,11 @@
       "skills": [
         "translate",
         "search"
+      ],
+      "category": "Other",
+      "tags": [
+        "translate",
+        "other"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -2039,8 +2621,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-102",
-      "name": "Gamma Seed Agent 3",
-      "description": "ASAP-compliant agent for search tasks.",
+      "name": "Fast Navigator 11",
+      "description": "Reference search node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/102/asap",
         "manifest": "https://example.com/seed/102/.well-known/asap/manifest.json"
@@ -2049,6 +2631,12 @@
         "search",
         "analyze",
         "synthesize"
+      ],
+      "category": "Research",
+      "tags": [
+        "search",
+        "research",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -2059,8 +2647,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-103",
-      "name": "Delta Seed Agent 4",
-      "description": "Demo agent showcasing analyze capability.",
+      "name": "Elastic Analyst 11",
+      "description": "High-performance analyze service.",
       "endpoints": {
         "http": "https://example.com/seed/103/asap",
         "manifest": "https://example.com/seed/103/.well-known/asap/manifest.json"
@@ -2068,6 +2656,11 @@
       "skills": [
         "analyze",
         "synthesize"
+      ],
+      "category": "Data",
+      "tags": [
+        "analyze",
+        "data"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -2078,8 +2671,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-104",
-      "name": "Epsilon Seed Agent 5",
-      "description": "Reference implementation for protocol synthesize.",
+      "name": "Open Architect 11",
+      "description": "Professional synthesize assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/104/asap",
         "manifest": "https://example.com/seed/104/.well-known/asap/manifest.json"
@@ -2088,17 +2681,23 @@
         "synthesize",
         "planning"
       ],
+      "category": "Data",
+      "tags": [
+        "synthesize",
+        "data",
+        "enterprise"
+      ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-105",
-      "name": "Zeta Seed Agent 6",
-      "description": "ASAP-compliant agent for planning tasks.",
+      "name": "Prime Strategist 11",
+      "description": "Specialized agent for high-precision planning.",
       "endpoints": {
         "http": "https://example.com/seed/105/asap",
         "manifest": "https://example.com/seed/105/.well-known/asap/manifest.json"
@@ -2107,6 +2706,12 @@
         "planning",
         "qa",
         "documentation"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "planning",
+        "productivity",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -2120,8 +2725,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-106",
-      "name": "Eta Seed Agent 7",
-      "description": "Demo agent showcasing qa capability.",
+      "name": "Neural Validator 11",
+      "description": "Reference qa node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/106/asap",
         "manifest": "https://example.com/seed/106/.well-known/asap/manifest.json"
@@ -2129,6 +2734,12 @@
       "skills": [
         "qa",
         "documentation"
+      ],
+      "category": "Coding",
+      "tags": [
+        "qa",
+        "coding",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -2139,8 +2750,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-107",
-      "name": "Theta Seed Agent 8",
-      "description": "Reference implementation for protocol documentation.",
+      "name": "Deep Scribe 11",
+      "description": "High-performance documentation service.",
       "endpoints": {
         "http": "https://example.com/seed/107/asap",
         "manifest": "https://example.com/seed/107/.well-known/asap/manifest.json"
@@ -2148,6 +2759,11 @@
       "skills": [
         "documentation",
         "code_review"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "documentation",
+        "productivity"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -2158,8 +2774,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-108",
-      "name": "Iota Seed Agent 9",
-      "description": "ASAP-compliant agent for code_review tasks.",
+      "name": "Fluent Reviewer 11",
+      "description": "Professional code review assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/108/asap",
         "manifest": "https://example.com/seed/108/.well-known/asap/manifest.json"
@@ -2168,6 +2784,12 @@
         "code_review",
         "summarize",
         "translate"
+      ],
+      "category": "Coding",
+      "tags": [
+        "code-review",
+        "coding",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -2178,8 +2800,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-109",
-      "name": "Kappa Seed Agent 10",
-      "description": "Demo agent showcasing summarize capability.",
+      "name": "Quick Summarist 11",
+      "description": "Specialized agent for high-precision summarize.",
       "endpoints": {
         "http": "https://example.com/seed/109/asap",
         "manifest": "https://example.com/seed/109/.well-known/asap/manifest.json"
@@ -2188,17 +2810,22 @@
         "summarize",
         "translate"
       ],
+      "category": "Productivity",
+      "tags": [
+        "summarize",
+        "productivity"
+      ],
       "asap_version": "1.1.0",
       "repository_url": null,
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-110",
-      "name": "Alpha Seed Agent 1",
-      "description": "Reference implementation for protocol translate.",
+      "name": "Global Interpreter 12",
+      "description": "Reference translate node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/110/asap",
         "manifest": "https://example.com/seed/110/.well-known/asap/manifest.json"
@@ -2206,6 +2833,13 @@
       "skills": [
         "translate",
         "search"
+      ],
+      "category": "Other",
+      "tags": [
+        "translate",
+        "other",
+        "enterprise",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -2219,8 +2853,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-111",
-      "name": "Beta Seed Agent 2",
-      "description": "ASAP-compliant agent for search tasks.",
+      "name": "Secure Navigator 12",
+      "description": "High-performance search service.",
       "endpoints": {
         "http": "https://example.com/seed/111/asap",
         "manifest": "https://example.com/seed/111/.well-known/asap/manifest.json"
@@ -2229,6 +2863,11 @@
         "search",
         "analyze",
         "synthesize"
+      ],
+      "category": "Research",
+      "tags": [
+        "search",
+        "research"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -2239,8 +2878,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-112",
-      "name": "Gamma Seed Agent 3",
-      "description": "Demo agent showcasing analyze capability.",
+      "name": "Fast Analyst 12",
+      "description": "Professional analyze assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/112/asap",
         "manifest": "https://example.com/seed/112/.well-known/asap/manifest.json"
@@ -2248,6 +2887,12 @@
       "skills": [
         "analyze",
         "synthesize"
+      ],
+      "category": "Data",
+      "tags": [
+        "analyze",
+        "data",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -2258,8 +2903,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-113",
-      "name": "Delta Seed Agent 4",
-      "description": "Reference implementation for protocol synthesize.",
+      "name": "Elastic Architect 12",
+      "description": "Specialized agent for high-precision synthesize.",
       "endpoints": {
         "http": "https://example.com/seed/113/asap",
         "manifest": "https://example.com/seed/113/.well-known/asap/manifest.json"
@@ -2267,6 +2912,11 @@
       "skills": [
         "synthesize",
         "planning"
+      ],
+      "category": "Data",
+      "tags": [
+        "synthesize",
+        "data"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -2277,8 +2927,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-114",
-      "name": "Epsilon Seed Agent 5",
-      "description": "ASAP-compliant agent for planning tasks.",
+      "name": "Open Strategist 12",
+      "description": "Reference planning node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/114/asap",
         "manifest": "https://example.com/seed/114/.well-known/asap/manifest.json"
@@ -2288,17 +2938,23 @@
         "qa",
         "documentation"
       ],
+      "category": "Productivity",
+      "tags": [
+        "planning",
+        "productivity",
+        "enterprise"
+      ],
       "asap_version": "1.1.0",
       "repository_url": null,
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     },
     {
       "id": "urn:asap:agent:seed:agent-115",
-      "name": "Zeta Seed Agent 6",
-      "description": "Demo agent showcasing qa capability.",
+      "name": "Prime Validator 12",
+      "description": "High-performance qa service.",
       "endpoints": {
         "http": "https://example.com/seed/115/asap",
         "manifest": "https://example.com/seed/115/.well-known/asap/manifest.json"
@@ -2306,6 +2962,12 @@
       "skills": [
         "qa",
         "documentation"
+      ],
+      "category": "Coding",
+      "tags": [
+        "qa",
+        "coding",
+        "verified"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -2319,8 +2981,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-116",
-      "name": "Eta Seed Agent 7",
-      "description": "Reference implementation for protocol documentation.",
+      "name": "Neural Scribe 12",
+      "description": "Professional documentation assistant for autonomous workflows.",
       "endpoints": {
         "http": "https://example.com/seed/116/asap",
         "manifest": "https://example.com/seed/116/.well-known/asap/manifest.json"
@@ -2328,6 +2990,12 @@
       "skills": [
         "documentation",
         "code_review"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "documentation",
+        "productivity",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": "https://github.com/asap-protocol/examples",
@@ -2338,8 +3006,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-117",
-      "name": "Theta Seed Agent 8",
-      "description": "ASAP-compliant agent for code_review tasks.",
+      "name": "Deep Reviewer 12",
+      "description": "Specialized agent for high-precision code review.",
       "endpoints": {
         "http": "https://example.com/seed/117/asap",
         "manifest": "https://example.com/seed/117/.well-known/asap/manifest.json"
@@ -2348,6 +3016,11 @@
         "code_review",
         "summarize",
         "translate"
+      ],
+      "category": "Coding",
+      "tags": [
+        "code-review",
+        "coding"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -2358,8 +3031,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-118",
-      "name": "Iota Seed Agent 9",
-      "description": "Demo agent showcasing summarize capability.",
+      "name": "Fluent Summarist 12",
+      "description": "Reference summarize node compatible with ASAP 1.1.",
       "endpoints": {
         "http": "https://example.com/seed/118/asap",
         "manifest": "https://example.com/seed/118/.well-known/asap/manifest.json"
@@ -2367,6 +3040,12 @@
       "skills": [
         "summarize",
         "translate"
+      ],
+      "category": "Productivity",
+      "tags": [
+        "summarize",
+        "productivity",
+        "enterprise"
       ],
       "asap_version": "1.1.0",
       "repository_url": null,
@@ -2377,8 +3056,8 @@
     },
     {
       "id": "urn:asap:agent:seed:agent-119",
-      "name": "Kappa Seed Agent 10",
-      "description": "Reference implementation for protocol translate.",
+      "name": "Quick Interpreter 12",
+      "description": "High-performance translate service.",
       "endpoints": {
         "http": "https://example.com/seed/119/asap",
         "manifest": "https://example.com/seed/119/.well-known/asap/manifest.json"
@@ -2387,10 +3066,15 @@
         "translate",
         "search"
       ],
+      "category": "Other",
+      "tags": [
+        "translate",
+        "other"
+      ],
       "asap_version": "1.1.0",
       "repository_url": null,
       "documentation_url": null,
-      "built_with": null,
+      "built_with": "PydanticAI",
       "verification": null,
       "online_check": false
     }

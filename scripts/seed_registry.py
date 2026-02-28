@@ -38,38 +38,68 @@ SKILLS_POOL = [
     "qa",
     "documentation",
 ]
-FRAMEWORKS = ["CrewAI", "LangChain", "AutoGen", "Custom", None]
-NAME_PREFIXES = [
-    "Alpha",
-    "Beta",
-    "Gamma",
-    "Delta",
-    "Epsilon",
-    "Zeta",
-    "Eta",
-    "Theta",
-    "Iota",
-    "Kappa",
-]
+FRAMEWORKS = ["CrewAI", "LangChain", "AutoGen", "Custom", "PydanticAI"]
+
+# New realistic name components
+NAME_ADJECTIVES = ["Global", "Secure", "Fast", "Elastic", "Open", "Prime", "Neural", "Deep", "Fluent", "Quick"]
+SKILL_TO_NAME = {
+    "code_review": "Reviewer",
+    "summarize": "Summarist",
+    "translate": "Interpreter",
+    "search": "Navigator",
+    "analyze": "Analyst",
+    "synthesize": "Architect",
+    "planning": "Strategist",
+    "qa": "Validator",
+    "documentation": "Scribe",
+}
+
+SKILL_TO_CATEGORY = {
+    "code_review": "Coding",
+    "summarize": "Productivity",
+    "translate": "Other",
+    "search": "Research",
+    "analyze": "Data",
+    "synthesize": "Data",
+    "planning": "Productivity",
+    "qa": "Coding",
+    "documentation": "Productivity",
+}
+
 DESCRIPTION_TEMPLATES = [
-    "ASAP-compliant agent for {skill} tasks.",
-    "Demo agent showcasing {skill} capability.",
-    "Reference implementation for protocol {skill}.",
+    "Professional {skill} assistant for autonomous workflows.",
+    "Specialized agent for high-precision {skill}.",
+    "Reference {skill} node compatible with ASAP 1.1.",
+    "High-performance {skill} service.",
 ]
 
 
 def build_seed_agents(count: int) -> list[RegistryEntry]:
     entries: list[RegistryEntry] = []
     for i in range(count):
-        name_suffix = (i % 10) + 1
-        prefix = NAME_PREFIXES[i % len(NAME_PREFIXES)]
-        name = f"{prefix} Seed Agent {name_suffix}"
+        primary_skill = SKILLS_POOL[i % len(SKILLS_POOL)]
+        adj = NAME_ADJECTIVES[i % len(NAME_ADJECTIVES)]
+        base_name = SKILL_TO_NAME.get(primary_skill, "Agent")
+        
+        # Make name unique but professional
+        name = f"{adj} {base_name} { (i // 10) + 1 if i >= 10 else ''}".strip()
         agent_id = f"urn:asap:agent:seed:agent-{i}"
-        skills = [SKILLS_POOL[i % len(SKILLS_POOL)], SKILLS_POOL[(i + 1) % len(SKILLS_POOL)]]
+        
+        skills = [primary_skill, SKILLS_POOL[(i + 1) % len(SKILLS_POOL)]]
         if i % 3 == 0:
             skills.append(SKILLS_POOL[(i + 2) % len(SKILLS_POOL)])
+            
         desc_tpl = DESCRIPTION_TEMPLATES[i % len(DESCRIPTION_TEMPLATES)]
-        description = desc_tpl.format(skill=skills[0])
+        description = desc_tpl.format(skill=primary_skill.replace("_", " "))
+        
+        category = SKILL_TO_CATEGORY.get(primary_skill, "Other")
+        # Add some variety to tags
+        tags = [primary_skill.replace("_", "-"), category.lower()]
+        if i % 2 == 0:
+            tags.append("enterprise")
+        if i % 5 == 0:
+            tags.append("verified")
+
         base_url = "https://example.com/seed"
         entry = RegistryEntry(
             id=agent_id,
@@ -80,6 +110,8 @@ def build_seed_agents(count: int) -> list[RegistryEntry]:
                 "manifest": f"{base_url}/{i}/.well-known/asap/manifest.json",
             },
             skills=skills,
+            category=category,
+            tags=tags,
             asap_version="1.1.0",
             repository_url="https://github.com/asap-protocol/examples" if i % 4 == 0 else None,
             documentation_url=None,
