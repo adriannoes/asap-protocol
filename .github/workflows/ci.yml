@@ -150,6 +150,7 @@ jobs:
       - name: Setup Python
         uses: ./.github/actions/setup-python
       - name: Scan for vulnerabilities (pip-audit)
-        run: uv run pip-audit
+        run: uv run pip-audit --ignore-vuln CVE-2025-69872
+        # CVE-2025-69872: diskcache (transitive via crewai→chromadb); no fix released yet. Remove when upstream patches.
       - name: Scan for security issues (bandit)
         run: uv run bandit -r src/ -ll
