@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { ArrowRight, Terminal, Braces, Route, ShieldCheck, GitMerge, MessageSquare, Library, Zap } from 'lucide-react';
+import { ArrowRight, Terminal, Braces, Route, ShieldCheck, GitMerge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
@@ -175,9 +175,9 @@ export default function DeveloperExperiencePage() {
                                                 className="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity"
                                                 alt={fw.name}
                                             />
-                                        ) : (
-                                            (fw as any).icon
-                                        )}
+                                        ) : 'icon' in fw ? (
+                                            fw.icon as React.ReactNode
+                                        ) : null}
                                     </div>
                                     <h3 className="text-white font-bold text-sm tracking-tight">{fw.name}</h3>
                                 </div>
