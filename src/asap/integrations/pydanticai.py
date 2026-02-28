@@ -16,7 +16,7 @@ try:
     from pydantic_ai.tools import Tool as PydanticAITool
 except ImportError as _import_error:
     _import_error_pydantic_ai = _import_error
-    PydanticAITool = None  # type: ignore[misc, assignment]
+    PydanticAITool = None
 
 T = TypeVar("T")
 

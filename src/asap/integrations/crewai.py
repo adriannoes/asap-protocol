@@ -18,7 +18,7 @@ try:
     from crewai.tools import BaseTool as CrewAIBaseTool
 except ImportError as _import_error:
     _import_error_crewai = _import_error
-    CrewAIBaseTool = None  # type: ignore[misc, assignment]
+    CrewAIBaseTool = None
 
 
 def _default_input_schema() -> Type[BaseModel]:

@@ -26,7 +26,7 @@ try:
     from mcp.server.fastmcp import FastMCP
 except ImportError as _import_error:
     _mcp_import_error = _import_error
-    FastMCP = None  # type: ignore[assignment]
+    FastMCP = None
 
 _SERVER_NAME = "asap-mcp-server"
 _SERVER_VERSION = "1.0.0"
