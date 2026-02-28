@@ -203,6 +203,7 @@ export default function DemosPage() {
                         <Link
                             href="https://github.com/adriannoes/asap-protocol/tree/main/src/asap/examples"
                             target="_blank"
+                            rel="noreferrer"
                             className="inline-flex h-12 items-center justify-center rounded-md bg-white px-8 text-sm font-medium text-zinc-950 transition-colors hover:bg-zinc-200"
                         >
                             View Code Examples

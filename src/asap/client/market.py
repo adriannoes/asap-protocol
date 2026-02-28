@@ -6,6 +6,7 @@ import asyncio
 from typing import Any
 
 import httpx
+from pydantic import Field
 
 from asap.client.cache import get_registry
 from asap.client.http_client import get_with_429_retry
@@ -19,6 +20,7 @@ from asap.discovery.registry import (
 )
 from asap.discovery.wellknown import WELLKNOWN_MANIFEST_PATH
 from asap.errors import AgentRevokedException
+from asap.models.base import ASAPBaseModel
 from asap.models.constants import ASAP_PROTOCOL_VERSION
 from asap.models.envelope import Envelope
 from asap.models.entities import Manifest
@@ -31,6 +33,14 @@ logger = get_logger(__name__)
 
 # Default sender URN when SDK consumer does not identify as an agent.
 DEFAULT_SENDER_URN: str = "urn:asap:agent:sdk-consumer"
+
+
+class AgentSummary(ASAPBaseModel):
+    """Agent discovery summary from registry."""
+
+    urn: str = Field(..., description="Agent URN")
+    name: str = Field(..., description="Agent name")
+    skill_ids: list[str] = Field(default_factory=list, description="Skill IDs from registry")
 
 
 def _manifest_url_from_entry(entry: RegistryEntry) -> str:
@@ -87,6 +97,11 @@ class MarketClient:
 
         logger.info("resolve_success", urn=urn, manifest_id=signed.manifest.id)
         return ResolvedAgent(manifest=signed.manifest, entry=entry, client=self)
+
+    async def list_agents(self) -> list[AgentSummary]:
+        """List agents from registry (no manifest fetch). Use resolve(urn) for full manifest."""
+        registry = await get_registry(self.registry_url, ttl_seconds=self._registry_cache_ttl)
+        return [AgentSummary(urn=e.id, name=e.name, skill_ids=e.skills) for e in registry.agents]
 
 
 class ResolvedAgent:

@@ -52,6 +52,7 @@ export async function Header() {
                     <Link
                         href="https://github.com/adriannoes/asap-protocol/tree/main/docs"
                         target="_blank"
+                        rel="noreferrer"
                         className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
                     >
                         Docs

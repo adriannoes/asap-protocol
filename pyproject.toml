@@ -92,6 +92,9 @@ smolagents = [
 pydanticai = [
     "pydantic-ai>=0.2",
 ]
+openclaw = [
+    "openclaw-sdk>=2.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/adriannoes/asap-protocol"

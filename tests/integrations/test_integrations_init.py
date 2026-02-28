@@ -19,6 +19,9 @@ def test_integrations_all_list() -> None:
         "asap_tool_for_urn",
         "LlamaIndexAsapTool",
         "SmolAgentsAsapTool",
+        "OpenClawAsapBridge",
+        "is_error_result",
+        "get_result",
         "create_asap_tools_router",
     }
     assert set(intmod.__all__) == expected

@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import Image from 'next/image';
 import { ArrowRight, Terminal, Braces, Route, ShieldCheck, GitMerge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -133,6 +134,51 @@ export default function DeveloperExperiencePage() {
                                 Automated CI/CD Merge
                             </div>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Framework Ecosystem Section */}
+            <section className="relative z-10 py-24 bg-zinc-950/50 border-b border-zinc-900">
+                <div className="container mx-auto px-4 md:px-6">
+                    <div className="max-w-3xl mb-16">
+                        <h2 className="text-2xl font-bold text-white tracking-tight font-mono mb-4">
+                            <span className="text-indigo-500 mr-2">03.</span> Framework Ecosystem
+                        </h2>
+                        <p className="text-zinc-400">
+                            ASAP Protocol is framework-agnostic. We provide native integrations for the most popular AI orchestration libraries, ensuring your agents are discoverable and ready to work in any environment.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                        {[
+                            { name: 'LangChain', icon: 'langchain', desc: 'Auto-discover ASAP agents as standard LangChain tools.' },
+                            { name: 'CrewAI', icon: 'crewai', desc: 'Securely orchestrate multi-agent workflows with ASAP support.' },
+                            { name: 'PydanticAI', icon: 'pydantic', desc: 'Strict type-safe agent definitions powered by Pydantic.' },
+                            { name: 'LlamaIndex', icon: 'llamaindex', desc: 'Data-to-agent pipelines with ASAP-compliant tool calling.' },
+                            { name: 'MCP', icon: 'anthropic', desc: 'Connect ASAP agents directly to Claude Desktop & IDEs.' },
+                            { name: 'SmolAgents', icon: 'huggingface', desc: 'Minimalist, high-performance agentic logic integration.' },
+                            { name: 'OpenClaw', icon: 'openclaw', desc: 'Interoperable chat-based agent patterns.' },
+                            { name: 'Vercel AI SDK', icon: 'vercel', desc: 'Bridge ASAP agents into Next.js/React apps with native tool-calling support.' },
+                        ].map((fw) => (
+                            <div key={fw.name} className="p-5 rounded-lg border border-zinc-800 bg-zinc-900/20 hover:bg-zinc-900/40 transition-all group">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="w-8 h-8 rounded border border-zinc-800 bg-zinc-950 flex items-center justify-center shrink-0 group-hover:border-zinc-700 transition-colors overflow-hidden relative">
+                                        <Image
+                                            src={`/icons/${fw.icon}.svg`}
+                                            alt={fw.name}
+                                            width={32}
+                                            height={32}
+                                            className="object-contain p-1 opacity-70 group-hover:opacity-100 transition-opacity"
+                                        />
+                                    </div>
+                                    <h3 className="text-white font-bold text-sm tracking-tight">{fw.name}</h3>
+                                </div>
+                                <p className="text-zinc-500 text-xs leading-relaxed">
+                                    {fw.desc}
+                                </p>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </section>

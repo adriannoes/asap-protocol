@@ -126,9 +126,10 @@ async def test_token_is_expired_with_buffer() -> None:
         token_type="Bearer",
     )
     assert token.is_expired(buffer_seconds=TOKEN_REFRESH_BUFFER_SECONDS) is True
+    # Use a margin well above buffer so the check does not flake (clock can advance 1s).
     token_fresh = Token(
         access_token="x",
-        expires_at=now + TOKEN_REFRESH_BUFFER_SECONDS + 1,
+        expires_at=now + TOKEN_REFRESH_BUFFER_SECONDS + 60,
         token_type="Bearer",
     )
     assert token_fresh.is_expired(buffer_seconds=TOKEN_REFRESH_BUFFER_SECONDS) is False

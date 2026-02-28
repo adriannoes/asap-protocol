@@ -1,7 +1,7 @@
 'use server';
 
 import { unstable_cache, revalidateTag } from 'next/cache';
-import { auth, decryptToken } from '@/auth';
+import { auth } from '@/auth';
 import { Octokit } from 'octokit';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -69,13 +69,12 @@ export async function fetchUserRegistrationIssues() {
         }
 
         const username = session.user.username;
-        const encryptedAccessToken = session.encryptedAccessToken;
+        const accessToken = session.accessToken;
 
-        if (!username || !encryptedAccessToken) {
+        if (!username || !accessToken) {
             return { success: false, error: 'Missing GitHub credentials' };
         }
 
-        const accessToken = await decryptToken(encryptedAccessToken);
         const owner = process.env.GITHUB_REGISTRY_OWNER || 'adriannoes';
         const repo = process.env.GITHUB_REGISTRY_REPO || 'asap-protocol';
 

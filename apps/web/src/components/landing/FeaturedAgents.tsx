@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Manifest } from '@/types/protocol';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -11,39 +10,12 @@ import {
   CarouselPrevious,
 } from '@/components/ui/carousel';
 import { Badge } from '@/components/ui/badge';
-import { fetchRegistry } from '@/lib/registry';
 
-export function FeaturedAgents() {
-  const [agents, setAgents] = useState<Manifest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+interface FeaturedAgentsProps {
+  agents: Manifest[];
+}
 
-  useEffect(() => {
-    async function loadAgents() {
-      try {
-        const data = await fetchRegistry();
-        // Just mock picking a few agents for the carousel for now
-        setAgents(data.slice(0, 6));
-      } catch (err) {
-        console.error('Failed to fetch featured agents', err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadAgents();
-  }, []);
-
-  if (isLoading) {
-    return (
-      <section className="w-full border-t border-zinc-900 bg-zinc-950 py-12 md:py-24">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="flex h-48 items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
-          </div>
-        </div>
-      </section>
-    );
-  }
-
+export function FeaturedAgents({ agents }: FeaturedAgentsProps) {
   if (agents.length === 0) {
     return null; // Don't show the section if no agents yet
   }

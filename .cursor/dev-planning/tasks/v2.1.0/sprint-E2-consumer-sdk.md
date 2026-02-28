@@ -22,7 +22,7 @@
 
 **Trigger:** Developer calls `MarketClient().resolve(urn)` (Sprint E3 integrations depend on this).
 
-**Enables:** Sprint E3 (Framework Integrations) uses MarketClient; Sprint E5 (PyPI) ships SDK.
+**Enables:** Sprint E3 (Framework Integrations) uses MarketClient; Sprint E6 (PyPI) ships SDK.
 
 **Depends on:** Sprint E1 (trust, revocation); `asap.discovery.registry`, `asap.transport.client.ASAPClient`, `asap.transport.websocket`.
 

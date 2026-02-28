@@ -54,7 +54,7 @@
 ### 2.3 Missing Docstrings on Public API Methods ✅ Addressed
 *   **Location:** `src/asap/client/trust.py`, `src/asap/client/market.py` — docstrings added to MarketClient, ResolvedAgent, _get_ca_key_b64, verify_agent_trust
 *   **Problem:** Docstrings were _removed_ from `_get_ca_key_b64()` and `verify_agent_trust()` in `trust.py`. The new public classes `MarketClient` and `ResolvedAgent` have no docstrings on their public methods (`resolve`, `run`). This is the SDK's public surface — consumers of `from asap.client import MarketClient` need guided documentation.
-*   **Rationale (Expert View):** Sprint E2 is the foundation for Sprint E5 (PyPI distribution). PyPI packages are judged by their API documentation. `help(MarketClient.resolve)` currently shows nothing. The existing codebase (e.g., `ASAPClient`) sets a high bar with detailed docstrings including examples and raises.
+*   **Rationale (Expert View):** Sprint E2 is the foundation for Sprint E6 (PyPI distribution). PyPI packages are judged by their API documentation. `help(MarketClient.resolve)` currently shows nothing. The existing codebase (e.g., `ASAPClient`) sets a high bar with detailed docstrings including examples and raises.
 *   **Fix Suggestion:** Add docstrings to `MarketClient.__init__`, `MarketClient.resolve`, `ResolvedAgent.__init__`, `ResolvedAgent.run`, and restore removed docstrings in `trust.py`. Example:
     ```python
     async def resolve(self, urn: str) -> "ResolvedAgent":
