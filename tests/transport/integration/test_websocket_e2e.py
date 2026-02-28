@@ -26,6 +26,21 @@ def _free_port() -> int:
         return s.getsockname()[1]
 
 
+def _wait_for_port(host: str, port: int, timeout: float = 10.0) -> bool:
+    """Return True when the port is accepting connections, False on timeout."""
+    import time as _time
+    deadline = _time.monotonic() + timeout
+    while _time.monotonic() < deadline:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.5)
+                s.connect((host, port))
+            return True
+        except (OSError, socket.error):
+            _time.sleep(0.05)
+    return False
+
+
 class TestWebSocketClientE2E(NoRateLimitTestBase):
     """E2E: ASAPClient with transport_mode=websocket against live server."""
 
@@ -72,7 +87,8 @@ class TestWebSocketClientE2E(NoRateLimitTestBase):
         thread.start()
         if not server_started.wait(timeout=5.0):
             pytest.fail("Server did not start in time")
-        await asyncio.sleep(0.3)
+        if not _wait_for_port("127.0.0.1", port, timeout=10.0):
+            pytest.fail("Server port did not become reachable in time")
 
         ws_url = f"ws://127.0.0.1:{port}/asap/ws"
         try:
