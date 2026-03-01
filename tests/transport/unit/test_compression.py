@@ -162,6 +162,14 @@ class TestCompressPayload:
         assert algorithm == CompressionAlgorithm.GZIP
         assert len(result) < len(large_data)
 
+    def test_prefer_fast_compression_uses_gzip_when_brotli_available(self) -> None:
+        """When prefer_fast_compression is True, use GZIP even if brotli is available."""
+        large_data = b'{"data": "' + b"x" * 2000 + b'"}'  # > 1KB
+        with patch("asap.transport.compression.is_brotli_available", return_value=True):
+            result, algorithm = compress_payload(large_data, prefer_fast_compression=True)
+        assert algorithm == CompressionAlgorithm.GZIP
+        assert len(result) < len(large_data)
+
     def test_custom_threshold(self) -> None:
         """Verify custom threshold works."""
         data = b"x" * 500  # 500 bytes

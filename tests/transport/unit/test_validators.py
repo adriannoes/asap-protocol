@@ -17,6 +17,7 @@ from asap.transport.validators import (
     validate_envelope_nonce,
     validate_envelope_timestamp,
 )
+from asap.transport import validators as validators_module
 
 
 class TestTimestampValidation:
@@ -297,3 +298,24 @@ class TestNonceValidation:
             # TTL should be approximately NONCE_TTL_SECONDS (allow small timing variance)
             actual_ttl = expiry_time - current_time
             assert abs(actual_ttl - NONCE_TTL_SECONDS) < 1.0  # Within 1 second tolerance
+
+    def test_cleanup_probability_is_five_percent(self) -> None:
+        """_CLEANUP_PROBABILITY is 0.05 to reduce memory drift under high throughput (task 3.3)."""
+        assert validators_module._CLEANUP_PROBABILITY == 0.05
+
+    def test_cleanup_runs_when_store_exceeds_max_size(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When len(_store) > _MAX_NONCE_STORE_SIZE, cleanup runs and prunes expired (task 3.3)."""
+        monkeypatch.setattr(validators_module, "_MAX_NONCE_STORE_SIZE", 2)
+        store = InMemoryNonceStore()
+        # Add 3 nonces with expiry in the past (patch time so they expire immediately after).
+        with patch("asap.transport.validators.time") as mock_time:
+            mock_time.time.return_value = 0.0
+            for i in range(3):
+                store.check_and_mark(f"nonce-{i}", ttl_seconds=1)
+            assert len(store._store) == 3
+            mock_time.time.return_value = 2.0
+            store.check_and_mark("new-nonce", ttl_seconds=10)
+        assert len(store._store) == 1
+        assert "new-nonce" in store._store

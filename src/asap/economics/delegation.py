@@ -194,7 +194,10 @@ def validate_delegation(
     if jti_str and is_revoked is not None and is_revoked(jti_str):
         return ValidationResult(success=False, error="Token revoked")
     aud = claims.get("aud")
-    delegate = str(aud) if aud is not None else None
+    if isinstance(aud, list):
+        delegate = aud[0] if aud else None
+    else:
+        delegate = str(aud) if aud is not None else None
 
     x_constraints = claims.get(X_ASAP_CONSTRAINTS_CLAIM)
     if isinstance(x_constraints, dict) and usage_count_for_token is not None and jti_str:

@@ -6,8 +6,13 @@ and improve performance when discovering agent capabilities.
 The cache uses an OrderedDict with TTL (Time To Live) expiration and LRU
 eviction when max_size is reached. Entries expire after the configured
 TTL (default: 5 minutes).
+
+Background cleanup: Expired entries are removed on get() (lazy), but to reclaim
+memory without waiting for the next access, start a periodic cleanup task via
+start_periodic_cleanup() and cancel it on shutdown (e.g. in FastAPI lifespan).
 """
 
+import asyncio
 import time
 from collections import OrderedDict
 from threading import Lock
@@ -21,6 +26,9 @@ DEFAULT_TTL = 300.0
 
 # Default max cache size (number of entries)
 DEFAULT_MAX_SIZE = 1000
+
+# Default interval in seconds for background cleanup when using start_periodic_cleanup().
+DEFAULT_CLEANUP_INTERVAL = 60.0
 
 
 class CacheEntry:
@@ -40,11 +48,9 @@ class CacheEntry:
 
 
 class ManifestCache:
-    """Thread-safe in-memory LRU cache for agent manifests.
+    """Thread-safe in-memory LRU cache for agent manifests (TTL, LRU eviction).
 
-    Provides TTL-based expiration, LRU eviction when max_size is reached,
-    and methods for cache management. Thread-safe for concurrent access
-    from multiple async tasks.
+    Uses threading.Lock for sync API; asyncio.Lock migration deferred (CONC-01).
 
     Attributes:
         _cache: OrderedDict mapping URL to CacheEntry (maintains LRU order)
@@ -122,3 +128,17 @@ class ManifestCache:
             for url in expired_urls:
                 del self._cache[url]
             return len(expired_urls)
+
+
+def start_periodic_cleanup(
+    cache: ManifestCache,
+    interval_seconds: float = DEFAULT_CLEANUP_INTERVAL,
+) -> asyncio.Task[None]:
+    """Background task that calls cache.cleanup_expired() every interval_seconds. Cancel on shutdown."""
+
+    async def _loop() -> None:
+        while True:
+            await asyncio.sleep(interval_seconds)
+            cache.cleanup_expired()
+
+    return asyncio.create_task(_loop())

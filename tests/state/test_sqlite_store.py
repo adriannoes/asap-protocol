@@ -1,8 +1,11 @@
 """Tests for SQLite SnapshotStore and MeteringStore."""
 
+import asyncio
 import threading
 from datetime import datetime, timezone
+from pathlib import Path
 
+import aiosqlite
 import pytest
 
 from asap.models.entities import StateSnapshot
@@ -204,6 +207,69 @@ class TestSQLiteSnapshotStoreCRUD:
         final_count = threading.active_count()
         # Shared executor has max 4 workers; delta should be bounded (not 15+ new threads)
         assert final_count - initial_count <= 8
+
+
+@pytest.mark.asyncio
+async def test_sqlite_snapshot_store_concurrent_async_save_get(
+    sqlite_snapshot_store: SQLiteSnapshotStore,
+    sample_snapshot: StateSnapshot,
+) -> None:
+    """Concurrent save_async/get_async do not deadlock (ARCH-01)."""
+    base_id = sample_snapshot.task_id
+
+    # Run 50 concurrent save+get pairs (native async, no thread pool).
+    async def save_and_get(i: int) -> StateSnapshot | None:
+        snap = StateSnapshot(
+            id=f"snap_concurrent_{i}",
+            task_id=base_id,
+            version=sample_snapshot.version + i,
+            data={"seq": i},
+            checkpoint=False,
+            created_at=datetime.now(timezone.utc),
+        )
+        await sqlite_snapshot_store.save_async(snap)
+        return await sqlite_snapshot_store.get_async(base_id, snap.version)
+
+    results = await asyncio.gather(*[save_and_get(i) for i in range(50)])
+    assert len(results) == 50
+    for i, retrieved in enumerate(results):
+        assert retrieved is not None
+        assert retrieved.data.get("seq") == i
+
+
+@pytest.mark.asyncio
+async def test_sqlite_wal_mode_enabled(
+    db_path: Path,
+    sample_snapshot: StateSnapshot,
+) -> None:
+    """WAL mode is enabled; PRAGMA journal_mode returns 'wal' (task 2.3)."""
+    store = SQLiteSnapshotStore(db_path=db_path)
+    await store.save_async(sample_snapshot)
+    async with aiosqlite.connect(db_path) as conn:
+        cursor = await conn.execute("PRAGMA journal_mode")
+        row = await cursor.fetchone()
+    assert row is not None and row[0].lower() == "wal", (
+        "SQLite should be in WAL mode after store write; got journal_mode=%r"
+        % (row[0] if row else None)
+    )
+
+
+@pytest.mark.asyncio
+async def test_sqlite_wal_mode_creates_wal_and_shm_files(db_path: Path) -> None:
+    """With WAL enabled, a write creates .db-wal and .db-shm in the test dir (task 2.3 verify)."""
+    conn = await aiosqlite.connect(db_path)
+    await conn.execute("PRAGMA journal_mode=WAL")
+    await conn.execute("PRAGMA synchronous=NORMAL")
+    await conn.execute("CREATE TABLE IF NOT EXISTS t (id INTEGER PRIMARY KEY, x TEXT)")
+    await conn.execute("INSERT INTO t (id, x) VALUES (1, 'a')")
+    await conn.commit()
+    wal_path = Path(f"{db_path}-wal")
+    shm_path = Path(f"{db_path}-shm")
+    try:
+        assert wal_path.exists(), "WAL file should exist while connection has written in WAL mode"
+        assert shm_path.exists(), "SHM file should exist while connection has written in WAL mode"
+    finally:
+        await conn.close()
 
 
 class TestSQLiteSnapshotStorePersistence:
