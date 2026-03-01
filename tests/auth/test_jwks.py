@@ -1,5 +1,7 @@
 """Unit tests for JWKS validation and JWT signature verification."""
 
+import base64
+import json
 import time
 
 import httpx
@@ -114,6 +116,24 @@ async def test_validate_jwt_raises_on_malformed_token() -> None:
 
     with pytest.raises((DecodeError, JoseError)):
         validate_jwt("not.a.valid.jwt", key_set)
+
+
+def _base64url_encode(data: bytes) -> str:
+    """Encode bytes to base64url without padding (JWT format)."""
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+
+async def test_validate_jwt_raises_on_none_algorithm_token() -> None:
+    """Verify validate_jwt raises JoseError for token with alg 'none' (SEC-01)."""
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    key_set = jwk.KeySet.import_key_set(_make_jwks_response(key))
+
+    header = json.dumps({"alg": "none", "typ": "JWT"}).encode()
+    payload = json.dumps({"sub": "urn:asap:agent:test", "exp": int(time.time()) + 3600}).encode()
+    token = f"{_base64url_encode(header)}.{_base64url_encode(payload)}."
+
+    with pytest.raises(JoseError):
+        validate_jwt(token, key_set)
 
 
 async def test_jwks_validator_fetch_keys() -> None:
