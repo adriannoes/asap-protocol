@@ -33,9 +33,9 @@
 
 ## Acceptance Criteria
 
-- [ ] `asap-protocol` 2.1.0 published to PyPI
-- [ ] Optional groups `[mcp]`, `[langchain]`, `[crewai]`, `[llamaindex]`, `[smolagents]`, `[openclaw]` work
-- [ ] CI publishes on tag push `v*`
+- [x] `asap-protocol` 2.1.0 published to PyPI (verified: `uv pip install asap-protocol==2.1.0` from PyPI, `import asap` → 2.1.0)
+- [x] Optional groups `[mcp]`, `[langchain]`, `[crewai]`, `[llamaindex]`, `[smolagents]`, `[openclaw]` work (verified from repo in 6.3.1)
+- [x] CI publishes on tag push `v*` (tag `v2.1.0` pushed; workflow triggered)
 
 ---
 
@@ -93,7 +93,7 @@
 
 ## Definition of Done
 
-- [x] `pip install asap-protocol` works (verified from repo; PyPI after publish)
+- [x] `pip install asap-protocol` works (verified from repo; PyPI after workflow completes)
 - [x] `pip install asap-protocol[<extra>]` works for all frameworks (verified in 6.3.1)
-- [ ] Tag `v2.1.0` triggers publish workflow (verify after push + tag)
+- [x] Tag `v2.1.0` triggers publish workflow (tag pushed; workflow runs on tag push)
 - [x] CHANGELOG updated
