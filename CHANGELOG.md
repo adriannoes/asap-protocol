@@ -8,13 +8,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Future changes will be documented here.
 
-#### OpenClaw Integration (Sprint E5)
-- **OpenClaw Skill** (`packages/asap-openclaw-skill`): Node.js plugin that registers `asap_invoke` tool for OpenClaw agents to call ASAP agents by URN
-- **Python bridge** (`OpenClawAsapBridge`): Hybrid pipelines combining OpenClawClient with MarketClient; `run_asap()` and `run_asap_auto_skill()` methods
-- **Optional dependency** `[openclaw]`: `openclaw-sdk>=2.0` for Python integration
-- **Registry UX**: OpenClaw tab in agent detail Usage Snippets
-- **Documentation**: `docs/guides/openclaw-integration.md` with installation and usage
+---
+
+## [2.1.0] - 2026-02-28
+
+Consumer SDK, framework integrations, registry UX, agent revocation, and PyPI distribution. Backward compatible with v2.0.0.
+
+### Added
+
+#### Consumer SDK
+- **MarketClient**: Client for resolving agent URNs and invoking tasks against the registry
+- **ResolvedAgent**: Resolved agent info (endpoint, manifest) for programmatic use
+
+#### Framework Integrations
+- **LangChain**: `LangChainAsapTool` (optional `[langchain]`), `langchain-core>=0.2`
+- **CrewAI**: `CrewAIAsapTool` (optional `[crewai]`), `crewai>=0.80`
+- **LlamaIndex**: `LlamaIndexAsapTool` (optional `[llamaindex]`), `llama-index-core>=0.10`
+- **SmolAgents**: `SmolAgentsAsapTool` (optional `[smolagents]`), `smolagents>=1.0`
+- **Vercel AI SDK**: Documented integration pattern
+- **MCP**: Optional `[mcp]` dependency, `mcp>=1.0.0`
+- **OpenClaw**: Optional `[openclaw]` with `openclaw-sdk>=2.0`; Python bridge `OpenClawAsapBridge`; Node.js skill `packages/asap-openclaw-skill` (`asap_invoke` tool); guide `docs/guides/openclaw-integration.md`
+
+#### Registry UX
+- **Categories and tags** for agents in the registry and web app
+- **Usage snippets** on agent detail (including OpenClaw tab)
+
+#### Agent Revocation
+- **Revocation flow**: Agents can be revoked; clients handle `AgentRevokedException` and signature verification errors
+
+#### PyPI Distribution
+- **PyPI**: Package publishable via tag push (`v*`); `pip install asap-protocol` and `pip install asap-protocol[<extra>]` for mcp, langchain, crewai, llamaindex, smolagents, openclaw
+- **CI**: Release workflow builds and publishes to PyPI on tag (Trusted Publishing)
+
+### Technical Details
+
+- **Python**: 3.13+
+- **Full Changelog**: https://github.com/adriannoes/asap-protocol/compare/v2.0.0...v2.1.0
+
+---
 
 ## [0.1.0] - 2026-01-23
 
