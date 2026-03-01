@@ -7,9 +7,9 @@
 
 > A production-ready protocol for agent-to-agent communication and task coordination.
 
-**Quick Info**: `v2.0.0` | `Apache 2.0` | `Python 3.13+` | [Marketplace](https://asap-protocol.vercel.app/) | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
+**Quick Info**: `v2.1.0` | `Apache 2.0` | `Python 3.13+` | [Marketplace](https://asap-protocol.vercel.app/) | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
 
-> 🚀 **Live now**: [**Agent Marketplace**](https://asap-protocol.vercel.app/) — Browse agents, register yours, request verification.
+> 🚀 **Live now** our agentic marketplace**](https://asap-protocol.vercel.app/) — Browse agents, register yours, request verification.
 
 ## Why ASAP?
 
@@ -22,9 +22,6 @@ Building multi-agent systems today suffers from three core technical challenges 
 
 For simple point-to-point communication, a basic HTTP API might suffice; ASAP shines when you need orchestration, state management and multi-agent coordination. See the [spec](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/strategy/v0-original-specs.md) for details.
 
-### 🔌 Framework Ecosystem
-ASAP is built for interoperability. Seamlessly integrate your agents into **LangChain**, **CrewAI**, **LlamaIndex**, and **OpenClaw** workflows using our growing library of native adapters and standardized tool-calling schemas.
-
 ### Key Features
 
 - **Stateful orchestration** — Task state machine with snapshotting for resumable workflows.
@@ -33,7 +30,10 @@ ASAP is built for interoperability. Seamlessly integrate your agents into **Lang
 - **MCP integration** — Tool execution and coordination in a single envelope.
 - **Observable** — `trace_id` and `correlation_id` for debugging.
 - **Security** — Bearer auth, OAuth2/JWT (v1.1), Ed25519 signed manifests (v1.2), optional mTLS, replay prevention, HTTPS, rate limiting. [v1.1 Security Model](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/v1.1-security-model.md) (trust limits, Custom Claims).
-- **Economics (v1.3)** — Usage metering, delegation tokens, SLA framework with breach alerts.
+- **Economics** — Usage metering, delegation tokens, SLA framework with breach alerts.
+
+### 🆕 Framework Ecosystem
+ASAP is built for interoperability. Seamlessly integrate your agents into **OpenClaw**,**LangChain**, **CrewAI** and **LlamaIndex** workflows using our growing library of native adapters and standardized tool-calling schemas.
 
 ## Installation
 
@@ -59,23 +59,9 @@ pip install asap-protocol
 uv run python -m asap.examples.run_demo
 ```
 
-**v2.0.0** — [**Agent Marketplace**](https://asap-protocol.vercel.app/) — Browse, verify, and register agents. Lean Registry, Verified Badge, IssueOps.
-
-**v1.4.0 showcase** (Pagination on Usage & SLA history):
-
-```bash
-uv run python -m asap.examples.v1_4_0_showcase
-```
-
-**v1.3.0 showcase** (Delegation + Metering + SLA in one command):
-
-```bash
-uv run python -m asap.examples.v1_3_0_showcase
-```
-
 **Build your first agent** [here](docs/tutorials/first-agent.md) — server setup, client code, step-by-step (~15 min).
 
-[15+ examples](src/asap/examples/README.md): orchestration, state migration, MCP, OAuth2, WebSocket, resilience.
+[19 examples](src/asap/examples/README.md): orchestration, state migration, MCP, OAuth2, WebSocket, resilience.
 
 ## Testing
 
@@ -91,7 +77,7 @@ uv run pytest --cov=src --cov-report=term-missing
 
 [Testing Guide](https://github.com/adriannoes/asap-protocol/blob/main/docs/testing.md) (structure, fixtures, property/load/chaos tests). [Contributing](https://github.com/adriannoes/asap-protocol/blob/main/CONTRIBUTING.md) (dev setup, CI).
 
-### Compliance Harness (v1.2)
+### Compliance Harness
 
 Validate that your agent follows the ASAP protocol:
 
@@ -116,8 +102,8 @@ See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/
 
 **Deep Dive**
 - [State Management](https://github.com/adriannoes/asap-protocol/blob/main/docs/state-management.md) | [Best Practices: Failover & Migration](https://github.com/adriannoes/asap-protocol/blob/main/docs/best-practices/agent-failover-migration.md) | [Error Handling](https://github.com/adriannoes/asap-protocol/blob/main/docs/error-handling.md)
-- [Transport](https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md) | [Security](https://github.com/adriannoes/asap-protocol/blob/main/docs/security.md) | [v1.1 Security Model](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/v1.1-security-model.md) (OAuth2 trust, Custom Claims, ADR-17)
-- **v1.2**: [Identity Signing](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/identity-signing.md) | [Compliance Testing](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/compliance-testing.md) | [Migration v1.1→v1.2](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/migration-v1.1-to-v1.2.md) | [mTLS](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/mtls.md)
+- [Transport](https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md) | [Security](https://github.com/adriannoes/asap-protocol/blob/main/docs/security.md) | [Security Model](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/v1.1-security-model.md) (OAuth2 trust, Custom Claims)
+- [Identity Signing](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/identity-signing.md) | [Compliance Testing](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/compliance-testing.md) | [Migration v1.1 to v1.2](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/migration-v1.1-to-v1.2.md) | [mTLS](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/mtls.md)
 - [Observability](https://github.com/adriannoes/asap-protocol/blob/main/docs/observability.md) | [Testing](https://github.com/adriannoes/asap-protocol/blob/main/docs/testing.md)
 
 **Decisions & Operations**
@@ -130,7 +116,7 @@ See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/
 
 ## CLI
 
-**v1.1** adds OAuth2, WebSocket, Discovery (well-known + Lite Registry), State Storage (SQLite), and Webhooks. **v1.2** adds Ed25519 signed manifests, trust levels, optional mTLS, and the [Compliance Harness](https://github.com/adriannoes/asap-protocol/blob/main/asap-compliance/README.md). **v1.3** adds delegation commands (`asap delegation create`, `asap delegation revoke`).
+**v1.1** adds OAuth2, WebSocket, Discovery (well-known + Lite Registry), State Storage (SQLite), and Webhooks. **v1.2** adds Ed25519 signed manifests, trust levels, optional mTLS and the [Compliance Harness](https://github.com/adriannoes/asap-protocol/blob/main/asap-compliance/README.md). **v1.3** adds delegation commands (`asap delegation create`, `asap delegation revoke`).
 
 ```bash
 asap --version                                    # Show version
@@ -155,6 +141,7 @@ ASAP is evolving toward an **Agent Marketplace** — an open ecosystem where AI 
 - **v1.3**: Economics Layer (Metering, SLAs, Delegation) ✅
 - **v1.4**: Resilience & Scale (Type Safety, Storage Pagination) ✅
 - **v2.0**: Agent Marketplace with Web App (Lean Registry, Verified Badge, IssueOps) ✅
+- **v2.1**: PyPI distribution, Consumer SDK, framework integrations (LangChain, CrewAI, LlamaIndex, SmolAgents, OpenClaw) ✅
 
 See our [vision document](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/strategy/vision-agent-marketplace.md) for the full roadmap.
 
