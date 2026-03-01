@@ -101,18 +101,23 @@ def compress_payload(
     data: bytes,
     preferred_algorithm: CompressionAlgorithm | None = None,
     threshold: int = COMPRESSION_THRESHOLD,
+    prefer_fast_compression: bool = False,
 ) -> tuple[bytes, CompressionAlgorithm]:
     """Compress payload if it exceeds threshold.
 
     Compresses the payload using the preferred algorithm if specified,
-    otherwise uses the best available algorithm (brotli > gzip).
+    otherwise uses the best available algorithm (brotli > gzip), or gzip
+    when prefer_fast_compression is True to favor latency over ratio.
 
     Args:
         data: Raw bytes to compress
         preferred_algorithm: Optional preferred compression algorithm.
-            If None, uses brotli if available, otherwise gzip.
+            If None, uses brotli if available (unless prefer_fast_compression),
+            otherwise gzip.
         threshold: Minimum payload size to trigger compression (default: 1KB).
             Payloads smaller than this are returned as-is with IDENTITY encoding.
+        prefer_fast_compression: If True, prefer gzip over brotli for lower
+            latency at the cost of slightly worse compression ratio.
 
     Returns:
         Tuple of (compressed_data, algorithm_used)
@@ -139,11 +144,10 @@ def compress_payload(
     # Determine algorithm to use
     if preferred_algorithm is not None:
         algorithm = preferred_algorithm
-    elif is_brotli_available():
-        # TODO: Add prefer_fast_compression option to prefer gzip even when brotli is available
-        algorithm = CompressionAlgorithm.BROTLI
-    else:
+    elif prefer_fast_compression or not is_brotli_available():
         algorithm = CompressionAlgorithm.GZIP
+    else:
+        algorithm = CompressionAlgorithm.BROTLI
 
     # Skip if identity is requested
     if algorithm == CompressionAlgorithm.IDENTITY:

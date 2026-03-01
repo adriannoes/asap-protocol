@@ -12,6 +12,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.1] - 2026-03-01
+
+Patch release addressing tech debt and findings from the v2.1.0 Red-Team code review. Backward compatible with v2.1.0.
+
+### Security
+
+- **SEC-01 — JWT algorithm allowlist**: `jose_jwt.decode()` in `auth/jwks.py` and `auth/middleware.py` now restricts algorithms to `EdDSA`, `RS256`, `ES256`, preventing algorithm confusion attacks (RFC 8725 §3.2).
+- **Delegation `aud` claim**: RFC 7519 allows `aud` as an array; `economics/delegation.py` now coerces list to first element instead of string repr.
+- **Vercel AI router**: SECURITY WARNING in docstring and optional `api_key_header` parameter for auth.
+- **Frontend SSRF**: Agent registration URL validation now resolves DNS and blocks private/loopback IPs (DNS rebinding protection).
+
+### Architecture & Concurrency
+
+- **ARCH-01 — SQLite async bridging**: `state/stores/sqlite.py` exposes `save_async`, `get_async`, `list_versions_async`, `delete_async` using aiosqlite directly, avoiding `_run_sync` and event-loop blocking under concurrent load.
+- **CONC-01**: Replaced `threading.Lock` with `asyncio.Lock` in `auth/oidc.py` and `auth/jwks.py` for cache guards so the event loop is not blocked.
+- **SQLite WAL mode**: `journal_mode=WAL` and `synchronous=NORMAL` applied when opening connections in snapshot store and economics storage for better concurrency.
+- **Registry locks**: GIL-atomic `dict.setdefault()` for registry URL locks in `discovery/registry.py` (removed threading guard).
+
+### Reliability & Limits
+
+- **Webhook dead letters**: Capped at `MAX_DEAD_LETTERS` (1000) to prevent unbounded memory growth.
+- **ManifestCache**: Background cleanup hook / periodic `cleanup_expired()` documented and ensured for memory release.
+- **InMemoryNonceStore**: Cleanup probability increased; optional max-size fallback.
+- **Rate limiting**: Optional Redis backend (`ASAP_RATE_LIMIT_BACKEND=redis://...`) for shared limits across workers.
+
+### Code Quality
+
+- **echo_handler**: `TaskRequest.model_validate(envelope.payload_dict)` instead of `**payload_dict` so Pydantic validators run.
+- **Registry**: Empty-string coercion for `repository_url`/`documentation_url` (strip then None).
+- **SQLiteMeteringStorage**: `_ensure_table_once` so schema is created once per instance.
+- **Middleware docstring**: Backlog reference updated (v2.1.1).
+- **Compression**: `prefer_fast_compression` option to prefer gzip over brotli for lower latency.
+
+### Technical Details
+
+- **Full Changelog**: https://github.com/adriannoes/asap-protocol/compare/v2.1.0...v2.1.1
+
+---
+
 ## [2.1.0] - 2026-02-28
 
 Consumer SDK, framework integrations, registry UX, agent revocation, and PyPI distribution. Backward compatible with v2.0.0.

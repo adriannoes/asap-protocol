@@ -12,6 +12,7 @@ import pytest
 
 from asap.errors import WebhookURLValidationError
 from asap.transport.webhook import (
+    MAX_DEAD_LETTERS,
     X_ASAP_SIGNATURE_HEADER,
     DeadLetterEntry,
     RetryPolicy,
@@ -654,3 +655,13 @@ class TestWebhookRetryManager:
 
         entry = manager.dead_letters[0]
         assert entry.created_at > 0
+
+    async def test_dead_letters_capped_at_max(self) -> None:
+        """Emit 1001 dead letters; storage length stays exactly MAX_DEAD_LETTERS (task 3.1)."""
+        # Each deliver_with_retry uses 4 attempts (1 + max_retries) then DLQ; need 1001 * 4 responses.
+        responses = [_server_error(self._URL, 500)] * 4 * (MAX_DEAD_LETTERS + 1)
+        delivery = _make_mock_delivery(responses)
+        manager = WebhookRetryManager(delivery, policy=self._FAST_POLICY)
+        for _ in range(MAX_DEAD_LETTERS + 1):
+            await manager.deliver_with_retry(self._URL, self._PAYLOAD)
+        assert len(manager.dead_letters) == MAX_DEAD_LETTERS

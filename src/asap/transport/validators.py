@@ -155,7 +155,10 @@ class NonceStore(Protocol):
         ...
 
 
-_CLEANUP_PROBABILITY = 0.01
+# Run cleanup on ~5% of requests (was 1%); reduces memory drift under high throughput.
+_CLEANUP_PROBABILITY = 0.05
+# Hard cap: always run cleanup when store exceeds this size.
+_MAX_NONCE_STORE_SIZE = 50_000
 
 
 class InMemoryNonceStore:
@@ -173,7 +176,8 @@ class InMemoryNonceStore:
         self._lock = threading.RLock()
 
     def _cleanup_expired(self) -> None:
-        if random.random() >= _CLEANUP_PROBABILITY:  # nosec: only for probabilistic cleanup
+        # Always cleanup when over cap; otherwise run with probability to bound memory.
+        if len(self._store) <= _MAX_NONCE_STORE_SIZE and random.random() >= _CLEANUP_PROBABILITY:  # nosec B311
             return
         now = time.time()
         expired = [nonce for nonce, expiry in self._store.items() if expiry < now]

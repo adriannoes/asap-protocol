@@ -1,10 +1,13 @@
 """Unit tests for ASAP transport cache module.
 
 Tests cover CacheEntry and ManifestCache: TTL expiration, get/set/invalidate,
-clear_all, size, cleanup_expired, and thread-safety.
+clear_all, size, cleanup_expired, thread-safety, and background cleanup (task 3.2).
 """
 
 from __future__ import annotations
+
+import asyncio
+import contextlib
 
 import pytest
 
@@ -14,6 +17,7 @@ from asap.transport.cache import (
     DEFAULT_TTL,
     CacheEntry,
     ManifestCache,
+    start_periodic_cleanup,
 )
 
 
@@ -329,6 +333,36 @@ class TestManifestCacheCleanupExpired:
         """cleanup_expired() on empty cache returns 0."""
         cache = ManifestCache()
         assert cache.cleanup_expired() == 0
+
+
+class TestManifestCachePeriodicCleanup:
+    """Tests for start_periodic_cleanup (task 3.2: background cleanup / memory release)."""
+
+    @pytest.mark.asyncio
+    async def test_periodic_cleanup_prunes_expired_entries(self) -> None:
+        """Background cleanup task removes expired entries; cache size drops (memory release)."""
+        cache = ManifestCache(default_ttl=0.05)
+        cache.set("http://a.example.com/m.json", _make_manifest("urn:asap:agent:a"), ttl=0.03)
+        cache.set("http://b.example.com/m.json", _make_manifest("urn:asap:agent:b"), ttl=0.03)
+        assert cache.size() == 2
+        task = start_periodic_cleanup(cache, interval_seconds=0.05)
+        try:
+            await asyncio.sleep(0.15)
+            assert cache.size() == 0
+        finally:
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+
+    @pytest.mark.asyncio
+    async def test_start_periodic_cleanup_returns_cancellable_task(self) -> None:
+        """start_periodic_cleanup returns an asyncio.Task that can be cancelled on shutdown."""
+        cache = ManifestCache()
+        task = start_periodic_cleanup(cache, interval_seconds=300.0)
+        assert not task.done()
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
 
 
 class TestManifestCacheThreadSafety:

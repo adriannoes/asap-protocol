@@ -22,6 +22,7 @@ from joserfc import jwk
 from joserfc.errors import JoseError
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from asap.auth.jwks import _ALLOWED_JWT_ALGORITHMS
 from asap.auth.utils import parse_scope
 from asap.observability import get_logger
 
@@ -253,7 +254,7 @@ class OAuth2Middleware(BaseHTTPMiddleware):
 
         try:
             key_set = await self._get_key_set()
-            token_obj = jose_jwt.decode(token, key_set)
+            token_obj = jose_jwt.decode(token, key_set, algorithms=_ALLOWED_JWT_ALGORITHMS)
         except httpx.HTTPError as e:
             logger.error(
                 "asap.oauth2.jwks_fetch_failed",
@@ -269,7 +270,7 @@ class OAuth2Middleware(BaseHTTPMiddleware):
             await self._invalidate_jwks_cache()
             try:
                 key_set = await self._get_key_set()
-                token_obj = jose_jwt.decode(token, key_set)
+                token_obj = jose_jwt.decode(token, key_set, algorithms=_ALLOWED_JWT_ALGORITHMS)
             except httpx.HTTPError as e2:
                 logger.error(
                     "asap.oauth2.jwks_fetch_failed",

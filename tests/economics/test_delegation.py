@@ -15,6 +15,7 @@ from pydantic import ValidationError
 from asap.crypto.keys import generate_keypair
 from asap.economics.delegation import (
     DELEGATION_SCOPES,
+    JWT_ALG,
     JWT_ALGS_VERIFY,
     WILDCARD_SCOPE,
     DelegationConstraints,
@@ -400,6 +401,45 @@ class TestValidateDelegation:
         assert result.delegator == "urn:asap:agent:a"
         assert result.delegate == "urn:asap:agent:b"
         assert "task.execute" in (result.scopes or [])
+
+    def test_aud_claim_array_extracts_first_element(
+        self,
+        sample_constraints: DelegationConstraints,
+    ) -> None:
+        """RFC 7519 allows aud to be an array; delegate is set from aud[0]."""
+        private_key, public_key = generate_keypair()
+        now = datetime.now(timezone.utc)
+        iat = int(now.timestamp())
+        exp = int(sample_constraints.expires_at.timestamp())
+        claims: dict[str, Any] = {
+            "iss": "urn:asap:agent:a",
+            "aud": ["urn:asap:agent:b"],
+            "jti": "del_aud_array_test",
+            "iat": iat,
+            "exp": exp,
+            "scp": ["task.execute", "data.read"],
+        }
+        header = {"alg": JWT_ALG, "typ": "JWT"}
+        okp_key = ed25519_to_okp(private_key)
+        token = jose_jwt.encode(
+            header,
+            claims,
+            okp_key,
+            algorithms=[JWT_ALG],
+        )
+
+        def resolver(iss: str) -> Any:
+            assert iss == "urn:asap:agent:a"
+            return public_key
+
+        result = validate_delegation(
+            token,
+            "task.execute",
+            public_key_resolver=resolver,
+        )
+        assert result.success is True
+        assert result.delegator == "urn:asap:agent:a"
+        assert result.delegate == "urn:asap:agent:b"
 
     def test_expired_rejected(
         self,
