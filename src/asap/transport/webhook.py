@@ -38,6 +38,9 @@ X_ASAP_SIGNATURE_HEADER = "X-ASAP-Signature"
 # Default timeout for webhook HTTP requests (seconds).
 DEFAULT_WEBHOOK_TIMEOUT = 10.0
 
+# Maximum number of dead-letter entries to retain (evict oldest when exceeded).
+MAX_DEAD_LETTERS = 1000
+
 # Allowed URL schemes.
 _ALLOWED_SCHEMES_STRICT = frozenset({"https"})
 _ALLOWED_SCHEMES_RELAXED = frozenset({"http", "https"})
@@ -506,6 +509,8 @@ class WebhookRetryManager:
             last_result=last_result,
             attempts=1 + self._policy.max_retries,
         )
+        if len(self._dead_letters) >= MAX_DEAD_LETTERS:
+            self._dead_letters.pop(0)
         self._dead_letters.append(entry)
         logger.warning(
             "webhook.dead_letter",
