@@ -11,7 +11,9 @@ This module provides:
 HTTP rate limiting storage:
     Default is ``memory://`` (per-process). In multi-worker deployments (e.g. Gunicorn
     with 4 workers) the effective rate is approximately limit × number of workers.
-    For shared limits in production, use a Redis URI (planned for v1.2.0).
+    For shared limits across workers, set **ASAP_RATE_LIMIT_BACKEND** to a Redis URI:
+    ``ASAP_RATE_LIMIT_BACKEND=redis://localhost:6379/0``. Requires the optional
+    dependency: ``pip install 'asap-protocol[redis]'``.
 
 Public exports:
     ASAPRateLimiter: HTTP rate limiter using ``limits`` package.
@@ -24,13 +26,15 @@ Public exports:
 
 from __future__ import annotations
 
+import os
 import time
 import uuid
 from collections.abc import Callable, Sequence
 
 from fastapi import Request
 from limits import RateLimitItem, parse_many
-from limits.storage import MemoryStorage, Storage
+from limits.aio.storage.base import Storage as AioStorage
+from limits.storage import Storage, storage_from_string
 from limits.strategies import MovingWindowRateLimiter
 
 from asap.observability import get_logger
@@ -98,7 +102,7 @@ class ASAPRateLimiter:
         if storage_uri is None:
             storage_uri = f"memory://{uuid.uuid4().hex}"
 
-        self._storage: Storage = MemoryStorage(uri=storage_uri)
+        self._storage: Storage | AioStorage = storage_from_string(storage_uri)
         self._strategy = MovingWindowRateLimiter(self._storage)
 
     # ------------------------------------------------------------------
@@ -152,8 +156,13 @@ def create_limiter(
 ) -> ASAPRateLimiter:
     """Create a production rate limiter.
 
+    Storage is chosen by **storage_uri** (explicit argument) or by the
+    **ASAP_RATE_LIMIT_BACKEND** environment variable. If neither is set,
+    uses in-memory storage (per-process; effective limit × workers in
+    multi-worker deployments). Set ASAP_RATE_LIMIT_BACKEND=redis://host:port/db
+    for shared limits across workers (requires ``pip install 'asap-protocol[redis]'``).
+
     Returns a fully independent instance with its own storage.
-    ``memory://`` is per-process; use a Redis URI for shared limits across workers.
     """
     if key_func is None:
         key_func = get_remote_address
@@ -162,15 +171,19 @@ def create_limiter(
         limits = [DEFAULT_RATE_LIMIT]
 
     if storage_uri is None:
+        storage_uri = (os.environ.get("ASAP_RATE_LIMIT_BACKEND") or "").strip() or None
+
+    if storage_uri is None:
         storage_uri = f"memory://{uuid.uuid4().hex}"
         logger.warning(
             "asap.rate_limit.memory_storage",
             message=(
                 "memory:// storage is per-process; in multi-worker deployments "
-                "(e.g. Gunicorn), effective rate = limit × workers. Use Redis for shared limits."
+                "(e.g. Gunicorn), effective rate = limit × workers. Set "
+                "ASAP_RATE_LIMIT_BACKEND=redis://... for shared limits."
             ),
         )
-    elif storage_uri.startswith("redis://"):
+    elif storage_uri.strip().lower().startswith("redis://"):
         try:
             import redis  # noqa: F401
         except ImportError:
@@ -182,6 +195,10 @@ def create_limiter(
                 "Redis support requires the 'redis' package. "
                 "Install it with: pip install 'asap-protocol[redis]'"
             ) from None
+        logger.info(
+            "asap.rate_limit.redis_storage",
+            message="Rate limit storage backend: Redis (shared across workers).",
+        )
 
     return ASAPRateLimiter(
         key_func=key_func,
