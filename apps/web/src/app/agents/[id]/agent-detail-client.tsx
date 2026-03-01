@@ -1,5 +1,5 @@
 import type { RegistryAgent } from '@/types/registry';
-import { isAllowedExternalUrl } from '@/lib/url-validator';
+
 import { AgentStatusBadge } from '@/components/agent/agent-status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,9 +14,12 @@ interface AgentDetailClientProps {
     isRevoked?: boolean;
 }
 
+import { isAllowedProxyUrl } from '@/lib/url-validator';
+
 function safeAuthHref(url: unknown): string {
     if (typeof url !== 'string') return '#';
-    return isAllowedExternalUrl(url).valid ? url : '#';
+    // use synchronous basic URL validation for UI rendering (prevents javascript: links)
+    return isAllowedProxyUrl(url).valid ? url : '#';
 }
 
 export function AgentDetailClient({ agent, isRevoked }: AgentDetailClientProps) {

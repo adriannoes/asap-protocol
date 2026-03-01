@@ -35,16 +35,16 @@ export async function submitAgentRegistration(values: unknown) {
         const data = parsed.data;
         const { manifest_url, endpoint_http, endpoint_ws } = data;
 
-        const manifestCheck = isAllowedExternalUrl(manifest_url);
+        const manifestCheck = await isAllowedExternalUrl(manifest_url);
         if (!manifestCheck.valid) {
             return { success: false, error: `Manifest URL: ${manifestCheck.error}` };
         }
-        const endpointCheck = isAllowedExternalUrl(endpoint_http);
+        const endpointCheck = await isAllowedExternalUrl(endpoint_http);
         if (!endpointCheck.valid) {
             return { success: false, error: `Endpoint URL: ${endpointCheck.error}` };
         }
         if (endpoint_ws) {
-            const wsCheck = isAllowedExternalUrl(endpoint_ws);
+            const wsCheck = await isAllowedExternalUrl(endpoint_ws);
             if (!wsCheck.valid) {
                 return { success: false, error: `WebSocket URL: ${wsCheck.error}` };
             }

@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
         );
     }
 
-    const check = isAllowedExternalUrl(url);
+    const check = await isAllowedExternalUrl(url);
     if (!check.valid) {
         return NextResponse.json({ error: check.error ?? 'Invalid URL' }, { status: 400 });
     }
