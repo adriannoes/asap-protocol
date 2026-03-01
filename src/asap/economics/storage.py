@@ -409,6 +409,12 @@ _DEFAULT_DB_PATH = "asap_state.db"
 _USAGE_EVENTS_TABLE = "usage_events"
 
 
+async def _apply_wal_pragmas(conn: aiosqlite.Connection) -> None:
+    """WAL + NORMAL sync for concurrency."""
+    await conn.execute("PRAGMA journal_mode=WAL")
+    await conn.execute("PRAGMA synchronous=NORMAL")
+
+
 def _metrics_to_row(metrics: UsageMetrics, event_id: str) -> tuple[str, str, str, str, str, str]:
     """Serialize UsageMetrics to DB row (same schema as state UsageEvent)."""
     metrics_json = json.dumps(
@@ -470,6 +476,7 @@ class SQLiteMeteringStorage(MeteringStorageBase):
         """
         self._db_path = Path(db_path)
         self._retention_ttl_seconds = retention_ttl_seconds
+        self._initialized = False
 
     async def _ensure_table(self, conn: aiosqlite.Connection) -> None:
         """Create usage_events table and indexes if not exists."""
@@ -499,9 +506,16 @@ class SQLiteMeteringStorage(MeteringStorageBase):
         )
         await conn.commit()
 
+    async def _ensure_table_once(self, conn: aiosqlite.Connection) -> None:
+        """Ensure table exists once per instance (lazy init)."""
+        if not self._initialized:
+            await self._ensure_table(conn)
+            self._initialized = True
+
     async def _record_impl(self, metrics: UsageMetrics) -> None:
         async with aiosqlite.connect(self._db_path) as conn:
-            await self._ensure_table(conn)
+            await _apply_wal_pragmas(conn)
+            await self._ensure_table_once(conn)
             event_id = f"evt_{uuid.uuid4().hex}"
             row = _metrics_to_row(metrics, event_id)
             await conn.execute(
@@ -516,7 +530,8 @@ class SQLiteMeteringStorage(MeteringStorageBase):
 
     async def _query_impl(self, filters: MeteringQuery) -> list[UsageMetrics]:
         async with aiosqlite.connect(self._db_path) as conn:
-            await self._ensure_table(conn)
+            await _apply_wal_pragmas(conn)
+            await self._ensure_table_once(conn)
             conditions: list[str] = []
             params: list[Any] = []
             if filters.agent_id is not None:
@@ -566,7 +581,8 @@ class SQLiteMeteringStorage(MeteringStorageBase):
             events = await self._query_impl(agg_filters)
         else:
             async with aiosqlite.connect(self._db_path) as conn:
-                await self._ensure_table(conn)
+                await _apply_wal_pragmas(conn)
+                await self._ensure_table_once(conn)
                 cursor = await conn.execute(
                     f"""
                     SELECT id, task_id, agent_id, consumer_id, metrics, timestamp
@@ -619,7 +635,8 @@ class SQLiteMeteringStorage(MeteringStorageBase):
             events = await self._query_impl(summary_filters)
         else:
             async with aiosqlite.connect(self._db_path) as conn:
-                await self._ensure_table(conn)
+                await _apply_wal_pragmas(conn)
+                await self._ensure_table_once(conn)
                 cursor = await conn.execute(
                     f"""
                     SELECT id, task_id, agent_id, consumer_id, metrics, timestamp
@@ -638,7 +655,8 @@ class SQLiteMeteringStorage(MeteringStorageBase):
     async def _stats_impl(self) -> StorageStats:
         """Compute storage stats from SQLite."""
         async with aiosqlite.connect(self._db_path) as conn:
-            await self._ensure_table(conn)
+            await _apply_wal_pragmas(conn)
+            await self._ensure_table_once(conn)
             cursor = await conn.execute(
                 f"""
                 SELECT COUNT(*), MIN(timestamp)
@@ -670,7 +688,8 @@ class SQLiteMeteringStorage(MeteringStorageBase):
         cutoff = cutoff.replace(microsecond=0)
         cutoff_str = cutoff.isoformat()
         async with aiosqlite.connect(self._db_path) as conn:
-            await self._ensure_table(conn)
+            await _apply_wal_pragmas(conn)
+            await self._ensure_table_once(conn)
             cursor = await conn.execute(
                 f"""
                 DELETE FROM {_USAGE_EVENTS_TABLE}
