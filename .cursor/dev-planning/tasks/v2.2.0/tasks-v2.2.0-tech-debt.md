@@ -1,5 +1,7 @@
 # Tasks: v2.2.0 Tech Debt & Security Hardening
 
+**Status: ✅ Release completed.** v2.1.1 merged to `main`; tag and PyPI publish when ready.
+
 Based on the [v2.1.0 Red-Team Code Review](../code-review/v2.1.0/review-notes.md), these tasks map the critical architectural, security, and concurrency findings into actionable implementation steps. They **must be completed before** starting the new v2.2.0 Scale & Registry features.
 
 ## Relevant Files
@@ -158,7 +160,7 @@ Based on the [v2.1.0 Red-Team Code Review](../code-review/v2.1.0/review-notes.md
     - **Why**: Gives agents the ability to optimize for latency over bandwidth.
     - **Verify**: Unit test that verifies compression method selection changes when the flag is truthy.
 
-- [ ] 5.0 Release v2.1.1 (PyPI)
+- [x] 5.0 Release v2.1.1 (PyPI)
   **Trigger / entry point:** All previous Tech Debt tasks (1.0 to 4.0) are completed and tested.
   **Enables:** Distribution of ASAP Protocol `v2.1.1` to users fixing critical architecture and security bugs.
   **Depends on:** `tests/` passing, `ruff` passing, `mypy` passing.
@@ -175,7 +177,7 @@ Based on the [v2.1.0 Red-Team Code Review](../code-review/v2.1.0/review-notes.md
     - **Why**: Maintain rigorous historical records for users relying on the SDK.
     - **Verify**: CHANGELOG renders correctly in markdown preview.
 
-  - [ ] 5.3 Git Tag and trigger Trusted Publishing
+  - [x] 5.3 Git Tag and trigger Trusted Publishing
     - **File**: Terminal / Git (Action)
     - **What**: Commit the version bumps, then create and push an annotated git tag: `git tag -a v2.1.1 -m "Release v2.1.1" && git push origin v2.1.1`.
     - **Why**: Pushing a tag starting with `v*` will trigger `.github/workflows/release.yml`, which bundles the sdist/wheel and securely publishes to PyPI without manual tokens.

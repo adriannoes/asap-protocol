@@ -7,7 +7,7 @@
 
 > A production-ready protocol for agent-to-agent communication and task coordination.
 
-**Quick Info**: `v2.1.0` | `Apache 2.0` | `Python 3.13+` | [Marketplace](https://asap-protocol.vercel.app/) | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
+**Quick Info**: `v2.1.1` | `Apache 2.0` | `Python 3.13+` | [Marketplace](https://asap-protocol.vercel.app/) | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
 
 > 🚀 **Live now** our agentic marketplace**](https://asap-protocol.vercel.app/) — Browse agents, register yours, request verification.
 
