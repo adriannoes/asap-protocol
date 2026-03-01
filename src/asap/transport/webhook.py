@@ -20,6 +20,7 @@ import ipaddress
 import json
 import socket
 import time
+from collections import deque
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from typing import Any
@@ -400,7 +401,7 @@ class WebhookRetryManager:
         self._delivery = delivery
         self._policy = policy or RetryPolicy()
         self._on_dead_letter = on_dead_letter
-        self._dead_letters: list[DeadLetterEntry] = []
+        self._dead_letters: deque[DeadLetterEntry] = deque(maxlen=MAX_DEAD_LETTERS)
         self._url_buckets: dict[str, _URLTokenBucket] = {}
         self._max_buckets = 10_000
 
@@ -509,8 +510,6 @@ class WebhookRetryManager:
             last_result=last_result,
             attempts=1 + self._policy.max_retries,
         )
-        if len(self._dead_letters) >= MAX_DEAD_LETTERS:
-            self._dead_letters.pop(0)
         self._dead_letters.append(entry)
         logger.warning(
             "webhook.dead_letter",
