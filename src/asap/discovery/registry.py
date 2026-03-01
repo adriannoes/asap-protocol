@@ -8,7 +8,6 @@ listed agents.
 from __future__ import annotations
 
 import asyncio
-import threading
 import time
 from datetime import datetime
 from typing import Any
@@ -42,7 +41,6 @@ REGISTRY_CATEGORIES: tuple[str, ...] = (
 # Module-level cache: registry_url -> (expiry_monotonic, LiteRegistry).
 _registry_cache: dict[str, tuple[float, "LiteRegistry"]] = {}
 _registry_locks: dict[str, asyncio.Lock] = {}
-_registry_locks_guard = threading.Lock()
 
 
 class RegistryEntry(ASAPBaseModel):
@@ -166,10 +164,7 @@ async def discover_from_registry(
         httpx.HTTPError: On network or protocol errors.
         pydantic.ValidationError: If the response does not match LiteRegistry schema.
     """
-    with _registry_locks_guard:
-        if registry_url not in _registry_locks:
-            _registry_locks[registry_url] = asyncio.Lock()
-        url_lock = _registry_locks[registry_url]
+    url_lock = _registry_locks.setdefault(registry_url, asyncio.Lock())
     async with url_lock:
         now = time.monotonic()
         cached = _registry_cache.get(registry_url)
@@ -194,9 +189,8 @@ async def discover_from_registry(
 
 def reset_registry_cache() -> None:
     """Clear the module-level registry cache and coalescing locks (for test isolation)."""
-    with _registry_locks_guard:
-        _registry_cache.clear()
-        _registry_locks.clear()
+    _registry_cache.clear()
+    _registry_locks.clear()
 
 
 def find_by_skill(registry: LiteRegistry, skill: str) -> list[RegistryEntry]:
@@ -264,7 +258,7 @@ def generate_registry_entry(
         category=category,
         tags=tags or [],
         asap_version=manifest.capabilities.asap_version,
-        repository_url=repository_url or None,
-        documentation_url=documentation_url or None,
+        repository_url=(repository_url.strip() or None) if repository_url else None,
+        documentation_url=(documentation_url.strip() or None) if documentation_url else None,
         built_with=(built_with.strip() or None) if built_with else None,
     )
