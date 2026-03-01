@@ -135,17 +135,7 @@ class JWKSValidator:
         self._lock = asyncio.Lock()
 
     async def fetch_keys(self, jwks_uri: Optional[str] = None) -> jwk.KeySet:
-        """Fetch JWKS from URI and return KeySet.
-
-        Uses a thread-safe cache with TTL of 24 hours. Repeated calls
-        within TTL return the cached KeySet without HTTP request.
-
-        Args:
-            jwks_uri: Override URI (defaults to constructor value).
-
-        Returns:
-            KeySet for JWT validation.
-        """
+        """Fetch JWKS; task-safe cache, 24h TTL. jwks_uri overrides constructor default."""
         uri = jwks_uri or self._jwks_uri
         async with self._lock:
             if (

@@ -188,7 +188,7 @@ async def discover_from_registry(
 
 
 def reset_registry_cache() -> None:
-    """Clear the module-level registry cache and coalescing locks (for test isolation)."""
+    """Clear the module-level registry cache and coalescing locks (TEST ONLY — not safe to call concurrently)."""
     _registry_cache.clear()
     _registry_locks.clear()
 

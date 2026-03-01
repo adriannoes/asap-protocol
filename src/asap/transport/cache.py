@@ -48,11 +48,9 @@ class CacheEntry:
 
 
 class ManifestCache:
-    """Thread-safe in-memory LRU cache for agent manifests.
+    """Thread-safe in-memory LRU cache for agent manifests (TTL, LRU eviction).
 
-    Provides TTL-based expiration, LRU eviction when max_size is reached,
-    and methods for cache management. Thread-safe for concurrent access
-    from multiple async tasks.
+    Uses threading.Lock for sync API; asyncio.Lock migration deferred (CONC-01).
 
     Attributes:
         _cache: OrderedDict mapping URL to CacheEntry (maintains LRU order)
