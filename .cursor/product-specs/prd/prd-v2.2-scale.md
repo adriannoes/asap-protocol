@@ -171,6 +171,7 @@ The Registry API Backend **leaves the public repo** and becomes private infrastr
 
 | Prerequisite | Source |
 |-------------|--------|
+| **v2.1.0 Tech Debt & Security Cleared** | [tasks-v2.2.0-tech-debt.md](../../tasks/v2.2.0/tasks-v2.2.0-tech-debt.md) must be done first! |
 | Consumer SDK live and adopted | v2.1 |
 | 500+ real agents in Lite Registry | Growth trigger — verify before starting |
 | ASAP OAuth2 infrastructure working | v1.1+ |

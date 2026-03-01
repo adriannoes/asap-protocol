@@ -310,6 +310,28 @@ class TestCreateLimiter:
         with patch.dict("sys.modules", {"redis": None}), pytest.raises(ImportError, match="redis"):
             create_limiter(storage_uri="redis://localhost:6379")
 
+    def test_create_limiter_uses_asap_rate_limit_backend_env(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """create_limiter uses ASAP_RATE_LIMIT_BACKEND when storage_uri not passed (task 3.4)."""
+        monkeypatch.delenv("ASAP_RATE_LIMIT_BACKEND", raising=False)
+        limiter = create_limiter()
+        assert isinstance(limiter, ASAPRateLimiter)
+        monkeypatch.setenv("ASAP_RATE_LIMIT_BACKEND", "memory://env-backend-test")
+        limiter2 = create_limiter()
+        assert isinstance(limiter2, ASAPRateLimiter)
+        req = MagicMock(client=MagicMock(host="192.168.1.1"))
+        limiter2.check(req)
+        assert limiter2.test(req) is True
+
+    def test_create_limiter_redis_uri_from_env_raises_when_redis_missing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When ASAP_RATE_LIMIT_BACKEND=redis://... and redis not installed, raise ImportError."""
+        monkeypatch.setenv("ASAP_RATE_LIMIT_BACKEND", "redis://localhost:6379/0")
+        with patch.dict("sys.modules", {"redis": None}), pytest.raises(ImportError, match="redis"):
+            create_limiter()
+
 
 class TestASAPRateLimiterTest:
     def test_test_method_returns_true(self) -> None:

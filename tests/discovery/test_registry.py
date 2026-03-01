@@ -316,6 +316,29 @@ class TestGenerateRegistryEntry:
         assert entry.documentation_url == "https://docs.example.com/agent"
         assert entry.built_with == "CrewAI"
 
+    def test_whitespace_urls_resolve_to_none(self) -> None:
+        """repository_url and documentation_url with only whitespace become None."""
+        manifest = Manifest(
+            id="urn:asap:agent:my-agent",
+            name="My Agent",
+            version="1.0.0",
+            description="Does things",
+            capabilities=Capability(
+                asap_version="1.1.0",
+                skills=[Skill(id="skill_x", description="X")],
+            ),
+            endpoints=Endpoint(asap="https://example.com/asap", events=None),
+        )
+        endpoints = {"http": "https://example.com/asap"}
+        entry = generate_registry_entry(
+            manifest,
+            endpoints,
+            repository_url="   ",
+            documentation_url="\t\n  ",
+        )
+        assert entry.repository_url is None
+        assert entry.documentation_url is None
+
     def test_generates_entry_with_category_tags(self) -> None:
         """generate_registry_entry with category/tags produces valid entry (Sprint E4)."""
         manifest = Manifest(

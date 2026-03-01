@@ -7,9 +7,9 @@ Auth0, Keycloak, Azure AD, and other OIDC-compliant providers.
 
 from __future__ import annotations
 
+import asyncio
 import ipaddress
 import time
-from threading import Lock
 from typing import Any, Optional
 from urllib.parse import urlparse
 
@@ -119,7 +119,7 @@ class OIDCDiscovery:
         self._issuer_url = issuer_url.rstrip("/")
         self._transport = transport
         self._cache_entry: Optional[_DiscoveryCacheEntry] = None
-        self._lock = Lock()
+        self._lock = asyncio.Lock()
 
     async def discover(self) -> OIDCConfig:
         """Fetch and parse OIDC configuration from the provider.
@@ -135,13 +135,13 @@ class OIDCDiscovery:
             ValueError: If required fields (issuer, token_endpoint, jwks_uri)
                 are missing from the discovery response.
         """
-        with self._lock:
+        async with self._lock:
             if self._cache_entry is not None and not self._cache_entry.is_expired():
                 return self._cache_entry.config
 
         config = await self._fetch_discovery()
 
-        with self._lock:
+        async with self._lock:
             self._cache_entry = _DiscoveryCacheEntry(config, DISCOVERY_CACHE_TTL_SECONDS)
         return config
 

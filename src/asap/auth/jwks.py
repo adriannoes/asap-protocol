@@ -7,8 +7,8 @@ Caches JWKS with TTL 24 hours; cache is invalidated on validation failure.
 
 from __future__ import annotations
 
+import asyncio
 import time
-from threading import Lock
 from typing import Any, Optional
 
 import httpx
@@ -21,6 +21,9 @@ from asap.observability import get_logger
 logger = get_logger(__name__)
 
 JWKS_CACHE_TTL_SECONDS = 86400.0
+
+# RFC 8725 §3.2: restrict accepted algorithms to prevent Algorithm Confusion attacks.
+_ALLOWED_JWT_ALGORITHMS = ["EdDSA", "RS256", "ES256"]
 
 
 class _JWKSCacheEntry:
@@ -87,7 +90,7 @@ def validate_jwt(token: str, key_set: jwk.KeySet) -> Claims:
             fails (BadSignatureError, DecodeError, InvalidKeyIdError,
             ExpiredTokenError, MissingClaimError, etc.).
     """
-    token_obj = jose_jwt.decode(token, key_set)
+    token_obj = jose_jwt.decode(token, key_set, algorithms=_ALLOWED_JWT_ALGORITHMS)
     claims = dict(token_obj.claims)
 
     if "exp" not in claims:
@@ -129,22 +132,12 @@ class JWKSValidator:
         self._transport = transport
         self._key_set: Optional[jwk.KeySet] = None
         self._keys_cache: Optional[_JWKSCacheEntry] = None
-        self._lock = Lock()
+        self._lock = asyncio.Lock()
 
     async def fetch_keys(self, jwks_uri: Optional[str] = None) -> jwk.KeySet:
-        """Fetch JWKS from URI and return KeySet.
-
-        Uses a thread-safe cache with TTL of 24 hours. Repeated calls
-        within TTL return the cached KeySet without HTTP request.
-
-        Args:
-            jwks_uri: Override URI (defaults to constructor value).
-
-        Returns:
-            KeySet for JWT validation.
-        """
+        """Fetch JWKS; task-safe cache, 24h TTL. jwks_uri overrides constructor default."""
         uri = jwks_uri or self._jwks_uri
-        with self._lock:
+        async with self._lock:
             if (
                 self._keys_cache is not None
                 and not self._keys_cache.is_expired()
@@ -155,14 +148,14 @@ class JWKSValidator:
 
         key_set = await fetch_keys(uri, transport=self._transport)
 
-        with self._lock:
+        async with self._lock:
             self._keys_cache = _JWKSCacheEntry(key_set, JWKS_CACHE_TTL_SECONDS)
             self._key_set = key_set
         return key_set
 
-    def _invalidate_keys_cache(self) -> None:
+    async def _invalidate_keys_cache(self) -> None:
         """Clear JWKS cache on unknown kid or key rotation."""
-        with self._lock:
+        async with self._lock:
             self._keys_cache = None
             self._key_set = None
 
@@ -202,6 +195,6 @@ class JWKSValidator:
         try:
             return self.validate_jwt(token, key_set)
         except JoseError:
-            self._invalidate_keys_cache()
+            await self._invalidate_keys_cache()
             key_set = await self.fetch_keys(self._jwks_uri)
             return self.validate_jwt(token, key_set)

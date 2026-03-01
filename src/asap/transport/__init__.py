@@ -42,9 +42,11 @@ Example:
 """
 
 from asap.transport.cache import (
+    DEFAULT_CLEANUP_INTERVAL,
     DEFAULT_MAX_SIZE,
     DEFAULT_TTL,
     ManifestCache,
+    start_periodic_cleanup,
 )
 from asap.transport.client import (
     ASAPClient,
@@ -124,6 +126,8 @@ __all__ = [
     "ManifestCache",
     "DEFAULT_TTL",
     "DEFAULT_MAX_SIZE",
+    "DEFAULT_CLEANUP_INTERVAL",
+    "start_periodic_cleanup",
     # Compression
     "COMPRESSION_THRESHOLD",
     "CompressionAlgorithm",

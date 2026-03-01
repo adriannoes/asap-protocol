@@ -7,9 +7,9 @@
 
 > A production-ready protocol for agent-to-agent communication and task coordination.
 
-**Quick Info**: `v2.1.0` | `Apache 2.0` | `Python 3.13+` | [Marketplace](https://asap-protocol.vercel.app/) | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
+**Quick Info**: `v2.1.1` | `Apache 2.0` | `Python 3.13+` | [Marketplace](https://asap-protocol.vercel.app/) | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
 
-> 🚀 **Live now** our agentic marketplace**](https://asap-protocol.vercel.app/) — Browse agents, register yours, request verification.
+> 🚀 **Live now** our [agentic marketplace**](https://asap-protocol.vercel.app/) — Browse agents, register yours, request verification.
 
 ## Why ASAP?
 
@@ -29,11 +29,11 @@ For simple point-to-point communication, a basic HTTP API might suffice; ASAP sh
 - **Async-native** — `asyncio` + `httpx`; sync and async handlers supported.
 - **MCP integration** — Tool execution and coordination in a single envelope.
 - **Observable** — `trace_id` and `correlation_id` for debugging.
-- **Security** — Bearer auth, OAuth2/JWT (v1.1), Ed25519 signed manifests (v1.2), optional mTLS, replay prevention, HTTPS, rate limiting. [v1.1 Security Model](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/v1.1-security-model.md) (trust limits, Custom Claims).
+- **Security** — Bearer auth, OAuth2/JWT, Ed25519 signed manifests, optional mTLS, replay prevention, HTTPS, rate limiting. [Security Model](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/v1.1-security-model.md) (trust limits, Custom Claims).
 - **Economics** — Usage metering, delegation tokens, SLA framework with breach alerts.
 
 ### 🆕 Framework Ecosystem
-ASAP is built for interoperability. Seamlessly integrate your agents into **OpenClaw**,**LangChain**, **CrewAI** and **LlamaIndex** workflows using our growing library of native adapters and standardized tool-calling schemas.
+ASAP is built for interoperability. Seamlessly integrate your agents into **OpenClaw**, **LangChain**, **CrewAI** and **LlamaIndex** workflows using our growing library of native adapters and standardized tool-calling schemas.
 
 ## Installation
 
@@ -49,7 +49,7 @@ Or with pip:
 pip install asap-protocol
 ```
 
-📦 **Available on [PyPI](https://pypi.org/project/asap-protocol/)**. For reproducible environments, prefer `uv` when possible.
+📦 **Available on [PyPI](https://pypi.org/project/asap-protocol/)** — for reproducible environments, prefer `uv` when possible.
 
 ## Quick Start
 
@@ -88,10 +88,6 @@ pytest --asap-agent-url https://your-agent.example.com -m asap_compliance
 
 See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/compliance-testing.md) for handshake, schema and state machine validation.
 
-## Benchmarks
-
-[Benchmark Results](https://github.com/adriannoes/asap-protocol/blob/main/benchmarks/RESULTS.md): load (1,500+ RPS), stress, memory.
-
 ## Documentation
 
 **Learn**
@@ -122,10 +118,10 @@ See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/
 asap --version                                    # Show version
 asap list-schemas                                 # List all available schemas
 asap export-schemas                               # Export JSON schemas to file
-asap keys generate -o key.pem                     # Generate Ed25519 keypair (v1.2)
-asap manifest sign -k key.pem manifest.json       # Sign manifest (v1.2)
-asap manifest verify signed.json                  # Verify signature (v1.2)
-asap manifest info signed.json                    # Show trust level (v1.2)
+asap keys generate -o key.pem                     # Generate Ed25519 keypair
+asap manifest sign -k key.pem manifest.json       # Sign manifest
+asap manifest verify signed.json                  # Verify signature
+asap manifest info signed.json                    # Show trust level
 ```
 
 See [CLI reference](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/identity-signing.md) or run `asap --help`.
@@ -135,13 +131,6 @@ See [docs index](https://github.com/adriannoes/asap-protocol/blob/main/docs/inde
 ## What's Next? 🔭
 
 ASAP is evolving toward an **Agent Marketplace** — an open ecosystem where AI agents discover, trust and collaborate autonomously:
-
-- **v1.1**: Identity Layer (OAuth2, WebSocket, Discovery) ✅
-- **v1.2**: Trust Layer (Signed Manifests, Compliance Harness, mTLS) ✅
-- **v1.3**: Economics Layer (Metering, SLAs, Delegation) ✅
-- **v1.4**: Resilience & Scale (Type Safety, Storage Pagination) ✅
-- **v2.0**: Agent Marketplace with Web App (Lean Registry, Verified Badge, IssueOps) ✅
-- **v2.1**: PyPI distribution, Consumer SDK, framework integrations (LangChain, CrewAI, LlamaIndex, SmolAgents, OpenClaw) ✅
 
 See our [vision document](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/strategy/vision-agent-marketplace.md) for the full roadmap.
 

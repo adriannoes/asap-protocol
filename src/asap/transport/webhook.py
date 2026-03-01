@@ -20,6 +20,7 @@ import ipaddress
 import json
 import socket
 import time
+from collections import deque
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from typing import Any
@@ -37,6 +38,9 @@ X_ASAP_SIGNATURE_HEADER = "X-ASAP-Signature"
 
 # Default timeout for webhook HTTP requests (seconds).
 DEFAULT_WEBHOOK_TIMEOUT = 10.0
+
+# Maximum number of dead-letter entries to retain (evict oldest when exceeded).
+MAX_DEAD_LETTERS = 1000
 
 # Allowed URL schemes.
 _ALLOWED_SCHEMES_STRICT = frozenset({"https"})
@@ -397,7 +401,7 @@ class WebhookRetryManager:
         self._delivery = delivery
         self._policy = policy or RetryPolicy()
         self._on_dead_letter = on_dead_letter
-        self._dead_letters: list[DeadLetterEntry] = []
+        self._dead_letters: deque[DeadLetterEntry] = deque(maxlen=MAX_DEAD_LETTERS)
         self._url_buckets: dict[str, _URLTokenBucket] = {}
         self._max_buckets = 10_000
 

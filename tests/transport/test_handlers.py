@@ -544,6 +544,36 @@ class TestTaskRequestHandler:
         assert response_payload.task_id is not None
         assert len(response_payload.task_id) > 0
 
+    def test_echo_handler_raises_validation_error_on_invalid_payload(
+        self, sample_manifest: Manifest
+    ) -> None:
+        """Test echo handler raises ValidationError when payload fails Pydantic validation."""
+        from types import SimpleNamespace
+
+        from pydantic import ValidationError
+
+        from asap.transport.handlers import create_echo_handler
+
+        # Envelope normally validates payload on build; use a minimal object that
+        # exposes invalid payload_dict (missing required skill_id) to exercise
+        # TaskRequest.model_validate() inside the handler.
+        invalid_payload = {"conversation_id": "conv_1", "input": {}}
+        envelope_like = SimpleNamespace(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:server",
+            id="env-1",
+            trace_id=None,
+            payload_dict=invalid_payload,
+        )
+        handler = create_echo_handler()
+        with pytest.raises(ValidationError) as exc_info:
+            handler(envelope_like, sample_manifest)
+        errors = exc_info.value.errors()
+        assert any("skill_id" in str(loc) for e in errors for loc in (e.get("loc") or ())), (
+            f"Expected skill_id in validation errors, got: {errors}"
+        )
+
 
 class TestDefaultRegistry:
     """Tests for creating a pre-configured registry with default handlers."""

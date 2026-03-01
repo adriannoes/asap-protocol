@@ -9,8 +9,9 @@ This module provides middleware that:
 
 **Rate limit storage:** The default limiter uses in-memory storage (``memory://``).
 The configured limit is per-process; with multiple workers (e.g. Gunicorn), the
-effective limit is approximately limit × number of workers. Use Redis for
-shared limits in production (planned for v1.2.0).
+effective limit is approximately limit × number of workers. Set
+**ASAP_RATE_LIMIT_BACKEND=redis://host:port/db** for shared limits (requires
+``pip install 'asap-protocol[redis]'``). Future middleware work: see backlog (v2.1.1).
 
 Example:
     >>> from asap.transport.middleware import AuthenticationMiddleware, BearerTokenValidator
