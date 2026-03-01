@@ -6,6 +6,7 @@ import asyncio
 import concurrent.futures
 import json
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
@@ -55,7 +56,6 @@ def _run_sync(coro: Any) -> Any:
 
 
 def _snapshot_to_row(snapshot: StateSnapshot) -> tuple[str, str, int, str, int, str]:
-    """Serialize StateSnapshot to DB row (task_id, id, version, data, checkpoint, created_at)."""
     data_json = json.dumps(snapshot.data)
     created_at = snapshot.created_at.isoformat()
     checkpoint = 1 if snapshot.checkpoint else 0
@@ -70,7 +70,6 @@ def _snapshot_to_row(snapshot: StateSnapshot) -> tuple[str, str, int, str, int, 
 
 
 def _row_to_snapshot(row: tuple[Any, ...]) -> StateSnapshot:
-    """Build StateSnapshot from DB row (task_id, id, version, data, checkpoint, created_at)."""
     task_id, id_, version, data_json, checkpoint, created_at_str = row
     data = json.loads(data_json)
     created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
@@ -85,7 +84,6 @@ def _row_to_snapshot(row: tuple[Any, ...]) -> StateSnapshot:
 
 
 def _event_to_row(event: UsageEvent, event_id: str) -> tuple[str, str, str, str, str, str]:
-    """Serialize UsageEvent to DB row."""
     metrics_json = event.metrics.model_dump_json()
     ts = event.timestamp.isoformat()
     return (
@@ -99,7 +97,6 @@ def _event_to_row(event: UsageEvent, event_id: str) -> tuple[str, str, str, str,
 
 
 def _row_to_event(row: tuple[Any, ...]) -> UsageEvent:
-    """Build UsageEvent from DB row."""
     (
         _id,
         task_id,
@@ -128,11 +125,16 @@ class SQLiteSnapshotStore:
     """
 
     def __init__(self, db_path: str | Path = DEFAULT_DB_PATH) -> None:
-        """Initialize with database file path."""
         self._db_path = Path(db_path)
 
+    @asynccontextmanager
+    async def _connect(self) -> Any:
+        """Connection with WAL pragmas applied."""
+        async with aiosqlite.connect(self._db_path) as conn:
+            await _apply_wal_pragmas(conn)
+            yield conn
+
     async def _ensure_snapshots_table(self, conn: aiosqlite.Connection) -> None:
-        """Create snapshots table if not exists."""
         await conn.execute(
             f"""
             CREATE TABLE IF NOT EXISTS {SNAPSHOTS_TABLE} (
@@ -149,8 +151,7 @@ class SQLiteSnapshotStore:
         await conn.commit()
 
     async def _save_impl(self, snapshot: StateSnapshot) -> None:
-        async with aiosqlite.connect(self._db_path) as conn:
-            await _apply_wal_pragmas(conn)
+        async with self._connect() as conn:
             await self._ensure_snapshots_table(conn)
             row = _snapshot_to_row(snapshot)
             await conn.execute(
@@ -168,8 +169,7 @@ class SQLiteSnapshotStore:
         task_id: TaskID,
         version: int | None,
     ) -> StateSnapshot | None:
-        async with aiosqlite.connect(self._db_path) as conn:
-            await _apply_wal_pragmas(conn)
+        async with self._connect() as conn:
             await self._ensure_snapshots_table(conn)
             if version is not None:
                 cursor = await conn.execute(
@@ -197,8 +197,7 @@ class SQLiteSnapshotStore:
             return _row_to_snapshot(tuple(row))
 
     async def _list_versions_impl(self, task_id: TaskID) -> list[int]:
-        async with aiosqlite.connect(self._db_path) as conn:
-            await _apply_wal_pragmas(conn)
+        async with self._connect() as conn:
             await self._ensure_snapshots_table(conn)
             cursor = await conn.execute(
                 f"""
@@ -216,8 +215,7 @@ class SQLiteSnapshotStore:
         task_id: TaskID,
         version: int | None,
     ) -> bool:
-        async with aiosqlite.connect(self._db_path) as conn:
-            await _apply_wal_pragmas(conn)
+        async with self._connect() as conn:
             await self._ensure_snapshots_table(conn)
             if version is not None:
                 cursor = await conn.execute(
@@ -278,8 +276,7 @@ class SQLiteSnapshotStore:
 
     async def initialize(self) -> None:
         """Create tables if not exists (call from async context if needed)."""
-        async with aiosqlite.connect(self._db_path) as conn:
-            await _apply_wal_pragmas(conn)
+        async with self._connect() as conn:
             await self._ensure_snapshots_table(conn)
 
 
@@ -287,11 +284,16 @@ class SQLiteMeteringStore:
     """SQLite-backed MeteringStore; usage events persist across restarts."""
 
     def __init__(self, db_path: str | Path = DEFAULT_DB_PATH) -> None:
-        """Share db_path with SQLiteSnapshotStore for a single DB file."""
         self._db_path = Path(db_path)
 
+    @asynccontextmanager
+    async def _connect(self) -> Any:
+        """Connection with WAL pragmas applied."""
+        async with aiosqlite.connect(self._db_path) as conn:
+            await _apply_wal_pragmas(conn)
+            yield conn
+
     async def _ensure_usage_table(self, conn: aiosqlite.Connection) -> None:
-        """Create usage_events table and index if not exists."""
         await conn.execute(
             f"""
             CREATE TABLE IF NOT EXISTS {USAGE_EVENTS_TABLE} (
@@ -313,8 +315,7 @@ class SQLiteMeteringStore:
         await conn.commit()
 
     async def _record_impl(self, event: UsageEvent) -> None:
-        async with aiosqlite.connect(self._db_path) as conn:
-            await _apply_wal_pragmas(conn)
+        async with self._connect() as conn:
             await self._ensure_usage_table(conn)
             event_id = f"evt_{uuid.uuid4().hex}"
             row = _event_to_row(event, event_id)
@@ -336,8 +337,7 @@ class SQLiteMeteringStore:
         limit: int | None = None,
         offset: int = 0,
     ) -> list[UsageEvent]:
-        async with aiosqlite.connect(self._db_path) as conn:
-            await _apply_wal_pragmas(conn)
+        async with self._connect() as conn:
             await self._ensure_usage_table(conn)
             start_s = start.isoformat()
             end_s = end.isoformat()
@@ -359,8 +359,7 @@ class SQLiteMeteringStore:
             return [_row_to_event(tuple(r)) for r in rows]
 
     async def _aggregate_impl(self, agent_id: str, period: str) -> UsageAggregate:
-        async with aiosqlite.connect(self._db_path) as conn:
-            await _apply_wal_pragmas(conn)
+        async with self._connect() as conn:
             await self._ensure_usage_table(conn)
             cursor = await conn.execute(
                 f"""
@@ -413,6 +412,5 @@ class SQLiteMeteringStore:
 
     async def initialize(self) -> None:
         """Create usage_events table if not exists."""
-        async with aiosqlite.connect(self._db_path) as conn:
-            await _apply_wal_pragmas(conn)
+        async with self._connect() as conn:
             await self._ensure_usage_table(conn)
