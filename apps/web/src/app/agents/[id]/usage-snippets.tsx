@@ -62,8 +62,8 @@ export function UsageSnippets({ agentId, agent }: UsageSnippetsProps) {
             </CardHeader>
             <CardContent>
                 <Tabs defaultValue="node" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8 h-auto md:h-10">
-                        <TabsTrigger value="node">Node.js</TabsTrigger>
+                    <TabsList className="flex flex-wrap h-auto w-full justify-start gap-1 p-1">
+                        <TabsTrigger value="node" className="flex-grow sm:flex-grow-0">Node.js</TabsTrigger>
                         <TabsTrigger value="langchain">LangChain</TabsTrigger>
                         <TabsTrigger value="llamaindex">LlamaIndex</TabsTrigger>
                         <TabsTrigger value="crewai">CrewAI</TabsTrigger>
