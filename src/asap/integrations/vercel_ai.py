@@ -4,19 +4,31 @@ Provides HTTP endpoints that return tool definitions in JSON Schema format,
 compatible with Vercel AI SDK's `tool({ parameters: jsonSchema(...) })`.
 The frontend fetches tool definitions and invokes agents via POST /invoke.
 
+SECURITY WARNING: This router does **not** apply authentication by default.
+Endpoints (/tools, /invoke, /discover) are exposed without auth and may allow
+any caller to invoke agents. For production, pass ``api_key_header`` to
+require a shared secret header (e.g. ``X-API-Key``), or mount the router
+behind your own auth middleware (e.g. OAuth2, API key middleware).
+
 Usage:
     from fastapi import FastAPI
     from asap.integrations.vercel_ai import create_asap_tools_router
 
     app = FastAPI()
     app.include_router(create_asap_tools_router(), prefix="/api/asap", tags=["asap-tools"])
+    # With optional API key auth:
+    app.include_router(
+        create_asap_tools_router(api_key_header="X-API-Key"),
+        prefix="/api/asap",
+        tags=["asap-tools"],
+    )
 """
 
 from __future__ import annotations
 
 from typing import Any, cast
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from asap.client.cache import get_registry
@@ -116,16 +128,34 @@ def create_asap_tools_router(
     registry_url: str = DEFAULT_REGISTRY_URL,
     whitelist_urns: list[str] | None = None,
     auth_token: str | None = None,
+    api_key_header: str | None = None,
 ) -> APIRouter:
-    """FastAPI router: GET /tools, POST /invoke, GET /discover for Vercel AI SDK."""
+    """FastAPI router: GET /tools, POST /invoke, GET /discover for Vercel AI SDK.
+
+    When ``api_key_header`` is set (e.g. ``X-API-Key``), all routes require
+    that header to be present and non-empty; otherwise 401 is returned.
+    """
     client = MarketClient(
         registry_url=registry_url,
         auth_token=auth_token,
     )
     router = APIRouter()
 
+    async def _require_api_key(request: Request) -> None:
+        if api_key_header is None:
+            return
+        value = (request.headers.get(api_key_header) or "").strip()
+        if not value:
+            raise HTTPException(
+                status_code=401,
+                detail="Missing or empty API key",
+                headers={"WWW-Authenticate": "ApiKey"},
+            )
+
     @router.get("/tools", response_model=ToolsListResponse)
-    async def list_tools() -> ToolsListResponse:
+    async def list_tools(
+        _: None = Depends(_require_api_key),
+    ) -> ToolsListResponse:
         tools: list[ToolDefinition] = [
             ToolDefinition(
                 name=ASAP_INVOKE_TOOL_DEF["name"],
@@ -152,7 +182,10 @@ def create_asap_tools_router(
         return ToolsListResponse(tools=tools)
 
     @router.post("/invoke", response_model=InvokeResponse)
-    async def invoke_agent(req: InvokeRequest) -> InvokeResponse:
+    async def invoke_agent(
+        req: InvokeRequest,
+        _: None = Depends(_require_api_key),
+    ) -> InvokeResponse:
         try:
             agent = await client.resolve(req.urn)
             skill_id = (
@@ -178,7 +211,10 @@ def create_asap_tools_router(
             return InvokeResponse(error=str(e))
 
     @router.get("/discover")
-    async def discover_agents(query: str = "") -> list[dict[str, Any]]:
+    async def discover_agents(
+        query: str = "",
+        _: None = Depends(_require_api_key),
+    ) -> list[dict[str, Any]]:
         try:
             registry = await get_registry(registry_url)
             return _search_registry(registry, query)
