@@ -70,12 +70,14 @@ def _signed_manifest_json() -> str:
 def _app_with_router(
     whitelist_urns: list[str] | None = None,
     api_key_header: str | None = None,
+    api_key_value: str | None = None,
 ) -> FastAPI:
     app = FastAPI()
     router = create_asap_tools_router(
         registry_url="https://reg.example/registry.json",
         whitelist_urns=whitelist_urns,
         api_key_header=api_key_header,
+        api_key_value=api_key_value,
     )
     app.include_router(router, prefix="/api/asap", tags=["asap-tools"])
     return app
@@ -213,3 +215,28 @@ def test_api_key_header_accepts_valid_header() -> None:
     data = r.json()
     assert "tools" in data
     assert len(data["tools"]) >= 1
+
+
+def test_api_key_value_returns_401_when_wrong() -> None:
+    """When api_key_value is set, wrong header value returns 401 Invalid API key."""
+    app = _app_with_router(
+        api_key_header="X-API-Key",
+        api_key_value="expected-secret",
+    )
+    client = TestClient(app)
+    r = client.get("/api/asap/tools", headers={"X-API-Key": "wrong-value"})
+    assert r.status_code == 401
+    assert r.json().get("detail") == "Invalid API key"
+
+
+def test_api_key_value_accepts_matching_value() -> None:
+    """When api_key_value is set, matching header value returns 200."""
+    app = _app_with_router(
+        api_key_header="X-API-Key",
+        api_key_value="expected-secret",
+    )
+    client = TestClient(app)
+    r = client.get("/api/asap/tools", headers={"X-API-Key": "expected-secret"})
+    assert r.status_code == 200
+    data = r.json()
+    assert "tools" in data

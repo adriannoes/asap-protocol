@@ -26,6 +26,7 @@ Usage:
 
 from __future__ import annotations
 
+import hmac
 from typing import Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -129,11 +130,14 @@ def create_asap_tools_router(
     whitelist_urns: list[str] | None = None,
     auth_token: str | None = None,
     api_key_header: str | None = None,
+    api_key_value: str | None = None,
 ) -> APIRouter:
     """FastAPI router: GET /tools, POST /invoke, GET /discover for Vercel AI SDK.
 
     When ``api_key_header`` is set (e.g. ``X-API-Key``), all routes require
     that header to be present and non-empty; otherwise 401 is returned.
+    If ``api_key_value`` is also set, the header value must match (constant-time
+    comparison) or 401 is returned.
     """
     client = MarketClient(
         registry_url=registry_url,
@@ -149,6 +153,12 @@ def create_asap_tools_router(
             raise HTTPException(
                 status_code=401,
                 detail="Missing or empty API key",
+                headers={"WWW-Authenticate": "ApiKey"},
+            )
+        if api_key_value is not None and not hmac.compare_digest(value, api_key_value):
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid API key",
                 headers={"WWW-Authenticate": "ApiKey"},
             )
 
