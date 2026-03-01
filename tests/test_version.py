@@ -1,6 +1,9 @@
+import importlib.metadata
+
 from asap import __version__
 
 
 def test_version():
-    """Test that the package version is exposed correctly."""
-    assert __version__ == "2.0.0"
+    """Package __version__ matches installed package metadata (pyproject.toml)."""
+    expected = importlib.metadata.version("asap-protocol")
+    assert __version__ == expected
