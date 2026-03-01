@@ -37,7 +37,7 @@ describe('submitAgentRegistration', () => {
         auth.mockResolvedValue({
             user: { id: 'u1', username: 'testuser', name: 'Test' },
         } as never);
-        isAllowedExternalUrl.mockReturnValue({ valid: true });
+        isAllowedExternalUrl.mockResolvedValue({ valid: true });
         checkRateLimit.mockReturnValue(true);
     });
 
@@ -72,7 +72,7 @@ describe('submitAgentRegistration', () => {
     });
 
     it('returns error when manifest URL fails SSRF check', async () => {
-        isAllowedExternalUrl.mockImplementation((url: string) => {
+        isAllowedExternalUrl.mockImplementation(async (url: string) => {
             if (url.includes('manifest')) return { valid: false, error: 'Internal/Private network addresses are not allowed.' };
             return { valid: true };
         });
@@ -83,7 +83,7 @@ describe('submitAgentRegistration', () => {
     });
 
     it('returns error when endpoint URL fails SSRF check', async () => {
-        isAllowedExternalUrl.mockImplementation((url: string) => {
+        isAllowedExternalUrl.mockImplementation(async (url: string) => {
             if (url.includes('asap')) return { valid: false, error: 'Internal/Private network addresses are not allowed.' };
             return { valid: true };
         });
@@ -94,7 +94,7 @@ describe('submitAgentRegistration', () => {
 
     it('returns error when WebSocket URL fails SSRF check', async () => {
         const formWithWs = { ...validForm, endpoint_ws: 'wss://169.254.169.254/internal' };
-        isAllowedExternalUrl.mockImplementation((url: string) => {
+        isAllowedExternalUrl.mockImplementation(async (url: string) => {
             if (url.includes('169.254') || url.includes('internal'))
                 return { valid: false, error: 'Internal/Private network addresses are not allowed.' };
             return { valid: true };

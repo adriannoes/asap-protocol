@@ -47,7 +47,7 @@ export async function isAllowedExternalUrl(url: string): Promise<AllowedUrlResul
                     return { valid: false, error: `Resolved IP (${ip}) is an internal/private address.` };
                 }
             }
-        } catch (dnsError) {
+        } catch {
             return { valid: false, error: 'Could not resolve hostname.' };
         }
 
