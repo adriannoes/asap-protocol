@@ -4,62 +4,62 @@ import { isAllowedExternalUrl, isAllowedProxyUrl } from './url-validator';
 import { isAllowedProxyUrlAsync } from './url-validator-server';
 
 describe('isAllowedExternalUrl', () => {
-    it('allows valid public HTTPS URL', () => {
-        expect(isAllowedExternalUrl('https://example.com/manifest')).toEqual({ valid: true });
-        expect(isAllowedExternalUrl('https://api.myagent.io')).toEqual({ valid: true });
+    it('allows valid external URLs', async () => {
+        expect(await isAllowedExternalUrl('https://example.com/manifest')).toEqual({ valid: true });
+        expect(await isAllowedExternalUrl('https://api.myagent.io')).toEqual({ valid: true });
     });
 
-    it('allows valid public HTTP URL', () => {
-        expect(isAllowedExternalUrl('http://example.com')).toEqual({ valid: true });
+    it('allows http scheme', async () => {
+        expect(await isAllowedExternalUrl('http://example.com')).toEqual({ valid: true });
     });
 
-    it('rejects localhost', () => {
-        expect(isAllowedExternalUrl('http://localhost:8080').valid).toBe(false);
-        expect(isAllowedExternalUrl('https://localhost/manifest').valid).toBe(false);
+    it('blocks localhost', async () => {
+        expect((await isAllowedExternalUrl('http://localhost:8080')).valid).toBe(false);
+        expect((await isAllowedExternalUrl('https://localhost/manifest')).valid).toBe(false);
     });
 
-    it('rejects 127.0.0.1', () => {
-        expect(isAllowedExternalUrl('http://127.0.0.1:3000').valid).toBe(false);
+    it('blocks IPv4 loopback', async () => {
+        expect((await isAllowedExternalUrl('http://127.0.0.1:3000')).valid).toBe(false);
     });
 
-    it('rejects 0.0.0.0', () => {
-        expect(isAllowedExternalUrl('http://0.0.0.0:8080').valid).toBe(false);
+    it('blocks IPv4 unspecified', async () => {
+        expect((await isAllowedExternalUrl('http://0.0.0.0:8080')).valid).toBe(false);
     });
 
-    it('rejects IPv6 loopback ::1', () => {
-        expect(isAllowedExternalUrl('http://[::1]/manifest').valid).toBe(false);
+    it('blocks IPv6 loopback', async () => {
+        expect((await isAllowedExternalUrl('http://[::1]/manifest')).valid).toBe(false);
     });
 
-    it('rejects IPv6-mapped 127.0.0.1', () => {
-        expect(isAllowedExternalUrl('http://[::ffff:127.0.0.1]/manifest').valid).toBe(false);
+    it('blocks IPv4-mapped IPv6 loopback', async () => {
+        expect((await isAllowedExternalUrl('http://[::ffff:127.0.0.1]/manifest')).valid).toBe(false);
     });
 
-    it('rejects cloud metadata hostnames', () => {
-        expect(isAllowedExternalUrl('http://metadata.google.internal/computeMetadata/v1/').valid).toBe(false);
-        expect(isAllowedExternalUrl('http://metadata.aws.internal/').valid).toBe(false);
-        expect(isAllowedExternalUrl('http://169.254.169.254/latest/meta-data').valid).toBe(false);
+    it('blocks cloud metadata IPs', async () => {
+        expect((await isAllowedExternalUrl('http://metadata.google.internal/computeMetadata/v1/')).valid).toBe(false);
+        expect((await isAllowedExternalUrl('http://metadata.aws.internal/')).valid).toBe(false);
+        expect((await isAllowedExternalUrl('http://169.254.169.254/latest/meta-data')).valid).toBe(false);
     });
 
-    it('rejects private IPv4 ranges', () => {
-        expect(isAllowedExternalUrl('http://192.168.1.1').valid).toBe(false);
-        expect(isAllowedExternalUrl('http://10.0.0.1').valid).toBe(false);
-        expect(isAllowedExternalUrl('http://172.16.0.1').valid).toBe(false);
-        expect(isAllowedExternalUrl('http://172.31.255.255').valid).toBe(false);
+    it('blocks common private subnets', async () => {
+        expect((await isAllowedExternalUrl('http://192.168.1.1')).valid).toBe(false);
+        expect((await isAllowedExternalUrl('http://10.0.0.1')).valid).toBe(false);
+        expect((await isAllowedExternalUrl('http://172.16.0.1')).valid).toBe(false);
+        expect((await isAllowedExternalUrl('http://172.31.255.255')).valid).toBe(false);
     });
 
-    it('rejects non-HTTP(S) protocols', () => {
-        expect(isAllowedExternalUrl('file:///etc/passwd').valid).toBe(false);
-        expect(isAllowedExternalUrl('ftp://example.com').valid).toBe(false);
+    it('blocks non-http protocols', async () => {
+        expect((await isAllowedExternalUrl('file:///etc/passwd')).valid).toBe(false);
+        expect((await isAllowedExternalUrl('ftp://example.com')).valid).toBe(false);
     });
 
-    it('returns error message for invalid URL', () => {
-        const result = isAllowedExternalUrl('not-a-url');
+    it('handles invalid URL strings gracefully', async () => {
+        const result = await isAllowedExternalUrl('not-a-url');
         expect(result.valid).toBe(false);
-        expect(result.error).toBeDefined();
+        expect(result.error).toBe('Invalid URL.');
     });
 
-    it('returns error message for blocked host', () => {
-        const result = isAllowedExternalUrl('http://localhost');
+    it('validates protocol correctly', async () => {
+        const result = await isAllowedExternalUrl('http://localhost');
         expect(result.valid).toBe(false);
         expect(result.error).toContain('Internal/Private');
     });

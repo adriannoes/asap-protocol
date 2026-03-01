@@ -20,12 +20,14 @@ function isBlockedHostname(hostname: string): boolean {
 
 
 
+import dns from 'dns/promises';
+
 export interface AllowedUrlResult {
     valid: boolean;
     error?: string;
 }
 
-export function isAllowedExternalUrl(url: string): AllowedUrlResult {
+export async function isAllowedExternalUrl(url: string): Promise<AllowedUrlResult> {
     try {
         const parsed = new URL(url);
         if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
@@ -35,6 +37,20 @@ export function isAllowedExternalUrl(url: string): AllowedUrlResult {
         if (isBlockedHostname(hostname)) {
             return { valid: false, error: 'Internal/Private network addresses are not allowed.' };
         }
+
+        // DNS Rebinding / SSRF Protection
+        // Resolve the hostname and check if the returned IP is private/loopback
+        try {
+            const addresses = await dns.resolve(hostname);
+            for (const ip of addresses) {
+                if (isBlockedHostname(ip)) {
+                    return { valid: false, error: `Resolved IP (${ip}) is an internal/private address.` };
+                }
+            }
+        } catch (dnsError) {
+            return { valid: false, error: 'Could not resolve hostname.' };
+        }
+
         return { valid: true };
     } catch {
         return { valid: false, error: 'Invalid URL.' };
