@@ -170,7 +170,7 @@ def manifest_verify(
         typer.Option(
             "--public-key",
             "-k",
-            help="Path to private key PEM (public key is used for verification). Optional if manifest includes public_key.",
+            help="Path to Ed25519 private key PEM (public key is derived for verification). Optional if manifest includes embedded public_key.",
         ),
     ] = None,
 ) -> None:
