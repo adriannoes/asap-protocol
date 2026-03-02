@@ -411,9 +411,10 @@ _USAGE_EVENTS_TABLE = "usage_events"
 
 
 async def _apply_wal_pragmas(conn: aiosqlite.Connection) -> None:
-    """WAL + NORMAL sync for concurrency."""
+    """WAL + NORMAL sync for concurrency; busy_timeout to avoid 'database is locked' under load."""
     await conn.execute("PRAGMA journal_mode=WAL")
     await conn.execute("PRAGMA synchronous=NORMAL")
+    await conn.execute("PRAGMA busy_timeout=15000")
 
 
 def _metrics_to_row(metrics: UsageMetrics, event_id: str) -> tuple[str, str, str, str, str, str]:
