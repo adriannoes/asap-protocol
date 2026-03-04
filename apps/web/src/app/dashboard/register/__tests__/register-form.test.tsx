@@ -15,6 +15,14 @@ vi.mock('../actions', () => ({
     submitAgentRegistration: vi.fn()
 }));
 
+// Mock WebCrypto to prevent idb-keyval errors in tests
+vi.mock('@/lib/webcrypto', () => ({
+    generateAndStoreAgentKeys: vi.fn().mockResolvedValue({
+        publicKeyBase64: 'mocked-public-key',
+        success: true
+    })
+}));
+
 const mockSubmit = vi.mocked(actions.submitAgentRegistration);
 
 function fillValidFields() {
