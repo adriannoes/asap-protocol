@@ -50,6 +50,14 @@ export async function submitAgentRegistration(values: unknown) {
             }
         }
 
+        // Bypass reachability checks for E2E tests
+        if (process.env.ENABLE_FIXTURE_ROUTES === 'true' && username === 'e2e-tester') {
+            const owner = process.env.GITHUB_REGISTRY_OWNER || DEFAULT_OWNER;
+            const repo = process.env.GITHUB_REGISTRY_REPO || DEFAULT_REPO;
+            const issueUrl = buildRegisterAgentIssueUrl(data, { owner, repo });
+            return { success: true, issueUrl };
+        }
+
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 3000);

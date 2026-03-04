@@ -1,6 +1,7 @@
 import { createHash } from 'crypto';
 import NextAuth from 'next-auth';
 import GitHub from 'next-auth/providers/github';
+import Credentials from 'next-auth/providers/credentials';
 import { EncryptJWT, jwtDecrypt } from 'jose';
 
 // JWT secret; fail if unset or too short (CWE-326: weak key derivation).
@@ -30,11 +31,38 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             clientSecret: process.env.GITHUB_CLIENT_SECRET,
             authorization: { params: { scope: 'read:user' } },
         }),
+        // Test-login provider only when ENABLE_FIXTURE_ROUTES=true (E2E).
+        ...(process.env.ENABLE_FIXTURE_ROUTES === 'true'
+            ? [
+                Credentials({
+                    id: 'test-login',
+                    name: 'Test Login',
+                    credentials: {
+                        username: { label: 'Username', type: 'text' },
+                    },
+                    async authorize(credentials) {
+                        if (credentials?.username) {
+                            return {
+                                id: 'test-123',
+                                name: 'E2E Test User',
+                                email: 'test@example.com',
+
+                                username: credentials.username,
+                            };
+                        }
+                        return null;
+                    },
+                }),
+            ]
+            : []),
     ],
     callbacks: {
         jwt({ token, user, profile, account }) {
             if (user) {
                 token.id = user.id;
+                if ('username' in user && typeof (user as { username?: string }).username === 'string') {
+                    token.username = (user as { username: string }).username;
+                }
                 if (profile?.login) {
                     token.username = profile.login;
                 }
