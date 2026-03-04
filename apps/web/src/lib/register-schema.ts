@@ -27,6 +27,7 @@ export const ManifestSchema = z.object({
     built_with: z.string().optional(),
     repository_url: z.string().url().optional().or(z.literal('')),
     documentation_url: z.string().url().optional().or(z.literal('')),
+    public_key: z.string().optional(),
     confirm: z.boolean().refine((v) => v === true, {
         message: 'You must confirm before submitting.',
     }),
