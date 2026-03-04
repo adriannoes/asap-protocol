@@ -9,8 +9,8 @@ vi.mock('@/auth', () => ({
 
 const baseUrl = 'http://localhost:3000';
 
-/** Next.js middleware second argument (event/context); we only need to pass something. */
-const middlewareContext = {} as Record<string, unknown>;
+/** Compatible with Next.js AppRouteHandlerFnContext (second arg to proxy). */
+const middlewareContext = { params: Promise.resolve({}) };
 
 function createRequest(
     pathname: string,
