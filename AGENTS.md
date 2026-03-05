@@ -8,7 +8,7 @@
 **ASAP Protocol** (Async Simple Agent Protocol) is a production-ready standard for agent-to-agent communication.
 - **Stack**: Python 3.13+, FastAPI, Pydantic v2.
 - **Transport**: JSON-RPC 2.0 over HTTP/WebSocket.
-- **Status**: v2.0.0 (Released).
+- **Status**: v2.1.1 (Released).
 - **Framework Integrations**: LangChain, CrewAI, PydanticAI, LlamaIndex, SmolAgents, Vercel AI SDK, MCP, OpenClaw.
 
 ## Quick Start
@@ -16,7 +16,7 @@
 ```bash
 uv sync                                     # Install dependencies
 uv run pytest                               # Run tests (add -v for verbose)
-uv run asap serve --reload                  # Start dev server
+uv run uvicorn asap.transport.server:app --reload  # Start dev server
 uv run mypy src/ scripts/ tests/ && uv run ruff check src/  # Verify quality
 ```
 

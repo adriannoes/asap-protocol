@@ -7,9 +7,9 @@
 
 > A production-ready protocol for agent-to-agent communication and task coordination.
 
-**Quick Info**: `v2.1.1` | `Apache 2.0` | `Python 3.13+` | [Marketplace](https://asap-protocol.vercel.app/) | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
+**Quick Info**: `v2.1.1` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
 
-> 🚀 **Live now** our [agentic marketplace**](https://asap-protocol.vercel.app/) — Browse agents, register yours, request verification.
+> 🚀 **Live now** our [**agentic marketplace**](https://asap-protocol.vercel.app/) — Browse agents, register yours, request verification.
 
 ## Why ASAP?
 
@@ -18,7 +18,7 @@ Building multi-agent systems today suffers from three core technical challenges 
 2. **State Drift**: Lack of native persistence makes it impossible to reliably resume long-running agentic workflows.
 3. **Fragmentation**: No unified way to handle task delegation, artifact exchange and tool execution (MCP) in a single envelope.
 
-**ASAP** provides a production-ready communication layer that simplifies these complexities. It's ideal for **multi-agent orchestration**, **stateful workflows** (persistence, resumability), **MCP integration**, and **production systems** requiring high-performance, type-safe agent communication. 
+**ASAP** provides a production-ready communication layer that simplifies these complexities. It's ideal for **multi-agent orchestration**, **stateful workflows** (persistence, resumability), **MCP support** and **production systems** requiring high-performance, type-safe agent communication. 
 
 For simple point-to-point communication, a basic HTTP API might suffice; ASAP shines when you need orchestration, state management and multi-agent coordination. See the [spec](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/strategy/v0-original-specs.md) for details.
 
@@ -112,7 +112,9 @@ See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/
 
 ## CLI
 
-**v1.1** adds OAuth2, WebSocket, Discovery (well-known + Lite Registry), State Storage (SQLite), and Webhooks. **v1.2** adds Ed25519 signed manifests, trust levels, optional mTLS and the [Compliance Harness](https://github.com/adriannoes/asap-protocol/blob/main/asap-compliance/README.md). **v1.3** adds delegation commands (`asap delegation create`, `asap delegation revoke`).
+- **v1.1** adds OAuth2, WebSocket, Discovery (well-known + Lite Registry), State Storage (SQLite) and Webhooks. 
+- **v1.2** adds Ed25519 signed manifests, trust levels, optional mTLS and the [Compliance Harness](https://github.com/adriannoes/asap-protocol/blob/main/asap-compliance/README.md). 
+- **v1.3** adds delegation commands (`asap delegation create`, `asap delegation revoke`).
 
 ```bash
 asap --version                                    # Show version
@@ -128,17 +130,15 @@ See [CLI reference](https://github.com/adriannoes/asap-protocol/blob/main/docs/g
 
 See [docs index](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#v11-features-api-reference--guides) and [Identity Signing](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/identity-signing.md) for details.
 
-## What's Next? 🔭
+## 🔭 What's Next?
 
-ASAP is evolving toward an **Agent Marketplace** — an open ecosystem where AI agents discover, trust and collaborate autonomously:
-
-See our [vision document](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/strategy/vision-agent-marketplace.md) for the full roadmap.
+ASAP is evolving toward an **Agent Marketplace** — an open ecosystem where AI agents discover, trust and collaborate autonomously. See our [vision document](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/strategy/vision-agent-marketplace.md) for the full roadmap.
 
 ## Contributing
 
-**Community feedback and contributions are essential** for ASAP Protocol's evolution. 
+**Community feedback and contributions are essential** for ASAP Protocol's evolution. We're working on improvements and your input helps shape the future of the protocol. 
 
-We're working on improvements and your input helps shape the future of the protocol. Every contribution, from bug reports to feature suggestions, documentation improvements and code contributions, makes a real difference.
+Every contribution, from bug reports to feature suggestions, documentation improvements and code contributions, makes a real difference.
 
 Check out our [contributing guidelines](https://github.com/adriannoes/asap-protocol/blob/main/CONTRIBUTING.md) to get started. It's easier than you think! 🚀
 
