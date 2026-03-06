@@ -18,8 +18,8 @@ vi.mock('../actions', () => ({
 // Mock WebCrypto to prevent idb-keyval errors in tests
 vi.mock('@/lib/webcrypto', () => ({
     generateAndStoreAgentKeys: vi.fn().mockResolvedValue({
-        publicKeyBase64: 'mocked-public-key',
-        success: true
+        publicKey: 'mocked-public-key',
+        privateKey: {} as CryptoKey
     })
 }));
 
@@ -153,6 +153,7 @@ describe('RegisterAgentForm', () => {
                 built_with: '',
                 repository_url: '',
                 documentation_url: '',
+                public_key: 'mocked-public-key',
                 confirm: true,
             });
             expect(openSpy).toHaveBeenCalledWith(issueUrl, '_blank', 'noopener,noreferrer');
