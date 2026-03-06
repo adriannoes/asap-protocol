@@ -3,8 +3,8 @@ import { encode } from 'next-auth/jwt';
 import { cookies } from 'next/headers';
 
 export async function GET(request: Request) {
-    // Only allow this in test or development environments
-    if (process.env.NODE_ENV === 'production' && process.env.ENABLE_FIXTURE_ROUTES !== 'true') {
+    // Strictly deny access outside fixture-enabled non-production environments
+    if (process.env.ENABLE_FIXTURE_ROUTES !== 'true' || process.env.NODE_ENV === 'production') {
         return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
