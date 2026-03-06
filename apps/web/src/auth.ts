@@ -32,7 +32,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             authorization: { params: { scope: 'read:user' } },
         }),
         // Test-login provider only when ENABLE_FIXTURE_ROUTES=true (E2E).
-        ...(process.env.ENABLE_FIXTURE_ROUTES === 'true'
+        ...(process.env.ENABLE_FIXTURE_ROUTES === 'true' && process.env.NODE_ENV !== 'production'
             ? [
                 Credentials({
                     id: 'test-login',
@@ -47,7 +47,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                                 name: 'E2E Test User',
                                 email: 'test@example.com',
 
-                                username: credentials.username,
+                                username: String(credentials.username),
                             };
                         }
                         return null;
@@ -60,8 +60,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         jwt({ token, user, profile, account }) {
             if (user) {
                 token.id = user.id;
-                if ('username' in user && typeof (user as { username?: string }).username === 'string') {
-                    token.username = (user as { username: string }).username;
+                if (user.username) {
+                    token.username = user.username;
                 }
                 if (profile?.login) {
                     token.username = profile.login;
