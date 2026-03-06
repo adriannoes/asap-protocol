@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:load": "ENABLE_FIXTURE_ROUTES=true npx playwright test tests/load/browse-500.spec.ts"
+    "test:load": "ENABLE_FIXTURE_ROUTES=true npx playwright test tests/load/browse-500.spec.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -26,6 +29,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "embla-carousel-react": "^8.6.0",
+    "idb-keyval": "^6.2.2",
     "lucide-react": "^0.576.0",
     "next": "16.1.6",
     "next-auth": "5.0.0-beta.30",

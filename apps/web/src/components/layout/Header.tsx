@@ -11,6 +11,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MobileNav } from "./mobile-nav";
 
 export async function Header() {
     const session = await auth();
@@ -27,6 +28,11 @@ export async function Header() {
                         </div>
                         <span className="font-bold text-lg tracking-tight">ASAP Protocol</span>
                     </Link>
+                </div>
+
+                {/* Mobile Nav */}
+                <div className="flex md:hidden flex-1 justify-end">
+                    <MobileNav />
                 </div>
 
                 {/* Center Nav */}

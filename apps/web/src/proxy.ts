@@ -6,7 +6,8 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
 
   // Apply CORS rules to /api routes (strict: reject missing Origin to enforce allowlist).
-  if (pathname.startsWith('/api/')) {
+  // Skip strict Origin check for /api/auth so NextAuth sign-in, callback, and session work.
+  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth')) {
     const origin = req.headers.get('origin');
     const allowedOrigin = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
@@ -26,9 +27,12 @@ export default auth((req) => {
     return response;
   }
 
-  // Protect /dashboard and other private routes
+  // Protect /dashboard: redirect to sign-in with callbackUrl so after login user lands on requested page
   if (pathname.startsWith('/dashboard') && !isLoggedIn) {
-    return Response.redirect(new URL('/', req.nextUrl));
+    const callbackUrl = req.nextUrl.toString();
+    const signInUrl = new URL('/api/auth/signin', req.nextUrl.origin);
+    signInUrl.searchParams.set('callbackUrl', callbackUrl);
+    return Response.redirect(signInUrl);
   }
 });
 

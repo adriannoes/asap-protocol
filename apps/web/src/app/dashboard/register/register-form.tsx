@@ -28,6 +28,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
 import { ManifestSchema, type ManifestFormValues } from "@/lib/register-schema";
 import { submitAgentRegistration } from "./actions";
+import { generateAndStoreAgentKeys } from "@/lib/webcrypto";
 
 const BUILT_WITH_OPTIONS = ['', 'CrewAI', 'OpenClaw', 'LangChain', 'AutoGen', 'Other'] as const;
 const EMPTY_VALUE = '__none__'; // Radix Select disallows value=""
@@ -57,7 +58,9 @@ export function RegisterAgentForm() {
         setResult(null);
 
         try {
-            // Server action call (defined in actions.ts)
+            const keys = await generateAndStoreAgentKeys();
+            if (keys) values.public_key = keys.publicKey;
+
             const response = await submitAgentRegistration(values);
 
             if (response.success && response.issueUrl) {

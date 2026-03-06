@@ -15,6 +15,14 @@ vi.mock('../actions', () => ({
     submitAgentRegistration: vi.fn()
 }));
 
+// Mock WebCrypto to prevent idb-keyval errors in tests
+vi.mock('@/lib/webcrypto', () => ({
+    generateAndStoreAgentKeys: vi.fn().mockResolvedValue({
+        publicKey: 'mocked-public-key',
+        privateKey: {} as CryptoKey
+    })
+}));
+
 const mockSubmit = vi.mocked(actions.submitAgentRegistration);
 
 function fillValidFields() {
@@ -145,6 +153,7 @@ describe('RegisterAgentForm', () => {
                 built_with: '',
                 repository_url: '',
                 documentation_url: '',
+                public_key: 'mocked-public-key',
                 confirm: true,
             });
             expect(openSpy).toHaveBeenCalledWith(issueUrl, '_blank', 'noopener,noreferrer');

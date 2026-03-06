@@ -32,6 +32,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
         title: `${agent.name} | ASAP Protocol Registry`,
         description: agent.description ?? '',
+        openGraph: {
+            title: `${agent.name} | ASAP Protocol Registry`,
+            description: agent.description ?? '',
+            type: 'website',
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: `${agent.name} | ASAP Protocol Registry`,
+            description: agent.description ?? '',
+        },
     };
 }
 

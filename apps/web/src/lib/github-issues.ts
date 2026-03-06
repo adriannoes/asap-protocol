@@ -32,6 +32,9 @@ export function buildRegisterAgentIssueUrl(
     params.set('built_with', values.built_with ?? '');
     params.set('repository_url', values.repository_url ?? '');
     params.set('documentation_url', values.documentation_url ?? '');
+    if (values.public_key) {
+        params.set('public_key', values.public_key);
+    }
     if (values.confirm) {
         params.set('confirm', '0');
     }
