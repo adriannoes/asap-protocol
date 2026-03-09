@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { TerminalSquare, PlusCircle, Activity, Key, BarChart3, Globe, ShieldAlert, GitPullRequest, ExternalLink, ShieldCheck, RefreshCw } from 'lucide-react';
+import { TerminalSquare, PlusCircle, Activity, Key, BarChart3, Globe, ShieldAlert, GitPullRequest, ExternalLink, ShieldCheck, RefreshCw, Workflow } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
@@ -66,6 +66,28 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
             </TabsList>
 
             <TabsContent value="agents" className="space-y-6">
+                <Card className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border-indigo-500/20">
+                    <CardContent className="p-4 flex items-center gap-4">
+                        <div className="p-3 bg-indigo-500/10 rounded-lg border border-indigo-500/20 shrink-0">
+                            <Workflow className="w-6 h-6 text-indigo-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-sm">Agent Builder</h3>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                                Design, connect, and run AI agents visually with our drag-and-drop builder.
+                            </p>
+                        </div>
+                        <Button asChild variant="outline" size="sm" className="shrink-0 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10">
+                            <a
+                                href={`${process.env.NEXT_PUBLIC_AGENT_BUILDER_URL ?? 'https://open-agentic-flow.vercel.app'}?from=asap`}
+                                className="flex items-center gap-1.5"
+                            >
+                                Open Agent Builder
+                                <ExternalLink className="w-3 h-3" />
+                            </a>
+                        </Button>
+                    </CardContent>
+                </Card>
                 <div className="flex justify-between items-center flex-wrap gap-4">
                     <div>
                         <h2 className="text-xl font-semibold tracking-tight">Registered Agents</h2>
