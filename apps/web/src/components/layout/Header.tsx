@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Terminal } from "lucide-react";
+import { Terminal, Workflow, Sparkles } from "lucide-react";
 import { auth, signIn, signOut } from "@/auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +32,7 @@ export async function Header() {
 
                 {/* Mobile Nav */}
                 <div className="flex md:hidden flex-1 justify-end">
-                    <MobileNav />
+                    <MobileNav session={session} />
                 </div>
 
                 {/* Center Nav */}
@@ -63,6 +63,33 @@ export async function Header() {
                     >
                         Docs
                     </Link>
+                    {session?.user && (
+                        <a
+                            href={`${process.env.NEXT_PUBLIC_AGENT_BUILDER_URL ?? "https://open-agentic-flow.vercel.app"}?from=asap`}
+                            className="text-sm font-medium text-zinc-400 transition-colors hover:text-white inline-flex items-center gap-1.5"
+                        >
+                            <Workflow className="h-3.5 w-3.5" />
+                            Agent Builder
+                        </a>
+                    )}
+                    {!session?.user && (
+                        <form
+                            action={async () => {
+                                "use server";
+                                await signIn("github", {
+                                    redirectTo: `${process.env.NEXT_PUBLIC_AGENT_BUILDER_URL ?? "https://open-agentic-flow.vercel.app"}?from=asap`,
+                                });
+                            }}
+                        >
+                            <button
+                                type="submit"
+                                className="text-sm font-medium text-indigo-400 transition-colors hover:text-indigo-300 inline-flex items-center gap-1.5"
+                            >
+                                <Sparkles className="h-3.5 w-3.5" />
+                                Build Agents
+                            </button>
+                        </form>
+                    )}
                 </nav>
 
                 {/* Right Auth/Actions */}
