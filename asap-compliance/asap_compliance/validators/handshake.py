@@ -19,6 +19,7 @@ from asap.discovery.validation import (
 from asap.discovery.wellknown import WELLKNOWN_MANIFEST_PATH
 from asap.models.constants import ASAP_PROTOCOL_VERSION
 from asap.models.entities import Manifest
+from asap.errors import SignatureVerificationError
 
 from asap_compliance.config import ComplianceConfig
 
@@ -209,7 +210,7 @@ async def _check_manifest(
                 message=f"Invalid manifest schema: {e}",
             )
         )
-    except Exception as e:
+    except SignatureVerificationError as e:
         results.append(
             CheckResult(
                 name="manifest_signature",
