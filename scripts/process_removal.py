@@ -149,7 +149,7 @@ def main() -> None:
                 }
             )
         )
-        logger.exception("Unexpected error processing removal", error=str(err))
+        logger.exception("Unexpected error processing removal: %s", err)
         try:
             write_validation_result(
                 args.output, errors="Internal processing error", debug_id=debug_id

@@ -70,6 +70,7 @@ def _is_safe_url(url: str) -> bool:
     except ValueError:
         addr = None
     else:
+        assert addr is not None  # mypy: else implies try succeeded
         if addr.is_private or addr.is_loopback or addr.is_link_local:
             return False
     try:
@@ -305,7 +306,7 @@ def main() -> None:
                 }
             )
         )
-        logger.exception("Unexpected error processing registration", error=str(err))
+        logger.exception("Unexpected error processing registration: %s", err)
         try:
             write_validation_result(
                 args.output, errors="Internal processing error", debug_id=debug_id
