@@ -122,12 +122,6 @@ class JWKSValidator:
         *,
         transport: Optional[httpx.AsyncBaseTransport] = None,
     ) -> None:
-        """Initialize the validator.
-
-        Args:
-            jwks_uri: URL of the JWKS endpoint.
-            transport: Optional httpx transport for testing.
-        """
         self._jwks_uri = jwks_uri
         self._transport = transport
         self._key_set: Optional[jwk.KeySet] = None

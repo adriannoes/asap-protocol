@@ -986,7 +986,11 @@ async def handle_websocket_connection(
                         "id": None,
                     }
                     await websocket.send_text(json.dumps(error_payload))
-                except Exception:
+                except Exception as send_error:
+                    logger.debug(
+                        "asap.websocket.error_payload_failed",
+                        error=str(send_error),
+                    )
                     break
     except (SystemExit, KeyboardInterrupt):
         raise

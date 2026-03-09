@@ -50,15 +50,6 @@ class BoundedExecutor(Executor):
     """
 
     def __init__(self, max_threads: int | None = None) -> None:
-        """Initialize bounded executor.
-
-        Args:
-            max_threads: Maximum number of concurrent threads.
-                Defaults to min(32, os.cpu_count() + 4) if None.
-
-        Raises:
-            ValueError: If max_threads is less than 1
-        """
         if max_threads is None:
             # Default: min(32, cpu_count + 4) following asyncio convention
             cpu_count = os.cpu_count() or 1
