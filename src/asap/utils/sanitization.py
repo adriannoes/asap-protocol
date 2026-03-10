@@ -24,12 +24,6 @@ from urllib.parse import urlparse, urlunparse
 
 # Sanitization configuration
 SANITIZE_PREFIX_LENGTH = 8
-"""Number of characters to show when truncating sensitive values.
-
-This constant defines how many characters of a sensitive value (token, nonce)
-are preserved when sanitizing for logs. The value balances security (preventing
-full exposure) with debuggability (allowing identification of value types).
-"""
 
 
 def sanitize_token(token: str) -> str:
@@ -69,7 +63,7 @@ def sanitize_url(url: str) -> str:
                 )
             )
         return url
-    except Exception:
+    except (TypeError, ValueError):
         return re.sub(r"://[^:]+:[^@]+@", r"://***:***@", url)
 
 

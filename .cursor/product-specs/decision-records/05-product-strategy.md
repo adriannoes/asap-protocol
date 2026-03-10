@@ -377,3 +377,74 @@ The primary consumers of `asap-mcp-server` in v2.1 are Python developers already
 > **Future**: A TypeScript/npm wrapper may be added in v2.2+ if non-Python demand justifies the maintenance cost.
 >
 > **Date**: 2026-02-25
+
+---
+
+## Q26: Cross-Platform Domain & Branding Strategy (ASAP Protocol + Agent Builder)
+
+### Context
+
+The ASAP Protocol ecosystem now spans two deployed applications:
+
+| Application | Vercel Project | Current URL |
+|-------------|---------------|-------------|
+| ASAP Protocol (Web App) | `asap-protocol` | `asap-protocol.vercel.app` |
+| Agent Builder (agentic-orchestration) | `v0-agent-kit` | `open-agentic-flow.vercel.app` |
+
+These are separate Next.js apps on separate Vercel deployments. The cross-platform integration (see `prd-cross-platform-integration-asap.md` and `prd-cross-platform-integration-agentic.md`) introduces bidirectional navigation and shared authentication between them.
+
+The question: should we acquire a custom domain now, or defer?
+
+### Analysis
+
+| Criterion | Vercel Subdomains (Current) | Custom Domain (e.g., `asapprotocol.dev`) |
+|-----------|---------------------------|----------------------------------------|
+| **Cost** | Free | ~$12-50/year depending on TLD |
+| **Branding** | Unprofessional for production use | Professional, memorable |
+| **SSO** | Requires shared OAuth App (1-click sign-in) | Enables shared cookies via subdomain (`app.asap.dev`, `builder.asap.dev`) → zero-click SSO |
+| **SEO** | Vercel subdomains are not ideal for SEO | Full control over SEO |
+| **Setup effort** | None | DNS configuration, SSL (auto via Vercel), OAuth callback URL updates |
+| **Migration risk** | None | All hardcoded URLs, OAuth callbacks, CORS configs, and env vars must be updated |
+
+### Impact on Cross-Platform Integration
+
+**Without custom domain** (current state):
+- SSO works via shared GitHub OAuth App — user must click "Sign in with GitHub" once on Agent Builder (GitHub auto-approves, no consent screen).
+- All cross-app URLs are stored in environment variables (`NEXT_PUBLIC_AGENT_BUILDER_URL`, `NEXT_PUBLIC_ASAP_PROTOCOL_URL`) making future migration straightforward.
+- No shared cookies possible (different domains).
+
+**With custom domain** (future state):
+- Subdomain structure (e.g., `asapprotocol.dev` + `builder.asapprotocol.dev`) enables shared cookies.
+- True zero-click SSO possible via shared session cookie on parent domain.
+- Professional branding across both apps.
+
+### Migration Checklist (When Domain is Acquired)
+
+1. **DNS**: Point domain to Vercel.
+2. **Vercel**: Add custom domains to both projects.
+3. **Environment Variables**: Update `NEXT_PUBLIC_AGENT_BUILDER_URL` and `NEXT_PUBLIC_ASAP_PROTOCOL_URL` on both Vercel projects.
+4. **GitHub OAuth App**: Update callback URLs to new domains.
+5. **CORS**: Update `NEXT_PUBLIC_APP_URL` on both apps.
+6. **Cookie Domain**: Configure NextAuth to set cookies on parent domain (e.g., `.asapprotocol.dev`).
+7. **Testing**: Full E2E test of SSO flow, navigation, and registry data fetching.
+8. **Redirects**: Add Vercel redirects from old `.vercel.app` URLs to new domain.
+
+### Expert Assessment
+
+Acquiring a domain is important for branding and SSO but is not a blocker for the integration. The integration is designed with environment variables for all cross-app URLs, making domain migration a configuration change (not a code change). Deferring the domain purchase is the pragmatic choice: it avoids premature optimization and allows the team to validate the integration UX before investing in branding.
+
+### Decision
+
+> [!IMPORTANT]
+> **ADR-26**: The cross-platform integration proceeds with **Vercel subdomains** (`asap-protocol.vercel.app` and `open-agentic-flow.vercel.app`). Custom domain acquisition is **deferred** to a future milestone.
+>
+> **Rationale**: The integration uses environment variables for all cross-app URLs, ensuring zero-code-change migration when a domain is purchased. SSO works via shared GitHub OAuth App (1-click sign-in). The current priority is validating the integration UX, not branding.
+>
+> **Constraints**:
+> - All cross-app URLs MUST use environment variables (never hardcoded).
+> - The shared GitHub OAuth App MUST have both callback URLs registered.
+> - When a domain is acquired, follow the Migration Checklist above.
+>
+> **Recommended Domain TLDs** (for future reference): `.dev`, `.app`, `.io`, `.protocol`
+>
+> **Date**: 2026-03-05

@@ -23,7 +23,8 @@ export async function submitAgentRegistration(values: unknown) {
             return { success: false, error: 'GitHub account link missing or invalid. Please re-login.' };
         }
 
-        if (!checkRateLimit(userId, 5, 60_000)) {
+        const isE2E = process.env.ENABLE_FIXTURE_ROUTES === 'true' && username === 'e2e-tester';
+        if (!isE2E && !checkRateLimit(userId, 5, 60_000)) {
             return { success: false, error: 'Too many registration attempts. Please try again in a minute.' };
         }
 

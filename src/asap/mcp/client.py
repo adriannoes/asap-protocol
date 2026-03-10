@@ -46,20 +46,6 @@ class MCPClient:
         request_id_type: Literal["int", "str"] = "str",
         allowed_binaries: frozenset[str] | None = None,
     ) -> None:
-        """Initialize the client.
-
-        Args:
-            server_command: Command and args to start the server (e.g. ["python", "-m", "asap.mcp.server_runner"]).
-                Must come from a trusted source (e.g. config file). Do not derive from user input;
-                untrusted input could allow command injection.
-            name: Client name for initialize.
-            version: Client version for initialize.
-            receive_timeout: Seconds to wait for a response (None = no timeout).
-            request_id_type: Request id type for JSON-RPC id field ("int" or "str").
-            allowed_binaries: Optional allowlist for first element of server_command. When set, the binary
-                (basename of server_command[0]) must be in this set. Use for strict environments.
-                Example: frozenset({"python", "python3"}). None = no validation (default).
-        """
         if allowed_binaries is not None and server_command:
             binary = os.path.basename(server_command[0])
             if binary not in allowed_binaries:

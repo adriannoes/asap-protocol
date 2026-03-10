@@ -58,8 +58,8 @@ def main() -> None:
                 all_output.append(result.stdout)
             else:
                 print(f"⚠️ Failed to convert {sf.name}: {result.stderr}")
-        except Exception as e:
-            print(f"Error converting {sf.name}: {e}")
+        except OSError as err:
+            print(f"Error converting {sf.name}: {err}")
 
     combined = "\n".join(all_output)
     deduped = _deduplicate_type_aliases(combined)

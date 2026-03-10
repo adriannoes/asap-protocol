@@ -106,15 +106,6 @@ class OIDCDiscovery:
         transport: Optional[httpx.AsyncBaseTransport] = None,
         allow_private_issuers: bool = False,
     ) -> None:
-        """Initialize the discovery client.
-
-        Args:
-            issuer_url: Issuer URL (e.g. https://auth.example.com or
-                https://tenant.auth0.com).
-            transport: Optional httpx transport for testing.
-            allow_private_issuers: If True, allow private/internal hosts (127.0.0.1,
-                10.x, etc.). Use only for local development; defaults to False.
-        """
         _validate_issuer_url(issuer_url, allow_private_issuers=allow_private_issuers)
         self._issuer_url = issuer_url.rstrip("/")
         self._transport = transport
