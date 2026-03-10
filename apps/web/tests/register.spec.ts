@@ -6,7 +6,7 @@ test.describe('Register Agent (Authenticated)', () => {
         await page.goto('/api/auth/test-login?username=e2e-tester');
     });
 
-    test('should allow user to fill and submit agent registration', async ({ page, context }) => {
+    test('should allow user to fill and submit agent registration', async ({ page }) => {
         await page.goto('/dashboard/register');
         await expect(page).toHaveTitle(/Register Agent \| Developer Dashboard/);
 

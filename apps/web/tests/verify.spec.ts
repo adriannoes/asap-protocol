@@ -15,7 +15,7 @@ test.describe('Verify Agent (Authenticated)', () => {
         await expect(page.getByRole('link', { name: 'Return to Dashboard' })).toBeVisible();
     });
 
-    test('should allow user to fill and submit verification request', async ({ page, context }) => {
+    test('should allow user to fill and submit verification request', async ({ page }) => {
         const agentId = 'urn:asap:agent:e2e-tester:e2e-awesome-agent';
         await page.goto(`/dashboard/verify?agent_id=${encodeURIComponent(agentId)}`);
 
