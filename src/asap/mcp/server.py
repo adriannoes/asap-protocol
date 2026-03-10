@@ -59,15 +59,6 @@ class MCPServer:
         description: str | None = None,
         instructions: str | None = None,
     ) -> None:
-        """Initialize the MCP server.
-
-        Args:
-            name: Server programmatic name.
-            version: Server version string.
-            title: Optional human-readable title.
-            description: Optional description.
-            instructions: Optional instructions for the client/LLM.
-        """
         self._server_info = Implementation(
             name=name,
             version=version,
@@ -116,7 +107,6 @@ class MCPServer:
         return caps
 
     def _handle_initialize(self, params: dict[str, Any] | None) -> dict[str, Any]:
-        """Handle initialize request; return InitializeResult as dict."""
         result = InitializeResult(
             protocolVersion=MCP_PROTOCOL_VERSION,
             capabilities=self._get_capabilities(),
@@ -126,18 +116,16 @@ class MCPServer:
         return result.model_dump(by_alias=True, exclude_none=True)
 
     def _handle_tools_list(self, params: dict[str, Any] | None) -> dict[str, Any]:
-        """Handle tools/list; return ListToolsResult as dict."""
-        tools_list: list[Tool] = []
-        for name, (_, input_schema, description, title) in self._tools.items():
-            tools_list.append(
-                Tool(
-                    name=name,
-                    description=description,
-                    inputSchema=input_schema,
-                    title=title,
-                )
+        tools = [
+            Tool(
+                name=name,
+                description=description,
+                inputSchema=input_schema,
+                title=title,
             )
-        result = ListToolsResult(tools=tools_list)
+            for name, (_, input_schema, description, title) in self._tools.items()
+        ]
+        result = ListToolsResult(tools=tools)
         return result.model_dump(by_alias=True, exclude_none=True)
 
     async def _handle_tools_call(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -230,7 +218,6 @@ class MCPServer:
         )
 
     def _dispatch_notification(self, notif: JSONRPCNotification) -> None:
-        """Handle notification (no response)."""
         if notif.method == "notifications/initialized":
             logger.debug("mcp.initialized", message="Client sent initialized")
         elif notif.method == "notifications/cancelled":

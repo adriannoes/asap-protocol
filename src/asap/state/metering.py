@@ -159,7 +159,6 @@ class InMemoryMeteringStore:
     """
 
     def __init__(self) -> None:
-        """Initialize the in-memory metering store."""
         self._lock = asyncio.Lock()
         self._events: list[UsageEvent] = []
 

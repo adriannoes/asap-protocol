@@ -25,12 +25,6 @@ class ManifestValidationError(Exception):
     """
 
     def __init__(self, message: str, field: str | None = None) -> None:
-        """Initialize validation error.
-
-        Args:
-            message: Error description.
-            field: Optional field or constraint that failed.
-        """
         super().__init__(message)
         self.message = message
         self.field = field

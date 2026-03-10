@@ -12,7 +12,7 @@ export default async function RegisterAgentPage() {
     const session = await auth();
 
     if (!session?.user) {
-        redirect('/');
+        redirect(`/api/auth/signin?callbackUrl=${encodeURIComponent('/dashboard/register')}`);
     }
 
     return (

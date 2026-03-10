@@ -32,11 +32,6 @@ class MockAgent:
     """
 
     def __init__(self, agent_id: str = "urn:asap:agent:mock") -> None:
-        """Initialize the mock agent.
-
-        Args:
-            agent_id: URN for this mock agent.
-        """
         self.agent_id = agent_id
         self._responses: dict[str, dict[str, Any]] = {}
         self._default_response: dict[str, Any] | None = None
