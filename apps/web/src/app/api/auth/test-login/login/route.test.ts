@@ -13,41 +13,21 @@ vi.mock('next/headers', () => ({
   cookies: (...args: unknown[]) => cookiesMock(...args),
 }));
 
-const originalEnableFixtureRoutes = process.env.ENABLE_FIXTURE_ROUTES;
-const originalNodeEnv = process.env.NODE_ENV;
-const originalAuthSecret = process.env.AUTH_SECRET;
-
 describe('GET /api/auth/test-login/login', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     cookiesMock.mockResolvedValue({ set: setCookieMock });
     vi.mocked(encode).mockResolvedValue('encoded-token');
-    process.env.AUTH_SECRET = 'a'.repeat(40);
+    vi.stubEnv('AUTH_SECRET', 'a'.repeat(40));
   });
 
   afterEach(() => {
-    if (originalEnableFixtureRoutes === undefined) {
-      delete process.env.ENABLE_FIXTURE_ROUTES;
-    } else {
-      process.env.ENABLE_FIXTURE_ROUTES = originalEnableFixtureRoutes;
-    }
-
-    if (originalNodeEnv === undefined) {
-      delete process.env.NODE_ENV;
-    } else {
-      process.env.NODE_ENV = originalNodeEnv;
-    }
-
-    if (originalAuthSecret === undefined) {
-      delete process.env.AUTH_SECRET;
-    } else {
-      process.env.AUTH_SECRET = originalAuthSecret;
-    }
+    vi.unstubAllEnvs();
   });
 
   it('returns 404 when fixture routes are disabled', async () => {
-    process.env.ENABLE_FIXTURE_ROUTES = 'false';
-    process.env.NODE_ENV = 'test';
+    vi.stubEnv('ENABLE_FIXTURE_ROUTES', 'false');
+    vi.stubEnv('NODE_ENV', 'test');
 
     const res = await GET(new Request('http://localhost/api/auth/test-login/login'));
 
@@ -58,8 +38,8 @@ describe('GET /api/auth/test-login/login', () => {
   });
 
   it('returns 404 in production even when fixture flag is true', async () => {
-    process.env.ENABLE_FIXTURE_ROUTES = 'true';
-    process.env.NODE_ENV = 'production';
+    vi.stubEnv('ENABLE_FIXTURE_ROUTES', 'true');
+    vi.stubEnv('NODE_ENV', 'production');
 
     const res = await GET(new Request('http://localhost/api/auth/test-login/login'));
 
@@ -69,8 +49,8 @@ describe('GET /api/auth/test-login/login', () => {
   });
 
   it('creates secure cookie and redirects when request is https', async () => {
-    process.env.ENABLE_FIXTURE_ROUTES = 'true';
-    process.env.NODE_ENV = 'test';
+    vi.stubEnv('ENABLE_FIXTURE_ROUTES', 'true');
+    vi.stubEnv('NODE_ENV', 'test');
 
     const request = new Request(
       'https://example.com/api/auth/test-login/login?id=u-1&username=alice&redirect=%2Fdashboard%2Fverify'
@@ -100,8 +80,8 @@ describe('GET /api/auth/test-login/login', () => {
   });
 
   it('uses default values and non-secure cookie on http requests', async () => {
-    process.env.ENABLE_FIXTURE_ROUTES = 'true';
-    process.env.NODE_ENV = 'test';
+    vi.stubEnv('ENABLE_FIXTURE_ROUTES', 'true');
+    vi.stubEnv('NODE_ENV', 'test');
 
     const res = await GET(new Request('http://localhost/api/auth/test-login/login'));
 
