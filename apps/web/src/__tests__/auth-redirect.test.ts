@@ -31,4 +31,18 @@ describe('resolveRedirectUrl (auth redirect callback)', () => {
         const result = resolveRedirectUrl(externalUrl, BASE_URL, undefined);
         expect(result).toBe(BASE_URL);
     });
+
+    it('blocks spoofed domains (Open Redirect prevention)', () => {
+        const result = resolveRedirectUrl(
+            'https://open-agentic-flow.vercel.app.evil.com/dashboard',
+            BASE_URL,
+            AGENT_BUILDER_URL
+        );
+        expect(result).toBe(BASE_URL);
+    });
+
+    it('allows relative urls', () => {
+        const result = resolveRedirectUrl('/dashboard', BASE_URL, AGENT_BUILDER_URL);
+        expect(result).toBe(new URL('/dashboard', BASE_URL).toString());
+    });
 });
