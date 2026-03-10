@@ -29,23 +29,24 @@ test.describe('Verify Agent (Authenticated)', () => {
         await page.getByLabel(/Evidence of reliability/i).fill('https://status.example.com');
         await page.getByLabel(/Contact info/i).fill('e2e@example.com');
 
-        // The form opens a new tab on submit. Playwright expects a popup.
-        const [newPage] = await Promise.all([
-            context.waitForEvent('page'),
-            page.getByRole('button', { name: /Open GitHub Issue/i }).click()
-        ]);
+        // Click the submit button
+        // We look specifically for the button role to avoid confusing with the success link later
+        await page.getByRole('button', { name: /^Open GitHub Issue$/i }).click();
 
-        await newPage.waitForLoadState();
-        const popupUrl = newPage.url();
+        // Ensure success state in original page
+        await expect(page.getByText('Open GitHub to submit')).toBeVisible();
 
-        // Verify it redirected to GitHub Issues
-        const decodedUrl = decodeURIComponent(popupUrl);
+        // Verify the fallback link's href is correct
+        const githubLink = page.getByRole('link', { name: /^Open GitHub Issue$/i });
+        await expect(githubLink).toBeVisible();
+        const href = await githubLink.getAttribute('href');
+        expect(href).toBeTruthy();
+
+        // Verify it points to GitHub Issues with correct params
+        const decodedUrl = decodeURIComponent(href!);
         expect(decodedUrl).toContain('github.com');
         expect(decodedUrl).toContain('issues/new');
         expect(decodedUrl).toContain('e2e-awesome-agent');
         expect(decodedUrl).toContain('Verify'); // Should contain verified somewhere in the title/body
-
-        // Ensure success state in original page
-        await expect(page.getByText('Open GitHub to submit')).toBeVisible();
     });
 });
