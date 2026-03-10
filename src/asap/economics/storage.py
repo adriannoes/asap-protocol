@@ -233,12 +233,6 @@ class InMemoryMeteringStorage(MeteringStorageBase):
     """
 
     def __init__(self, retention_ttl_seconds: int | None = None) -> None:
-        """Initialize the in-memory store.
-
-        Args:
-            retention_ttl_seconds: If set, purge_expired() removes events older
-                than this. None disables retention (keep all).
-        """
         self._lock = asyncio.Lock()
         self._events: list[UsageMetrics] = []
         self._retention_ttl_seconds = retention_ttl_seconds
@@ -469,13 +463,6 @@ class SQLiteMeteringStorage(MeteringStorageBase):
         db_path: str | Path = _DEFAULT_DB_PATH,
         retention_ttl_seconds: int | None = None,
     ) -> None:
-        """Initialize with database file path.
-
-        Args:
-            db_path: Path to SQLite database file.
-            retention_ttl_seconds: If set, purge_expired() removes events older
-                than this. None disables retention (keep all).
-        """
         self._db_path = Path(db_path)
         self._retention_ttl_seconds = retention_ttl_seconds
         self._initialized = False

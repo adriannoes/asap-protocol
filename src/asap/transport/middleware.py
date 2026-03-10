@@ -521,15 +521,6 @@ class SizeLimitMiddleware(BaseHTTPMiddleware):
     """
 
     def __init__(self, app: Any, max_size: int) -> None:
-        """Initialize size limit middleware.
-
-        Args:
-            app: The ASGI application
-            max_size: Maximum allowed request size in bytes
-
-        Raises:
-            ValueError: If max_size is less than 1
-        """
         if max_size < 1:
             raise ValueError(f"max_size must be >= 1, got {max_size}")
         super().__init__(app)

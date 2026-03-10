@@ -67,10 +67,12 @@ def _is_safe_url(url: str) -> bool:
         return False
     try:
         addr = ipaddress.ip_address(hostname)
+    except ValueError:
+        addr = None
+    else:
+        assert addr is not None  # mypy: else implies try succeeded
         if addr.is_private or addr.is_loopback or addr.is_link_local:
             return False
-    except ValueError:
-        pass
     try:
         resolved = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC)
         for _, _, _, _, sockaddr in resolved:
@@ -293,7 +295,7 @@ def main() -> None:
             output_path=args.output,
             registry_path=args.registry,
         )
-    except Exception:
+    except Exception as err:
         debug_id = generate_debug_id()
         logger.info(
             json.dumps(
@@ -304,7 +306,7 @@ def main() -> None:
                 }
             )
         )
-        logger.exception("Unexpected error processing registration")
+        logger.exception("Unexpected error processing registration: %s", err)
         try:
             write_validation_result(
                 args.output, errors="Internal processing error", debug_id=debug_id

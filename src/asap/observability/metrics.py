@@ -151,7 +151,6 @@ class MetricsCollector:
     }
 
     def __init__(self) -> None:
-        """Initialize the metrics collector with default metrics."""
         self._lock = threading.Lock()
         self._counters: dict[str, Counter] = {}
         self._histograms: dict[str, Histogram] = {}

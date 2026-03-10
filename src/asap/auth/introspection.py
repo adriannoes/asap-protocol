@@ -106,15 +106,6 @@ class TokenIntrospector:
         transport: Optional[httpx.AsyncBaseTransport] = None,
         max_cache_size: int = 1000,
     ) -> None:
-        """Initialize the introspection client.
-
-        Args:
-            introspection_url: URL of the introspection endpoint (RFC 7662).
-            client_id: OAuth2 client ID for Basic auth to the endpoint.
-            client_secret: OAuth2 client secret for Basic auth.
-            transport: Optional httpx transport for testing.
-            max_cache_size: Maximum introspection result cache entries (0 = unlimited).
-        """
         self._url = introspection_url
         self._client_id = client_id
         self._client_secret = client_secret

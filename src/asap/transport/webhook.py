@@ -521,5 +521,9 @@ class WebhookRetryManager:
         if self._on_dead_letter is not None:
             try:
                 await self._on_dead_letter(entry)
-            except Exception:
-                logger.exception("webhook.dead_letter.callback_error", url=url)
+            except Exception as err:
+                logger.exception(
+                    "webhook.dead_letter.callback_error",
+                    url=url,
+                    error=str(err),
+                )

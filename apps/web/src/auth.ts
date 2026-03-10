@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import NextAuth from 'next-auth';
+import { resolveRedirectUrl } from './auth-redirect';
 import GitHub from 'next-auth/providers/github';
 import Credentials from 'next-auth/providers/credentials';
 import { EncryptJWT, jwtDecrypt } from 'jose';
@@ -83,6 +84,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
             return session;
         },
+        redirect({ url, baseUrl }) {
+            return resolveRedirectUrl(url, baseUrl, process.env.NEXT_PUBLIC_AGENT_BUILDER_URL);
+        },
     },
-    pages: { signIn: '/' },
+    pages: { signIn: '/auth/signin' },
 });
