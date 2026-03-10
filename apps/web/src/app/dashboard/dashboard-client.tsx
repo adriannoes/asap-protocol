@@ -15,6 +15,7 @@ import {
     revalidateUserRegistrationIssues,
 } from './actions';
 import { AgentStatusBadge } from '@/components/agent/agent-status-badge';
+import { AGENT_BUILDER_URL_WITH_FROM } from '@/lib/agent-builder-url';
 
 export type PendingRegistration = {
     id: number;
@@ -79,7 +80,7 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
                         </div>
                         <Button asChild variant="outline" size="sm" className="shrink-0 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10">
                             <a
-                                href={`${process.env.NEXT_PUBLIC_AGENT_BUILDER_URL ?? 'https://open-agentic-flow.vercel.app'}?from=asap`}
+                                href={AGENT_BUILDER_URL_WITH_FROM}
                                 className="flex items-center gap-1.5"
                             >
                                 Open Agent Builder

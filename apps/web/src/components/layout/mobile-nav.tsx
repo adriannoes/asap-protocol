@@ -6,9 +6,9 @@ import type { Session } from 'next-auth';
 import { Menu, Terminal, Workflow, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { AGENT_BUILDER_URL_WITH_FROM } from '@/lib/agent-builder-url';
 
-const AGENT_BUILDER_URL =
-    process.env.NEXT_PUBLIC_AGENT_BUILDER_URL ?? 'https://open-agentic-flow.vercel.app';
+const BUILD_AGENTS_CALLBACK_URL = encodeURIComponent(AGENT_BUILDER_URL_WITH_FROM);
 
 export function MobileNav({ session }: { session: Session | null }) {
     const [open, setOpen] = useState(false);
@@ -65,7 +65,7 @@ export function MobileNav({ session }: { session: Session | null }) {
                     </Link>
                     {session?.user ? (
                         <a
-                            href={`${AGENT_BUILDER_URL}?from=asap`}
+                            href={AGENT_BUILDER_URL_WITH_FROM}
                             onClick={() => setOpen(false)}
                             className="text-lg font-medium text-zinc-400 transition-colors hover:text-white inline-flex items-center gap-1.5"
                         >
@@ -74,7 +74,7 @@ export function MobileNav({ session }: { session: Session | null }) {
                         </a>
                     ) : (
                         <a
-                            href={`/api/auth/signin?callbackUrl=${encodeURIComponent(`${AGENT_BUILDER_URL}?from=asap`)}`}
+                            href={`/api/auth/signin?callbackUrl=${BUILD_AGENTS_CALLBACK_URL}`}
                             onClick={() => setOpen(false)}
                             className="text-lg font-medium text-indigo-400 transition-colors hover:text-indigo-300 inline-flex items-center gap-1.5"
                         >

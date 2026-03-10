@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Terminal, Workflow, Sparkles } from "lucide-react";
 import { auth, signIn, signOut } from "@/auth";
+import { AGENT_BUILDER_URL_WITH_FROM } from "@/lib/agent-builder-url";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -65,7 +66,7 @@ export async function Header() {
                     </Link>
                     {session?.user && (
                         <a
-                            href={`${process.env.NEXT_PUBLIC_AGENT_BUILDER_URL ?? "https://open-agentic-flow.vercel.app"}?from=asap`}
+                            href={AGENT_BUILDER_URL_WITH_FROM}
                             className="text-sm font-medium text-zinc-400 transition-colors hover:text-white inline-flex items-center gap-1.5"
                         >
                             <Workflow className="h-3.5 w-3.5" />
@@ -77,7 +78,7 @@ export async function Header() {
                             action={async () => {
                                 "use server";
                                 await signIn("github", {
-                                    redirectTo: `${process.env.NEXT_PUBLIC_AGENT_BUILDER_URL ?? "https://open-agentic-flow.vercel.app"}?from=asap`,
+                                    redirectTo: AGENT_BUILDER_URL_WITH_FROM,
                                 });
                             }}
                         >
