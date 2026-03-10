@@ -24,7 +24,6 @@ class InMemorySnapshotStore:
     """
 
     def __init__(self) -> None:
-        """Initialize the in-memory snapshot store."""
         self._lock = threading.RLock()
         self._snapshots: dict[TaskID, dict[int, StateSnapshot]] = {}
         self._latest_versions: dict[TaskID, int] = {}

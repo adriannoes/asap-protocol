@@ -104,15 +104,6 @@ class OAuth2ClientCredentials:
         scope: Optional[str] = None,
         transport: Optional[httpx.AsyncBaseTransport] = None,
     ) -> None:
-        """Initialize the OAuth2 client credentials client.
-
-        Args:
-            client_id: OAuth2 client ID from the provider.
-            client_secret: OAuth2 client secret from the provider.
-            token_url: URL of the OAuth2 token endpoint.
-            scope: Optional space-separated scopes to request.
-            transport: Optional httpx transport for testing (e.g. MockTransport).
-        """
         self._client_id = client_id
         self._client_secret = client_secret
         self._token_url = token_url

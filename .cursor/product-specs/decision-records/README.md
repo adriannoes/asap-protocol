@@ -45,12 +45,15 @@ Product roadmap, feature prioritization, and ecosystem strategy.
 - **Q21**: Pricing Strategy (Free vs Paid)
 - **Q22**: Register-Agent Template and Registry Metadata (Trust, Discovery, “Other Platforms”)
 - **Q24**: `asap-mcp-server` — Python (pip) vs TypeScript (npm) — ADR-24
+- **Q26**: Cross-Platform Domain & Branding Strategy (ASAP Protocol + Agent Builder) — ADR-26
 
 ### Planning Documents (dev-planning/ and prd/)
 
 - **[v2.0-marketplace-usage-foundation.md](../../dev-planning/tasks/v2.0.0/v2.0-marketplace-usage-foundation.md)** — Usage storage (local vs central), control model, evolution path to marketplace. Reference when building v2.0 central dashboard.
 - **[prd-v2.1-ecosystem.md](../prd/prd-v2.1-ecosystem.md)** — Consumer SDK, LangChain/CrewAI/MCP integrations, Category/Tags, Revocation, PyPI. Tasks: [tasks-v2.1.0-roadmap.md](../../dev-planning/tasks/v2.1.0/tasks-v2.1.0-roadmap.md).
 - **[prd-v2.2-scale.md](../prd/prd-v2.2-scale.md)** — Registry API Backend, Auto-Registration, Audit Logging, DeepEval.
+- **[prd-cross-platform-integration-asap.md](../prd/prd-cross-platform-integration-asap.md)** — Cross-platform integration (ASAP Protocol side). Agent Builder link, SSO, Dashboard card.
+- **[prd-cross-platform-integration-agentic.md](../prd/prd-cross-platform-integration-agentic.md)** — Cross-platform integration (Agent Builder side). Registry replacement, back-navigation, design unification.
 - **[prd-v3.0-economy.md](../prd/prd-v3.0-economy.md)** — Economy Settlement, Stripe, Credits, Clearing House, ASAP Cloud.
 
 ---

@@ -145,19 +145,6 @@ class OAuth2Middleware(BaseHTTPMiddleware):
         manifest_id: str | None = None,
         custom_claim: str | None = None,
     ) -> None:
-        """Initialize OAuth2 middleware.
-
-        Args:
-            app: ASGI application.
-            jwks_uri: URL of the JWKS endpoint (e.g. from OIDC discovery).
-            required_scope: If set, token must contain this scope or 403 is returned.
-            path_prefix: If set, only requests under this path are validated; others pass through.
-            jwks_fetcher: Optional async (uri) -> KeySet for tests; default fetches via httpx.
-            manifest_id: Optional agent manifest id for identity binding (ADR-17). If set,
-                validates custom claim or allowlist fallback.
-            custom_claim: Optional JWT claim key for agent_id; when None, uses
-                ASAP_AUTH_CUSTOM_CLAIM env var.
-        """
         super().__init__(app)
         self._jwks_uri = jwks_uri
         self._required_scope = required_scope

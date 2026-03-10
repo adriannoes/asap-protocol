@@ -377,7 +377,9 @@ async def test_circuit_breaker_opens_after_retransmission_exhaustion(
         payload={"conversation_id": "c2", "skill_id": "s1", "input": {}},
     )
     transport._register_pending_ack(env2)
-    await asyncio.sleep(0.15)
+    # Wait for ack_check_loop: timeout (50ms) + retransmit cycle + 2nd timeout + check
+    # ~50ms + 30ms + 50ms + 30ms = 160ms minimum; use 0.35s for CI stability
+    await asyncio.sleep(0.35)
     assert cb.get_state() == CircuitState.OPEN, (
         f"Expected CB OPEN after 2 failures, got {cb.get_state()}"
     )

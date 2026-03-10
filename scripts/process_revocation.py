@@ -169,7 +169,7 @@ def main() -> None:
             registry_path=args.registry,
             revoked_path=args.revoked,
         )
-    except Exception:
+    except Exception as err:
         debug_id = generate_debug_id()
         logger.info(
             json.dumps(
@@ -180,7 +180,7 @@ def main() -> None:
                 }
             )
         )
-        logger.exception("Unexpected error processing revocation")
+        logger.exception("Unexpected error processing revocation: %s", err)
         try:
             write_validation_result(
                 args.output, errors="Internal processing error", debug_id=debug_id
