@@ -266,7 +266,7 @@ class A2HClient:
     ) -> A2HMessage:
         """Construct an ``A2HMessage`` with auto-generated message_id and created_at."""
         render = RenderContent(body=body) if body else None
-        explanation_bundle = {"reason": explanation} if explanation else None
+        explanation_bundle = {"why": explanation} if explanation else None
         links = {"a2a_thread": f"asap:conversation/{conversation_id}"} if conversation_id else None
         return A2HMessage(
             type=intent_type,
