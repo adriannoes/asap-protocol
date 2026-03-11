@@ -9,6 +9,7 @@ See: https://github.com/twilio-labs/Agent2Human
 from __future__ import annotations
 
 import asyncio
+import time
 import uuid
 from datetime import datetime, timezone
 from enum import StrEnum
@@ -83,6 +84,9 @@ class ChannelBinding(BaseModel):
 
     type: str
     address: str
+    nonce: str | None = None
+    expires_at: datetime | None = None
+    render: RenderContent | None = None
     fallback: list[ChannelFallback] | None = None
 
 
@@ -94,6 +98,7 @@ class RenderContent(BaseModel):
     body: str
     title: str | None = None
     footer: str | None = None
+    icon: str | None = None
 
 
 class AssuranceConfig(BaseModel):
@@ -115,6 +120,7 @@ class Component(BaseModel):
     label: str | None = None
     required: bool = False
     options: list[dict[str, str]] | None = None
+    validation: dict[str, Any] | None = None
 
 
 class CallbackConfig(BaseModel):
@@ -136,6 +142,7 @@ class A2HMessage(BaseModel):
     agent_id: str
     principal_id: str
     a2h_version: str = "1.0"
+    a2h_min_version: str | None = None
     interaction_id: str | None = None
     responds_to: str | None = None
     channel: ChannelBinding | None = None
@@ -148,6 +155,7 @@ class A2HMessage(BaseModel):
     callback: CallbackConfig | None = None
     components: list[Component] | None = None
     created_at: datetime | None = None
+    signature: str | None = None
 
 
 class IntentResponse(BaseModel):
@@ -176,6 +184,7 @@ class A2HResponse(BaseModel):
     decided_at: datetime | None = None
     data: dict[str, Any] | None = None
     evidence: dict[str, Any] | None = None
+    signature: str | None = None
 
 
 class InteractionStatus(BaseModel):
@@ -188,6 +197,7 @@ class InteractionStatus(BaseModel):
     created_at: datetime
     updated_at: datetime
     response: A2HResponse | None = None
+    error: dict[str, Any] | None = None
 
 
 class GatewayCapabilities(BaseModel):
@@ -223,11 +233,13 @@ class A2HClient:
         api_key: str | None = None,
         oauth_token: str | None = None,
         agent_id: str = "asap-agent",
+        http_client: httpx.AsyncClient | None = None,
     ) -> None:
         self.gateway_url = gateway_url.rstrip("/")
         self.api_key = api_key
         self.oauth_token = oauth_token
         self.agent_id = agent_id
+        self._external_client = http_client
 
     def _headers(self) -> dict[str, str]:
         """Build HTTP headers for gateway requests."""
@@ -239,7 +251,20 @@ class A2HClient:
         return headers
 
     async def _request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
-        """Send an HTTP request to the gateway and raise on non-2xx."""
+        """Send an HTTP request to the gateway and raise on non-2xx.
+
+        Reuses the injected ``http_client`` when available (connection pooling
+        for polling). Falls back to a per-request AsyncClient otherwise.
+        """
+        if self._external_client is not None:
+            response = await self._external_client.request(
+                method,
+                f"{self.gateway_url}{path}",
+                headers=self._headers(),
+                **kwargs,
+            )
+            response.raise_for_status()
+            return response
         async with httpx.AsyncClient() as client:
             response = await client.request(
                 method,
@@ -303,8 +328,7 @@ class A2HClient:
                 (EXPIRED, CANCELLED, FAILED) or ANSWERED with no response payload.
             TimeoutError: If elapsed time exceeds *max_wait* seconds.
         """
-        loop = asyncio.get_event_loop()
-        start = loop.time()
+        start = time.monotonic()
         while True:
             status = await self.get_status(interaction_id)
             if status.state == InteractionState.ANSWERED:
@@ -313,7 +337,7 @@ class A2HClient:
                 return status.response
             if status.state in TERMINAL_STATES:
                 raise ValueError(f"Interaction {interaction_id} ended with state: {status.state}")
-            if loop.time() - start > max_wait:
+            if time.monotonic() - start > max_wait:
                 raise TimeoutError(
                     f"Polling timed out after {max_wait}s for interaction {interaction_id}"
                 )
