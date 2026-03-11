@@ -54,8 +54,8 @@ async def run_approval_demo(gateway_url: str, principal_id: str) -> None:
             body="ASAP agent is starting a task that requires your approval.",
         )
         logger.info("a2h.inform_sent", extra={"interaction_id": interaction_id})
-    except Exception as exc:
-        logger.error("a2h.inform_failed", extra={"error": str(exc)})
+    except Exception:
+        logger.exception("a2h.inform_failed")
         return
 
     try:
@@ -74,8 +74,8 @@ async def run_approval_demo(gateway_url: str, principal_id: str) -> None:
         )
     except TimeoutError:
         logger.error("a2h.approval_timeout", extra={"message": "Human did not respond in time"})
-    except Exception as exc:
-        logger.error("a2h.approval_failed", extra={"error": str(exc)})
+    except Exception:
+        logger.exception("a2h.approval_failed")
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
