@@ -188,7 +188,7 @@ def client(gateway: GatewaySimulator) -> A2HClient:
         response.raise_for_status()
         return response
 
-    c._request = patched_request  # type: ignore[assignment]
+    c._request = patched_request
     return c
 
 
