@@ -23,6 +23,8 @@ def test_integrations_all_list() -> None:
         "is_error_result",
         "get_result",
         "create_asap_tools_router",
+        "A2HClient",
+        "A2HApprovalProvider",
     }
     assert set(intmod.__all__) == expected
     assert len(intmod.__all__) == len(list(intmod.__all__))

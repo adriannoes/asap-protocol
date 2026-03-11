@@ -11,6 +11,7 @@ Usage:
     from asap.integrations import SmolAgentsAsapTool  # requires [smolagents]
     from asap.integrations import OpenClawAsapBridge, get_result, is_error_result  # requires [openclaw]
     from asap.integrations import create_asap_tools_router  # FastAPI; deps in package
+    from asap.integrations import A2HClient, A2HApprovalProvider  # no extra deps
 """
 
 from __future__ import annotations
@@ -25,6 +26,8 @@ __all__ = [
     "is_error_result",
     "get_result",
     "create_asap_tools_router",
+    "A2HClient",
+    "A2HApprovalProvider",
 ]
 
 
@@ -65,4 +68,12 @@ def __getattr__(name: str) -> object:
         from asap.integrations.vercel_ai import create_asap_tools_router
 
         return create_asap_tools_router
+    if name == "A2HClient":
+        from asap.integrations.a2h import A2HClient
+
+        return A2HClient
+    if name == "A2HApprovalProvider":
+        from asap.integrations.a2h import A2HApprovalProvider
+
+        return A2HApprovalProvider
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

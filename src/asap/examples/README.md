@@ -83,6 +83,12 @@ Run agents individually:
 | **mcp_client_demo** | MCP client via stdio: start server subprocess, list tools, call echo | `uv run python -m asap.examples.mcp_client_demo` |
 | **mcp_integration** | Call MCP tools via ASAP envelopes (McpToolCall, McpToolResult) | `uv run python -m asap.examples.mcp_integration [--agent-url URL]` (local build only if no URL) |
 
+### Human-in-the-loop
+
+| Module | Description | Usage |
+|--------|-------------|--------|
+| **a2h_approval** | A2H approval: notify human + request authorization via A2H Gateway | `uv run python -m asap.examples.a2h_approval [--gateway-url URL] [--principal-id ID]` |
+
 ### Authentication and rate limiting
 
 | Module | Description | Usage |
