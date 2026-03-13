@@ -154,10 +154,13 @@ Consumer pre-funds 1000 credits ($10)
 
 | Feature | Reason | When |
 |---------|--------|------|
-| Crypto payments | Regulatory complexity; re-evaluate if demand justifies | TBD |
+| Crypto/DeFi settlement | Pluggable architecture keeps door open; separate repo when triggers met | v4.0+ (separate repo) |
 | Federated registry | Centralized approach still validates at v3 | v3.x+ |
 | Enterprise SSO / SAML | After enterprise traction in v2.x | TBD |
 | Real-time bidding / auctions | Complex, low priority at this stage | v4.0+ |
+
+> [!NOTE]
+> **Crypto settlement is NOT cancelled** — it is architecturally planned via the `SettlementBackend` Protocol interface (see §6.4). The v3.0 economy ships with Stripe as the reference backend. DeFi settlement (stablecoins on L2) will be built in a separate repository (`asap-settlement-crypto`) when transaction volume and user demand justify it. See [crypto-settlement-strategy.md](../strategy/crypto-settlement-strategy.md) for the full analysis.
 
 ---
 
@@ -172,13 +175,31 @@ Consumer pre-funds 1000 credits ($10)
 | Credit ledger | PostgreSQL (from v2.2 Registry API Backend) | Atomic transactions, ACID |
 | Payout | Stripe Connect (Express accounts) | Agent providers onboard without explicit banking relationship |
 
-### 6.2 Economic Safety
+### 6.2 Pluggable Settlement Architecture
+
+All economy features MUST use the `SettlementBackend` Protocol interface — NOT direct Stripe calls. This enables future settlement backends (crypto/DeFi) without changing the economy logic.
+
+```python
+@runtime_checkable
+class SettlementBackend(Protocol):
+    async def hold(self, payer_id: str, amount_credits: int, task_id: str) -> HoldReceipt: ...
+    async def release(self, receipt: HoldReceipt, payee_id: str, fee_pct: float) -> Settlement: ...
+    async def refund(self, receipt: HoldReceipt) -> Settlement: ...
+    async def balance(self, account_id: str) -> int: ...
+    async def top_up(self, account_id: str, amount_credits: int) -> str: ...
+```
+
+v3.0 ships `StripeSettlement` as the reference implementation. Future `CryptoSettlement` (stablecoins on L2) will be in a separate repo implementing the same Protocol.
+
+**Reference**: [crypto-settlement-strategy.md](../strategy/crypto-settlement-strategy.md)
+
+### 6.3 Economic Safety
 
 - **Pre-funding only**: No billing after the fact — reduces fraud and chargebacks
 - **Hard limits**: Consumers can set max daily spend
 - **Fraud detection**: Flag accounts with unusual consumption spikes before dispute
 
-### 6.3 Legal Prerequisites
+### 6.4 Legal Prerequisites
 
 Before launching economy features:
 - [ ] Terms of Service updated with economic provisions (escrow, dispute, refund policy)
@@ -218,7 +239,7 @@ Before launching economy features:
 - **Q1**: What percentage does ASAP retain per transaction? (Start: 5–10%, validate with providers)
 - **Q2**: Are credits tied to USD or is there a pegged internal currency?
 - **Q3**: Should ASAP Cloud be a separate product (separate repo, separate billing) or part of `asap-protocol`?
-- **Q4**: Crypto payments: deferred indefinitely or worth revisiting if L2 settlement costs drop to < $0.001?
+- **Q4**: ~~Crypto payments: deferred indefinitely or worth revisiting if L2 settlement costs drop to < $0.001?~~ **RESOLVED (2026-03-13)**: Crypto settlement is planned as v4.0+ extension in separate repo (`asap-settlement-crypto`). v3.0 designs `SettlementBackend` Protocol interface to keep door open. See [crypto-settlement-strategy.md](../strategy/crypto-settlement-strategy.md).
 
 ---
 
@@ -227,6 +248,7 @@ Before launching economy features:
 - **Vision**: [vision-agent-marketplace.md](../strategy/vision-agent-marketplace.md) §3 (Economy Layer) and §5.3 (Pricing Strategy)
 - **Deferred Backlog (original scope)**: [deferred-backlog.md](../strategy/deferred-backlog.md) §4 and §5
 - **Previous Version**: [prd-v2.2-scale.md](./prd-v2.2-scale.md)
+- **Crypto Settlement Strategy**: [crypto-settlement-strategy.md](../strategy/crypto-settlement-strategy.md)
 - **Roadmap**: [roadmap-to-marketplace.md](../strategy/roadmap-to-marketplace.md)
 
 ---
@@ -236,3 +258,4 @@ Before launching economy features:
 | Date | Version | Change |
 |------|---------|--------|
 | 2026-02-25 | 0.1.0 | Vision DRAFT — consolidates deferred-backlog §4, §5 and vision-agent-marketplace §3 |
+| 2026-03-13 | 0.2.0 | Added §6.2 Pluggable Settlement Architecture (SettlementBackend Protocol). Q4 resolved: crypto settlement planned as v4.0+ in separate repo. Non-Goals updated. |

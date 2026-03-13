@@ -18,7 +18,7 @@
 
 **Trigger to revisit**: When the Lite Registry reaches **500+ agents** OR when automated registration (not PR-based) becomes a blocker for adoption.
 
-**Proposed milestone**: v2.1
+**Proposed milestone**: v2.3
 
 ### Original Scope (Preserved)
 
@@ -58,7 +58,7 @@
 
 **Trigger to revisit**: When **marketplace users request quality filtering** (e.g., "show me only agents with low hallucination scores").
 
-**Proposed milestone**: v2.2+
+**Proposed milestone**: v2.3+
 
 ### Original Scope (Preserved)
 
@@ -90,7 +90,7 @@
 
 **Trigger to revisit**: When the first **enterprise customer** requests compliance audit trails OR when billing disputes arise.
 
-**Proposed milestone**: v2.1+
+**Proposed milestone**: v2.2 (kept in revised scope)
 
 ### Original Scope (Preserved)
 
@@ -117,12 +117,13 @@
 
 **Trigger to revisit**: When **Verified badge revenue exceeds $5k/month** AND users request pay-per-use agent services.
 
-**Proposed milestone**: v3.0
+**Proposed milestone**: v3.0 (Stripe), v4.0+ (Crypto/DeFi)
 
 ### Technical Notes
 - Depends on: Usage metering (v1.3), Delegation tokens (v1.3), Stripe integration (v2.0)
 - Stripe Connect for marketplace-style payouts
 - Complex regulatory implications (money transmission laws)
+- **v3.0 architectural decision (2026-03-13)**: Settlement uses `SettlementBackend` Protocol interface — pluggable by design. `StripeSettlement` is the reference backend. `CryptoSettlement` (stablecoins on L2) planned as v4.0+ extension in separate repo (`asap-settlement-crypto`). See [crypto-settlement-strategy.md](./crypto-settlement-strategy.md).
 
 ---
 
@@ -157,19 +158,42 @@
 
 ---
 
+## 7. Auto-Registration (Originally v2.2 PRD, §4.2)
+
+**What**: Self-service agent registration via API endpoint (replacing IssueOps for compliant agents).
+
+**Why deferred**: Auto-Registration depends on the Registry API Backend (§1). Without a PostgreSQL-backed registry, there is no write API for self-service registration. IssueOps (ADR-18) remains sufficient at current scale.
+
+**Trigger to revisit**: When Registry API Backend is implemented (v2.3) AND IssueOps becomes a bottleneck for adoption.
+
+**Proposed milestone**: v2.3
+
+### Original Scope (Preserved from prd-v2.2-scale.md §4.2)
+
+| Task | Description | Deliverable |
+|------|-------------|-------------|
+| AUTO-001 | Self-registration endpoint: agent submits manifest URL + ASAP auth token | API endpoint |
+| AUTO-002 | Compliance gating: agent must pass Compliance Harness v2 before listing | Validation |
+| AUTO-003 | Rate limiting: max 5 registration attempts per token per hour | Rate limiter |
+| AUTO-004 | IssueOps remains available as human-review path | Fallback |
+| AUTO-005 | Anti-spam: trust level starts at `self-signed`, manual review for `verified` | Trust policy |
+
+---
+
 ## Summary
 
 | Feature | Original Version | Deferred To | Trigger | PRD |
-|---------|-----------------|-------------|---------|----|
-| Registry API Backend | v1.2 | v2.2 | 500+ real agents in Lite Registry | [prd-v2.2-scale.md](../prd/prd-v2.2-scale.md) |
-| DeepEval Intelligence | v1.2 | v2.2+ (conditional) | User demand for quality filtering | [prd-v2.2-scale.md](../prd/prd-v2.2-scale.md) §4.4 |
-| Audit Logging | v1.3 | v2.2 | Enterprise customer or billing disputes | [prd-v2.2-scale.md](../prd/prd-v2.2-scale.md) §4.3 |
-| Economy Settlement | v2.0+ | v3.0 | Revenue > $5k/mo + user demand | [prd-v3.0-economy.md](../prd/prd-v3.0-economy.md) |
+|---------|-----------------|-------------|---------|-----|
+| Registry API Backend | v1.2 | **v2.3** | 500+ real agents in Lite Registry | [prd-v2.3-scale.md](../prd/prd-v2.3-scale.md) |
+| DeepEval Intelligence | v1.2 | **v2.3+** (conditional) | User demand for quality filtering | [prd-v2.3-scale.md](../prd/prd-v2.3-scale.md) §4.4 |
+| Audit Logging | v1.3 | **v2.2** (kept) | Enterprise customer or billing disputes | [prd-v2.2-protocol-hardening.md](../prd/prd-v2.2-protocol-hardening.md) §4.8 |
+| Economy Settlement | v2.0+ | v3.0 (Stripe), v4.0+ (Crypto) | Revenue > $5k/mo + user demand | [prd-v3.0-economy.md](../prd/prd-v3.0-economy.md), [crypto-settlement-strategy.md](./crypto-settlement-strategy.md) |
 | Payment Processing | v2.0 | v3.0 | 100+ Verified Agents | [prd-v3.0-economy.md](../prd/prd-v3.0-economy.md) §4.1 |
 | Category/Tags in Registry | — | **v2.1 ✅ IN PRD** | Browse/search UX — trigger met | [prd-v2.1-ecosystem.md](../prd/prd-v2.1-ecosystem.md) §4.5 |
+| Auto-Registration | v2.2 | **v2.3** | IssueOps bottleneck + Registry API Backend | [prd-v2.3-scale.md](../prd/prd-v2.3-scale.md) §4.2 |
 
 > [!NOTE]
-> **v2.1 scope decided (2026-02-25)**: Consumer SDK (demand-side), Framework Integrations (LangChain, CrewAI, MCP), Category/Tags, Agent Revocation, and PyPI distribution. See [prd-v2.1-ecosystem.md](../prd/prd-v2.1-ecosystem.md).
+> **v2.2 scope revised (2026-03-13)**: Strategic review re-scoped v2.2 from "Scale & Registry" to "Protocol Hardening" (streaming, errors, versioning, batch, async). Registry API Backend, Auto-Registration, and DeepEval deferred to v2.3 (triggers not met). See [prd-v2.2-protocol-hardening.md](../prd/prd-v2.2-protocol-hardening.md).
 
 ---
 
@@ -180,3 +204,5 @@
 | 2026-02-12 | Initial document — Lean Marketplace pivot |
 | 2026-02-20 | Added §6 Category/Tags in Lite Registry (v2.1+) |
 | 2026-02-25 | Updated summary table with PRD links; Category/Tags moved to v2.1 (trigger met); Registry API and Audit Logging moved to v2.2 PRD; Economy Settlement and Payment to v3.0 PRD |
+| 2026-03-13 | **Strategic Review v2.2**: Registry API Backend deferred v2.2→v2.3, DeepEval deferred v2.2+→v2.3+, Audit Logging kept in v2.2 (protocol scope), added §7 Auto-Registration (new deferral from v2.2 to v2.3). Updated summary table with revised PRD links. |
+| 2026-03-13 | **DeFi Settlement**: Updated §4 Economy Settlement with SettlementBackend Protocol decision and crypto extension (v4.0+, separate repo). Summary table updated. |

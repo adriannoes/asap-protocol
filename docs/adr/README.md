@@ -25,6 +25,8 @@
 | [ADR-015](ADR-015-observability-design.md) | Observability Design (trace_id, correlation_id) | Accepted |
 | [ADR-016](ADR-016-versioning-policy.md) | Versioning Policy (SemVer, Contract Tests) | Accepted |
 | [ADR-017](ADR-017-failure-injection-strategy.md) | Failure Injection Strategy (Chaos Testing) | Accepted |
+| [ADR-018](ADR-018-streaming-transport.md) | Streaming Transport (SSE for HTTP) | Accepted |
+| [ADR-019](ADR-019-unified-versioning.md) | Unified Versioning and Content Negotiation | Accepted |
 
 ---
 

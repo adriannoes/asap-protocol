@@ -2,10 +2,10 @@
 
 > **Evolution Path**: v1.0.0 → v2.0.0 ✅ Released → v2.1.0 (next)
 >
-> **Status**: v2.0.0 RELEASED — Planning v2.1.0
-> **Horizon**: v2.1.0 Ecosystem, then v2.2.0 Scale, then v3.0.0 Economy
+> **Status**: v2.1.1 RELEASED — Planning v2.2.0
+> **Horizon**: v2.2.0 Protocol Hardening, then v2.3.0 Scale, then v3.0.0 Economy
 > **Created**: 2026-01-30
-> **Updated**: 2026-02-25
+> **Updated**: 2026-03-13
 
 ---
 
@@ -218,8 +218,9 @@ Key architectural and business decisions made during planning. Each decision inc
 | **v1.3.0** | Observability | Metering + SLAs + Delegation | ✅ Released — Observability metering, SLA framework, delegation tokens |
 | **v1.4.0** | Hardening | Resilience + Scale | Type safety hardening, storage pagination |
 | **v2.0.0** | Marketplace | Full launch | ✅ Released (2026-02-25) — Web App, Lite Registry (120+ agents), Verified Badge, IssueOps registration |
-| **v2.1.0** | Ecosystem | Demand-side activation | Consumer SDK, LangChain/CrewAI/MCP integrations, Category/Tags, Agent Revocation, PyPI — See [prd-v2.1-ecosystem.md](../prd/prd-v2.1-ecosystem.md) |
-| **v2.2.0** | Scale | Registry infrastructure | Registry API Backend (PostgreSQL), Auto-Registration, Audit Logging, DeepEval (conditional) — See [prd-v2.2-scale.md](../prd/prd-v2.2-scale.md) |
+| **v2.1.0** | Ecosystem | Demand-side activation | ✅ Released — Consumer SDK, LangChain/CrewAI/MCP integrations, Category/Tags, Agent Revocation, PyPI — See [prd-v2.1-ecosystem.md](../prd/prd-v2.1-ecosystem.md) |
+| **v2.2.0** | Protocol Hardening | Close competitive gaps | Streaming/SSE, Error Taxonomy Evolution, Unified Versioning, Async Protocol, Batch Operations, Compliance Harness v2, Audit Logging — See [prd-v2.2-protocol-hardening.md](../prd/prd-v2.2-protocol-hardening.md) |
+| **v2.3.0** | Scale | Registry infrastructure | Registry API Backend (PostgreSQL), Auto-Registration, Orchestration Primitives, DeepEval (conditional) — See [prd-v2.3-scale.md](../prd/prd-v2.3-scale.md) |
 | **v3.0.0** | Economy | Monetization | Stripe, Credits, Economy Settlement, Clearing House, ASAP Cloud — See [prd-v3.0-economy.md](../prd/prd-v3.0-economy.md) |
 
 ---
@@ -525,11 +526,11 @@ We follow an **Open Core + SaaS** model (LangChain-style). See [vision-agent-mar
 
 | Phase | Public (repo) | Private (separate) |
 |-------|---------------|---------------------|
-| **v2.0 (now)** | SDK, Web App, Lite Registry | — |
-| **v2.1** | SDK, Web App frontend | Registry API Backend |
+| **v2.0-v2.2 (current)** | SDK, Web App, Lite Registry | — |
+| **v2.3** | SDK, Web App frontend | Registry API Backend |
 | **v3.0** | SDK, Web App frontend | Registry API, Billing, Economy Settlement |
 
-**Decision point**: Start separating when building **v2.1 Registry API Backend**. Until then, everything stays public. Cloning the repo does not replace the product (network effect, trust, backend services).
+**Decision point**: Start separating when building **v2.3 Registry API Backend**. Until then, everything stays public. Cloning the repo does not replace the product (network effect, trust, backend services).
 
 ---
 
@@ -564,6 +565,8 @@ We follow an **Open Core + SaaS** model (LangChain-style). See [vision-agent-mar
 - **v1.2 PRD**: [prd-v1.2-roadmap.md](../prd/prd-v1.2-roadmap.md)
 - **v1.3 PRD**: [prd-v1.3-roadmap.md](../prd/prd-v1.3-roadmap.md)
 - **v2.0 PRD**: [prd-v2.0-roadmap.md](../prd/prd-v2.0-roadmap.md)
+- **v2.2 PRD**: [prd-v2.2-protocol-hardening.md](../prd/prd-v2.2-protocol-hardening.md)
+- **v2.3 PRD**: [prd-v2.3-scale.md](../prd/prd-v2.3-scale.md)
 - **Checkpoints**: [checkpoints.md](../../dev-planning/checkpoints.md)
 
 ---
@@ -586,3 +589,4 @@ We follow an **Open Core + SaaS** model (LangChain-style). See [vision-agent-mar
 | 2026-02-21 | **Sprint M3 complete**: Status → LAUNCH PREP. Launch criteria updated (IssueOps, registration, verification done). Web App table with status. v2.0.0 timeline note. |
 | 2026-02-21 | **Open Core boundary**: Added Open Source vs. Proprietary section. Public until v2.1; Registry API Backend and billing become private. |
 | 2026-02-25 | **v2.0.0 Released**: Status → RELEASED. Release timeline updated with v2.1.0 (Ecosystem), v2.2.0 (Scale), v3.0.0 (Economy). PRDs created for each. Header updated. |
+| 2026-03-13 | **Strategic Review v2.2**: Re-scoped v2.2 from "Scale & Registry" to "Protocol Hardening" (streaming, errors, versioning, batch, async). Marketplace items deferred to v2.3 (triggers not met). Added v2.3.0 "Scale" to timeline. |

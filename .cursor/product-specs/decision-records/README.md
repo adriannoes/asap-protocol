@@ -1,6 +1,8 @@
 # ASAP Protocol: Decision Records (ADR) Index
 
 > **Status**: Living Documentation
+>
+> **Unified Index**: See [ADR-INDEX.md](./ADR-INDEX.md) for a single reference mapping both ADR collections (`docs/adr/` and this directory) and clarifying numbering collisions.
 
 This directory contains the Architectural Decision Records (ADR) for the ASAP Protocol. These documents capture critical design choices, trade-offs, and rationale.
 

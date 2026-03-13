@@ -181,12 +181,15 @@ graph TD
 
 #### 3.3 Settlement
 
-| Method | Latency | Trust Required |
-|--------|---------|----------------|
-| **Pre-paid credits** | Instant | Low |
-| **Escrow** | On completion | Medium |
-| **Invoicing** | Net-30 | High |
-| **Crypto** | Near-instant | None |
+| Method | Latency | Trust Required | Backend |
+|--------|---------|----------------|---------|
+| **Pre-paid credits** | Instant | Low | Stripe (v3.0) |
+| **Escrow** | On completion | Medium | Stripe / Smart Contract |
+| **Invoicing** | Net-30 | High | Stripe |
+| **Crypto (Stablecoin)** | Near-instant | None | DeFi (v4.0+, separate repo) |
+
+> [!NOTE]
+> **Pluggable Settlement Architecture (v3.0 decision)**: The Economy Layer uses a `SettlementBackend` Protocol interface, enabling multiple settlement implementations. v3.0 ships with Stripe as the reference backend. DeFi/crypto settlement (stablecoins on L2) is a future extension in a **separate repository** (`asap-settlement-crypto`), connected via the same Protocol interface. See [crypto-settlement-strategy.md](./crypto-settlement-strategy.md) for the full analysis and architecture.
 
 ---
 
@@ -287,6 +290,17 @@ Auto-failover based on health checks
 | v1.3 | Observability Metering | Usage visibility (uses MeteringStore from v1.1) |
 | v1.3 | SLA Framework | Service guarantees as trust signals (SLAStorage, /sla/* API) |
 | v2.0 | Marketplace Core | Web App + Lite Registry + Verified Badge |
+| v2.1 | Consumer SDK + Integrations | Demand-side activation (LangChain, CrewAI, MCP) |
+| v2.2 | Streaming/SSE | Incremental task responses |
+| v2.2 | Error Taxonomy Evolution | Recovery hints, structured retry |
+| v2.2 | Unified Versioning | Content negotiation, backward compat |
+| v2.2 | Async Protocol | Dual SnapshotStore/MeteringStore |
+| v2.2 | Batch Operations | JSON-RPC batch requests |
+| v2.2 | Compliance Harness v2 | Extended protocol certification |
+| v2.2 | Audit Logging | Tamper-evident write logs |
+| v2.3 | Registry API Backend | PostgreSQL search, CRUD, trust scoring |
+| v2.3 | Auto-Registration | Self-service without PR |
+| v2.3 | Orchestration Primitives | Protocol-level coordinator pattern |
 
 ### Architecture Layers
 
@@ -457,16 +471,22 @@ We follow an **Open Core + SaaS** model: open source drives adoption; proprietar
 ```
 PUBLIC REPO (asap-protocol)
 ├── src/asap/           # Protocol SDK (MIT)
+├── src/asap/economics/ # SettlementBackend Protocol (interface, public)
 ├── apps/web/           # Frontend (can stay public)
 └── registry.json       # Lite Registry
 
-PRIVATE / SaaS (when v2.1+)
+PRIVATE / SaaS (when v2.3+)
 ├── Registry API Backend
 ├── Billing / Stripe
-└── Economy Settlement
+└── Economy Settlement (Stripe backend)
+
+FUTURE SEPARATE REPO (asap-settlement-crypto, v4.0+)
+├── contracts/          # Solidity smart contracts (escrow, credits)
+├── src/                # Python SDK implementing SettlementBackend
+└── audits/             # Security audit reports
 ```
 
-**Decision point**: Start separating when building **v2.1 Registry API Backend**. Until then, everything stays public.
+**Decision point**: Start separating when building **v2.3 Registry API Backend**. Until then, everything stays public. Crypto settlement is always a separate repo due to different stack (Solidity), compliance requirements, and audit needs.
 
 ---
 
@@ -492,3 +512,5 @@ PRIVATE / SaaS (when v2.1+)
 | 2026-02-13 | **Security Hardening**: Added JCS/Strict Verification to building blocks |
 | 2026-02-18 | **v1.3 SLA decisions**: Updated SLA Framework (trust signals, no compensation in v1.3), added SLAStorage + /sla/* API to building blocks, aligned with sprint E3 plan |
 | 2026-02-21 | **Open Core boundary**: Added §5.5 Open Source vs. Proprietary (LangChain-style). Public: SDK, frontend, Lite Registry. Private from v2.1: Registry API, billing, economy. |
+| 2026-03-13 | **Strategic Review v2.2**: Added v2.1, v2.2, v2.3 building blocks. v2.2 re-scoped to Protocol Hardening (streaming, errors, versioning, batch, async, compliance, audit). Marketplace scale items deferred to v2.3. |
+| 2026-03-13 | **DeFi Settlement strategy**: Added pluggable SettlementBackend note to §3.3, updated Repository Strategy with `asap-settlement-crypto` as future separate repo. Crypto settlement is v4.0+ extension, not v3.0. See `crypto-settlement-strategy.md`. |
