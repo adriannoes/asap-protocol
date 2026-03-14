@@ -59,7 +59,7 @@ describe('BrowseContent', () => {
     it('filters agents by text search (debounced)', async () => {
         render(<BrowseContent initialAgents={mockAgents} />);
 
-        const searchInput = screen.getByPlaceholderText('Search agents...');
+        const searchInput = screen.getByPlaceholderText('Search agents by name or description...');
         fireEvent.change(searchInput, { target: { value: 'secure' } });
 
         await waitFor(() => {
@@ -104,13 +104,13 @@ describe('BrowseContent', () => {
     it('shows "No results" when search yields no matches', async () => {
         render(<BrowseContent initialAgents={mockAgents} />);
 
-        const searchInput = screen.getByPlaceholderText('Search agents...');
+        const searchInput = screen.getByPlaceholderText('Search agents by name or description...');
         fireEvent.change(searchInput, { target: { value: 'nonexistent-agent-name' } });
 
         await waitFor(() => {
             expect(screen.queryByText('Search Bot')).not.toBeInTheDocument();
             expect(screen.queryByText('Secure Writer')).not.toBeInTheDocument();
-            expect(screen.getByText('No results.')).toBeInTheDocument();
+            expect(screen.getByText('No agents match your criteria')).toBeInTheDocument();
         }, { timeout: 1000 });
     });
 });
