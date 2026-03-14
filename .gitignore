@@ -181,6 +181,7 @@ cython_debug/
 # Strategy docs (private — do not commit)
 .cursor/product-specs/strategy/
 node_modules/
+.pnpm-store/
 .github/wiki/
 
 # Next.js app lib (do not ignore; root lib/ is for Python)

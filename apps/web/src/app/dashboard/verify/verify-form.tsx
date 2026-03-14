@@ -56,11 +56,7 @@ export function VerifyForm({ defaultAgentId }: VerifyFormProps) {
             if (response.success && response.issueUrl) {
                 setResult({ success: true, issueUrl: response.issueUrl });
                 form.reset({ ...form.getValues(), why_verified: '', running_since: '', evidence: '', contact: '' });
-                try {
-                    window.open(response.issueUrl, '_blank', 'noopener,noreferrer');
-                } catch (e) {
-                    console.warn("Popup blocked by browser. User can use fallback link.", e);
-                }
+                window.open(response.issueUrl, '_blank', 'noopener,noreferrer');
             } else {
                 setResult({ success: false, error: response.error ?? 'Request failed' });
             }

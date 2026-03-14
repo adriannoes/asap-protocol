@@ -2,8 +2,6 @@ import { ImageResponse } from 'next/og';
 import { fetchAgentById } from '../../../lib/registry';
 
 export const runtime = 'edge';
-
-// Image metadata
 export const alt = 'ASAP Protocol Agent';
 export const size = {
     width: 1200,
@@ -64,7 +62,6 @@ export default async function Image({ params }: { params: Promise<{ id: string }
                         marginBottom: '40px',
                     }}
                 >
-                    {/* Mock Logo / Protocol Name */}
                     <div
                         style={{
                             fontSize: 32,

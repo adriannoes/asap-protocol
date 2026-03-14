@@ -2,6 +2,8 @@ import { Metadata } from 'next';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { RegisterAgentForm } from './register-form';
+import { CanvasBg } from '@/components/ui/canvas-bg';
+import { GlassContainer } from '@/components/ui/glass-container';
 
 export const metadata: Metadata = {
     title: 'Register Agent | Developer Dashboard',
@@ -16,16 +18,21 @@ export default async function RegisterAgentPage() {
     }
 
     return (
-        <div className="container mx-auto py-10 px-4 max-w-3xl">
-            <div className="mb-8 border-b pb-6">
-                <h1 className="text-3xl font-bold tracking-tight">Register New Agent</h1>
-                <p className="text-muted-foreground mt-2">
-                    Publish your agent to the ASAP Protocol registry. You will be taken to GitHub to submit
-                    a pre-filled registration issue; a GitHub Action will validate and add your agent to the registry.
-                </p>
-            </div>
+        <div className="relative min-h-[calc(100vh-4rem)]">
+            <CanvasBg className="fixed" />
+            <div className="relative z-10 container mx-auto py-10 px-4 max-w-3xl">
+                <div className="mb-8 border-b border-zinc-800 pb-6">
+                    <h1 className="text-3xl font-bold tracking-tight text-white">Register New Agent</h1>
+                    <p className="text-zinc-400 mt-2">
+                        Publish your agent to the ASAP Protocol registry. You will be taken to GitHub to submit
+                        a pre-filled registration issue; a GitHub Action will validate and add your agent to the registry.
+                    </p>
+                </div>
 
-            <RegisterAgentForm />
+                <GlassContainer className="p-8">
+                    <RegisterAgentForm />
+                </GlassContainer>
+            </div>
         </div>
     );
 }

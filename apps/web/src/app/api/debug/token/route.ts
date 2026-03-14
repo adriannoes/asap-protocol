@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getToken } from 'next-auth/jwt';
 
-/** Debug token check; 404 in production unless X-Debug-Token matches DEBUG_TOKEN. */
 export async function GET(request: NextRequest) {
   const isProduction =
     process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';

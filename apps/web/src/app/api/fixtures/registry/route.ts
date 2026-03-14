@@ -1,9 +1,3 @@
-/**
- * Fixture endpoint for load testing: returns a configurable number of mock agents.
- * Only enabled when ENABLE_FIXTURE_ROUTES=true (e.g. in Playwright or local load tests).
- * Do not enable in production.
- */
-
 import { NextRequest, NextResponse } from 'next/server';
 
 const MAX_FIXTURE_AGENTS = 2000;

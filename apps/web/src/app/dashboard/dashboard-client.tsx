@@ -33,8 +33,7 @@ interface DashboardClientProps {
     username: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- username reserved for future use (e.g. personalization)
-export function DashboardClient({ initialAgents, username }: DashboardClientProps) {
+export function DashboardClient({ initialAgents, username: _username }: DashboardClientProps) {
     const router = useRouter();
     const [isRefreshing, setIsRefreshing] = useState(false);
     const { data: pendingIssuesData, mutate } = useSWR('userRegistrationIssues', async () => {
@@ -109,7 +108,6 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
                     </div>
                 </div>
 
-                {/* Pending registration issues (IssueOps): open issues with label "registration" by this user */}
                 {pendingRegistrations.length > 0 && (
                     <div className="space-y-3 mb-6">
                         <h3 className="text-sm font-medium text-muted-foreground">Pending Registrations</h3>

@@ -2,10 +2,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Browse Page', () => {
     test('has Search capability and displays agents', async ({ page }) => {
-        // Navigate to the browse page
         await page.goto('/browse');
 
-        // Verify title and page header
         await expect(page).toHaveTitle(/Browse Agents/);
         await expect(page.getByRole('heading', { name: 'Agent Registry' })).toBeVisible();
 

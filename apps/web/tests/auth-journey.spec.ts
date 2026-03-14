@@ -74,4 +74,25 @@ test.describe('Auth & Register Agent journey', () => {
         await expect(page).toHaveURL(/\/browse/);
         await expect(page).toHaveTitle(/Browse Agents/);
     });
+
+    test('sign-in page renders WebGL background', async ({ page }) => {
+        await page.goto('/auth/signin');
+        await expect(page.getByTestId('canvas-bg')).toBeVisible({ timeout: 10000 });
+        await expect(page.getByRole('heading', { name: /Sign in/i })).toBeVisible();
+    });
+
+    test('WebGL canvas does not cause console errors', async ({ page }) => {
+        const errors: string[] = [];
+        page.on('console', (msg) => {
+            if (msg.type() === 'error') errors.push(msg.text());
+        });
+
+        await page.goto('/auth/signin');
+        await page.getByTestId('canvas-bg').waitFor({ state: 'visible', timeout: 10000 });
+
+        const criticalErrors = errors.filter(
+            (e) => !e.includes('third-party cookie') && !e.includes('favicon')
+        );
+        expect(criticalErrors).toHaveLength(0);
+    });
 });

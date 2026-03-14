@@ -8,7 +8,6 @@ export const metadata: Metadata = {
 };
 
 export default function TestRegisterPage() {
-    // Block access in production — this page is only for local development testing
     if (process.env.NODE_ENV === 'production') {
         redirect('/dashboard/register');
     }

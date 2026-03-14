@@ -1,4 +1,3 @@
-/** Server-side proxy for agent health checks (avoids exposing client IP to agents). */
 import { NextRequest, NextResponse } from 'next/server';
 import { isAllowedExternalUrl } from '@/lib/url-validator';
 import { checkProxyRateLimit } from '@/lib/rate-limit';

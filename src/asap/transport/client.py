@@ -778,7 +778,7 @@ class ASAPClient:
                 if self._auth_token:
                     headers["Authorization"] = f"Bearer {self._auth_token}"
 
-                assert self._client is not None  # HTTP path: __aenter__ set it
+                assert self._client is not None  # HTTP path: __aenter__ set it  # nosec B101
                 response = await self._client.post(
                     f"{self.base_url}/asap",
                     headers=headers,

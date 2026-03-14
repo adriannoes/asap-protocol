@@ -21,7 +21,7 @@ const FEATURE_CONTENT: Record<
     {
         title: string;
         description: string;
-        icon: React.ElementType;
+        icon: React.ComponentType<{ className?: string }>;
         content: React.ReactNode;
         capabilities: FeatureCapability[];
     }
@@ -167,7 +167,6 @@ export default async function FeatureDetail({ params }: { params: Promise<{ slug
 
     return (
         <main className="min-h-screen bg-zinc-950 font-sans text-white selection:bg-indigo-500/30">
-            {/* Decorative gradient blur */}
             <div className="absolute top-0 -z-10 h-full w-full bg-zinc-950">
                 <div className="absolute left-1/2 right-0 top-0 -z-10 -ml-24 h-[600px] w-[600px] rounded-full bg-indigo-900/20 blur-[120px]" />
             </div>

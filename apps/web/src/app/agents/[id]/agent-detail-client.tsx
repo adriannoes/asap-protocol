@@ -18,7 +18,6 @@ import { isAllowedProxyUrl } from '@/lib/url-validator';
 
 function safeAuthHref(url: unknown): string {
     if (typeof url !== 'string') return '#';
-    // use synchronous basic URL validation for UI rendering (prevents javascript: links)
     return isAllowedProxyUrl(url).valid ? url : '#';
 }
 
@@ -36,7 +35,6 @@ export function AgentDetailClient({ agent, isRevoked }: AgentDetailClientProps) 
 
     return (
         <div className="space-y-8">
-            {/* Back Navigation */}
             <div>
                 <Button variant="ghost" asChild className="-ml-4 mb-2">
                     <Link href="/browse" className="text-muted-foreground flex items-center">
@@ -121,7 +119,6 @@ export function AgentDetailClient({ agent, isRevoked }: AgentDetailClientProps) 
                 <div className="md:col-span-2 space-y-6">
                     <UsageSnippets agentId={agent.id ?? ''} agent={agent} />
 
-                    {/* Skills and Capabilities */}
                     <Card>
                         <CardHeader>
                             <CardTitle>Capabilities & Skills</CardTitle>
@@ -162,7 +159,6 @@ export function AgentDetailClient({ agent, isRevoked }: AgentDetailClientProps) 
                 </div>
 
                 <div className="space-y-6">
-                    {/* SLA Section */}
                     <Card>
                         <CardHeader>
                             <CardTitle>Service Level</CardTitle>
@@ -196,7 +192,6 @@ export function AgentDetailClient({ agent, isRevoked }: AgentDetailClientProps) 
                         </CardContent>
                     </Card>
 
-                    {/* Auth Requirements */}
                     <Card>
                         <CardHeader>
                             <CardTitle>Authentication</CardTitle>

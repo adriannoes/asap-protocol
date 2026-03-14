@@ -51,7 +51,6 @@ export async function submitAgentRegistration(values: unknown) {
             }
         }
 
-        // Bypass reachability checks for E2E tests
         if (process.env.ENABLE_FIXTURE_ROUTES === 'true' && process.env.NODE_ENV !== 'production' && username === 'e2e-tester') {
             const owner = process.env.GITHUB_REGISTRY_OWNER || DEFAULT_OWNER;
             const repo = process.env.GITHUB_REGISTRY_REPO || DEFAULT_REPO;

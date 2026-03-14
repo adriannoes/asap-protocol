@@ -50,6 +50,7 @@ src/asap/
 - **Rules**: `.cursor/rules/*.mdc` (Auto-loaded context)
 - **Commands**: `.cursor/commands/` (Workflows like `create-prd`, `generate-tasks`)
 - **Skills**: `.cursor/skills/` (Specialized agents for Security, Reviews)
+- **Web E2E**: `apps/web/docs/playwright-e2e.md` — Playwright browser path troubleshooting
 
 ## Key Architectural Patterns
 

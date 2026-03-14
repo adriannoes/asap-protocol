@@ -54,7 +54,6 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
         return Array.from(categoriesSet).sort();
     }, [initialAgents]);
 
-    // Extract unique tags (Task 4.4.3)
     const availableTags = useMemo(() => {
         const tagsSet = new Set<string>();
         initialAgents.forEach((agent) => {
@@ -67,7 +66,6 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
         return Array.from(tagsSet).sort();
     }, [initialAgents]);
 
-    // Extract unique skills from all agents (Task 4.1.3)
     const availableSkills = useMemo(() => {
         const skillsSet = new Set<string>();
         initialAgents.forEach((agent) => {
@@ -111,7 +109,6 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
             });
         }
 
-        // Apply Trust Level Filters (Task 4.1.4)
         if (requireSla) {
             result = result.filter((agent) => !!agent.sla);
         }
@@ -120,12 +117,10 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
             result = result.filter((agent) => Array.isArray(agent.auth?.schemes) && agent.auth.schemes.length > 0);
         }
 
-        // Apply Category Filter (Task 4.4.2)
         if (selectedCategory) {
             result = result.filter((agent) => agent.category === selectedCategory);
         }
 
-        // Apply Tags Filter (Task 4.4.3)
         if (selectedTags.length > 0) {
             result = result.filter((agent) => {
                 const agentTags = Array.isArray(agent.tags) ? agent.tags : [];
@@ -138,7 +133,6 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
 
     return (
         <div className="flex flex-col md:flex-row gap-6">
-            {/* Sidebar / Filters (Task 4.1.2, 4.1.3, 4.1.4) */}
             <div className="w-full md:w-64 shrink-0 space-y-6">
                 <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4">
                     <h2 className="font-semibold mb-4">Filters</h2>
@@ -164,7 +158,6 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
                             </Select>
                         </div>
 
-                        {/* Tags Filter (Task 4.4.3) */}
                         <div className="pt-4 border-t">
                             <h3 className="text-sm font-medium mb-3">Tags</h3>
                             {availableTags.length > 0 ? (
@@ -191,7 +184,6 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
                             )}
                         </div>
 
-                        {/* Skill Filters (Task 4.1.3) */}
                         <div className="pt-4 border-t">
                             <h3 className="text-sm font-medium mb-3">Skills</h3>
                             {availableSkills.length > 0 ? (
@@ -218,7 +210,6 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
                             )}
                         </div>
 
-                        {/* Trust level filters (Task 4.1.4) */}
                         <div className="pt-4 border-t">
                             <h3 className="text-sm font-medium mb-3">Trust Levels</h3>
                             <div className="space-y-2">

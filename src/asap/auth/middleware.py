@@ -31,7 +31,7 @@ logger = get_logger(__name__)
 HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
 ERROR_AUTH_REQUIRED = "Authentication required"
-ERROR_INVALID_TOKEN = "Invalid authentication token"
+ERROR_INVALID_TOKEN = "Invalid authentication token"  # nosec B105
 ERROR_INSUFFICIENT_SCOPE = "Insufficient scope"
 ERROR_IDENTITY_MISMATCH = "Identity mismatch: custom claim does not match agent manifest"
 

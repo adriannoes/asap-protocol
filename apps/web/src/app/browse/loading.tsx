@@ -1,9 +1,6 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import { AgentCardSkeleton } from './agent-card-skeleton';
 
-/**
- * Loading UI for /browse - skeleton grid matching Agent Card dimensions (Task 4.2.2, zero CLS).
- */
 export default function BrowseLoading() {
   const skeletons = Array.from({ length: 9 }, (_, i) => <AgentCardSkeleton key={i} />);
 
@@ -16,7 +13,6 @@ export default function BrowseLoading() {
         </div>
 
         <div className="flex flex-col md:flex-row gap-6">
-          {/* Sidebar skeleton - matches browse-content layout */}
           <div className="w-full md:w-64 shrink-0">
             <div className="rounded-lg border bg-card p-4 space-y-4">
               <Skeleton className="h-5 w-32" />
@@ -32,7 +28,6 @@ export default function BrowseLoading() {
             </div>
           </div>
 
-          {/* Grid skeleton - same layout as browse-content (grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6) */}
           <div className="flex-1">
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {skeletons}

@@ -1,5 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// Resolve NodeJS warnings about conflicting color environment variables
+delete process.env.NO_COLOR;
+delete process.env.FORCE_COLOR;
+
+const webServerEnv = { ...process.env };
+
 /**
  * See https://playwright.dev/docs/test-configuration.
  *
@@ -72,6 +78,7 @@ export default defineConfig({
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     env: {
+      ...webServerEnv,
       ENABLE_FIXTURE_ROUTES: 'true',
       // Use fixture registry for E2E so dashboard Bento test can assert with agents
       REGISTRY_URL: 'http://localhost:3000/api/fixtures/registry?count=10',

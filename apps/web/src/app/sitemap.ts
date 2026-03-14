@@ -1,14 +1,13 @@
 import { MetadataRoute } from 'next';
 import { fetchRegistry } from '../lib/registry';
 
-export const revalidate = 60; // 1 minute (ISR cache)
+export const revalidate = 60;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://asap-protocol.com';
 
     const agents = await fetchRegistry();
 
-    // Exclude seeded/mock/loadtest agents so bots don't index fake pages.
     const validAgents = agents.filter(
         (a) =>
             a.id &&

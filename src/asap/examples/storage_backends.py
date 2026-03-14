@@ -34,7 +34,7 @@ def main() -> None:
     )
     store.save(snapshot)
     retrieved = store.get(task_id, None)
-    assert retrieved is not None
+    assert retrieved is not None  # nosec B101
     print(f"Backend: {os.environ.get('ASAP_STORAGE_BACKEND', 'memory')}")
     print(f"Saved and retrieved task_id={task_id}, data={retrieved.data}")
 
