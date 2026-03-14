@@ -1,15 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
- */
-// import dotenv from 'dotenv';
-// import path from 'path';
-// dotenv.config({ path: path.resolve(__dirname, '.env') });
-
-/**
  * See https://playwright.dev/docs/test-configuration.
+ *
+ * If you see "Executable doesn't exist" (e.g. when running from Cursor sandbox),
+ * see apps/web/docs/playwright-e2e.md for PLAYWRIGHT_BROWSERS_PATH setup.
  */
 export default defineConfig({
   testDir: './tests',
@@ -78,6 +73,8 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     env: {
       ENABLE_FIXTURE_ROUTES: 'true',
+      // Use fixture registry for E2E so dashboard Bento test can assert with agents
+      REGISTRY_URL: 'http://localhost:3000/api/fixtures/registry?count=10',
     },
   },
 });

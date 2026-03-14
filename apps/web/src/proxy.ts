@@ -7,7 +7,8 @@ export default auth((req) => {
 
   // Apply CORS rules to /api routes (strict: reject missing Origin to enforce allowlist).
   // Skip strict Origin check for /api/auth so NextAuth sign-in, callback, and session work.
-  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth')) {
+  // Skip for /api/fixtures so server-side fetch (e.g. REGISTRY_URL in E2E) can reach it.
+  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth') && !pathname.startsWith('/api/fixtures')) {
     const origin = req.headers.get('origin');
     const allowedOrigin = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
@@ -34,6 +35,8 @@ export default auth((req) => {
     signInUrl.searchParams.set('callbackUrl', callbackUrl);
     return Response.redirect(signInUrl);
   }
+
+  return NextResponse.next();
 });
 
 // Optionally, don't invoke Middleware on some paths
