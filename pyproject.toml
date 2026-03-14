@@ -101,6 +101,10 @@ Repository = "https://github.com/adriannoes/asap-protocol"
 Issues = "https://github.com/adriannoes/asap-protocol/issues"
 "PyPI" = "https://pypi.org/project/asap-protocol/"
 
+# Override transitive pyjwt to >=2.12.0 for CVE-2026-32597 (crit header validation).
+[tool.uv]
+override-dependencies = ["pyjwt>=2.12.0"]
+
 [project.scripts]
 asap = "asap.cli:main"
 asap-mcp-server = "asap.mcp.serve:main"
