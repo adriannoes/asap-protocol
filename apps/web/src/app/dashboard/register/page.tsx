@@ -19,7 +19,7 @@ export default async function RegisterAgentPage() {
 
     return (
         <div className="relative min-h-[calc(100vh-4rem)]">
-            <CanvasBg />
+            <CanvasBg className="fixed" />
             <div className="relative z-10 container mx-auto py-10 px-4 max-w-3xl">
                 <div className="mb-8 border-b border-zinc-800 pb-6">
                     <h1 className="text-3xl font-bold tracking-tight text-white">Register New Agent</h1>

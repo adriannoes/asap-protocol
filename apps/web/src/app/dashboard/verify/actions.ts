@@ -16,7 +16,6 @@ export async function submitVerificationRequest(
     }
 
     const userId = (session.user as { id?: string }).id ?? 'anonymous';
-    // Assuming 'username' is the appropriate field for username in session.user based on register/actions.ts
     const username = (session.user as { username?: string }).username || session.user.name;
     const isE2E = process.env.ENABLE_FIXTURE_ROUTES === 'true' && username === 'e2e-tester';
     if (!isE2E && !checkRateLimit(userId, 5, 60_000)) {

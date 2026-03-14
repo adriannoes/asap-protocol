@@ -65,7 +65,7 @@ describe('submitAgentRegistration', () => {
     it('returns error for invalid form data', async () => {
         const result = await submitAgentRegistration({
             ...validForm,
-            name: 'ab', // too short
+            name: 'ab',
         });
         expect(result.success).toBe(false);
         expect(result.error).toContain('Invalid form data');

@@ -18,7 +18,6 @@ export default async function DashboardPage() {
 
     const username = session.user.username || '';
 
-    // Ownership: strict URN prefix urn:asap:agent:<username>: to avoid false positives.
     const allAgents = await fetchRegistry();
     const prefix = username ? `urn:asap:agent:${username.toLowerCase()}:` : '';
     const myAgents = prefix ? allAgents.filter(a => (a.id ?? '').toLowerCase().startsWith(prefix)) : [];

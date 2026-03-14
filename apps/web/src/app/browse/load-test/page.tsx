@@ -1,11 +1,4 @@
 'use client';
-
-/**
- * Load-test page: fetches 500+ agents from fixture API and renders BrowseContent (Task 4.2.1).
- * Only intended for use when ENABLE_FIXTURE_ROUTES=true (Playwright load tests).
- * Simulates parsing a large registry.json payload and measures client-side render.
- */
-
 import { useEffect, useState } from 'react';
 import { BrowseContent } from '../browse-content';
 import BrowseLoading from '../loading';

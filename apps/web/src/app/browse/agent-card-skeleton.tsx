@@ -1,8 +1,3 @@
-/**
- * Skeleton that matches Agent Card dimensions exactly to prevent CLS (Task 4.2.2).
- * Must mirror the layout of the Card in browse-content.tsx.
- */
-
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 

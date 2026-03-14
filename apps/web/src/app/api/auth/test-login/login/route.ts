@@ -3,7 +3,6 @@ import { encode } from 'next-auth/jwt';
 import { cookies } from 'next/headers';
 
 export async function GET(request: Request) {
-    // Strictly deny access outside fixture-enabled non-production environments
     if (process.env.ENABLE_FIXTURE_ROUTES !== 'true' || process.env.NODE_ENV === 'production') {
         return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
@@ -16,7 +15,6 @@ export async function GET(request: Request) {
     const isSecure = request.url.startsWith('https://');
     const cookieName = isSecure ? '__Secure-authjs.session-token' : 'authjs.session-token';
 
-    // Generate a NextAuth valid JWT token
     const token = await encode({
         token: {
             sub: userId,

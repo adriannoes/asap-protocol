@@ -84,7 +84,7 @@ export function UsageSnippets({ agentId, agent }: UsageSnippetsProps) {
                                 <span className="text-purple-400">await</span> client.connect(<span className="text-emerald-300">&apos;{agentId}&apos;</span>);{'\n\n'}
                                 <span className="text-purple-400">const</span> response = <span className="text-purple-400">await</span> client.sendTask({'{'}{'\n'}
                                 {'  '}skill: <span className="text-emerald-300">&apos;{firstSkillId(agent)}&apos;</span>,{'\n'}
-                                {'  '}input: {'{ /* payload */ }'}{'\n'}
+                                {'  '}input: {'{'}{'\n'}
                                 {'}'});
                             </pre>
                         </div>

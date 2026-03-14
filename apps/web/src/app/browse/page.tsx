@@ -7,7 +7,6 @@ export const metadata: Metadata = {
     description: 'Discover and integrate autonomous AI agents from the ASAP Protocol registry.',
 };
 
-/** Must be static for Next.js segment config. Fetch uses REGISTRY_REVALIDATE_SECONDS from registry.ts. */
 export const revalidate = 60;
 
 export default async function BrowsePage() {

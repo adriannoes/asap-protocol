@@ -18,7 +18,6 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
-/** Breakpoints aligned with Tailwind: sm 640, md 768, lg 1024, xl 1280. */
 function useColumns(): number {
     const [columns, setColumns] = useState(1);
     useEffect(() => {
@@ -45,10 +44,8 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
     const [requireSla, setRequireSla] = useState(false);
     const [requireAuth, setRequireAuth] = useState(false);
 
-    // Defer filter updates to keep UI responsive with 500+ entries (avoids blocking input)
     const deferredSearch = useDeferredValue(searchQuery);
 
-    // Extract unique categories (Task 4.4.2)
     const availableCategories = useMemo(() => {
         const categoriesSet = new Set<string>();
         initialAgents.forEach((agent) => {
@@ -57,7 +54,6 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
         return Array.from(categoriesSet).sort();
     }, [initialAgents]);
 
-    // Extract unique tags (Task 4.4.3)
     const availableTags = useMemo(() => {
         const tagsSet = new Set<string>();
         initialAgents.forEach((agent) => {
@@ -70,7 +66,6 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
         return Array.from(tagsSet).sort();
     }, [initialAgents]);
 
-    // Extract unique skills from all agents (Task 4.1.3)
     const availableSkills = useMemo(() => {
         const skillsSet = new Set<string>();
         initialAgents.forEach((agent) => {
@@ -99,11 +94,9 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
         );
     };
 
-    // Filter agents based on search, selected skills, and trust levels
     const filteredAgents = useMemo(() => {
         let result = initialAgents;
 
-        // Apply Search Filter (deferred to avoid blocking input)
         if (deferredSearch) {
             const lowerQuery = deferredSearch.toLowerCase();
             result = result.filter(
@@ -114,7 +107,6 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
             );
         }
 
-        // Apply Skills Filter (Strict Mode)
         if (selectedSkills.length > 0) {
             result = result.filter((agent) => {
                 const agentSkills = Array.isArray(agent.capabilities?.skills)
@@ -125,7 +117,6 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
             });
         }
 
-        // Apply Trust Level Filters (Task 4.1.4)
         if (requireSla) {
             result = result.filter((agent) => !!agent.sla);
         }
@@ -134,12 +125,10 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
             result = result.filter((agent) => Array.isArray(agent.auth?.schemes) && agent.auth.schemes.length > 0);
         }
 
-        // Apply Category Filter (Task 4.4.2)
         if (selectedCategory) {
             result = result.filter((agent) => agent.category === selectedCategory);
         }
 
-        // Apply Tags Filter (Task 4.4.3)
         if (selectedTags.length > 0) {
             result = result.filter((agent) => {
                 const agentTags = Array.isArray(agent.tags) ? agent.tags : [];
@@ -183,7 +172,6 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
 
     return (
         <div className="flex flex-col md:flex-row gap-6">
-            {/* Sidebar / Filters (Task 4.1.2, 4.1.3, 4.1.4) */}
             <div className="w-full md:w-64 shrink-0 space-y-6">
                 <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4">
                     <h2 className="font-semibold mb-4">Search & Filters</h2>
@@ -199,7 +187,6 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
                             />
                         </div>
 
-                        {/* Category Filter (Task 4.4.2) — Shadcn Select per tech-stack */}
                         <div className="pt-4 border-t">
                             <h3 className="text-sm font-medium mb-3">Category</h3>
                             <Select
@@ -220,7 +207,6 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
                             </Select>
                         </div>
 
-                        {/* Tags Filter (Task 4.4.3) */}
                         <div className="pt-4 border-t">
                             <h3 className="text-sm font-medium mb-3">Tags</h3>
                             {availableTags.length > 0 ? (
@@ -247,7 +233,6 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
                             )}
                         </div>
 
-                        {/* Skill Filters (Task 4.1.3) */}
                         <div className="pt-4 border-t">
                             <h3 className="text-sm font-medium mb-3">Skills</h3>
                             {availableSkills.length > 0 ? (
@@ -274,7 +259,6 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
                             )}
                         </div>
 
-                        {/* Trust level filters (Task 4.1.4) */}
                         <div className="pt-4 border-t">
                             <h3 className="text-sm font-medium mb-3">Trust Levels</h3>
                             <div className="space-y-2">
@@ -302,7 +286,6 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
                 </div>
             </div>
 
-            {/* Main Content / Agent Cards Grid */}
             <div className="flex-1">
                 {filteredAgents.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-950 p-12 flex flex-col items-center justify-center text-center relative overflow-hidden group">

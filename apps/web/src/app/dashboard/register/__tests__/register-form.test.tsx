@@ -5,17 +5,14 @@ import * as actions from '../actions';
 import { buildRegisterAgentIssueUrl } from '@/lib/github-issues';
 import type { ManifestFormValues } from '@/lib/register-schema';
 
-// Mock Next.js Link
 vi.mock('next/link', () => ({
     default: ({ children, href }: { children: React.ReactNode, href: string }) => <a href={href}>{children}</a>
 }));
 
-// Mock the server action
 vi.mock('../actions', () => ({
     submitAgentRegistration: vi.fn()
 }));
 
-// Mock WebCrypto to prevent idb-keyval errors in tests
 vi.mock('@/lib/webcrypto', () => ({
     generateAndStoreAgentKeys: vi.fn().mockResolvedValue({
         publicKey: 'mocked-public-key',
@@ -58,7 +55,6 @@ describe('RegisterAgentForm', () => {
         const submitButton = screen.getByRole('button', { name: /Submit Registration/i });
         fireEvent.click(submitButton);
 
-        // Zod validation messages (required fields; confirm may be among them)
         await waitFor(() => {
             const lengthErrors = screen.getAllByText(/(String must contain at least|Too small)/i);
             expect(lengthErrors.length).toBeGreaterThan(0);
@@ -120,7 +116,6 @@ describe('RegisterAgentForm', () => {
     it('validates confirmation checkbox is required (Zod)', async () => {
         render(<RegisterAgentForm />);
         fillValidFields();
-        // do not check the confirm checkbox
 
         fireEvent.click(screen.getByRole('button', { name: /Submit Registration/i }));
 

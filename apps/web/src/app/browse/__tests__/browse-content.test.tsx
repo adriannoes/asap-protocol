@@ -3,14 +3,12 @@ import { describe, it, expect } from 'vitest';
 import { BrowseContent } from '../browse-content';
 import { Manifest } from '@/types/protocol';
 
-// Mock test data
 const mockAgents: Manifest[] = [
     {
         id: 'urn:asap:agent:user1:search-bot',
         name: 'Search Bot',
         description: 'A bot that searches the web',
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        version: '1.0.0' as any,
+        version: 1,
         endpoints: { asap: 'https://api.example.com/search' },
         capabilities: {
             asap_version: '0.1',
@@ -24,8 +22,7 @@ const mockAgents: Manifest[] = [
         id: 'urn:asap:agent:user2:secure-writer',
         name: 'Secure Writer',
         description: 'Writes secure code',
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        version: '1.0.0' as any,
+        version: 1,
         endpoints: { asap: 'https://api.example.com/write' },
         sla: {
             availability: '99.9%',
@@ -57,7 +54,6 @@ describe('BrowseContent', () => {
         const searchInput = screen.getByPlaceholderText('Search agents...');
         fireEvent.change(searchInput, { target: { value: 'secure' } });
 
-        // Wait for debounce (300ms)
         await waitFor(() => {
             expect(screen.queryByText('Search Bot')).not.toBeInTheDocument();
             expect(screen.getByText('Secure Writer')).toBeInTheDocument();
@@ -67,15 +63,12 @@ describe('BrowseContent', () => {
     it('filters agents by skill selection', () => {
         render(<BrowseContent initialAgents={mockAgents} />);
 
-        // Initial state - both visible
         expect(screen.getByText('Search Bot')).toBeInTheDocument();
         expect(screen.getByText('Secure Writer')).toBeInTheDocument();
 
-        // Click the 'coding' skill badge
         const codingBadge = screen.getAllByText('coding')[0];
         fireEvent.click(codingBadge);
 
-        // Only Secure Writer should have 'coding'
         expect(screen.queryByText('Search Bot')).not.toBeInTheDocument();
         expect(screen.getByText('Secure Writer')).toBeInTheDocument();
     });
@@ -86,7 +79,6 @@ describe('BrowseContent', () => {
         const slaCheckbox = screen.getByLabelText(/Has published SLA/i);
         fireEvent.click(slaCheckbox);
 
-        // Secure Writer has an SLA, Search Bot doesn't
         expect(screen.queryByText('Search Bot')).not.toBeInTheDocument();
         expect(screen.getByText('Secure Writer')).toBeInTheDocument();
     });
@@ -97,7 +89,6 @@ describe('BrowseContent', () => {
         const authCheckbox = screen.getByLabelText(/Requires Authentication/i);
         fireEvent.click(authCheckbox);
 
-        // Secure Writer requires "Bearer" Auth, Search Bot has no Auth
         expect(screen.queryByText('Search Bot')).not.toBeInTheDocument();
         expect(screen.getByText('Secure Writer')).toBeInTheDocument();
     });
