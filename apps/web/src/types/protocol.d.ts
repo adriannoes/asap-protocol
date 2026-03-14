@@ -1629,7 +1629,7 @@ export interface Manifest {
    */
   sla?: SLADefinition | null;
   /**
-   * Verification status for marketplace trust badge (Task 3.6)
+   * Verification status for marketplace trust badge
    */
   verification?: VerificationStatus | null;
   ttl_seconds?: TtlSeconds;
@@ -1728,10 +1728,8 @@ export interface SLADefinition {
   support_hours?: SupportHours;
 }
 /**
- * Verification status for marketplace trust badge (Task 3.6).
- *
- * When status is 'verified', the agent displays a Verified badge in the
- * registry UI. Admins add this after manual review of verification requests.
+ * Verification status for marketplace trust badge.
+ * When status is 'verified', the agent displays a Verified badge in the registry UI.
  */
 export interface VerificationStatus {
   status: VerificationState;

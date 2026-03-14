@@ -48,13 +48,13 @@ export function FeaturedAgents({ agents }: FeaturedAgentsProps) {
                   className="basis-full pl-2 md:basis-1/2 md:pl-4 lg:basis-1/3"
                 >
                   <div className="p-1">
-                    <Card className="border-zinc-800 bg-zinc-950/50 backdrop-blur-sm transition-all hover:border-indigo-500/50 hover:bg-zinc-900/80 hover:shadow-lg hover:shadow-indigo-500/10">
+                    <Card className="border-zinc-800 bg-zinc-950/50 backdrop-blur-sm transition-all hover:border-indigo-500/30 hover:bg-zinc-900/80">
                       <CardHeader className="pb-4">
                         <div className="mb-2 flex items-start justify-between">
                           <CardTitle className="line-clamp-1 text-xl text-white">
                             {agent.name}
                           </CardTitle>
-                          {/* Trust level will be computed externally in v2.0 Lite Registry via verified maintainers. Hiding badge for now. */}
+                          {/* Trust badge hidden until registry provides verification. */}
                         </div>
                         <CardDescription className="line-clamp-2 min-h-[40px] text-zinc-400">
                           {agent.description}

@@ -54,7 +54,7 @@ export function DataTable<TData, TValue>({
         }
     }, [searchParams, searchKey]);
 
-    // Debounce URL update to avoid server roundtrip on every keystroke (PR-93 code review)
+    // Debounce URL update to avoid server roundtrip on every keystroke
     useEffect(() => {
         const t = setTimeout(() => {
             const params = new URLSearchParams(searchParams.toString());
@@ -80,6 +80,7 @@ export function DataTable<TData, TValue>({
         }
     };
 
+    // eslint-disable-next-line react-hooks/incompatible-library
     const table = useReactTable({
         data,
         columns,

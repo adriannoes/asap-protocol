@@ -76,7 +76,7 @@ function normalizeRegistryAgent(agent: RegistryAgentValidated): RegistryAgent {
  * Fetch the ASAP Lite Registry.
  * We fetch from REGISTRY_URL (GitHub Pages or raw URL). Next.js ISR uses REGISTRY_REVALIDATE_SECONDS.
  * Normalizes registry format: endpoints.http -> endpoints.asap for UI compatibility.
- * Validates response with Zod (IMP-4).
+ * Validates response with Zod.
  */
 export async function fetchRegistry(): Promise<RegistryAgent[]> {
   // Server-side only: use REGISTRY_URL (not NEXT_PUBLIC_) to avoid leaking in client bundle.

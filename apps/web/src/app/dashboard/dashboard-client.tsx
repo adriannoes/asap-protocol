@@ -117,7 +117,7 @@ export function DashboardClient({ initialAgents, username: _username }: Dashboar
                                     <CardContent className="p-4 space-y-3">
                                         <div className="flex items-center justify-between gap-3">
                                             <div className="flex items-center gap-3 min-w-0">
-                                                <div className="p-2 bg-indigo-500/10 text-indigo-500 rounded-full shrink-0">
+                                                <div className="p-2 bg-indigo-500/10 text-indigo-500 rounded-[--radius] shrink-0">
                                                     <GitPullRequest className="w-4 h-4" />
                                                 </div>
                                                 <div className="min-w-0">

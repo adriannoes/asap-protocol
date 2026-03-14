@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
 
-/** E2E: Register Agent → sign-in with callbackUrl; login not 403; Explore Agents → /browse. */
 test.describe('Auth & Register Agent journey', () => {
     test('Register Agent from homepage redirects to sign-in with callbackUrl to /dashboard/register', async ({
         page,
@@ -94,5 +93,19 @@ test.describe('Auth & Register Agent journey', () => {
             (e) => !e.includes('third-party cookie') && !e.includes('favicon')
         );
         expect(criticalErrors).toHaveLength(0);
+    });
+});
+
+test.describe('Landing Page Animations', () => {
+    test('Landing page renders animated background paths', async ({ page }) => {
+        await page.goto('/');
+        await expect(page.getByTestId('background-paths')).toBeVisible({ timeout: 5000 });
+    });
+
+    test('Landing page hero text animates on load', async ({ page }) => {
+        await page.goto('/');
+        const heading = page.getByRole('heading', { level: 1 });
+        await expect(heading).toBeVisible({ timeout: 5000 });
+        await expect(heading).toContainText(/Marketplace|Agents/i);
     });
 });
