@@ -9,14 +9,12 @@ export const metadata: Metadata = {
     description: 'Documentation on how to define your agent manifest and register it in the ASAP Protocol marketplace.',
 };
 
-/** Static content only; force static generation at build time. */
 export const dynamic = 'force-static';
 
 export default function DocsRegisterPage() {
     return (
         <div className="relative flex flex-col min-h-screen font-sans text-zinc-300 selection:bg-indigo-500/30 overflow-hidden">
             <CanvasBg />
-            {/* Subtle Grid Background */}
             <div className="fixed inset-0 z-0 flex justify-center pointer-events-none opacity-[0.03]">
                 <div className="w-full max-w-7xl h-full border-x border-zinc-500">
                     <div className="w-px h-full bg-zinc-500 ml-[33%] absolute left-0 hidden md:block" />
@@ -24,7 +22,6 @@ export default function DocsRegisterPage() {
                 </div>
             </div>
 
-            {/* Header Content */}
             <section className="relative z-10 py-20 border-b border-zinc-900 bg-zinc-950">
                 <div className="container mx-auto px-4 max-w-4xl relative">
                     <div className="inline-flex items-center rounded-md border border-zinc-800 bg-zinc-900/50 px-3 py-1 font-mono text-[11px] uppercase tracking-wider text-zinc-400 mb-6">
@@ -40,11 +37,9 @@ export default function DocsRegisterPage() {
                 </div>
             </section>
 
-            {/* Main Content */}
             <section className="relative z-10 py-16">
                 <div className="container mx-auto px-4 max-w-4xl space-y-16">
 
-                    {/* Step 1: The Manifest */}
                     <div className="space-y-6">
                         <div className="flex items-center gap-4">
                             <div className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-400 font-bold border border-indigo-500/20">
@@ -82,7 +77,6 @@ manifest = Manifest(
                         </div>
                     </div>
 
-                    {/* Step 2: The Handler */}
                     <div className="space-y-6">
                         <div className="flex items-center gap-4">
                             <div className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-400 font-bold border border-indigo-500/20">
@@ -111,7 +105,6 @@ app = create_app(manifest, registry)`}</code>
                         </div>
                     </div>
 
-                    {/* Step 3: Registration */}
                     <div className="space-y-6 pt-8 border-t border-zinc-900">
                         <div className="flex items-center gap-4 mb-8">
                             <div className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-400 font-bold border border-indigo-500/20">
@@ -121,7 +114,6 @@ app = create_app(manifest, registry)`}</code>
                         </div>
 
                         <div className="grid md:grid-cols-2 gap-6">
-                            {/* Dashboard Registration */}
                             <div className="p-6 rounded-xl border border-indigo-500/30 bg-indigo-500/5 relative group hover:bg-indigo-500/10 transition-colors">
                                 <ShieldCheck className="w-6 h-6 text-indigo-400 mb-4" />
                                 <h3 className="text-lg font-bold text-white mb-2">Web Dashboard (Recommended)</h3>
@@ -135,7 +127,6 @@ app = create_app(manifest, registry)`}</code>
                                 </Button>
                             </div>
 
-                            {/* Manual IssueOps */}
                             <div className="p-6 rounded-xl border border-zinc-800 bg-zinc-900/40 relative group hover:bg-zinc-900/60 transition-colors">
                                 <GitPullRequest className="w-6 h-6 text-zinc-400 mb-4" />
                                 <h3 className="text-lg font-bold text-white mb-2">Manual IssueOps</h3>

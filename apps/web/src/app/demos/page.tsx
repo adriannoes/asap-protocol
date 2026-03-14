@@ -10,7 +10,6 @@ export const metadata: Metadata = {
 export default function DemosPage() {
     return (
         <main className="flex flex-col min-h-screen bg-zinc-950 font-sans text-zinc-300 selection:bg-indigo-500/30">
-            {/* Subtle Grid Background */}
             <div className="fixed inset-0 z-0 flex justify-center pointer-events-none opacity-[0.03]">
                 <div className="w-full max-w-7xl h-full border-x border-zinc-500 flex justify-between">
                     <div className="w-px h-full bg-zinc-500" />
@@ -45,7 +44,6 @@ export default function DemosPage() {
 
                 <div className="space-y-32">
 
-                    {/* Demo 1: The .process Command */}
                     <section>
                         <div className="mb-12 flex items-center gap-4 border-b border-zinc-900 pb-4">
                             <div className="flex h-10 w-10 items-center justify-center rounded-md bg-zinc-900 border border-zinc-800">
@@ -67,16 +65,13 @@ export default function DemosPage() {
                                 </p>
                             </div>
 
-                            {/* IDE Block */}
                             <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 overflow-hidden font-mono text-[13px] leading-relaxed w-full">
                                 <div className="flex border-b border-zinc-800 bg-zinc-950 px-4 py-2 text-xs text-zinc-500">
                                     <div className="flex-1">client.ts</div>
                                 </div>
                                 <div className="p-4 bg-zinc-950/80 text-zinc-300 overflow-x-auto whitespace-pre">
-                                    <span className="text-zinc-500">{'{/* 1. Client connects via WebSocket */}'}</span><br />
                                     <span className="text-indigo-400">const</span> <span className="text-blue-300">ws</span> = <span className="text-indigo-400">new</span> WebSocket(<span className="text-green-300">&apos;wss://agent.example.com/asap&apos;</span>);<br />
                                     <br />
-                                    <span className="text-zinc-500">{'{/* 2. Client sends standard payload */}'}</span><br />
                                     ws.send(JSON.stringify({'{'}<br />
                                     &nbsp;&nbsp;action: <span className="text-green-300">&quot;.process&quot;</span>,<br />
                                     &nbsp;&nbsp;input: {'{'}<br />
@@ -85,7 +80,6 @@ export default function DemosPage() {
                                     &nbsp;&nbsp;{'}'}<br />
                                     {'}'}));<br />
                                     <br />
-                                    <span className="text-zinc-500">{'{/* 3. Agent streams lifecycle and output */}'}</span><br />
                                     <span className="text-cyan-400">{'<-'}</span> {'{'} <span className="text-indigo-300">&quot;type&quot;</span>: <span className="text-green-300">&quot;lifecycle&quot;</span>, <span className="text-indigo-300">&quot;status&quot;</span>: <span className="text-green-300">&quot;started&quot;</span> {'}'}<br />
                                     <span className="text-cyan-400">{'<-'}</span> {'{'} <span className="text-indigo-300">&quot;type&quot;</span>: <span className="text-green-300">&quot;lifecycle&quot;</span>, <span className="text-indigo-300">&quot;status&quot;</span>: <span className="text-green-300">&quot;processing&quot;</span> {'}'}<br />
                                     <span className="text-purple-400">{'<-'}</span> {'{'} <span className="text-indigo-300">&quot;type&quot;</span>: <span className="text-green-300">&quot;output&quot;</span>, <span className="text-indigo-300">&quot;data&quot;</span>: {'{'} <span className="text-indigo-300">&quot;result&quot;</span>: <span className="text-green-300">&quot;...&quot;</span> {'}'} {'}'}
@@ -94,7 +88,6 @@ export default function DemosPage() {
                         </div>
                     </section>
 
-                    {/* Demo 2: Strict Schema Validation */}
                     <section>
                         <div className="mb-12 flex items-center gap-4 border-b border-zinc-900 pb-4">
                             <div className="flex h-10 w-10 items-center justify-center rounded-md bg-zinc-900 border border-zinc-800">
@@ -107,7 +100,6 @@ export default function DemosPage() {
                         </div>
 
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-12 items-center">
-                            {/* IDE Block */}
                             <div className="order-2 xl:order-1 rounded-lg border border-zinc-800 bg-zinc-900/50 overflow-hidden font-mono text-[13px] leading-relaxed w-full">
                                 <div className="flex border-b border-zinc-800 bg-zinc-950 px-4 py-2 text-xs text-zinc-500">
                                     <div className="flex-1">validator.ts</div>
@@ -115,7 +107,6 @@ export default function DemosPage() {
                                 <div className="p-4 bg-zinc-950/80 text-zinc-300 overflow-x-auto whitespace-pre">
                                     <span className="text-indigo-400">import</span> {'{'} z {'}'} <span className="text-indigo-400">from</span> <span className="text-green-300">&quot;zod&quot;</span>;<br />
                                     <br />
-                                    <span className="text-zinc-500">{'{/* Copied directly from Agent\'s Lite Registry Manifest */}'}</span><br />
                                     <span className="text-indigo-400">const</span> InputSchema = z.object({'{'}<br />
                                     &nbsp;&nbsp;repository: z.string().url(),<br />
                                     &nbsp;&nbsp;branch: z.string().optional()<br />
@@ -125,7 +116,6 @@ export default function DemosPage() {
                                     &nbsp;&nbsp;repository: <span className="text-red-300">&quot;not-a-url&quot;</span>,<br />
                                     {'}'};<br />
                                     <br />
-                                    <span className="text-zinc-500">{'{/* Client validates *before* hitting network */}'}</span><br />
                                     <span className="text-indigo-400">const</span> valid = InputSchema.safeParse(payload);<br />
                                     <br />
                                     <span className="text-red-400">if</span> (!valid.success) {'{'}<br />
@@ -144,7 +134,6 @@ export default function DemosPage() {
                         </div>
                     </section>
 
-                    {/* Demo 3: Memory Snapshots */}
                     <section>
                         <div className="mb-12 flex items-center gap-4 border-b border-zinc-900 pb-4">
                             <div className="flex h-10 w-10 items-center justify-center rounded-md bg-zinc-900 border border-zinc-800">
@@ -166,7 +155,6 @@ export default function DemosPage() {
                                 </p>
                             </div>
 
-                            {/* IDE Block */}
                             <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 overflow-hidden font-mono text-[13px] leading-relaxed w-full">
                                 <div className="flex border-b border-zinc-800 bg-zinc-950 px-4 py-2 text-xs text-zinc-500">
                                     <div className="flex-1">WebSocket Stream</div>
@@ -184,7 +172,6 @@ export default function DemosPage() {
                                     &nbsp;&nbsp;{'}'}<br />
                                     {'}'}<br />
                                     <br />
-                                    <span className="text-zinc-500">{'{/* UI instantly renders the "thought" string to the user. */}'}</span>
                                 </div>
                             </div>
                         </div>
