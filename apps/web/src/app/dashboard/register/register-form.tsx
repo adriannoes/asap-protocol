@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ghostInputClassName } from "@/lib/auth-input-styles";
+import { cn } from "@/lib/utils";
 import {
     Select,
     SelectContent,
@@ -23,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
@@ -81,8 +84,15 @@ export function RegisterAgentForm() {
         }
     }
 
+    const springTransition = { type: "spring" as const, stiffness: 150, damping: 25 };
+
     if (result?.success) {
         return (
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={springTransition}
+            >
             <Alert className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
                 <CheckCircle2 className="h-4 w-4 stroke-emerald-500" />
                 <AlertTitle>Open GitHub to submit</AlertTitle>
@@ -102,10 +112,16 @@ export function RegisterAgentForm() {
                     </div>
                 </AlertDescription>
             </Alert>
+            </motion.div>
         );
     }
 
     return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={springTransition}
+        >
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 
@@ -125,7 +141,7 @@ export function RegisterAgentForm() {
                             <FormItem>
                                 <FormLabel>Agent Slug Name (required)</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="my-awesome-agent" {...field} />
+                                    <Input className={ghostInputClassName} placeholder="my-awesome-agent" {...field} />
                                 </FormControl>
                                 <FormDescription>
                                     Unique, URL-friendly identifier for your agent.
@@ -142,7 +158,7 @@ export function RegisterAgentForm() {
                             <FormItem>
                                 <FormLabel>Manifest URL (required)</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="https://api.myagent.com/asap/manifest" {...field} />
+                                    <Input className={ghostInputClassName} placeholder="https://api.myagent.com/asap/manifest" {...field} />
                                 </FormControl>
                                 <FormDescription>
                                     Public URL to fetch your agent&apos;s manifest.json
@@ -162,7 +178,7 @@ export function RegisterAgentForm() {
                             <FormControl>
                                 <Textarea
                                     placeholder="Briefly describe what your agent does and how it's used..."
-                                    className="resize-none"
+                                    className={cn("resize-none", ghostInputClassName)}
                                     {...field}
                                 />
                             </FormControl>
@@ -179,7 +195,7 @@ export function RegisterAgentForm() {
                             <FormItem>
                                 <FormLabel>HTTP Endpoint (required)</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="https://api.myagent.com/asap" {...field} />
+                                    <Input className={ghostInputClassName} placeholder="https://api.myagent.com/asap" {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -193,7 +209,7 @@ export function RegisterAgentForm() {
                             <FormItem>
                                 <FormLabel>WebSocket Endpoint (optional)</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="wss://api.myagent.com/asap/ws" {...field} />
+                                    <Input className={ghostInputClassName} placeholder="wss://api.myagent.com/asap/ws" {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -208,7 +224,7 @@ export function RegisterAgentForm() {
                         <FormItem>
                             <FormLabel>Skills (required, comma separated)</FormLabel>
                             <FormControl>
-                                <Input placeholder="web_research, summarization" {...field} />
+                                <Input className={ghostInputClassName} placeholder="web_research, summarization" {...field} />
                             </FormControl>
                             <FormDescription>
                                 Skill identifiers your agent supports. Example: web_research, summarization
@@ -257,7 +273,7 @@ export function RegisterAgentForm() {
                             <FormItem>
                                 <FormLabel>Repository URL (optional)</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="https://github.com/username/agent-repo" {...field} />
+                                    <Input className={ghostInputClassName} placeholder="https://github.com/username/agent-repo" {...field} />
                                 </FormControl>
                                 <FormDescription>
                                     Link to the agent source code. Helps trust and verification.
@@ -273,7 +289,7 @@ export function RegisterAgentForm() {
                             <FormItem>
                                 <FormLabel>Documentation URL (optional)</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="https://docs.example.com/agent" {...field} />
+                                    <Input className={ghostInputClassName} placeholder="https://docs.example.com/agent" {...field} />
                                 </FormControl>
                                 <FormDescription>
                                     Link to docs on how to use this agent.
@@ -327,5 +343,6 @@ export function RegisterAgentForm() {
                 </div>
             </form>
         </Form>
+        </motion.div>
     );
 }

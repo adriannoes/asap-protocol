@@ -2,6 +2,8 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { Terminal } from 'lucide-react';
 import { SignInForm } from './signin-form';
+import { CanvasBg } from '@/components/ui/canvas-bg';
+import { GlassContainer } from '@/components/ui/glass-container';
 
 export const metadata: Metadata = {
     title: 'Sign in | ASAP Protocol',
@@ -17,9 +19,8 @@ export default async function SignInPage({ searchParams }: PageProps) {
     const callbackUrl = params.callbackUrl ?? '/dashboard';
 
     return (
-        <main className="flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center bg-zinc-950 px-4 py-16">
-            <div className="pointer-events-none absolute top-1/2 left-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-[100px]" />
-
+        <main className="relative flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center px-4 py-16 overflow-hidden">
+            <CanvasBg />
             <div className="relative z-10 flex w-full max-w-md flex-col items-center gap-8 text-center">
                 <Link
                     href="/"
@@ -41,7 +42,9 @@ export default async function SignInPage({ searchParams }: PageProps) {
                     </p>
                 </div>
 
-                <SignInForm callbackUrl={callbackUrl} />
+                <GlassContainer className="p-8 w-full">
+                    <SignInForm callbackUrl={callbackUrl} />
+                </GlassContainer>
 
                 <p className="text-xs text-zinc-500">
                     By signing in, you agree to our{' '}

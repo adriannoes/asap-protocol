@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { ArrowRight, BookOpen, ShieldCheck, GitPullRequest, Code2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { CanvasBg } from '@/components/ui/canvas-bg';
 
 export const metadata: Metadata = {
     title: 'Register Agent Specs | ASAP Protocol',
@@ -13,7 +14,8 @@ export const dynamic = 'force-static';
 
 export default function DocsRegisterPage() {
     return (
-        <div className="flex flex-col min-h-screen bg-zinc-950 font-sans text-zinc-300 selection:bg-indigo-500/30">
+        <div className="relative flex flex-col min-h-screen font-sans text-zinc-300 selection:bg-indigo-500/30 overflow-hidden">
+            <CanvasBg />
             {/* Subtle Grid Background */}
             <div className="fixed inset-0 z-0 flex justify-center pointer-events-none opacity-[0.03]">
                 <div className="w-full max-w-7xl h-full border-x border-zinc-500">
