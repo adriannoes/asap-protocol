@@ -1,4 +1,4 @@
-"""Tests for SLA breach WebSocket subscription and broadcast (Task 3.3.4, 3.3.5)."""
+"""Tests for SLA breach WebSocket subscription and broadcast."""
 
 from __future__ import annotations
 

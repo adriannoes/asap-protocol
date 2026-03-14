@@ -293,7 +293,7 @@ class TestParsePercentage:
 
 
 class TestEvaluateBreachConditions:
-    """Tests for evaluate_breach_conditions (Task 3.3.1)."""
+    """Tests for evaluate_breach_conditions."""
 
     def _metrics(
         self,
@@ -408,7 +408,7 @@ class TestEvaluateBreachConditions:
 
 
 class TestBreachDetector:
-    """Tests for BreachDetector (Task 3.3.2, 3.3.3)."""
+    """Tests for BreachDetector."""
 
     def _metrics(
         self,

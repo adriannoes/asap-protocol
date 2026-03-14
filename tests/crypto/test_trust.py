@@ -115,7 +115,7 @@ def test_trust_level_backward_compat_omitted_field() -> None:
     assert detect_trust_level(signed_legacy) == TrustLevel.SELF_SIGNED
 
 
-# --- Task 2.2: CA signing and verification ---
+# --- CA signing and verification ---
 
 
 def test_sign_with_ca_returns_verified_trust_level() -> None:

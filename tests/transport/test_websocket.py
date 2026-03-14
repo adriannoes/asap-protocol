@@ -1,4 +1,4 @@
-"""Unit and integration tests for WebSocket transport (Task 3.1, 3.2, 3.3)."""
+"""Unit and integration tests for WebSocket transport."""
 
 import asyncio
 import contextlib
@@ -350,7 +350,7 @@ class TestWebSocketErrorHandling(NoRateLimitTestBase):
 
 
 class TestWebSocketTransportCorrelation(NoRateLimitTestBase):
-    """Tests for request/response correlation by request_id (Task 3.2.3)."""
+    """Tests for request/response correlation by request_id."""
 
     @pytest.mark.asyncio
     async def test_send_and_receive_returns_correlated_envelope(
@@ -670,7 +670,7 @@ class TestWebSocketTransportCorrelation(NoRateLimitTestBase):
 
 
 class TestWebSocketTransportOnMessage(NoRateLimitTestBase):
-    """Tests for server-push callback on_message (Task 3.2.4)."""
+    """Tests for server-push callback on_message."""
 
     @pytest.mark.asyncio
     async def test_on_message_called_for_push_frame(
@@ -786,7 +786,7 @@ class _MockWebSocket:
         pass
 
 
-# --- Heartbeat (Task 3.3.1) ---
+# --- Heartbeat ---
 
 
 class TestWebSocketHeartbeat(NoRateLimitTestBase):
@@ -821,7 +821,7 @@ class TestWebSocketHeartbeat(NoRateLimitTestBase):
         assert pong_data.get("type") == HEARTBEAT_FRAME_TYPE_PONG
 
 
-# --- Reconnection (Task 3.3.2) ---
+# --- Reconnection ---
 
 
 class TestWebSocketReconnection(NoRateLimitTestBase):
@@ -872,7 +872,7 @@ class TestWebSocketReconnection(NoRateLimitTestBase):
             await transport.connect("ws://127.0.0.1:1/")  # nothing listening
 
 
-# --- Connection pool (Task 3.3.3) ---
+# --- Connection pool ---
 
 
 class TestWebSocketConnectionPool(NoRateLimitTestBase):
@@ -1256,7 +1256,7 @@ class TestWebSocketConnectionPool(NoRateLimitTestBase):
             await pool.acquire()
 
 
-# --- Graceful shutdown (Task 3.3.4) ---
+# --- Graceful shutdown ---
 
 
 class TestWebSocketGracefulShutdown(NoRateLimitTestBase):
@@ -1281,7 +1281,7 @@ class TestWebSocketGracefulShutdown(NoRateLimitTestBase):
         assert len(app.state.websocket_connections) == 0
 
 
-# --- Chaos tests (Task 3.3.5) ---
+# --- Chaos tests ---
 
 
 def _app_with_close_ws_route(
@@ -1475,7 +1475,7 @@ class TestWebSocketChaos(NoRateLimitTestBase):
         await transport.close()
 
 
-# --- Rate Limiting (Task 3.3.6) ---
+# --- Rate limiting ---
 
 
 class TestWebSocketServerRateLimit(NoRateLimitTestBase):
@@ -1562,7 +1562,7 @@ class TestWebSocketServerRateLimit(NoRateLimitTestBase):
                 websocket.receive_text()
 
 
-# --- Ack Handling & Circuit Breaker (Task 3.3.7) ---
+# --- Ack handling & circuit breaker ---
 
 
 class TestWebSocketAckHandling(NoRateLimitTestBase):
@@ -1645,7 +1645,7 @@ class TestWebSocketAckHandling(NoRateLimitTestBase):
             # Should be removed
             assert "env-1" not in transport._pending_acks
             # Should have retried 2 times (initial send not counted here as we mocked register)
-            # Actually _send_envelope_only is called on retransmit.
+            # _send_envelope_only is called on retransmit.
             # 2 retries = 2 calls.
             assert transport._send_envelope_only.call_count >= 2
         finally:

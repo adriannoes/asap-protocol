@@ -1,7 +1,7 @@
 """Unit tests for ASAP transport cache module.
 
 Tests cover CacheEntry and ManifestCache: TTL expiration, get/set/invalidate,
-clear_all, size, cleanup_expired, thread-safety, and background cleanup (task 3.2).
+clear_all, size, cleanup_expired, thread-safety, and background cleanup.
 """
 
 from __future__ import annotations
@@ -336,7 +336,7 @@ class TestManifestCacheCleanupExpired:
 
 
 class TestManifestCachePeriodicCleanup:
-    """Tests for start_periodic_cleanup (task 3.2: background cleanup / memory release)."""
+    """Tests for start_periodic_cleanup (background cleanup / memory release)."""
 
     @pytest.mark.asyncio
     async def test_periodic_cleanup_prunes_expired_entries(self) -> None:

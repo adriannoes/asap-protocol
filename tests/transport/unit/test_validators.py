@@ -300,13 +300,13 @@ class TestNonceValidation:
             assert abs(actual_ttl - NONCE_TTL_SECONDS) < 1.0  # Within 1 second tolerance
 
     def test_cleanup_probability_is_five_percent(self) -> None:
-        """_CLEANUP_PROBABILITY is 0.05 to reduce memory drift under high throughput (task 3.3)."""
+        """_CLEANUP_PROBABILITY is 0.05 to reduce memory drift under high throughput."""
         assert validators_module._CLEANUP_PROBABILITY == 0.05
 
     def test_cleanup_runs_when_store_exceeds_max_size(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """When len(_store) > _MAX_NONCE_STORE_SIZE, cleanup runs and prunes expired (task 3.3)."""
+        """When len(_store) > _MAX_NONCE_STORE_SIZE, cleanup runs and prunes expired."""
         monkeypatch.setattr(validators_module, "_MAX_NONCE_STORE_SIZE", 2)
         store = InMemoryNonceStore()
         # Add 3 nonces with expiry in the past (patch time so they expire immediately after).

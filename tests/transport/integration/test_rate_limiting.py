@@ -313,7 +313,7 @@ class TestCreateLimiter:
     def test_create_limiter_uses_asap_rate_limit_backend_env(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """create_limiter uses ASAP_RATE_LIMIT_BACKEND when storage_uri not passed (task 3.4)."""
+        """create_limiter uses ASAP_RATE_LIMIT_BACKEND when storage_uri not passed."""
         monkeypatch.delenv("ASAP_RATE_LIMIT_BACKEND", raising=False)
         limiter = create_limiter()
         assert isinstance(limiter, ASAPRateLimiter)

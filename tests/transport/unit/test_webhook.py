@@ -657,7 +657,7 @@ class TestWebhookRetryManager:
         assert entry.created_at > 0
 
     async def test_dead_letters_capped_at_max(self) -> None:
-        """Emit 1001 dead letters; storage length stays exactly MAX_DEAD_LETTERS (task 3.1)."""
+        """Emit 1001 dead letters; storage length stays exactly MAX_DEAD_LETTERS."""
         # Each deliver_with_retry uses 4 attempts (1 + max_retries) then DLQ; need 1001 * 4 responses.
         responses = [_server_error(self._URL, 500)] * 4 * (MAX_DEAD_LETTERS + 1)
         delivery = _make_mock_delivery(responses)

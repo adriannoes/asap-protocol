@@ -1,4 +1,4 @@
-"""Tests for MessageAck and requires_ack (ADR-16, Task 3.4)."""
+"""Tests for MessageAck and requires_ack (ADR-16)."""
 
 import json
 from typing import TYPE_CHECKING

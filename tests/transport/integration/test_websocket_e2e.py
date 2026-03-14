@@ -1,4 +1,4 @@
-"""E2E tests: ASAPClient over WebSocket with real server (Task 3.2)."""
+"""E2E tests: ASAPClient over WebSocket with real server."""
 
 import socket
 import threading

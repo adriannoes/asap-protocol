@@ -1,4 +1,4 @@
-"""Tests for scripts/seed_registry.py (Task 4.5.1)."""
+"""Tests for scripts/seed_registry.py."""
 
 from __future__ import annotations
 
