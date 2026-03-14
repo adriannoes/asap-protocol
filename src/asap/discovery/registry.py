@@ -92,7 +92,7 @@ class RegistryEntry(ASAPBaseModel):
     )
     verification: VerificationStatus | None = Field(
         default=None,
-        description="Verification status for marketplace trust badge (Task 3.6)",
+        description="Verification status for marketplace trust badge",
     )
     online_check: bool | None = Field(
         default=None,

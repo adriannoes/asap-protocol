@@ -4,7 +4,7 @@
 This script relies on `export_schemas.py` to first generate the JSON schema
 files in `schemas/`, then uses `json-schema-to-typescript` (via npx) to compile
 them into a single `protocol.d.ts` file. Duplicate type/interface declarations
-are removed (IMP-9 from PR-58 code review).
+are removed.
 """
 
 import re

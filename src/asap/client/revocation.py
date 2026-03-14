@@ -36,7 +36,7 @@ async def is_revoked(
     revoked_url: str | None = None,
     http_client: httpx.AsyncClient | None = None,
 ) -> bool:
-    """Fetch revoked list (no cache); True if URN revoked. Optional http_client for pooling (Sprint E2: wrap HTTPStatusError in ASAPError)."""
+    """Fetch revoked list (no cache); True if URN revoked. Optional http_client for pooling."""
     url = revoked_url or os.environ.get("ASAP_REVOKED_AGENTS_URL", DEFAULT_REVOKED_URL)
     client = http_client or httpx.AsyncClient()
     to_close = None if http_client is not None else client
