@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ArrowLeft, Database, ShieldCheck, Zap, Activity } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { ArrowLeft, Database, ShieldCheck, Zap, Activity, Globe, Lock, Code } from 'lucide-react';
 import { notFound } from 'next/navigation';
+import { BentoGrid, BentoCard } from '@/components/ui/bento-grid';
 
 export function generateStaticParams() {
     return [
@@ -12,6 +14,8 @@ export function generateStaticParams() {
     ];
 }
 
+type FeatureCapability = { title: string; description: string; icon: LucideIcon };
+
 const FEATURE_CONTENT: Record<
     string,
     {
@@ -19,12 +23,18 @@ const FEATURE_CONTENT: Record<
         description: string;
         icon: React.ComponentType<{ className?: string }>;
         content: React.ReactNode;
+        capabilities: FeatureCapability[];
     }
 > = {
     'lite-registry': {
         title: 'Lite Registry',
         description: 'Zero database overhead. Pure speed and resilience.',
         icon: Database,
+        capabilities: [
+            { title: 'CDN-Optimized', description: 'Delivered instantaneously across global Edge networks.', icon: Globe },
+            { title: 'Resilient', description: 'Unaffected by database outages or query bottlenecks.', icon: Database },
+            { title: 'Transparent', description: 'The entire registry is an open-source JSON file, publicly auditable.', icon: Code },
+        ],
         content: (
             <>
                 <p className="mb-6">
@@ -49,6 +59,11 @@ const FEATURE_CONTENT: Record<
         title: 'Verified Trust',
         description: 'Rigorous vetting for a secure agent ecosystem.',
         icon: ShieldCheck,
+        capabilities: [
+            { title: 'Untrusted', description: 'Agents running locally or not officially indexed. No guarantees.', icon: Lock },
+            { title: 'Self-Signed', description: 'Registered in the Lite Registry. Ed25519 keys prove publisher identity.', icon: ShieldCheck },
+            { title: 'Verified', description: 'Manual IssueOps vetting by the core team. Highest trust tier.', icon: ShieldCheck },
+        ],
         content: (
             <>
                 <p className="mb-6">
@@ -73,6 +88,11 @@ const FEATURE_CONTENT: Record<
         title: '1-Click Integration',
         description: 'Instantly launch and orchestrate agents natively over WebSockets.',
         icon: Zap,
+        capabilities: [
+            { title: 'Universal Connection', description: 'Secure WebSockets enable bidirectional streaming without HTTP timeouts.', icon: Zap },
+            { title: 'Standard Schema', description: 'Inputs defined by manifest schema. Validation before work begins.', icon: Code },
+            { title: 'No SDK Lock-in', description: 'Any language with WebSocket support can integrate. SDKs are optional.', icon: Globe },
+        ],
         content: (
             <>
                 <p className="mb-6">
@@ -97,6 +117,11 @@ const FEATURE_CONTENT: Record<
         title: 'Full Observability',
         description: 'Real-time state streaming and standardized task telemetrics.',
         icon: Activity,
+        capabilities: [
+            { title: 'Live Event Stream', description: 'Immediate updates as agents change states (started, processing, completed).', icon: Activity },
+            { title: 'State Snapshots', description: 'Internal memory snapshots for intermediate UI or real-time debug.', icon: Database },
+            { title: 'Structured Logging', description: 'ASAP JSON format with Trace IDs for audit across multi-agent clusters.', icon: Code },
+        ],
         content: (
             <>
                 <p className="mb-6">
@@ -170,6 +195,22 @@ export default async function FeatureDetail({ params }: { params: Promise<{ slug
 
                     <div className="space-y-6 text-lg leading-relaxed">
                         {feature.content}
+                    </div>
+
+                    <div className="mt-12">
+                        <h2 className="mb-6 text-2xl font-bold tracking-tight text-white">
+                            Key Capabilities
+                        </h2>
+                        <BentoGrid>
+                            {feature.capabilities.map((cap) => (
+                                <BentoCard
+                                    key={cap.title}
+                                    icon={cap.icon}
+                                    title={cap.title}
+                                    description={cap.description}
+                                />
+                            ))}
+                        </BentoGrid>
                     </div>
 
                     <div className="mt-16 border-t border-zinc-800 pt-8 text-center">

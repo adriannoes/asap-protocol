@@ -19,8 +19,9 @@ test.describe('Dashboard (Authenticated)', () => {
             await expect(page.getByTestId('sidebar-link-register')).toBeVisible();
         }
 
-        await expect(page.getByRole('heading', { name: 'No agents found' })).toBeVisible();
-        await expect(page.getByText(/You haven't registered any agents/)).toBeVisible();
+        // Check for the "No agents found" empty state (use .first() when multiple instances exist)
+        await expect(page.getByRole('heading', { name: 'No agents found' }).first()).toBeVisible();
+        await expect(page.getByText(/You haven't registered any agents/).first()).toBeVisible();
 
         await expect(page.getByRole('tab', { name: /My Agents/ })).toBeVisible();
         await expect(page.getByRole('tab', { name: 'Usage Metrics' })).toBeVisible();
@@ -64,5 +65,13 @@ test.describe('Dashboard (Authenticated)', () => {
         await expect(sidebar).toHaveAttribute('data-state', 'collapsed');
         await page.keyboard.press(`${modKey}+b`);
         await expect(sidebar).toHaveAttribute('data-state', 'expanded');
+    });
+
+    test('dashboard shows Bento metric cards when user has agents', async ({ page }) => {
+        // loadtest user gets agents from fixture registry (REGISTRY_URL in playwright config)
+        await page.goto('/api/auth/test-login?username=loadtest');
+        await expect(page).toHaveURL(/\/dashboard/);
+        await expect(page.getByTestId('bento-card-total-agents')).toBeVisible();
+        await expect(page.getByTestId('bento-card-active-tasks')).toBeVisible();
     });
 });
