@@ -10,6 +10,19 @@ test.describe('Register Agent (Authenticated)', () => {
         await page.goto('/dashboard/register');
         await expect(page).toHaveTitle(/Register Agent \| Developer Dashboard/);
 
+        // Wait for Canvas background and form to be ready
+        await expect(page.getByTestId('canvas-bg')).toBeVisible({ timeout: 10000 });
+        const firstInput = page.getByLabel(/Agent Slug Name/i);
+        await expect(firstInput).toBeVisible({ timeout: 5000 });
+        // Ghost inputs: transparent background (visual regression; format varies by browser)
+        const bgColor = await firstInput.evaluate(
+            (el) => window.getComputedStyle(el).getPropertyValue('background-color')
+        );
+        expect(
+            bgColor === 'rgba(0, 0, 0, 0)' || bgColor === 'transparent',
+            `Expected transparent background, got: ${bgColor}`
+        ).toBe(true);
+
         // Fill out the form
         await page.getByLabel(/Agent Slug Name/i).fill('e2e-awesome-agent');
         await page.getByRole('textbox', { name: /Manifest URL/i }).fill('https://example.com/manifest.json');
