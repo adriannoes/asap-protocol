@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { TerminalSquare, PlusCircle, Activity, Key, BarChart3, Globe, ShieldAlert, GitPullRequest, ExternalLink, ShieldCheck, RefreshCw, Workflow } from 'lucide-react';
+import { PackageSearch, PlusCircle, Activity, Key, BarChart3, Globe, ShieldAlert, GitPullRequest, ExternalLink, ShieldCheck, RefreshCw, Workflow } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
@@ -15,6 +15,7 @@ import {
     revalidateUserRegistrationIssues,
 } from './actions';
 import { AgentStatusBadge } from '@/components/agent/agent-status-badge';
+import { EmptyState } from '@/components/ui/empty-state';
 import { AGENT_BUILDER_URL_WITH_FROM } from '@/lib/agent-builder-url';
 
 export type PendingRegistration = {
@@ -31,6 +32,7 @@ interface DashboardClientProps {
     username: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- username reserved for future use (e.g. personalization)
 export function DashboardClient({ initialAgents, username }: DashboardClientProps) {
     const router = useRouter();
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -152,19 +154,14 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
                     </Card>
                 ) : initialAgents.length === 0 ? (
                     <Card className="border-dashed bg-muted/30">
-                        <CardContent className="flex flex-col items-center justify-center py-16 text-center space-y-4">
-                            <div className="p-4 bg-muted rounded-full">
-                                <TerminalSquare className="w-8 h-8 text-muted-foreground" />
-                            </div>
-                            <div className="max-w-md">
-                                <h3 className="font-semibold text-lg">No agents found</h3>
-                                <p className="text-sm text-muted-foreground mt-1 mb-4">
-                                    You haven&apos;t registered any agents under the username <span className="font-mono">{username}</span> yet.
-                                </p>
-                                <Button asChild variant="outline">
-                                    <Link href="/dashboard/register">Register your first agent</Link>
-                                </Button>
-                            </div>
+                        <CardContent className="p-0">
+                            <EmptyState
+                                icon={PackageSearch}
+                                title="No agents found"
+                                description="You haven't registered any agents yet."
+                                actionLabel="Register your first agent"
+                                actionHref="/dashboard/register"
+                            />
                         </CardContent>
                     </Card>
                 ) : (
