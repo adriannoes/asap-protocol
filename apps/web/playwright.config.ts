@@ -77,6 +77,10 @@ export default defineConfig({
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     env: {
+      // Avoid Node.js warning: "NO_COLOR is ignored due to FORCE_COLOR"
+      ...Object.fromEntries(
+        Object.entries(process.env).filter(([k]) => k !== 'NO_COLOR')
+      ),
       ENABLE_FIXTURE_ROUTES: 'true',
     },
   },
