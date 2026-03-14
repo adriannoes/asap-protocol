@@ -149,7 +149,7 @@ class TokenIntrospector:
     async def _do_introspect(self, token: str) -> TokenInfo:
         """Perform the HTTP introspection request."""
         auth = (self._client_id, self._client_secret)
-        data = {"token": token, "token_type_hint": "access_token"}
+        data = {"token": token, "token_type_hint": "access_token"}  # nosec B105
 
         kwargs: dict[str, Any] = {"timeout": httpx.Timeout(10.0)}
         if self._transport is not None:

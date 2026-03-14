@@ -66,5 +66,5 @@ async def get_with_429_retry(
         )
         await asyncio.sleep(_delay_seconds_for_429(resp, attempt))
     # Type narrowing for mypy only; unreachable (loop returns or raises on final 429).
-    assert resp is not None
+    assert resp is not None  # nosec B101
     return resp

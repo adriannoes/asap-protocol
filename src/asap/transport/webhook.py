@@ -463,7 +463,7 @@ class WebhookRetryManager:
             await asyncio.sleep(delay)
 
         # All retries exhausted → dead letter queue.
-        assert last_result is not None  # At least one attempt was made.
+        assert last_result is not None  # At least one attempt was made.  # nosec B101
         await self._send_to_dead_letter(url, payload, last_result)
         return last_result
 
