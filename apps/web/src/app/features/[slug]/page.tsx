@@ -17,7 +17,7 @@ const FEATURE_CONTENT: Record<
     {
         title: string;
         description: string;
-        icon: React.ElementType;
+        icon: React.ComponentType<{ className?: string }>;
         content: React.ReactNode;
     }
 > = {
