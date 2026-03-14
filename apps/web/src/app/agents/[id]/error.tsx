@@ -1,8 +1,7 @@
 'use client';
 
 export default function Error({
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Next.js error boundary requires error prop
-    error,
+    error: _error,
     reset,
 }: {
     error: Error & { digest?: string };
