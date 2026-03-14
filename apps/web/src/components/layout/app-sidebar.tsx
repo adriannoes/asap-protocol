@@ -18,6 +18,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   {
@@ -48,9 +49,17 @@ const NAV_ITEMS = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const isTransparent = pathname === "/dashboard/register";
 
   return (
-    <Sidebar className="bg-background border-r border-sidebar-border font-sans">
+    <Sidebar 
+      className={cn(
+        "font-sans transition-colors duration-500",
+        isTransparent 
+          ? "border-r border-white/5 [&_[data-sidebar=sidebar]]:bg-transparent" 
+          : "bg-background border-r border-sidebar-border"
+      )}
+    >
       <SidebarContent data-testid="app-sidebar">
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
