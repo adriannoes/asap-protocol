@@ -48,8 +48,6 @@ const COLOR_SCHEMES = {
   },
 };
 
-const FPS_THROTTLE_MS = 1000 / 60;
-
 interface DotMatrixSceneProps {
   colorScheme: "indigo" | "zinc";
   isVisible: boolean;
@@ -58,7 +56,6 @@ interface DotMatrixSceneProps {
 function DotMatrixScene({ colorScheme, isVisible }: DotMatrixSceneProps) {
   const materialRef = useRef<ShaderMaterialType>(null);
   const { invalidate } = useThree();
-  const lastFrameTime = useRef(0);
 
   const uniforms = useMemo(
     () => ({
@@ -74,14 +71,14 @@ function DotMatrixScene({ colorScheme, isVisible }: DotMatrixSceneProps) {
   }, [isVisible, invalidate]);
 
   useFrame((_, delta) => {
-    if (!isVisible || !materialRef.current) return;
+    if (!isVisible) return;
 
-    const now = performance.now();
-    if (now - lastFrameTime.current < FPS_THROTTLE_MS) return;
-    lastFrameTime.current = now;
-
-    materialRef.current.uniforms.uTime.value += delta;
+    // Unconditionally request the next frame while visible.
+    // Keeps the 'demand' loop alive (required for frameloop="demand").
     invalidate();
+
+    if (!materialRef.current) return;
+    materialRef.current.uniforms.uTime.value += delta;
   });
 
   return (
