@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PackageSearch, PlusCircle, Activity, Key, BarChart3, Globe, ShieldAlert, GitPullRequest, ExternalLink, ShieldCheck, RefreshCw, Workflow } from 'lucide-react';
+import { PackageSearch, PlusCircle, Activity, Key, BarChart3, Globe, ShieldAlert, GitPullRequest, ExternalLink, ShieldCheck, RefreshCw, Workflow, Bot, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
@@ -17,6 +17,7 @@ import {
 import { AgentStatusBadge } from '@/components/agent/agent-status-badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { AGENT_BUILDER_URL_WITH_FROM } from '@/lib/agent-builder-url';
+import { BentoGrid, BentoCard } from '@/components/ui/bento-grid';
 
 export type PendingRegistration = {
     id: number;
@@ -165,7 +166,29 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <>
+                        <BentoGrid className="mb-8">
+                            <BentoCard
+                                icon={Bot}
+                                title="Total Agents"
+                                value={initialAgents.length}
+                                description="Registered agents in your account"
+                                className="md:col-span-2"
+                            />
+                            <BentoCard
+                                icon={Activity}
+                                title="Active Tasks"
+                                value={0}
+                                description="Currently running task sessions"
+                            />
+                            <BentoCard
+                                icon={Shield}
+                                title="Verified"
+                                value={initialAgents.filter((a) => a.verification?.status === 'verified').length}
+                                description="Agents with verified trust badges"
+                            />
+                        </BentoGrid>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {initialAgents.map(agent => (
                             <Card key={agent.id ?? ''}>
                                 <CardHeader className="pb-4">
@@ -211,7 +234,8 @@ export function DashboardClient({ initialAgents, username }: DashboardClientProp
                                 </CardFooter>
                             </Card>
                         ))}
-                    </div>
+                        </div>
+                    </>
                 )}
             </TabsContent>
 

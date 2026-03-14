@@ -1,7 +1,14 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { BrowseContent } from '../browse-content';
 import { Manifest } from '@/types/protocol';
+
+const mockSearchParams = new URLSearchParams();
+vi.mock('next/navigation', () => ({
+    useRouter: () => ({ replace: vi.fn(), push: vi.fn(), refresh: vi.fn() }),
+    usePathname: () => '/browse',
+    useSearchParams: () => mockSearchParams,
+}));
 
 // Mock test data
 const mockAgents: Manifest[] = [
@@ -102,7 +109,7 @@ describe('BrowseContent', () => {
         expect(screen.getByText('Secure Writer')).toBeInTheDocument();
     });
 
-    it('shows "No agents found" when filters yield no results', async () => {
+    it('shows "No results" when search yields no matches', async () => {
         render(<BrowseContent initialAgents={mockAgents} />);
 
         const searchInput = screen.getByPlaceholderText('Search agents...');
@@ -111,8 +118,7 @@ describe('BrowseContent', () => {
         await waitFor(() => {
             expect(screen.queryByText('Search Bot')).not.toBeInTheDocument();
             expect(screen.queryByText('Secure Writer')).not.toBeInTheDocument();
-            expect(screen.getByText(/We couldn't find any agents matching/)).toBeInTheDocument();
-            expect(screen.getByText(/be the first to build and monetize this capability/)).toBeInTheDocument();
+            expect(screen.getByText('No results.')).toBeInTheDocument();
         }, { timeout: 1000 });
     });
 });

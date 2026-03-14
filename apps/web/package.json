@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:load": "ENABLE_FIXTURE_ROUTES=true npx playwright test tests/load/browse-500.spec.ts",
     "test:e2e": "playwright test",
+    "test:e2e:local": "bash scripts/test-e2e.sh",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui"
   },
@@ -22,6 +23,7 @@
     "@radix-ui/react-scroll-area": "^1.2.2",
     "@radix-ui/react-separator": "^1.1.1",
     "@radix-ui/react-slot": "^1.1.1",
+    "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.21",
     "@vercel/analytics": "^1.6.1",
     "@vercel/speed-insights": "^1.3.1",

@@ -55,6 +55,16 @@ describe('proxy (middleware)', () => {
         });
     });
 
+    describe('/api/fixtures excluded from strict CORS (server-side fetch)', () => {
+        it('does not return 403 for /api/fixtures/registry when Origin is missing', async () => {
+            const { default: proxy } = await import('@/proxy');
+            const req = createRequest('/api/fixtures/registry?count=10');
+            const res = (await proxy(req, middlewareContext)) as Response;
+            expect(res).toBeDefined();
+            expect(res.status).toBe(200);
+        });
+    });
+
     describe('/api/auth excluded from strict CORS', () => {
         it('does not return 403 for /api/auth/signin when Origin is missing', async () => {
             const { default: proxy } = await import('@/proxy');
