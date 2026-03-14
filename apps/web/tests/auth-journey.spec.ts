@@ -77,9 +77,7 @@ test.describe('Auth & Register Agent journey', () => {
 
     test('sign-in page renders WebGL background', async ({ page }) => {
         await page.goto('/auth/signin');
-        // Wait for Canvas to be visible (may take a moment for WebGL init)
         await expect(page.getByTestId('canvas-bg')).toBeVisible({ timeout: 10000 });
-        // Verify the form is still rendered on top
         await expect(page.getByRole('heading', { name: /Sign in/i })).toBeVisible();
     });
 
@@ -90,9 +88,8 @@ test.describe('Auth & Register Agent journey', () => {
         });
 
         await page.goto('/auth/signin');
-        await page.waitForTimeout(3000); // Let Canvas initialize fully
+        await page.getByTestId('canvas-bg').waitFor({ state: 'visible', timeout: 10000 });
 
-        // Filter out known non-critical warnings
         const criticalErrors = errors.filter(
             (e) => !e.includes('third-party cookie') && !e.includes('favicon')
         );

@@ -1,5 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// Resolve NodeJS warnings about conflicting color environment variables
+delete process.env.NO_COLOR;
+delete process.env.FORCE_COLOR;
+
+const webServerEnv = { ...process.env };
+
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
@@ -77,10 +83,7 @@ export default defineConfig({
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     env: {
-      // Avoid Node.js warning: "NO_COLOR is ignored due to FORCE_COLOR"
-      ...Object.fromEntries(
-        Object.entries(process.env).filter(([k]) => k !== 'NO_COLOR')
-      ),
+      ...webServerEnv,
       ENABLE_FIXTURE_ROUTES: 'true',
     },
   },

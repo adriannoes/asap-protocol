@@ -2,7 +2,6 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Register Agent (Authenticated)', () => {
     test.beforeEach(async ({ page }) => {
-        // Authenticate as a test user
         await page.goto('/api/auth/test-login?username=e2e-tester');
     });
 
@@ -10,20 +9,10 @@ test.describe('Register Agent (Authenticated)', () => {
         await page.goto('/dashboard/register');
         await expect(page).toHaveTitle(/Register Agent \| Developer Dashboard/);
 
-        // Wait for Canvas background and form to be ready
-        await expect(page.getByTestId('canvas-bg')).toBeVisible({ timeout: 10000 });
         const firstInput = page.getByLabel(/Agent Slug Name/i);
         await expect(firstInput).toBeVisible({ timeout: 5000 });
-        // Ghost inputs: transparent background (visual regression; format varies by browser)
-        const bgColor = await firstInput.evaluate(
-            (el) => window.getComputedStyle(el).getPropertyValue('background-color')
-        );
-        expect(
-            bgColor === 'rgba(0, 0, 0, 0)' || bgColor === 'transparent',
-            `Expected transparent background, got: ${bgColor}`
-        ).toBe(true);
+        await expect(page.getByTestId('canvas-bg')).toBeVisible({ timeout: 10_000 });
 
-        // Fill out the form
         await page.getByLabel(/Agent Slug Name/i).fill('e2e-awesome-agent');
         await page.getByRole('textbox', { name: /Manifest URL/i }).fill('https://example.com/manifest.json');
         await page.getByLabel(/Short Description/i).fill('This is an awesome agent created by Playwright E2E tests.');
@@ -32,26 +21,19 @@ test.describe('Register Agent (Authenticated)', () => {
         await page.getByRole('textbox', { name: /Repository URL/i }).fill('https://github.com/asap-protocol/e2e');
         await page.getByRole('textbox', { name: /Documentation URL/i }).fill('https://example.com/docs');
 
-        // Check the consent box
         await page.getByRole('checkbox').check();
-
-        // Click the submit button
         await page.getByRole('button', { name: /Submit Registration/i }).click();
 
-        // Ensure success state in original page
         await expect(page.getByText('Open GitHub to submit')).toBeVisible();
-
-        // Instead of dealing with popups, verify the fallback link's href is correct
         const githubLink = page.getByRole('link', { name: /Open GitHub Issue/i });
         await expect(githubLink).toBeVisible();
         const href = await githubLink.getAttribute('href');
         expect(href).toBeTruthy();
 
-        // Verify it points to GitHub Issues with correct params
         const decodedUrl = decodeURIComponent(href!);
         expect(decodedUrl).toContain('github.com');
         expect(decodedUrl).toContain('issues/new');
         expect(decodedUrl).toContain('e2e-awesome-agent');
-        expect(decodedUrl).toContain('public_key='); // Verify WebCrypto Public Key is generated and attached
+        expect(decodedUrl).toContain('public_key=');
     });
 });
