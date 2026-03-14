@@ -37,10 +37,13 @@ alwaysApply: false
   ```
 - **No arbitrary values**: Avoid `w-[123px]`. Use theme tokens (e.g., `w-32`).
 - **Design Aesthetic ("The Clean Architect")**: 
-  - Follow a minimalism approach. 
-  - Use Pure Black (`#000`) or Dark Zinc backgrounds. 
-  - Rely on 1px subtle borders and high contrast text (White/Grey). 
-  - Strictly **NO** heavy neon glows or excessive gradients. Functional minimalism is key.
+  - Follow a functional minimalism approach. 
+  - Use Pure Black (`#000`) or Dark Zinc backgrounds (avoid pure `#FFF` in dark mode, use slight off-whites or glass layers).
+  - Rely on 1px subtle borders (e.g., `border-white/10`) and high contrast text.
+  - **Premium Interactions**: Actively use Glassmorphism (`backdrop-blur`), subtle lifts (`hover:-translate-y-0.5`), and radial gradient reveals on cards. Avoid static, flat data presentation.
+  - **Animation**: Use `framer-motion` for state transitions (`AnimatePresence`) and hero elements. Never use abrupt DOM swapping for major components.
+  - **Anti-Boilerplate Discipline**: Strictly **NO** heavy neon glows, excessive static gradients, or generic "Lovable/v0" pill-shaped (`rounded-full`) colorful layouts. The UI must feel like a highly technical, monochromatic engineering tool, not a generic SaaS template. Let the physics and motion provide the "wow" factor, not coloring in background divs.
+  - **Consult**: Always refer to `.cursor/design/design-system.md` for the single source of truth on UI/UX behavior.
 
 ## 5. Component Architecture
 - **Shadcn**: Use `packages/ui` components (e.g., `<Button>`, `<Card>`) instead of HTML tags.
