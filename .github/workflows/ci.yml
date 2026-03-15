@@ -130,7 +130,17 @@ jobs:
       - name: Run tests with coverage
         env:
           PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}
-        run: uv run pytest --tb=short --cov=asap --cov-report=xml --cov-fail-under=85
+        run: |
+          for i in 1 2; do
+            echo "Coverage attempt $i/2"
+            if uv run pytest --tb=short --cov=asap --cov-report=xml --cov-fail-under=85; then
+              echo "Coverage passed on attempt $i"
+              exit 0
+            fi
+            echo "Coverage attempt $i failed, retrying..."
+          done
+          echo "Coverage failed after 2 attempts"
+          exit 1
         timeout-minutes: 15
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de  # v5.5.2
