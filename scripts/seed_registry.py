@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
-"""Seed registry.json with 100+ mock agents for launch cold start (Task 4.5.1).
+"""Seed registry.json with 100+ mock agents for launch cold start.
 
-Generates agents with online_check=False so the UI skips reachability checks
-and seeded agents do not appear as "Unreachable". Use for social proof and
-to validate client-side load testing (Task 4.2.1).
-
-Usage (from repo root):
-  uv run python scripts/seed_registry.py [--count 120] [--registry path/to/registry.json]
+Generates agents with online_check=False so the UI skips reachability checks.
+Usage: uv run python scripts/seed_registry.py [--count 120] [--registry path/to/registry.json]
 """
 
 from __future__ import annotations

@@ -387,7 +387,7 @@ class TestBackoffInRetryLoop:
     async def test_backoff_pattern_1s_2s_4s_8s_with_jitter(
         self, sample_request_envelope: Envelope
     ) -> None:
-        """Test local backoff pattern: 1s, 2s, 4s, 8s with jitter (Task 4.1.4).
+        """Test local backoff pattern: 1s, 2s, 4s, 8s with jitter.
 
         This test mocks a server that returns 503, sends a request, observes delays,
         and verifies the exponential pattern (1s, 2s, 4s, 8s) with jitter applied.
@@ -451,10 +451,7 @@ class TestBackoffInRetryLoop:
     async def test_backoff_pattern_1s_2s_4s_8s_without_jitter(
         self, sample_request_envelope: Envelope
     ) -> None:
-        """Test local backoff pattern: 1s, 2s, 4s, 8s without jitter (Task 4.1.4).
-
-        This test verifies the exact exponential pattern without jitter for precise timing.
-        """
+        """Test local backoff pattern: 1s, 2s, 4s, 8s without jitter."""
         call_count = 0
         delays: list[float] = []
 

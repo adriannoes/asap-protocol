@@ -233,7 +233,7 @@ def get_remote_address(request: Request) -> str:
 
 
 # ------------------------------------------------------------------
-# WebSocket token bucket (unchanged from previous implementation)
+# WebSocket token bucket
 # ------------------------------------------------------------------
 
 DEFAULT_WS_MESSAGES_PER_SECOND = 10.0

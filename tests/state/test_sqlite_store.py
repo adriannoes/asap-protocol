@@ -245,7 +245,7 @@ async def test_sqlite_wal_mode_enabled(
     db_path: Path,
     sample_snapshot: StateSnapshot,
 ) -> None:
-    """WAL mode is enabled; PRAGMA journal_mode returns 'wal' (task 2.3)."""
+    """WAL mode is enabled; PRAGMA journal_mode returns 'wal'."""
     store = SQLiteSnapshotStore(db_path=db_path)
     await store.save_async(sample_snapshot)
     async with aiosqlite.connect(db_path) as conn:
@@ -259,7 +259,7 @@ async def test_sqlite_wal_mode_enabled(
 
 @pytest.mark.asyncio
 async def test_sqlite_wal_mode_creates_wal_and_shm_files(db_path: Path) -> None:
-    """With WAL enabled, a write creates .db-wal and .db-shm in the test dir (task 2.3 verify)."""
+    """With WAL enabled, a write creates .db-wal and .db-shm in the test dir."""
     conn = await aiosqlite.connect(db_path)
     await conn.execute("PRAGMA journal_mode=WAL")
     await conn.execute("PRAGMA synchronous=NORMAL")

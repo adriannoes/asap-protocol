@@ -1,12 +1,6 @@
 /**
- * Client-side load test: browse page with 500+ agents (Task 4.2.1).
- *
- * Simulates parsing a registry.json payload with 500+ agents and measures
- * browser render time, memory usage, and Time to Interactive (TTI).
- *
- * Uses /browse/load-test which fetches from /api/fixtures/registry?count=500 client-side.
- * Run with: ENABLE_FIXTURE_ROUTES=true npx playwright test tests/load/browse-500.spec.ts
- * Or: npm run test:load
+ * Load test: browse page with 500+ agents. Uses /browse/load-test (api/fixtures/registry?count=500).
+ * Run: ENABLE_FIXTURE_ROUTES=true npx playwright test tests/load/browse-500.spec.ts or npm run test:load
  */
 
 import { test, expect } from '@playwright/test';

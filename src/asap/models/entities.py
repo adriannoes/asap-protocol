@@ -188,11 +188,7 @@ class AuthScheme(ASAPBaseModel):
 
 
 class VerificationStatus(ASAPBaseModel):
-    """Verification status for marketplace trust badge (Task 3.6).
-
-    When status is 'verified', the agent displays a Verified badge in the
-    registry UI. Admins add this after manual review of verification requests.
-    """
+    """Verification status for marketplace trust badge."""
 
     status: VerificationState = Field(
         ..., description="Verification state (verified, pending, rejected)"
@@ -345,7 +341,7 @@ class Manifest(ASAPBaseModel):
     )
     verification: VerificationStatus | None = Field(
         default=None,
-        description="Verification status for marketplace trust badge (Task 3.6)",
+        description="Verification status for marketplace trust badge",
     )
     ttl_seconds: int = Field(
         default=DEFAULT_MANIFEST_TTL_SECONDS,

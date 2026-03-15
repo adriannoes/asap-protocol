@@ -1,4 +1,4 @@
-"""Tests for delegation revocation storage (Task 2.4.1)."""
+"""Tests for delegation revocation storage."""
 
 from pathlib import Path
 

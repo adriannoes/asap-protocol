@@ -15,21 +15,15 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { DataTable } from '@/components/agents/data-table';
-import { columns } from '@/components/agents/columns';
+import { AgentCard } from '@/components/agents/agent-card';
+import { Input } from '@/components/ui/input';
 
-function DataTableSkeleton() {
+function CardsSkeleton() {
     return (
-        <div className="w-full space-y-4" data-testid="data-table-skeleton">
-            <Skeleton className="h-9 w-full sm:max-w-sm" />
-            <Skeleton className="h-[400px] w-full rounded-md" />
-            <div className="flex justify-between">
-                <Skeleton className="h-4 w-24" />
-                <div className="flex gap-2">
-                    <Skeleton className="h-8 w-20" />
-                    <Skeleton className="h-8 w-16" />
-                </div>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full" data-testid="cards-skeleton">
+            {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-[240px] w-full rounded-xl bg-zinc-900/50" />
+            ))}
         </div>
     );
 }
@@ -39,13 +33,14 @@ interface BrowseContentProps {
 }
 
 export function BrowseContent({ initialAgents }: BrowseContentProps) {
+    const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>('');
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
     const [requireSla, setRequireSla] = useState(false);
     const [requireAuth, setRequireAuth] = useState(false);
 
-    // Extract unique categories (Task 4.4.2)
+    // Unique categories from agents
     const availableCategories = useMemo(() => {
         const categoriesSet = new Set<string>();
         initialAgents.forEach((agent) => {
@@ -98,6 +93,14 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
     const filteredAgents = useMemo(() => {
         let result = initialAgents;
 
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            result = result.filter((agent) => 
+                agent.name?.toLowerCase().includes(query) || 
+                agent.description?.toLowerCase().includes(query)
+            );
+        }
+
         // Apply Skills Filter (Strict Mode)
         if (selectedSkills.length > 0) {
             result = result.filter((agent) => {
@@ -129,7 +132,7 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
         }
 
         return result;
-    }, [initialAgents, selectedSkills, selectedCategory, selectedTags, requireSla, requireAuth]);
+    }, [initialAgents, searchQuery, selectedSkills, selectedCategory, selectedTags, requireSla, requireAuth]);
 
     return (
         <div className="flex flex-col md:flex-row gap-6">
@@ -137,7 +140,7 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
                 <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4">
                     <h2 className="font-semibold mb-4">Filters</h2>
                     <div className="space-y-4">
-                        {/* Category Filter (Task 4.4.2) — Shadcn Select per tech-stack */}
+                        {/* Category filter (Shadcn Select) */}
                         <div className="pt-4 border-t">
                             <h3 className="text-sm font-medium mb-3">Category</h3>
                             <Select
@@ -237,8 +240,18 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
                 </div>
             </div>
 
-            {/* Main Content / DataTable */}
-            <div className="flex-1">
+            {/* Main Content / Cards Grid */}
+            <div className="flex-1 space-y-6">
+                <div className="flex w-full md:max-w-md items-center relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                    <Input 
+                        placeholder="Search agents by name or description..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9 bg-zinc-950/50 border-zinc-800 focus-visible:ring-indigo-500/50"
+                    />
+                </div>
+
                 {filteredAgents.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-950 p-12 flex flex-col items-center justify-center text-center relative overflow-hidden group">
                         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
@@ -256,8 +269,12 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
                         </div>
                     </div>
                 ) : (
-                    <Suspense fallback={<DataTableSkeleton />}>
-                        <DataTable columns={columns} data={filteredAgents} searchKey="name" />
+                    <Suspense fallback={<CardsSkeleton />}>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                            {filteredAgents.map((agent) => (
+                                <AgentCard key={agent.id} agent={agent} />
+                            ))}
+                        </div>
                     </Suspense>
                 )}
             </div>

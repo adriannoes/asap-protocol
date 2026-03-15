@@ -46,7 +46,7 @@ Use this to decide whether to approve or reject a verification request.
 
 ## Updating the registry with verification (after schema support)
 
-Today, the registry and protocol schema do not yet define a `verification` field. When they do (see Task 3.6 in the v2.0 roadmap):
+Today, the registry and protocol schema do not yet define a `verification` field. When they do (see v2.0 roadmap):
 
 1. Open `registry.json` in the repo.
 2. Find the agent entry by **id** (URN).

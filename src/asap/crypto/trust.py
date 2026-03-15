@@ -33,7 +33,7 @@ def sign_with_ca(
     agent_key: Ed25519PrivateKey,
     ca_key: Ed25519PrivateKey,
 ) -> SignedManifest:
-    """Sign manifest with ASAP CA key (simulation; full service in v2.0). JCS canonicalized.
+    """Sign manifest with ASAP CA key (simulation). JCS canonicalized.
 
     Tech debt: Replace with real CA service integration. See issue #44.
     """

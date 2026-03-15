@@ -2,7 +2,7 @@
 
 Provides token acquisition and refresh using:
 - client_credentials: Machine-to-machine authentication (agent-to-agent)
-- authorization_code: Human-in-the-loop scenarios (placeholder for v1.1.1+)
+- authorization_code: Human-in-the-loop scenarios (planned)
 
 Uses Authlib's AsyncOAuth2Client internally (ADR-12).
 """

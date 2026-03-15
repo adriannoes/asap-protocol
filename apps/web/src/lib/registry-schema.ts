@@ -1,6 +1,6 @@
 /**
  * Zod schema for runtime validation of registry.json response.
- * Prevents type assertion bypass (IMP-4).
+ * Prevents type assertion bypass.
  */
 import { z } from 'zod';
 

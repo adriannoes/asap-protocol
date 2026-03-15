@@ -234,7 +234,7 @@ class TestInMemorySnapshotStore:
         task_id_1 = "task_01HX5K4N000000000000000001"
         task_id_2 = "task_01HX5K4N000000000000000002"
 
-        # Create snapshots for task 1
+        # Create snapshots for task_id_1
         snapshot_1 = StateSnapshot(
             id="snap_01HX5K7R000000000000000001",
             task_id=task_id_1,
@@ -243,7 +243,7 @@ class TestInMemorySnapshotStore:
             created_at=now,
         )
 
-        # Create snapshots for task 2
+        # Create snapshots for task_id_2
         snapshot_2 = StateSnapshot(
             id="snap_01HX5K7R000000000000000002",
             task_id=task_id_2,
@@ -480,12 +480,12 @@ class TestInMemorySnapshotStore:
         snapshot_store.save(snapshot_1)
         snapshot_store.save(snapshot_2)
 
-        # Delete task 1
+        # Delete task_id_1
         snapshot_store.delete(task_id_1)
 
-        # Task 1 should be gone
+        # task_id_1 removed
         assert snapshot_store.get(task_id_1) is None
-        # Task 2 should still exist
+        # task_id_2 unchanged
         assert snapshot_store.get(task_id_2) is not None
         assert snapshot_store.get(task_id_2).data["task"] == 2
 

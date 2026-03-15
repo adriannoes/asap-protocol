@@ -333,7 +333,7 @@ PAYLOAD_TYPE_REGISTRY: dict[str, type[ASAPBaseModel]] = {
 }
 
 # Union type for all payload types
-# Note: The discriminator (payload_type) will be in the Envelope, not in individual payloads
+# Discriminator payload_type lives on Envelope, not on individual payloads
 PayloadType = Union[
     TaskRequest,
     TaskResponse,

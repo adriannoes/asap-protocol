@@ -216,7 +216,7 @@ class TestEnvelope:
         """Test that response payloads must have correlation_id."""
         from asap.models.envelope import Envelope
 
-        # TaskResponse without correlation_id should fail validation
+        # TaskResponse without correlation_id fails validation
         with pytest.raises(ValidationError) as exc_info:
             Envelope(
                 asap_version="0.1",

@@ -556,7 +556,7 @@ class TestTaskRequestHandler:
 
         # Envelope normally validates payload on build; use a minimal object that
         # exposes invalid payload_dict (missing required skill_id) to exercise
-        # TaskRequest.model_validate() inside the handler.
+        # Handler validates payload as TaskRequest.
         invalid_payload = {"conversation_id": "conv_1", "input": {}}
         envelope_like = SimpleNamespace(
             asap_version="0.1",

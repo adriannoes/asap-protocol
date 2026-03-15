@@ -245,7 +245,7 @@ def evaluate_breach_conditions(
     return results
 
 
-# --- Breach detector and alert hooks (Task 3.3.2, 3.3.3) ---
+# --- Breach detector and alert hooks ---
 
 
 def _default_breach_alert(breach: SLABreach) -> None:

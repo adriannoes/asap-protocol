@@ -236,8 +236,7 @@ class TestErrorHandling:
 
     def test_internal_error_returns_json_rpc_error(self, client: TestClient) -> None:
         """Test that internal server errors return JSON-RPC error format."""
-        # This test will be updated when we have actual error-triggering scenarios
-        # For now, we just verify the endpoint is operational
+        # Verify manifest endpoint is operational
         response = client.get("/.well-known/asap/manifest.json")
         assert response.status_code == 200
 

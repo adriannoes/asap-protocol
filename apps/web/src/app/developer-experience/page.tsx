@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import Image from 'next/image';
 import { ArrowRight, Terminal, Braces, Route, ShieldCheck, GitMerge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { BackgroundPaths } from '@/components/ui/background-paths';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
@@ -20,7 +21,8 @@ export default function DeveloperExperiencePage() {
                 </div>
             </div>
 
-            <section className="relative z-10 py-24 lg:py-32 border-b border-zinc-900">
+            <section className="relative z-10 overflow-hidden py-24 lg:py-32 border-b border-zinc-900">
+                <BackgroundPaths pathCount={4} />
                 <div className="container mx-auto px-4 md:px-6 relative text-center">
                     <div className="inline-flex items-center rounded-md border border-zinc-800 bg-zinc-900/50 px-3 py-1 font-mono text-[11px] uppercase tracking-wider text-zinc-400 mb-8">
                         <Terminal className="mr-2 h-3 w-3 text-indigo-400" />
