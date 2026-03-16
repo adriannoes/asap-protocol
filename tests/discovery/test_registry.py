@@ -239,29 +239,79 @@ class TestDiscoverFromRegistry:
 
     @pytest.mark.asyncio
     async def test_concurrent_calls_same_url_coalesce_fetch(self) -> None:
-        """Concurrent calls for the same URL share one network fetch."""
+        """Concurrent same-URL calls overlap and still perform a single fetch."""
         call_count = 0
+        first_fetch_started = asyncio.Event()
+        release_first_fetch = asyncio.Event()
 
-        def mock_transport(request: httpx.Request) -> httpx.Response:
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_response.text = VALID_REGISTRY_JSON
+
+        async def delayed_get(url: str) -> MagicMock:
             nonlocal call_count
             call_count += 1
-            return httpx.Response(status_code=200, content=VALID_REGISTRY_JSON.encode())
+            first_fetch_started.set()
+            await release_first_fetch.wait()
+            return mock_response
+
+        mock_client = AsyncMock()
+        mock_client.get.side_effect = delayed_get
+
+        mock_context_manager = AsyncMock()
+        mock_context_manager.__aenter__.return_value = mock_client
+        mock_context_manager.__aexit__.return_value = None
 
         url = "https://coalesced.example/registry.json"
-        reg1, reg2 = await asyncio.gather(
-            discover_from_registry(
-                registry_url=url,
-                transport=httpx.MockTransport(mock_transport),
-            ),
-            discover_from_registry(
-                registry_url=url,
-                transport=httpx.MockTransport(mock_transport),
-            ),
-        )
+        with patch(
+            "asap.discovery.registry.httpx.AsyncClient",
+            return_value=mock_context_manager,
+        ) as mock_async_client:
+            first_task = asyncio.create_task(
+                discover_from_registry(registry_url=url, transport=None)
+            )
+            await first_fetch_started.wait()
+            second_task = asyncio.create_task(
+                discover_from_registry(registry_url=url, transport=None)
+            )
+            release_first_fetch.set()
+            reg1, reg2 = await asyncio.gather(first_task, second_task)
 
-        assert call_count == 1
+        mock_async_client.assert_called_once()
         assert reg1.version == reg2.version
         assert len(reg1.agents) == len(reg2.agents)
+        assert call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_expired_cache_failed_refresh_does_not_poison_next_refresh(self) -> None:
+        """A failed refresh on expired cache still allows a later successful refresh."""
+
+        def ok_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, content=VALID_REGISTRY_JSON.encode())
+
+        def fail_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=503, content=b"temporarily unavailable")
+
+        url = "https://refresh-failure.example/registry.json"
+        await discover_from_registry(
+            registry_url=url,
+            ttl_seconds=0,
+            transport=httpx.MockTransport(ok_transport),
+        )
+        with pytest.raises(httpx.HTTPStatusError):
+            await discover_from_registry(
+                registry_url=url,
+                ttl_seconds=0,
+                transport=httpx.MockTransport(fail_transport),
+            )
+        refreshed = await discover_from_registry(
+            registry_url=url,
+            ttl_seconds=30,
+            transport=httpx.MockTransport(ok_transport),
+        )
+
+        assert refreshed.version == "1.0"
+        assert len(refreshed.agents) == 2
 
     @pytest.mark.asyncio
     async def test_without_transport_uses_default_async_client(self) -> None:
