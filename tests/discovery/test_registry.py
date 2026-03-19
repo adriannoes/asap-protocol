@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import httpx
 import pytest
 from pydantic import ValidationError
@@ -155,6 +158,19 @@ class TestRegistrySchemaValidation:
         entry = RegistryEntry.model_validate(data)
         assert entry.category == "Coding"
 
+    def test_registry_entry_preserves_unknown_category(self) -> None:
+        """Unknown categories are preserved, avoiding accidental data loss."""
+        data = {
+            "id": "urn:asap:agent:test:bot",
+            "name": "Test",
+            "description": "x",
+            "endpoints": {"http": "https://example.com"},
+            "asap_version": "2.0",
+            "category": "Robotics",
+        }
+        entry = RegistryEntry.model_validate(data)
+        assert entry.category == "Robotics"
+
 
 class TestDiscoverFromRegistry:
     """discover_from_registry fetches and parses from URL."""
@@ -196,6 +212,135 @@ class TestDiscoverFromRegistry:
         assert call_count == 1
         assert reg1.version == reg2.version
         assert len(reg1.agents) == len(reg2.agents)
+
+    @pytest.mark.asyncio
+    async def test_cache_expired_refetches(self) -> None:
+        """An expired cache entry is evicted and fetched again."""
+        call_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            return httpx.Response(status_code=200, content=VALID_REGISTRY_JSON.encode())
+
+        url = "https://cache-expired.example/registry.json"
+        await discover_from_registry(
+            registry_url=url,
+            ttl_seconds=0,
+            transport=httpx.MockTransport(mock_transport),
+        )
+        await discover_from_registry(
+            registry_url=url,
+            ttl_seconds=0,
+            transport=httpx.MockTransport(mock_transport),
+        )
+
+        assert call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_concurrent_calls_same_url_coalesce_fetch(self) -> None:
+        """Concurrent same-URL calls overlap and still perform a single fetch."""
+        call_count = 0
+        first_fetch_started = asyncio.Event()
+        release_first_fetch = asyncio.Event()
+
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_response.text = VALID_REGISTRY_JSON
+
+        async def delayed_get(url: str) -> MagicMock:
+            nonlocal call_count
+            call_count += 1
+            first_fetch_started.set()
+            await release_first_fetch.wait()
+            return mock_response
+
+        mock_client = AsyncMock()
+        mock_client.get.side_effect = delayed_get
+
+        mock_context_manager = AsyncMock()
+        mock_context_manager.__aenter__.return_value = mock_client
+        mock_context_manager.__aexit__.return_value = None
+
+        url = "https://coalesced.example/registry.json"
+        with patch(
+            "asap.discovery.registry.httpx.AsyncClient",
+            return_value=mock_context_manager,
+        ) as mock_async_client:
+            first_task = asyncio.create_task(
+                discover_from_registry(registry_url=url, transport=None)
+            )
+            await first_fetch_started.wait()
+            second_task = asyncio.create_task(
+                discover_from_registry(registry_url=url, transport=None)
+            )
+            release_first_fetch.set()
+            reg1, reg2 = await asyncio.gather(first_task, second_task)
+
+        mock_async_client.assert_called_once()
+        assert reg1.version == reg2.version
+        assert len(reg1.agents) == len(reg2.agents)
+        assert call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_expired_cache_failed_refresh_does_not_poison_next_refresh(self) -> None:
+        """A failed refresh on expired cache still allows a later successful refresh."""
+
+        def ok_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, content=VALID_REGISTRY_JSON.encode())
+
+        def fail_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=503, content=b"temporarily unavailable")
+
+        url = "https://refresh-failure.example/registry.json"
+        await discover_from_registry(
+            registry_url=url,
+            ttl_seconds=0,
+            transport=httpx.MockTransport(ok_transport),
+        )
+        with pytest.raises(httpx.HTTPStatusError):
+            await discover_from_registry(
+                registry_url=url,
+                ttl_seconds=0,
+                transport=httpx.MockTransport(fail_transport),
+            )
+        refreshed = await discover_from_registry(
+            registry_url=url,
+            ttl_seconds=30,
+            transport=httpx.MockTransport(ok_transport),
+        )
+
+        assert refreshed.version == "1.0"
+        assert len(refreshed.agents) == 2
+
+    @pytest.mark.asyncio
+    async def test_without_transport_uses_default_async_client(self) -> None:
+        """When transport is omitted, discover_from_registry builds a default AsyncClient."""
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_response.text = VALID_REGISTRY_JSON
+
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(return_value=mock_response)
+
+        mock_context_manager = AsyncMock()
+        mock_context_manager.__aenter__.return_value = mock_client
+        mock_context_manager.__aexit__.return_value = None
+
+        url = "https://default-client.example/registry.json"
+        with patch(
+            "asap.discovery.registry.httpx.AsyncClient",
+            return_value=mock_context_manager,
+        ) as mock_async_client:
+            reg = await discover_from_registry(registry_url=url, transport=None)
+
+        assert reg.version == "1.0"
+        assert len(reg.agents) == 2
+        mock_async_client.assert_called_once()
+        call_kwargs = mock_async_client.call_args.kwargs
+        assert "transport" not in call_kwargs
+        assert isinstance(call_kwargs["timeout"], httpx.Timeout)
+        mock_client.get.assert_awaited_once_with(url)
 
     @pytest.mark.asyncio
     async def test_network_error_raised(self) -> None:
