@@ -89,6 +89,8 @@ We continuously monitor dependencies using:
 - **pip-audit**: Integrated into CI pipeline for vulnerability scanning
 - **GitHub Security Advisories**: Public database of known vulnerabilities
 
+CI runs `pip-audit` after `uv sync --frozen --all-extras --dev`. To match the security job locally, use the same sync, then `uv run pip-audit` with the `--ignore-vuln` flags documented in [.github/workflows/ci.yml](.github/workflows/ci.yml). Plain `uv run pip-audit` without optional extras may not install the same dependency graph (e.g. transitive `nltk` from optional integrations). Temporary ignores apply only when OSV lists no fixed PyPI release yet; remove them once `uv.lock` upgrades to a patched version.
+
 ### Version Update Schedule
 
 - **Security Updates**: Automatic and immediate (no schedule)

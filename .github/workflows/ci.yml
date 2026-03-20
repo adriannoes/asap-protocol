@@ -159,7 +159,15 @@ jobs:
       - name: Setup Python
         uses: ./.github/actions/setup-python
       - name: Scan for vulnerabilities (pip-audit)
-        run: uv run pip-audit --ignore-vuln CVE-2025-69872
-        # CVE-2025-69872: diskcache (transitive via crewai→chromadb); no fix released yet. Remove when upstream patches.
+        run: |
+          uv run pip-audit \
+            --ignore-vuln CVE-2025-69872 \
+            --ignore-vuln CVE-2026-33230 \
+            --ignore-vuln CVE-2026-33231 \
+            --ignore-vuln GHSA-rf74-v2fm-23pw
+        # CVE-2025-69872: diskcache (transitive via crewai→chromadb); no fix on PyPI yet.
+        # NLTK (GHSA-rf74-v2fm-23pw, CVE-2026-33230, CVE-2026-33231): transitive via optional extras
+        # (e.g. crewai); PyPI latest is 3.9.3 with no patched release in OSV. Re-run without ignores
+        # after nltk releases a fix and uv.lock picks it up.
       - name: Scan for security issues (bandit)
         run: uv run bandit -r src/ -ll
