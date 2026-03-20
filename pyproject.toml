@@ -28,7 +28,7 @@ dependencies = [
     "pydantic>=2.12.5",
     "fastapi>=0.128.0",
     "httpx[http2]>=0.28.1",
-    "authlib>=1.3",
+    "authlib>=1.6.9",
     "joserfc>=1.6.3",
     "uvicorn>=0.34",
     "python-ulid>=3.0",
@@ -101,9 +101,16 @@ Repository = "https://github.com/adriannoes/asap-protocol"
 Issues = "https://github.com/adriannoes/asap-protocol/issues"
 "PyPI" = "https://pypi.org/project/asap-protocol/"
 
-# Override transitive pyjwt to >=2.12.0 for CVE-2026-32597 (crit header validation).
+# Override transitive dependencies for security fixes:
+# - pyjwt>=2.12.0 for CVE-2026-32597 (crit header validation)
+# - pyasn1>=0.6.3 for CVE-2026-30922 (DoS via unbounded recursion)
+# - tinytag>=2.2.1 for CVE-2026-32889
 [tool.uv]
-override-dependencies = ["pyjwt>=2.12.0"]
+override-dependencies = [
+    "pyjwt>=2.12.0",
+    "pyasn1>=0.6.3",
+    "tinytag>=2.2.1",
+]
 
 [project.scripts]
 asap = "asap.cli:main"
