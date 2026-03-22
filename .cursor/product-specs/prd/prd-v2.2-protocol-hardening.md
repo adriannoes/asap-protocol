@@ -5,7 +5,7 @@
 > **Version**: 2.2.0
 > **Status**: DRAFT
 > **Created**: 2026-03-13
-> **Last Updated**: 2026-03-13
+> **Last Updated**: 2026-03-20
 > **Supersedes**: [prd-v2.2-scale.md](./prd-v2.2-scale.md) (scope revised per strategic review)
 
 ---
@@ -14,12 +14,20 @@
 
 ### 1.1 Purpose
 
-v2.2.0 rebalances investment from marketplace to protocol. Since v2.0, the protocol core has not received new capabilities — v2.0 focused on the Web App, v2.1 on the Consumer SDK and integrations. The original v2.2 scope (Registry API Backend, Auto-Registration) was deferred because its triggers were not met (neither 500+ agents nor IssueOps bottleneck). This release delivers protocol hardening:
+v2.2.0 is the most transformative release since v2.0. It rebalances investment from marketplace to protocol, delivering both **identity/authorization hardening** and **protocol maturity**. Since v2.0, the protocol core has not received new capabilities — v2.0 focused on the Web App, v2.1 on the Consumer SDK and integrations. The original v2.2 scope (Registry API Backend, Auto-Registration) was deferred because its triggers were not met. This release delivers:
 
-- **Streaming/SSE**: Server-Sent Events for incremental task responses (closing the biggest competitive gap vs Google A2A)
+**Identity & Authorization Hardening**:
+- **Per-Runtime-Agent Identity**: Host→Agent hierarchy; each conversation/session gets its own Ed25519 keypair (SD-12)
+- **Capability-Based Authorization**: Fine-grained capabilities with constraint operators replacing coarse OAuth scopes (SD-13)
+- **Agent Lifecycle Management**: Session TTL, max lifetime, absolute lifetime with reactivation as security checkpoint
+- **Approval Flows**: RFC 8628 Device Authorization, CIBA, and WebAuthn proof-of-presence for user consent (SD-14)
+- **Self-Authorization Prevention**: Biometric/hardware proof for agents controlling the browser
+
+**Protocol Maturity**:
+- **Streaming/SSE**: Server-Sent Events for incremental task responses
 - **Error Taxonomy Evolution**: Recovery hints and structured retry semantics (extending existing ADR-012 hierarchy)
 - **Unified Versioning**: Content negotiation and resolution of the SemVer vs CalVer conflict (ADR-016 vs Q6)
-- **Async Protocol Resolution**: Formal dual-protocol for SnapshotStore (resolving the CP-1 open decision from tech-stack-decisions.md §5.3)
+- **Async Protocol Resolution**: Formal dual-protocol for SnapshotStore (resolving the CP-1 open decision)
 - **A2H Integration Completion**: Finalizing the 90%-complete Human-in-the-Loop integration
 - **Batch Operations**: Implementing JSON-RPC 2.0 native batch (noted as "future" in ADR-003)
 - **Compliance Harness v2**: Expanding certification to cover new protocol features
@@ -30,10 +38,11 @@ v2.2.0 rebalances investment from marketplace to protocol. Since v2.0, the proto
 
 ### 1.2 Strategic Context
 
-v2.2 invests in the **Protocol Layer** to close competitive gaps and resolve open technical debt before scaling the marketplace in v2.3.
+v2.2 invests in the **Identity/Auth Layer** and **Protocol Layer** to establish enterprise-grade security and resolve open technical debt before scaling in v2.3.
 
 | Layer | v2.2 Investment |
 |-------|----------------|
+| Identity & Auth | **Primary focus** — Per-agent identity, capabilities, approval, lifecycle |
 | Protocol (Transport, Models, Errors) | **Primary focus** — Streaming, Batch, Versioning |
 | State (Persistence) | Async Protocol resolution |
 | Trust (Compliance) | Harness v2 |
@@ -45,18 +54,35 @@ v2.2 invests in the **Protocol Layer** to close competitive gaps and resolve ope
 
 | Goal | Metric | Priority |
 |------|--------|----------|
+| Per-agent identity | Agent registration with own Ed25519 keypair under Host | P0 |
+| Capability authorization | Capabilities with constraint enforcement operational | P0 |
+| Agent lifecycle | Session TTL, max lifetime, reactivation working | P0 |
+| Approval flows | Device Auth (RFC 8628) consent flow operational | P1 |
+| Self-auth prevention | WebAuthn integration for browser-controlling agents | P1 |
 | Streaming responses | SSE endpoint functional with e2e tests | P1 |
 | Error recoverability | All 6 error categories have RecoverableError/FatalError classification | P1 |
 | Version negotiation | Client/Server negotiate ASAP-Version 2.1 <-> 2.2 | P1 |
 | Async persistence | AsyncSnapshotStore Protocol adopted; sync deprecated | P1 |
 | A2H complete | All pending commits merged | P1 |
 | Batch throughput | JSON-RPC batch endpoint handles N requests in single POST | P2 |
-| Compliance coverage | Harness covers streaming, errors, versioning, batch | P2 |
+| Compliance coverage | Harness covers identity, capabilities, streaming, errors, versioning, batch | P2 |
 | Audit compliance | All write operations logged in tamper-evident chain | P2 |
 
 ---
 
 ## 3. User Stories
+
+### Enterprise Platform (Agent Identity)
+> As an **enterprise platform**, I want **each runtime agent (conversation, task, session) to have its own cryptographic identity** so that **I can audit, scope, and revoke individual agents without affecting others**.
+
+### Agent Developer (Capabilities)
+> As an **agent developer**, I want to **define fine-grained capabilities with constraints** (e.g., "transfer up to $1,000 in USD") so that **consumers grant precisely scoped access instead of blanket permissions**.
+
+### SDK Consumer (Approval)
+> As a **SDK consumer**, I want **user consent via Device Authorization or CIBA before an agent acts on my behalf** so that **I maintain control over what agents can do with my resources**.
+
+### Security Engineer (Self-Auth Prevention)
+> As a **security engineer**, I want to **require WebAuthn proof-of-presence for agents that control the browser** so that **agents cannot auto-approve their own capability requests**.
 
 ### Agent Developer (Streaming)
 > As an **agent developer**, I want to **stream task results incrementally via SSE** so that **consumers see partial progress without waiting for full completion**.
@@ -77,7 +103,121 @@ v2.2 invests in the **Protocol Layer** to close competitive gaps and resolve ope
 
 ## 4. Functional Requirements
 
-### 4.1 Streaming/SSE (P1)
+### 4.1 Per-Runtime-Agent Identity (P0)
+
+Each runtime agent gets its own Ed25519 keypair under a persistent Host identity. This separates the long-lived client environment (Host) from the individual runtime actor (Agent).
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| ID-001 | `HostIdentity` model — persistent client environment identity with Ed25519 keypair, optional `user_id`, default capabilities | MUST |
+| ID-002 | `AgentSession` model — runtime agent with own keypair, `host_id` FK, mode (`delegated`/`autonomous`), status, lifetime clocks | MUST |
+| ID-003 | `POST /asap/agent/register` — register agent under host with Host JWT containing agent public key | MUST |
+| ID-004 | `GET /asap/agent/status` — return agent status, capability grants, and lifecycle info | MUST |
+| ID-005 | `POST /asap/agent/revoke` — permanently revoke an agent; host revocation cascades to all agents | MUST |
+| ID-006 | `POST /asap/agent/rotate-key` — replace agent's public key (host-authenticated) | SHOULD |
+| ID-007 | Host JWT (`typ: host+jwt`) and Agent JWT (`typ: agent+jwt`) with distinct verification flows | MUST |
+| ID-008 | Backward compatibility — existing OAuth2 flow remains valid alongside new identity model | MUST |
+| ID-009 | `jti` replay detection with in-memory cache (90s TTL window) | MUST |
+
+**Data Model**:
+```python
+class HostIdentity(BaseModel):
+    host_id: str
+    name: str | None = None
+    public_key: dict  # JWK
+    user_id: str | None = None
+    default_capabilities: list[str] = []
+    status: Literal["active", "pending", "revoked"]
+
+class AgentSession(BaseModel):
+    agent_id: str
+    host_id: str
+    public_key: dict  # JWK
+    mode: Literal["delegated", "autonomous"]
+    status: Literal["pending", "active", "expired", "revoked"]
+    session_ttl: timedelta | None = None
+    max_lifetime: timedelta | None = None
+    absolute_lifetime: timedelta | None = None
+```
+
+---
+
+### 4.2 Capability-Based Authorization (P0)
+
+Upgrades from coarse OAuth scopes (`READ/EXECUTE/ADMIN`) to fine-grained capabilities with constraint operators.
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| CAP-001 | `CapabilityDefinition` model — name, description, input/output JSON schemas, optional location | MUST |
+| CAP-002 | `CapabilityGrant` model — per-agent grant with status (`active`/`pending`/`denied`), optional constraints | MUST |
+| CAP-003 | `CapabilityConstraint` — operators: `max`, `min`, `in` (allowed values), `not_in` (blocked values), exact value | MUST |
+| CAP-004 | Constraint enforcement on capability execution with `constraint_violated` error including `violations` array | MUST |
+| CAP-005 | `GET /asap/capability/list` — lightweight capability listing (name, description, grant_status) | MUST |
+| CAP-006 | `GET /asap/capability/describe?name=` — full detail with input/output schemas | MUST |
+| CAP-007 | `POST /asap/capability/execute` — gateway endpoint; validates JWT, checks grants, enforces constraints | MUST |
+| CAP-008 | Backward compatibility — existing OAuth scopes map to capabilities (`SCOPE_READ` → read capabilities, etc.) | MUST |
+| CAP-009 | Partial approval — user may approve some capabilities and deny others during registration | SHOULD |
+
+**Constraint Example**:
+```json
+{
+  "capability": "transfer_funds",
+  "status": "active",
+  "constraints": {
+    "amount": { "max": 1000 },
+    "currency": { "in": ["USD", "EUR"] },
+    "destination": "acc_456"
+  }
+}
+```
+
+---
+
+### 4.3 Agent Lifecycle Management (P0)
+
+Three independent clocks govern agent lifetimes. Reactivation is a security checkpoint.
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| LIFE-001 | Session TTL — measured from last request; agent expires if idle | MUST |
+| LIFE-002 | Max lifetime — measured from last activation; caps continuous use | MUST |
+| LIFE-003 | Absolute lifetime — measured from creation; hard limit, agent permanently revoked | MUST |
+| LIFE-004 | `POST /asap/agent/reactivate` — reactivate expired agent; escalated capabilities decay to host defaults | MUST |
+| LIFE-005 | Each authenticated request extends session TTL (`last_used_at` update) | MUST |
+| LIFE-006 | Configurable defaults per server (e.g., 30min session, 24h max, 7d absolute) | SHOULD |
+
+---
+
+### 4.4 Approval Flows (P1)
+
+Protocol-level user consent for agent registration and capability escalation.
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| APPR-001 | Device Authorization (RFC 8628) — baseline; returns `verification_uri` + `user_code` | MUST |
+| APPR-002 | Client polls `GET /asap/agent/status` at `interval` until status changes from `pending` | MUST |
+| APPR-003 | CIBA support — server pushes notification; returns `binding_message` | SHOULD |
+| APPR-004 | Approval object schema in registration/reactivation responses when consent required | MUST |
+| APPR-005 | Integration with existing A2H infrastructure as approval channel | SHOULD |
+| APPR-006 | `preferred_method` hint in registration request (server decides final method) | SHOULD |
+
+---
+
+### 4.5 Self-Authorization Prevention (P1)
+
+Agents controlling the browser can navigate to approval URLs and auto-approve. Mitigations required.
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| SELF-001 | Fresh authentication requirement on approval endpoints (stale sessions rejected) | MUST |
+| SELF-002 | WebAuthn integration for high-risk capability approval (`userVerification: "required"`) | SHOULD |
+| SELF-003 | CIBA preference when agent controls browser (approval on separate device) | SHOULD |
+| SELF-004 | Documented threat model in security considerations | MUST |
+| SELF-005 | `freshSessionWindow` configuration (default: 300 seconds) | SHOULD |
+
+---
+
+### 4.6 Streaming/SSE (P1)
 
 Builds on: Q5 (`stream_uri` for large payloads), Q16 (streaming does not require ack), `tech-stack-decisions.md` §2.3 (WebSocket rationale).
 
@@ -103,7 +243,7 @@ data: {"id":"...","payload_type":"task_stream","payload":{"chunk":"final result"
 
 ---
 
-### 4.2 Error Taxonomy Evolution (P1)
+### 4.7 Error Taxonomy Evolution (P1)
 
 Builds on: ADR-012 (`docs/adr/`) defines `ASAPError` with categories `asap:protocol`, `asap:routing`, `asap:capability`, `asap:execution`, `asap:resource`, `asap:security`. Q7 (`decision-records/02-protocol.md`) documents the same taxonomy.
 
@@ -130,7 +270,7 @@ This is an EVOLUTION of the existing hierarchy, not a rewrite.
 
 ---
 
-### 4.3 Unified Versioning (P1)
+### 4.8 Unified Versioning (P1)
 
 Builds on: ADR-016 (`docs/adr/`) defines SemVer + `asap_version` + contract tests. Q6 (`decision-records/05-product-strategy.md`) proposes Major.CalVer hybrid. There is no ADR reconciling the two.
 
@@ -148,7 +288,7 @@ Builds on: ADR-016 (`docs/adr/`) defines SemVer + `asap_version` + contract test
 
 ---
 
-### 4.4 Async Protocol Resolution (P1)
+### 4.9 Async Protocol Resolution (P1)
 
 Builds on: `tech-stack-decisions.md` §5.3 documented 3 options (keep sync, evolve to async, dual protocol). Decision was deferred to CP-1 (post-v1.1) and never resolved. v2.1.1 added `save_async`/`get_async` to `SQLiteSnapshotStore` but the formal `Protocol` remains sync.
 
@@ -163,7 +303,7 @@ Builds on: `tech-stack-decisions.md` §5.3 documented 3 options (keep sync, evol
 
 ---
 
-### 4.5 A2H Integration Completion (P1)
+### 4.10 A2H Integration Completion (P1)
 
 Pending commits from tasks-a2h-integration.md: 1.4, 2.5, 3.7, 4.4, 5.7.
 
@@ -175,7 +315,7 @@ Pending commits from tasks-a2h-integration.md: 1.4, 2.5, 3.7, 4.4, 5.7.
 
 ---
 
-### 4.6 Batch Operations (P2)
+### 4.11 Batch Operations (P2)
 
 Builds on: ADR-003 (`docs/adr/`) chose JSON-RPC 2.0, which natively supports batch requests (array of objects). Mentioned as "future" in the original decision.
 
@@ -189,7 +329,7 @@ Builds on: ADR-003 (`docs/adr/`) chose JSON-RPC 2.0, which natively supports bat
 
 ---
 
-### 4.7 Compliance Harness v2 (P2)
+### 4.12 Compliance Harness v2 (P2)
 
 Builds on: Original harness (v1.2 T3) covers handshake, schema, state machine.
 
@@ -204,7 +344,7 @@ Builds on: Original harness (v1.2 T3) covers handshake, schema, state machine.
 
 ---
 
-### 4.8 Audit Logging (P2)
+### 4.13 Audit Logging (P2)
 
 Kept from original v2.2 PRD. Originally v1.3 E4, deferred to v2.1+ (deferred-backlog.md §3).
 
@@ -222,10 +362,15 @@ Kept from original v2.2 PRD. Originally v1.3 E4, deferred to v2.1+ (deferred-bac
 
 | Feature | Reason | When |
 |---------|--------|------|
+| Delegated/Autonomous mode formalization | Identity foundation needed first | v2.3 |
+| Runtime capability escalation | Requires capability model stable | v2.3 |
+| TypeScript SDK | Requires stable identity/auth API | v2.3 |
+| Intent-based directory search | Requires Registry API Backend | v2.3 |
 | Registry API Backend (PostgreSQL) | Trigger not met (500+ agents) | v2.3 |
 | Auto-Registration | Depends on Registry API Backend | v2.3 |
 | DeepEval Intelligence Layer | Trigger not met (user demand) | v2.3+ (conditional) |
 | Orchestration Primitives | Complex; requires streaming first | v2.3 |
+| OpenAPI adapter | Requires stable capability model | v2.4 |
 | Economy Settlement / Billing | No live transactions yet | v3.0 |
 | Node.js / Go SDKs | Demand-driven | TBD |
 
@@ -258,11 +403,16 @@ None required. All features use existing dependencies (FastAPI, httpx, Pydantic 
 
 | Metric | Target |
 |--------|--------|
+| Agent registration with own keypair | Host→Agent identity flow e2e operational |
+| Capability grants with constraints | Constraint enforcement with violation reporting |
+| Agent lifecycle clocks | Session TTL, max lifetime, reactivation working |
+| Device Authorization approval | RFC 8628 consent flow e2e operational |
+| Self-auth prevention | WebAuthn integration for sensitive capabilities |
 | Streaming SSE functional with e2e tests | TaskStream end-to-end via HTTP and WebSocket |
 | Error codes with recovery hints | All 6 existing categories with RecoverableError/FatalError |
 | Version negotiation active | Client/Server negotiate v2.1 <-> v2.2 |
 | AsyncSnapshotStore Protocol | Dual protocol implemented; sync deprecated |
-| Compliance Harness v2 | Checks for streaming, errors, versioning, batch |
+| Compliance Harness v2 | Checks for identity, capabilities, streaming, errors, versioning, batch |
 | A2H complete and integrated | All pending commits merged |
 | Audit log operational | All write ops logged with hash chain |
 
@@ -274,6 +424,9 @@ None required. All features use existing dependencies (FastAPI, httpx, Pydantic 
 |-------------|--------|
 | v2.1.1 Tech Debt & Security Cleared | Completed |
 | A2H Integration 90% complete | v2.2 tasks (in progress) |
+| ADR-identity (per-runtime-agent) created and accepted | New (this PRD, SD-12) |
+| ADR-capabilities (constraint-based authz) created and accepted | New (this PRD, SD-13) |
+| ADR-approval (Device Auth + CIBA + WebAuthn) created and accepted | New (this PRD, SD-14) |
 | ADR-streaming created and accepted | New (this PRD) |
 | ADR-versioning created and accepted | New (this PRD) |
 
@@ -298,3 +451,4 @@ None required. All features use existing dependencies (FastAPI, httpx, Pydantic 
 | Date | Version | Change |
 |------|---------|--------|
 | 2026-03-13 | 1.0.0 | Initial DRAFT — strategic review re-scoped v2.2 from "Scale & Registry" to "Protocol Hardening". Marketplace items deferred to v2.3 (triggers not met). |
+| 2026-03-20 | 2.0.0 | **Identity & Auth Hardening**: Added §4.1–4.5 (Per-Runtime-Agent Identity, Capability-Based Authorization, Agent Lifecycle, Approval Flows, Self-Authorization Prevention). Renumbered existing sections to §4.6–4.13. Updated goals, user stories, non-goals, success metrics, and prerequisites. |

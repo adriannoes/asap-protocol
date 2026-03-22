@@ -1,11 +1,11 @@
 # ASAP Protocol: Roadmap to Marketplace
 
-> **Evolution Path**: v1.0.0 → v2.0.0 ✅ Released → v2.1.0 (next)
+> **Evolution Path**: v1.0.0 → v2.0.0 ✅ Released → v2.1.0 ✅ Released → v2.2.0 (next)
 >
 > **Status**: v2.1.1 RELEASED — Planning v2.2.0
-> **Horizon**: v2.2.0 Protocol Hardening, then v2.3.0 Scale, then v3.0.0 Economy
+> **Horizon**: v2.2.0 Protocol Hardening, v2.3.0 Scale, v2.4.0 Adoption, v3.0.0 Economy
 > **Created**: 2026-01-30
-> **Updated**: 2026-03-13
+> **Updated**: 2026-03-20
 
 ---
 
@@ -208,6 +208,48 @@ Key architectural and business decisions made during planning. Each decision inc
 
 ---
 
+### SD-12: Agent Identity — Per-Runtime-Agent Keypairs
+
+**Decision**: Upgrade from service-level identity to per-runtime-agent identity. Each conversation/task/session gets its own Ed25519 keypair under a persistent Host identity.
+
+| Option | Considered | Rationale |
+|--------|------------|-----------|
+| **Per-runtime keypair** | ✅ Selected | Granular audit, isolated revocation, enterprise-grade security |
+| Service-level identity only | Rejected | No isolation between agents sharing credentials; insufficient for regulated industries |
+| Per-user identity | Rejected | Agents are not users — they need distinct lifecycle and scoping |
+
+**Why this matters**: Two separate conversations in the same application are different agents with different contexts and permissions. Service-level identity collapses all runtime agents into one — no visibility, no scoping, no isolation. Per-agent keypairs give servers the ability to identify, scope, audit, and revoke individual agents.
+
+---
+
+### SD-13: Authorization Model — Capabilities with Constraints
+
+**Decision**: Upgrade from coarse OAuth scopes (`READ/EXECUTE/ADMIN`) to fine-grained capabilities with constraint operators (`min/max/in/not_in`).
+
+| Option | Considered | Rationale |
+|--------|------------|-----------|
+| **Capability-based with constraints** | ✅ Selected | Precise authorization, self-correcting agents, enterprise compliance |
+| OAuth scopes (current) | Keep as compatibility layer | Too coarse for real-world authorization (e.g., "transfer up to $1000 in USD") |
+| RBAC (role-based) | Rejected | Roles are too broad; capabilities are more composable |
+
+**Why this matters**: OAuth scopes tell you *what category* of action is allowed. Capabilities tell you *exactly which action* with *exactly what parameters*. Constraint operators enable scoped grants like "transfer up to $1,000 in USD to account X" — a requirement for financial, healthcare, and enterprise use cases.
+
+---
+
+### SD-14: Approval Flows — Device Authorization + CIBA + WebAuthn
+
+**Decision**: Add protocol-level user consent flows for agent registration and capability escalation, with self-authorization prevention.
+
+| Option | Considered | Rationale |
+|--------|------------|-----------|
+| **RFC 8628 + CIBA + WebAuthn** | ✅ Selected | Standards-based, covers all deployment models, prevents self-approval |
+| A2H only | Rejected | A2H is agent-to-human communication, not formal consent/authorization |
+| Custom consent UI | Rejected | Non-standard, no interoperability |
+
+**Why this matters**: Agents increasingly control the user's browser (MCP servers, browser tools, desktop copilots). Without biometric/hardware proof of presence, an agent can navigate to the approval URL and approve itself. WebAuthn is the only reliable proof-of-human when the agent controls the browser.
+
+---
+
 ## Release Timeline
 
 | Version | Codename | Focus | Key Deliverables |
@@ -219,8 +261,9 @@ Key architectural and business decisions made during planning. Each decision inc
 | **v1.4.0** | Hardening | Resilience + Scale | Type safety hardening, storage pagination |
 | **v2.0.0** | Marketplace | Full launch | ✅ Released (2026-02-25) — Web App, Lite Registry (120+ agents), Verified Badge, IssueOps registration |
 | **v2.1.0** | Ecosystem | Demand-side activation | ✅ Released — Consumer SDK, LangChain/CrewAI/MCP integrations, Category/Tags, Agent Revocation, PyPI — See [prd-v2.1-ecosystem.md](../prd/prd-v2.1-ecosystem.md) |
-| **v2.2.0** | Protocol Hardening | Close competitive gaps | Streaming/SSE, Error Taxonomy Evolution, Unified Versioning, Async Protocol, Batch Operations, Compliance Harness v2, Audit Logging — See [prd-v2.2-protocol-hardening.md](../prd/prd-v2.2-protocol-hardening.md) |
-| **v2.3.0** | Scale | Registry infrastructure | Registry API Backend (PostgreSQL), Auto-Registration, Orchestration Primitives, DeepEval (conditional) — See [prd-v2.3-scale.md](../prd/prd-v2.3-scale.md) |
+| **v2.2.0** | Protocol Hardening | Identity, auth, and protocol maturity | Per-runtime-agent identity, capability-based authz, approval flows, agent lifecycle, streaming/SSE, error taxonomy, versioning, async, batch, audit logging — See [prd-v2.2-protocol-hardening.md](../prd/prd-v2.2-protocol-hardening.md) |
+| **v2.3.0** | Scale | Registry + SDK expansion | Registry API Backend (PostgreSQL), Auto-Registration, TypeScript SDK, Intent-Based Search, Orchestration Primitives, DeepEval (conditional) — See [prd-v2.3-scale.md](../prd/prd-v2.3-scale.md) |
+| **v2.4.0** | Adoption | Lower integration barriers | OpenAPI adapter, WWW-Authenticate ASAP challenge, cross-protocol compatibility |
 | **v3.0.0** | Economy | Monetization | Stripe, Credits, Economy Settlement, Clearing House, ASAP Cloud — See [prd-v3.0-economy.md](../prd/prd-v3.0-economy.md) |
 
 ---
@@ -460,6 +503,281 @@ Human interface for marketplace interactions:
 
 ---
 
+## v2.2.0 "Protocol Hardening" — Identity, Auth & Protocol Maturity
+
+**Goal**: Elevate the protocol to production-grade with per-runtime-agent identity, capability-based authorization, streaming, and formal error handling. This is the most transformative release since v2.0.
+
+**PRD**: [prd-v2.2-protocol-hardening.md](../prd/prd-v2.2-protocol-hardening.md)
+
+### Features
+
+#### Identity & Authorization (NEW — SD-12, SD-13, SD-14)
+
+| Feature | Priority | Purpose |
+|---------|----------|---------|
+| Per-Runtime-Agent Identity | P0 | Host→Agent hierarchy; each session gets Ed25519 keypair |
+| Capability-Based Authorization | P0 | Fine-grained capabilities with `min/max/in/not_in` constraints |
+| Agent Lifecycle Management | P0 | Session TTL, max lifetime, absolute lifetime; reactivation as security checkpoint |
+| Approval Flows (RFC 8628 + CIBA) | P1 | Protocol-level user consent for registration and capability escalation |
+| Self-Authorization Prevention | P1 | WebAuthn/biometric proof for agents controlling the browser |
+
+#### Protocol Maturity (Existing v2.2 scope)
+
+| Feature | Priority | Purpose |
+|---------|----------|---------|
+| Streaming/SSE | P1 | `POST /asap/stream`, `TaskStream` payload, incremental responses |
+| Error Taxonomy Evolution | P1 | `RecoverableError`/`FatalError`, recovery hints, structured retry |
+| Unified Versioning | P1 | `ASAP-Version` header, content negotiation 2.1↔2.2 |
+| Async Protocol | P1 | `AsyncSnapshotStore`, `AsyncMeteringStore`; sync path deprecated |
+| A2H Integration Completion | P1 | Finalize pending A2H commits |
+| Batch Operations | P2 | JSON-RPC batch (array of requests in one POST) |
+| Compliance Harness v2 | P2 | Extended checks for streaming, errors, versioning, batch |
+| Audit Logging | P2 | Tamper-evident logs, hash chain, `AuditStore` protocol |
+
+### Deliverables
+
+```
+src/asap/
+├── auth/
+│   ├── identity.py        # HostIdentity, AgentSession models
+│   ├── capabilities.py    # CapabilityDefinition, CapabilityGrant, constraints
+│   ├── approval.py        # Device Authorization (RFC 8628), CIBA flows
+│   ├── lifecycle.py       # Session TTL, max lifetime, reactivation logic
+│   └── oauth2.py          # Existing (enhanced with capability mapping)
+├── transport/
+│   ├── sse.py             # SSE streaming endpoint
+│   ├── batch.py           # JSON-RPC batch handler
+│   └── server.py          # Updated: /asap/agent/* endpoints
+├── models/
+│   ├── errors.py          # RecoverableError, FatalError, recovery hints
+│   └── versioning.py      # ASAP-Version negotiation
+├── state/
+│   ├── async_snapshot.py  # AsyncSnapshotStore protocol
+│   ├── async_metering.py  # AsyncMeteringStore protocol
+│   └── audit.py           # AuditStore, hash chain
+└── handlers/
+    └── a2h.py             # A2H completion
+```
+
+### Why This Matters
+
+- **Per-agent identity** is the foundation for enterprise trust. Two agents sharing credentials = no visibility, no scoping, no isolation.
+- **Capability constraints** enable regulated use cases (finance, health) — "transfer up to $1,000 in USD" instead of "has EXECUTE scope".
+- **Streaming/SSE** closes the last major gap vs Google A2A.
+- **Async protocols** resolve the CP-1 technical debt from sync SnapshotStore.
+
+### Non-Goals (Deferred)
+
+- Registry API Backend → v2.3
+- TypeScript SDK → v2.3
+- DeepEval → v2.3 (conditional)
+- OpenAPI adapter → v2.4
+- Economy Settlement → v3.0
+
+---
+
+## v2.3.0 "Scale" — Registry, SDKs & Discovery
+
+**Goal**: Scale the ecosystem infrastructure and expand beyond Python with a TypeScript SDK, API-driven registration, and intelligent discovery.
+
+**PRD**: [prd-v2.3-scale.md](../prd/prd-v2.3-scale.md)
+
+**Trigger**: v2.2 released AND (500+ agents OR IssueOps bottleneck)
+
+### Features
+
+#### Registry & Discovery
+
+| Feature | Priority | Purpose |
+|---------|----------|---------|
+| Registry API Backend | P1 | PostgreSQL: CRUD, search, trust scoring, `registry.json` mirror |
+| Auto-Registration | P1 | Self-service API (no PR required), compliance gating |
+| Intent-Based Directory Search | P1 | Natural-language queries ("I need an agent for code review") |
+| Capability-Aware Introspection | P2 | RFC 7662 introspection returning grant info for resource servers |
+| WWW-Authenticate ASAP Challenge | P3 | Resource servers redirect unknown agents to discovery |
+
+#### SDK Expansion
+
+| Feature | Priority | Purpose |
+|---------|----------|---------|
+| TypeScript Client SDK | P1 | `@asap-protocol/client` npm package |
+| AI Framework Adapters (TS) | P2 | Vercel AI SDK, OpenAI SDK, Anthropic SDK adapters |
+
+#### Protocol Enhancements
+
+| Feature | Priority | Purpose |
+|---------|----------|---------|
+| Delegated/Autonomous Mode Formalization | P2 | Explicit mode support in manifest and registration |
+| Runtime Capability Escalation | P2 | `POST /asap/agent/request-capability` — add capabilities without re-registration |
+| Orchestration Primitives | P2 | `CoordinatorEnvelope`, `TaskGroup`, wait-all/any/first-success patterns |
+| DeepEval Intelligence | P3 | Cognitive quality scoring (conditional: 3+ user requests) |
+
+#### Governance & Privacy
+
+| Feature | Priority | Purpose |
+|---------|----------|---------|
+| Privacy Considerations (Spec §) | P3 | Data retention, host key correlation, behavioral signals |
+
+### Deliverables
+
+```
+src/asap/
+├── registry/
+│   ├── api.py             # REST API (CRUD, search, trust scoring)
+│   ├── auto_register.py   # Self-service registration with compliance gate
+│   └── intent_search.py   # NL intent search (BM25 + optional embeddings)
+├── auth/
+│   ├── introspection.py   # Capability-aware token introspection
+│   ├── escalation.py      # Runtime capability request flow
+│   └── modes.py           # Delegated/Autonomous mode support
+├── orchestration/
+│   ├── coordinator.py     # CoordinatorEnvelope, TaskGroup
+│   └── patterns.py        # wait-all, wait-any, first-success
+└── discovery/
+    └── challenge.py       # WWW-Authenticate ASAP challenge
+
+packages/
+└── @asap-protocol/
+    ├── client/            # TypeScript SDK (npm)
+    └── adapters/          # Vercel AI, OpenAI, Anthropic
+```
+
+### Migration (v2.2 → v2.3)
+
+| Action | Required? |
+|--------|-----------|
+| Migrate from IssueOps to API registration | Optional (IssueOps still works) |
+| Add `mode` field to manifest | Recommended |
+| Enable intent-based search in registry | Automatic for API-registered agents |
+
+### Non-Goals (Deferred)
+
+- OpenAPI adapter → v2.4
+- Economy Settlement, Billing → v3.0
+- Crypto/DeFi → v4.0+
+- Federated Registry → v3.x+
+
+---
+
+## v2.4.0 "Adoption" — Lower Integration Barriers
+
+**Goal**: Make ASAP trivially adoptable for services with existing APIs and ensure interoperability across the agent protocol landscape.
+
+**Trigger**: v2.3 released
+
+### Features
+
+| Feature | Priority | Purpose |
+|---------|----------|---------|
+| OpenAPI Adapter | P1 | Auto-derive ASAP capabilities from existing OpenAPI specs (zero-code onboarding) |
+| MCP Auth Bridge | P2 | ASAP identity layer for MCP servers (solve MCP's auth gap) |
+| Cross-Protocol Compatibility | P3 | Thin adapters for interop with other agent auth protocols |
+| Formal ASAP Specification Document | P2 | RFC-style specification for standardization track |
+
+### OpenAPI Adapter
+
+```python
+from asap.adapters.openapi import create_from_openapi
+
+server = create_from_openapi(
+    spec_url="https://api.example.com/openapi.json",
+    default_capabilities=["GET", "HEAD"],
+    approval_strength={"POST": "webauthn", "DELETE": "webauthn"},
+)
+```
+
+Each OpenAPI `operationId` becomes a capability. Input/output schemas are derived from the spec. Execution proxies to the upstream API.
+
+### Migration (v2.3 → v2.4)
+
+| Action | Required? |
+|--------|-----------|
+| Use OpenAPI adapter for existing APIs | Optional (manual capability definitions still work) |
+| Enable MCP Auth Bridge | Optional |
+
+### Non-Goals (Deferred)
+
+- Economy Settlement, Billing → v3.0
+- ASAP Cloud → v3.0
+- Crypto/DeFi → v4.0+
+
+---
+
+## v3.0.0 "Economy" — Monetization & Marketplace Economics
+
+**Goal**: Enable paid agent services, verified badge monetization, and the foundation for an agent economy.
+
+**PRD**: [prd-v3.0-economy.md](../prd/prd-v3.0-economy.md)
+
+**Trigger**: 100+ Verified Agents willing to pay $49/mo OR agent-to-agent transactions > $5k/mo
+
+### Features
+
+| Feature | Priority | Purpose |
+|---------|----------|---------|
+| Payment Processing (Stripe) | P1 | Verified Badge $49/mo, webhooks, tax, Customer Portal |
+| Credit System | P1 | 1 credit = $0.01, `price_per_task_credits`, SDK auto-deduct |
+| Clearing House | P1 | 5–10% fee on agent-to-agent transactions, Stripe Connect payouts |
+| Escrow & Disputes | P2 | Hold on task start, 24h dispute window, arbitration |
+| SLA Financial Compensation | P2 | Breach penalties funded from escrow |
+| ASAP Cloud (Alpha) | P2 | `asap deploy`, managed hosting ("Vercel for Agents") |
+
+### Architecture
+
+```
+┌──────────────────────────────────────────────────────┐
+│                  ECONOMY LAYER (v3.0)                 │
+│                                                       │
+│  ┌─────────────┐  ┌─────────────┐  ┌──────────────┐ │
+│  │   Stripe     │  │  Credits    │  │  Clearing    │ │
+│  │   Backend    │  │  Ledger     │  │  House       │ │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬───────┘ │
+│         └────────────────┼────────────────┘          │
+│                    ┌─────┴──────┐                     │
+│                    │ Settlement │                     │
+│                    │  Backend   │ ← Pluggable Protocol│
+│                    │ (Protocol) │                     │
+│                    └────────────┘                     │
+└──────────────────────────────────────────────────────┘
+```
+
+Settlement uses a pluggable `SettlementBackend` Protocol — Stripe is the v3.0 reference implementation. Crypto/DeFi (stablecoins on L2) lives in a **separate repo** (`asap-settlement-crypto`) for v4.0+.
+
+### Non-Goals (Deferred)
+
+- Crypto/DeFi settlement → v4.0+ (separate repo)
+- Real-time bidding/auctions → v4.0+
+- Enterprise SSO/SAML → TBD
+- Federated Registry → v3.x+
+
+---
+
+## Roadmap Summary
+
+```
+v2.2 Protocol Hardening     v2.3 Scale           v2.4 Adoption        v3.0 Economy
+═══════════════════════     ═══════════════      ═══════════════      ═══════════════
+┌───────────────────┐       ┌──────────────┐     ┌──────────────┐    ┌──────────────┐
+│ • Agent Identity  │       │ • Registry   │     │ • OpenAPI    │    │ • Stripe     │
+│ • Capabilities +  │──────▶│   API Backend│────▶│   Adapter    │───▶│ • Credits    │
+│   Constraints     │       │ • TS SDK     │     │ • MCP Auth   │    │ • Clearing   │
+│ • Approval Flows  │       │ • Intent     │     │   Bridge     │    │   House      │
+│ • Agent Lifecycle │       │   Search     │     │ • Formal     │    │ • Escrow     │
+│ • Streaming/SSE   │       │ • Auto-Reg   │     │   Spec Doc   │    │ • ASAP Cloud │
+│ • Error Taxonomy  │       │ • Orchestr.  │     │ • Cross-     │    │   (alpha)    │
+│ • Versioning      │       │   Primitives │     │   Protocol   │    │              │
+│ • Async Protocol  │       │ • Delegated/ │     │   Compat     │    │              │
+│ • Batch Ops       │       │   Autonomous │     │              │    │              │
+│ • Audit Logging   │       │ • Cap. Escal.│     │              │    │              │
+│ • Compliance v2   │       │ • Privacy    │     │              │    │              │
+└───────────────────┘       └──────────────┘     └──────────────┘    └──────────────┘
+
+  🔐 Security &              📈 Growth &          🔌 Integration      💰 Monetization
+  Protocol maturity          Ecosystem            & Adoption          & Economy
+```
+
+---
+
 ## Migration Guide
 
 | Version | Action Required |
@@ -468,6 +786,10 @@ Human interface for marketplace interactions:
 | v1.1 → v1.2 | Sign manifest with Ed25519, run compliance harness |
 | v1.2 → v1.3 | Define SLAs in manifest, add metering hooks (using `MeteringStore` interface), configure delegation, set up `SLAStorage` |
 | v1.3 → v2.0 | Register in marketplace Web App, consider Verified badge (Free) |
+| v2.1 → v2.2 | Adopt per-agent identity (optional, OAuth2 still works), define capabilities with constraints, migrate to `AsyncSnapshotStore`, add `ASAP-Version` header |
+| v2.2 → v2.3 | Migrate to API registration (optional), add `mode` to manifest, install TS SDK if applicable |
+| v2.3 → v2.4 | Use OpenAPI adapter for existing APIs (optional) |
+| v2.4 → v3.0 | Configure Stripe for Verified Badge billing, set `price_per_task_credits` in manifest |
 
 ### Backward Compatibility
 
@@ -498,6 +820,10 @@ Strategic risks identified during the v1.1.0 planning review (2026-02-07):
 | **Agent migration** | What happens when an agent moves to a different host? | v1.2 (Registry should handle re-registration) |
 | **Rate limiting across transports** | HTTP has rate limiting, WebSocket does not | v1.1 Sprint S3 |
 | **Conflict resolution** | Multi-agent parallel work on same task | v1.2+ (define in orchestration patterns) |
+| **Host key correlation** | Same host keypair across servers enables cross-server tracking | v2.3 (privacy considerations) |
+| **Self-authorization attack surface** | Agents controlling browsers can auto-approve; WebAuthn required | v2.2 (SD-14) |
+| **TypeScript ecosystem gap** | AI tools (Claude, Cursor, ChatGPT) are TS-native; Python-only SDK limits adoption | v2.3 (TypeScript SDK) |
+| **OpenAPI integration path** | Services with existing APIs need zero-code onboarding | v2.4 (OpenAPI adapter) |
 
 ---
 
@@ -519,6 +845,9 @@ Strategic risks identified during the v1.1.0 planning review (2026-02-07):
 | SQ-10 | Discovery gap between v1.1 and v1.2? | Lite Registry on GitHub Pages | SD-11 |
 | SQ-11 | WebSocket message reliability? | Selective ack for state-changing messages + AckAwareClient | ADR-16 |
 | SQ-12 | Identity mapping (IdP sub → agent_id)? | Custom Claims + allowlist fallback | ADR-17 |
+| SQ-13a | Per-agent vs per-service identity? | Per-runtime-agent keypair under Host | SD-12 |
+| SQ-14a | Scope-based vs capability-based authz? | Capabilities with constraint operators | SD-13 |
+| SQ-15a | Approval mechanism for agent registration? | RFC 8628 + CIBA + WebAuthn | SD-14 |
 
 ## Open Source vs. Proprietary Boundary
 
@@ -526,8 +855,8 @@ We follow an **Open Core + SaaS** model (LangChain-style). See [vision-agent-mar
 
 | Phase | Public (repo) | Private (separate) |
 |-------|---------------|---------------------|
-| **v2.0-v2.2 (current)** | SDK, Web App, Lite Registry | — |
-| **v2.3** | SDK, Web App frontend | Registry API Backend |
+| **v2.0-v2.2 (current)** | SDK (Python + TS), Web App, Lite Registry | — |
+| **v2.3-v2.4** | SDK, Web App frontend, OpenAPI adapter | Registry API Backend |
 | **v3.0** | SDK, Web App frontend | Registry API, Billing, Economy Settlement |
 
 **Decision point**: Start separating when building **v2.3 Registry API Backend**. Until then, everything stays public. Cloning the repo does not replace the product (network effect, trust, backend services).
@@ -552,6 +881,11 @@ We follow an **Open Core + SaaS** model (LangChain-style). See [vision-agent-mar
 | v1.2 | Signed manifests | 80% of agents |
 | v1.3 | SLA definitions | 60% of agents |
 | v2.0 | Marketplace registrations | 100+ agents |
+| v2.2 | Per-agent identity adoption | 30% of new agents use runtime identity |
+| v2.2 | Capability-based grants | 50% of agents define capabilities |
+| v2.3 | TypeScript SDK downloads | 500+ npm weekly downloads |
+| v2.3 | Intent-based searches | 100+ daily queries |
+| v2.4 | OpenAPI adapter usage | 20+ services onboarded via adapter |
 
 ---
 
@@ -590,3 +924,4 @@ We follow an **Open Core + SaaS** model (LangChain-style). See [vision-agent-mar
 | 2026-02-21 | **Open Core boundary**: Added Open Source vs. Proprietary section. Public until v2.1; Registry API Backend and billing become private. |
 | 2026-02-25 | **v2.0.0 Released**: Status → RELEASED. Release timeline updated with v2.1.0 (Ecosystem), v2.2.0 (Scale), v3.0.0 (Economy). PRDs created for each. Header updated. |
 | 2026-03-13 | **Strategic Review v2.2**: Re-scoped v2.2 from "Scale & Registry" to "Protocol Hardening" (streaming, errors, versioning, batch, async). Marketplace items deferred to v2.3 (triggers not met). Added v2.3.0 "Scale" to timeline. |
+| 2026-03-20 | **Identity & Auth Hardening**: Added SD-12 (per-runtime-agent identity), SD-13 (capability-based authz with constraints), SD-14 (approval flows — Device Auth, CIBA, WebAuthn). Updated v2.2 scope to include identity/auth features. Added v2.4.0 "Adoption" to timeline (OpenAPI adapter, ASAP challenge). Added new blind spots (host correlation, self-auth, TS gap, OpenAPI). Extended success metrics for v2.2–v2.4. Resolved SQ-13a/14a/15a. |
