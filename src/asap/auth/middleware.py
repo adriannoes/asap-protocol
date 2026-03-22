@@ -110,6 +110,8 @@ def _get_bearer_token(request: Request) -> str | None:
 
 DEFAULT_HTTP_TIMEOUT = 10.0
 
+AGENT_IDENTITY_ROUTE_PREFIX = "/asap/agent/"
+
 
 async def _fetch_jwks(
     jwks_uri: str, transport: httpx.AsyncBaseTransport | None = None
@@ -130,6 +132,7 @@ class OAuth2Middleware(BaseHTTPMiddleware):
     Extracts Authorization: Bearer <token>, validates the JWT signature
     with keys from jwks_uri, checks exp, and optionally enforces a
     required scope. Sets request.state.oauth2_claims on success.
+    Skips ``/asap/agent/*`` (Host JWT, not IdP access tokens).
 
     Returns 401 if the token is missing or invalid, 403 if scope is insufficient.
     """
@@ -163,9 +166,9 @@ class OAuth2Middleware(BaseHTTPMiddleware):
 
     def _should_validate(self, path: str) -> bool:
         """Return True if this request path should be validated."""
-        if self._path_prefix is None:
-            return True
-        return path.startswith(self._path_prefix)
+        if self._path_prefix is not None and not path.startswith(self._path_prefix):
+            return False
+        return not path.startswith(AGENT_IDENTITY_ROUTE_PREFIX)
 
     async def _get_key_set(self) -> jwk.KeySet:
         """Return JWKS, from cache or by fetching."""

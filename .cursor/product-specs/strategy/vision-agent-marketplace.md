@@ -71,17 +71,79 @@ To achieve this vision while serving Enterprise needs, ASAP prioritizes:
 
 ## Core Components
 
-### 1. Discovery Service
+### 1. Agent Identity & Authorization Layer
+
+**Purpose**: Give every runtime agent its own verifiable identity, fine-grained capabilities, and independent lifecycle.
+
+Today's auth models (OAuth, sessions, API keys) treat agents as applications or users. ASAP treats each runtime agent — a specific conversation, task, or session — as a **first-class principal** with its own cryptographic identity.
+
+#### 1.1 Per-Runtime-Agent Identity
+
+Each agent gets its own Ed25519 keypair under a persistent **Host** identity (the client environment — e.g., a Cursor session, a CI runner, a deployed service).
+
+| Concept | Description |
+|---------|-------------|
+| **Host** | Persistent client environment identity (keypair + metadata). Carries default capabilities. |
+| **Agent** | Runtime actor within a host. Own keypair, own grants, own lifecycle. |
+| **Mode** | `delegated` (acts on behalf of user) or `autonomous` (no user in the loop) |
+
+#### 1.2 Capability-Based Authorization
+
+Instead of coarse OAuth scopes, agents receive **named capabilities** with optional **constraints** that scope exactly what they can do.
+
+```json
+{
+  "capability": "transfer_funds",
+  "status": "active",
+  "constraints": {
+    "amount": { "max": 1000 },
+    "currency": { "in": ["USD", "EUR"] },
+    "destination": "acc_456"
+  }
+}
+```
+
+Constraint operators: `max`, `min`, `in`, `not_in`, exact value. Violations return detailed error info so agents can self-correct.
+
+#### 1.3 Agent Lifecycle
+
+Three independent clocks govern agent lifetimes:
+
+| Clock | Measures From | Purpose |
+|-------|---------------|---------|
+| **Session TTL** | Last request | Protects against abandoned agents |
+| **Max Lifetime** | Last activation | Caps continuous use |
+| **Absolute Lifetime** | Creation | Hard limit; agent is permanently revoked |
+
+Reactivation is a **security checkpoint**: escalated capabilities decay to host defaults.
+
+#### 1.4 Approval Flows
+
+When registration or capability escalation requires user consent:
+
+| Method | Use Case |
+|--------|----------|
+| **Device Authorization (RFC 8628)** | User visits URL, enters code (like TV login) |
+| **CIBA** | Server pushes notification to user's device |
+| **WebAuthn / Biometric** | Proof of physical presence for sensitive operations |
+
+Self-authorization prevention: agents that control the browser cannot approve themselves — biometric/hardware proof required for data-modifying capabilities.
+
+---
+
+### 2. Discovery Service
 
 **Purpose**: Find the right agent for any task.
 
 | Feature | Description |
 |---------|-------------|
 | **Skill Search** | Query by capability, domain, or task type |
+| **Intent-Based Search** | Natural-language queries ("I need an agent that can review Python code") |
 | **Semantic Matching** | AI-powered matching beyond keywords |
 | **Availability Check** | Real-time capacity and queue status |
 | **Geo-awareness** | Prefer local/regional agents for latency |
 | **Version Filtering** | Match ASAP protocol versions |
+| **WWW-Authenticate Challenge** | Resource servers redirect unknown agents to ASAP discovery |
 
 **Example Query**:
 ```json
@@ -96,13 +158,21 @@ To achieve this vision while serving Enterprise needs, ASAP prioritizes:
 }
 ```
 
+**Intent-Based Query** (v2.3+):
+```json
+{
+  "intent": "review Python pull requests for security vulnerabilities",
+  "limit": 5
+}
+```
+
 ---
 
-### 2. Trust Layer
+### 3. Trust Layer
 
 **Purpose**: Establish and verify agent trustworthiness.
 
-#### 2.1 Credential Types
+#### 3.1 Credential Types
 
 | Credential | Description | Issuer |
 |------------|-------------|--------|
@@ -111,7 +181,7 @@ To achieve this vision while serving Enterprise needs, ASAP prioritizes:
 | **Verified** | Third-party audit passed | Marketplace |
 | **Certified** | Specialized skill certified | Industry body |
 
-#### 2.2 Reputation System
+#### 3.2 Reputation System
 
 ```
 Agent Reputation Score = f(
@@ -124,7 +194,7 @@ Agent Reputation Score = f(
 )
 ```
 
-#### 2.3 Trust Delegation
+#### 3.3 Trust Delegation
 
 Agents can delegate trust to sub-agents:
 
@@ -138,7 +208,7 @@ graph TD
 
 ---
 
-### 3. Economy Layer
+### 4. Economy Layer
 
 **Purpose**: Enable value exchange between agents.
 
@@ -193,7 +263,7 @@ graph TD
 
 ---
 
-## 4. Agent Evaluations ("Evals")
+## 5. Agent Evaluations ("Evals")
 
 **Purpose**: Provide objective, verifiable metrics for agent quality and safety.
 
@@ -291,6 +361,11 @@ Auto-failover based on health checks
 | v1.3 | SLA Framework | Service guarantees as trust signals (SLAStorage, /sla/* API) |
 | v2.0 | Marketplace Core | Web App + Lite Registry + Verified Badge |
 | v2.1 | Consumer SDK + Integrations | Demand-side activation (LangChain, CrewAI, MCP) |
+| v2.2 | Per-Runtime-Agent Identity | Host→Agent hierarchy with Ed25519 keypairs per session |
+| v2.2 | Capability-Based Authorization | Fine-grained capabilities with constraint operators |
+| v2.2 | Approval Flows | RFC 8628 Device Auth, CIBA, WebAuthn consent |
+| v2.2 | Agent Lifecycle Management | Session TTL, max lifetime, reactivation checkpoints |
+| v2.2 | Self-Authorization Prevention | Biometric proof for browser-controlling agents |
 | v2.2 | Streaming/SSE | Incremental task responses |
 | v2.2 | Error Taxonomy Evolution | Recovery hints, structured retry |
 | v2.2 | Unified Versioning | Content negotiation, backward compat |
@@ -298,9 +373,17 @@ Auto-failover based on health checks
 | v2.2 | Batch Operations | JSON-RPC batch requests |
 | v2.2 | Compliance Harness v2 | Extended protocol certification |
 | v2.2 | Audit Logging | Tamper-evident write logs |
+| v2.3 | Delegated/Autonomous Mode Formalization | Explicit mode support in manifests |
+| v2.3 | Runtime Capability Escalation | Request additional capabilities at runtime |
+| v2.3 | Intent-Based Directory Search | Natural-language search across registry |
+| v2.3 | TypeScript Client SDK | Official npm package with framework adapters |
+| v2.3 | Capability-Aware Introspection | RFC 7662 introspection with grant validation |
+| v2.3 | Privacy Considerations | Formal data retention and behavioral signal policies |
 | v2.3 | Registry API Backend | PostgreSQL search, CRUD, trust scoring |
 | v2.3 | Auto-Registration | Self-service without PR |
 | v2.3 | Orchestration Primitives | Protocol-level coordinator pattern |
+| v2.4 | OpenAPI Adapter | Auto-derive capabilities from existing API specs |
+| v2.4 | WWW-Authenticate ASAP Challenge | Resource servers redirect agents to discovery |
 
 ### Architecture Layers
 
@@ -312,14 +395,17 @@ Auto-failover based on health checks
 │                    MARKETPLACE LAYER                         │
 │  (Discovery, Trust, Economy, Governance)                     │
 ├──────────────────────────────────────────────────────────────┤
+│                    IDENTITY & AUTH LAYER (v2.2+)             │
+│  (Host→Agent identity, Capabilities, Approval, Lifecycle)    │
+├──────────────────────────────────────────────────────────────┤
 │                    PROTOCOL LAYER                            │
-│  (ASAP v2.0 with extensions)                                 │
+│  (ASAP v2.0+ — Envelope, Task State Machine, JSON-RPC 2.0)  │
 ├──────────────────────────────────────────────────────────────┤
 │                    STORAGE LAYER (SD-9)                      │
 │  (SnapshotStore, MeteringStore — Agent's choice of backend)  │
 ├──────────────────────────────────────────────────────────────┤
 │                    TRANSPORT LAYER                           │
-│  (HTTP, WebSocket, Broker)                                   │
+│  (HTTP, WebSocket, SSE, Webhook, Broker)                     │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -514,3 +600,4 @@ FUTURE SEPARATE REPO (asap-settlement-crypto, v4.0+)
 | 2026-02-21 | **Open Core boundary**: Added §5.5 Open Source vs. Proprietary (LangChain-style). Public: SDK, frontend, Lite Registry. Private from v2.1: Registry API, billing, economy. |
 | 2026-03-13 | **Strategic Review v2.2**: Added v2.1, v2.2, v2.3 building blocks. v2.2 re-scoped to Protocol Hardening (streaming, errors, versioning, batch, async, compliance, audit). Marketplace scale items deferred to v2.3. |
 | 2026-03-13 | **DeFi Settlement strategy**: Added pluggable SettlementBackend note to §3.3, updated Repository Strategy with `asap-settlement-crypto` as future separate repo. Crypto settlement is v4.0+ extension, not v3.0. See `crypto-settlement-strategy.md`. |
+| 2026-03-20 | **Identity & Authorization Layer**: Added §1 (Agent Identity & Authorization) with per-runtime-agent identity, capability-based authz with constraints, agent lifecycle (3 clocks), and approval flows (Device Auth, CIBA, WebAuthn). Added Identity & Auth Layer to Architecture. Updated building blocks with v2.2 identity features, v2.3 intent-based search/TS SDK/privacy/introspection, v2.4 OpenAPI adapter. Renumbered sections (Discovery→§2, Trust→§3, Economy→§4). |

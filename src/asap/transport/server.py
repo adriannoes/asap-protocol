@@ -79,6 +79,13 @@ from asap.observability.tracing import (
 )
 from asap.utils.sanitization import sanitize_nonce
 from asap.auth import OAuth2Config, OAuth2Middleware
+from asap.auth.agent_jwt import JtiReplayCache
+from asap.auth.identity import (
+    AgentStore,
+    HostStore,
+    InMemoryAgentStore,
+    InMemoryHostStore,
+)
 from asap.transport.middleware import (
     AuthenticationMiddleware,
     BearerTokenValidator,
@@ -116,6 +123,7 @@ from asap.state.metering import MeteringStore
 from asap.state.snapshot import SnapshotStore
 from asap.economics.sla_storage import SLAStorage
 from asap.economics.storage import MeteringStorage, metering_storage_adapter
+from asap.transport.agent_routes import create_agent_identity_router
 from asap.transport.delegation_api import create_delegation_router
 from asap.transport.sla_api import create_sla_router
 from asap.transport.usage_api import create_usage_router
@@ -1152,6 +1160,11 @@ def create_app(
     delegation_key_store: Callable[[str], Any] | None = None,
     delegation_storage: object | None = None,
     sla_storage: object | None = None,
+    identity_host_store: HostStore | None = None,
+    identity_agent_store: AgentStore | None = None,
+    identity_jti_cache: JtiReplayCache | None = None,
+    identity_jwt_audience: str | list[str] | None = None,
+    identity_rate_limit: str | None = None,
 ) -> FastAPI:
     """Create and configure a FastAPI application for ASAP protocol.
 
@@ -1172,9 +1185,9 @@ def create_app(
         token_validator: Optional function to validate Bearer tokens.
             Required if manifest.auth is configured. Should return agent ID
             if token is valid, None otherwise.
-        oauth2_config: Optional OAuth2 config. When provided, OAuth2Middleware
-            is applied to all /asap/* routes (JWT validation via JWKS). If not
-            provided, /asap remains unauthenticated unless manifest.auth is used.
+        oauth2_config: When set, OAuth2Middleware validates IdP JWTs for ``path_prefix``
+            routes; ``/asap/agent/*`` uses Host JWT instead. Without it, ``/asap`` is open
+            unless ``manifest.auth`` and ``token_validator`` are configured.
         rate_limit: Optional rate limit string (e.g., "10/second;100/minute").
             Rate limiting is IP-based (per client IP address) to prevent DoS attacks.
             Uses token bucket pattern: burst limit + sustained limit.
@@ -1211,6 +1224,16 @@ def create_app(
             token IDs so only the delegator can revoke.
         sla_storage: Optional SLAStorage for SLA metrics and breaches. When provided,
             enables GET /sla, /sla/history, /sla/breaches for querying SLA status.
+        identity_host_store: Optional HostStore; default in-memory when both stores omitted.
+        identity_agent_store: Optional AgentStore; must be set with identity_host_store or both omitted.
+        identity_jti_cache: Optional ``jti`` replay cache for Host JWT on mutating agent routes.
+            Defaults to a new in-memory cache per app.
+        identity_jwt_audience: Expected ``aud`` value(s) for Host JWT verification on
+            ``/asap/agent/*``. Defaults to ``manifest.id`` so tokens are bound to this
+            server instance. Set explicitly for multi-audience or migration scenarios.
+        identity_rate_limit: Rate limit string for ``/asap/agent/*`` endpoints.
+            Defaults to ``"5/second;30/minute"`` (tighter than the main limiter).
+            Uses a separate budget from the main ``rate_limit``.
 
     Returns:
         Configured FastAPI application ready to run
@@ -1322,6 +1345,22 @@ def create_app(
             manifest_id=manifest.id,
         )
 
+    _identity_host_store: HostStore
+    _identity_agent_store: AgentStore
+    if identity_host_store is None and identity_agent_store is None:
+        _identity_agent_store = InMemoryAgentStore()
+        _identity_host_store = InMemoryHostStore(agent_store=_identity_agent_store)
+    elif identity_host_store is not None and identity_agent_store is not None:
+        _identity_host_store = identity_host_store
+        _identity_agent_store = identity_agent_store
+    else:
+        msg = "identity_host_store and identity_agent_store must both be set or both omitted"
+        raise ValueError(msg)
+    _identity_jti_cache = identity_jti_cache if identity_jti_cache is not None else JtiReplayCache()
+    _identity_jwt_audience: str | list[str] = (
+        identity_jwt_audience if identity_jwt_audience is not None else manifest.id
+    )
+
     # Resolve snapshot store (env-based when not provided)
     if snapshot_store is None:
         snapshot_store = create_snapshot_store()
@@ -1392,6 +1431,14 @@ def create_app(
     app.state.sla_breach_subscribers = _sla_breach_subscribers
     app.state.websocket_message_rate_limit = websocket_message_rate_limit
     app.state.mtls_config = mtls_config
+    app.state.identity_host_store = _identity_host_store
+    app.state.identity_agent_store = _identity_agent_store
+    app.state.identity_jti_cache = _identity_jti_cache
+    app.state.identity_jwt_audience = _identity_jwt_audience
+    # Dedicated rate limiter for /asap/agent/* (separate budget from main limiter)
+    _identity_rl = identity_rate_limit or "5/second;30/minute"
+    app.state.identity_limiter = create_limiter([_identity_rl])
+    app.include_router(create_agent_identity_router())
     if metering_storage is not None and isinstance(metering_storage, MeteringStorage):
         app.state.metering_storage = metering_storage
         app.include_router(create_usage_router())

@@ -19,8 +19,23 @@ Public exports:
     OIDCDiscovery: OIDC discovery client
     OIDCConfig: OIDC provider configuration model
     JWKSValidator: JWKS fetcher and JWT validator with key rotation support
+    HostIdentity, AgentSession, HostStore, AgentStore, JWT helpers: per-runtime identity (Ed25519)
 """
 
+from asap.auth.agent_jwt import (
+    create_agent_jwt,
+    create_host_jwt,
+    verify_agent_jwt,
+    verify_host_jwt,
+)
+from asap.auth.identity import (
+    AgentSession,
+    AgentStore,
+    HostIdentity,
+    HostStore,
+    host_urn_from_thumbprint,
+    jwk_thumbprint_sha256,
+)
 from asap.auth.introspection import TokenInfo, TokenIntrospector
 from asap.auth.jwks import JWKSValidator, Claims, fetch_keys, validate_jwt
 from asap.auth.oidc import OIDCConfig, OIDCDiscovery
@@ -29,21 +44,31 @@ from asap.auth.oauth2 import OAuth2ClientCredentials, Token
 from asap.auth.scopes import SCOPE_ADMIN, SCOPE_EXECUTE, SCOPE_READ, require_scope
 
 __all__ = [
-    "OAuth2Claims",
-    "OAuth2ClientCredentials",
-    "OAuth2Config",
-    "OAuth2Middleware",
+    "AgentSession",
+    "AgentStore",
     "Claims",
     "JWKSValidator",
     "OIDCConfig",
     "OIDCDiscovery",
     "fetch_keys",
-    "validate_jwt",
+    "HostIdentity",
+    "HostStore",
+    "host_urn_from_thumbprint",
+    "jwk_thumbprint_sha256",
+    "OAuth2Claims",
+    "OAuth2ClientCredentials",
+    "OAuth2Config",
+    "OAuth2Middleware",
     "SCOPE_ADMIN",
     "SCOPE_EXECUTE",
     "SCOPE_READ",
     "Token",
     "TokenInfo",
     "TokenIntrospector",
+    "create_agent_jwt",
+    "create_host_jwt",
     "require_scope",
+    "validate_jwt",
+    "verify_agent_jwt",
+    "verify_host_jwt",
 ]

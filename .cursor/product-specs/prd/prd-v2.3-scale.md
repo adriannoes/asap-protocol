@@ -5,7 +5,7 @@
 > **Version**: 2.3.0
 > **Status**: VISION DRAFT
 > **Created**: 2026-03-13
-> **Last Updated**: 2026-03-13
+> **Last Updated**: 2026-03-20
 > **Origin**: Items deferred from [prd-v2.2-scale.md](./prd-v2.2-scale.md) per strategic review (2026-03)
 
 ---
@@ -19,7 +19,13 @@ v2.3.0 addresses marketplace scale. These items were originally scoped for v2.2 
 This release delivers:
 - **Registry API Backend**: PostgreSQL-backed search, CRUD, and trust scoring
 - **Auto-Registration**: Self-service registration without PR (with compliance gating)
+- **TypeScript Client SDK**: Official npm package with AI framework adapters
+- **Intent-Based Directory Search**: Natural-language queries across the registry
+- **Delegated/Autonomous Mode Formalization**: Explicit mode support in manifests and registration
+- **Runtime Capability Escalation**: Request additional capabilities without re-registration
+- **Capability-Aware Introspection**: RFC 7662 introspection returning grant info
 - **Orchestration Primitives**: Protocol-level coordinator pattern for multi-agent workflows
+- **Privacy Considerations**: Formal spec section on data retention and behavioral signals
 - **DeepEval Intelligence Layer** *(conditional)*: If marketplace user demand for quality filtering materializes
 
 > [!CAUTION]
@@ -43,9 +49,12 @@ v2.3 is the point where the ASAP Protocol begins separating into its **Open Core
 
 | Goal | Metric | Priority |
 |------|--------|----------|
-| Search performance | Full-text results < 200ms p95 | P1 |
+| Search performance | Full-text + intent-based results < 200ms p95 | P1 |
 | Registration friction | Self-service without PR for compliant agents | P1 |
-| Orchestration support | Coordinator pattern with streaming (v2.2) support | P1 |
+| TypeScript adoption | 500+ weekly npm downloads within 3 months | P1 |
+| Intent-based discovery | 100+ daily intent queries | P1 |
+| Capability escalation | Runtime capability request flow operational | P2 |
+| Orchestration support | Coordinator pattern with streaming (v2.2) support | P2 |
 | Intelligence filtering | Ability to filter by DeepEval quality scores | P3 (conditional) |
 
 ---
@@ -58,8 +67,17 @@ v2.3 is the point where the ASAP Protocol begins separating into its **Open Core
 ### Registry Consumer (Semantic Search)
 > As a **developer**, I want to **search agents by capability using natural language** (e.g., "find me agents that do PDF extraction") so that **I discover relevant agents faster than scanning 500+ entries**.
 
+### TypeScript Developer
+> As a **TypeScript developer**, I want to **use an official ASAP SDK with Vercel AI SDK adapters** so that **I can integrate ASAP agents into my Next.js application without writing protocol code**.
+
+### Agent Developer (Capability Escalation)
+> As an **agent developer**, I want to **request additional capabilities at runtime without re-registering** so that **my agent can adapt to new tasks as they arise**.
+
 ### Orchestrator Agent
 > As an **orchestrator agent**, I want to **discover and coordinate multiple agents using protocol-level primitives** so that **multi-agent workflows are reliable and observable without ad-hoc coordination logic**.
+
+### Platform Operator (Privacy)
+> As a **platform operator**, I want to **have formal privacy guidelines for agent activity data** so that **I can comply with data protection requirements**.
 
 ---
 
@@ -121,7 +139,103 @@ New scope. Enables protocol-level multi-agent coordination.
 
 ---
 
-### 4.4 DeepEval Intelligence Layer (P3 — Conditional)
+### 4.4 TypeScript Client SDK (P1)
+
+Official npm package for ASAP Protocol with AI framework adapters.
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| TS-001 | `@asap-protocol/client` npm package — manages host/agent keys, signs JWTs, handles registration | MUST |
+| TS-002 | Discovery: `listProviders()`, `searchProviders(intent)`, `discoverProvider(url)` | MUST |
+| TS-003 | Capabilities: `listCapabilities()`, `describeCapability(name)`, `executeCapability(name, args)` | MUST |
+| TS-004 | Connection: `connectAgent(provider, capabilities, mode)`, `disconnectAgent(agentId)` | MUST |
+| TS-005 | Lifecycle: `reactivateAgent(agentId)`, `agentStatus(agentId)`, `requestCapability(agentId, caps)` | MUST |
+| TS-006 | Vercel AI SDK adapter — ASAP capabilities as Vercel AI tools | SHOULD |
+| TS-007 | OpenAI SDK adapter — ASAP capabilities as function calls | SHOULD |
+| TS-008 | Anthropic SDK adapter — ASAP capabilities as tool use | SHOULD |
+| TS-009 | Pluggable storage interface for key persistence (memory, file, keychain) | SHOULD |
+
+---
+
+### 4.5 Intent-Based Directory Search (P1)
+
+Natural-language search across the registry, beyond categories and keywords.
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| INTENT-001 | `GET /registry/search?intent=<natural-language>&limit=N` — NL search endpoint | MUST |
+| INTENT-002 | BM25 full-text search as baseline | MUST |
+| INTENT-003 | Optional embedding-based semantic search (when available) | SHOULD |
+| INTENT-004 | Results return standard discovery documents (name, description, issuer, endpoints) | MUST |
+| INTENT-005 | Integration with `search_providers` client tool | MUST |
+
+---
+
+### 4.6 Delegated/Autonomous Mode Formalization (P2)
+
+Explicit mode support in manifests and agent registration.
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| MODE-001 | `supported_modes` field in manifest: `["delegated", "autonomous"]` | MUST |
+| MODE-002 | Mode validation on registration: reject unsupported modes | MUST |
+| MODE-003 | Autonomous agent claiming when host becomes linked to a user | SHOULD |
+| MODE-004 | Mode-specific default capabilities per host | SHOULD |
+
+---
+
+### 4.7 Runtime Capability Escalation (P2)
+
+Allow agents to request additional capabilities without re-registration.
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| ESC-001 | `POST /asap/agent/request-capability` — request additional capabilities for existing agent | MUST |
+| ESC-002 | Triggers approval flow if capability requires consent | MUST |
+| ESC-003 | Agent remains `active` while individual grants move from `pending` to `active`/`denied` | MUST |
+| ESC-004 | `request_capability` client tool in Python and TypeScript SDKs | MUST |
+
+---
+
+### 4.8 Capability-Aware Introspection (P2)
+
+Extend token introspection for resource servers that validate agent JWTs.
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| INTRO-001 | `POST /asap/agent/introspect` — accepts agent JWT, returns active/inactive + compact grants | MUST |
+| INTRO-002 | Response includes `agent_id`, `host_id`, `user_id`, `agent_capability_grants`, `mode` | MUST |
+| INTRO-003 | Compact grants (capability + status only) — no input/output schemas | MUST |
+| INTRO-004 | Endpoint protected with server-to-server auth (shared secret, mTLS, or IP restriction) | SHOULD |
+
+---
+
+### 4.9 WWW-Authenticate ASAP Challenge (P3)
+
+Resource servers redirect unknown agents to ASAP discovery.
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| CHAL-001 | `WWW-Authenticate: ASAP discovery="https://example.com/.well-known/asap/manifest.json"` on 401 | SHOULD |
+| CHAL-002 | Client recognizes `ASAP` scheme and initiates discovery/registration | SHOULD |
+| CHAL-003 | Return `403` with `capability_not_granted` when JWT present but capability missing | SHOULD |
+
+---
+
+### 4.10 Privacy Considerations (P3)
+
+Formal privacy section in the ASAP specification.
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| PRIV-001 | Document host key correlation risk (same keypair across servers enables tracking) | SHOULD |
+| PRIV-002 | Data retention policy guidance for agent activity logs | SHOULD |
+| PRIV-003 | Capability requests as behavioral signals — treat with same data protection as grants | SHOULD |
+| PRIV-004 | Guidance on `reason` field sensitivity (may contain PII) | SHOULD |
+
+---
+
+### 4.11 DeepEval Intelligence Layer (P3 — Conditional)
 
 Scope preserved from original [prd-v2.2-scale.md](./prd-v2.2-scale.md) §4.4:
 
@@ -141,6 +255,9 @@ Scope preserved from original [prd-v2.2-scale.md](./prd-v2.2-scale.md) §4.4:
 
 | Feature | Reason | When |
 |---------|--------|------|
+| OpenAPI adapter | Requires stable capability model from v2.2–v2.3 | v2.4 |
+| MCP Auth Bridge | Requires stable identity model | v2.4 |
+| Formal ASAP Specification Document | Requires all protocol features stable | v2.4 |
 | Economy Settlement / Billing | No live transactions yet | v3.0 |
 | Payment Processing (Stripe) | Trigger not met (100+ Verified Agents) | v3.0 |
 | Node.js / Go SDKs | Demand-driven | TBD |
@@ -181,6 +298,9 @@ Orchestration Primitives depend on v2.2 features:
 | Real agents (non-seed) in Registry | 500+ |
 | Auto-registration adoption | > 70% of new registrations via API (vs IssueOps) |
 | Search p95 latency | < 200ms |
+| TypeScript SDK weekly downloads | 500+ on npm |
+| Intent-based searches | 100+ daily queries |
+| Runtime capability escalation | 10+ agents using escalation flow |
 | Multi-agent workflows | 10+ orchestration flows using ORCH primitives |
 
 ---
@@ -202,7 +322,7 @@ Orchestration Primitives depend on v2.2 features:
 - **Origin PRD (deferred scope)**: [prd-v2.2-scale.md](./prd-v2.2-scale.md)
 - **Protocol Hardening**: [prd-v2.2-protocol-hardening.md](./prd-v2.2-protocol-hardening.md)
 - **Previous Version**: [prd-v2.1-ecosystem.md](./prd-v2.1-ecosystem.md)
-- **Next Version**: [prd-v3.0-economy.md](./prd-v3.0-economy.md)
+- **Next Version**: [prd-v2.4-adoption.md](./prd-v2.4-adoption.md)
 - **Deferred Backlog**: [deferred-backlog.md](../strategy/deferred-backlog.md)
 - **Vision**: [vision-agent-marketplace.md](../strategy/vision-agent-marketplace.md)
 - **Roadmap**: [roadmap-to-marketplace.md](../strategy/roadmap-to-marketplace.md)
@@ -214,3 +334,4 @@ Orchestration Primitives depend on v2.2 features:
 | Date | Version | Change |
 |------|---------|--------|
 | 2026-03-13 | 0.1.0 | Vision DRAFT — marketplace items deferred from v2.2 per strategic review. Added Orchestration Primitives (new). |
+| 2026-03-20 | 0.2.0 | **Expanded scope**: Added §4.4 TypeScript SDK, §4.5 Intent-Based Search, §4.6 Delegated/Autonomous Modes, §4.7 Capability Escalation, §4.8 Capability-Aware Introspection, §4.9 ASAP Challenge, §4.10 Privacy Considerations. Updated goals, user stories, non-goals, success metrics. |
