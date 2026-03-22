@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import base64
 import time
 
+import pytest
 from fastapi.testclient import TestClient
 from joserfc import jwk, jwt as jose_jwt
 
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
 from asap.auth import OAuth2Config
+from asap.auth.agent_jwt import create_host_jwt
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest
@@ -128,3 +134,46 @@ def test_server_with_oauth2_config_accepts_asap_with_valid_jwt() -> None:
     assert response.status_code == 200
     data = response.json()
     assert data.get("jsonrpc") == "2.0"
+
+
+@pytest.mark.filterwarnings("ignore:EdDSA is deprecated:UserWarning")
+def test_oauth2_middleware_skips_agent_register_host_jwt() -> None:
+    """POST /asap/agent/register uses Host JWT; OAuth2 JWKS must not block it."""
+
+    async def mock_jwks(_uri: str) -> jwk.KeySet:
+        key = jwk.RSAKey.generate_key(2048, private=True)
+        return jwk.KeySet.import_key_set({"keys": [key.as_dict(private=False)]})
+
+    app = create_app(
+        _minimal_manifest(),
+        registry=create_default_registry(),
+        oauth2_config=OAuth2Config(
+            jwks_uri="https://auth.example.com/jwks.json",
+            path_prefix="/asap",
+            jwks_fetcher=mock_jwks,
+        ),
+        rate_limit="100000/minute",
+    )
+    host_sk = Ed25519PrivateKey.generate()
+    agent_sk = Ed25519PrivateKey.generate()
+    raw = agent_sk.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    x = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+    agent_jwk = {"kty": "OKP", "crv": "Ed25519", "x": x}
+    host_token = create_host_jwt(
+        host_sk,
+        aud="asap:registry",
+        agent_public_key=agent_jwk,
+        ttl_seconds=120,
+    )
+    with TestClient(app) as client:
+        response = client.post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {host_token}"},
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert body.get("status") == "pending"
+    assert "agent_id" in body
