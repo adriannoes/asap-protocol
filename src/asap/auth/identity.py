@@ -1,8 +1,4 @@
-"""Per-runtime-agent identity models (host and agent session).
-
-These models support the Host→Agent hierarchy and Ed25519-backed sessions
-described in the v2.2 protocol hardening PRD (§4.1).
-"""
+"""Host and agent session models for per-runtime identity (Ed25519)."""
 
 from __future__ import annotations
 

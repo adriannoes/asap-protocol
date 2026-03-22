@@ -54,7 +54,6 @@ class JwtVerifyResult:
     host: HostIdentity | None = None
     agent: AgentSession | None = None
     error: str | None = None
-    """Human-readable failure reason when ``ok`` is False."""
 
 
 class JtiReplayCache:
