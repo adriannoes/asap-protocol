@@ -116,6 +116,19 @@
   - **What**: Export `HostIdentity`, `AgentSession`, `HostStore`, `AgentStore`, `create_host_jwt`, `create_agent_jwt`, `verify_host_jwt`, `verify_agent_jwt`
   - **Verify**: `from asap.auth import HostIdentity, AgentSession` works
 
+### 5.0 PR #102 Code Review Fixes
+
+- [x] 5.1 Extract Agent Routes
+  - **What**: Moved agent endpoints from `server.py` to a dedicated `APIRouter` in `src/asap/transport/agent_routes.py`.
+- [x] 5.2 Convert async tests
+  - **What**: Converted `asyncio.run()` calls in `tests/transport/test_server.py` to `await` inside `async def` tests.
+- [x] 5.3 Dedicated rate limiter
+  - **What**: Added `identity_rate_limit` param to `create_app` and mapped agent routes to `app.state.identity_limiter`.
+- [x] 5.4 Pydantic JWK validation
+  - **What**: Added `OkpPublicKey` `AfterValidator` in `identity.py` to ensure only valid Ed25519 JWKs are accepted at model construction.
+- [x] 5.5 Refactor JWT parsing
+  - **What**: Switched manual JWT payload decoding to `joserfc.jws.extract_compact` for secure parsing before signature verification.
+
 ---
 
 ## Definition of Done

@@ -1,5 +1,7 @@
 # Tasks: A2H Protocol Integration (v2.2.0)
 
+> **Status**: ✅ COMPLETED — All tasks merged and PR closed.
+>
 > **PRD**: `prd-a2h-integration.md`
 > **Goal**: Enable ASAP agents to communicate with humans via A2H Gateways using a decoupled, protocol-agnostic HITL interface
 > **Prerequisite**: v2.2.0 tech debt cleared (`tasks-v2.2.0-tech-debt.md`)
@@ -83,7 +85,7 @@
   - **Pattern**: Follow `tests/integrations/test_openclaw.py` structure (imports, fixtures, test naming).
   - **Verify**: `PYTHONPATH=src uv run pytest tests/handlers/test_hitl.py -v` — all tests pass.
 
-- [ ] 1.4 Commit
+- [x] 1.4 Commit
   - **Command**: `git add src/asap/handlers/ tests/handlers/ && git commit -m "feat(handlers): add HumanApprovalProvider protocol and ApprovalResult model"`
   - **Scope**: `src/asap/handlers/__init__.py`, `src/asap/handlers/hitl.py`, `tests/handlers/__init__.py`, `tests/handlers/test_hitl.py`
 
@@ -177,7 +179,7 @@
   - **Why**: Discovery response from `/.well-known/a2h`. Using `extra="allow"` here because gateways may extend the spec with custom fields. This follows the A2H spec's extensibility principle.
   - **Verify**: Can instantiate `GatewayCapabilities(a2h_supported=["1.0"], channels=["sms"])`.
 
-- [ ] 2.5 Commit
+- [x] 2.5 Commit
   - **Command**: `git add src/asap/integrations/a2h.py && git commit -m "feat(integrations): add A2H protocol Pydantic models"`
   - **Scope**: `src/asap/integrations/a2h.py` (models only, client comes in Task 3.0)
 
@@ -252,7 +254,7 @@
   - **Why**: These are the blocking (polling) methods corresponding to A2H-004, A2H-005, A2H-006.
   - **Verify**: `authorize()` returns `A2HResponse` with `decision` field. Timeout raises `TimeoutError`.
 
-- [ ] 3.7 Commit
+- [x] 3.7 Commit
   - **Command**: `git add src/asap/integrations/a2h.py && git commit -m "feat(integrations): add A2HClient async HTTP client with polling"`
   - **Scope**: `src/asap/integrations/a2h.py` (models + client)
 
@@ -328,7 +330,7 @@
   - **Why**: Validates the bridge between the generic HITL Protocol and A2H-specific implementation.
   - **Verify**: `PYTHONPATH=src uv run pytest tests/integrations/test_a2h.py -v -k "provider"` — all provider tests pass.
 
-- [ ] 4.4 Commit
+- [x] 4.4 Commit
   - **Command**: `git add tests/integrations/test_a2h.py src/asap/integrations/a2h.py && git commit -m "feat(integrations): add A2HApprovalProvider and comprehensive A2H tests"`
   - **Scope**: `tests/integrations/test_a2h.py`, `src/asap/integrations/a2h.py` (A2HApprovalProvider addition)
 
@@ -419,7 +421,7 @@
   - **Why**: Pre-push CI verification per git-commits.mdc rules.
   - **Verify**: All commands exit 0.
 
-- [ ] 5.7 Commit
+- [x] 5.7 Commit
   - **Command**: `git add src/asap/integrations/__init__.py src/asap/examples/a2h_approval.py src/asap/examples/README.md tests/examples/test_a2h_approval.py tests/integrations/test_integrations_init.py AGENTS.md && git commit -m "feat(integrations): add A2H lazy exports, example, and documentation"`
   - **Scope**: All files from 5.1–5.5
 
@@ -435,13 +437,13 @@
 
 ## Definition of Done
 
-- [ ] `HumanApprovalProvider` Protocol available in `asap.handlers` (core, decoupled)
-- [ ] `A2HClient` and `A2HApprovalProvider` available in `asap.integrations` (lazy exports)
-- [ ] All A2H Pydantic models validate against the A2H OpenAPI spec
-- [ ] Unit test coverage ≥ 90% on new code
-- [ ] Runnable example at `asap.examples.a2h_approval`
-- [ ] `AGENTS.md` updated
-- [ ] Zero new dependencies added to `pyproject.toml`
-- [ ] Full CI suite passes: `ruff check`, `ruff format --check`, `mypy`, `pytest`
+- [x] `HumanApprovalProvider` Protocol available in `asap.handlers` (core, decoupled)
+- [x] `A2HClient` and `A2HApprovalProvider` available in `asap.integrations` (lazy exports)
+- [x] All A2H Pydantic models validate against the A2H OpenAPI spec
+- [x] Unit test coverage ≥ 90% on new code
+- [x] Runnable example at `asap.examples.a2h_approval`
+- [x] `AGENTS.md` updated
+- [x] Zero new dependencies added to `pyproject.toml`
+- [x] Full CI suite passes: `ruff check`, `ruff format --check`, `mypy`, `pytest`
 
 **Total Sub-tasks**: 24

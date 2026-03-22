@@ -5,7 +5,7 @@
 > **Version**: 3.0.0
 > **Status**: VISION DRAFT
 > **Created**: 2026-02-25
-> **Last Updated**: 2026-02-25
+> **Last Updated**: 2026-03-20
 
 ---
 
@@ -172,7 +172,7 @@ Consumer pre-funds 1000 credits ($10)
 |-----------|--------|-----------|
 | Payment processor | Stripe (Checkout, Connect, Tax) | Industry standard, marketplace payouts, tax automation |
 | Webhooks | Stripe Webhooks → Vercel Edge Functions | Serverless, no additional backend |
-| Credit ledger | PostgreSQL (from v2.2 Registry API Backend) | Atomic transactions, ACID |
+| Credit ledger | PostgreSQL (from v2.3 Registry API Backend) | Atomic transactions, ACID |
 | Payout | Stripe Connect (Express accounts) | Agent providers onboard without explicit banking relationship |
 
 ### 6.2 Pluggable Settlement Architecture
@@ -226,8 +226,11 @@ Before launching economy features:
 | Prerequisite | Source |
 |-------------|--------|
 | ASAP OAuth2 infrastructure | v1.1+ |
-| Registry API Backend (PostgreSQL) | v2.2 |
+| Per-runtime-agent identity & capabilities | v2.2 |
+| Registry API Backend (PostgreSQL) | v2.3 |
 | Audit Logging | v2.2 |
+| TypeScript SDK | v2.3 |
+| OpenAPI adapter (for easy service onboarding) | v2.4 |
 | Consumer SDK (credits API) | v2.1 (extended in v3.0) |
 | Usage Metering (`MeteringStore`) | v1.3+ |
 | 100+ Verified agent candidates | Growth trigger |
@@ -247,7 +250,7 @@ Before launching economy features:
 
 - **Vision**: [vision-agent-marketplace.md](../strategy/vision-agent-marketplace.md) §3 (Economy Layer) and §5.3 (Pricing Strategy)
 - **Deferred Backlog (original scope)**: [deferred-backlog.md](../strategy/deferred-backlog.md) §4 and §5
-- **Previous Version**: [prd-v2.2-scale.md](./prd-v2.2-scale.md)
+- **Previous Version**: [prd-v2.4-adoption.md](./prd-v2.4-adoption.md)
 - **Crypto Settlement Strategy**: [crypto-settlement-strategy.md](../strategy/crypto-settlement-strategy.md)
 - **Roadmap**: [roadmap-to-marketplace.md](../strategy/roadmap-to-marketplace.md)
 
@@ -259,3 +262,4 @@ Before launching economy features:
 |------|---------|--------|
 | 2026-02-25 | 0.1.0 | Vision DRAFT — consolidates deferred-backlog §4, §5 and vision-agent-marketplace §3 |
 | 2026-03-13 | 0.2.0 | Added §6.2 Pluggable Settlement Architecture (SettlementBackend Protocol). Q4 resolved: crypto settlement planned as v4.0+ in separate repo. Non-Goals updated. |
+| 2026-03-20 | 0.3.0 | Updated prerequisites: Registry API Backend is v2.3 (not v2.2). Added v2.2 identity/capabilities, v2.3 TypeScript SDK, v2.4 OpenAPI adapter as prerequisites. Updated previous version link to v2.4. |
