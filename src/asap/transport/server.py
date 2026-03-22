@@ -51,24 +51,19 @@ import time
 import traceback
 from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Annotated, Any, Callable, Optional, TypeVar, cast
+from typing import Any, Callable, Optional, TypeVar, cast
 
-from fastapi import FastAPI, HTTPException, Query, Request, WebSocket
-from joserfc.errors import JoseError
-from joserfc.jwk import OKPKey
+from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from opentelemetry import context
-from pydantic import Field, ValidationError
+from pydantic import ValidationError
 
 from asap.discovery import health as discovery_health
 from asap.discovery import wellknown
 from asap.errors import InvalidNonceError, InvalidTimestampError, ThreadPoolExhaustedError
-from asap.models.base import ASAPBaseModel
 from asap.models.constants import MAX_REQUEST_SIZE
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
-from asap.models.ids import generate_id
 from asap.models.envelope import Envelope
 from asap.observability import (
     get_logger,
@@ -84,21 +79,12 @@ from asap.observability.tracing import (
 )
 from asap.utils.sanitization import sanitize_nonce
 from asap.auth import OAuth2Config, OAuth2Middleware
-from asap.auth.agent_jwt import (
-    AGENT_PUBLIC_KEY_CLAIM,
-    HOST_PUBLIC_KEY_CLAIM,
-    JtiReplayCache,
-    JwtVerifyResult,
-    verify_host_jwt,
-)
+from asap.auth.agent_jwt import JtiReplayCache
 from asap.auth.identity import (
-    AgentSession,
     AgentStore,
-    HostIdentity,
     HostStore,
     InMemoryAgentStore,
     InMemoryHostStore,
-    jwk_thumbprint_sha256,
 )
 from asap.transport.middleware import (
     AuthenticationMiddleware,
@@ -137,6 +123,7 @@ from asap.state.metering import MeteringStore
 from asap.state.snapshot import SnapshotStore
 from asap.economics.sla_storage import SLAStorage
 from asap.economics.storage import MeteringStorage, metering_storage_adapter
+from asap.transport.agent_routes import create_agent_identity_router
 from asap.transport.delegation_api import create_delegation_router
 from asap.transport.sla_api import create_sla_router
 from asap.transport.usage_api import create_usage_router
@@ -163,299 +150,6 @@ HandlerResult = tuple[Optional[T], Optional[JSONResponse]]
 
 # Environment variable to enable handler hot reload (development)
 ENV_HOT_RELOAD = "ASAP_HOT_RELOAD"
-
-
-class AgentRevokeBody(ASAPBaseModel):
-    """Body for ``POST /asap/agent/revoke``."""
-
-    agent_id: str = Field(..., min_length=1)
-
-
-class AgentRotateKeyBody(ASAPBaseModel):
-    """Body for ``POST /asap/agent/rotate-key``."""
-
-    agent_id: str = Field(..., min_length=1)
-    new_public_key: dict[str, Any]
-
-
-def _bearer_token_from_request(request: Request) -> str | None:
-    """Return raw Bearer token from Authorization header, if present."""
-    auth = request.headers.get("Authorization")
-    if not auth or not auth.startswith("Bearer "):
-        return None
-    return auth[7:].strip() or None
-
-
-async def _verify_host_bearer_identity(
-    request: Request,
-    *,
-    jti_replay_cache: JtiReplayCache | None,
-) -> tuple[JwtVerifyResult | None, JSONResponse | None]:
-    """Verify Host JWT; optional ``jti`` replay cache for mutating routes."""
-    token = _bearer_token_from_request(request)
-    if not token:
-        return None, JSONResponse(
-            status_code=401,
-            content={"detail": "Authentication required"},
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    host_store: HostStore = request.app.state.identity_host_store
-    result = await verify_host_jwt(token, host_store, jti_replay_cache=jti_replay_cache)
-    if not result.ok:
-        return None, JSONResponse(
-            status_code=401,
-            content={"detail": result.error or "Invalid host token"},
-        )
-
-    claims = result.claims
-    if claims is None:
-        return None, JSONResponse(status_code=401, content={"detail": "Invalid host token"})
-
-    iss = claims.get("iss")
-    if not isinstance(iss, str) or not iss.strip():
-        return None, JSONResponse(
-            status_code=400,
-            content={"detail": "missing iss in host JWT"},
-        )
-
-    host = result.host
-    if host is not None and host.status == "revoked":
-        return None, JSONResponse(status_code=403, content={"detail": "host revoked"})
-
-    return result, None
-
-
-def _effective_identity_host_id(result: JwtVerifyResult) -> str:
-    """Host id from store or synthetic id for first-seen keys (matches register)."""
-    claims = result.claims
-    if claims is None:
-        msg = "verified host JWT must include claims"
-        raise ValueError(msg)
-    iss = claims.get("iss")
-    if not isinstance(iss, str):
-        msg = "verified host JWT must include iss"
-        raise ValueError(msg)
-    if result.host is not None:
-        return result.host.host_id
-    return f"urn:asap:host:{iss}"
-
-
-def _agent_lifecycle_json(session: AgentSession) -> dict[str, Any]:
-    """Serialize agent lifecycle fields for JSON responses."""
-
-    def _td_seconds(td: timedelta | None) -> float | None:
-        if td is None:
-            return None
-        return td.total_seconds()
-
-    return {
-        "mode": session.mode,
-        "session_ttl": _td_seconds(session.session_ttl),
-        "max_lifetime": _td_seconds(session.max_lifetime),
-        "absolute_lifetime": _td_seconds(session.absolute_lifetime),
-        "created_at": session.created_at.isoformat(),
-        "activated_at": session.activated_at.isoformat() if session.activated_at else None,
-        "last_used_at": session.last_used_at.isoformat() if session.last_used_at else None,
-    }
-
-
-async def _handle_agent_register(request: Request) -> JSONResponse:
-    """Create or return an agent session from a verified Host JWT."""
-    jti_cache: JtiReplayCache = request.app.state.identity_jti_cache
-    result, err = await _verify_host_bearer_identity(request, jti_replay_cache=jti_cache)
-    if err is not None:
-        return err
-    if result is None:
-        return JSONResponse(status_code=401, content={"detail": "Invalid host token"})
-
-    agent_store: AgentStore = request.app.state.identity_agent_store
-    host_store: HostStore = request.app.state.identity_host_store
-    claims = result.claims
-    assert claims is not None
-
-    agent_pub_raw = claims.get(AGENT_PUBLIC_KEY_CLAIM)
-    if not isinstance(agent_pub_raw, dict):
-        return JSONResponse(
-            status_code=400,
-            content={"detail": "missing or invalid agent_public_key claim in host JWT"},
-        )
-
-    try:
-        OKPKey.import_key(cast("dict[str, str | list[str]]", dict(agent_pub_raw)))
-    except (JoseError, TypeError, ValueError):
-        return JSONResponse(status_code=400, content={"detail": "invalid agent_public_key JWK"})
-
-    agent_pub: dict[str, Any] = dict(agent_pub_raw)
-
-    host_pub = claims.get(HOST_PUBLIC_KEY_CLAIM)
-    if not isinstance(host_pub, dict):
-        return JSONResponse(
-            status_code=400, content={"detail": "missing host_public_key in host JWT"}
-        )
-
-    host = result.host
-    now = datetime.now(timezone.utc)
-    iss = claims.get("iss")
-    if not isinstance(iss, str) or not iss.strip():
-        return JSONResponse(status_code=400, content={"detail": "missing iss in host JWT"})
-    if host is None:
-        host = HostIdentity(
-            host_id=f"urn:asap:host:{iss}",
-            public_key=dict(host_pub),
-            status="pending",
-            created_at=now,
-            updated_at=now,
-        )
-        await host_store.save(host)
-
-    host_id = host.host_id
-
-    agent_tp = jwk_thumbprint_sha256(agent_pub)
-    existing: AgentSession | None = None
-    for sess in await agent_store.list_by_host(host_id):
-        if jwk_thumbprint_sha256(sess.public_key) == agent_tp:
-            existing = sess
-            break
-
-    if existing is not None:
-        return JSONResponse(
-            status_code=200,
-            content={
-                "agent_id": existing.agent_id,
-                "host_id": existing.host_id,
-                "status": existing.status,
-            },
-        )
-
-    agent_id = generate_id()
-    session = AgentSession(
-        agent_id=agent_id,
-        host_id=host_id,
-        public_key=agent_pub,
-        mode="delegated",
-        status="pending",
-        created_at=now,
-    )
-    await agent_store.save(session)
-    return JSONResponse(
-        status_code=200,
-        content={"agent_id": agent_id, "host_id": host_id, "status": "pending"},
-    )
-
-
-async def _handle_agent_status(request: Request, agent_id: str) -> JSONResponse:
-    """Return agent session status and lifecycle for the authenticated host."""
-    result, err = await _verify_host_bearer_identity(request, jti_replay_cache=None)
-    if err is not None:
-        return err
-    if result is None:
-        return JSONResponse(status_code=401, content={"detail": "Invalid host token"})
-
-    host_id = _effective_identity_host_id(result)
-    agent_store: AgentStore = request.app.state.identity_agent_store
-    session = await agent_store.get(agent_id)
-    if session is None:
-        return JSONResponse(status_code=404, content={"detail": "unknown agent_id"})
-    if session.host_id != host_id:
-        return JSONResponse(
-            status_code=403,
-            content={"detail": "agent does not belong to this host"},
-        )
-
-    return JSONResponse(
-        status_code=200,
-        content={
-            "agent_id": session.agent_id,
-            "host_id": session.host_id,
-            "status": session.status,
-            "capabilities": [],
-            "lifecycle": _agent_lifecycle_json(session),
-        },
-    )
-
-
-async def _handle_agent_revoke(request: Request, body: AgentRevokeBody) -> JSONResponse:
-    """Permanently revoke an agent session for the authenticated host."""
-    jti_cache: JtiReplayCache = request.app.state.identity_jti_cache
-    result, err = await _verify_host_bearer_identity(request, jti_replay_cache=jti_cache)
-    if err is not None:
-        return err
-    if result is None:
-        return JSONResponse(status_code=401, content={"detail": "Invalid host token"})
-
-    host_id = _effective_identity_host_id(result)
-    agent_store: AgentStore = request.app.state.identity_agent_store
-    session = await agent_store.get(body.agent_id)
-    if session is None:
-        return JSONResponse(status_code=404, content={"detail": "unknown agent_id"})
-    if session.host_id != host_id:
-        return JSONResponse(
-            status_code=403,
-            content={"detail": "agent does not belong to this host"},
-        )
-
-    await agent_store.revoke(body.agent_id)
-    return JSONResponse(
-        status_code=200,
-        content={"agent_id": body.agent_id, "status": "revoked"},
-    )
-
-
-async def _handle_agent_rotate_key(request: Request, body: AgentRotateKeyBody) -> JSONResponse:
-    """Replace the agent session's Ed25519 public JWK (old JWTs no longer verify)."""
-    jti_cache: JtiReplayCache = request.app.state.identity_jti_cache
-    result, err = await _verify_host_bearer_identity(request, jti_replay_cache=jti_cache)
-    if err is not None:
-        return err
-    if result is None:
-        return JSONResponse(status_code=401, content={"detail": "Invalid host token"})
-
-    host_id = _effective_identity_host_id(result)
-    agent_store: AgentStore = request.app.state.identity_agent_store
-    session = await agent_store.get(body.agent_id)
-    if session is None:
-        return JSONResponse(status_code=404, content={"detail": "unknown agent_id"})
-    if session.host_id != host_id:
-        return JSONResponse(
-            status_code=403,
-            content={"detail": "agent does not belong to this host"},
-        )
-    if session.status == "revoked":
-        return JSONResponse(
-            status_code=400,
-            content={"detail": "cannot rotate key for revoked agent"},
-        )
-
-    try:
-        OKPKey.import_key(cast("dict[str, str | list[str]]", dict(body.new_public_key)))
-    except (JoseError, TypeError, ValueError):
-        return JSONResponse(
-            status_code=400,
-            content={"detail": "invalid new_public_key JWK"},
-        )
-    new_pub: dict[str, Any] = dict(body.new_public_key)
-
-    new_tp = jwk_thumbprint_sha256(new_pub)
-    if new_tp == jwk_thumbprint_sha256(session.public_key):
-        return JSONResponse(
-            status_code=200,
-            content={"agent_id": session.agent_id, "status": session.status},
-        )
-
-    for other in await agent_store.list_by_host(host_id):
-        if other.agent_id != session.agent_id and jwk_thumbprint_sha256(other.public_key) == new_tp:
-            return JSONResponse(
-                status_code=409,
-                content={"detail": "another agent under this host already uses this public key"},
-            )
-
-    rotated = session.model_copy(update={"public_key": new_pub})
-    await agent_store.save(rotated)
-    return JSONResponse(
-        status_code=200,
-        content={"agent_id": rotated.agent_id, "status": rotated.status},
-    )
 
 
 class RegistryHolder:
@@ -1469,6 +1163,8 @@ def create_app(
     identity_host_store: HostStore | None = None,
     identity_agent_store: AgentStore | None = None,
     identity_jti_cache: JtiReplayCache | None = None,
+    identity_jwt_audience: str | list[str] | None = None,
+    identity_rate_limit: str | None = None,
 ) -> FastAPI:
     """Create and configure a FastAPI application for ASAP protocol.
 
@@ -1532,6 +1228,12 @@ def create_app(
         identity_agent_store: Optional AgentStore; must be set with identity_host_store or both omitted.
         identity_jti_cache: Optional ``jti`` replay cache for Host JWT on mutating agent routes.
             Defaults to a new in-memory cache per app.
+        identity_jwt_audience: Expected ``aud`` value(s) for Host JWT verification on
+            ``/asap/agent/*``. Defaults to ``manifest.id`` so tokens are bound to this
+            server instance. Set explicitly for multi-audience or migration scenarios.
+        identity_rate_limit: Rate limit string for ``/asap/agent/*`` endpoints.
+            Defaults to ``"5/second;30/minute"`` (tighter than the main limiter).
+            Uses a separate budget from the main ``rate_limit``.
 
     Returns:
         Configured FastAPI application ready to run
@@ -1655,6 +1357,9 @@ def create_app(
         msg = "identity_host_store and identity_agent_store must both be set or both omitted"
         raise ValueError(msg)
     _identity_jti_cache = identity_jti_cache if identity_jti_cache is not None else JtiReplayCache()
+    _identity_jwt_audience: str | list[str] = (
+        identity_jwt_audience if identity_jwt_audience is not None else manifest.id
+    )
 
     # Resolve snapshot store (env-based when not provided)
     if snapshot_store is None:
@@ -1729,6 +1434,11 @@ def create_app(
     app.state.identity_host_store = _identity_host_store
     app.state.identity_agent_store = _identity_agent_store
     app.state.identity_jti_cache = _identity_jti_cache
+    app.state.identity_jwt_audience = _identity_jwt_audience
+    # Dedicated rate limiter for /asap/agent/* (separate budget from main limiter)
+    _identity_rl = identity_rate_limit or "5/second;30/minute"
+    app.state.identity_limiter = create_limiter([_identity_rl])
+    app.include_router(create_agent_identity_router())
     if metering_storage is not None and isinstance(metering_storage, MeteringStorage):
         app.state.metering_storage = metering_storage
         app.include_router(create_usage_router())
@@ -1906,33 +1616,6 @@ def create_app(
         # Rate limit check — uses app.state.limiter so tests can override.
         app.state.limiter.check(request)
         return await handler.handle_message(request)
-
-    @app.post("/asap/agent/register")
-    async def agent_register(request: Request) -> JSONResponse:
-        """Register an agent session under a host using a Host JWT (Bearer)."""
-        app.state.limiter.check(request)
-        return await _handle_agent_register(request)
-
-    @app.get("/asap/agent/status")
-    async def agent_status(
-        request: Request,
-        agent_id: Annotated[str, Query(min_length=1)],
-    ) -> JSONResponse:
-        """Return agent status and lifecycle for the authenticated host (Host JWT)."""
-        app.state.limiter.check(request)
-        return await _handle_agent_status(request, agent_id)
-
-    @app.post("/asap/agent/revoke")
-    async def agent_revoke(request: Request, body: AgentRevokeBody) -> JSONResponse:
-        """Revoke an agent session (Host JWT; body: ``agent_id``)."""
-        app.state.limiter.check(request)
-        return await _handle_agent_revoke(request, body)
-
-    @app.post("/asap/agent/rotate-key")
-    async def agent_rotate_key(request: Request, body: AgentRotateKeyBody) -> JSONResponse:
-        """Rotate agent Ed25519 public key (Host JWT; body: ``agent_id``, ``new_public_key``)."""
-        app.state.limiter.check(request)
-        return await _handle_agent_rotate_key(request, body)
 
     @app.websocket("/asap/ws")
     async def websocket_asap(websocket: WebSocket) -> None:

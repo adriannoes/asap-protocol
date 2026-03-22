@@ -14,7 +14,6 @@ Tests cover:
 - Authentication integration
 """
 
-import asyncio
 import base64
 import collections.abc
 import json
@@ -59,6 +58,9 @@ from asap.transport.server import (
     _run_handler_watcher,
 )
 
+# Host JWT ``aud`` must match ``create_app`` default (``identity_jwt_audience`` == ``manifest.id``).
+_HOST_JWT_AUDIENCE = "urn:asap:agent:test-server"
+
 
 def _ed25519_public_jwk(private_key: Ed25519PrivateKey) -> dict[str, Any]:
     """Public JWK (OKP / Ed25519) for Host JWT agent_public_key claim."""
@@ -72,7 +74,7 @@ def _ed25519_public_jwk(private_key: Ed25519PrivateKey) -> dict[str, Any]:
 
 def _host_jwt_without_agent_claim(host_sk: Ed25519PrivateKey, *, ttl_seconds: int = 120) -> str:
     """Host JWT for status routes (no ``agent_public_key`` claim required)."""
-    return create_host_jwt(host_sk, aud="asap:registry", ttl_seconds=ttl_seconds)
+    return create_host_jwt(host_sk, aud=_HOST_JWT_AUDIENCE, ttl_seconds=ttl_seconds)
 
 
 def _app_with_identity_stores(
@@ -87,6 +89,7 @@ def _app_with_identity_stores(
         rate_limit="999999/minute",
         identity_host_store=host_store,
         identity_agent_store=agent_store,
+        identity_rate_limit="999999/minute",
     )
     if isolated_rate_limiter is not None:
         app.state.limiter = isolated_rate_limiter
@@ -964,7 +967,7 @@ class TestDebugLogMode:
 class TestAgentRegisterEndpoint:
     """Tests for POST /asap/agent/register (Host JWT + agent public key)."""
 
-    def test_register_creates_pending_agent(
+    async def test_register_creates_pending_agent(
         self,
         sample_manifest: Manifest,
         isolated_rate_limiter: "ASAPRateLimiter | None",
@@ -977,6 +980,7 @@ class TestAgentRegisterEndpoint:
             rate_limit="999999/minute",
             identity_host_store=host_store,
             identity_agent_store=agent_store,
+            identity_rate_limit="999999/minute",
         )
         if isolated_rate_limiter is not None:
             app.state.limiter = isolated_rate_limiter
@@ -985,7 +989,7 @@ class TestAgentRegisterEndpoint:
         agent_jwk = _ed25519_public_jwk(agent_sk)
         token = create_host_jwt(
             host_sk,
-            aud="asap:registry",
+            aud=_HOST_JWT_AUDIENCE,
             agent_public_key=agent_jwk,
             ttl_seconds=120,
         )
@@ -1000,7 +1004,7 @@ class TestAgentRegisterEndpoint:
         assert data["agent_id"]
         assert data["host_id"].startswith("urn:asap:host:")
         thumb = jwk_thumbprint_sha256(agent_jwk)
-        stored_list = asyncio.run(agent_store.list_by_host(data["host_id"]))
+        stored_list = await agent_store.list_by_host(data["host_id"])
         assert len(stored_list) == 1
         stored = stored_list[0]
         assert jwk_thumbprint_sha256(stored.public_key) == thumb
@@ -1029,13 +1033,13 @@ class TestAgentRegisterEndpoint:
         client = TestClient(app)
         token1 = create_host_jwt(
             host_sk,
-            aud="asap:registry",
+            aud=_HOST_JWT_AUDIENCE,
             agent_public_key=agent_jwk,
             ttl_seconds=120,
         )
         token2 = create_host_jwt(
             host_sk,
-            aud="asap:registry",
+            aud=_HOST_JWT_AUDIENCE,
             agent_public_key=agent_jwk,
             ttl_seconds=120,
         )
@@ -1062,13 +1066,37 @@ class TestAgentRegisterEndpoint:
         r = TestClient(app).post("/asap/agent/register")
         assert r.status_code == 401
 
+    def test_register_host_jwt_wrong_audience_returns_401(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: "ASAPRateLimiter | None",
+    ) -> None:
+        """Host JWT with ``aud`` not matching this server (manifest id) is rejected."""
+        app = create_app(sample_manifest, rate_limit="999999/minute")
+        if isolated_rate_limiter is not None:
+            app.state.limiter = isolated_rate_limiter
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        token = create_host_jwt(
+            host_sk,
+            aud="payment-service-other",
+            agent_public_key=_ed25519_public_jwk(agent_sk),
+            ttl_seconds=120,
+        )
+        r = TestClient(app).post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 401
+        assert "audience" in r.json()["detail"].lower()
+
     def test_register_without_agent_public_key_claim_returns_400(
         self,
         sample_manifest: Manifest,
         isolated_rate_limiter: "ASAPRateLimiter | None",
     ) -> None:
         host_sk = Ed25519PrivateKey.generate()
-        token = create_host_jwt(host_sk, aud="asap:registry", ttl_seconds=120)
+        token = create_host_jwt(host_sk, aud=_HOST_JWT_AUDIENCE, ttl_seconds=120)
         app = create_app(sample_manifest, rate_limit="999999/minute")
         if isolated_rate_limiter is not None:
             app.state.limiter = isolated_rate_limiter
@@ -1098,7 +1126,7 @@ class TestAgentStatusEndpoint:
         agent_jwk = _ed25519_public_jwk(agent_sk)
         reg_tok = create_host_jwt(
             host_sk,
-            aud="asap:registry",
+            aud=_HOST_JWT_AUDIENCE,
             agent_public_key=agent_jwk,
             ttl_seconds=120,
         )
@@ -1125,7 +1153,7 @@ class TestAgentStatusEndpoint:
         assert life["activated_at"] is None
         assert life["last_used_at"] is None
 
-    def test_status_reflects_active(
+    async def test_status_reflects_active(
         self,
         sample_manifest: Manifest,
         isolated_rate_limiter: "ASAPRateLimiter | None",
@@ -1137,7 +1165,7 @@ class TestAgentStatusEndpoint:
         agent_sk = Ed25519PrivateKey.generate()
         reg_tok = create_host_jwt(
             host_sk,
-            aud="asap:registry",
+            aud=_HOST_JWT_AUDIENCE,
             agent_public_key=_ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
@@ -1147,14 +1175,12 @@ class TestAgentStatusEndpoint:
             headers={"Authorization": f"Bearer {reg_tok}"},
         )
         aid = reg.json()["agent_id"]
-        sess = asyncio.run(agent_store.get(aid))
+        sess = await agent_store.get(aid)
         assert sess is not None
         now = datetime.now(timezone.utc)
-        asyncio.run(
-            agent_store.save(
-                sess.model_copy(
-                    update={"status": "active", "activated_at": now},
-                )
+        await agent_store.save(
+            sess.model_copy(
+                update={"status": "active", "activated_at": now},
             )
         )
         host_tok = _host_jwt_without_agent_claim(host_sk)
@@ -1166,7 +1192,7 @@ class TestAgentStatusEndpoint:
         assert st.json()["status"] == "active"
         assert st.json()["lifecycle"]["activated_at"] is not None
 
-    def test_status_reflects_expired(
+    async def test_status_reflects_expired(
         self,
         sample_manifest: Manifest,
         isolated_rate_limiter: "ASAPRateLimiter | None",
@@ -1178,7 +1204,7 @@ class TestAgentStatusEndpoint:
         agent_sk = Ed25519PrivateKey.generate()
         reg_tok = create_host_jwt(
             host_sk,
-            aud="asap:registry",
+            aud=_HOST_JWT_AUDIENCE,
             agent_public_key=_ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
@@ -1187,9 +1213,9 @@ class TestAgentStatusEndpoint:
             "/asap/agent/register",
             headers={"Authorization": f"Bearer {reg_tok}"},
         ).json()["agent_id"]
-        sess = asyncio.run(agent_store.get(aid))
+        sess = await agent_store.get(aid)
         assert sess is not None
-        asyncio.run(agent_store.save(sess.model_copy(update={"status": "expired"})))
+        await agent_store.save(sess.model_copy(update={"status": "expired"}))
         host_tok = _host_jwt_without_agent_claim(host_sk)
         st = client.get(
             f"/asap/agent/status?agent_id={aid}",
@@ -1198,7 +1224,7 @@ class TestAgentStatusEndpoint:
         assert st.status_code == 200
         assert st.json()["status"] == "expired"
 
-    def test_status_reflects_revoked(
+    async def test_status_reflects_revoked(
         self,
         sample_manifest: Manifest,
         isolated_rate_limiter: "ASAPRateLimiter | None",
@@ -1210,7 +1236,7 @@ class TestAgentStatusEndpoint:
         agent_sk = Ed25519PrivateKey.generate()
         reg_tok = create_host_jwt(
             host_sk,
-            aud="asap:registry",
+            aud=_HOST_JWT_AUDIENCE,
             agent_public_key=_ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
@@ -1219,7 +1245,7 @@ class TestAgentStatusEndpoint:
             "/asap/agent/register",
             headers={"Authorization": f"Bearer {reg_tok}"},
         ).json()["agent_id"]
-        asyncio.run(agent_store.revoke(aid))
+        await agent_store.revoke(aid)
         host_tok = _host_jwt_without_agent_claim(host_sk)
         st = client.get(
             f"/asap/agent/status?agent_id={aid}",
@@ -1239,7 +1265,7 @@ class TestAgentStatusEndpoint:
         agent_sk = Ed25519PrivateKey.generate()
         reg_tok = create_host_jwt(
             host_sk,
-            aud="asap:registry",
+            aud=_HOST_JWT_AUDIENCE,
             agent_public_key=_ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
@@ -1265,7 +1291,7 @@ class TestAgentStatusEndpoint:
         agent_sk = Ed25519PrivateKey.generate()
         reg_tok = create_host_jwt(
             host1_sk,
-            aud="asap:registry",
+            aud=_HOST_JWT_AUDIENCE,
             agent_public_key=_ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
@@ -1327,7 +1353,7 @@ class TestAgentRevokeEndpoint:
         agent_sk = Ed25519PrivateKey.generate()
         reg_tok = create_host_jwt(
             host_sk,
-            aud="asap:registry",
+            aud=_HOST_JWT_AUDIENCE,
             agent_public_key=_ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
@@ -1336,7 +1362,7 @@ class TestAgentRevokeEndpoint:
             "/asap/agent/register",
             headers={"Authorization": f"Bearer {reg_tok}"},
         ).json()["agent_id"]
-        rev_tok = create_host_jwt(host_sk, aud="asap:registry", ttl_seconds=120)
+        rev_tok = create_host_jwt(host_sk, aud=_HOST_JWT_AUDIENCE, ttl_seconds=120)
         r = client.post(
             "/asap/agent/revoke",
             headers={"Authorization": f"Bearer {rev_tok}"},
@@ -1356,7 +1382,7 @@ class TestAgentRevokeEndpoint:
         agent_sk = Ed25519PrivateKey.generate()
         reg_tok = create_host_jwt(
             host_sk,
-            aud="asap:registry",
+            aud=_HOST_JWT_AUDIENCE,
             agent_public_key=_ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
@@ -1365,8 +1391,8 @@ class TestAgentRevokeEndpoint:
             "/asap/agent/register",
             headers={"Authorization": f"Bearer {reg_tok}"},
         ).json()["agent_id"]
-        t1 = create_host_jwt(host_sk, aud="asap:registry", ttl_seconds=120)
-        t2 = create_host_jwt(host_sk, aud="asap:registry", ttl_seconds=120)
+        t1 = create_host_jwt(host_sk, aud=_HOST_JWT_AUDIENCE, ttl_seconds=120)
+        t2 = create_host_jwt(host_sk, aud=_HOST_JWT_AUDIENCE, ttl_seconds=120)
         assert (
             client.post(
                 "/asap/agent/revoke",
@@ -1399,7 +1425,7 @@ class TestAgentRevokeEndpoint:
     ) -> None:
         app, _a, _h = _app_with_identity_stores(sample_manifest, isolated_rate_limiter)
         host_sk = Ed25519PrivateKey.generate()
-        tok = create_host_jwt(host_sk, aud="asap:registry", ttl_seconds=120)
+        tok = create_host_jwt(host_sk, aud=_HOST_JWT_AUDIENCE, ttl_seconds=120)
         r = TestClient(app).post(
             "/asap/agent/revoke",
             headers={"Authorization": f"Bearer {tok}"},
@@ -1418,7 +1444,7 @@ class TestAgentRevokeEndpoint:
         agent_sk = Ed25519PrivateKey.generate()
         reg_tok = create_host_jwt(
             host1_sk,
-            aud="asap:registry",
+            aud=_HOST_JWT_AUDIENCE,
             agent_public_key=_ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
@@ -1427,7 +1453,7 @@ class TestAgentRevokeEndpoint:
             "/asap/agent/register",
             headers={"Authorization": f"Bearer {reg_tok}"},
         ).json()["agent_id"]
-        other_tok = create_host_jwt(host2_sk, aud="asap:registry", ttl_seconds=120)
+        other_tok = create_host_jwt(host2_sk, aud=_HOST_JWT_AUDIENCE, ttl_seconds=120)
         r = client.post(
             "/asap/agent/revoke",
             headers={"Authorization": f"Bearer {other_tok}"},
@@ -1442,7 +1468,7 @@ class TestAgentRevokeEndpoint:
     ) -> None:
         app, _a, _h = _app_with_identity_stores(sample_manifest, isolated_rate_limiter)
         host_sk = Ed25519PrivateKey.generate()
-        tok = create_host_jwt(host_sk, aud="asap:registry", ttl_seconds=120)
+        tok = create_host_jwt(host_sk, aud=_HOST_JWT_AUDIENCE, ttl_seconds=120)
         r = TestClient(app).post(
             "/asap/agent/revoke",
             headers={"Authorization": f"Bearer {tok}"},
@@ -1450,7 +1476,7 @@ class TestAgentRevokeEndpoint:
         )
         assert r.status_code == 422
 
-    def test_after_revoke_agent_jwt_verify_fails(
+    async def test_after_revoke_agent_jwt_verify_fails(
         self,
         sample_manifest: Manifest,
         isolated_rate_limiter: "ASAPRateLimiter | None",
@@ -1465,7 +1491,7 @@ class TestAgentRevokeEndpoint:
         host_tp = jwk_thumbprint_sha256(host_pub)
         reg_tok = create_host_jwt(
             host_sk,
-            aud="asap:registry",
+            aud=_HOST_JWT_AUDIENCE,
             agent_public_key=_ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
@@ -1474,12 +1500,10 @@ class TestAgentRevokeEndpoint:
             "/asap/agent/register",
             headers={"Authorization": f"Bearer {reg_tok}"},
         ).json()["agent_id"]
-        sess = asyncio.run(agent_store.get(aid))
+        sess = await agent_store.get(aid)
         assert sess is not None
-        asyncio.run(
-            agent_store.save(
-                sess.model_copy(update={"status": "active"}),
-            )
+        await agent_store.save(
+            sess.model_copy(update={"status": "active"}),
         )
         agent_token = create_agent_jwt(
             agent_sk,
@@ -1487,9 +1511,9 @@ class TestAgentRevokeEndpoint:
             agent_id=aid,
             aud="https://asap.test/asap",
         )
-        ok_before = asyncio.run(verify_agent_jwt(agent_token, host_store, agent_store))
+        ok_before = await verify_agent_jwt(agent_token, host_store, agent_store)
         assert ok_before.ok
-        rev_tok = create_host_jwt(host_sk, aud="asap:registry", ttl_seconds=120)
+        rev_tok = create_host_jwt(host_sk, aud=_HOST_JWT_AUDIENCE, ttl_seconds=120)
         assert (
             client.post(
                 "/asap/agent/revoke",
@@ -1498,7 +1522,7 @@ class TestAgentRevokeEndpoint:
             ).status_code
             == 200
         )
-        ok_after = asyncio.run(verify_agent_jwt(agent_token, host_store, agent_store))
+        ok_after = await verify_agent_jwt(agent_token, host_store, agent_store)
         assert not ok_after.ok
         assert ok_after.error is not None
         assert "revoked" in ok_after.error.lower()
@@ -1508,7 +1532,7 @@ class TestAgentRevokeEndpoint:
 class TestAgentRotateKeyEndpoint:
     """Tests for POST /asap/agent/rotate-key (Host JWT + new JWK)."""
 
-    def test_rotate_old_agent_jwt_rejected_new_accepted(
+    async def test_rotate_old_agent_jwt_rejected_new_accepted(
         self,
         sample_manifest: Manifest,
         isolated_rate_limiter: "ASAPRateLimiter | None",
@@ -1523,7 +1547,7 @@ class TestAgentRotateKeyEndpoint:
         host_tp = jwk_thumbprint_sha256(_ed25519_public_jwk(host_sk))
         reg_tok = create_host_jwt(
             host_sk,
-            aud="asap:registry",
+            aud=_HOST_JWT_AUDIENCE,
             agent_public_key=_ed25519_public_jwk(agent_sk_old),
             ttl_seconds=120,
         )
@@ -1532,11 +1556,9 @@ class TestAgentRotateKeyEndpoint:
             "/asap/agent/register",
             headers={"Authorization": f"Bearer {reg_tok}"},
         ).json()["agent_id"]
-        sess = asyncio.run(agent_store.get(aid))
+        sess = await agent_store.get(aid)
         assert sess is not None
-        asyncio.run(
-            agent_store.save(sess.model_copy(update={"status": "active"})),
-        )
+        await agent_store.save(sess.model_copy(update={"status": "active"}))
         aud = "https://asap.test/asap"
         token_old = create_agent_jwt(
             agent_sk_old,
@@ -1544,8 +1566,8 @@ class TestAgentRotateKeyEndpoint:
             agent_id=aid,
             aud=aud,
         )
-        assert asyncio.run(verify_agent_jwt(token_old, host_store, agent_store)).ok
-        rot_tok = create_host_jwt(host_sk, aud="asap:registry", ttl_seconds=120)
+        assert (await verify_agent_jwt(token_old, host_store, agent_store)).ok
+        rot_tok = create_host_jwt(host_sk, aud=_HOST_JWT_AUDIENCE, ttl_seconds=120)
         rot = client.post(
             "/asap/agent/rotate-key",
             headers={"Authorization": f"Bearer {rot_tok}"},
@@ -1557,7 +1579,7 @@ class TestAgentRotateKeyEndpoint:
         assert rot.status_code == 200
         assert rot.json()["agent_id"] == aid
         assert rot.json()["status"] == "active"
-        bad = asyncio.run(verify_agent_jwt(token_old, host_store, agent_store))
+        bad = await verify_agent_jwt(token_old, host_store, agent_store)
         assert not bad.ok
         token_new = create_agent_jwt(
             agent_sk_new,
@@ -1565,7 +1587,7 @@ class TestAgentRotateKeyEndpoint:
             agent_id=aid,
             aud=aud,
         )
-        assert asyncio.run(verify_agent_jwt(token_new, host_store, agent_store)).ok
+        assert (await verify_agent_jwt(token_new, host_store, agent_store)).ok
 
     def test_rotate_same_key_idempotent(
         self,
@@ -1578,7 +1600,7 @@ class TestAgentRotateKeyEndpoint:
         pub = _ed25519_public_jwk(agent_sk)
         reg_tok = create_host_jwt(
             host_sk,
-            aud="asap:registry",
+            aud=_HOST_JWT_AUDIENCE,
             agent_public_key=pub,
             ttl_seconds=120,
         )
@@ -1587,7 +1609,7 @@ class TestAgentRotateKeyEndpoint:
             "/asap/agent/register",
             headers={"Authorization": f"Bearer {reg_tok}"},
         ).json()["agent_id"]
-        rot_tok = create_host_jwt(host_sk, aud="asap:registry", ttl_seconds=120)
+        rot_tok = create_host_jwt(host_sk, aud=_HOST_JWT_AUDIENCE, ttl_seconds=120)
         r = client.post(
             "/asap/agent/rotate-key",
             headers={"Authorization": f"Bearer {rot_tok}"},
@@ -1607,7 +1629,7 @@ class TestAgentRotateKeyEndpoint:
         new_sk = Ed25519PrivateKey.generate()
         reg_tok = create_host_jwt(
             host_sk,
-            aud="asap:registry",
+            aud=_HOST_JWT_AUDIENCE,
             agent_public_key=_ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
@@ -1616,7 +1638,7 @@ class TestAgentRotateKeyEndpoint:
             "/asap/agent/register",
             headers={"Authorization": f"Bearer {reg_tok}"},
         ).json()["agent_id"]
-        t_rev = create_host_jwt(host_sk, aud="asap:registry", ttl_seconds=120)
+        t_rev = create_host_jwt(host_sk, aud=_HOST_JWT_AUDIENCE, ttl_seconds=120)
         assert (
             client.post(
                 "/asap/agent/revoke",
@@ -1625,7 +1647,7 @@ class TestAgentRotateKeyEndpoint:
             ).status_code
             == 200
         )
-        t_rot = create_host_jwt(host_sk, aud="asap:registry", ttl_seconds=120)
+        t_rot = create_host_jwt(host_sk, aud=_HOST_JWT_AUDIENCE, ttl_seconds=120)
         r = client.post(
             "/asap/agent/rotate-key",
             headers={"Authorization": f"Bearer {t_rot}"},
@@ -1642,7 +1664,7 @@ class TestAgentRotateKeyEndpoint:
         app, _a, _h = _app_with_identity_stores(sample_manifest, isolated_rate_limiter)
         host_sk = Ed25519PrivateKey.generate()
         new_sk = Ed25519PrivateKey.generate()
-        tok = create_host_jwt(host_sk, aud="asap:registry", ttl_seconds=120)
+        tok = create_host_jwt(host_sk, aud=_HOST_JWT_AUDIENCE, ttl_seconds=120)
         r = TestClient(app).post(
             "/asap/agent/rotate-key",
             headers={"Authorization": f"Bearer {tok}"},
@@ -1665,7 +1687,7 @@ class TestAgentRotateKeyEndpoint:
         new_sk = Ed25519PrivateKey.generate()
         reg_tok = create_host_jwt(
             host1_sk,
-            aud="asap:registry",
+            aud=_HOST_JWT_AUDIENCE,
             agent_public_key=_ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
@@ -1674,7 +1696,7 @@ class TestAgentRotateKeyEndpoint:
             "/asap/agent/register",
             headers={"Authorization": f"Bearer {reg_tok}"},
         ).json()["agent_id"]
-        other_tok = create_host_jwt(host2_sk, aud="asap:registry", ttl_seconds=120)
+        other_tok = create_host_jwt(host2_sk, aud=_HOST_JWT_AUDIENCE, ttl_seconds=120)
         r = client.post(
             "/asap/agent/rotate-key",
             headers={"Authorization": f"Bearer {other_tok}"},
@@ -1692,7 +1714,7 @@ class TestAgentRotateKeyEndpoint:
         agent_sk = Ed25519PrivateKey.generate()
         reg_tok = create_host_jwt(
             host_sk,
-            aud="asap:registry",
+            aud=_HOST_JWT_AUDIENCE,
             agent_public_key=_ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
@@ -1701,7 +1723,7 @@ class TestAgentRotateKeyEndpoint:
             "/asap/agent/register",
             headers={"Authorization": f"Bearer {reg_tok}"},
         ).json()["agent_id"]
-        rot_tok = create_host_jwt(host_sk, aud="asap:registry", ttl_seconds=120)
+        rot_tok = create_host_jwt(host_sk, aud=_HOST_JWT_AUDIENCE, ttl_seconds=120)
         r = client.post(
             "/asap/agent/rotate-key",
             headers={"Authorization": f"Bearer {rot_tok}"},
@@ -1726,7 +1748,7 @@ class TestAgentRotateKeyEndpoint:
             client.post(
                 "/asap/agent/register",
                 headers={
-                    "Authorization": f"Bearer {create_host_jwt(host_sk, aud='asap:registry', agent_public_key=pub1, ttl_seconds=120)}"
+                    "Authorization": f"Bearer {create_host_jwt(host_sk, aud=_HOST_JWT_AUDIENCE, agent_public_key=pub1, ttl_seconds=120)}"
                 },
             ).status_code
             == 200
@@ -1734,10 +1756,10 @@ class TestAgentRotateKeyEndpoint:
         aid2 = client.post(
             "/asap/agent/register",
             headers={
-                "Authorization": f"Bearer {create_host_jwt(host_sk, aud='asap:registry', agent_public_key=pub2, ttl_seconds=120)}"
+                "Authorization": f"Bearer {create_host_jwt(host_sk, aud=_HOST_JWT_AUDIENCE, agent_public_key=pub2, ttl_seconds=120)}"
             },
         ).json()["agent_id"]
-        rot_tok = create_host_jwt(host_sk, aud="asap:registry", ttl_seconds=120)
+        rot_tok = create_host_jwt(host_sk, aud=_HOST_JWT_AUDIENCE, ttl_seconds=120)
         r = client.post(
             "/asap/agent/rotate-key",
             headers={"Authorization": f"Bearer {rot_tok}"},
