@@ -103,7 +103,7 @@ def test_host_jwt_with_optional_agent_public_key() -> None:
     agent_pk = {"kty": "OKP", "crv": "Ed25519", "x": "dGVzdA"}
     token = create_host_jwt(
         sk,
-        aud="asap:registry",
+        aud="urn:asap:agent:test-server",
         agent_public_key=agent_pk,
     )
     pub = _public_okp(sk)
@@ -161,6 +161,33 @@ async def test_verify_host_jwt_with_registered_host() -> None:
     assert res.ok
     assert res.host is not None and res.host.host_id == "h1"
     assert res.claims is not None and res.claims["aud"] == "https://aud.example"
+
+
+@pytest.mark.filterwarnings("ignore:EdDSA is deprecated:UserWarning")
+async def test_verify_host_jwt_audience_mismatch() -> None:
+    """When ``expected_audience`` is set, wrong ``aud`` in token fails."""
+    sk = Ed25519PrivateKey.generate()
+    hosts = InMemoryHostStore()
+    token = create_host_jwt(sk, aud="payment-service")
+    res = await verify_host_jwt(
+        token,
+        hosts,
+        expected_audience="urn:asap:agent:identity",
+    )
+    assert not res.ok
+    assert res.error == "audience mismatch"
+
+
+@pytest.mark.filterwarnings("ignore:EdDSA is deprecated:UserWarning")
+async def test_verify_host_jwt_list_aud_round_trip() -> None:
+    """``aud`` as list matches when ``expected_audience`` lists overlap."""
+    sk = Ed25519PrivateKey.generate()
+    hosts = InMemoryHostStore()
+    token = create_host_jwt(sk, aud=["aud1", "aud2"])
+    res = await verify_host_jwt(token, hosts, expected_audience=["aud2", "aud3"])
+    assert res.ok
+    assert res.claims is not None
+    assert res.claims["aud"] == ["aud1", "aud2"]
 
 
 @pytest.mark.filterwarnings("ignore:EdDSA is deprecated:UserWarning")
@@ -233,6 +260,53 @@ async def test_verify_agent_jwt_success() -> None:
     assert res.ok
     assert res.agent is not None and res.agent.agent_id == "a1"
     assert res.host is not None and res.host.host_id == "h1"
+
+
+@pytest.mark.filterwarnings("ignore:EdDSA is deprecated:UserWarning")
+async def test_verify_agent_jwt_audience_mismatch() -> None:
+    """``expected_audience`` rejects tokens minted for another consumer."""
+    now = datetime.now(timezone.utc)
+    host_sk = Ed25519PrivateKey.generate()
+    host_pub = _public_jwk_dict(host_sk)
+    host_tp = jwk_thumbprint_sha256(host_pub)
+    agent_sk = Ed25519PrivateKey.generate()
+    agent_pub = _public_jwk_dict(agent_sk)
+
+    hosts = InMemoryHostStore()
+    agents = InMemoryAgentStore()
+    await hosts.save(
+        HostIdentity(
+            host_id="h1",
+            public_key=host_pub,
+            status="active",
+            created_at=now,
+            updated_at=now,
+        )
+    )
+    await agents.save(
+        AgentSession(
+            agent_id="a1",
+            host_id="h1",
+            public_key=agent_pub,
+            mode="delegated",
+            status="active",
+            created_at=now,
+        )
+    )
+    token = create_agent_jwt(
+        agent_sk,
+        host_thumbprint=host_tp,
+        agent_id="a1",
+        aud="other-consumer",
+    )
+    res = await verify_agent_jwt(
+        token,
+        hosts,
+        agents,
+        expected_audience="urn:asap:expected",
+    )
+    assert not res.ok
+    assert res.error == "audience mismatch"
 
 
 @pytest.mark.filterwarnings("ignore:EdDSA is deprecated:UserWarning")
@@ -444,6 +518,16 @@ def test_jti_replay_cache_rejects_blank_jti() -> None:
     cache = JtiReplayCache()
     assert not cache.check_and_record("p", "")
     assert not cache.check_and_record("p", "   ")
+
+
+def test_jti_replay_cache_max_size_evicts_oldest_expiry_first() -> None:
+    """Beyond ``max_size``, earliest-expiring entries are dropped (memory cap)."""
+    cache = JtiReplayCache(ttl_seconds=90.0, max_size=2)
+    assert cache.check_and_record("p", "a")
+    assert cache.check_and_record("p", "b")
+    assert len(cache._expiry_by_key) == 2
+    assert cache.check_and_record("p", "c")
+    assert len(cache._expiry_by_key) == 2
 
 
 @pytest.mark.filterwarnings("ignore:EdDSA is deprecated:UserWarning")

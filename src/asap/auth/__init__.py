@@ -28,7 +28,14 @@ from asap.auth.agent_jwt import (
     verify_agent_jwt,
     verify_host_jwt,
 )
-from asap.auth.identity import AgentSession, AgentStore, HostIdentity, HostStore
+from asap.auth.identity import (
+    AgentSession,
+    AgentStore,
+    HostIdentity,
+    HostStore,
+    host_urn_from_thumbprint,
+    jwk_thumbprint_sha256,
+)
 from asap.auth.introspection import TokenInfo, TokenIntrospector
 from asap.auth.jwks import JWKSValidator, Claims, fetch_keys, validate_jwt
 from asap.auth.oidc import OIDCConfig, OIDCDiscovery
@@ -46,6 +53,8 @@ __all__ = [
     "fetch_keys",
     "HostIdentity",
     "HostStore",
+    "host_urn_from_thumbprint",
+    "jwk_thumbprint_sha256",
     "OAuth2Claims",
     "OAuth2ClientCredentials",
     "OAuth2Config",

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import base64
 from datetime import datetime, timedelta, timezone
-from typing import get_args
+from typing import Any, get_args
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives import serialization
 from pydantic import ValidationError
 
 from asap.auth.identity import (
@@ -18,6 +21,7 @@ from asap.auth.identity import (
     HostStore,
     InMemoryAgentStore,
     InMemoryHostStore,
+    host_urn_from_thumbprint,
     jwk_thumbprint_sha256,
 )
 
@@ -26,12 +30,27 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _make_ed25519_jwk() -> dict[str, str]:
+    """Return a valid Ed25519 public JWK dict (fresh key each call)."""
+    sk = Ed25519PrivateKey.generate()
+    raw = sk.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    x = base64.urlsafe_b64encode(raw).decode().rstrip("=")
+    return {"kty": "OKP", "crv": "Ed25519", "x": x}
+
+
+# Reusable valid key for tests that don't need unique keys
+_VALID_JWK: dict[str, str] = _make_ed25519_jwk()
+
+
 def test_host_identity_minimal() -> None:
     """HostIdentity accepts required fields and optional defaults."""
     now = _utc_now()
     host = HostIdentity(
         host_id="host-1",
-        public_key={"kty": "OKP", "crv": "Ed25519", "x": "abc"},
+        public_key=_VALID_JWK,
         status="active",
         created_at=now,
         updated_at=now,
@@ -49,7 +68,7 @@ def test_agent_session_minimal() -> None:
     session = AgentSession(
         agent_id="agent-1",
         host_id="host-1",
-        public_key={"kty": "OKP", "crv": "Ed25519", "x": "def"},
+        public_key=_VALID_JWK,
         mode="delegated",
         status="pending",
         created_at=now,
@@ -62,7 +81,7 @@ def test_agent_session_minimal() -> None:
 def test_host_identity_all_status_literals_accepted() -> None:
     """HostIdentity accepts each allowed status value."""
     now = _utc_now()
-    pk: dict[str, str] = {"kty": "OKP", "x": "x"}
+    pk: dict[str, str] = _make_ed25519_jwk()
     for status in get_args(HostStatus):
         h = HostIdentity(
             host_id="h",
@@ -77,7 +96,7 @@ def test_host_identity_all_status_literals_accepted() -> None:
 def test_agent_session_all_mode_and_status_literals_accepted() -> None:
     """AgentSession accepts each allowed mode and status value."""
     now = _utc_now()
-    pk: dict[str, str] = {"kty": "OKP", "x": "x"}
+    pk: dict[str, str] = _make_ed25519_jwk()
     for mode in get_args(AgentMode):
         for status in get_args(AgentSessionStatus):
             s = AgentSession(
@@ -99,7 +118,7 @@ def test_host_identity_invalid_status_rejected() -> None:
         HostIdentity.model_validate(
             {
                 "host_id": "h",
-                "public_key": {"kty": "OKP"},
+                "public_key": _VALID_JWK,
                 "status": "unknown",
                 "created_at": now,
                 "updated_at": now,
@@ -110,10 +129,10 @@ def test_host_identity_invalid_status_rejected() -> None:
 def test_agent_session_invalid_mode_or_status_rejected() -> None:
     """Invalid agent mode or status fails validation."""
     now = _utc_now()
-    base = {
+    base: dict[str, Any] = {
         "agent_id": "a",
         "host_id": "h",
-        "public_key": {"kty": "OKP"},
+        "public_key": _VALID_JWK,
         "created_at": now,
     }
     with pytest.raises(ValidationError):
@@ -128,7 +147,7 @@ def test_host_identity_optional_fields_round_trip() -> None:
     host = HostIdentity(
         host_id="h",
         name="My Host",
-        public_key={"kty": "OKP"},
+        public_key=_VALID_JWK,
         user_id="user-9",
         default_capabilities=["asap:execute", "asap:read"],
         status="pending",
@@ -145,7 +164,7 @@ def test_models_are_frozen() -> None:
     now = _utc_now()
     host = HostIdentity(
         host_id="h",
-        public_key={"kty": "OKP"},
+        public_key=_VALID_JWK,
         status="active",
         created_at=now,
         updated_at=now,
@@ -160,7 +179,7 @@ def test_models_reject_extra_fields() -> None:
     with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
         HostIdentity(
             host_id="h",
-            public_key={},
+            public_key=_VALID_JWK,
             status="active",
             created_at=now,
             updated_at=now,
@@ -170,7 +189,7 @@ def test_models_reject_extra_fields() -> None:
         AgentSession(
             agent_id="a",
             host_id="h",
-            public_key={},
+            public_key=_VALID_JWK,
             mode="autonomous",
             status="active",
             created_at=now,
@@ -184,7 +203,7 @@ def test_agent_session_optional_timedeltas() -> None:
     session = AgentSession(
         agent_id="a",
         host_id="h",
-        public_key={"kty": "OKP"},
+        public_key=_VALID_JWK,
         mode="delegated",
         status="active",
         session_ttl=timedelta(seconds=60),
@@ -269,7 +288,7 @@ async def test_in_memory_host_store_round_trip_and_thumbprint() -> None:
     """Host save/get and lookup by RFC 7638 thumbprint."""
     store = InMemoryHostStore()
     now = _utc_now()
-    public_key = {"kty": "OKP", "crv": "Ed25519", "x": "dGVzdA"}
+    public_key = _make_ed25519_jwk()
     host = HostIdentity(
         host_id="host-1",
         public_key=public_key,
@@ -289,7 +308,7 @@ async def test_in_memory_host_public_key_rotation_updates_thumb_index() -> None:
     now = _utc_now()
     v1 = HostIdentity(
         host_id="hid",
-        public_key={"kty": "OKP", "x": "aa"},
+        public_key=_make_ed25519_jwk(),
         status="active",
         created_at=now,
         updated_at=now,
@@ -298,7 +317,7 @@ async def test_in_memory_host_public_key_rotation_updates_thumb_index() -> None:
     tp1 = jwk_thumbprint_sha256(v1.public_key)
     v2 = v1.model_copy(
         update={
-            "public_key": {"kty": "OKP", "x": "bb"},
+            "public_key": _make_ed25519_jwk(),
             "updated_at": now,
         }
     )
@@ -315,7 +334,7 @@ async def test_in_memory_host_revoke_cascades_to_agents() -> None:
     await hosts.save(
         HostIdentity(
             host_id="h1",
-            public_key={"kty": "OKP", "x": "x"},
+            public_key=_make_ed25519_jwk(),
             status="active",
             created_at=now,
             updated_at=now,
@@ -325,7 +344,7 @@ async def test_in_memory_host_revoke_cascades_to_agents() -> None:
         AgentSession(
             agent_id="a1",
             host_id="h1",
-            public_key={"kty": "OKP", "x": "y"},
+            public_key=_make_ed25519_jwk(),
             mode="delegated",
             status="active",
             created_at=now,
@@ -345,7 +364,7 @@ async def test_in_memory_agent_store_list_and_revoke() -> None:
     a1 = AgentSession(
         agent_id="a1",
         host_id="h1",
-        public_key={"kty": "OKP"},
+        public_key=_make_ed25519_jwk(),
         mode="delegated",
         status="active",
         created_at=now,
@@ -353,7 +372,7 @@ async def test_in_memory_agent_store_list_and_revoke() -> None:
     a2 = AgentSession(
         agent_id="a2",
         host_id="h1",
-        public_key={"kty": "OKP"},
+        public_key=_make_ed25519_jwk(),
         mode="autonomous",
         status="pending",
         created_at=now,
@@ -376,6 +395,25 @@ def test_jwk_thumbprint_sha256_is_deterministic() -> None:
     assert jwk_thumbprint_sha256(jwk_dict) == jwk_thumbprint_sha256(dict(jwk_dict))
 
 
+def test_jwk_thumbprint_sha256_ignores_optional_jwk_fields() -> None:
+    """RFC 7638: thumbprint uses only required members; ``kid``/``use`` do not change it."""
+    minimal = {"kty": "OKP", "crv": "Ed25519", "x": "dGVzdA"}
+    with_extras = {**minimal, "kid": "key-1", "use": "sig"}
+    assert jwk_thumbprint_sha256(minimal) == jwk_thumbprint_sha256(with_extras)
+
+
+def test_host_urn_from_thumbprint() -> None:
+    """Synthetic host id is stable for a given thumbprint string."""
+    tp = "AbCdEf"
+    assert host_urn_from_thumbprint(tp) == "urn:asap:host:AbCdEf"
+
+
+def test_jwk_thumbprint_sha256_unsupported_kty_raises() -> None:
+    """Unsupported ``kty`` values raise ``ValueError``."""
+    with pytest.raises(ValueError, match="unsupported kty"):
+        jwk_thumbprint_sha256({"kty": "bogus", "x": "x"})
+
+
 async def test_in_memory_host_store_get_and_revoke_edge_cases() -> None:
     """Missing ids return None; revoke is idempotent; cascade optional."""
     store = InMemoryHostStore()
@@ -387,7 +425,7 @@ async def test_in_memory_host_store_get_and_revoke_edge_cases() -> None:
     await store.save(
         HostIdentity(
             host_id="h1",
-            public_key={"kty": "OKP", "x": "z"},
+            public_key=_make_ed25519_jwk(),
             status="active",
             created_at=now,
             updated_at=now,
@@ -413,7 +451,7 @@ async def test_in_memory_agent_store_get_and_revoke_edge_cases() -> None:
         AgentSession(
             agent_id="a1",
             host_id="h1",
-            public_key={"kty": "OKP"},
+            public_key=_make_ed25519_jwk(),
             mode="delegated",
             status="active",
             created_at=now,
@@ -433,7 +471,7 @@ async def test_host_revoke_cascades_multiple_agents() -> None:
     await hosts.save(
         HostIdentity(
             host_id="hx",
-            public_key={"kty": "OKP", "x": "p"},
+            public_key=_make_ed25519_jwk(),
             status="active",
             created_at=now,
             updated_at=now,
@@ -444,7 +482,7 @@ async def test_host_revoke_cascades_multiple_agents() -> None:
             AgentSession(
                 agent_id=aid,
                 host_id="hx",
-                public_key={"kty": "OKP", "x": aid},
+                public_key=_make_ed25519_jwk(),
                 mode="delegated",
                 status="active",
                 created_at=now,

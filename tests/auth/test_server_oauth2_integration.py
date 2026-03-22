@@ -164,7 +164,7 @@ def test_oauth2_middleware_skips_agent_register_host_jwt() -> None:
     agent_jwk = {"kty": "OKP", "crv": "Ed25519", "x": x}
     host_token = create_host_jwt(
         host_sk,
-        aud="asap:registry",
+        aud="urn:asap:agent:test-server",
         agent_public_key=agent_jwk,
         ttl_seconds=120,
     )

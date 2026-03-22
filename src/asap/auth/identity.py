@@ -6,9 +6,11 @@ import base64
 import hashlib
 import json
 from datetime import datetime, timedelta, timezone
-from typing import Any, Literal, Protocol, runtime_checkable
+from typing import Annotated, Any, Literal, Protocol, runtime_checkable
 
-from pydantic import Field
+from joserfc.errors import JoseError
+from joserfc.jwk import OKPKey
+from pydantic import AfterValidator, Field
 
 from asap.models.base import ASAPBaseModel
 
@@ -17,12 +19,25 @@ AgentMode = Literal["delegated", "autonomous"]
 AgentSessionStatus = Literal["pending", "active", "expired", "revoked"]
 
 
+def validate_okp_public_key(value: dict[str, Any]) -> dict[str, Any]:
+    """Validate that the dict represents a valid OKP (Ed25519) public JWK."""
+    try:
+        OKPKey.import_key({str(k): v for k, v in value.items()})
+    except (JoseError, TypeError, ValueError, KeyError) as exc:
+        msg = f"Invalid OKP public key JWK: {exc}"
+        raise ValueError(msg) from exc
+    return value
+
+
+OkpPublicKey = Annotated[dict[str, Any], AfterValidator(validate_okp_public_key)]
+
+
 class HostIdentity(ASAPBaseModel):
     """Registered host identity for the agent JWT hierarchy."""
 
     host_id: str
     name: str | None = None
-    public_key: dict[str, Any]
+    public_key: OkpPublicKey
     user_id: str | None = None
     default_capabilities: list[str] = Field(default_factory=list)
     status: HostStatus
@@ -56,7 +71,7 @@ class AgentSession(ASAPBaseModel):
 
     agent_id: str
     host_id: str
-    public_key: dict[str, Any]
+    public_key: OkpPublicKey
     mode: AgentMode
     status: AgentSessionStatus
     session_ttl: timedelta | None = None
@@ -93,10 +108,37 @@ class AgentStore(Protocol):
 
 
 def jwk_thumbprint_sha256(public_key: dict[str, Any]) -> str:
-    """RFC 7638 JWK thumbprint using SHA-256 (base64url, no padding)."""
-    canonical = json.dumps(public_key, sort_keys=True, separators=(",", ":"))
+    """RFC 7638 JWK thumbprint using SHA-256 (base64url, no padding).
+
+    Uses only the required members for the key type (RFC 7638 §3.2), in
+    lexicographic order via ``sort_keys=True``, so optional JWK fields
+    (``kid``, ``use``, etc.) do not change the thumbprint.
+    """
+    kty = public_key.get("kty")
+    if kty == "OKP":
+        required = {"crv": public_key["crv"], "kty": kty, "x": public_key["x"]}
+    elif kty == "EC":
+        required = {
+            "crv": public_key["crv"],
+            "kty": kty,
+            "x": public_key["x"],
+            "y": public_key["y"],
+        }
+    elif kty == "RSA":
+        required = {"e": public_key["e"], "kty": kty, "n": public_key["n"]}
+    elif kty == "oct":
+        required = {"k": public_key["k"], "kty": kty}
+    else:
+        msg = f"unsupported kty for thumbprint: {kty!r}"
+        raise ValueError(msg)
+    canonical = json.dumps(required, sort_keys=True, separators=(",", ":"))
     digest = hashlib.sha256(canonical.encode("utf-8")).digest()
     return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+
+
+def host_urn_from_thumbprint(thumbprint: str) -> str:
+    """Synthetic host id for a first-seen host key (``iss`` thumbprint)."""
+    return f"urn:asap:host:{thumbprint}"
 
 
 def _utc_now() -> datetime:

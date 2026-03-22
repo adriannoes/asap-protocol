@@ -18,6 +18,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from joserfc import jwt as jose_jwt
 from joserfc.errors import JoseError
 from joserfc.jwk import OKPKey
+from joserfc.jws import extract_compact as _jws_extract_compact
 
 from asap.auth.identity import (
     AgentSession,
@@ -61,16 +62,27 @@ class JtiReplayCache:
 
     Partition keys isolate tokens per host thumbprint or per agent id so
     unrelated identities do not share ``jti`` namespaces.
+
+    ``max_size`` bounds memory: after pruning expired entries, if the map
+    still exceeds ``max_size``, entries with the earliest expiry are removed
+    first (may slightly weaken replay detection for those keys under extreme
+    load; prefer Redis-backed limits in multi-instance production).
     """
 
-    def __init__(self, ttl_seconds: float = 90.0) -> None:
+    def __init__(self, ttl_seconds: float = 90.0, max_size: int = 10_000) -> None:
         self._ttl = ttl_seconds
+        self._max_size = max_size
         self._expiry_by_key: dict[tuple[str, str], float] = {}
 
     def _prune_expired(self, now: float) -> None:
         dead = [k for k, exp in self._expiry_by_key.items() if exp <= now]
         for k in dead:
             del self._expiry_by_key[k]
+
+    def _evict_to_max_size(self) -> None:
+        while len(self._expiry_by_key) > self._max_size:
+            oldest = min(self._expiry_by_key, key=lambda k: self._expiry_by_key[k])
+            del self._expiry_by_key[oldest]
 
     def check_and_record(self, partition_key: str, jti: str) -> bool:
         """Record ``jti`` for ``partition_key``.
@@ -89,24 +101,19 @@ class JtiReplayCache:
         if key in self._expiry_by_key and self._expiry_by_key[key] > now:
             return False
         self._expiry_by_key[key] = now + self._ttl
+        self._evict_to_max_size()
         return True
 
 
-def _b64url_decode_segment(segment: str) -> bytes:
-    pad = 4 - len(segment) % 4
-    if pad != 4:
-        segment += "=" * pad
-    return base64.urlsafe_b64decode(segment)
-
-
 def _unverified_header_and_payload(token: str) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Parse JWT header and payload without verifying the signature."""
-    parts = token.split(".")
-    if len(parts) != 3:
-        msg = "malformed JWT: expected three segments"
-        raise ValueError(msg)
-    header = json.loads(_b64url_decode_segment(parts[0]).decode("utf-8"))
-    payload = json.loads(_b64url_decode_segment(parts[1]).decode("utf-8"))
+    """Parse JWT header and payload without verifying the signature.
+
+    Uses :func:`joserfc.jws.extract_compact` to decode the compact
+    serialisation, avoiding manual base64url padding.
+    """
+    obj = _jws_extract_compact(token.encode("utf-8"))
+    header = dict(obj.headers())
+    payload: dict[str, Any] = json.loads(obj.payload)
     return header, payload
 
 
@@ -146,10 +153,29 @@ def _jti_present(claims: dict[str, Any]) -> bool:
     return isinstance(jti, str) and bool(jti.strip())
 
 
+def _audience_matches_expected(
+    claims: dict[str, Any],
+    expected_audience: str | list[str],
+) -> bool:
+    """Return True if ``aud`` intersects ``expected_audience`` (RFC 7519 §4.1.3)."""
+    aud = claims.get("aud")
+    expected = (
+        [expected_audience] if isinstance(expected_audience, str) else list(expected_audience)
+    )
+    if isinstance(aud, str):
+        token_auds = [aud]
+    elif isinstance(aud, list):
+        token_auds = [a for a in aud if isinstance(a, str)]
+    else:
+        return False
+    return any(a in expected for a in token_auds)
+
+
 async def verify_host_jwt(
     token: str,
     host_store: HostStore,
     *,
+    expected_audience: str | list[str] | None = None,
     jti_replay_cache: JtiReplayCache | None = None,
 ) -> JwtVerifyResult:
     """Verify a Host JWT signature and resolve the host (or inline registration).
@@ -158,12 +184,17 @@ async def verify_host_jwt(
     ``iss`` vs thumbprint, ``exp``/``iat``/``jti``, optional replay cache, and
     rejects stored hosts in ``revoked`` status.
 
+    When ``expected_audience`` is set, the ``aud`` claim must match one of the
+    expected values (RFC 7519 §4.1.3). Production callers should pass the
+    server's manifest id (or equivalent) so tokens cannot be replayed across
+    services.
+
     When no host row exists for ``iss``, verification still succeeds (dynamic
     registration) with ``host=None`` and valid ``claims``.
     """
     try:
         header, unverified_payload = _unverified_header_and_payload(token)
-    except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as e:
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError, JoseError) as e:
         return JwtVerifyResult(ok=False, error=f"invalid JWT structure: {e!s}")
 
     if header.get("typ") != HOST_JWT_TYP:
@@ -186,6 +217,8 @@ async def verify_host_jwt(
         return JwtVerifyResult(ok=False, error="invalid iat (too far in the future)")
     if not _jti_present(claims):
         return JwtVerifyResult(ok=False, error="missing jti")
+    if expected_audience is not None and not _audience_matches_expected(claims, expected_audience):
+        return JwtVerifyResult(ok=False, error="audience mismatch")
 
     host_pub = claims.get(HOST_PUBLIC_KEY_CLAIM)
     if not isinstance(host_pub, dict):
@@ -213,12 +246,16 @@ async def verify_agent_jwt(
     host_store: HostStore,
     agent_store: AgentStore,
     *,
+    expected_audience: str | list[str] | None = None,
     jti_replay_cache: JtiReplayCache | None = None,
 ) -> JwtVerifyResult:
-    """Verify an Agent JWT: typ, signatures, host/agent rows, exp/iat/jti, capabilities."""
+    """Verify an Agent JWT: typ, signatures, host/agent rows, exp/iat/jti, capabilities.
+
+    When ``expected_audience`` is set, ``aud`` must match (RFC 7519 §4.1.3).
+    """
     try:
         header, unverified_payload = _unverified_header_and_payload(token)
-    except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as e:
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError, JoseError) as e:
         return JwtVerifyResult(ok=False, error=f"invalid JWT structure: {e!s}")
 
     if header.get("typ") != AGENT_JWT_TYP:
@@ -249,6 +286,8 @@ async def verify_agent_jwt(
         return JwtVerifyResult(ok=False, error="invalid iat (too far in the future)")
     if not _jti_present(claims):
         return JwtVerifyResult(ok=False, error="missing jti")
+    if expected_audience is not None and not _audience_matches_expected(claims, expected_audience):
+        return JwtVerifyResult(ok=False, error="audience mismatch")
 
     if claims.get("sub") != agent.agent_id:
         return JwtVerifyResult(ok=False, error="sub does not match verified agent id")
