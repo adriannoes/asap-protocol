@@ -18,9 +18,11 @@
 - `tests/auth/test_agent_jwt.py` — JWT creation/verification tests
 
 ### Modified Files
-- `src/asap/transport/server.py` — New `/asap/agent/*` endpoints
+- `src/asap/transport/server.py` — New `/asap/agent/*` endpoints; docs clarify OAuth2 on `POST /asap` vs Host JWT on agent routes
+- `src/asap/auth/middleware.py` — OAuth2 middleware skips `/asap/agent/*` (Host JWT); docstring documents coexistence with `POST /asap` OAuth2
 - `src/asap/auth/__init__.py` — Export new symbols
 - `tests/transport/test_server.py` — Endpoint tests
+- `tests/auth/test_server_oauth2_integration.py` — Agent register exempt from OAuth2 JWKS
 
 ---
 
@@ -82,34 +84,34 @@
 
 ### 3.0 Create Agent Registration Endpoints
 
-- [ ] 3.1 Add `POST /asap/agent/register` endpoint
+- [x] 3.1 Add `POST /asap/agent/register` endpoint
   - **File**: `src/asap/transport/server.py` (modify)
   - **What**: Accepts Host JWT with agent public key. Creates `AgentSession` under the host. Returns `agent_id`, `host_id`, `status`. If host is unknown, creates it in `pending` state. Idempotent: re-registering a `pending` agent returns existing state.
   - **Verify**: `uv run pytest tests/transport/test_server.py -k "register"`
 
-- [ ] 3.2 Add `GET /asap/agent/status` endpoint
+- [x] 3.2 Add `GET /asap/agent/status` endpoint
   - **File**: `src/asap/transport/server.py` (modify)
   - **What**: Host JWT auth. Returns agent status, capability grants (empty for now — capabilities come in S1), lifecycle info. Query param `agent_id`.
   - **Verify**: Test with active, pending, expired, revoked agents
 
-- [ ] 3.3 Add `POST /asap/agent/revoke` endpoint
+- [x] 3.3 Add `POST /asap/agent/revoke` endpoint
   - **File**: `src/asap/transport/server.py` (modify)
   - **What**: Host JWT auth. Permanently revokes an agent. Returns `{"agent_id": "...", "status": "revoked"}`.
   - **Verify**: Revoked agent cannot authenticate
 
-- [ ] 3.4 Add `POST /asap/agent/rotate-key` endpoint
+- [x] 3.4 Add `POST /asap/agent/rotate-key` endpoint
   - **File**: `src/asap/transport/server.py` (modify)
   - **What**: Host JWT auth. Replaces agent's public key. Old key stops working immediately.
   - **Verify**: Old JWT rejected, new JWT accepted after rotation
 
-- [ ] 3.5 Ensure backward compatibility with existing OAuth2
+- [x] 3.5 Ensure backward compatibility with existing OAuth2
   - **File**: `src/asap/transport/server.py` (modify)
   - **What**: Existing `POST /asap` endpoint continues to accept OAuth2 Bearer tokens. New agent identity is opt-in, not mandatory. Both auth paths coexist.
   - **Verify**: Existing tests still pass without modification
 
 ### 4.0 Update Exports and Documentation
 
-- [ ] 4.1 Update `auth/__init__.py` exports
+- [x] 4.1 Update `auth/__init__.py` exports
   - **File**: `src/asap/auth/__init__.py` (modify)
   - **What**: Export `HostIdentity`, `AgentSession`, `HostStore`, `AgentStore`, `create_host_jwt`, `create_agent_jwt`, `verify_host_jwt`, `verify_agent_jwt`
   - **Verify**: `from asap.auth import HostIdentity, AgentSession` works
@@ -118,11 +120,11 @@
 
 ## Definition of Done
 
-- [ ] `HostIdentity` and `AgentSession` models with full validation
-- [ ] Host JWT and Agent JWT creation and verification working
-- [ ] `jti` replay detection with 90s TTL cache
-- [ ] `/asap/agent/register`, `/status`, `/revoke`, `/rotate-key` endpoints operational
-- [ ] Existing OAuth2 flow unaffected (backward compatible)
-- [ ] Test coverage >= 90% for new code
-- [ ] `uv run mypy src/asap/auth/` passes
-- [ ] `uv run ruff check src/asap/auth/` passes
+- [x] `HostIdentity` and `AgentSession` models with full validation
+- [x] Host JWT and Agent JWT creation and verification working
+- [x] `jti` replay detection with 90s TTL cache
+- [x] `/asap/agent/register`, `/status`, `/revoke`, `/rotate-key` endpoints operational
+- [x] Existing OAuth2 flow unaffected (backward compatible)
+- [x] Test coverage >= 90% for new code (`identity.py`, `agent_jwt.py`)
+- [x] `uv run mypy src/asap/auth/` passes
+- [x] `uv run ruff check src/asap/auth/` passes
