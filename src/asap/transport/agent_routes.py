@@ -23,6 +23,7 @@ from asap.auth.agent_jwt import (
     JwtVerifyResult,
     verify_host_jwt,
 )
+from asap.auth.capabilities import CapabilityRegistry
 from asap.auth.identity import (
     AgentSession,
     AgentStore,
@@ -34,6 +35,7 @@ from asap.auth.identity import (
 from asap.models.base import ASAPBaseModel
 from asap.models.ids import generate_id
 from asap.observability import get_logger
+from asap.transport._auth_helpers import bearer_token_from_request
 
 logger = get_logger(__name__)
 
@@ -61,21 +63,13 @@ class AgentRotateKeyBody(ASAPBaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _bearer_token_from_request(request: Request) -> str | None:
-    """Return raw Bearer token from Authorization header, if present."""
-    auth = request.headers.get("Authorization")
-    if not auth or not auth.startswith("Bearer "):
-        return None
-    return auth[7:].strip() or None
-
-
 async def _verify_host_bearer_identity(
     request: Request,
     *,
     jti_replay_cache: JtiReplayCache | None,
 ) -> tuple[JwtVerifyResult | None, JSONResponse | None]:
     """Verify Host JWT; optional ``jti`` replay cache for mutating routes."""
-    token = _bearer_token_from_request(request)
+    token = bearer_token_from_request(request)
     if not token:
         return None, JSONResponse(
             status_code=401,
@@ -239,16 +233,70 @@ async def _handle_agent_register(request: Request) -> JSONResponse:
         created_at=now,
     )
     await agent_store.save(session)
+
+    capability_grants: list[dict[str, Any]] = []
+    try:
+        raw_body = await request.json()
+    except (ValueError, UnicodeDecodeError):
+        raw_body = {}
+    requested_caps = raw_body.get("capabilities") if isinstance(raw_body, dict) else None
+    if isinstance(requested_caps, list) and hasattr(request.app.state, "capability_registry"):
+        registry: CapabilityRegistry = request.app.state.capability_registry
+        for cap_req in requested_caps:
+            cap_name = (
+                cap_req
+                if isinstance(cap_req, str)
+                else cap_req.get("name", "")
+                if isinstance(cap_req, dict)
+                else ""
+            )
+            constraints = cap_req.get("constraints") if isinstance(cap_req, dict) else None
+            if not cap_name:
+                continue
+            defn = registry.describe(cap_name)
+            if defn is not None:
+                g = registry.grant(
+                    agent_id,
+                    cap_name,
+                    constraints=constraints,
+                    granted_by=host_id,
+                )
+                capability_grants.append(
+                    {
+                        "capability": g.capability,
+                        "status": g.status,
+                    }
+                )
+            else:
+                g = registry.grant(
+                    agent_id,
+                    cap_name,
+                    status="denied",
+                    reason=f"capability {cap_name!r} not found",
+                    granted_by=host_id,
+                )
+                capability_grants.append(
+                    {
+                        "capability": g.capability,
+                        "status": g.status,
+                        "reason": g.reason,
+                    }
+                )
+
     logger.info(
         "asap.identity.agent_register",
         action="register",
         agent_id=agent_id,
         host_id=host_id,
     )
-    return JSONResponse(
-        status_code=200,
-        content={"agent_id": agent_id, "host_id": host_id, "status": "pending"},
-    )
+    response_content: dict[str, Any] = {
+        "agent_id": agent_id,
+        "host_id": host_id,
+        "status": "pending",
+    }
+    if capability_grants:
+        response_content["agent_capability_grants"] = capability_grants
+    return JSONResponse(status_code=200, content=response_content)
 
 
 async def _handle_agent_status(request: Request, agent_id: str) -> JSONResponse:

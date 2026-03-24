@@ -158,16 +158,10 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - name: Setup Python
         uses: ./.github/actions/setup-python
+        with:
+          # Omit extras whose transitive deps have no OSV fix on PyPI (diskcache, nltk).
+          sync-flags: --no-extra crewai --no-extra llamaindex
       - name: Scan for vulnerabilities (pip-audit)
-        run: |
-          uv run pip-audit \
-            --ignore-vuln CVE-2025-69872 \
-            --ignore-vuln CVE-2026-33230 \
-            --ignore-vuln CVE-2026-33231 \
-            --ignore-vuln GHSA-rf74-v2fm-23pw
-        # CVE-2025-69872: diskcache (transitive via crewai→chromadb); no fix on PyPI yet.
-        # NLTK (GHSA-rf74-v2fm-23pw, CVE-2026-33230, CVE-2026-33231): transitive via optional extras
-        # (e.g. crewai); PyPI latest is 3.9.3 with no patched release in OSV. Re-run without ignores
-        # after nltk releases a fix and uv.lock picks it up.
+        run: uv run pip-audit
       - name: Scan for security issues (bandit)
         run: uv run bandit -r src/ -ll

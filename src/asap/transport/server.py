@@ -124,6 +124,7 @@ from asap.state.snapshot import SnapshotStore
 from asap.economics.sla_storage import SLAStorage
 from asap.economics.storage import MeteringStorage, metering_storage_adapter
 from asap.transport.agent_routes import create_agent_identity_router
+from asap.transport.capability_routes import create_capability_router
 from asap.transport.delegation_api import create_delegation_router
 from asap.transport.sla_api import create_sla_router
 from asap.transport.usage_api import create_usage_router
@@ -1439,6 +1440,13 @@ def create_app(
     _identity_rl = identity_rate_limit or "5/second;30/minute"
     app.state.identity_limiter = create_limiter([_identity_rl])
     app.include_router(create_agent_identity_router())
+
+    # Capability-based authorization (S1)
+    from asap.auth.capabilities import CapabilityRegistry
+
+    if not hasattr(app.state, "capability_registry"):
+        app.state.capability_registry = CapabilityRegistry()
+    app.include_router(create_capability_router())
     if metering_storage is not None and isinstance(metering_storage, MeteringStorage):
         app.state.metering_storage = metering_storage
         app.include_router(create_usage_router())
