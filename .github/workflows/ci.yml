@@ -159,9 +159,7 @@ jobs:
       - name: Setup Python
         uses: ./.github/actions/setup-python
         with:
-          # Extras `crewai` / `llamaindex` pull transitive deps with no patched PyPI release yet
-          # (diskcache via instructor/chromadb; nltk via llama-index-core). Other jobs install
-          # full extras for integration tests; this job audits the rest of the tree without ignores.
+          # Omit extras whose transitive deps have no OSV fix on PyPI (diskcache, nltk).
           sync-flags: --no-extra crewai --no-extra llamaindex
       - name: Scan for vulnerabilities (pip-audit)
         run: uv run pip-audit
