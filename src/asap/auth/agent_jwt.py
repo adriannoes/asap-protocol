@@ -254,6 +254,7 @@ async def verify_agent_jwt(
     """Verify an Agent JWT: typ, signatures, host/agent rows, exp/iat/jti, capabilities.
 
     When ``expected_audience`` is set, ``aud`` must match (RFC 7519 §4.1.3).
+    When ``agent_store_writable`` is False, session extension after verification is not persisted.
     """
     try:
         header, unverified_payload = _unverified_header_and_payload(token)
@@ -311,14 +312,12 @@ async def verify_agent_jwt(
         if not jti_replay_cache.check_and_record(agent.agent_id, jti):
             return JwtVerifyResult(ok=False, error="jti replay detected")
 
-    # Lifecycle: evaluate the three lifetime clocks
     expiry_status = check_agent_expiry(agent)
     if expiry_status == "revoked":
         return JwtVerifyResult(ok=False, error="agent_revoked")
     if expiry_status == "expired":
         return JwtVerifyResult(ok=False, error="agent_expired")
 
-    # Session is active — extend the session TTL
     agent = extend_session(agent)
     if agent_store_writable:
         await agent_store.save(agent)

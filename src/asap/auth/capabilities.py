@@ -1,19 +1,9 @@
-"""Capability-based authorization for ASAP agents.
-
-Provides models and logic for defining, granting, and enforcing
-fine-grained capabilities that replace coarse OAuth2 scopes.
-
-Public exports:
-    CapabilityDefinition: Schema for a named capability (input/output schemas, location)
-    CapabilityConstraint: Operator-based constraint on capability arguments
-    validate_constraints: Enforce constraints against actual arguments
-    ConstraintViolation: Single constraint check failure descriptor
-"""
+"""Capability definitions, grants, constraint validation, and registry."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Literal
 
 from asap.models.base import ASAPBaseModel
@@ -22,15 +12,7 @@ GrantStatus = Literal["active", "pending", "denied"]
 
 
 class CapabilityDefinition(ASAPBaseModel):
-    """A named capability that an ASAP server can offer to agents.
-
-    Attributes:
-        name: Unique identifier for the capability (e.g. "file:read").
-        description: Human-readable explanation of what the capability does.
-        input_schema: Optional JSON Schema describing accepted arguments.
-        output_schema: Optional JSON Schema describing the result shape.
-        location: Optional URI or path hint for capability discovery.
-    """
+    """Registered capability (name, schemas, optional location URI)."""
 
     name: str
     description: str
@@ -40,16 +22,7 @@ class CapabilityDefinition(ASAPBaseModel):
 
 
 class CapabilityGrant(ASAPBaseModel):
-    """A grant of a specific capability to an agent.
-
-    Attributes:
-        capability: Name of the granted capability.
-        status: Current grant status — active, pending, or denied.
-        constraints: Optional operator-based constraints on arguments.
-        granted_by: Identifier of the host or entity that issued the grant.
-        reason: Human-readable explanation (e.g. why denied).
-        expires_at: Optional expiry timestamp for the grant itself.
-    """
+    """Grant of one capability to an agent (status, optional constraints and expiry)."""
 
     capability: str
     status: GrantStatus = "pending"
@@ -163,7 +136,6 @@ def validate_constraints(
             continue
 
         if isinstance(spec, dict) and OPERATOR_KEYS & spec.keys():
-            # Operator object — evaluate each operator independently
             for op, expected in spec.items():
                 if op not in OPERATOR_KEYS:
                     continue
@@ -171,7 +143,6 @@ def validate_constraints(
                 if v is not None:
                     violations.append(v)
         else:
-            # Exact-match constraint
             if actual != spec:
                 violations.append(
                     ConstraintViolation(
@@ -192,7 +163,7 @@ def validate_constraints(
 
 @dataclass
 class GrantCheckResult:
-    """Outcome of checking whether an agent may use a capability."""
+    """Result of :meth:`CapabilityRegistry.check_grant`."""
 
     allowed: bool
     violations: list[ConstraintViolation]
@@ -200,15 +171,10 @@ class GrantCheckResult:
 
 
 class CapabilityRegistry:
-    """In-memory registry for capability definitions and agent grants.
-
-    Provides ``register``, ``list_capabilities``, ``describe``, ``grant``,
-    and ``check_grant`` to manage the full capability lifecycle.
-    """
+    """In-memory definitions and per-agent grants (single-process; not shared across workers)."""
 
     def __init__(self) -> None:
         self._definitions: dict[str, CapabilityDefinition] = {}
-        # agent_id → capability_name → grant
         self._grants: dict[str, dict[str, CapabilityGrant]] = {}
 
     # -- Definitions --------------------------------------------------------
@@ -217,13 +183,8 @@ class CapabilityRegistry:
         """Register (or replace) a capability definition."""
         self._definitions[definition.name] = definition
 
-    def list_capabilities(self, agent_id: str | None = None) -> list[CapabilityDefinition]:
-        """Return all registered definitions.
-
-        If *agent_id* is given the list is unchanged — filtering by grant
-        status is left to the caller (endpoint layer) which can augment the
-        response with ``grant_status`` per item.
-        """
+    def list_capabilities(self) -> list[CapabilityDefinition]:
+        """Return all registered capability definitions."""
         return list(self._definitions.values())
 
     def describe(self, name: str) -> CapabilityDefinition | None:
@@ -265,11 +226,7 @@ class CapabilityRegistry:
         capability: str,
         arguments: dict[str, Any] | None = None,
     ) -> GrantCheckResult:
-        """Check whether *agent_id* may invoke *capability* with *arguments*.
-
-        Returns a :class:`GrantCheckResult` with ``allowed=True`` only when
-        the agent holds an active grant and all constraints pass.
-        """
+        """Return whether *agent_id* may invoke *capability* with *arguments*."""
         agent_grants = self._grants.get(agent_id, {})
         g = agent_grants.get(capability)
 
@@ -279,14 +236,9 @@ class CapabilityRegistry:
         if g.status != "active":
             return GrantCheckResult(allowed=False, violations=[], grant=g)
 
-        # Check grant-level expiry
-        if g.expires_at is not None:
-            from datetime import timezone
+        if g.expires_at is not None and datetime.now(timezone.utc) > g.expires_at:
+            return GrantCheckResult(allowed=False, violations=[], grant=g)
 
-            if datetime.now(timezone.utc) > g.expires_at:
-                return GrantCheckResult(allowed=False, violations=[], grant=g)
-
-        # Enforce constraints
         if g.constraints and arguments is not None:
             violations = validate_constraints(g.constraints, arguments)
             if violations:
@@ -309,17 +261,7 @@ def map_scopes_to_capabilities(
     scopes: list[str],
     registry: CapabilityRegistry,
 ) -> list[CapabilityGrant]:
-    """Map OAuth2 scopes to capability grants for backward compatibility.
-
-    Mapping rules:
-    - ``asap:admin`` → all registered capabilities (active).
-    - ``asap:execute`` → capabilities whose name contains ``execute``,
-      ``write``, or ``invoke`` (active).
-    - ``asap:read`` → capabilities whose name contains ``read``, ``list``,
-      or ``describe`` (active).
-
-    Grants are returned sorted by capability name for deterministic output.
-    """
+    """Map OAuth2 scopes to synthetic active grants (admin = all caps; read/execute by name heuristics)."""
     all_caps = registry.list_capabilities()
     granted_names: set[str] = set()
 
