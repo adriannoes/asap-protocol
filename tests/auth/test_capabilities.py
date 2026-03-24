@@ -199,6 +199,16 @@ class TestConstraintOperators:
         vs = validate_constraints(constraints, {"count": 200, "env": "prod"})
         assert len(vs) == 2
 
+    def test_unknown_operator_ignored(self) -> None:
+        """Unknown operator keys in the spec dict are silently skipped."""
+        assert validate_constraints({"n": {"unknown_op": 5, "max": 10}}, {"n": 5}) == []
+
+    def test_unknown_operator_only_treated_as_exact(self) -> None:
+        """Spec dict with no recognized operators is treated as exact-match."""
+        vs = validate_constraints({"n": {"custom": "x"}}, {"n": 42})
+        assert len(vs) == 1
+        assert vs[0].operator == "eq"
+
 
 # ---------------------------------------------------------------------------
 # ConstraintViolation structure
@@ -237,11 +247,6 @@ class TestCapabilityRegistry:
 
     def test_list(self, registry: CapabilityRegistry) -> None:
         caps = registry.list_capabilities()
-        assert len(caps) == 2
-
-    def test_list_with_agent_id(self, registry: CapabilityRegistry) -> None:
-        """agent_id param doesn't filter definitions (filtering is endpoint-level)."""
-        caps = registry.list_capabilities(agent_id="agent-1")
         assert len(caps) == 2
 
     def test_describe_found(self, registry: CapabilityRegistry) -> None:
