@@ -35,6 +35,7 @@ from asap.auth.identity import (
 from asap.models.base import ASAPBaseModel
 from asap.models.ids import generate_id
 from asap.observability import get_logger
+from asap.transport._auth_helpers import bearer_token_from_request
 
 logger = get_logger(__name__)
 
@@ -62,21 +63,13 @@ class AgentRotateKeyBody(ASAPBaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _bearer_token_from_request(request: Request) -> str | None:
-    """Return raw Bearer token from Authorization header, if present."""
-    auth = request.headers.get("Authorization")
-    if not auth or not auth.startswith("Bearer "):
-        return None
-    return auth[7:].strip() or None
-
-
 async def _verify_host_bearer_identity(
     request: Request,
     *,
     jti_replay_cache: JtiReplayCache | None,
 ) -> tuple[JwtVerifyResult | None, JSONResponse | None]:
     """Verify Host JWT; optional ``jti`` replay cache for mutating routes."""
-    token = _bearer_token_from_request(request)
+    token = bearer_token_from_request(request)
     if not token:
         return None, JSONResponse(
             status_code=401,
@@ -241,11 +234,10 @@ async def _handle_agent_register(request: Request) -> JSONResponse:
     )
     await agent_store.save(session)
 
-    # Process capability requests from body (optional)
     capability_grants: list[dict[str, Any]] = []
     try:
         raw_body = await request.json()
-    except Exception:
+    except (ValueError, UnicodeDecodeError):
         raw_body = {}
     requested_caps = raw_body.get("capabilities") if isinstance(raw_body, dict) else None
     if isinstance(requested_caps, list) and hasattr(request.app.state, "capability_registry"):

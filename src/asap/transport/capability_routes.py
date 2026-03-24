@@ -1,12 +1,4 @@
-"""Capability HTTP endpoints (``/asap/capability/*``, ``/asap/agent/reactivate``).
-
-Provides a FastAPI :class:`APIRouter` for capability listing, description,
-execution, and agent reactivation.  Authentication varies by endpoint:
-- ``/capability/list`` supports no-auth, Host JWT, or Agent JWT.
-- ``/capability/describe`` is unauthenticated (public metadata).
-- ``/capability/execute`` requires Agent JWT.
-- ``/agent/reactivate`` requires Host JWT.
-"""
+"""Routes for ``/asap/capability/*`` and ``POST /asap/agent/reactivate``."""
 
 from __future__ import annotations
 
@@ -21,11 +13,14 @@ from asap.auth.agent_jwt import (
     verify_agent_jwt,
     verify_host_jwt,
 )
+from pydantic import ValidationError
+
 from asap.auth.capabilities import CapabilityGrant, CapabilityRegistry
 from asap.auth.identity import AgentStore, HostStore
 from asap.auth.lifecycle import reactivate_agent
 from asap.models.base import ASAPBaseModel
 from asap.observability import get_logger
+from asap.transport._auth_helpers import bearer_token_from_request
 
 logger = get_logger(__name__)
 
@@ -53,20 +48,13 @@ class AgentReactivateBody(ASAPBaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _bearer_token_from_request(request: Request) -> str | None:
-    auth = request.headers.get("Authorization")
-    if not auth or not auth.startswith("Bearer "):
-        return None
-    return auth[7:].strip() or None
-
-
 async def _verify_host_bearer(
     request: Request,
     *,
     jti_replay_cache: JtiReplayCache | None = None,
 ) -> tuple[JwtVerifyResult | None, JSONResponse | None]:
     """Verify a Host JWT Bearer token."""
-    token = _bearer_token_from_request(request)
+    token = bearer_token_from_request(request)
     if not token:
         return None, JSONResponse(
             status_code=401,
@@ -92,7 +80,7 @@ async def _verify_agent_bearer(
     jti_replay_cache: JtiReplayCache | None = None,
 ) -> tuple[JwtVerifyResult | None, JSONResponse | None]:
     """Verify an Agent JWT Bearer token."""
-    token = _bearer_token_from_request(request)
+    token = bearer_token_from_request(request)
     if not token:
         return None, JSONResponse(
             status_code=401,
@@ -139,14 +127,18 @@ def _grant_to_dict(g: CapabilityGrant) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-async def _handle_capability_list(request: Request) -> JSONResponse:
+async def _handle_capability_list(
+    request: Request,
+    *,
+    query: str = "",
+    cursor: int = 0,
+    limit: int = 100,
+) -> JSONResponse:
     """List capabilities. Auth-mode aware: no-auth, Host JWT, or Agent JWT."""
     registry = _registry(request)
     definitions = registry.list_capabilities()
 
-    query = request.query_params.get("query", "").lower()
-    cursor = int(request.query_params.get("cursor", "0"))
-    limit = min(int(request.query_params.get("limit", "100")), 1000)
+    query = query.lower()
 
     if query:
         definitions = [
@@ -158,7 +150,7 @@ async def _handle_capability_list(request: Request) -> JSONResponse:
 
     items: list[dict[str, Any]] = []
     # Try Agent JWT first, then Host JWT, then no-auth
-    token = _bearer_token_from_request(request)
+    token = bearer_token_from_request(request)
     agent_id: str | None = None
     if token:
         host_store: HostStore = request.app.state.identity_host_store
@@ -217,9 +209,12 @@ async def _handle_capability_execute(request: Request) -> JSONResponse:
 
     try:
         raw_body = await request.json()
-        body = CapabilityExecuteBody(**raw_body)
-    except Exception:
-        return JSONResponse(status_code=400, content={"detail": "Invalid request body"})
+    except ValueError as e:
+        return JSONResponse(status_code=400, content={"detail": f"Invalid JSON: {e}"})
+    try:
+        body = CapabilityExecuteBody.model_validate(raw_body)
+    except ValidationError as e:
+        return JSONResponse(status_code=400, content={"detail": e.errors()})
 
     registry = _registry(request)
     agent_id = result.agent.agent_id
@@ -269,9 +264,12 @@ async def _handle_agent_reactivate(request: Request) -> JSONResponse:
 
     try:
         raw_body = await request.json()
-        body = AgentReactivateBody(**raw_body)
-    except Exception:
-        return JSONResponse(status_code=400, content={"detail": "Invalid request body"})
+    except ValueError as e:
+        return JSONResponse(status_code=400, content={"detail": f"Invalid JSON: {e}"})
+    try:
+        body = AgentReactivateBody.model_validate(raw_body)
+    except ValidationError as e:
+        return JSONResponse(status_code=400, content={"detail": e.errors()})
 
     agent_store: AgentStore = request.app.state.identity_agent_store
     host_store: HostStore = request.app.state.identity_host_store
@@ -344,9 +342,14 @@ def create_capability_router() -> APIRouter:
     router = APIRouter()
 
     @router.get("/asap/capability/list")
-    async def capability_list(request: Request) -> JSONResponse:
+    async def capability_list(
+        request: Request,
+        query: Annotated[str, Query()] = "",
+        cursor: Annotated[int, Query(ge=0)] = 0,
+        limit: Annotated[int, Query(ge=1, le=1000)] = 100,
+    ) -> JSONResponse:
         request.app.state.identity_limiter.check(request)
-        return await _handle_capability_list(request)
+        return await _handle_capability_list(request, query=query, cursor=cursor, limit=limit)
 
     @router.get("/asap/capability/describe")
     async def capability_describe(
