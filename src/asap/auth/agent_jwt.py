@@ -27,6 +27,7 @@ from asap.auth.identity import (
     HostStore,
     jwk_thumbprint_sha256,
 )
+from asap.auth.lifecycle import check_agent_expiry, extend_session
 from asap.models.ids import generate_id
 
 # Encode/decode: EdDSA (RFC 8037 Ed25519); joserfc also accepts "Ed25519" alias.
@@ -248,6 +249,7 @@ async def verify_agent_jwt(
     *,
     expected_audience: str | list[str] | None = None,
     jti_replay_cache: JtiReplayCache | None = None,
+    agent_store_writable: bool = True,
 ) -> JwtVerifyResult:
     """Verify an Agent JWT: typ, signatures, host/agent rows, exp/iat/jti, capabilities.
 
@@ -308,6 +310,18 @@ async def verify_agent_jwt(
         jti = str(claims["jti"])
         if not jti_replay_cache.check_and_record(agent.agent_id, jti):
             return JwtVerifyResult(ok=False, error="jti replay detected")
+
+    # Lifecycle: evaluate the three lifetime clocks
+    expiry_status = check_agent_expiry(agent)
+    if expiry_status == "revoked":
+        return JwtVerifyResult(ok=False, error="agent_revoked")
+    if expiry_status == "expired":
+        return JwtVerifyResult(ok=False, error="agent_expired")
+
+    # Session is active — extend the session TTL
+    agent = extend_session(agent)
+    if agent_store_writable:
+        await agent_store.save(agent)
 
     return JwtVerifyResult(ok=True, claims=claims, host=host, agent=agent)
 
