@@ -43,7 +43,7 @@ Before pushing to the repository, always run the full CI check suite locally to 
 2. **Formatting**: `uv run ruff format --check .` - Ensure consistent code formatting (or `uv run ruff format .` to auto-fix)
 3. **Type Checking**: `uv run mypy src/ scripts/ tests/` - Validate type annotations (strict for src/scripts, relaxed for tests)
 4. **Tests**: `PYTHONPATH=src uv run pytest --cov=src --cov-report=xml` - Run full test suite with coverage
-5. **Security**: `uv run pip-audit` - Scan for known vulnerabilities in dependencies
+5. **Security**: `uv sync --frozen --all-extras --dev --no-extra crewai --no-extra llamaindex && uv run pip-audit` — same graph as the CI security job (see `SECURITY.md`); use full `uv sync --frozen --all-extras --dev` when auditing optional integration extras separately
 
 ### Pre-Push CI Verification (Web App / TypeScript)
 
