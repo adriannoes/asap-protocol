@@ -222,7 +222,14 @@ async def _background_a2h_resolve(
     context: str,
     principal_id: str,
 ) -> None:
-    await channel.resolve_via_a2h(agent_id, context=context, principal_id=principal_id)
+    try:
+        await channel.resolve_via_a2h(agent_id, context=context, principal_id=principal_id)
+    except Exception:
+        logger.exception(
+            "asap.identity.a2h_resolve_failed",
+            agent_id=agent_id,
+            principal_id=principal_id,
+        )
 
 
 async def _verify_host_bearer_identity(
@@ -464,7 +471,11 @@ async def _handle_agent_register(
             response_content["agent_capability_grants"] = capability_grants
         return JSONResponse(status_code=200, content=response_content)
 
-    assert approval_store is not None
+    if approval_store is None:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "approval store not configured"},
+        )
     host_supports_ciba = bool(getattr(request.app.state, "identity_host_supports_ciba", True))
     method = select_approval_method(
         host,
