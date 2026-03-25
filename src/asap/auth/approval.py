@@ -2,6 +2,27 @@
 
 from __future__ import annotations
 
+__all__ = [
+    "A2HApprovalChannel",
+    "ApprovalMethod",
+    "ApprovalObject",
+    "ApprovalRequestState",
+    "ApprovalStatus",
+    "ApprovalStore",
+    "DEFAULT_CIBA_BINDING_MESSAGE",
+    "DEFAULT_DEVICE_EXPIRES_IN_SECONDS",
+    "DEFAULT_DEVICE_VERIFICATION_URI",
+    "DEFAULT_POLL_INTERVAL_SECONDS",
+    "InMemoryApprovalStore",
+    "USER_CODE_ALPHABET",
+    "USER_CODE_LENGTH",
+    "approval_object_for_client",
+    "check_approval_status",
+    "create_ciba_approval",
+    "create_device_authorization",
+    "select_approval_method",
+]
+
 import asyncio
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -87,14 +108,19 @@ def _refresh_expired(state: ApprovalRequestState) -> ApprovalRequestState:
 
 
 def _state_to_approval_object(state: ApprovalRequestState) -> ApprovalObject:
-    """Build the client-facing approval object from stored state."""
+    """Build the client-facing approval object from stored state.
+
+    ``expires_in`` is the remaining lifetime in seconds (RFC 8628-style), not the
+    original TTL stored in ``ApprovalRequestState.expires_in``.
+    """
+    remaining = max(1, int((_deadline(state) - _utcnow()).total_seconds()))
     return ApprovalObject(
         method=state.method,
         verification_uri=state.verification_uri,
         verification_uri_complete=state.verification_uri_complete,
         user_code=state.user_code,
         binding_message=state.binding_message,
-        expires_in=state.expires_in,
+        expires_in=remaining,
         interval=state.interval,
     )
 
