@@ -14,16 +14,14 @@ Tests cover:
 - Authentication integration
 """
 
-import base64
 import collections.abc
 import json
 import time
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
-from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi import FastAPI
 
@@ -63,19 +61,10 @@ from asap.transport.server import (
     create_app,
     _run_handler_watcher,
 )
+from tests.crypto.jwk_helpers import ed25519_public_jwk
 
 # Host JWT ``aud`` must match ``create_app`` default (``identity_jwt_audience`` == ``manifest.id``).
 _HOST_JWT_AUDIENCE = "urn:asap:agent:test-server"
-
-
-def _ed25519_public_jwk(private_key: Ed25519PrivateKey) -> dict[str, Any]:
-    """Public JWK (OKP / Ed25519) for Host JWT agent_public_key claim."""
-    raw = private_key.public_key().public_bytes(
-        encoding=serialization.Encoding.Raw,
-        format=serialization.PublicFormat.Raw,
-    )
-    x = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
-    return {"kty": "OKP", "crv": "Ed25519", "x": x}
 
 
 def _host_jwt_without_agent_claim(host_sk: Ed25519PrivateKey, *, ttl_seconds: int = 120) -> str:
@@ -992,7 +981,7 @@ class TestAgentRegisterEndpoint:
             app.state.limiter = isolated_rate_limiter
         host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
-        agent_jwk = _ed25519_public_jwk(agent_sk)
+        agent_jwk = ed25519_public_jwk(agent_sk)
         token = create_host_jwt(
             host_sk,
             aud=_HOST_JWT_AUDIENCE,
@@ -1030,8 +1019,8 @@ class TestAgentRegisterEndpoint:
         )
         host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
-        host_pub = _ed25519_public_jwk(host_sk)
-        agent_pub = _ed25519_public_jwk(agent_sk)
+        host_pub = ed25519_public_jwk(host_sk)
+        agent_pub = ed25519_public_jwk(agent_sk)
         now = datetime.now(timezone.utc)
         await host_store.save(
             HostIdentity(
@@ -1078,7 +1067,7 @@ class TestAgentRegisterEndpoint:
             app.state.limiter = isolated_rate_limiter
         host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
-        agent_jwk = _ed25519_public_jwk(agent_sk)
+        agent_jwk = ed25519_public_jwk(agent_sk)
         client = TestClient(app)
         token1 = create_host_jwt(
             host_sk,
@@ -1129,7 +1118,7 @@ class TestAgentRegisterEndpoint:
         token = create_host_jwt(
             host_sk,
             aud="payment-service-other",
-            agent_public_key=_ed25519_public_jwk(agent_sk),
+            agent_public_key=ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
         r = TestClient(app).post(
@@ -1172,7 +1161,7 @@ class TestAgentStatusEndpoint:
         )
         host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
-        agent_jwk = _ed25519_public_jwk(agent_sk)
+        agent_jwk = ed25519_public_jwk(agent_sk)
         reg_tok = create_host_jwt(
             host_sk,
             aud=_HOST_JWT_AUDIENCE,
@@ -1217,7 +1206,7 @@ class TestAgentStatusEndpoint:
         reg_tok = create_host_jwt(
             host_sk,
             aud=_HOST_JWT_AUDIENCE,
-            agent_public_key=_ed25519_public_jwk(agent_sk),
+            agent_public_key=ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
         client = TestClient(app)
@@ -1256,7 +1245,7 @@ class TestAgentStatusEndpoint:
         reg_tok = create_host_jwt(
             host_sk,
             aud=_HOST_JWT_AUDIENCE,
-            agent_public_key=_ed25519_public_jwk(agent_sk),
+            agent_public_key=ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
         client = TestClient(app)
@@ -1288,7 +1277,7 @@ class TestAgentStatusEndpoint:
         reg_tok = create_host_jwt(
             host_sk,
             aud=_HOST_JWT_AUDIENCE,
-            agent_public_key=_ed25519_public_jwk(agent_sk),
+            agent_public_key=ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
         client = TestClient(app)
@@ -1317,7 +1306,7 @@ class TestAgentStatusEndpoint:
         reg_tok = create_host_jwt(
             host_sk,
             aud=_HOST_JWT_AUDIENCE,
-            agent_public_key=_ed25519_public_jwk(agent_sk),
+            agent_public_key=ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
         client = TestClient(app)
@@ -1343,7 +1332,7 @@ class TestAgentStatusEndpoint:
         reg_tok = create_host_jwt(
             host1_sk,
             aud=_HOST_JWT_AUDIENCE,
-            agent_public_key=_ed25519_public_jwk(agent_sk),
+            agent_public_key=ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
         client = TestClient(app)
@@ -1405,7 +1394,7 @@ class TestAgentRevokeEndpoint:
         reg_tok = create_host_jwt(
             host_sk,
             aud=_HOST_JWT_AUDIENCE,
-            agent_public_key=_ed25519_public_jwk(agent_sk),
+            agent_public_key=ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
         client = TestClient(app)
@@ -1434,7 +1423,7 @@ class TestAgentRevokeEndpoint:
         reg_tok = create_host_jwt(
             host_sk,
             aud=_HOST_JWT_AUDIENCE,
-            agent_public_key=_ed25519_public_jwk(agent_sk),
+            agent_public_key=ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
         client = TestClient(app)
@@ -1496,7 +1485,7 @@ class TestAgentRevokeEndpoint:
         reg_tok = create_host_jwt(
             host1_sk,
             aud=_HOST_JWT_AUDIENCE,
-            agent_public_key=_ed25519_public_jwk(agent_sk),
+            agent_public_key=ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
         client = TestClient(app)
@@ -1538,12 +1527,12 @@ class TestAgentRevokeEndpoint:
         )
         host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
-        host_pub = _ed25519_public_jwk(host_sk)
+        host_pub = ed25519_public_jwk(host_sk)
         host_tp = jwk_thumbprint_sha256(host_pub)
         reg_tok = create_host_jwt(
             host_sk,
             aud=_HOST_JWT_AUDIENCE,
-            agent_public_key=_ed25519_public_jwk(agent_sk),
+            agent_public_key=ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
         client = TestClient(app)
@@ -1595,11 +1584,11 @@ class TestAgentRotateKeyEndpoint:
         host_sk = Ed25519PrivateKey.generate()
         agent_sk_old = Ed25519PrivateKey.generate()
         agent_sk_new = Ed25519PrivateKey.generate()
-        host_tp = jwk_thumbprint_sha256(_ed25519_public_jwk(host_sk))
+        host_tp = jwk_thumbprint_sha256(ed25519_public_jwk(host_sk))
         reg_tok = create_host_jwt(
             host_sk,
             aud=_HOST_JWT_AUDIENCE,
-            agent_public_key=_ed25519_public_jwk(agent_sk_old),
+            agent_public_key=ed25519_public_jwk(agent_sk_old),
             ttl_seconds=120,
         )
         client = TestClient(app)
@@ -1624,7 +1613,7 @@ class TestAgentRotateKeyEndpoint:
             headers={"Authorization": f"Bearer {rot_tok}"},
             json={
                 "agent_id": aid,
-                "new_public_key": _ed25519_public_jwk(agent_sk_new),
+                "new_public_key": ed25519_public_jwk(agent_sk_new),
             },
         )
         assert rot.status_code == 200
@@ -1648,7 +1637,7 @@ class TestAgentRotateKeyEndpoint:
         app, _as, _hs = _app_with_identity_stores(sample_manifest, isolated_rate_limiter)
         host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
-        pub = _ed25519_public_jwk(agent_sk)
+        pub = ed25519_public_jwk(agent_sk)
         reg_tok = create_host_jwt(
             host_sk,
             aud=_HOST_JWT_AUDIENCE,
@@ -1681,7 +1670,7 @@ class TestAgentRotateKeyEndpoint:
         reg_tok = create_host_jwt(
             host_sk,
             aud=_HOST_JWT_AUDIENCE,
-            agent_public_key=_ed25519_public_jwk(agent_sk),
+            agent_public_key=ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
         client = TestClient(app)
@@ -1702,7 +1691,7 @@ class TestAgentRotateKeyEndpoint:
         r = client.post(
             "/asap/agent/rotate-key",
             headers={"Authorization": f"Bearer {t_rot}"},
-            json={"agent_id": aid, "new_public_key": _ed25519_public_jwk(new_sk)},
+            json={"agent_id": aid, "new_public_key": ed25519_public_jwk(new_sk)},
         )
         assert r.status_code == 400
         assert "revoked" in r.json()["detail"].lower()
@@ -1721,7 +1710,7 @@ class TestAgentRotateKeyEndpoint:
             headers={"Authorization": f"Bearer {tok}"},
             json={
                 "agent_id": "nonexistentagentid00",
-                "new_public_key": _ed25519_public_jwk(new_sk),
+                "new_public_key": ed25519_public_jwk(new_sk),
             },
         )
         assert r.status_code == 404
@@ -1739,7 +1728,7 @@ class TestAgentRotateKeyEndpoint:
         reg_tok = create_host_jwt(
             host1_sk,
             aud=_HOST_JWT_AUDIENCE,
-            agent_public_key=_ed25519_public_jwk(agent_sk),
+            agent_public_key=ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
         client = TestClient(app)
@@ -1751,7 +1740,7 @@ class TestAgentRotateKeyEndpoint:
         r = client.post(
             "/asap/agent/rotate-key",
             headers={"Authorization": f"Bearer {other_tok}"},
-            json={"agent_id": aid, "new_public_key": _ed25519_public_jwk(new_sk)},
+            json={"agent_id": aid, "new_public_key": ed25519_public_jwk(new_sk)},
         )
         assert r.status_code == 403
 
@@ -1766,7 +1755,7 @@ class TestAgentRotateKeyEndpoint:
         reg_tok = create_host_jwt(
             host_sk,
             aud=_HOST_JWT_AUDIENCE,
-            agent_public_key=_ed25519_public_jwk(agent_sk),
+            agent_public_key=ed25519_public_jwk(agent_sk),
             ttl_seconds=120,
         )
         client = TestClient(app)
@@ -1792,8 +1781,8 @@ class TestAgentRotateKeyEndpoint:
         host_sk = Ed25519PrivateKey.generate()
         sk1 = Ed25519PrivateKey.generate()
         sk2 = Ed25519PrivateKey.generate()
-        pub1 = _ed25519_public_jwk(sk1)
-        pub2 = _ed25519_public_jwk(sk2)
+        pub1 = ed25519_public_jwk(sk1)
+        pub2 = ed25519_public_jwk(sk2)
         client = TestClient(app)
         assert (
             client.post(

@@ -10,12 +10,10 @@ Covers:
 
 from __future__ import annotations
 
-import base64
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
 import pytest
-from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -30,6 +28,7 @@ from asap.auth.identity import (
     jwk_thumbprint_sha256,
 )
 from asap.transport.server import create_app
+from tests.crypto.jwk_helpers import ed25519_public_jwk
 
 if TYPE_CHECKING:
     from asap.models.entities import Manifest
@@ -40,15 +39,6 @@ _HOST_JWT_AUDIENCE = "urn:asap:agent:test-server"
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _ed25519_public_jwk(private_key: Ed25519PrivateKey) -> dict[str, Any]:
-    raw = private_key.public_key().public_bytes(
-        encoding=serialization.Encoding.Raw,
-        format=serialization.PublicFormat.Raw,
-    )
-    x = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
-    return {"kty": "OKP", "crv": "Ed25519", "x": x}
 
 
 def _host_jwt(
@@ -104,7 +94,7 @@ async def _register_and_activate(
     activated_at: datetime | None = None,
 ) -> str:
     """Register an agent, activate it in the store, and return agent_id."""
-    agent_pub = _ed25519_public_jwk(agent_sk)
+    agent_pub = ed25519_public_jwk(agent_sk)
     token = _host_jwt(host_sk, agent_public_key=agent_pub)
     r = client.post("/asap/agent/register", headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 200
@@ -144,7 +134,7 @@ def _agent_jwt(
     host_sk: Ed25519PrivateKey,
     agent_id: str,
 ) -> str:
-    host_tp = jwk_thumbprint_sha256(_ed25519_public_jwk(host_sk))
+    host_tp = jwk_thumbprint_sha256(ed25519_public_jwk(host_sk))
     return create_agent_jwt(
         agent_sk,
         host_thumbprint=host_tp,
@@ -469,7 +459,7 @@ class TestAgentReactivate:
 
         # Set host default capabilities
         host = await host_store.get_by_public_key(
-            jwk_thumbprint_sha256(_ed25519_public_jwk(host_sk))
+            jwk_thumbprint_sha256(ed25519_public_jwk(host_sk))
         )
         assert host is not None
         updated_host = host.model_copy(
@@ -566,7 +556,7 @@ class TestAgentReactivate:
 
         # Register the other host so lookup by iss succeeds
         other_agent_sk = Ed25519PrivateKey.generate()
-        other_agent_pub = _ed25519_public_jwk(other_agent_sk)
+        other_agent_pub = ed25519_public_jwk(other_agent_sk)
         other_reg_token = _host_jwt(other_host_sk, agent_public_key=other_agent_pub)
         r_reg = client.post(
             "/asap/agent/register",
@@ -647,8 +637,8 @@ class TestRegisterWithCapabilities:
         client = TestClient(app)
         host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
-        host_pub = _ed25519_public_jwk(host_sk)
-        agent_pub = _ed25519_public_jwk(agent_sk)
+        host_pub = ed25519_public_jwk(host_sk)
+        agent_pub = ed25519_public_jwk(agent_sk)
         now = datetime.now(timezone.utc)
         await host_store.save(
             HostIdentity(
@@ -685,7 +675,7 @@ class TestRegisterWithCapabilities:
         client = TestClient(app)
         host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
-        agent_pub = _ed25519_public_jwk(agent_sk)
+        agent_pub = ed25519_public_jwk(agent_sk)
         token = _host_jwt(host_sk, agent_public_key=agent_pub)
 
         r = client.post(

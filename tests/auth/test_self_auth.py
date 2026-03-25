@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import base64
 from datetime import datetime, timezone
 from typing import Any
+from unittest.mock import MagicMock, patch
 
 import pytest
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from asap.auth.approval import select_approval_method
 from asap.auth.identity import (
@@ -28,16 +26,7 @@ from asap.auth.self_auth import (
     verify_webauthn_if_required,
     webauthn_required_capability_names,
 )
-
-
-def _make_ed25519_jwk() -> dict[str, str]:
-    sk = Ed25519PrivateKey.generate()
-    raw = sk.public_key().public_bytes(
-        encoding=serialization.Encoding.Raw,
-        format=serialization.PublicFormat.Raw,
-    )
-    x = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
-    return {"kty": "OKP", "crv": "Ed25519", "x": x}
+from tests.crypto.jwk_helpers import make_ed25519_jwk
 
 
 def _sample_host(
@@ -46,7 +35,7 @@ def _sample_host(
     status: HostStatus = "pending",
 ) -> HostIdentity:
     now = datetime.now(timezone.utc)
-    pk = _make_ed25519_jwk()
+    pk = make_ed25519_jwk()
     hid = host_urn_from_thumbprint(jwk_thumbprint_sha256(pk))
     return HostIdentity(
         host_id=hid,
@@ -61,7 +50,7 @@ def _sample_host(
 
 def _sample_agent() -> AgentSession:
     now = datetime.now(timezone.utc)
-    pk = _make_ed25519_jwk()
+    pk = make_ed25519_jwk()
     return AgentSession(
         agent_id="agent-x",
         host_id="host-y",
@@ -128,6 +117,18 @@ def test_webauthn_protocol_runtime_checkable() -> None:
 async def test_placeholder_webauthn_verifier_accepts_anything() -> None:
     v = PlaceholderWebAuthnVerifier()
     assert await v.verify("ch", {"x": 1}) is True
+
+
+@pytest.mark.asyncio
+async def test_placeholder_webauthn_verifier_logs_warning_once() -> None:
+    PlaceholderWebAuthnVerifier._warned = False
+    mock_log = MagicMock()
+    with patch("asap.auth.self_auth.get_logger", return_value=mock_log):
+        v = PlaceholderWebAuthnVerifier()
+        assert await v.verify("c1", {}) is True
+        mock_log.warning.assert_called_once()
+        assert await v.verify("c2", {}) is True
+        assert mock_log.warning.call_count == 1
 
 
 @pytest.mark.asyncio

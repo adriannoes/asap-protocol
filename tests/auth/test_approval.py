@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import base64
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from asap.auth.approval import (
     A2HApprovalChannel,
@@ -29,16 +27,8 @@ from asap.auth.identity import (
     jwk_thumbprint_sha256,
 )
 from asap.handlers.hitl import ApprovalDecision, ApprovalResult
-
-
-def _make_ed25519_jwk() -> dict[str, str]:
-    sk = Ed25519PrivateKey.generate()
-    raw = sk.public_key().public_bytes(
-        encoding=serialization.Encoding.Raw,
-        format=serialization.PublicFormat.Raw,
-    )
-    x = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
-    return {"kty": "OKP", "crv": "Ed25519", "x": x}
+from asap.transport.agent_routes import _background_a2h_resolve
+from tests.crypto.jwk_helpers import make_ed25519_jwk
 
 
 def _sample_host(
@@ -48,7 +38,7 @@ def _sample_host(
     default_capabilities: list[str] | None = None,
 ) -> HostIdentity:
     now = datetime.now(timezone.utc)
-    pk = _make_ed25519_jwk()
+    pk = make_ed25519_jwk()
     hid = host_urn_from_thumbprint(jwk_thumbprint_sha256(pk))
     return HostIdentity(
         host_id=hid,
@@ -63,7 +53,7 @@ def _sample_host(
 
 def _sample_agent() -> AgentSession:
     now = datetime.now(timezone.utc)
-    pk = _make_ed25519_jwk()
+    pk = make_ed25519_jwk()
     return AgentSession(
         agent_id="agent-x",
         host_id="host-y",
@@ -151,6 +141,37 @@ async def test_idempotent_pending_reregistration() -> None:
     a = await create_device_authorization(store, "r1", ["a"])
     b = await create_device_authorization(store, "r1", ["a"])
     assert a.user_code == b.user_code
+
+
+@pytest.mark.asyncio
+async def test_approval_object_expires_in_reflects_remaining_seconds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = InMemoryApprovalStore()
+    t0 = datetime(2022, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr("asap.auth.approval._utcnow", lambda: t0)
+    first = await create_device_authorization(store, "ttl-1", ["a"], expires_in=600)
+    assert first.expires_in == 600
+    monkeypatch.setattr(
+        "asap.auth.approval._utcnow",
+        lambda: t0 + timedelta(seconds=100),
+    )
+    second = await create_device_authorization(store, "ttl-1", ["a"], expires_in=600)
+    assert second.user_code == first.user_code
+    assert second.expires_in == 500
+
+
+@pytest.mark.asyncio
+async def test_background_a2h_resolve_swallows_provider_errors() -> None:
+    ch = MagicMock(spec=A2HApprovalChannel)
+    ch.resolve_via_a2h = AsyncMock(side_effect=RuntimeError("a2h unavailable"))
+    await _background_a2h_resolve(
+        ch,
+        "agent-z",
+        context="ctx",
+        principal_id="principal-z",
+    )
+    ch.resolve_via_a2h.assert_awaited_once()
 
 
 def test_select_linked_host_prefers_ciba_when_supported() -> None:

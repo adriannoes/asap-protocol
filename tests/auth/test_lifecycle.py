@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import base64
 from datetime import datetime, timedelta, timezone
 from typing import get_args
 
 import pytest
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from asap.auth.identity import AgentSession, HostIdentity
 from asap.auth.lifecycle import (
@@ -17,23 +14,14 @@ from asap.auth.lifecycle import (
     extend_session,
     reactivate_agent,
 )
+from tests.crypto.jwk_helpers import make_ed25519_jwk
 
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _make_ed25519_jwk() -> dict[str, str]:
-    sk = Ed25519PrivateKey.generate()
-    raw = sk.public_key().public_bytes(
-        encoding=serialization.Encoding.Raw,
-        format=serialization.PublicFormat.Raw,
-    )
-    x = base64.urlsafe_b64encode(raw).decode().rstrip("=")
-    return {"kty": "OKP", "crv": "Ed25519", "x": x}
-
-
-_VALID_JWK = _make_ed25519_jwk()
+_VALID_JWK = make_ed25519_jwk()
 
 
 def _agent(
