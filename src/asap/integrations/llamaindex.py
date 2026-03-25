@@ -14,13 +14,18 @@ from asap.models.entities import Manifest
 from asap.models.ids import generate_id
 
 # Lazy import to avoid requiring llama-index-core when not used.
+# Use ``Any`` so optional ``None`` fallback type-checks when the extra is absent.
+FunctionTool: Any = None
+ToolMetadata: Any = None
+_import_error_llamaindex: ImportError | None = None
 try:
-    from llama_index.core.tools import FunctionTool
-    from llama_index.core.tools.types import ToolMetadata
+    from llama_index.core.tools import FunctionTool as _FunctionTool
+    from llama_index.core.tools.types import ToolMetadata as _ToolMetadata
+
+    FunctionTool = _FunctionTool
+    ToolMetadata = _ToolMetadata
 except ImportError as _import_error:
     _import_error_llamaindex = _import_error
-    FunctionTool = None
-    ToolMetadata = None
 
 
 def _default_input_schema() -> Type[BaseModel]:
@@ -98,6 +103,7 @@ class LlamaIndexAsapTool:
         description: str | None = None,
     ) -> None:
         if FunctionTool is None or ToolMetadata is None:
+            assert _import_error_llamaindex is not None
             raise RuntimeError(
                 "llama-index-core is required for LlamaIndexAsapTool. "
                 "Install with: pip install asap-protocol[llamaindex]"
