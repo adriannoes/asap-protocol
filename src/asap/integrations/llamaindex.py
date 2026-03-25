@@ -19,8 +19,8 @@ try:
     from llama_index.core.tools.types import ToolMetadata
 except ImportError as _import_error:
     _import_error_llamaindex = _import_error
-    FunctionTool = None  # type: ignore[assignment, misc]
-    ToolMetadata = None  # type: ignore[assignment, misc]
+    FunctionTool = None
+    ToolMetadata = None
 
 
 def _default_input_schema() -> Type[BaseModel]:
