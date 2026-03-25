@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import base64
 from datetime import datetime, timedelta, timezone
 from typing import Any, get_args
 
 import pytest
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from cryptography.hazmat.primitives import serialization
 from pydantic import ValidationError
 
 from asap.auth.identity import (
@@ -24,25 +21,15 @@ from asap.auth.identity import (
     host_urn_from_thumbprint,
     jwk_thumbprint_sha256,
 )
+from tests.crypto.jwk_helpers import make_ed25519_jwk
 
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _make_ed25519_jwk() -> dict[str, str]:
-    """Return a valid Ed25519 public JWK dict (fresh key each call)."""
-    sk = Ed25519PrivateKey.generate()
-    raw = sk.public_key().public_bytes(
-        encoding=serialization.Encoding.Raw,
-        format=serialization.PublicFormat.Raw,
-    )
-    x = base64.urlsafe_b64encode(raw).decode().rstrip("=")
-    return {"kty": "OKP", "crv": "Ed25519", "x": x}
-
-
 # Reusable valid key for tests that don't need unique keys
-_VALID_JWK: dict[str, str] = _make_ed25519_jwk()
+_VALID_JWK: dict[str, str] = make_ed25519_jwk()
 
 
 def test_host_identity_minimal() -> None:
@@ -81,7 +68,7 @@ def test_agent_session_minimal() -> None:
 def test_host_identity_all_status_literals_accepted() -> None:
     """HostIdentity accepts each allowed status value."""
     now = _utc_now()
-    pk: dict[str, str] = _make_ed25519_jwk()
+    pk: dict[str, str] = make_ed25519_jwk()
     for status in get_args(HostStatus):
         h = HostIdentity(
             host_id="h",
@@ -96,7 +83,7 @@ def test_host_identity_all_status_literals_accepted() -> None:
 def test_agent_session_all_mode_and_status_literals_accepted() -> None:
     """AgentSession accepts each allowed mode and status value."""
     now = _utc_now()
-    pk: dict[str, str] = _make_ed25519_jwk()
+    pk: dict[str, str] = make_ed25519_jwk()
     for mode in get_args(AgentMode):
         for status in get_args(AgentSessionStatus):
             s = AgentSession(
@@ -288,7 +275,7 @@ async def test_in_memory_host_store_round_trip_and_thumbprint() -> None:
     """Host save/get and lookup by RFC 7638 thumbprint."""
     store = InMemoryHostStore()
     now = _utc_now()
-    public_key = _make_ed25519_jwk()
+    public_key = make_ed25519_jwk()
     host = HostIdentity(
         host_id="host-1",
         public_key=public_key,
@@ -308,7 +295,7 @@ async def test_in_memory_host_public_key_rotation_updates_thumb_index() -> None:
     now = _utc_now()
     v1 = HostIdentity(
         host_id="hid",
-        public_key=_make_ed25519_jwk(),
+        public_key=make_ed25519_jwk(),
         status="active",
         created_at=now,
         updated_at=now,
@@ -317,7 +304,7 @@ async def test_in_memory_host_public_key_rotation_updates_thumb_index() -> None:
     tp1 = jwk_thumbprint_sha256(v1.public_key)
     v2 = v1.model_copy(
         update={
-            "public_key": _make_ed25519_jwk(),
+            "public_key": make_ed25519_jwk(),
             "updated_at": now,
         }
     )
@@ -334,7 +321,7 @@ async def test_in_memory_host_revoke_cascades_to_agents() -> None:
     await hosts.save(
         HostIdentity(
             host_id="h1",
-            public_key=_make_ed25519_jwk(),
+            public_key=make_ed25519_jwk(),
             status="active",
             created_at=now,
             updated_at=now,
@@ -344,7 +331,7 @@ async def test_in_memory_host_revoke_cascades_to_agents() -> None:
         AgentSession(
             agent_id="a1",
             host_id="h1",
-            public_key=_make_ed25519_jwk(),
+            public_key=make_ed25519_jwk(),
             mode="delegated",
             status="active",
             created_at=now,
@@ -364,7 +351,7 @@ async def test_in_memory_agent_store_list_and_revoke() -> None:
     a1 = AgentSession(
         agent_id="a1",
         host_id="h1",
-        public_key=_make_ed25519_jwk(),
+        public_key=make_ed25519_jwk(),
         mode="delegated",
         status="active",
         created_at=now,
@@ -372,7 +359,7 @@ async def test_in_memory_agent_store_list_and_revoke() -> None:
     a2 = AgentSession(
         agent_id="a2",
         host_id="h1",
-        public_key=_make_ed25519_jwk(),
+        public_key=make_ed25519_jwk(),
         mode="autonomous",
         status="pending",
         created_at=now,
@@ -425,7 +412,7 @@ async def test_in_memory_host_store_get_and_revoke_edge_cases() -> None:
     await store.save(
         HostIdentity(
             host_id="h1",
-            public_key=_make_ed25519_jwk(),
+            public_key=make_ed25519_jwk(),
             status="active",
             created_at=now,
             updated_at=now,
@@ -451,7 +438,7 @@ async def test_in_memory_agent_store_get_and_revoke_edge_cases() -> None:
         AgentSession(
             agent_id="a1",
             host_id="h1",
-            public_key=_make_ed25519_jwk(),
+            public_key=make_ed25519_jwk(),
             mode="delegated",
             status="active",
             created_at=now,
@@ -471,7 +458,7 @@ async def test_host_revoke_cascades_multiple_agents() -> None:
     await hosts.save(
         HostIdentity(
             host_id="hx",
-            public_key=_make_ed25519_jwk(),
+            public_key=make_ed25519_jwk(),
             status="active",
             created_at=now,
             updated_at=now,
@@ -482,7 +469,7 @@ async def test_host_revoke_cascades_multiple_agents() -> None:
             AgentSession(
                 agent_id=aid,
                 host_id="hx",
-                public_key=_make_ed25519_jwk(),
+                public_key=make_ed25519_jwk(),
                 mode="delegated",
                 status="active",
                 created_at=now,

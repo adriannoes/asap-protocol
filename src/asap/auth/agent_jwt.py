@@ -272,7 +272,7 @@ async def verify_agent_jwt(
     if agent is None:
         return JwtVerifyResult(ok=False, error="unknown agent")
 
-    if agent.status in ("revoked", "expired"):
+    if agent.status in ("revoked", "expired", "pending", "rejected"):
         return JwtVerifyResult(ok=False, error=f"agent session not usable: {agent.status}")
 
     try:
