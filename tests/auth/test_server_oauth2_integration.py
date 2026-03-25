@@ -177,3 +177,4 @@ def test_oauth2_middleware_skips_agent_register_host_jwt() -> None:
     body = response.json()
     assert body.get("status") == "pending"
     assert "agent_id" in body
+    assert "approval" in body

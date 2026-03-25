@@ -23,8 +23,10 @@ from fastapi.testclient import TestClient
 from asap.auth.agent_jwt import create_agent_jwt, create_host_jwt
 from asap.auth.capabilities import CapabilityDefinition, CapabilityRegistry
 from asap.auth.identity import (
+    HostIdentity,
     InMemoryAgentStore,
     InMemoryHostStore,
+    host_urn_from_thumbprint,
     jwk_thumbprint_sha256,
 )
 from asap.transport.server import create_app
@@ -90,6 +92,7 @@ def _setup(
 
 async def _register_and_activate(
     client: TestClient,
+    app: FastAPI,
     agent_store: InMemoryAgentStore,
     host_sk: Ed25519PrivateKey,
     agent_sk: Ed25519PrivateKey,
@@ -105,7 +108,17 @@ async def _register_and_activate(
     token = _host_jwt(host_sk, agent_public_key=agent_pub)
     r = client.post("/asap/agent/register", headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 200
-    aid = r.json()["agent_id"]
+    reg = r.json()
+    aid = reg["agent_id"]
+    if reg.get("status") == "pending":
+        approval_store = app.state.identity_approval_store
+        await approval_store.approve(aid, "test-operator")
+        poll = client.get(
+            f"/asap/agent/status?agent_id={aid}",
+            headers={"Authorization": f"Bearer {_host_jwt(host_sk)}"},
+        )
+        assert poll.status_code == 200
+        assert poll.json()["status"] == "active"
 
     sess = await agent_store.get(aid)
     assert sess is not None
@@ -229,7 +242,7 @@ class TestCapabilityList:
         client = TestClient(app)
         host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
-        aid = await _register_and_activate(client, agent_store, host_sk, agent_sk)
+        aid = await _register_and_activate(client, app, agent_store, host_sk, agent_sk)
 
         registry.grant(aid, "file:read")
         registry.grant(aid, "file:write", status="denied", reason="policy")
@@ -303,7 +316,7 @@ class TestCapabilityExecute:
         client = TestClient(app)
         host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
-        aid = await _register_and_activate(client, agent_store, host_sk, agent_sk)
+        aid = await _register_and_activate(client, app, agent_store, host_sk, agent_sk)
         registry.grant(aid, "file:read")
 
         token = _agent_jwt(agent_sk, host_sk, aid)
@@ -326,7 +339,7 @@ class TestCapabilityExecute:
         client = TestClient(app)
         host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
-        aid = await _register_and_activate(client, agent_store, host_sk, agent_sk)
+        aid = await _register_and_activate(client, app, agent_store, host_sk, agent_sk)
 
         token = _agent_jwt(agent_sk, host_sk, aid)
         r = client.post(
@@ -348,7 +361,7 @@ class TestCapabilityExecute:
         client = TestClient(app)
         host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
-        aid = await _register_and_activate(client, agent_store, host_sk, agent_sk)
+        aid = await _register_and_activate(client, app, agent_store, host_sk, agent_sk)
         registry.grant(aid, "file:read", constraints={"path": {"in": ["/tmp"]}})
 
         token = _agent_jwt(agent_sk, host_sk, aid)
@@ -387,7 +400,7 @@ class TestCapabilityExecute:
         client = TestClient(app)
         host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
-        aid = await _register_and_activate(client, agent_store, host_sk, agent_sk)
+        aid = await _register_and_activate(client, app, agent_store, host_sk, agent_sk)
         registry.grant(aid, "file:read")
 
         token = _agent_jwt(agent_sk, host_sk, aid)
@@ -413,7 +426,7 @@ class TestCapabilityExecute:
         client = TestClient(app)
         host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
-        aid = await _register_and_activate(client, agent_store, host_sk, agent_sk)
+        aid = await _register_and_activate(client, app, agent_store, host_sk, agent_sk)
         registry.grant(aid, "file:read")
 
         token = _agent_jwt(agent_sk, host_sk, aid)
@@ -448,7 +461,9 @@ class TestAgentReactivate:
         client = TestClient(app)
         host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
-        aid = await _register_and_activate(client, agent_store, host_sk, agent_sk, status="expired")
+        aid = await _register_and_activate(
+            client, app, agent_store, host_sk, agent_sk, status="expired"
+        )
         registry.grant(aid, "file:read")
         registry.grant(aid, "admin:config")
 
@@ -488,7 +503,9 @@ class TestAgentReactivate:
         client = TestClient(app)
         host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
-        aid = await _register_and_activate(client, agent_store, host_sk, agent_sk, status="revoked")
+        aid = await _register_and_activate(
+            client, app, agent_store, host_sk, agent_sk, status="revoked"
+        )
 
         token = _host_jwt(host_sk)
         r = client.post(
@@ -512,6 +529,7 @@ class TestAgentReactivate:
         now = datetime.now(timezone.utc)
         aid = await _register_and_activate(
             client,
+            app,
             agent_store,
             host_sk,
             agent_sk,
@@ -542,7 +560,9 @@ class TestAgentReactivate:
         host_sk = Ed25519PrivateKey.generate()
         other_host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
-        aid = await _register_and_activate(client, agent_store, host_sk, agent_sk, status="expired")
+        aid = await _register_and_activate(
+            client, app, agent_store, host_sk, agent_sk, status="expired"
+        )
 
         # Register the other host so lookup by iss succeeds
         other_agent_sk = Ed25519PrivateKey.generate()
@@ -616,18 +636,30 @@ class TestAgentReactivate:
 
 @pytest.mark.filterwarnings("ignore:EdDSA is deprecated:UserWarning")
 class TestRegisterWithCapabilities:
-    def test_register_with_known_capabilities_grants_active(
+    async def test_register_with_known_capabilities_grants_active(
         self,
         sample_manifest: Manifest,
         isolated_rate_limiter: ASAPRateLimiter | None,
     ) -> None:
-        app, _, _, registry = _setup(
+        app, _, host_store, _registry = _setup(
             sample_manifest, isolated_rate_limiter, capabilities=_DEFAULT_CAPS
         )
         client = TestClient(app)
         host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
+        host_pub = _ed25519_public_jwk(host_sk)
         agent_pub = _ed25519_public_jwk(agent_sk)
+        now = datetime.now(timezone.utc)
+        await host_store.save(
+            HostIdentity(
+                host_id=host_urn_from_thumbprint(jwk_thumbprint_sha256(host_pub)),
+                public_key=dict(host_pub),
+                status="active",
+                default_capabilities=["file:read", "file:write", "admin:config"],
+                created_at=now,
+                updated_at=now,
+            )
+        )
         token = _host_jwt(host_sk, agent_public_key=agent_pub)
 
         r = client.post(
@@ -637,16 +669,19 @@ class TestRegisterWithCapabilities:
         )
         assert r.status_code == 200
         body = r.json()
+        assert body["status"] == "active"
         grants = body.get("agent_capability_grants", [])
         assert len(grants) == 2
         assert all(g["status"] == "active" for g in grants)
 
-    def test_register_with_unknown_capability_denied(
+    async def test_register_with_unknown_capability_denied(
         self,
         sample_manifest: Manifest,
         isolated_rate_limiter: ASAPRateLimiter | None,
     ) -> None:
-        app, _, _, _ = _setup(sample_manifest, isolated_rate_limiter, capabilities=_DEFAULT_CAPS)
+        app, _agent_store, _host_store, registry = _setup(
+            sample_manifest, isolated_rate_limiter, capabilities=_DEFAULT_CAPS
+        )
         client = TestClient(app)
         host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
@@ -659,8 +694,18 @@ class TestRegisterWithCapabilities:
             json={"capabilities": ["file:read", "nonexistent:cap"]},
         )
         assert r.status_code == 200
-        grants = r.json()["agent_capability_grants"]
-        by_cap = {g["capability"]: g for g in grants}
-        assert by_cap["file:read"]["status"] == "active"
-        assert by_cap["nonexistent:cap"]["status"] == "denied"
-        assert "reason" in by_cap["nonexistent:cap"]
+        reg = r.json()
+        assert reg["status"] == "pending"
+        aid = reg["agent_id"]
+        await app.state.identity_approval_store.approve(aid, "test-user")
+        poll = client.get(
+            f"/asap/agent/status?agent_id={aid}",
+            headers={"Authorization": f"Bearer {_host_jwt(host_sk)}"},
+        )
+        assert poll.status_code == 200
+        assert poll.json()["status"] == "active"
+
+        by_cap = {g.capability: g for g in registry.get_grants(aid)}
+        assert by_cap["file:read"].status == "active"
+        assert by_cap["nonexistent:cap"].status == "denied"
+        assert by_cap["nonexistent:cap"].reason

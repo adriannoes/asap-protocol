@@ -49,7 +49,13 @@ from asap.transport.jsonrpc import (
     JsonRpcRequest,
 )
 from asap.auth.agent_jwt import create_agent_jwt, create_host_jwt, verify_agent_jwt
-from asap.auth.identity import InMemoryAgentStore, InMemoryHostStore, jwk_thumbprint_sha256
+from asap.auth.identity import (
+    HostIdentity,
+    InMemoryAgentStore,
+    InMemoryHostStore,
+    host_urn_from_thumbprint,
+    jwk_thumbprint_sha256,
+)
 from asap.transport.server import (
     ASAPRequestHandler,
     RegistryHolder,
@@ -1001,6 +1007,8 @@ class TestAgentRegisterEndpoint:
         assert r.status_code == 200
         data = r.json()
         assert data["status"] == "pending"
+        assert "approval" in data
+        assert data["approval"]["method"] == "device_authorization"
         assert data["agent_id"]
         assert data["host_id"].startswith("urn:asap:host:")
         thumb = jwk_thumbprint_sha256(agent_jwk)
@@ -1010,6 +1018,47 @@ class TestAgentRegisterEndpoint:
         assert jwk_thumbprint_sha256(stored.public_key) == thumb
         assert stored.agent_id == data["agent_id"]
         assert stored.host_id == data["host_id"]
+
+    async def test_register_auto_approves_when_host_active_and_capabilities_in_defaults(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: "ASAPRateLimiter | None",
+    ) -> None:
+        """Trusted host with requested caps ⊆ default_capabilities skips manual approval."""
+        app, _agent_store, host_store = _app_with_identity_stores(
+            sample_manifest, isolated_rate_limiter
+        )
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        host_pub = _ed25519_public_jwk(host_sk)
+        agent_pub = _ed25519_public_jwk(agent_sk)
+        now = datetime.now(timezone.utc)
+        await host_store.save(
+            HostIdentity(
+                host_id=host_urn_from_thumbprint(jwk_thumbprint_sha256(host_pub)),
+                public_key=dict(host_pub),
+                status="active",
+                default_capabilities=["exec:read"],
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        token = create_host_jwt(
+            host_sk,
+            aud=_HOST_JWT_AUDIENCE,
+            agent_public_key=agent_pub,
+            ttl_seconds=120,
+        )
+        client = TestClient(app)
+        r = client.post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"capabilities": ["exec:read"]},
+        )
+        assert r.status_code == 200
+        body = r.json()
+        assert body["status"] == "active"
+        assert "approval" not in body
 
     def test_register_idempotent_for_same_agent_key(
         self,
@@ -1146,6 +1195,8 @@ class TestAgentStatusEndpoint:
         body = st.json()
         assert body["agent_id"] == aid
         assert body["status"] == "pending"
+        assert body.get("approval_status") == "pending"
+        assert "approval" in body
         assert body["capabilities"] == []
         life = body["lifecycle"]
         assert life["mode"] == "delegated"
