@@ -8,6 +8,18 @@ from typing import Any, Protocol, runtime_checkable
 from pydantic import ConfigDict, Field
 
 from asap.models.base import ASAPBaseModel
+from asap.observability import get_logger
+
+__all__ = [
+    "FreshSessionConfig",
+    "PlaceholderWebAuthnVerifier",
+    "WebAuthnVerifier",
+    "check_fresh_session",
+    "fresh_session_violation_detail",
+    "host_jwt_issued_at_seconds",
+    "verify_webauthn_if_required",
+    "webauthn_required_capability_names",
+]
 
 
 class FreshSessionConfig(ASAPBaseModel):
@@ -78,7 +90,18 @@ class WebAuthnVerifier(Protocol):
 class PlaceholderWebAuthnVerifier:
     """Stub verifier that always succeeds; replace with a real WebAuthn stack in production."""
 
+    _warned: bool = False
+
     async def verify(self, _challenge: str, _response: Any) -> bool:
+        if not PlaceholderWebAuthnVerifier._warned:
+            get_logger(__name__).warning(
+                "asap.identity.placeholder_webauthn_verifier",
+                detail=(
+                    "PlaceholderWebAuthnVerifier in use; all WebAuthn checks will pass. "
+                    "Replace with a real verifier in production."
+                ),
+            )
+            PlaceholderWebAuthnVerifier._warned = True
         return True
 
 
