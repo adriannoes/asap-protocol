@@ -161,7 +161,8 @@ jobs:
         with:
           # Omit extras whose transitive deps have no OSV fix on PyPI (diskcache, nltk).
           sync-flags: --no-extra crewai --no-extra llamaindex
+      # Pygments 2.19.2 is the latest PyPI release; OSV reports CVE-2026-4539 with no fix published yet.
       - name: Scan for vulnerabilities (pip-audit)
-        run: uv run pip-audit
+        run: uv run pip-audit --ignore-vuln CVE-2026-4539
       - name: Scan for security issues (bandit)
         run: uv run bandit -r src/ -ll

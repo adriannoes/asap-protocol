@@ -91,7 +91,9 @@ We continuously monitor dependencies using:
 
 CI runs `pip-audit` after a sync that **excludes** the optional extras `crewai` and `llamaindex`, because those graphs currently pull transitive packages (`diskcache`, `nltk`) that OSV still lists with no fixed release on PyPI. To match the security job locally:
 
-`uv sync --frozen --all-extras --dev --no-extra crewai --no-extra llamaindex` then `uv run pip-audit`.
+`uv sync --frozen --all-extras --dev --no-extra crewai --no-extra llamaindex` then `uv run pip-audit --ignore-vuln CVE-2026-4539` (matches CI).
+
+**CVE-2026-4539 (Pygments)**: OSV lists this advisory while the latest release on PyPI remains `2.19.2`. CI uses `--ignore-vuln CVE-2026-4539` until a patched `pygments` release is published; remove the flag when upgrading resolves the advisory.
 
 If you install `[crewai]` or `[llamaindex]`, run `pip-audit` separately on that environment and expect possible advisories until upstream publishes patched releases. Integration tests for those extras still run in CI with the full dependency tree.
 
