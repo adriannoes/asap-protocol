@@ -3,6 +3,12 @@
 name: "Setup Python (uv)"
 description: "Install uv with cache, Python 3.13, and sync dev dependencies"
 
+inputs:
+  sync-flags:
+    description: "Extra arguments appended to `uv sync` (e.g. `--no-extra crewai --no-extra llamaindex` for pip-audit)."
+    required: false
+    default: ""
+
 runs:
   using: "composite"
   steps:
@@ -16,5 +22,5 @@ runs:
       shell: bash
 
     - name: Install dependencies
-      run: uv sync --frozen --all-extras --dev
+      run: uv sync --frozen --all-extras --dev ${{ inputs.sync-flags }}
       shell: bash

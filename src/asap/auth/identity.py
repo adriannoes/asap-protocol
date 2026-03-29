@@ -16,7 +16,7 @@ from asap.models.base import ASAPBaseModel
 
 HostStatus = Literal["active", "pending", "revoked"]
 AgentMode = Literal["delegated", "autonomous"]
-AgentSessionStatus = Literal["pending", "active", "expired", "revoked"]
+AgentSessionStatus = Literal["pending", "active", "expired", "revoked", "rejected"]
 
 
 def validate_okp_public_key(value: dict[str, Any]) -> dict[str, Any]:

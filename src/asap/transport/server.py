@@ -80,6 +80,8 @@ from asap.observability.tracing import (
 from asap.utils.sanitization import sanitize_nonce
 from asap.auth import OAuth2Config, OAuth2Middleware
 from asap.auth.agent_jwt import JtiReplayCache
+from asap.auth.approval import A2HApprovalChannel, ApprovalStore, InMemoryApprovalStore
+from asap.auth.self_auth import FreshSessionConfig, WebAuthnVerifier
 from asap.auth.identity import (
     AgentStore,
     HostStore,
@@ -124,6 +126,7 @@ from asap.state.snapshot import SnapshotStore
 from asap.economics.sla_storage import SLAStorage
 from asap.economics.storage import MeteringStorage, metering_storage_adapter
 from asap.transport.agent_routes import create_agent_identity_router
+from asap.transport.capability_routes import create_capability_router
 from asap.transport.delegation_api import create_delegation_router
 from asap.transport.sla_api import create_sla_router
 from asap.transport.usage_api import create_usage_router
@@ -1165,6 +1168,11 @@ def create_app(
     identity_jti_cache: JtiReplayCache | None = None,
     identity_jwt_audience: str | list[str] | None = None,
     identity_rate_limit: str | None = None,
+    identity_approval_store: ApprovalStore | None = None,
+    identity_host_supports_ciba: bool = True,
+    identity_approval_a2h_channel: A2HApprovalChannel | None = None,
+    identity_fresh_session_config: FreshSessionConfig | None = None,
+    identity_webauthn_verifier: WebAuthnVerifier | None = None,
 ) -> FastAPI:
     """Create and configure a FastAPI application for ASAP protocol.
 
@@ -1234,6 +1242,16 @@ def create_app(
         identity_rate_limit: Rate limit string for ``/asap/agent/*`` endpoints.
             Defaults to ``"5/second;30/minute"`` (tighter than the main limiter).
             Uses a separate budget from the main ``rate_limit``.
+        identity_approval_store: Store for registration approval flows (Device Auth / CIBA).
+            Defaults to an in-memory store per process.
+        identity_host_supports_ciba: When True and the host has ``user_id``, CIBA may be
+            selected over Device Authorization.
+        identity_approval_a2h_channel: Optional channel that resolves pending approvals
+            via A2H in a background task after register.
+        identity_fresh_session_config: When set, registration requiring approval and
+            pending approval polling require a Host JWT issued within ``window_seconds``.
+        identity_webauthn_verifier: Optional async verifier for ``webauthn`` assertions
+            when ``require_webauthn_for`` lists requested capabilities.
 
     Returns:
         Configured FastAPI application ready to run
@@ -1360,6 +1378,9 @@ def create_app(
     _identity_jwt_audience: str | list[str] = (
         identity_jwt_audience if identity_jwt_audience is not None else manifest.id
     )
+    _identity_approval_store: ApprovalStore = (
+        identity_approval_store if identity_approval_store is not None else InMemoryApprovalStore()
+    )
 
     # Resolve snapshot store (env-based when not provided)
     if snapshot_store is None:
@@ -1435,10 +1456,25 @@ def create_app(
     app.state.identity_agent_store = _identity_agent_store
     app.state.identity_jti_cache = _identity_jti_cache
     app.state.identity_jwt_audience = _identity_jwt_audience
+    app.state.identity_approval_store = _identity_approval_store
+    app.state.identity_host_supports_ciba = identity_host_supports_ciba
+    if identity_approval_a2h_channel is not None:
+        app.state.identity_approval_a2h_channel = identity_approval_a2h_channel
+    if identity_fresh_session_config is not None:
+        app.state.identity_fresh_session_config = identity_fresh_session_config
+    if identity_webauthn_verifier is not None:
+        app.state.identity_webauthn_verifier = identity_webauthn_verifier
     # Dedicated rate limiter for /asap/agent/* (separate budget from main limiter)
     _identity_rl = identity_rate_limit or "5/second;30/minute"
     app.state.identity_limiter = create_limiter([_identity_rl])
     app.include_router(create_agent_identity_router())
+
+    # Capability-based authorization (S1)
+    from asap.auth.capabilities import CapabilityRegistry
+
+    if not hasattr(app.state, "capability_registry"):
+        app.state.capability_registry = CapabilityRegistry()
+    app.include_router(create_capability_router())
     if metering_storage is not None and isinstance(metering_storage, MeteringStorage):
         app.state.metering_storage = metering_storage
         app.include_router(create_usage_router())

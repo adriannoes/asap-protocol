@@ -14,11 +14,15 @@ from asap.models.entities import Manifest
 from asap.models.ids import generate_id
 
 # Lazy import to avoid requiring crewai when not used.
+# Use ``Any`` so optional ``None`` fallback type-checks when crewai is absent.
+CrewAIBaseTool: Any = None
+_import_error_crewai: ImportError | None = None
 try:
-    from crewai.tools import BaseTool as CrewAIBaseTool
+    from crewai.tools import BaseTool as _CrewAIBaseTool
+
+    CrewAIBaseTool = _CrewAIBaseTool
 except ImportError as _import_error:
     _import_error_crewai = _import_error
-    CrewAIBaseTool = None  # type: ignore[assignment, misc]
 
 
 def _default_input_schema() -> Type[BaseModel]:
@@ -112,6 +116,7 @@ class CrewAIAsapTool(CrewAIBaseTool if CrewAIBaseTool is not None else object): 
         **kwargs: Any,
     ) -> None:
         if CrewAIBaseTool is None:
+            assert _import_error_crewai is not None
             raise RuntimeError(
                 "crewai is required for CrewAIAsapTool. "
                 "Install with: pip install asap-protocol[crewai]"
