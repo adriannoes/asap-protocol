@@ -1145,6 +1145,33 @@ class TestAgentRegisterEndpoint:
         assert r.status_code == 400
         assert "agent_public_key" in r.json()["detail"]
 
+    def test_register_returns_500_when_approval_required_but_store_missing(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: "ASAPRateLimiter | None",
+    ) -> None:
+        """Registration requiring approval fails closed when approval store is unavailable."""
+        app, _agent_store, _host_store = _app_with_identity_stores(
+            sample_manifest, isolated_rate_limiter
+        )
+        app.state.identity_approval_store = None
+
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        token = create_host_jwt(
+            host_sk,
+            aud=_HOST_JWT_AUDIENCE,
+            agent_public_key=ed25519_public_jwk(agent_sk),
+            ttl_seconds=120,
+        )
+
+        r = TestClient(app).post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 500
+        assert r.json() == {"detail": "approval store not configured"}
+
 
 @pytest.mark.filterwarnings("ignore:EdDSA is deprecated:UserWarning")
 class TestAgentStatusEndpoint:
