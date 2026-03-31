@@ -417,8 +417,11 @@ async def _handle_agent_register(
         "identity_approval_store",
         None,
     )
-    if approval_store is None:
-        needs = False
+    if needs and approval_store is None:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "approval store not configured"},
+        )
 
     registry: CapabilityRegistry | None = (
         request.app.state.capability_registry
