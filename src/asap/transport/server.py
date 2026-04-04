@@ -2,6 +2,7 @@
 
 This module provides a production-ready FastAPI server that:
 - Exposes POST /asap endpoint for JSON-RPC 2.0 wrapped ASAP messages
+- Exposes POST /asap/stream for JSON-RPC input and SSE (``text/event-stream``) chunk responses
 - Exposes GET /.well-known/asap/manifest.json for agent discovery
 - Exposes GET /asap/metrics for Prometheus-compatible metrics
 - Handles errors with proper JSON-RPC error responses
@@ -50,18 +51,26 @@ import threading
 import time
 import traceback
 from contextlib import asynccontextmanager, suppress
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Optional, TypeVar, cast
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
+from starlette.responses import StreamingResponse
 from opentelemetry import context
 from pydantic import ValidationError
 
 from asap.discovery import health as discovery_health
 from asap.discovery import wellknown
-from asap.errors import InvalidNonceError, InvalidTimestampError, ThreadPoolExhaustedError
+from asap.errors import (
+    ASAPError,
+    InvalidNonceError,
+    InvalidTimestampError,
+    ThreadPoolExhaustedError,
+    jsonrpc_error_data_for_asap_exception,
+)
 from asap.models.constants import MAX_REQUEST_SIZE
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.envelope import Envelope
@@ -298,6 +307,23 @@ class ASAPRequestHandler:
         )
         return JSONResponse(status_code=200, content=error_response.model_dump())
 
+    def build_jsonrpc_error_for_asap_exception(
+        self,
+        exc: ASAPError,
+        *,
+        request_id: str | int | None,
+        extra_data: dict[str, Any] | None = None,
+    ) -> JSONResponse:
+        """JSON-RPC error with ASAP *rpc_code* top-level and recovery hints in *data*."""
+        data = jsonrpc_error_data_for_asap_exception(exc)
+        if extra_data:
+            data = {**data, **extra_data}
+        payload = JsonRpcErrorResponse(
+            error=JsonRpcError(code=exc.rpc_code, message=exc.message, data=data),
+            id=request_id,
+        )
+        return JSONResponse(status_code=200, content=payload.model_dump())
+
     def record_error_metrics(
         self,
         metrics: MetricsCollector,
@@ -467,8 +493,12 @@ class ASAPRequestHandler:
                 content={
                     "error": "Service Temporarily Unavailable",
                     "code": e.code,
+                    "rpc_code": e.rpc_code,
                     "message": e.message,
                     "details": e.details,
+                    "recoverable": True,
+                    "retry_after_ms": e.retry_after_ms,
+                    "fallback_action": e.fallback_action,
                 },
             )
             return None, error_response
@@ -484,19 +514,10 @@ class ASAPRequestHandler:
             self.record_error_metrics(
                 ctx.metrics, payload_type, "handler_not_found", duration_seconds
             )
-            handler_error = JsonRpcErrorResponse(
-                error=JsonRpcError.from_code(
-                    METHOD_NOT_FOUND,
-                    data={
-                        "payload_type": e.payload_type,
-                        "error": str(e),
-                    },
-                ),
-                id=ctx.request_id,
-            )
-            error_response = JSONResponse(
-                status_code=200,
-                content=handler_error.model_dump(),
+            error_response = self.build_jsonrpc_error_for_asap_exception(
+                e,
+                request_id=ctx.request_id,
+                extra_data={"error": str(e)},
             )
             return None, error_response
 
@@ -1051,15 +1072,10 @@ class ASAPRequestHandler:
                     self.record_error_metrics(
                         ctx.metrics, payload_type, "invalid_timestamp", duration_seconds
                     )
-                    err_resp = self.build_error_response(
-                        INVALID_PARAMS,
-                        data={
-                            "error": "Invalid envelope timestamp",
-                            "code": e.code,
-                            "message": e.message,
-                            "details": e.details,
-                        },
+                    err_resp = self.build_jsonrpc_error_for_asap_exception(
+                        e,
                         request_id=ctx.request_id,
+                        extra_data={"error": "Invalid envelope timestamp"},
                     )
                     self._log_response_debug(err_resp)
                     return err_resp
@@ -1080,15 +1096,10 @@ class ASAPRequestHandler:
                     self.record_error_metrics(
                         ctx.metrics, payload_type, "invalid_nonce", duration_seconds
                     )
-                    err_resp = self.build_error_response(
-                        INVALID_PARAMS,
-                        data={
-                            "error": "Invalid envelope nonce",
-                            "code": e.code,
-                            "message": e.message,
-                            "details": e.details,
-                        },
+                    err_resp = self.build_jsonrpc_error_for_asap_exception(
+                        e,
                         request_id=ctx.request_id,
+                        extra_data={"error": "Invalid envelope nonce"},
                     )
                     self._log_response_debug(err_resp)
                     return err_resp
@@ -1143,6 +1154,264 @@ class ASAPRequestHandler:
             err_resp = self._handle_internal_error(e, ctx, payload_type)
             self._log_response_debug(err_resp)
             return err_resp
+
+    async def _prepare_streaming_request(
+        self,
+        request: Request,
+        start_time: float,
+    ) -> tuple[RequestContext, Envelope, Any | None] | Response:
+        """Parse JSON-RPC, auth, nonce/timestamp, ensure a streaming handler exists.
+
+        Returns ``(context, envelope, trace_token)`` on success, or an error
+        ``Response`` (caller must not start a stream).
+        """
+        metrics = get_metrics()
+        payload_type = "unknown"
+
+        parse_result = await self._parse_and_validate_request(request)
+        rpc_request, parse_error = parse_result
+        if parse_error is not None:
+            self._log_response_debug(parse_error)
+            return parse_error
+        if rpc_request is None:
+            raise RuntimeError("Internal error: rpc_request is None after validation")
+
+        self._log_request_debug(rpc_request)
+
+        ctx = RequestContext(
+            request_id=rpc_request.id,
+            start_time=start_time,
+            metrics=metrics,
+            rpc_request=rpc_request,
+        )
+
+        auth_result = await self._authenticate_request(request, ctx)
+        authenticated_agent_id, auth_error = auth_result
+        if auth_error is not None:
+            self._log_response_debug(auth_error)
+            return auth_error
+
+        envelope_result = self._validate_envelope(ctx)
+        envelope_or_none, result = envelope_result
+        if envelope_or_none is None:
+            error_resp = cast(JSONResponse, result)
+            self._log_response_debug(error_resp)
+            return error_resp
+        envelope = envelope_or_none
+        payload_type = cast(str, result)
+
+        trace_token = extract_and_activate_envelope_trace_context(envelope)
+        sender_error = self._verify_sender_matches_auth(
+            authenticated_agent_id,
+            envelope,
+            ctx,
+            payload_type,
+        )
+        if sender_error is not None:
+            self._log_response_debug(sender_error)
+            if trace_token is not None:
+                context.detach(trace_token)
+            return sender_error
+
+        try:
+            validate_envelope_timestamp(envelope)
+        except InvalidTimestampError as e:
+            log_ts: dict[str, Any] = {
+                "envelope_id": envelope.id,
+                "error": e.message,
+                "details": e.details,
+            }
+            if not is_debug_mode() and isinstance(e.details, dict):
+                log_ts["details"] = sanitize_for_logging(e.details)
+            logger.warning("asap.request.invalid_timestamp", **log_ts)
+            duration_seconds = time.perf_counter() - ctx.start_time
+            self.record_error_metrics(
+                ctx.metrics, payload_type, "invalid_timestamp", duration_seconds
+            )
+            err_resp = self.build_jsonrpc_error_for_asap_exception(
+                e,
+                request_id=ctx.request_id,
+                extra_data={"error": "Invalid envelope timestamp"},
+            )
+            self._log_response_debug(err_resp)
+            if trace_token is not None:
+                context.detach(trace_token)
+            return err_resp
+
+        try:
+            validate_envelope_nonce(envelope, self.nonce_store)
+        except InvalidNonceError as e:
+            nonce_sanitized = sanitize_nonce(e.nonce)
+            error_msg = e.message if is_debug_mode() else "Duplicate nonce detected"
+            logger.warning(
+                "asap.request.invalid_nonce",
+                envelope_id=envelope.id,
+                nonce=nonce_sanitized,
+                error=error_msg,
+            )
+            duration_seconds = time.perf_counter() - ctx.start_time
+            self.record_error_metrics(ctx.metrics, payload_type, "invalid_nonce", duration_seconds)
+            err_resp = self.build_jsonrpc_error_for_asap_exception(
+                e,
+                request_id=ctx.request_id,
+                extra_data={"error": "Invalid envelope nonce"},
+            )
+            self._log_response_debug(err_resp)
+            if trace_token is not None:
+                context.detach(trace_token)
+            return err_resp
+
+        logger.info(
+            "asap.request.stream_received",
+            envelope_id=envelope.id,
+            trace_id=envelope.trace_id,
+            payload_type=envelope.payload_type,
+            sender=envelope.sender,
+            recipient=envelope.recipient,
+            authenticated=authenticated_agent_id is not None,
+        )
+
+        if not self.registry_holder.registry.has_streaming_handler(envelope.payload_type):
+            duration_seconds = time.perf_counter() - ctx.start_time
+            self.record_error_metrics(
+                ctx.metrics, payload_type, "handler_not_found", duration_seconds
+            )
+            err_resp = self.build_jsonrpc_error_for_asap_exception(
+                HandlerNotFoundError(envelope.payload_type),
+                request_id=ctx.request_id,
+                extra_data={"error": "No streaming handler registered for payload type"},
+            )
+            self._log_response_debug(err_resp)
+            if trace_token is not None:
+                context.detach(trace_token)
+            return err_resp
+
+        return ctx, envelope, trace_token
+
+    async def handle_stream(self, request: Request) -> Response:
+        """Handle ASAP streaming: JSON-RPC body, SSE ``text/event-stream`` response.
+
+        Each event body is one ``Envelope`` (typically ``TaskStream``) as JSON on a ``data:`` line.
+        """
+        start_time = time.perf_counter()
+        payload_type = "unknown"
+
+        try:
+            prepared = await self._prepare_streaming_request(request, start_time)
+            if isinstance(prepared, Response):
+                return prepared
+            ctx, envelope, trace_token = prepared
+            payload_type = envelope.payload_type
+
+            async def sse_events() -> AsyncIterator[bytes]:
+                try:
+                    async for (
+                        response_envelope
+                    ) in self.registry_holder.registry.dispatch_stream_async(
+                        envelope, self.manifest
+                    ):
+                        injected = inject_envelope_trace_context(response_envelope)
+                        line = f"data: {json.dumps(injected.model_dump(mode='json'))}\n\n"
+                        yield line.encode("utf-8")
+                    duration_seconds = time.perf_counter() - ctx.start_time
+                    normalized_payload_type = self._normalize_payload_type_for_metrics(payload_type)
+                    ctx.metrics.increment_counter(
+                        "asap_requests_total",
+                        {"payload_type": normalized_payload_type, "status": "success"},
+                    )
+                    ctx.metrics.increment_counter(
+                        "asap_requests_success_total",
+                        {"payload_type": normalized_payload_type},
+                    )
+                    ctx.metrics.observe_histogram(
+                        "asap_request_duration_seconds",
+                        duration_seconds,
+                        {"payload_type": normalized_payload_type, "status": "success"},
+                    )
+                    logger.info(
+                        "asap.request.stream_processed",
+                        envelope_id=envelope.id,
+                        payload_type=payload_type,
+                        duration_ms=round(duration_seconds * 1000, 2),
+                    )
+                finally:
+                    if trace_token is not None:
+                        context.detach(trace_token)
+
+            return StreamingResponse(
+                sse_events(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                },
+            )
+        except Exception as e:
+            if "ctx" not in locals():
+                temp_metrics = get_metrics()
+                temp_rpc_request = JsonRpcRequest(
+                    jsonrpc="2.0", method=ASAP_METHOD, params={}, id=""
+                )
+                ctx = RequestContext(
+                    request_id="",
+                    start_time=start_time,
+                    metrics=temp_metrics,
+                    rpc_request=temp_rpc_request,
+                )
+            err_resp = self._handle_internal_error(e, ctx, payload_type)
+            self._log_response_debug(err_resp)
+            return err_resp
+
+    async def iter_websocket_stream(
+        self,
+        request: Request,
+        jsonrpc_id: str | int | None,
+    ) -> AsyncIterator[str]:
+        """Yield JSON-RPC ``result.envelope`` frames for each streamed chunk (WebSocket)."""
+        start_time = time.perf_counter()
+        prepared = await self._prepare_streaming_request(request, start_time)
+        if isinstance(prepared, Response):
+            body = prepared.body
+            payload = body.decode("utf-8") if isinstance(body, bytes) else str(body)
+            yield payload
+            return
+        ctx, envelope, trace_token = prepared
+        payload_type = envelope.payload_type
+        response_id: str | int = jsonrpc_id if jsonrpc_id is not None else ""
+        try:
+            async for response_envelope in self.registry_holder.registry.dispatch_stream_async(
+                envelope, self.manifest
+            ):
+                injected = inject_envelope_trace_context(response_envelope)
+                rpc_response = JsonRpcResponse(
+                    result={"envelope": injected.model_dump(mode="json")},
+                    id=response_id,
+                )
+                yield json.dumps(rpc_response.model_dump())
+            duration_seconds = time.perf_counter() - ctx.start_time
+            normalized_payload_type = self._normalize_payload_type_for_metrics(payload_type)
+            ctx.metrics.increment_counter(
+                "asap_requests_total",
+                {"payload_type": normalized_payload_type, "status": "success"},
+            )
+            ctx.metrics.increment_counter(
+                "asap_requests_success_total",
+                {"payload_type": normalized_payload_type},
+            )
+            ctx.metrics.observe_histogram(
+                "asap_request_duration_seconds",
+                duration_seconds,
+                {"payload_type": normalized_payload_type, "status": "success"},
+            )
+            logger.info(
+                "asap.request.ws_stream_processed",
+                envelope_id=envelope.id,
+                payload_type=payload_type,
+                duration_ms=round(duration_seconds * 1000, 2),
+            )
+        finally:
+            if trace_token is not None:
+                context.detach(trace_token)
 
 
 def create_app(
@@ -1652,6 +1921,12 @@ def create_app(
         # Rate limit check — uses app.state.limiter so tests can override.
         app.state.limiter.check(request)
         return await handler.handle_message(request)
+
+    @app.post("/asap/stream", response_model=None)
+    async def handle_asap_stream(request: Request) -> Response:
+        """Stream task chunks as Server-Sent Events (``Envelope`` JSON per ``data:`` line)."""
+        app.state.limiter.check(request)
+        return await handler.handle_stream(request)
 
     @app.websocket("/asap/ws")
     async def websocket_asap(websocket: WebSocket) -> None:

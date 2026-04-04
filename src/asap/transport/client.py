@@ -38,9 +38,10 @@ import random
 import re
 import threading
 import time
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from email.utils import parsedate_to_datetime
-from typing import Any, Literal, Mapping, Optional
+from typing import Literal, Mapping, Optional
 from urllib.parse import ParseResult, urlparse, urlunparse
 
 import httpx
@@ -59,7 +60,15 @@ from asap.crypto.signing import verify_manifest
 from asap.discovery.health import HealthStatus, WELLKNOWN_HEALTH_PATH
 from asap.discovery.validation import ManifestValidationError, validate_manifest_schema
 from asap.discovery.wellknown import WELLKNOWN_MANIFEST_PATH
-from asap.errors import CircuitOpenError, SignatureVerificationError
+from asap.errors import (
+    ASAPConnectionError,
+    ASAPRemoteError,
+    ASAPTimeoutError,
+    CircuitOpenError,
+    RemoteRecoverableRPCError,
+    SignatureVerificationError,
+    remote_rpc_error_from_json,
+)
 from asap.models.constants import (
     DEFAULT_BASE_DELAY,
     DEFAULT_CIRCUIT_BREAKER_THRESHOLD,
@@ -83,6 +92,14 @@ from asap.transport.compression import (
 )
 from asap.transport.jsonrpc import ASAP_METHOD
 from asap.utils.sanitization import sanitize_url
+
+__all__ = [
+    "ASAPClient",
+    "RetryConfig",
+    "ASAPConnectionError",
+    "ASAPRemoteError",
+    "ASAPTimeoutError",
+]
 
 # Module logger
 logger = get_logger(__name__)
@@ -153,74 +170,6 @@ class RetryConfig:
     circuit_breaker_enabled: bool = False
     circuit_breaker_threshold: int = DEFAULT_CIRCUIT_BREAKER_THRESHOLD
     circuit_breaker_timeout: float = DEFAULT_CIRCUIT_BREAKER_TIMEOUT
-
-
-class ASAPConnectionError(Exception):
-    """Raised when connection to remote agent fails.
-
-    This error occurs when the HTTP connection cannot be established
-    or when the remote server returns an HTTP error status.
-
-    Attributes:
-        message: Error description with troubleshooting suggestions
-        cause: Original exception that caused this error
-        url: URL that failed to connect (if available)
-    """
-
-    def __init__(
-        self, message: str, cause: Exception | None = None, url: str | None = None
-    ) -> None:
-        # Enhance message with troubleshooting suggestions if URL is provided
-        if url and "Verify" not in message and "troubleshooting" not in message.lower():
-            enhanced_message = (
-                f"{message}\n"
-                f"Troubleshooting: Connection failed to {url}. "
-                "Verify the agent is running and accessible. "
-                "Check the URL format, network connectivity, and firewall settings."
-            )
-        else:
-            enhanced_message = message
-
-        super().__init__(enhanced_message)
-        self.message = enhanced_message
-        self.cause = cause
-        self.url = url
-
-
-class ASAPTimeoutError(Exception):
-    """Raised when request to remote agent times out.
-
-    This error occurs when the HTTP request exceeds the configured
-    timeout duration.
-
-    Attributes:
-        message: Error description
-        timeout: Timeout value in seconds
-    """
-
-    def __init__(self, message: str, timeout: float | None = None) -> None:
-        super().__init__(message)
-        self.message = message
-        self.timeout = timeout
-
-
-class ASAPRemoteError(Exception):
-    """Raised when remote agent returns an error response.
-
-    This error occurs when the JSON-RPC response contains an error
-    object, indicating the remote agent could not process the request.
-
-    Attributes:
-        code: JSON-RPC error code
-        message: Error message from remote
-        data: Optional additional error data
-    """
-
-    def __init__(self, code: int, message: str, data: dict[str, Any] | None = None) -> None:
-        super().__init__(f"Remote error {code}: {message}")
-        self.code = code
-        self.message = message
-        self.data = data or {}
 
 
 class ASAPClient:
@@ -686,7 +635,7 @@ class ASAPClient:
             try:
                 return await self._ws_transport.send_and_receive(envelope)
             except WebSocketRemoteError as e:
-                raise ASAPRemoteError(e.code, e.message, e.data) from e
+                raise remote_rpc_error_from_json(e.code, e.message, e.data) from e
             except asyncio.TimeoutError as e:
                 raise ASAPTimeoutError(
                     f"WebSocket receive timed out after {self.timeout}s",
@@ -964,24 +913,44 @@ class ASAPClient:
                     else:
                         json_response = response.json()
                 except Exception as e:
-                    raise ASAPRemoteError(-32700, f"Invalid response: {e}") from e
+                    raise ASAPRemoteError.from_jsonrpc(
+                        -32700, f"Invalid response: {e}", None
+                    ) from e
 
                 if "error" in json_response:
                     if self._circuit_breaker is not None:
                         self._circuit_breaker.record_success()
 
                     error = json_response["error"]
-                    raise ASAPRemoteError(
-                        error.get("code", -32603),
-                        error.get("message", "Unknown error"),
-                        error.get("data"),
-                    )
+                    err_payload = error.get("data")
+                    err_data = err_payload if isinstance(err_payload, dict) else None
+                    wire_code = int(error.get("code", -32603))
+                    err_msg = str(error.get("message", "Unknown error"))
+                    rpc_exc = remote_rpc_error_from_json(wire_code, err_msg, err_data)
+                    if (
+                        isinstance(rpc_exc, RemoteRecoverableRPCError)
+                        and rpc_exc.retry_after_ms is not None
+                        and attempt < self.max_retries - 1
+                    ):
+                        delay_s = max(0.0, rpc_exc.retry_after_ms / 1000.0)
+                        logger.info(
+                            "asap.client.retry_recoverable_rpc_error",
+                            target_url=sanitized_url,
+                            envelope_id=envelope.id,
+                            attempt=attempt + 1,
+                            retry_after_ms=rpc_exc.retry_after_ms,
+                            message="Retrying after server recoverable JSON-RPC error hint",
+                        )
+                        await asyncio.sleep(delay_s)
+                        last_exception = rpc_exc
+                        continue
+                    raise rpc_exc
 
                 # Extract envelope from result
                 result = json_response.get("result", {})
                 envelope_data = result.get("envelope")
                 if not envelope_data:
-                    raise ASAPRemoteError(-32603, "Missing envelope in response")
+                    raise ASAPRemoteError.from_jsonrpc(-32603, "Missing envelope in response", None)
 
                 response_envelope = Envelope(**envelope_data)
 
@@ -1091,7 +1060,12 @@ class ASAPClient:
                 )
                 raise last_exception from e
 
-            except (ASAPConnectionError, ASAPRemoteError, ASAPTimeoutError):
+            except (
+                ASAPConnectionError,
+                ASAPRemoteError,
+                RemoteRecoverableRPCError,
+                ASAPTimeoutError,
+            ):
                 # Re-raise our custom errors without recording failure again
                 # (failures are already recorded before these exceptions are raised)
                 raise
@@ -1139,6 +1113,97 @@ class ASAPClient:
             f"Verify the agent is running and accessible.",
             url=sanitize_url(self.base_url),
         )  # pragma: no cover
+
+    async def stream(self, envelope: Envelope) -> AsyncIterator[Envelope]:
+        """POST to ``/asap/stream`` and yield each SSE ``data:`` line as an ``Envelope``.
+
+        Requires HTTP transport (not WebSocket). Each event body is a full envelope,
+        typically with ``payload_type`` ``TaskStream``.
+
+        Args:
+            envelope: Outgoing request envelope (e.g. ``TaskRequest``).
+
+        Yields:
+            One envelope per SSE event.
+
+        Raises:
+            ASAPConnectionError: On HTTP errors or non-streaming failure responses.
+            ASAPRemoteError: If the server returns a JSON-RPC error body instead of SSE.
+        """
+        if envelope is None:
+            raise ValueError("envelope cannot be None")
+        if not self._client:
+            raise ASAPConnectionError(
+                "Client not connected. Use 'async with' context.",
+                url=sanitize_url(self.base_url),
+            )
+        if self._ws_transport:
+            raise ASAPConnectionError(
+                "HTTP streaming only: disconnect WebSocket mode or use "
+                "WebSocketTransport.send_and_receive_stream for /asap/ws.",
+                url=sanitize_url(self.base_url),
+            )
+
+        idempotency_key = generate_id()
+        request_id = f"req-{next(self._request_counter)}"
+        json_rpc_request = {
+            "jsonrpc": "2.0",
+            "method": ASAP_METHOD,
+            "params": {
+                "envelope": envelope.model_dump(mode="json"),
+                "idempotency_key": idempotency_key,
+            },
+            "id": request_id,
+        }
+        request_body = json.dumps(json_rpc_request).encode("utf-8")
+        headers: dict[str, str] = {
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+            "X-Idempotency-Key": idempotency_key,
+        }
+        if self._auth_token:
+            headers["Authorization"] = f"Bearer {self._auth_token}"
+
+        assert self._client is not None  # nosec B101
+        async with self._client.stream(
+            "POST",
+            f"{self.base_url}/asap/stream",
+            headers=headers,
+            content=request_body,
+        ) as response:
+            if response.status_code >= 400:
+                body = await response.aread()
+                try:
+                    text = body.decode("utf-8")
+                    err_json = json.loads(text)
+                    if isinstance(err_json, dict) and "error" in err_json:
+                        error = err_json["error"]
+                        wire_code = int(error.get("code", -32603))
+                        err_msg = str(error.get("message", "Unknown error"))
+                        err_payload = error.get("data")
+                        err_data = err_payload if isinstance(err_payload, dict) else None
+                        raise remote_rpc_error_from_json(wire_code, err_msg, err_data)
+                except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+                    pass
+                raise ASAPConnectionError(
+                    f"HTTP error {response.status_code} on stream: {body[:200]!r}",
+                    url=sanitize_url(self.base_url),
+                )
+
+            buffer = ""
+            async for chunk in response.aiter_text():
+                buffer += chunk
+                while "\n\n" in buffer:
+                    raw_event, buffer = buffer.split("\n\n", 1)
+                    for line in raw_event.split("\n"):
+                        line_stripped = line.strip()
+                        if not line_stripped.startswith("data:"):
+                            continue
+                        json_str = line_stripped[5:].strip()
+                        if not json_str:
+                            continue
+                        data = json.loads(json_str)
+                        yield Envelope.model_validate(data)
 
     async def get_manifest(self, url: str | None = None) -> Manifest:
         """Get agent manifest from cache or HTTP endpoint.

@@ -31,7 +31,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import time
-from collections.abc import Awaitable
+from collections.abc import AsyncIterator, Awaitable
 from concurrent.futures import Executor
 from threading import RLock
 from typing import TYPE_CHECKING, Callable, Protocol, Union, cast
@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from asap.state.metering import MeteringStore  # noqa: F401
 
 from asap.economics.hooks import record_task_usage
-from asap.errors import ASAPError
+from asap.errors import FatalError, RPC_HANDLER_NOT_FOUND
 from asap.models.entities import Manifest
 from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
@@ -67,6 +67,9 @@ class AsyncHandler(Protocol):
 
 # Type alias for handler functions (supports both sync and async)
 Handler = Union[SyncHandler, AsyncHandler]
+
+# Async generator: async def handler(env, manifest) -> AsyncIterator[Envelope]
+StreamingHandler = Callable[[Envelope, Manifest], AsyncIterator[Envelope]]
 
 # Type alias for factories that return a sync handler (useful in tests)
 SyncHandlerFactory = Callable[[], SyncHandler]
@@ -111,7 +114,28 @@ def validate_handler(handler: Handler) -> None:
         )
 
 
-class HandlerNotFoundError(ASAPError):
+def validate_streaming_handler(handler: StreamingHandler) -> None:
+    """Ensure *handler* is an async generator function `(envelope, manifest) -> ...`."""
+    if not callable(handler):
+        raise TypeError("Streaming handler must be callable")
+    if not inspect.isasyncgenfunction(handler):
+        raise TypeError(
+            "Streaming handler must be an async generator function "
+            "(async def ... (envelope, manifest) with yield)"
+        )
+    try:
+        sig = inspect.signature(handler)
+    except (ValueError, TypeError):
+        raise TypeError("Streaming handler signature could not be inspected") from None
+    params = list(sig.parameters)
+    if len(params) == 2 or (len(params) == 3 and params[0] in ("self", "cls")):
+        return
+    raise TypeError(
+        f"Streaming handler must accept (envelope, manifest); got {len(params)} parameters: {params}"
+    )
+
+
+class HandlerNotFoundError(FatalError):
     """Raised when no handler is registered for a payload type.
 
     This error occurs when attempting to dispatch an envelope with
@@ -131,9 +155,10 @@ class HandlerNotFoundError(ASAPError):
     def __init__(self, payload_type: str) -> None:
         message = f"No handler registered for payload type: {payload_type}"
         super().__init__(
-            code="asap:transport/handler_not_found",
-            message=message,
-            details={"payload_type": payload_type},
+            "asap:transport/handler_not_found",
+            message,
+            {"payload_type": payload_type},
+            rpc_code=RPC_HANDLER_NOT_FOUND,
         )
         self.payload_type = payload_type
 
@@ -153,6 +178,7 @@ class HandlerRegistry:
 
     Attributes:
         _handlers: Internal mapping of payload_type to handler function
+        _streaming_handlers: payload_type -> async generator handler for POST /asap/stream and WS
         _lock: Reentrant lock for thread-safe operations
         _executor: Optional executor for running sync handlers (for DoS prevention)
 
@@ -170,6 +196,7 @@ class HandlerRegistry:
         metering_store: object | None = None,
     ) -> None:
         self._handlers: dict[str, Handler] = {}
+        self._streaming_handlers: dict[str, StreamingHandler] = {}
         self._lock = RLock()
         self._executor: Executor | None = executor
         self._metering_store = metering_store
@@ -189,6 +216,27 @@ class HandlerRegistry:
     def has_handler(self, payload_type: str) -> bool:
         with self._lock:
             return payload_type in self._handlers
+
+    def register_streaming_handler(self, payload_type: str, handler: StreamingHandler) -> None:
+        """Register an async generator handler for SSE ``/asap/stream`` and WebSocket streaming.
+
+        Coexists with :meth:`register` for the same *payload_type*: normal POST ``/asap`` uses
+        the regular handler; streaming uses this handler.
+        """
+        validate_streaming_handler(handler)
+        with self._lock:
+            is_override = payload_type in self._streaming_handlers
+            self._streaming_handlers[payload_type] = handler
+            logger.debug(
+                "asap.handler.streaming_registered",
+                payload_type=payload_type,
+                handler_name=handler.__name__ if hasattr(handler, "__name__") else str(handler),
+                is_override=is_override,
+            )
+
+    def has_streaming_handler(self, payload_type: str) -> bool:
+        with self._lock:
+            return payload_type in self._streaming_handlers
 
     def set_metering_store(self, store: object | None) -> None:
         """Set MeteringStore for usage recording (optional).
@@ -379,6 +427,75 @@ class HandlerRegistry:
                     duration_ms=round(duration_ms, 2),
                 )
                 raise
+
+    async def dispatch_stream_async(
+        self,
+        envelope: Envelope,
+        manifest: Manifest,
+    ) -> AsyncIterator[Envelope]:
+        """Yield response envelopes from the streaming handler for *envelope.payload_type*."""
+        payload_type = envelope.payload_type
+        start_time = time.perf_counter()
+
+        with self._lock:
+            if payload_type not in self._streaming_handlers:
+                logger.warning(
+                    "asap.handler.streaming_not_found",
+                    payload_type=payload_type,
+                    envelope_id=envelope.id,
+                )
+                raise HandlerNotFoundError(payload_type)
+            handler = self._streaming_handlers[payload_type]
+
+        logger.debug(
+            "asap.handler.dispatch_stream",
+            payload_type=payload_type,
+            envelope_id=envelope.id,
+            handler_name=handler.__name__ if hasattr(handler, "__name__") else str(handler),
+        )
+
+        agent_urn = manifest.id
+        try:
+            with handler_span_context(
+                payload_type=payload_type,
+                agent_urn=agent_urn,
+                envelope_id=envelope.id,
+            ):
+                async for response_envelope in handler(envelope, manifest):
+                    yield response_envelope
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            duration_seconds = duration_ms / 1000.0
+            metrics = get_metrics()
+            metrics.increment_counter(
+                "asap_handler_executions_total",
+                {"payload_type": payload_type},
+            )
+            metrics.observe_histogram(
+                "asap_handler_duration_seconds",
+                duration_seconds,
+                {"payload_type": payload_type},
+            )
+            logger.debug(
+                "asap.handler.stream_completed",
+                payload_type=payload_type,
+                envelope_id=envelope.id,
+                duration_ms=round(duration_ms, 2),
+            )
+        except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            get_metrics().increment_counter(
+                "asap_handler_errors_total",
+                {"payload_type": payload_type},
+            )
+            logger.exception(
+                "asap.handler.stream_error",
+                payload_type=payload_type,
+                envelope_id=envelope.id,
+                error=str(e),
+                error_type=type(e).__name__,
+                duration_ms=round(duration_ms, 2),
+            )
+            raise
 
     def list_handlers(self) -> list[str]:
         """List all registered payload types.
