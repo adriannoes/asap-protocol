@@ -17,7 +17,8 @@ from asap.models.payloads import TaskRequest, TaskResponse
 from asap.testing import assert_envelope_valid, assert_response_correlates
 
 if TYPE_CHECKING:
-    pass
+    from asap.models.entities import Manifest
+    from asap.transport.rate_limit import ASAPRateLimiter
 
 
 # Test fixtures
@@ -422,8 +423,49 @@ class TestASAPClientErrorHandling:
             with pytest.raises(ASAPRemoteError) as exc_info:
                 await client.send(sample_request_envelope)
 
-            assert exc_info.value.code == -32601
+            assert exc_info.value.json_rpc_code == -32601
             assert "Method not found" in exc_info.value.message
+
+    async def test_send_retries_on_recoverable_json_rpc_with_retry_after_ms(
+        self,
+        sample_request_envelope: Envelope,
+        sample_response_envelope: Envelope,
+    ) -> None:
+        """Recoverable JSON-RPC error with retry_after_ms triggers a retry and eventual success."""
+        from asap.transport.client import ASAPClient
+
+        attempts: list[int] = []
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            attempts.append(1)
+            if len(attempts) == 1:
+                return httpx.Response(
+                    status_code=200,
+                    json={
+                        "jsonrpc": "2.0",
+                        "error": {
+                            "code": -32002,
+                            "message": "server asked to wait",
+                            "data": {
+                                "recoverable": True,
+                                "retry_after_ms": 0,
+                                "asap_taxonomy_code": "asap:protocol/invalid_timestamp",
+                            },
+                        },
+                        "id": "req-1",
+                    },
+                )
+            return create_mock_response(sample_response_envelope)
+
+        async with ASAPClient(
+            "http://localhost:8000",
+            transport=httpx.MockTransport(mock_transport),
+            max_retries=3,
+        ) as client:
+            response = await client.send(sample_request_envelope)
+
+        assert len(attempts) == 2
+        assert response.payload_type == "task.response"
 
     async def test_send_raises_on_http_error(self, sample_request_envelope: Envelope) -> None:
         """Test send() raises error on HTTP error status."""
@@ -673,7 +715,7 @@ class TestASAPClientRetryEdgeCases:
             with pytest.raises(ASAPRemoteError) as exc_info:
                 await client.send(sample_request_envelope)
 
-            assert exc_info.value.code == -32603
+            assert exc_info.value.json_rpc_code == -32603
             assert "missing envelope" in str(exc_info.value).lower()
 
     async def test_send_wraps_unexpected_exceptions(
@@ -743,6 +785,52 @@ class TestASAPClientRetryEdgeCases:
         await client.__aexit__(None, None, None)
         # Should not raise any exception
         assert not client.is_connected
+
+
+class TestASAPClientStreaming:
+    """Tests for ``ASAPClient.stream`` (SSE /asap/stream)."""
+
+    @pytest.mark.anyio
+    async def test_client_stream_parses_sse_chunks(
+        self,
+        sample_manifest: "Manifest",
+        isolated_rate_limiter: "ASAPRateLimiter | None",
+    ) -> None:
+        """``ASAPClient.stream`` reads ``/asap/stream`` SSE ``data:`` lines as envelopes."""
+        from httpx import ASGITransport
+
+        from asap.transport.client import ASAPClient
+        from asap.transport.handlers import HandlerRegistry, create_echo_handler
+        from asap.transport.server import create_app
+        from tests.transport.test_streaming import _word_stream_handler
+
+        registry = HandlerRegistry()
+        registry.register("task.request", create_echo_handler())
+        registry.register_streaming_handler("task.request", _word_stream_handler)
+        app = create_app(sample_manifest, registry, rate_limit="999999/minute")
+        if isolated_rate_limiter is not None:
+            app.state.limiter = isolated_rate_limiter
+
+        req_env = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient=sample_manifest.id,
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="c-stream",
+                skill_id="echo",
+                input={"text": "x y"},
+            ).model_dump(),
+        )
+        transport = ASGITransport(app=app)
+        async with ASAPClient(
+            "http://test-agent",
+            transport=transport,
+            require_https=False,
+        ) as client:
+            out = [e async for e in client.stream(req_env)]
+        assert len(out) == 2
+        assert out[-1].payload_dict.get("final") is True
 
 
 class TestASAPClientHTTPSValidation:
@@ -847,7 +935,7 @@ class TestASAPClientCustomErrors:
         from asap.transport.client import ASAPRemoteError
 
         error = ASAPRemoteError(-32601, "Method not found", {"method": "unknown"})
-        assert error.code == -32601
+        assert error.json_rpc_code == -32601
         assert error.message == "Method not found"
         assert error.data == {"method": "unknown"}
 

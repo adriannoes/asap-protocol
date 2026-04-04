@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 if TYPE_CHECKING:
     from asap.transport.rate_limit import ASAPRateLimiter
 
+from asap.errors import RPC_HANDLER_NOT_FOUND
 from asap.models.entities import AuthScheme, Capability, Endpoint, Manifest, Skill
 from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
@@ -23,7 +24,6 @@ from asap.transport.handlers import HandlerRegistry
 from asap.transport.jsonrpc import (
     INVALID_PARAMS,
     INVALID_REQUEST,
-    METHOD_NOT_FOUND,
     JsonRpcErrorResponse,
     JsonRpcRequest,
     JsonRpcResponse,
@@ -365,7 +365,7 @@ class TestHandlerRegistryIntegration(NoRateLimitTestBase):
         assert response_payload.result.get("custom") is True
 
     def test_unknown_payload_type_returns_method_not_found(self, sample_manifest: Manifest) -> None:
-        """Test that unknown payload type returns METHOD_NOT_FOUND error."""
+        """Test that unknown payload type returns handler-not-found ASAP error."""
         # Create registry without handler for "unknown.type"
         registry = HandlerRegistry()
         # Only register task.request handler
@@ -395,10 +395,13 @@ class TestHandlerRegistryIntegration(NoRateLimitTestBase):
 
         # Should return JSON-RPC error
         error_response = JsonRpcErrorResponse(**response.json())
-        assert error_response.error.code == METHOD_NOT_FOUND
+        assert error_response.error.code == RPC_HANDLER_NOT_FOUND
         assert error_response.id == "unknown-type-test"
         assert error_response.error.data is not None
-        assert error_response.error.data.get("payload_type") == "unknown.payload.type"
+        assert (
+            error_response.error.data.get("details", {}).get("payload_type")
+            == "unknown.payload.type"
+        )
 
     def test_empty_registry_returns_error_for_all_types(self, sample_manifest: Manifest) -> None:
         """Test that empty registry returns error for any payload type."""
@@ -428,7 +431,7 @@ class TestHandlerRegistryIntegration(NoRateLimitTestBase):
 
         assert response.status_code == 200
         error_response = JsonRpcErrorResponse(**response.json())
-        assert error_response.error.code == METHOD_NOT_FOUND
+        assert error_response.error.code == RPC_HANDLER_NOT_FOUND
 
 
 class TestMetricsEndpoint(NoRateLimitTestBase):

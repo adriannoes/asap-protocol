@@ -17,8 +17,8 @@ if TYPE_CHECKING:
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest
+from asap.errors import RPC_INVALID_NONCE, RPC_INVALID_TIMESTAMP
 from asap.transport.jsonrpc import (
-    INVALID_PARAMS,
     JsonRpcErrorResponse,
     JsonRpcRequest,
 )
@@ -105,7 +105,7 @@ class TestValidationOrder(NoRateLimitTestBase):
         assert "error" in response_data
 
         error_response = JsonRpcErrorResponse(**response_data)
-        assert error_response.error.code == INVALID_PARAMS
+        assert error_response.error.code == RPC_INVALID_TIMESTAMP
         assert "timestamp" in error_response.error.data.get("error", "").lower()
         assert "nonce" not in error_response.error.data.get("error", "").lower()
 
@@ -172,7 +172,7 @@ class TestValidationOrder(NoRateLimitTestBase):
         assert "error" in response_data
 
         error_response = JsonRpcErrorResponse(**response_data)
-        assert error_response.error.code == INVALID_PARAMS
+        assert error_response.error.code == RPC_INVALID_NONCE
         assert "nonce" in error_response.error.data.get("error", "").lower()
 
     def test_both_validations_return_appropriate_error_codes(
@@ -181,7 +181,7 @@ class TestValidationOrder(NoRateLimitTestBase):
         """Test that both validations return appropriate error codes.
 
         This ensures that timestamp and nonce errors are properly distinguished
-        and return INVALID_PARAMS with appropriate error messages.
+        and return ASAP JSON-RPC codes with appropriate error messages.
         """
         # Test timestamp error
         old_timestamp = datetime.now(timezone.utc) - timedelta(minutes=10)
@@ -213,7 +213,7 @@ class TestValidationOrder(NoRateLimitTestBase):
         assert "error" in response_data_timestamp
 
         error_response_timestamp = JsonRpcErrorResponse(**response_data_timestamp)
-        assert error_response_timestamp.error.code == INVALID_PARAMS
+        assert error_response_timestamp.error.code == RPC_INVALID_TIMESTAMP
         assert "timestamp" in error_response_timestamp.error.data.get("error", "").lower()
 
         # Test nonce error (duplicate)
@@ -268,5 +268,5 @@ class TestValidationOrder(NoRateLimitTestBase):
         assert "error" in response_data_nonce
 
         error_response_nonce = JsonRpcErrorResponse(**response_data_nonce)
-        assert error_response_nonce.error.code == INVALID_PARAMS
+        assert error_response_nonce.error.code == RPC_INVALID_NONCE
         assert "nonce" in error_response_nonce.error.data.get("error", "").lower()

@@ -468,7 +468,10 @@ class TestHandlerNotFoundError:
         error = HandlerNotFoundError("my.payload")
         result = error.to_dict()
 
+        from asap.errors import RPC_HANDLER_NOT_FOUND
+
         assert result["code"] == "asap:transport/handler_not_found"
+        assert result["rpc_code"] == RPC_HANDLER_NOT_FOUND
         assert "my.payload" in result["message"]
         assert result["details"]["payload_type"] == "my.payload"
 

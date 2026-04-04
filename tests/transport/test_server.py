@@ -32,6 +32,7 @@ from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
 
+from asap.errors import RPC_HANDLER_NOT_FOUND
 from asap.models.entities import Manifest
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest
@@ -42,7 +43,6 @@ from asap.transport.jsonrpc import (
     INTERNAL_ERROR,
     INVALID_PARAMS,
     INVALID_REQUEST,
-    METHOD_NOT_FOUND,
     PARSE_ERROR,
     JsonRpcRequest,
 )
@@ -561,8 +561,8 @@ class TestASAPRequestHandlerHelpers:
 
         content = bytes(error_response.body).decode()
         error_data = json.loads(content)
-        assert error_data["error"]["code"] == METHOD_NOT_FOUND
-        assert "unknown.type" in error_data["error"]["data"]["payload_type"]
+        assert error_data["error"]["code"] == RPC_HANDLER_NOT_FOUND
+        assert "unknown.type" in error_data["error"]["data"]["details"]["payload_type"]
 
     def test_build_success_response(
         self, handler: ASAPRequestHandler, metrics: MetricsCollector

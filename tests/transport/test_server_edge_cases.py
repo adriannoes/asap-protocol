@@ -252,7 +252,9 @@ class TestHandlerNotFound(NoRateLimitTestBase):
         assert response.status_code == 200
         data = response.json()
         assert "error" in data
-        assert data["error"]["code"] == METHOD_NOT_FOUND
+        from asap.errors import RPC_HANDLER_NOT_FOUND
+
+        assert data["error"]["code"] == RPC_HANDLER_NOT_FOUND
 
 
 class TestThreadPoolExhausted(NoRateLimitTestBase):
