@@ -4,9 +4,12 @@ from asap.errors import (
     ASAPError,
     InvalidTransitionError,
     MalformedEnvelopeError,
+    RPC_REMOTE_GENERIC,
+    RecoverableError,
     TaskNotFoundError,
     TaskAlreadyCompletedError,
     ThreadPoolExhaustedError,
+    ASAPConnectionError,
 )
 
 
@@ -150,6 +153,14 @@ class TestTaskAlreadyCompletedError:
         assert isinstance(error, Exception)
 
 
+class TestRecoverableTransportErrors:
+    """ASAP client transport errors participate in the recoverable taxonomy."""
+
+    def test_connection_error_is_recoverable(self) -> None:
+        err = ASAPConnectionError("down", url="http://localhost:1")
+        assert isinstance(err, RecoverableError)
+
+
 class TestErrorSerialization:
     """Test error serialization to dictionary."""
 
@@ -159,6 +170,7 @@ class TestErrorSerialization:
 
         assert result == {
             "code": "asap:test/error",
+            "rpc_code": RPC_REMOTE_GENERIC,
             "message": "Test error message",
             "details": {},
         }
@@ -173,6 +185,7 @@ class TestErrorSerialization:
 
         assert result == {
             "code": "asap:test/detailed_error",
+            "rpc_code": RPC_REMOTE_GENERIC,
             "message": "Detailed error",
             "details": details,
         }
@@ -270,10 +283,14 @@ class TestThreadPoolExhaustedError:
 
     def test_thread_pool_exhausted_error_to_dict(self) -> None:
         """Test ThreadPoolExhaustedError serialization."""
+        from asap.errors import RPC_THREAD_POOL_EXHAUSTED
+
         error = ThreadPoolExhaustedError(max_threads=15, active_threads=15)
         result = error.to_dict()
 
         assert result["code"] == "asap:transport/thread_pool_exhausted"
+        assert result["rpc_code"] == RPC_THREAD_POOL_EXHAUSTED
         assert "Thread pool exhausted" in result["message"]
         assert result["details"]["max_threads"] == 15
         assert result["details"]["active_threads"] == 15
+        assert result.get("retry_after_ms") is not None
