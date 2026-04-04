@@ -82,6 +82,34 @@ class TaskRequest(ASAPBaseModel):
     )
 
 
+class TaskStream(ASAPBaseModel):
+    """Chunk of streamed task output (SSE or WebSocket).
+
+    Used with Envelope payload_type ``TaskStream`` for incremental results
+    from a streaming handler. The client correlates chunks via
+    ``Envelope.correlation_id`` matching the original ``TaskRequest``.
+
+    Attributes:
+        chunk: Text fragment for this event (e.g. token or word).
+        progress: Optional completion ratio in ``[0, 1]``.
+        final: When True, no further chunks are expected for this task.
+        status: Optional task status (e.g. WORKING until final COMPLETED).
+    """
+
+    chunk: str = Field(default="", description="Streamed text fragment")
+    progress: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Optional progress from 0.0 to 1.0",
+    )
+    final: bool = Field(default=False, description="True when this is the last chunk")
+    status: TaskStatus | None = Field(
+        default=None,
+        description="Task status hint (e.g. COMPLETED on final chunk)",
+    )
+
+
 class TaskResponse(ASAPBaseModel):
     """Response to a task execution request.
 
@@ -318,6 +346,7 @@ class MessageAck(ASAPBaseModel):
 # Normalized payload_type -> PayloadType class (Envelope strict validation).
 PAYLOAD_TYPE_REGISTRY: dict[str, type[ASAPBaseModel]] = {
     "taskrequest": TaskRequest,
+    "taskstream": TaskStream,
     "taskresponse": TaskResponse,
     "taskupdate": TaskUpdate,
     "taskcancel": TaskCancel,
@@ -336,6 +365,7 @@ PAYLOAD_TYPE_REGISTRY: dict[str, type[ASAPBaseModel]] = {
 # Discriminator payload_type lives on Envelope, not on individual payloads
 PayloadType = Union[
     TaskRequest,
+    TaskStream,
     TaskResponse,
     TaskUpdate,
     TaskCancel,
@@ -351,12 +381,12 @@ PayloadType = Union[
 ]
 """Union type of all ASAP payload types.
 
-PayloadType represents any of the 13 payload types used in ASAP protocol messages.
+PayloadType represents any of the protocol payload types used in ASAP messages.
 The actual payload type discrimination is done via the 'payload_type' field in the
 Envelope that wraps these payloads.
 
 Payload types:
-- Task operations: TaskRequest, TaskResponse, TaskUpdate, TaskCancel
+- Task operations: TaskRequest, TaskStream, TaskResponse, TaskUpdate, TaskCancel
 - Messaging: MessageSend
 - State management: StateQuery, StateRestore, ArtifactNotify
 - MCP integration: McpToolCall, McpToolResult, McpResourceFetch, McpResourceData
