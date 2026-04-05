@@ -411,7 +411,7 @@ class TestAsyncClientIntegration(NoRateLimitTestBase):
             with pytest.raises(ASAPRemoteError) as exc_info:
                 await client.send(sample_task_request_envelope)
 
-            assert exc_info.value.code == -32603
+            assert exc_info.value.json_rpc_code == -32603
 
 
 class TestHandlerRegistryIntegration(NoRateLimitTestBase):

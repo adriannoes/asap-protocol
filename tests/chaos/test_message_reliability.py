@@ -28,6 +28,7 @@ from asap.models.envelope import Envelope
 from asap.models.enums import TaskStatus
 from asap.models.payloads import TaskRequest, TaskResponse
 from asap.transport.circuit_breaker import get_registry
+from asap.errors import RemoteRecoverableRPCError
 from asap.transport.client import (
     ASAPClient,
     ASAPConnectionError,
@@ -476,7 +477,13 @@ class TestPartialCorruption:
             ) as client:
                 # Should raise error due to invalid JSON (not retried)
                 with pytest.raises(
-                    (ASAPConnectionError, ASAPRemoteError, ValueError, ValidationError)
+                    (
+                        ASAPConnectionError,
+                        ASAPRemoteError,
+                        RemoteRecoverableRPCError,
+                        ValueError,
+                        ValidationError,
+                    )
                 ):
                     await client.send(sample_request_envelope)
 
@@ -514,7 +521,13 @@ class TestPartialCorruption:
             ) as client:
                 # Should raise validation error (client may wrap in ASAPConnectionError)
                 with pytest.raises(
-                    (ASAPConnectionError, ASAPRemoteError, ValueError, ValidationError)
+                    (
+                        ASAPConnectionError,
+                        ASAPRemoteError,
+                        RemoteRecoverableRPCError,
+                        ValueError,
+                        ValidationError,
+                    )
                 ):
                     await client.send(sample_request_envelope)
 
@@ -600,7 +613,13 @@ class TestMessageReliabilityEdgeCases:
                 max_retries=1,
             ) as client:
                 with pytest.raises(
-                    (ASAPConnectionError, ASAPRemoteError, ValueError, ValidationError)
+                    (
+                        ASAPConnectionError,
+                        ASAPRemoteError,
+                        RemoteRecoverableRPCError,
+                        ValueError,
+                        ValidationError,
+                    )
                 ):
                     await client.send(sample_request_envelope)
 
@@ -620,7 +639,13 @@ class TestMessageReliabilityEdgeCases:
                 max_retries=1,
             ) as client:
                 with pytest.raises(
-                    (ASAPConnectionError, ASAPRemoteError, ValueError, ValidationError)
+                    (
+                        ASAPConnectionError,
+                        ASAPRemoteError,
+                        RemoteRecoverableRPCError,
+                        ValueError,
+                        ValidationError,
+                    )
                 ):
                     await client.send(sample_request_envelope)
 
@@ -646,7 +671,15 @@ class TestMessageReliabilityEdgeCases:
             transport=httpx.MockTransport(mock_transport),
         ) as client:
             # Should raise an error for JSON-RPC error response
-            with pytest.raises((ASAPConnectionError, ASAPRemoteError, ValueError, ValidationError)):
+            with pytest.raises(
+                (
+                    ASAPConnectionError,
+                    ASAPRemoteError,
+                    RemoteRecoverableRPCError,
+                    ValueError,
+                    ValidationError,
+                )
+            ):
                 await client.send(sample_request_envelope)
 
     async def test_mixed_retryable_failures(

@@ -591,6 +591,54 @@ class WebSocketTransport:
         finally:
             self._pending.pop(request_id, None)
 
+    async def send_and_receive_stream(self, envelope: Envelope) -> AsyncIterator[Envelope]:
+        """Send one JSON-RPC frame and yield every streaming ``result.envelope`` with matching id.
+
+        Stops after an envelope whose payload has ``final=True`` (e.g. ``TaskStream``).
+        Skips heartbeat pongs and ``asap.ack`` notifications.
+        """
+        if self._ws is None:
+            raise RuntimeError("WebSocket not connected; call connect(url) first")
+        request_id = self._next_request_id()
+        frame = encode_envelope_frame(
+            self._envelope_dict_for_send(envelope),
+            request_id=request_id,
+            encoding=FRAME_ENCODING_JSON,
+        )
+        if not isinstance(frame, str):
+            raise TypeError(f"Expected text frame (str), got {type(frame).__name__}")
+        await self._ws.send(frame)
+        self._register_pending_ack(envelope)
+        while True:
+            raw = await asyncio.wait_for(self._ws.recv(), timeout=self._receive_timeout)
+            if isinstance(raw, bytes):
+                raw = raw.decode("utf-8")
+            data = decode_frame_to_json(raw)
+            if _is_heartbeat_pong(data):
+                continue
+            if data.get("method") == ASAP_ACK_METHOD:
+                continue
+            if "error" in data:
+                err = data["error"]
+                raise WebSocketRemoteError(
+                    err.get("code", -32603),
+                    err.get("message", "Unknown error"),
+                    err.get("data"),
+                )
+            if data.get("id") != request_id:
+                continue
+            result = data.get("result")
+            if not result or "envelope" not in result:
+                raise WebSocketRemoteError(
+                    -32603,
+                    "Missing result.envelope in response",
+                    data=data,
+                )
+            env = Envelope.model_validate(result["envelope"])
+            yield env
+            if env.payload_dict.get("final") is True:
+                break
+
     async def receive(self) -> Envelope:
         if self._ws is None:
             raise RuntimeError("WebSocket not connected; call connect(url) first")
@@ -740,6 +788,14 @@ async def _make_fake_request(body: str, websocket: WebSocket) -> Request:
 
 def _is_heartbeat_pong(data: dict[str, Any]) -> bool:
     return data.get("type") == HEARTBEAT_FRAME_TYPE_PONG and "method" not in data
+
+
+def _registry_has_streaming_for_payload(registry: Any, payload_type: str) -> bool:
+    """True only when registry reports streaming with a real bool (not e.g. MagicMock)."""
+    fn = getattr(registry, "has_streaming_handler", None)
+    if not callable(fn):
+        return False
+    return fn(payload_type) is True
 
 
 def _build_ack_notification_frame(
@@ -953,13 +1009,23 @@ async def handle_websocket_connection(
                     asap_version=envelope_for_ack.asap_version,
                 )
                 await websocket.send_text(ack_frame)
+            use_stream = envelope_for_ack is not None and _registry_has_streaming_for_payload(
+                request_handler.registry_holder.registry,
+                envelope_for_ack.payload_type,
+            )
             try:
                 request = await _make_fake_request(raw, websocket)
-                response = await request_handler.handle_message(request)
-                body = response.body
-                await websocket.send_text(
-                    body.decode("utf-8") if isinstance(body, bytes) else str(body)
-                )
+                if use_stream:
+                    async for text in request_handler.iter_websocket_stream(
+                        request, data.get("id")
+                    ):
+                        await websocket.send_text(text)
+                else:
+                    response = await request_handler.handle_message(request)
+                    body = response.body
+                    await websocket.send_text(
+                        body.decode("utf-8") if isinstance(body, bytes) else str(body)
+                    )
             except Exception as e:
                 logger.warning(
                     "asap.websocket.message_error",

@@ -249,6 +249,61 @@ class TestWebSocketMessageRouting(NoRateLimitTestBase):
             assert "envelope" in data["result"]
             assert data["result"]["envelope"].get("payload_type") == "task.response"
 
+    def test_websocket_streaming_yields_multiple_taskstream(
+        self,
+        sample_manifest: Manifest,
+        disable_rate_limiting: "ASAPRateLimiter",
+    ) -> None:
+        """Registered streaming handler sends one JSON-RPC result per TaskStream chunk."""
+        from asap.transport.handlers import HandlerRegistry, create_echo_handler
+        from tests.transport.test_streaming import _word_stream_handler
+
+        registry = HandlerRegistry()
+        registry.register("task.request", create_echo_handler())
+        registry.register_streaming_handler("task.request", _word_stream_handler)
+        app_instance = create_app(
+            sample_manifest,
+            registry,
+            rate_limit=TEST_RATE_LIMIT_DEFAULT,
+        )
+        app_instance.state.limiter = disable_rate_limiting
+
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-ws-stream",
+                skill_id="echo",
+                input={"text": "aa bb"},
+            ).model_dump(),
+        )
+        rpc = JsonRpcRequest(
+            method=ASAP_METHOD,
+            params={"envelope": envelope.model_dump(mode="json")},
+            id="ws-stream-1",
+        )
+        body = json.dumps(rpc.model_dump())
+
+        results: list[dict[str, Any]] = []
+        with (
+            TestClient(app_instance) as ws_client,
+            ws_client.websocket_connect("/asap/ws") as websocket,
+        ):
+            websocket.send_text(body)
+            while len(results) < 2:
+                frame = json.loads(websocket.receive_text())
+                if frame.get("method") == ASAP_ACK_METHOD:
+                    continue
+                results.append(frame)
+
+        assert results[0].get("id") == "ws-stream-1"
+        assert results[0]["result"]["envelope"]["payload_type"] == "TaskStream"
+        assert results[0]["result"]["envelope"]["payload"]["final"] is False
+        assert results[1]["result"]["envelope"]["payload"]["final"] is True
+        assert results[1].get("id") == "ws-stream-1"
+
 
 class TestWebSocketErrorHandling(NoRateLimitTestBase):
     """Tests for error handling (invalid JSON, invalid params, etc.)."""
