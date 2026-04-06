@@ -2,14 +2,20 @@
 
 from asap.errors import (
     ASAPError,
+    RPC_CONNECTION_ERROR,
     InvalidTransitionError,
     MalformedEnvelopeError,
     RPC_REMOTE_GENERIC,
     RecoverableError,
+    RemoteFatalRPCError,
+    RemoteRecoverableRPCError,
     TaskNotFoundError,
     TaskAlreadyCompletedError,
     ThreadPoolExhaustedError,
     ASAPConnectionError,
+    is_asap_json_rpc_code,
+    jsonrpc_error_data_for_asap_exception,
+    remote_rpc_error_from_json,
 )
 
 
@@ -294,3 +300,101 @@ class TestThreadPoolExhaustedError:
         assert result["details"]["max_threads"] == 15
         assert result["details"]["active_threads"] == 15
         assert result.get("retry_after_ms") is not None
+
+
+class TestJsonRpcErrorInterop:
+    """Tests for JSON-RPC interop and metadata shaping."""
+
+    def test_asap_json_rpc_code_boundaries(self) -> None:
+        """ASAP JSON-RPC helper accepts only reserved code range."""
+        assert is_asap_json_rpc_code(-32059) is True
+        assert is_asap_json_rpc_code(-32000) is True
+        assert is_asap_json_rpc_code(-31999) is False
+        assert is_asap_json_rpc_code(-32060) is False
+
+    def test_asap_error_rejects_out_of_range_rpc_code(self) -> None:
+        """Base ASAPError rejects JSON-RPC codes outside ASAP reserved slot."""
+        import pytest
+
+        with pytest.raises(ValueError, match="rpc_code must be in"):
+            ASAPError(code="asap:test/error", message="bad rpc", rpc_code=-32603)
+
+    def test_remote_rpc_error_from_json_returns_recoverable_and_strips_meta(self) -> None:
+        """Recoverable remote payload is typed and metadata fields are normalized."""
+        err = remote_rpc_error_from_json(
+            rpc_code=-32033,
+            message="remote timeout",
+            data={
+                "recoverable": True,
+                "retry_after_ms": 250,
+                "alternative_agents": ["urn:asap:agent:secondary"],
+                "fallback_action": "retry_with_backoff",
+                "asap_taxonomy_code": "asap:transport/timeout",
+                "rpc_code": -32033,
+                "upstream": "worker-1",
+            },
+        )
+
+        assert isinstance(err, RemoteRecoverableRPCError)
+        assert err.rpc_code == -32033
+        assert err.json_rpc_code == -32033
+        assert err.code == "asap:transport/timeout"
+        assert err.retry_after_ms == 250
+        assert err.alternative_agents == ["urn:asap:agent:secondary"]
+        assert err.fallback_action == "retry_with_backoff"
+        assert err.details == {"upstream": "worker-1"}
+
+    def test_remote_rpc_error_from_json_uses_code_field_fallback(self) -> None:
+        """A taxonomy-like `code` field in data overrides default taxonomy mapping."""
+        err = remote_rpc_error_from_json(
+            rpc_code=-32040,
+            message="resource exhausted",
+            data={
+                "recoverable": False,
+                "code": "asap:resource/exhausted",
+                "queue_depth": 11,
+            },
+        )
+
+        assert isinstance(err, RemoteFatalRPCError)
+        assert err.code == "asap:resource/exhausted"
+        assert err.details == {"queue_depth": 11}
+
+    def test_remote_rpc_error_preserves_wire_code_but_normalizes_internal_slot(self) -> None:
+        """Non-ASAP wire code is preserved while internal rpc_code uses remote-generic slot."""
+        err = remote_rpc_error_from_json(
+            rpc_code=-32603,
+            message="internal error",
+            data={"recoverable": False, "foo": "bar"},
+        )
+
+        assert isinstance(err, RemoteFatalRPCError)
+        assert err.json_rpc_code == -32603
+        assert err.rpc_code == RPC_REMOTE_GENERIC
+        assert err.details == {"foo": "bar"}
+
+    def test_jsonrpc_error_data_for_recoverable_exception(self) -> None:
+        """Server-side JSON-RPC data payload includes taxonomy and recoverability hints."""
+        err = ASAPConnectionError(
+            "connection refused",
+            url="https://agent.example.test/asap",
+            rpc_code=RPC_CONNECTION_ERROR,
+            retry_after_ms=500,
+            alternative_agents=["urn:asap:agent:fallback"],
+        )
+
+        payload = jsonrpc_error_data_for_asap_exception(err)
+        assert payload["code"] == "asap:transport/connection_error"
+        assert payload["rpc_code"] == RPC_CONNECTION_ERROR
+        assert payload["recoverable"] is True
+        assert payload["asap_taxonomy_code"] == "asap:transport/connection_error"
+        assert payload["retry_after_ms"] == 500
+        assert payload["alternative_agents"] == ["urn:asap:agent:fallback"]
+
+    def test_connection_error_message_not_duplicated_when_verify_text_present(self) -> None:
+        """Connection errors with existing troubleshooting guidance are not duplicated."""
+        err = ASAPConnectionError(
+            "Verify service availability before retrying.",
+            url="https://agent.example.test/asap",
+        )
+        assert str(err) == "Verify service availability before retrying."
