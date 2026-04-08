@@ -11,12 +11,14 @@ import pytest
 from pydantic import ValidationError
 
 from asap.transport.jsonrpc import (
+    ASAP_METHOD,
     ERROR_MESSAGES,
     INTERNAL_ERROR,
     INVALID_PARAMS,
     INVALID_REQUEST,
     METHOD_NOT_FOUND,
     PARSE_ERROR,
+    VERSION_INCOMPATIBLE,
     JsonRpcError,
     JsonRpcErrorResponse,
     JsonRpcRequest,
@@ -359,19 +361,23 @@ class TestJsonRpcIntegration:
         assert request.id == response.id
 
     def test_error_code_mapping_complete(self) -> None:
-        """Test all standard error codes are mapped."""
+        """Test all standard and ASAP-specific error codes are mapped."""
         expected_codes = [
             PARSE_ERROR,
             INVALID_REQUEST,
             METHOD_NOT_FOUND,
             INVALID_PARAMS,
             INTERNAL_ERROR,
+            VERSION_INCOMPATIBLE,
         ]
 
         for code in expected_codes:
             assert code in ERROR_MESSAGES
             error = JsonRpcError.from_code(code)
             assert error.message == ERROR_MESSAGES[code]
+
+    def test_asap_method_constant(self) -> None:
+        assert ASAP_METHOD == "asap.send"
 
     def test_round_trip_request(self) -> None:
         """Test serialization and deserialization of request."""

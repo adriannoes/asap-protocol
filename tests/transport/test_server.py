@@ -39,11 +39,13 @@ from asap.models.payloads import TaskRequest
 from asap.observability import get_metrics, reset_metrics
 from asap.observability.metrics import MetricsCollector
 from asap.transport.handlers import HandlerRegistry
+from asap.models.constants import ASAP_DEFAULT_TRANSPORT_VERSION
 from asap.transport.jsonrpc import (
     INTERNAL_ERROR,
     INVALID_PARAMS,
     INVALID_REQUEST,
     PARSE_ERROR,
+    VERSION_INCOMPATIBLE,
     JsonRpcRequest,
 )
 from asap.auth.agent_jwt import create_agent_jwt, create_host_jwt, verify_agent_jwt
@@ -151,6 +153,128 @@ class TestAppFactory:
         """Test that create_app(..., hot_reload=True) returns an app (watcher starts in background)."""
         app = create_app(sample_manifest, hot_reload=True)
         assert isinstance(app, FastAPI)
+
+
+class TestASAPVersionMiddleware:
+    """HTTP ASAP-Version header: negotiation on POST /asap and header on all responses."""
+
+    def test_health_includes_default_asap_version_header(
+        self, app: FastAPI, client: TestClient
+    ) -> None:
+        """Responses include ASAP-Version default when client omits the request header."""
+        response = client.get("/health")
+        assert response.status_code == 200
+        assert response.headers.get("ASAP-Version") == ASAP_DEFAULT_TRANSPORT_VERSION
+
+    def test_post_asap_without_header_uses_default_version_on_response(
+        self, app: FastAPI, client: TestClient
+    ) -> None:
+        """POST /asap without ASAP-Version succeeds and echoes the default wire version."""
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-version-1",
+                skill_id="echo",
+                input={"message": "hello"},
+            ).model_dump(),
+        )
+        body = {
+            "jsonrpc": "2.0",
+            "method": "asap.send",
+            "params": {"envelope": envelope.model_dump(mode="json")},
+            "id": "version-1",
+        }
+        response = client.post("/asap", json=body)
+        assert response.status_code == 200
+        assert response.headers.get("ASAP-Version") == ASAP_DEFAULT_TRANSPORT_VERSION
+        assert "result" in response.json()
+
+    def test_post_asap_with_compatible_version_echoes_header(
+        self, app: FastAPI, client: TestClient
+    ) -> None:
+        """POST /asap with supported ASAP-Version echoes that version on the response."""
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-version-2",
+                skill_id="echo",
+                input={"message": "hello"},
+            ).model_dump(),
+        )
+        body = {
+            "jsonrpc": "2.0",
+            "method": "asap.send",
+            "params": {"envelope": envelope.model_dump(mode="json")},
+            "id": "version-2",
+        }
+        response = client.post("/asap", json=body, headers={"ASAP-Version": "2.1"})
+        assert response.status_code == 200
+        assert response.headers.get("ASAP-Version") == "2.1"
+        assert "result" in response.json()
+
+    def test_post_asap_incompatible_version_returns_jsonrpc_error(
+        self, app: FastAPI, client: TestClient
+    ) -> None:
+        """Unsupported ASAP-Version yields JSON-RPC error -32000 without running the handler."""
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-version-3",
+                skill_id="echo",
+                input={"message": "hello"},
+            ).model_dump(),
+        )
+        body = {
+            "jsonrpc": "2.0",
+            "method": "asap.send",
+            "params": {"envelope": envelope.model_dump(mode="json")},
+            "id": "version-3",
+        }
+        response = client.post("/asap", json=body, headers={"ASAP-Version": "0.9"})
+        assert response.status_code == 200
+        assert response.headers.get("ASAP-Version") == ASAP_DEFAULT_TRANSPORT_VERSION
+        payload = response.json()
+        assert payload.get("error", {}).get("code") == VERSION_INCOMPATIBLE
+        assert payload.get("error", {}).get("data", {}).get("requested") == "0.9"
+
+    def test_post_asap_comma_separated_version_first_match_wins(
+        self, app: FastAPI, client: TestClient
+    ) -> None:
+        """Comma-separated ASAP-Version uses the first token in the supported set."""
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-version-4",
+                skill_id="echo",
+                input={"message": "hello"},
+            ).model_dump(),
+        )
+        body = {
+            "jsonrpc": "2.0",
+            "method": "asap.send",
+            "params": {"envelope": envelope.model_dump(mode="json")},
+            "id": "version-4",
+        }
+        response = client.post(
+            "/asap",
+            json=body,
+            headers={"ASAP-Version": "2.2, 2.1"},
+        )
+        assert response.status_code == 200
+        assert response.headers.get("ASAP-Version") == "2.2"
+        assert "result" in response.json()
 
 
 class TestRegistryHolder:
