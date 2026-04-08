@@ -22,7 +22,7 @@ classifiers = [
 
 dependencies = [
     "aiosqlite>=0.20",
-    "cryptography>=46.0.6",
+    "cryptography>=46.0.7",
     "jcs>=0.2.0",
     "jsonschema>=4.23.0",
     "pydantic>=2.12.5",
@@ -105,14 +105,14 @@ Issues = "https://github.com/adriannoes/asap-protocol/issues"
 # - pyjwt>=2.12.0 for CVE-2026-32597 (crit header validation)
 # - pyasn1>=0.6.3 for CVE-2026-30922 (DoS via unbounded recursion)
 # - tinytag>=2.2.1 for CVE-2026-32889
-# - cryptography>=46.0.6 for CVE-2026-34073 (name-constraint / peer identity)
+# - cryptography>=46.0.7 for CVE-2026-39892 / CVE-2026-34073 (name-constraint / peer identity)
 # - requests>=2.33.0 for CVE-2026-25645 (extract_zipped_paths temp file)
 [tool.uv]
 override-dependencies = [
     "pyjwt>=2.12.0",
     "pyasn1>=0.6.3",
     "tinytag>=2.2.1",
-    "cryptography>=46.0.6",
+    "cryptography>=46.0.7",
     "requests>=2.33.0",
 ]
 
