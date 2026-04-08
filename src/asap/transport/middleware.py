@@ -49,8 +49,18 @@ from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from asap.models.constants import (
+    ASAP_DEFAULT_TRANSPORT_VERSION,
+    ASAP_SUPPORTED_TRANSPORT_VERSIONS,
+    ASAP_VERSION_HEADER,
+)
 from asap.models.entities import Manifest
 from asap.observability import get_logger
+from asap.transport.jsonrpc import (
+    VERSION_INCOMPATIBLE,
+    JsonRpcError,
+    JsonRpcErrorResponse,
+)
 from asap.transport.rate_limit import (
     DEFAULT_RATE_LIMIT,
     ASAPRateLimiter,
@@ -564,12 +574,72 @@ class SizeLimitMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+_ASAP_VERSION_NEGOTIATION_PATHS = frozenset({"/asap", "/asap/stream"})
+
+
+def _first_supported_transport_version(header_value: str) -> str | None:
+    """Pick the first comma-separated token that appears in the supported set."""
+    for part in header_value.split(","):
+        token = part.strip()
+        if token and token in ASAP_SUPPORTED_TRANSPORT_VERSIONS:
+            return token
+    return None
+
+
+class ASAPVersionMiddleware(BaseHTTPMiddleware):
+    """Validate ``ASAP-Version`` on JSON-RPC HTTP endpoints and echo it on all responses.
+
+    If the header is omitted, the server assumes
+    ``ASAP_DEFAULT_TRANSPORT_VERSION``. If the header is set to a value outside
+    ``ASAP_SUPPORTED_TRANSPORT_VERSIONS``, the server returns a JSON-RPC error
+    with code ``VERSION_INCOMPATIBLE`` (-32000) without invoking the handler.
+    """
+
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Any]]
+    ) -> Any:
+        default_version = ASAP_DEFAULT_TRANSPORT_VERSION
+        response_version = default_version
+
+        if request.method == "POST" and request.url.path in _ASAP_VERSION_NEGOTIATION_PATHS:
+            raw = request.headers.get(ASAP_VERSION_HEADER.lower())
+            if raw is not None and raw.strip() != "":
+                stripped = raw.strip()
+                negotiated = _first_supported_transport_version(stripped)
+                if negotiated is None:
+                    logger.warning(
+                        "asap.version.incompatible",
+                        path=request.url.path,
+                        requested=stripped,
+                    )
+                    err = JsonRpcErrorResponse(
+                        error=JsonRpcError(
+                            code=VERSION_INCOMPATIBLE,
+                            message=JsonRpcError.from_code(VERSION_INCOMPATIBLE).message,
+                            data={
+                                "requested": stripped,
+                                "supported": sorted(ASAP_SUPPORTED_TRANSPORT_VERSIONS),
+                            },
+                        ),
+                        id=None,
+                    )
+                    resp = JSONResponse(status_code=200, content=err.model_dump())
+                    resp.headers[ASAP_VERSION_HEADER] = default_version
+                    return resp
+                response_version = negotiated
+
+        response = await call_next(request)
+        response.headers[ASAP_VERSION_HEADER] = response_version
+        return response
+
+
 # Export rate limiting components
 __all__ = [
     "AuthenticationMiddleware",
     "BearerTokenValidator",
     "TokenValidator",
     "SizeLimitMiddleware",
+    "ASAPVersionMiddleware",
     "ASAPRateLimiter",
     "RateLimitExceeded",
     "limiter",
