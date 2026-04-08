@@ -5,10 +5,16 @@ from pathlib import Path
 
 import pytest
 
-from asap.state.snapshot import SnapshotStore
+from asap.state.snapshot import (
+    AsyncSnapshotStore,
+    SnapshotStore,
+    create_async_snapshot_store,
+)
 from asap.state.stores import (
+    AsyncInMemorySnapshotStore,
     create_snapshot_store,
     InMemorySnapshotStore,
+    SQLiteAsyncSnapshotStore,
     SQLiteSnapshotStore,
 )
 
@@ -39,6 +45,19 @@ class TestCreateSnapshotStoreBackend:
         """ASAP_STORAGE_BACKEND=memory returns InMemorySnapshotStore."""
         env_backend = os.environ.get("ASAP_STORAGE_BACKEND")
         os.environ["ASAP_STORAGE_BACKEND"] = "memory"
+        try:
+            store = create_snapshot_store()
+            assert isinstance(store, InMemorySnapshotStore)
+        finally:
+            if env_backend is None:
+                os.environ.pop("ASAP_STORAGE_BACKEND", None)
+            else:
+                os.environ["ASAP_STORAGE_BACKEND"] = env_backend
+
+    def test_memory_backend_strips_and_lowercases(self) -> None:
+        """Backend value is normalized with strip().lower()."""
+        env_backend = os.environ.get("ASAP_STORAGE_BACKEND")
+        os.environ["ASAP_STORAGE_BACKEND"] = "  MeMoRy  "
         try:
             store = create_snapshot_store()
             assert isinstance(store, InMemorySnapshotStore)
@@ -89,6 +108,48 @@ class TestCreateSnapshotStoreBackend:
                 os.environ.pop("ASAP_STORAGE_PATH", None)
             else:
                 os.environ["ASAP_STORAGE_PATH"] = env_path
+
+
+class TestCreateAsyncSnapshotStore:
+    def test_default_sqlite_returns_sqlite_async(self, tmp_path: Path) -> None:
+        db_path = tmp_path / "async_factory.db"
+        env_path = os.environ.get("ASAP_STORAGE_PATH")
+        os.environ["ASAP_STORAGE_PATH"] = str(db_path)
+        try:
+            store = create_async_snapshot_store()
+            assert isinstance(store, SQLiteAsyncSnapshotStore)
+            assert isinstance(store, AsyncSnapshotStore)
+            assert store._db_path == db_path
+        finally:
+            if env_path is None:
+                os.environ.pop("ASAP_STORAGE_PATH", None)
+            else:
+                os.environ["ASAP_STORAGE_PATH"] = env_path
+
+    def test_sqlite_with_explicit_db_path(self, tmp_path: Path) -> None:
+        custom = tmp_path / "explicit_async.db"
+        store = create_async_snapshot_store("sqlite", db_path=custom)
+        assert isinstance(store, SQLiteAsyncSnapshotStore)
+        assert store._db_path == custom
+
+    def test_async_sqlite_backend_strips_and_lowercases(self, tmp_path: Path) -> None:
+        db = tmp_path / "strip_sqlite_async.db"
+        store = create_async_snapshot_store("  SQLITE  ", db_path=db)
+        assert isinstance(store, SQLiteAsyncSnapshotStore)
+        assert store._db_path == db
+
+    def test_memory_returns_async_in_memory(self) -> None:
+        store = create_async_snapshot_store("memory")
+        assert isinstance(store, AsyncInMemorySnapshotStore)
+        assert isinstance(store, AsyncSnapshotStore)
+
+    def test_async_memory_backend_strips_and_lowercases(self) -> None:
+        store = create_async_snapshot_store("  MeMoRy  ")
+        assert isinstance(store, AsyncInMemorySnapshotStore)
+
+    def test_invalid_async_backend_raises(self) -> None:
+        with pytest.raises(ValueError, match="Unknown async snapshot backend"):
+            create_async_snapshot_store("redis")
 
 
 class TestCreateSnapshotStoreInvalidBackend:

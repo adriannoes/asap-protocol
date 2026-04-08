@@ -1,11 +1,15 @@
 """Tests for ASAP metering store (MeteringStore protocol and InMemoryMeteringStore)."""
 
+from __future__ import annotations
+
 import asyncio
+import inspect
 from datetime import datetime, timezone
 
 import pytest
 
 from asap.state.metering import (
+    AsyncMeteringStore,
     InMemoryMeteringStore,
     MeteringStore,
     UsageAggregate,
@@ -37,6 +41,47 @@ def sample_event() -> UsageEvent:
     )
 
 
+class TestAsyncMeteringStoreProtocol:
+    """Test AsyncMeteringStore protocol contract."""
+
+    def test_async_metering_store_is_runtime_checkable(self) -> None:
+        """AsyncMeteringStore is runtime_checkable."""
+        from typing import runtime_checkable
+
+        assert runtime_checkable(AsyncMeteringStore)
+
+    def test_in_memory_implements_async_metering_store(self) -> None:
+        """InMemoryMeteringStore uses async def and matches AsyncMeteringStore."""
+        store = InMemoryMeteringStore()
+        assert isinstance(store, AsyncMeteringStore)
+        for name in ("record", "query", "aggregate"):
+            assert inspect.iscoroutinefunction(getattr(store, name))
+
+    @pytest.mark.asyncio
+    async def test_async_stub_isinstance_protocol(self) -> None:
+        """Minimal async implementation satisfies AsyncMeteringStore."""
+
+        class _Stub:
+            async def record(self, event: UsageEvent) -> None:
+                _ = event
+
+            async def query(
+                self,
+                agent_id: str,
+                start: datetime,
+                end: datetime,
+                limit: int | None = None,
+                offset: int = 0,
+            ) -> list[UsageEvent]:
+                _ = (agent_id, start, end, limit, offset)
+                return []
+
+            async def aggregate(self, agent_id: str, period: str) -> UsageAggregate:
+                return UsageAggregate(agent_id=agent_id, period=period)
+
+        assert isinstance(_Stub(), AsyncMeteringStore)
+
+
 class TestMeteringStoreProtocol:
     """Test MeteringStore protocol contract."""
 
@@ -54,6 +99,29 @@ class TestMeteringStoreProtocol:
         assert callable(store.record)
         assert callable(store.query)
         assert callable(store.aggregate)
+
+    def test_subclassing_metering_store_emits_deprecation_warning(self) -> None:
+        """MeteringStore is deprecated for new inheritance (PEP 702)."""
+
+        with pytest.warns(DeprecationWarning, match="AsyncMeteringStore"):
+
+            class _Legacy(MeteringStore):
+                async def record(self, event: UsageEvent) -> None:
+                    _ = event
+
+                async def query(
+                    self,
+                    agent_id: str,
+                    start: datetime,
+                    end: datetime,
+                    limit: int | None = None,
+                    offset: int = 0,
+                ) -> list[UsageEvent]:
+                    _ = (agent_id, start, end, limit, offset)
+                    return []
+
+                async def aggregate(self, agent_id: str, period: str) -> UsageAggregate:
+                    return UsageAggregate(agent_id=agent_id, period=period)
 
 
 class TestInMemoryMeteringStoreRecordAndQuery:
@@ -168,6 +236,17 @@ class TestInMemoryMeteringStoreRecordAndQuery:
         page3 = await metering_store.query("a1", start, end, limit=2, offset=4)
         assert len(page3) == 1
         assert page3[0].task_id == "t4"
+
+    @pytest.mark.asyncio
+    async def test_query_rejects_negative_offset(
+        self,
+        metering_store: InMemoryMeteringStore,
+    ) -> None:
+        """Query raises ValueError when offset is negative."""
+        start = datetime(2025, 2, 8, 10, 0, 0, tzinfo=timezone.utc)
+        end = datetime(2025, 2, 8, 14, 0, 0, tzinfo=timezone.utc)
+        with pytest.raises(ValueError, match="offset must be non-negative"):
+            await metering_store.query("a1", start, end, limit=1, offset=-1)
 
 
 class TestInMemoryMeteringStoreAggregate:
