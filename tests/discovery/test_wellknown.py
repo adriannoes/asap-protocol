@@ -90,6 +90,7 @@ class TestWellKnownEndpointViaApp:
         assert data["name"] == sample_manifest.name
         assert "capabilities" in data
         assert "endpoints" in data
+        assert data.get("supported_versions") == ["2.2"]
 
     def test_content_type_is_application_json(self, client: TestClient) -> None:
         """Content-Type is application/json."""

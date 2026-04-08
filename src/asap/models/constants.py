@@ -6,6 +6,11 @@ This module defines protocol-wide constants used across the codebase.
 # Protocol version
 ASAP_PROTOCOL_VERSION = "0.1"
 
+# ASAP-Version wire negotiation (HTTP JSON-RPC)
+ASAP_VERSION_HEADER = "ASAP-Version"
+ASAP_DEFAULT_TRANSPORT_VERSION = "2.2"
+ASAP_SUPPORTED_TRANSPORT_VERSIONS: frozenset[str] = frozenset({"2.1", "2.2"})
+
 DEFAULT_MANIFEST_TTL_SECONDS = 300
 """Default TTL in seconds for agent liveness (5 minutes)."""
 
