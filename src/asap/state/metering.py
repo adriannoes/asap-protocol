@@ -5,13 +5,14 @@ data, enabling the v1.3 Economics Layer (METER-001 to METER-006).
 
 Example:
     >>> store = InMemoryMeteringStore()
-    >>> isinstance(store, MeteringStore)
+    >>> isinstance(store, AsyncMeteringStore)
     True
 """
 
 from __future__ import annotations
 
 import asyncio
+import warnings
 from collections.abc import Awaitable
 from datetime import datetime
 from typing import Protocol, runtime_checkable
@@ -79,6 +80,35 @@ class UsageAggregate(ASAPBaseModel):
 
 
 @runtime_checkable
+class AsyncMeteringStore(Protocol):
+    """Async usage metering storage (:class:`MeteringStore` as ``async def``)."""
+
+    async def record(self, event: UsageEvent) -> None:
+        """Record a usage event."""
+        ...
+
+    async def query(
+        self,
+        agent_id: str,
+        start: datetime,
+        end: datetime,
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> list[UsageEvent]:
+        """Query usage events for an agent in a time range."""
+        ...
+
+    async def aggregate(self, agent_id: str, period: str) -> UsageAggregate:
+        """Aggregate usage for an agent over a period."""
+        ...
+
+
+@runtime_checkable
+@warnings.deprecated(
+    "Prefer AsyncMeteringStore for new code; this protocol keeps the older "
+    "Awaitable-return style for gradual migration.",
+    category=DeprecationWarning,
+)
 class MeteringStore(Protocol):
     """Protocol for usage metering storage implementations.
 
@@ -152,7 +182,7 @@ class MeteringStore(Protocol):
 
 
 class InMemoryMeteringStore:
-    """In-memory implementation of MeteringStore.
+    """In-memory implementation of :class:`AsyncMeteringStore` / :class:`MeteringStore`.
 
     Stores usage events in a list with asyncio.Lock for async-safe concurrent access.
     Used for testing and development; not persistent across restarts.
@@ -201,3 +231,13 @@ class InMemoryMeteringStore:
             total_tasks=total_tasks,
             total_api_calls=total_api_calls,
         )
+
+
+__all__ = [
+    "AsyncMeteringStore",
+    "InMemoryMeteringStore",
+    "MeteringStore",
+    "UsageAggregate",
+    "UsageEvent",
+    "UsageMetrics",
+]

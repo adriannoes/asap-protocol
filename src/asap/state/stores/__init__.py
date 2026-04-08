@@ -1,20 +1,28 @@
 """ASAP state storage backends.
 
 This package provides SnapshotStore and MeteringStore implementations:
-- InMemorySnapshotStore, InMemoryMeteringStore (from stores.memory)
-- SQLiteSnapshotStore, SQLiteMeteringStore (from stores.sqlite)
+- InMemorySnapshotStore, AsyncInMemorySnapshotStore, InMemoryMeteringStore (from stores.memory)
+- SQLiteAsyncSnapshotStore, SQLiteSnapshotStore, SQLiteMeteringStore (from stores.sqlite)
 
 Factory:
-- create_snapshot_store() builds a SnapshotStore from ASAP_STORAGE_BACKEND
-  and ASAP_STORAGE_PATH (default: memory, asap_state.db).
+- create_snapshot_store() — env ASAP_STORAGE_BACKEND / ASAP_STORAGE_PATH
+- create_async_snapshot_store() — re-exported; default sqlite, optional memory
 """
 
 import os
 from pathlib import Path
 
-from asap.state.snapshot import SnapshotStore
-from asap.state.stores.memory import InMemoryMeteringStore, InMemorySnapshotStore
-from asap.state.stores.sqlite import SQLiteMeteringStore, SQLiteSnapshotStore
+from asap.state.snapshot import SnapshotStore, create_async_snapshot_store
+from asap.state.stores.memory import (
+    AsyncInMemorySnapshotStore,
+    InMemoryMeteringStore,
+    InMemorySnapshotStore,
+)
+from asap.state.stores.sqlite import (
+    SQLiteAsyncSnapshotStore,
+    SQLiteMeteringStore,
+    SQLiteSnapshotStore,
+)
 
 ASAP_STORAGE_BACKEND_ENV = "ASAP_STORAGE_BACKEND"
 ASAP_STORAGE_PATH_ENV = "ASAP_STORAGE_PATH"
@@ -45,9 +53,12 @@ def create_snapshot_store() -> SnapshotStore:
 
 
 __all__ = [
+    "AsyncInMemorySnapshotStore",
     "InMemorySnapshotStore",
     "InMemoryMeteringStore",
+    "SQLiteAsyncSnapshotStore",
     "SQLiteSnapshotStore",
     "SQLiteMeteringStore",
+    "create_async_snapshot_store",
     "create_snapshot_store",
 ]
