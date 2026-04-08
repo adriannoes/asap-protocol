@@ -329,6 +329,7 @@ class TestManifest:
         assert manifest.name == "Test Agent"
         assert manifest.version == "1.0.0"
         assert manifest.capabilities.asap_version == "0.1"
+        assert manifest.supported_versions == ["2.2"]
 
     def test_manifest_creation_full(self):
         """Test creating a Manifest with all fields."""
@@ -382,6 +383,20 @@ class TestManifest:
         assert manifest.auth is None
         assert manifest.signature is None
         assert manifest.sla is None
+        assert manifest.supported_versions == ["2.2"]
+
+    def test_manifest_supported_versions_custom(self) -> None:
+        """Manifest accepts explicit supported_versions list."""
+        manifest = Manifest(
+            id="urn:asap:agent:multi-ver",
+            name="Multi",
+            version="1.0.0",
+            description="Test",
+            capabilities=Capability(asap_version="0.1", skills=[]),
+            endpoints=Endpoint(asap="https://api.example.com/asap"),
+            supported_versions=["2.1", "2.2"],
+        )
+        assert manifest.supported_versions == ["2.1", "2.2"]
 
     def test_manifest_urn_max_length_rejected(self) -> None:
         """Test that Manifest rejects agent id URN longer than MAX_URN_LENGTH (256)."""
@@ -426,6 +441,7 @@ class TestManifest:
         assert "version" in schema["properties"]
         assert "capabilities" in schema["properties"]
         assert "endpoints" in schema["properties"]
+        assert "supported_versions" in schema["properties"]
 
         required_fields = set(schema["required"])
         assert "id" in required_fields
@@ -452,6 +468,7 @@ class TestManifest:
         assert json_data["id"] == "urn:asap:agent:test"
         assert json_data["name"] == "Test Agent"
         assert len(json_data["capabilities"]["skills"]) == 1
+        assert json_data["supported_versions"] == ["2.2"]
 
     def test_manifest_deserialization(self):
         """Test Manifest deserialization from JSON."""
@@ -475,6 +492,7 @@ class TestManifest:
         assert manifest.name == data["name"]
         assert len(manifest.capabilities.skills) == 1
         assert manifest.sla is None
+        assert manifest.supported_versions == ["2.2"]
 
     def test_manifest_with_sla(self) -> None:
         """Manifest accepts optional sla field (SLADefinition)."""
@@ -524,6 +542,7 @@ class TestManifest:
         assert manifest.sla.availability == "99.9%"
         assert manifest.sla.max_latency_p95_ms == 200
         assert manifest.sla.support_hours == "business"
+        assert manifest.supported_versions == ["2.2"]
 
     def test_manifest_json_schema_includes_sla(self) -> None:
         """Manifest JSON Schema includes optional sla property."""
@@ -552,6 +571,7 @@ class TestManifestSLAFixture:
         assert manifest.sla.max_latency_p95_ms == 500
         assert manifest.sla.max_error_rate == "1%"
         assert manifest.sla.support_hours == "24/7"
+        assert manifest.supported_versions == ["2.2"]
 
 
 class TestConversation:
@@ -731,6 +751,42 @@ class TestTask:
         assert task.created_at == created
         assert task.updated_at == created
         assert task.created_at.tzinfo == timezone.utc
+
+    def test_task_is_terminal_delegates_to_status(self) -> None:
+        """Task.is_terminal() mirrors TaskStatus.is_terminal()."""
+        from datetime import datetime, timezone
+
+        from asap.models.entities import Task
+        from asap.models.enums import TaskStatus
+
+        now = datetime.now(timezone.utc)
+        for status in (
+            TaskStatus.COMPLETED,
+            TaskStatus.FAILED,
+            TaskStatus.CANCELLED,
+        ):
+            task = Task(
+                id=generate_id(),
+                conversation_id=generate_id(),
+                status=status,
+                created_at=now,
+                updated_at=now,
+            )
+            assert task.is_terminal()
+
+        for status in (
+            TaskStatus.SUBMITTED,
+            TaskStatus.WORKING,
+            TaskStatus.INPUT_REQUIRED,
+        ):
+            task = Task(
+                id=generate_id(),
+                conversation_id=generate_id(),
+                status=status,
+                created_at=now,
+                updated_at=now,
+            )
+            assert not task.is_terminal()
 
     def test_task_json_schema(self):
         """Test that Task generates valid JSON Schema."""
