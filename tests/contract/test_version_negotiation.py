@@ -95,7 +95,10 @@ def test_v21_client_against_v22_capable_server(
         )
     assert response.status_code == 200
     assert response.headers.get("ASAP-Version") == "2.1"
-    assert "result" in response.json()
+    payload = response.json()
+    env = payload.get("result", {}).get("envelope")
+    assert isinstance(env, dict)
+    assert env.get("payload_type") == "task.response"
 
 
 def test_v22_first_client_against_v21_only_server(
@@ -111,7 +114,10 @@ def test_v22_first_client_against_v21_only_server(
         )
     assert response.status_code == 200
     assert response.headers.get("ASAP-Version") == "2.1"
-    assert "result" in response.json()
+    payload = response.json()
+    env = payload.get("result", {}).get("envelope")
+    assert isinstance(env, dict)
+    assert env.get("payload_type") == "task.response"
 
 
 def test_incompatible_asap_version_returns_version_negotiation_error(
