@@ -26,6 +26,7 @@ from pydantic import ConfigDict, Field, field_validator, model_validator
 from asap.errors import UnsupportedAuthSchemeError
 from asap.models.base import ASAPBaseModel
 from asap.models.constants import (
+    ASAP_DEFAULT_TRANSPORT_VERSION,
     ASAP_PROTOCOL_VERSION,
     DEFAULT_MANIFEST_TTL_SECONDS,
     MAX_TASK_DEPTH,
@@ -334,7 +335,7 @@ class Manifest(ASAPBaseModel):
     capabilities: Capability = Field(..., description="Agent capabilities")
     endpoints: Endpoint = Field(..., description="Communication endpoints")
     supported_versions: list[str] = Field(
-        default_factory=lambda: ["2.2"],
+        default_factory=lambda: [ASAP_DEFAULT_TRANSPORT_VERSION],
         min_length=1,
         description="Supported ASAP HTTP wire versions (discovery / ASAP-Version)",
     )
