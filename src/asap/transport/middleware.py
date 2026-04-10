@@ -581,7 +581,7 @@ def _first_supported_transport_version(header_value: str) -> str | None:
     """Pick the first comma-separated token that appears in the supported set."""
     for part in header_value.split(","):
         token = part.strip()
-        if token and token in ASAP_SUPPORTED_TRANSPORT_VERSIONS:
+        if token in ASAP_SUPPORTED_TRANSPORT_VERSIONS:
             return token
     return None
 
