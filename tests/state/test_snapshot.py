@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 
@@ -15,6 +17,7 @@ from asap.state.snapshot import (
     SnapshotStore,
 )
 from asap.state.stores.memory import AsyncInMemorySnapshotStore
+from asap.state.stores.sqlite import SQLiteAsyncSnapshotStore
 
 
 @pytest.fixture
@@ -242,6 +245,79 @@ class TestAsyncInMemorySnapshotStore:
         assert await store.delete(sample_snapshot.task_id, 2) is True
         latest = await store.get(sample_snapshot.task_id, None)
         assert latest is not None and latest.version == 1
+
+
+class TestSQLiteAsyncSnapshotStore:
+    """Integration tests for SQLite async snapshot persistence (aiosqlite + WAL)."""
+
+    @pytest.mark.asyncio
+    async def test_save_get_roundtrip(self, tmp_path: Path, sample_snapshot: StateSnapshot) -> None:
+        store = SQLiteAsyncSnapshotStore(db_path=tmp_path / "test.db")
+        assert isinstance(store, AsyncSnapshotStore)
+        await store.save(sample_snapshot)
+        got = await store.get(sample_snapshot.task_id, sample_snapshot.version)
+        assert got is not None
+        assert got.id == sample_snapshot.id
+        assert got.data == sample_snapshot.data
+
+    @pytest.mark.asyncio
+    async def test_get_latest_and_list_versions(
+        self, tmp_path: Path, sample_snapshot: StateSnapshot
+    ) -> None:
+        store = SQLiteAsyncSnapshotStore(db_path=tmp_path / "versions.db")
+        await store.save(sample_snapshot)
+        v2 = StateSnapshot(
+            id="snap_sqlite_v2_01HX5K7R000000000000000001",
+            task_id=sample_snapshot.task_id,
+            version=2,
+            data={"step": 2},
+            checkpoint=False,
+            created_at=sample_snapshot.created_at,
+        )
+        await store.save(v2)
+        latest = await store.get(sample_snapshot.task_id, None)
+        assert latest is not None and latest.version == 2
+        assert await store.list_versions(sample_snapshot.task_id) == [1, 2]
+
+    @pytest.mark.asyncio
+    async def test_delete_specific_version_then_all(
+        self, tmp_path: Path, sample_snapshot: StateSnapshot
+    ) -> None:
+        store = SQLiteAsyncSnapshotStore(db_path=tmp_path / "delete.db")
+        await store.save(sample_snapshot)
+        v2 = StateSnapshot(
+            id="snap_sqlite_v2b_01HX5K7R000000000000000002",
+            task_id=sample_snapshot.task_id,
+            version=2,
+            data={},
+            checkpoint=False,
+            created_at=sample_snapshot.created_at,
+        )
+        await store.save(v2)
+        assert await store.delete(sample_snapshot.task_id, 1) is True
+        assert await store.get(sample_snapshot.task_id, 1) is None
+        assert await store.delete(sample_snapshot.task_id, None) is True
+        assert await store.list_versions(sample_snapshot.task_id) == []
+
+    @pytest.mark.asyncio
+    async def test_concurrent_saves_do_not_raise(self, tmp_path: Path) -> None:
+        """Multiple async saves to the same DB should not produce 'database is locked'."""
+        store = SQLiteAsyncSnapshotStore(db_path=tmp_path / "concurrent.db")
+        task_id: TaskID = "task_01HX5K4N000000000000000099"
+        now = datetime.now(timezone.utc)
+        snapshots = [
+            StateSnapshot(
+                id=f"snap_concurrent_01HX5K7R0000000000000000{i:02d}",
+                task_id=task_id,
+                version=i,
+                data={"i": i},
+                checkpoint=False,
+                created_at=now,
+            )
+            for i in range(1, 11)
+        ]
+        await asyncio.gather(*(store.save(s) for s in snapshots))
+        assert await store.list_versions(task_id) == list(range(1, 11))
 
 
 class TestInMemorySnapshotStore:
