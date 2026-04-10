@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import os
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
 
+import asap.client.cache as cache_module
 from asap.client.cache import (
     DEFAULT_REGISTRY_CACHE_TTL,
     get_registry,
@@ -116,3 +117,58 @@ async def test_ttl_from_env_used() -> None:
 
 def test_default_ttl_constant() -> None:
     assert DEFAULT_REGISTRY_CACHE_TTL == 300
+
+
+def test_cache_ttl_seconds_invalid_env_falls_back_to_default() -> None:
+    with patch.dict(os.environ, {"ASAP_REGISTRY_CACHE_TTL": "not-an-int"}, clear=False):
+        assert cache_module._cache_ttl_seconds() == DEFAULT_REGISTRY_CACHE_TTL
+
+
+def test_cache_ttl_seconds_non_positive_env_falls_back_to_default() -> None:
+    with patch.dict(os.environ, {"ASAP_REGISTRY_CACHE_TTL": "0"}, clear=False):
+        assert cache_module._cache_ttl_seconds() == DEFAULT_REGISTRY_CACHE_TTL
+
+
+@pytest.mark.asyncio
+async def test_get_registry_retries_on_429_then_succeeds() -> None:
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        if calls["n"] < 2:
+            return httpx.Response(429, headers={"Retry-After": "0"})
+        return httpx.Response(status_code=200, content=VALID_REGISTRY_JSON)
+
+    url = "https://429-then-ok.example/registry.json"
+    transport = httpx.MockTransport(handler)
+    with patch("asap.client.cache.asyncio.sleep", new_callable=AsyncMock):
+        reg = await get_registry(url, transport=transport)
+    assert reg.version == "1.0"
+    assert calls["n"] == 2
+
+
+@pytest.mark.asyncio
+async def test_get_registry_429_exhausted_raises() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(429, headers={"Retry-After": "0"})
+
+    url = "https://429-exhausted.example/registry.json"
+    transport = httpx.MockTransport(handler)
+    with (
+        patch("asap.client.cache.asyncio.sleep", new_callable=AsyncMock),
+        pytest.raises(httpx.HTTPStatusError) as exc_info,
+    ):
+        await get_registry(url, transport=transport)
+    assert exc_info.value.response.status_code == 429
+
+
+@pytest.mark.asyncio
+async def test_get_registry_non_429_http_error_propagates_immediately() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(404)
+
+    url = "https://404.example/registry.json"
+    transport = httpx.MockTransport(handler)
+    with pytest.raises(httpx.HTTPStatusError) as exc_info:
+        await get_registry(url, transport=transport)
+    assert exc_info.value.response.status_code == 404

@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import atexit
 import concurrent.futures
 import json
+import threading
 import uuid
+import weakref
+from collections import OrderedDict
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -21,17 +25,61 @@ DEFAULT_DB_PATH = "asap_state.db"
 SNAPSHOTS_TABLE = "snapshots"
 USAGE_EVENTS_TABLE = "usage_events"
 
+# One asyncio lock per DB path: concurrent openings raced on journal_mode=WAL.
+# Weak values drop entries when locks are collectable (limits growth in long test runs).
+_PRAGMA_SETUP_LOCKS: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
+_PRAGMA_DICT_GUARD = threading.Lock()
+# journal_mode=WAL is persistent per DB file; skip redundant SET after first success.
+# LRU-bounded so tmp_path-heavy suites do not grow this map without bound; eviction only
+# loses the in-memory hint (next open may re-run journal_mode=WAL; harmless).
+_MAX_WAL_METADATA_KEYS = 512
+_WAL_INITIALIZED_LRU: OrderedDict[str, None] = OrderedDict()
 
-async def _apply_wal_pragmas(conn: aiosqlite.Connection) -> None:
-    """WAL + NORMAL sync for concurrency; busy_timeout to avoid 'database is locked' under load."""
-    await conn.execute("PRAGMA journal_mode=WAL")
-    await conn.execute("PRAGMA synchronous=NORMAL")
+
+def _pragma_setup_lock(db_path: Path) -> asyncio.Lock:
+    """Per-DB asyncio lock (snapshot and metering share the same path key)."""
+    key = str(db_path.resolve())
+    with _PRAGMA_DICT_GUARD:
+        lock = _PRAGMA_SETUP_LOCKS.get(key)
+        if lock is None:
+            lock = asyncio.Lock()
+            _PRAGMA_SETUP_LOCKS[key] = lock
+        return lock
+
+
+def _wal_mark_initialized(db_key: str) -> None:
+    """Record that journal_mode=WAL was applied for this resolved path (LRU-bounded)."""
+    with _PRAGMA_DICT_GUARD:
+        if db_key in _WAL_INITIALIZED_LRU:
+            _WAL_INITIALIZED_LRU.move_to_end(db_key)
+        else:
+            _WAL_INITIALIZED_LRU[db_key] = None
+            while len(_WAL_INITIALIZED_LRU) > _MAX_WAL_METADATA_KEYS:
+                _WAL_INITIALIZED_LRU.popitem(last=False)
+
+
+async def _apply_wal_pragmas(conn: aiosqlite.Connection, db_key: str) -> None:
+    """Apply WAL pragmas; busy_timeout runs before journal_mode to reduce lock errors."""
     await conn.execute("PRAGMA busy_timeout=15000")
+    with _PRAGMA_DICT_GUARD:
+        need_journal_mode = db_key not in _WAL_INITIALIZED_LRU
+    if need_journal_mode:
+        await conn.execute("PRAGMA journal_mode=WAL")
+        _wal_mark_initialized(db_key)
+    await conn.execute("PRAGMA synchronous=NORMAL")
 
 
 # Shared executor for sync bridge when called from async context.
 # Reused across all DB operations to avoid per-call ThreadPoolExecutor creation.
 _SYNC_BRIDGE_EXECUTOR: concurrent.futures.ThreadPoolExecutor | None = None
+
+
+def _shutdown_sync_bridge_executor() -> None:
+    """Best-effort shutdown for test suites and clean interpreter exit."""
+    global _SYNC_BRIDGE_EXECUTOR
+    if _SYNC_BRIDGE_EXECUTOR is not None:
+        _SYNC_BRIDGE_EXECUTOR.shutdown(wait=False)
+        _SYNC_BRIDGE_EXECUTOR = None
 
 
 def _get_sync_bridge_executor() -> concurrent.futures.ThreadPoolExecutor:
@@ -42,6 +90,7 @@ def _get_sync_bridge_executor() -> concurrent.futures.ThreadPoolExecutor:
             max_workers=4,
             thread_name_prefix="asap-sqlite-sync",
         )
+        atexit.register(_shutdown_sync_bridge_executor)
     return _SYNC_BRIDGE_EXECUTOR
 
 
@@ -117,13 +166,8 @@ def _row_to_event(row: tuple[Any, ...]) -> UsageEvent:
     )
 
 
-class SQLiteSnapshotStore:
-    """SQLite-backed SnapshotStore; state persists across process restarts.
-
-    Uses aiosqlite; sync methods wrap async calls so the store conforms to
-    the sync SnapshotStore protocol. Call from sync code only (or use
-    a dedicated thread if you must use from async context).
-    """
+class _SQLiteSnapshotBackend:
+    """Shared SQLite snapshot table access (internal)."""
 
     def __init__(self, db_path: str | Path = DEFAULT_DB_PATH) -> None:
         self._db_path = Path(db_path)
@@ -131,8 +175,10 @@ class SQLiteSnapshotStore:
     @asynccontextmanager
     async def _connect(self) -> Any:
         """Connection with WAL pragmas applied."""
-        async with aiosqlite.connect(self._db_path) as conn:
-            await _apply_wal_pragmas(conn)
+        db_key = str(self._db_path.resolve())
+        async with aiosqlite.connect(self._db_path, timeout=15.0) as conn:
+            async with _pragma_setup_lock(self._db_path):
+                await _apply_wal_pragmas(conn, db_key)
             yield conn
 
     async def _ensure_snapshots_table(self, conn: aiosqlite.Connection) -> None:
@@ -231,54 +277,108 @@ class SQLiteSnapshotStore:
             await conn.commit()
             return bool(cursor.rowcount) if cursor.rowcount is not None else False
 
+    async def initialize(self) -> None:
+        """Create tables if not exists (call from async context if needed)."""
+        async with self._connect() as conn:
+            await self._ensure_snapshots_table(conn)
+
+
+async def _co_snapshot_save(backend: _SQLiteSnapshotBackend, snapshot: StateSnapshot) -> None:
+    await backend._save_impl(snapshot)
+
+
+async def _co_snapshot_get(
+    backend: _SQLiteSnapshotBackend,
+    task_id: TaskID,
+    version: int | None,
+) -> StateSnapshot | None:
+    return await backend._get_impl(task_id, version)
+
+
+async def _co_snapshot_list_versions(
+    backend: _SQLiteSnapshotBackend,
+    task_id: TaskID,
+) -> list[int]:
+    return await backend._list_versions_impl(task_id)
+
+
+async def _co_snapshot_delete(
+    backend: _SQLiteSnapshotBackend,
+    task_id: TaskID,
+    version: int | None,
+) -> bool:
+    return await backend._delete_impl(task_id, version)
+
+
+class SQLiteAsyncSnapshotStore(_SQLiteSnapshotBackend):
+    """SQLite :class:`~asap.state.snapshot.AsyncSnapshotStore` (``aiosqlite``)."""
+
+    async def save(self, snapshot: StateSnapshot) -> None:
+        """Persist a snapshot."""
+        await _co_snapshot_save(self, snapshot)
+
+    async def get(
+        self,
+        task_id: TaskID,
+        version: int | None = None,
+    ) -> StateSnapshot | None:
+        """Retrieve a snapshot; ``version`` None means latest."""
+        return await _co_snapshot_get(self, task_id, version)
+
+    async def list_versions(self, task_id: TaskID) -> list[int]:
+        """List version numbers for ``task_id`` in ascending order."""
+        return await _co_snapshot_list_versions(self, task_id)
+
+    async def delete(self, task_id: TaskID, version: int | None = None) -> bool:
+        """Delete one version or all snapshots for ``task_id``."""
+        return await _co_snapshot_delete(self, task_id, version)
+
+
+class SQLiteSnapshotStore(_SQLiteSnapshotBackend):
+    """SQLite :class:`~asap.state.snapshot.SnapshotStore`; sync methods use ``_run_sync``."""
+
     def save(self, snapshot: StateSnapshot) -> None:
-        """Save a snapshot (sync wrapper)."""
-        _run_sync(self._save_impl(snapshot))
+        """Save a snapshot."""
+        _run_sync(_co_snapshot_save(self, snapshot))
 
     def get(
         self,
         task_id: TaskID,
         version: int | None = None,
     ) -> StateSnapshot | None:
-        """Get snapshot by task_id and optional version (sync wrapper)."""
-        return cast(StateSnapshot | None, _run_sync(self._get_impl(task_id, version)))
+        """Get snapshot by task and optional version."""
+        return cast(
+            StateSnapshot | None,
+            _run_sync(_co_snapshot_get(self, task_id, version)),
+        )
 
     def list_versions(self, task_id: TaskID) -> list[int]:
-        """List versions for task (sync wrapper)."""
-        return cast(list[int], _run_sync(self._list_versions_impl(task_id)))
+        """List versions for task."""
+        return cast(list[int], _run_sync(_co_snapshot_list_versions(self, task_id)))
 
     def delete(self, task_id: TaskID, version: int | None = None) -> bool:
-        """Delete snapshot(s) (sync wrapper)."""
-        return cast(bool, _run_sync(self._delete_impl(task_id, version)))
+        """Delete snapshot(s) for task."""
+        return cast(bool, _run_sync(_co_snapshot_delete(self, task_id, version)))
 
     async def save_async(self, snapshot: StateSnapshot) -> None:
-        """Save a snapshot (native async; use from async context to avoid blocking)."""
-        await self._save_impl(snapshot)
+        await _co_snapshot_save(self, snapshot)
 
     async def get_async(
         self,
         task_id: TaskID,
         version: int | None = None,
     ) -> StateSnapshot | None:
-        """Get snapshot by task_id and optional version (native async)."""
-        return await self._get_impl(task_id, version)
+        return await _co_snapshot_get(self, task_id, version)
 
     async def list_versions_async(self, task_id: TaskID) -> list[int]:
-        """List versions for task (native async)."""
-        return await self._list_versions_impl(task_id)
+        return await _co_snapshot_list_versions(self, task_id)
 
     async def delete_async(
         self,
         task_id: TaskID,
         version: int | None = None,
     ) -> bool:
-        """Delete snapshot(s) (native async)."""
-        return await self._delete_impl(task_id, version)
-
-    async def initialize(self) -> None:
-        """Create tables if not exists (call from async context if needed)."""
-        async with self._connect() as conn:
-            await self._ensure_snapshots_table(conn)
+        return await _co_snapshot_delete(self, task_id, version)
 
 
 class SQLiteMeteringStore:
@@ -290,8 +390,10 @@ class SQLiteMeteringStore:
     @asynccontextmanager
     async def _connect(self) -> Any:
         """Connection with WAL pragmas applied."""
-        async with aiosqlite.connect(self._db_path) as conn:
-            await _apply_wal_pragmas(conn)
+        db_key = str(self._db_path.resolve())
+        async with aiosqlite.connect(self._db_path, timeout=15.0) as conn:
+            async with _pragma_setup_lock(self._db_path):
+                await _apply_wal_pragmas(conn, db_key)
             yield conn
 
     async def _ensure_usage_table(self, conn: aiosqlite.Connection) -> None:

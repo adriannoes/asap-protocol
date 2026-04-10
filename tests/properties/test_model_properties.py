@@ -39,6 +39,7 @@ from asap.models.payloads import (
     StateQuery,
     StateRestore,
     TaskCancel,
+    TaskMetrics,
     TaskRequest,
     TaskResponse,
     TaskUpdate,
@@ -307,6 +308,18 @@ def st_task_request(draw: st.DrawFn) -> TaskRequest:
 
 
 @st.composite
+def st_task_metrics(draw: st.DrawFn) -> TaskMetrics:
+    """Strategy for TaskMetrics (non-negative numeric fields per TaskMetrics schema)."""
+    return TaskMetrics(
+        duration_ms=draw(st.none() | st.integers(min_value=0, max_value=10_000_000)),
+        tokens_in=draw(st.none() | st.integers(min_value=0, max_value=500_000)),
+        tokens_out=draw(st.none() | st.integers(min_value=0, max_value=500_000)),
+        tokens_used=draw(st.none() | st.integers(min_value=0, max_value=1_000_000)),
+        api_calls=draw(st.none() | st.integers(min_value=0, max_value=10_000)),
+    )
+
+
+@st.composite
 def st_task_response(draw: st.DrawFn) -> TaskResponse:
     """Strategy for TaskResponse."""
     return TaskResponse(
@@ -314,7 +327,7 @@ def st_task_response(draw: st.DrawFn) -> TaskResponse:
         status=draw(st.sampled_from(list(TaskStatus))),
         result=draw(st.none() | st_json_dict()),
         final_state=draw(st.none() | st_json_dict()),
-        metrics=draw(st.none() | st_json_dict()),
+        metrics=draw(st.none() | st_task_metrics()),
     )
 
 

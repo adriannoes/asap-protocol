@@ -48,19 +48,7 @@ def test_canonicalize_deterministic() -> None:
 def test_canonicalize_same_content_different_key_order() -> None:
     manifest = _sample_manifest()
     payload = manifest.model_dump(exclude={"signature"})
-    # Build a dict with different insertion order (same keys/values)
-    reordered = {
-        "ttl_seconds": payload["ttl_seconds"],
-        "name": payload["name"],
-        "id": payload["id"],
-        "version": payload["version"],
-        "description": payload["description"],
-        "capabilities": payload["capabilities"],
-        "endpoints": payload["endpoints"],
-        "auth": payload["auth"],
-        "sla": payload["sla"],
-        "verification": payload.get("verification"),
-    }
+    reordered = {k: payload[k] for k in reversed(list(payload.keys()))}
     from_canonicalize = canonicalize(manifest)
     from_jcs = jcs.canonicalize(reordered)
     assert from_canonicalize == from_jcs

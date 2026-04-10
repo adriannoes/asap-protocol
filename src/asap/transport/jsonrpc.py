@@ -50,6 +50,8 @@ METHOD_NOT_FOUND = -32601
 INVALID_PARAMS = -32602
 INTERNAL_ERROR = -32603
 
+VERSION_INCOMPATIBLE = -32000
+
 # ASAP Protocol JSON-RPC Method Name
 ASAP_METHOD = "asap.send"
 
@@ -60,6 +62,7 @@ ERROR_MESSAGES: dict[int, str] = {
     METHOD_NOT_FOUND: "Method not found",
     INVALID_PARAMS: "Invalid params",
     INTERNAL_ERROR: "Internal error",
+    VERSION_INCOMPATIBLE: "ASAP protocol version incompatible",
 }
 
 

@@ -1,6 +1,7 @@
 """Tests for SQLite SnapshotStore and MeteringStore."""
 
 import asyncio
+import inspect
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,13 +11,18 @@ import pytest
 
 from asap.models.entities import StateSnapshot
 from asap.state.metering import (
+    AsyncMeteringStore,
     MeteringStore,
     UsageAggregate,
     UsageEvent,
     UsageMetrics,
 )
-from asap.state.snapshot import SnapshotStore
-from asap.state.stores.sqlite import SQLiteMeteringStore, SQLiteSnapshotStore
+from asap.state.snapshot import AsyncSnapshotStore, SnapshotStore
+from asap.state.stores.sqlite import (
+    SQLiteAsyncSnapshotStore,
+    SQLiteMeteringStore,
+    SQLiteSnapshotStore,
+)
 
 
 @pytest.fixture
@@ -76,6 +82,34 @@ class TestSQLiteSnapshotStoreProtocol:
     ) -> None:
         """SQLiteSnapshotStore is a SnapshotStore."""
         assert isinstance(sqlite_snapshot_store, SnapshotStore)
+
+    def test_implements_async_snapshot_store_protocol(
+        self,
+        sqlite_snapshot_store: SQLiteSnapshotStore,
+    ) -> None:
+        assert isinstance(sqlite_snapshot_store, AsyncSnapshotStore)
+
+    def test_sqlite_async_snapshot_store_has_coroutine_crud(
+        self,
+        db_path,
+    ) -> None:
+        store = SQLiteAsyncSnapshotStore(db_path=db_path)
+        assert isinstance(store, AsyncSnapshotStore)
+        for name in ("save", "get", "list_versions", "delete"):
+            assert inspect.iscoroutinefunction(getattr(store, name))
+
+
+@pytest.mark.asyncio
+async def test_sqlite_async_snapshot_store_await_save_get(
+    db_path,
+    sample_snapshot: StateSnapshot,
+) -> None:
+    store = SQLiteAsyncSnapshotStore(db_path=db_path)
+    await store.save(sample_snapshot)
+    retrieved = await store.get(sample_snapshot.task_id, sample_snapshot.version)
+    assert retrieved is not None
+    assert retrieved.id == sample_snapshot.id
+    assert retrieved.data == sample_snapshot.data
 
 
 class TestSQLiteSnapshotStoreCRUD:
@@ -300,8 +334,9 @@ class TestSQLiteMeteringStore:
         self,
         sqlite_metering_store: SQLiteMeteringStore,
     ) -> None:
-        """SQLiteMeteringStore is a MeteringStore."""
+        """SQLiteMeteringStore satisfies legacy and async metering protocols."""
         assert isinstance(sqlite_metering_store, MeteringStore)
+        assert isinstance(sqlite_metering_store, AsyncMeteringStore)
 
     @pytest.mark.asyncio
     async def test_record_and_query(

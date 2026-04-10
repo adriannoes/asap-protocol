@@ -1,10 +1,23 @@
 """Tests for ASAP snapshot store."""
 
-import pytest
+from __future__ import annotations
+
+import asyncio
+import inspect
 from datetime import datetime, timezone
+from pathlib import Path
+
+import pytest
 
 from asap.models.entities import StateSnapshot
-from asap.state.snapshot import InMemorySnapshotStore, SnapshotStore
+from asap.models.types import TaskID
+from asap.state.snapshot import (
+    AsyncSnapshotStore,
+    InMemorySnapshotStore,
+    SnapshotStore,
+)
+from asap.state.stores.memory import AsyncInMemorySnapshotStore
+from asap.state.stores.sqlite import SQLiteAsyncSnapshotStore
 
 
 @pytest.fixture
@@ -25,6 +38,78 @@ def sample_snapshot() -> StateSnapshot:
         checkpoint=False,
         created_at=now,
     )
+
+
+class TestAsyncSnapshotStoreInterface:
+    """Test the AsyncSnapshotStore interface contract."""
+
+    def test_async_snapshot_store_is_runtime_checkable(self) -> None:
+        """AsyncSnapshotStore supports isinstance checks."""
+        from typing import runtime_checkable
+
+        assert runtime_checkable(AsyncSnapshotStore)
+
+    def test_async_protocol_methods_defined(self) -> None:
+        """Protocol exposes the expected async method names."""
+        for name in ("save", "get", "list_versions", "delete"):
+            assert hasattr(AsyncSnapshotStore, name), name
+
+    @pytest.mark.asyncio
+    async def test_async_impl_isinstance_protocol(self) -> None:
+        """A class with async CRUD methods satisfies AsyncSnapshotStore."""
+
+        class _AsyncSnapshotStoreStub:
+            async def save(self, snapshot: StateSnapshot) -> None:
+                _ = snapshot
+
+            async def get(
+                self, task_id: TaskID, version: int | None = None
+            ) -> StateSnapshot | None:
+                _ = (task_id, version)
+                return None
+
+            async def list_versions(self, task_id: TaskID) -> list[int]:
+                _ = task_id
+                return []
+
+            async def delete(self, task_id: TaskID, version: int | None = None) -> bool:
+                _ = (task_id, version)
+                return False
+
+        stub = _AsyncSnapshotStoreStub()
+        assert isinstance(stub, AsyncSnapshotStore)
+
+    def test_sync_memory_store_exposes_sync_callables_only(self) -> None:
+        """InMemorySnapshotStore is sync; Protocol isinstance cannot enforce async def."""
+
+        store = InMemorySnapshotStore()
+        for name in ("save", "get", "list_versions", "delete"):
+            assert not inspect.iscoroutinefunction(getattr(store, name))
+
+    def test_async_stub_methods_are_coroutines(self) -> None:
+        """True async implementations use coroutine functions for CRUD."""
+
+        class _AsyncSnapshotStoreStub:
+            async def save(self, snapshot: StateSnapshot) -> None:
+                _ = snapshot
+
+            async def get(
+                self, task_id: TaskID, version: int | None = None
+            ) -> StateSnapshot | None:
+                _ = (task_id, version)
+                return None
+
+            async def list_versions(self, task_id: TaskID) -> list[int]:
+                _ = task_id
+                return []
+
+            async def delete(self, task_id: TaskID, version: int | None = None) -> bool:
+                _ = (task_id, version)
+                return False
+
+        stub = _AsyncSnapshotStoreStub()
+        for name in ("save", "get", "list_versions", "delete"):
+            assert inspect.iscoroutinefunction(getattr(stub, name))
 
 
 class TestSnapshotStoreInterface:
@@ -53,6 +138,186 @@ class TestSnapshotStoreInterface:
         """Test that InMemorySnapshotStore implements SnapshotStore protocol."""
         store = InMemorySnapshotStore()
         assert isinstance(store, SnapshotStore)
+
+    def test_subclassing_snapshot_store_emits_deprecation_warning(self) -> None:
+        """SnapshotStore is deprecated for new inheritance (PEP 702)."""
+
+        with pytest.warns(DeprecationWarning, match="AsyncSnapshotStore"):
+
+            class _LegacySubclass(SnapshotStore):
+                def save(self, snapshot: StateSnapshot) -> None:
+                    _ = snapshot
+
+                def get(self, task_id: TaskID, version: int | None = None) -> StateSnapshot | None:
+                    _ = (task_id, version)
+                    return None
+
+                def list_versions(self, task_id: TaskID) -> list[int]:
+                    _ = task_id
+                    return []
+
+                def delete(self, task_id: TaskID, version: int | None = None) -> bool:
+                    _ = (task_id, version)
+                    return False
+
+
+class TestAsyncInMemorySnapshotStore:
+    @pytest.mark.asyncio
+    async def test_save_get_roundtrip(self, sample_snapshot: StateSnapshot) -> None:
+        store = AsyncInMemorySnapshotStore()
+        assert isinstance(store, AsyncSnapshotStore)
+        await store.save(sample_snapshot)
+        got = await store.get(sample_snapshot.task_id, sample_snapshot.version)
+        assert got is not None
+        assert got.id == sample_snapshot.id
+
+    @pytest.mark.asyncio
+    async def test_get_latest_and_list_versions(self, sample_snapshot: StateSnapshot) -> None:
+        store = AsyncInMemorySnapshotStore()
+        await store.save(sample_snapshot)
+        v2 = StateSnapshot(
+            id="snap_async_v2",
+            task_id=sample_snapshot.task_id,
+            version=2,
+            data={"step": 2},
+            checkpoint=False,
+            created_at=sample_snapshot.created_at,
+        )
+        await store.save(v2)
+        latest = await store.get(sample_snapshot.task_id, None)
+        assert latest is not None and latest.version == 2
+        assert await store.list_versions(sample_snapshot.task_id) == [1, 2]
+
+    @pytest.mark.asyncio
+    async def test_get_unknown_task_returns_none(self) -> None:
+        store = AsyncInMemorySnapshotStore()
+        assert await store.get("unknown_task", None) is None
+        assert await store.list_versions("unknown_task") == []
+
+    @pytest.mark.asyncio
+    async def test_delete_specific_version_then_all(self, sample_snapshot: StateSnapshot) -> None:
+        store = AsyncInMemorySnapshotStore()
+        await store.save(sample_snapshot)
+        v2 = StateSnapshot(
+            id="snap_async_v2b",
+            task_id=sample_snapshot.task_id,
+            version=2,
+            data={},
+            checkpoint=False,
+            created_at=sample_snapshot.created_at,
+        )
+        await store.save(v2)
+        assert await store.delete(sample_snapshot.task_id, 1) is True
+        assert await store.get(sample_snapshot.task_id, 1) is None
+        assert await store.get(sample_snapshot.task_id, 2) is not None
+        assert await store.delete(sample_snapshot.task_id, None) is True
+        assert await store.list_versions(sample_snapshot.task_id) == []
+
+    @pytest.mark.asyncio
+    async def test_delete_unknown_returns_false(self) -> None:
+        store = AsyncInMemorySnapshotStore()
+        assert await store.delete("missing_task", None) is False
+        assert await store.delete("missing_task", 1) is False
+
+    @pytest.mark.asyncio
+    async def test_delete_nonexistent_version_returns_false(
+        self, sample_snapshot: StateSnapshot
+    ) -> None:
+        store = AsyncInMemorySnapshotStore()
+        await store.save(sample_snapshot)
+        assert await store.delete(sample_snapshot.task_id, 99) is False
+
+    @pytest.mark.asyncio
+    async def test_delete_latest_repoints_to_previous_version(
+        self, sample_snapshot: StateSnapshot
+    ) -> None:
+        store = AsyncInMemorySnapshotStore()
+        await store.save(sample_snapshot)
+        v2 = StateSnapshot(
+            id="snap_async_v2c",
+            task_id=sample_snapshot.task_id,
+            version=2,
+            data={},
+            checkpoint=False,
+            created_at=sample_snapshot.created_at,
+        )
+        await store.save(v2)
+        assert await store.delete(sample_snapshot.task_id, 2) is True
+        latest = await store.get(sample_snapshot.task_id, None)
+        assert latest is not None and latest.version == 1
+
+
+class TestSQLiteAsyncSnapshotStore:
+    """Integration tests for SQLite async snapshot persistence (aiosqlite + WAL)."""
+
+    @pytest.mark.asyncio
+    async def test_save_get_roundtrip(self, tmp_path: Path, sample_snapshot: StateSnapshot) -> None:
+        store = SQLiteAsyncSnapshotStore(db_path=tmp_path / "test.db")
+        assert isinstance(store, AsyncSnapshotStore)
+        await store.save(sample_snapshot)
+        got = await store.get(sample_snapshot.task_id, sample_snapshot.version)
+        assert got is not None
+        assert got.id == sample_snapshot.id
+        assert got.data == sample_snapshot.data
+
+    @pytest.mark.asyncio
+    async def test_get_latest_and_list_versions(
+        self, tmp_path: Path, sample_snapshot: StateSnapshot
+    ) -> None:
+        store = SQLiteAsyncSnapshotStore(db_path=tmp_path / "versions.db")
+        await store.save(sample_snapshot)
+        v2 = StateSnapshot(
+            id="snap_sqlite_v2_01HX5K7R000000000000000001",
+            task_id=sample_snapshot.task_id,
+            version=2,
+            data={"step": 2},
+            checkpoint=False,
+            created_at=sample_snapshot.created_at,
+        )
+        await store.save(v2)
+        latest = await store.get(sample_snapshot.task_id, None)
+        assert latest is not None and latest.version == 2
+        assert await store.list_versions(sample_snapshot.task_id) == [1, 2]
+
+    @pytest.mark.asyncio
+    async def test_delete_specific_version_then_all(
+        self, tmp_path: Path, sample_snapshot: StateSnapshot
+    ) -> None:
+        store = SQLiteAsyncSnapshotStore(db_path=tmp_path / "delete.db")
+        await store.save(sample_snapshot)
+        v2 = StateSnapshot(
+            id="snap_sqlite_v2b_01HX5K7R000000000000000002",
+            task_id=sample_snapshot.task_id,
+            version=2,
+            data={},
+            checkpoint=False,
+            created_at=sample_snapshot.created_at,
+        )
+        await store.save(v2)
+        assert await store.delete(sample_snapshot.task_id, 1) is True
+        assert await store.get(sample_snapshot.task_id, 1) is None
+        assert await store.delete(sample_snapshot.task_id, None) is True
+        assert await store.list_versions(sample_snapshot.task_id) == []
+
+    @pytest.mark.asyncio
+    async def test_concurrent_saves_do_not_raise(self, tmp_path: Path) -> None:
+        """Multiple async saves to the same DB should not produce 'database is locked'."""
+        store = SQLiteAsyncSnapshotStore(db_path=tmp_path / "concurrent.db")
+        task_id: TaskID = "task_01HX5K4N000000000000000099"
+        now = datetime.now(timezone.utc)
+        snapshots = [
+            StateSnapshot(
+                id=f"snap_concurrent_01HX5K7R0000000000000000{i:02d}",
+                task_id=task_id,
+                version=i,
+                data={"i": i},
+                checkpoint=False,
+                created_at=now,
+            )
+            for i in range(1, 11)
+        ]
+        await asyncio.gather(*(store.save(s) for s in snapshots))
+        assert await store.list_versions(task_id) == list(range(1, 11))
 
 
 class TestInMemorySnapshotStore:

@@ -98,6 +98,7 @@ from asap.auth.identity import (
     InMemoryHostStore,
 )
 from asap.transport.middleware import (
+    ASAPVersionMiddleware,
     AuthenticationMiddleware,
     BearerTokenValidator,
     SizeLimitMiddleware,
@@ -1803,6 +1804,8 @@ def create_app(
             jwks_uri=oauth2_config.jwks_uri,
             path_prefix=oauth2_config.path_prefix,
         )
+
+    app.add_middleware(ASAPVersionMiddleware)
 
     # Configure rate limiting
     if rate_limit is None:

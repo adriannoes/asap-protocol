@@ -41,7 +41,7 @@ import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from email.utils import parsedate_to_datetime
-from typing import Literal, Mapping, Optional
+from typing import Literal, Mapping, Optional, Sequence
 from urllib.parse import ParseResult, urlparse, urlunparse
 
 import httpx
@@ -70,6 +70,8 @@ from asap.errors import (
     remote_rpc_error_from_json,
 )
 from asap.models.constants import (
+    ASAP_SUPPORTED_TRANSPORT_VERSIONS,
+    ASAP_VERSION_HEADER,
     DEFAULT_BASE_DELAY,
     DEFAULT_CIRCUIT_BREAKER_THRESHOLD,
     DEFAULT_CIRCUIT_BREAKER_TIMEOUT,
@@ -200,6 +202,8 @@ class ASAPClient:
         compression: Whether compression is enabled for requests
         compression_threshold: Minimum payload size to trigger compression
         _circuit_breaker: Optional circuit breaker instance
+        last_response_asap_version: ``ASAP-Version`` header from the last HTTP
+            ``/asap`` or ``/asap/stream`` response (``None`` if missing)
 
     Pool sizing (pool_connections / pool_maxsize):
         Single-agent: 100 (default). Small cluster: 200–500. Large cluster: 500–1000.
@@ -262,6 +266,7 @@ class ASAPClient:
         trusted_manifest_keys: Optional[Mapping[str, str]] = None,
         on_message: Optional[OnMessageCallback] = None,
         mtls_config: Optional[MTLSConfig] = None,
+        supported_transport_versions: Sequence[str] | None = None,
         auth_token: str | None = None,
     ) -> None:
         # Extract retry config values
@@ -408,6 +413,24 @@ class ASAPClient:
         self._mtls_config = mtls_config
         self._auth_token = auth_token
 
+        if supported_transport_versions is None:
+            self._transport_versions = tuple(
+                sorted(ASAP_SUPPORTED_TRANSPORT_VERSIONS, reverse=True)
+            )
+        else:
+            tv = tuple(supported_transport_versions)
+            if not tv:
+                raise ValueError("supported_transport_versions must be non-empty when provided")
+            unknown = set(tv) - set(ASAP_SUPPORTED_TRANSPORT_VERSIONS)
+            if unknown:
+                raise ValueError(
+                    f"Unsupported ASAP transport versions {sorted(unknown)}. "
+                    f"Allowed: {sorted(ASAP_SUPPORTED_TRANSPORT_VERSIONS)}"
+                )
+            self._transport_versions = tv
+        self._asap_version_header_value = ", ".join(self._transport_versions)
+        self._last_response_asap_version: str | None = None
+
     @staticmethod
     def _is_localhost(parsed_url: ParseResult) -> bool:
         hostname = parsed_url.hostname
@@ -430,6 +453,16 @@ class ASAPClient:
             delay += jitter_amount
 
         return float(delay)
+
+    def _capture_asap_version_header(self, response: httpx.Response) -> None:
+        """Store ``ASAP-Version`` from an HTTP response for inspection."""
+        raw = response.headers.get(ASAP_VERSION_HEADER.lower())
+        self._last_response_asap_version = raw.strip() if raw else None
+
+    @property
+    def last_response_asap_version(self) -> str | None:
+        """Negotiated wire version from the last ``/asap`` or ``/asap/stream`` response."""
+        return self._last_response_asap_version
 
     async def _validate_connection(self) -> bool:
         """Validate that the agent endpoint is accessible.
@@ -721,6 +754,7 @@ class ASAPClient:
                     "Accept": accept_value,
                     "X-Idempotency-Key": idempotency_key,
                     "Accept-Encoding": get_accept_encoding_header(),
+                    ASAP_VERSION_HEADER: self._asap_version_header_value,
                 }
                 if content_encoding:
                     headers["Content-Encoding"] = content_encoding
@@ -733,6 +767,7 @@ class ASAPClient:
                     headers=headers,
                     content=request_body,
                 )
+                self._capture_asap_version_header(response)
 
                 # Log HTTP protocol version for debugging fallback behavior
                 if self._http2 and response.http_version != "HTTP/2":
@@ -1160,6 +1195,7 @@ class ASAPClient:
             "Content-Type": "application/json",
             "Accept": "text/event-stream",
             "X-Idempotency-Key": idempotency_key,
+            ASAP_VERSION_HEADER: self._asap_version_header_value,
         }
         if self._auth_token:
             headers["Authorization"] = f"Bearer {self._auth_token}"
@@ -1171,6 +1207,7 @@ class ASAPClient:
             headers=headers,
             content=request_body,
         ) as response:
+            self._capture_asap_version_header(response)
             if response.status_code >= 400:
                 body = await response.aread()
                 try:
