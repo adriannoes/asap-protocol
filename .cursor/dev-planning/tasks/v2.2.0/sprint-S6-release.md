@@ -49,13 +49,43 @@
 
 ### 3.0 Tag & Publish
 
-- [ ] 3.1 Create git tag
-  - **What**: `git tag -a v2.2.0 -m "Release v2.2.0 — Protocol Hardening"` and push
-  - **Verify**: Tag triggers release workflow
+> Release workflow: `.github/workflows/release.yml` — triggers on `push: tags: v*`.
+> Jobs: `validate` (CHANGELOG has `## [2.2.0]`) → `docker` (ghcr.io multi-arch) + `build-and-publish` (PyPI Trusted Publishing for `asap-protocol` + `asap-compliance`, plus GitHub Release with notes extracted from `CHANGELOG.md`).
 
-- [ ] 3.2 Verify PyPI publication
-  - **What**: Confirm `pip install asap-protocol==2.2.0` works
-  - **Verify**: Package available on PyPI
+- [x] 3.0.0 Pre-flight checklist (run locally, all from `main`)
+  - [x] `git rev-parse --abbrev-ref HEAD` → `main`
+  - [x] `git status` → working tree clean
+  - [x] `git pull --ff-only origin main` → up to date
+  - [x] `grep -n "^## \[2.2.0\]" CHANGELOG.md` → line 15 (required by `validate` job)
+  - [x] `uv run python -c "import asap; print(asap.__version__)"` → `2.2.0`
+  - [x] `grep '^version' pyproject.toml` → `version = "2.2.0"`
+  - [x] `git tag -l v2.2.0` → empty (tag not yet created)
+  - [x] PyPI Trusted Publishing verified — both `asap-protocol` and `asap-compliance` published successfully
+  - [x] `GITHUB_TOKEN` `packages: write` verified — `docker` job pushed to `ghcr.io/adriannoes/asap-protocol`
+
+- [x] 3.1 Create and push git tag
+  - **Commands executed**:
+    ```bash
+    git tag -a v2.2.0 -m "Release v2.2.0 — Protocol Hardening"
+    git push origin v2.2.0
+    ```
+  - **Result**: Workflow run `24522357084` — all 3 jobs green:
+    - `validate` (6s) — CHANGELOG `## [2.2.0]` check passed
+    - `build-and-publish` (42s) — PyPI publish + GitHub Release created
+    - `docker` (1m40s) — ghcr.io multi-arch image pushed
+
+- [x] 3.2 Verify artifacts
+  - [x] **PyPI (protocol)**: `asap-protocol 2.2.0` present; `pip install asap-protocol==2.2.0` in clean venv → `import asap; asap.__version__ == "2.2.0"` ✅
+  - [x] **PyPI (compliance)**: `asap-compliance 1.2.0` present (whl + sdist) ✅
+  - [x] **Docker**: `ghcr.io/adriannoes/asap-protocol:v2.2.0` and `:latest` both resolve to digest `sha256:c4b08dc6630a5d317201d3c9abf1458a69b72f393c437f392195b7bc666615b2` ✅
+  - [x] **GitHub Release**: `v2.2.0` published (not draft, not pre-release) at `2026-04-16T16:42:07Z` with assets: `asap_protocol-2.2.0-py3-none-any.whl`, `asap_protocol-2.2.0.tar.gz`, `asap_compliance-1.2.0-py3-none-any.whl`, `asap_compliance-1.2.0.tar.gz` ✅
+
+- [x] 3.3 Post-release hygiene
+  - [x] Announce release (internal note + link to GitHub Release)
+  - [x] Open a tracking issue for any follow-up items surfaced in `sprint-S5`/`S6` reviews
+  - [x] Ensure `main` is ready for the next cycle (bump on next feature PR, no pending hotfixes)
+
+> **Rollback note**: if any release job fails after the tag is pushed, do **not** reuse `v2.2.0`. Delete the remote tag (`git push origin :refs/tags/v2.2.0`), fix the issue on `main`, and re-tag from the new HEAD. PyPI does not allow re-uploading the same version, so a failed publish requires a patch bump (`v2.2.1`).
 
 ---
 
@@ -67,7 +97,7 @@
 - [x] CHANGELOG.md complete (all features implemented including S5 batch/audit/compliance)
 - [x] AGENTS.md updated
 - [x] Migration guide updated
-- [ ] v2.2.0 tagged and published to PyPI
+- [x] v2.2.0 tagged and published to PyPI (+ Docker on ghcr.io + GitHub Release) on 2026-04-16
 
 ---
 
