@@ -84,7 +84,7 @@ async def check_identity(client: AsyncClient) -> list[CheckResult]:
                 CheckResult(
                     name=name,
                     category="identity",
-                    passed=r.status_code in (200, 400, 401, 403, 422),
+                    passed=r.status_code in (200, 401, 403),
                     message=f"{method} {path} returned {r.status_code}",
                 )
             )
