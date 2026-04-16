@@ -1,4 +1,4 @@
-import { Search, ShieldCheck, Cpu } from 'lucide-react';
+import { Search, ShieldCheck, KeySquare, Cpu } from 'lucide-react';
 
 const steps = [
   {
@@ -14,9 +14,15 @@ const steps = [
     icon: ShieldCheck,
   },
   {
+    title: 'Authorize',
+    description:
+      'Grant fine-grained capabilities with constraints — for example, "transfer up to $1,000 USD only". Each runtime agent gets its own Ed25519 identity, so you can revoke a single session without touching the rest of your fleet.',
+    icon: KeySquare,
+  },
+  {
     title: 'Integrate',
     description:
-      'Connect via the ASAP Protocol over secure WebSockets. Standardized messages mean your code works with any agent.',
+      'Connect over JSON-RPC 2.0 with version negotiation, batch requests and streaming responses (SSE). Standardized envelopes mean your code works with any agent.',
     icon: Cpu,
   },
 ];
@@ -28,7 +34,7 @@ export function HowItWorksSection() {
         <div className="mb-16 flex flex-col gap-4 text-center">
           <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">How it works</h2>
           <p className="mx-auto max-w-[600px] text-zinc-400">
-            Three simple steps to build robust multi-agent swarms.
+            Four simple steps to build robust, secure multi-agent swarms.
           </p>
         </div>
 
