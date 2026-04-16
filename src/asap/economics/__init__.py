@@ -1,5 +1,12 @@
-"""ASAP Economics module — observability metering and delegation (v1.3)."""
+"""ASAP Economics module — observability metering, delegation, and audit (v1.3)."""
 
+from asap.economics.audit import (
+    AuditEntry,
+    AuditStore,
+    InMemoryAuditStore,
+    SQLiteAuditStore,
+    compute_entry_hash,
+)
 from asap.economics.delegation import (
     DELEGATION_SCOPES,
     WILDCARD_SCOPE,
@@ -48,12 +55,15 @@ from asap.economics.storage import (
 )
 
 __all__ = [
+    "AuditEntry",
+    "AuditStore",
     "BatchUsageRequest",
     "DELEGATION_SCOPES",
     "DelegationConstraints",
     "DelegationStorage",
     "DelegationToken",
     "create_delegation_jwt",
+    "InMemoryAuditStore",
     "InMemoryDelegationStorage",
     "InMemoryMeteringStorage",
     "InMemorySLAStorage",
@@ -63,6 +73,7 @@ __all__ = [
     "SLAMetrics",
     "SLABreach",
     "SLAStorage",
+    "SQLiteAuditStore",
     "SQLiteDelegationStorage",
     "SQLiteMeteringStorage",
     "SQLiteSLAStorage",
@@ -76,6 +87,7 @@ __all__ = [
     "ValidationResult",
     "WILDCARD_SCOPE",
     "aggregate_sla_metrics",
+    "compute_entry_hash",
     "compute_error_rate_percent",
     "compute_latency_p95_ms",
     "compute_uptime_percent",

@@ -179,15 +179,15 @@ class TestAsapEndpoint(NoRateLimitTestBase):
             assert "error" in data or "result" in data
 
     def test_asap_endpoint_handles_non_dict_body(self, client: TestClient) -> None:
-        """Test that non-dict JSON body returns INVALID_REQUEST."""
-        # Send array instead of object
+        """Test that non-dict JSON body is handled as a JSON-RPC batch."""
         response = client.post("/asap", json=["not", "an", "object"])
 
         assert response.status_code == 200
         data = response.json()
-        assert "error" in data
-        assert data["error"]["code"] == INVALID_REQUEST
-        assert "object" in data["error"]["data"]["error"].lower()
+        assert isinstance(data, list)
+        assert len(data) == 3
+        for item in data:
+            assert item["error"]["code"] == INVALID_REQUEST
 
     def test_asap_endpoint_handles_string_body(self, client: TestClient) -> None:
         """Test that string JSON body returns INVALID_REQUEST."""

@@ -21,11 +21,21 @@ from asap.testing.assertions import (
     assert_response_correlates,
     assert_task_completed,
 )
+from asap.testing.compliance import (
+    ALL_CATEGORIES,
+    CheckResult,
+    ComplianceReport,
+    run_compliance_harness_v2,
+)
 from asap.testing.mocks import MockAgent
 
 __all__ = [
+    "ALL_CATEGORIES",
+    "CheckResult",
+    "ComplianceReport",
     "MockAgent",
     "assert_envelope_valid",
     "assert_response_correlates",
     "assert_task_completed",
+    "run_compliance_harness_v2",
 ]

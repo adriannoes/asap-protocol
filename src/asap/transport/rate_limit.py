@@ -133,6 +133,27 @@ class ASAPRateLimiter:
         for rate_limit in self._rate_limits:
             self._strategy.hit(rate_limit, key)
 
+    def check_n(self, request: Request, n: int) -> None:
+        """Raise ``RateLimitExceeded`` if *n* hits would violate any configured limit.
+
+        Used for JSON-RPC batch requests where each sub-request consumes one hit.
+        """
+        if n <= 0:
+            return
+        key = self._key_func(request)
+        for rate_limit in self._rate_limits:
+            if not self._strategy.test(rate_limit, key):
+                window_stats = self._strategy.get_window_stats(rate_limit, key)
+                retry_seconds = max(1, int(window_stats[0] - time.time()))
+                raise RateLimitExceeded(
+                    detail=f"Rate limit exceeded: {rate_limit}",
+                    retry_after=retry_seconds,
+                    limit=str(rate_limit),
+                )
+        for rate_limit in self._rate_limits:
+            for _ in range(n):
+                self._strategy.hit(rate_limit, key)
+
     def test(self, request: Request) -> bool:
         """Return True if *request* would pass all limits (no counter increment)."""
         key = self._key_func(request)
