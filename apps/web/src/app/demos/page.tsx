@@ -38,7 +38,7 @@ export default function DemosPage() {
                         Execution in Action
                     </h1>
                     <p className="text-xl text-zinc-400">
-                        See the ASAP Protocol in action. Explore how developers integrate agents natively using WebSockets, structured schemas, and real-time state streaming.
+                        See the ASAP Protocol in action. Explore how developers integrate agents over JSON-RPC 2.0 — with version negotiation, scoped capabilities, and streaming responses via WebSockets or Server-Sent Events.
                     </p>
                 </header>
 
@@ -51,17 +51,17 @@ export default function DemosPage() {
                             </div>
                             <div>
                                 <h2 className="text-2xl font-bold tracking-tight text-white font-mono">1. The <code>.process</code> Command</h2>
-                                <p className="text-zinc-500 font-mono text-sm">Universal WebSocket orchestration.</p>
+                                <p className="text-zinc-500 font-mono text-sm">Universal JSON-RPC 2.0 orchestration over HTTP or WebSocket.</p>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-12 items-center">
                             <div className="space-y-6 text-zinc-400 leading-relaxed text-lg">
                                 <p>
-                                    Instead of learning a different REST API wrapper for every LLM or agent, ASAP normalizes the invocation workflow.
+                                    Instead of learning a different REST API wrapper for every LLM or agent, ASAP normalizes the invocation surface around JSON-RPC 2.0.
                                 </p>
                                 <p>
-                                    You open a WebSocket connection and send a single standard payload containing your input data mapped against the agent&apos;s registered schema. The agent immediately begins streaming states back.
+                                    Send a single envelope to <code>POST /asap</code> — or open a WebSocket for bidirectional flows — and the agent immediately starts streaming state. Version negotiation via the <code>ASAP-Version</code> header keeps clients and servers compatible across releases.
                                 </p>
                             </div>
 
@@ -95,7 +95,7 @@ export default function DemosPage() {
                             </div>
                             <div>
                                 <h2 className="text-2xl font-bold tracking-tight text-white font-mono">2. Strict Schema validation</h2>
-                                <p className="text-zinc-500 font-mono text-sm">Zero guesswork with Zod schemas.</p>
+                                <p className="text-zinc-500 font-mono text-sm">Zero guesswork with capability schemas and Zod.</p>
                             </div>
                         </div>
 
@@ -130,6 +130,9 @@ export default function DemosPage() {
                                 <p>
                                     Because the orchestration data layer maps 1:1, developers can instantly wrap requests in Zod or TypeScript types, catching invalid inputs locally before they ever hit the agent&apos;s network boundaries.
                                 </p>
+                                <p>
+                                    Since v2.2, every capability publishes its own input schema plus optional constraint operators (<code>max</code>, <code>min</code>, <code>in</code>, <code>not_in</code>) — so consumers know exactly what they&apos;re granting before the agent ever acts.
+                                </p>
                             </div>
                         </div>
                     </section>
@@ -148,10 +151,10 @@ export default function DemosPage() {
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-12 items-center">
                             <div className="space-y-6 text-zinc-400 leading-relaxed text-lg">
                                 <p>
-                                    The protocol enforces a <code>MemorySnapshot</code> standard. Long-running tasks, like recursive Code Reviewers, no longer leave you waiting in the dark.
+                                    The protocol standardizes incremental updates so long-running tasks — like recursive Code Reviewers — never leave you waiting in the dark.
                                 </p>
                                 <p>
-                                    Agents stream continuous snapshots defining their internal context memory, tool invocations, and generated thoughts. Build rich, dynamic UIs that update as the agent thinks.
+                                    Subscribe to a WebSocket for bidirectional <code>memory_snapshot</code> events, or hit <code>POST /asap/stream</code> with <code>Accept: text/event-stream</code> to consume <code>TaskStream</code> chunks over Server-Sent Events. Either way, you build rich, dynamic UIs that update as the agent thinks.
                                 </p>
                             </div>
 
@@ -184,7 +187,7 @@ export default function DemosPage() {
                         Ready to start building?
                     </h2>
                     <p className="mb-8 text-xl text-zinc-400 max-w-2xl mx-auto">
-                        Dive into our repository to see fully functional examples of ASAP agents built in Python and TypeScript.
+                        Dive into our repository to see fully functional examples of ASAP agents built in Python, with reference integrations for LangChain, CrewAI, PydanticAI, LlamaIndex and more.
                     </p>
                     <div className="flex items-center justify-center gap-4">
                         <Link
