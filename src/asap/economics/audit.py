@@ -240,8 +240,7 @@ class SQLiteAuditStore:
             params.append(end.isoformat())
 
         select_from = (
-            "SELECT id, timestamp, operation, agent_urn, details, prev_hash, hash "
-            "FROM audit_log"
+            "SELECT id, timestamp, operation, agent_urn, details, prev_hash, hash FROM audit_log"
         )
         # WHERE fragments are fixed literals with ? placeholders; values are bound via params.
         where_sql = (" WHERE " + " AND ".join(clauses)) if clauses else ""
