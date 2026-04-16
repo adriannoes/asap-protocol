@@ -16,10 +16,17 @@ export function HeroSection() {
             className="flex flex-col justify-center space-y-8 text-center lg:text-left animate-in fade-in slide-in-from-bottom-5 duration-700 ease-out"
           >
             <div className="space-y-4">
-              <div className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-sm font-medium text-indigo-300 backdrop-blur-sm">
-                <span className="mr-2 flex h-2 w-2 animate-pulse rounded-full bg-indigo-500"></span>
-                v2.0.0 Now Live
-              </div>
+              <Link
+                href="https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="View ASAP Protocol v2.2.0 changelog on GitHub"
+              >
+                <div className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-sm font-medium text-indigo-300 backdrop-blur-sm transition-colors hover:border-indigo-500/60 hover:bg-indigo-500/15">
+                  <span className="mr-2 flex h-2 w-2 animate-pulse rounded-full bg-indigo-500"></span>
+                  v2.2.0 Now Live
+                </div>
+              </Link>
               <AnimatedText
                 text="The Marketplace for Autonomous Agents"
                 className="text-4xl font-bold tracking-tighter leading-tight sm:text-5xl xl:text-6xl/none bg-clip-text text-transparent bg-gradient-to-r from-white to-white/80"

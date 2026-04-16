@@ -4,15 +4,15 @@ import { Terminal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const TERMINAL_LINES = [
-  { text: '[SYSTEM] ASAP Bridge v2.0.0 init...', color: 'text-zinc-500', delay: 400 },
-  { text: '[LOOKUP] urn:asap:agent:secure-writer...', color: 'text-indigo-400', delay: 1000 },
-  { text: '[FOUND] Endpoint: https://api.asap-secure.io/asap', color: 'text-emerald-400', delay: 1800 },
-  { text: '-> CALL asap/deliver { "method": "capabilities.list" }', color: 'text-cyan-400', delay: 2800 },
-  { text: '<- RESP { "skills": ["text-gen", "audit"], "v": "1.1" }', color: 'text-purple-400', delay: 3800 },
-  { text: '[AUTH] Requested delegation token for requester_app_01', color: 'text-amber-400', delay: 4800 },
-  { text: '-> EXEC { "skill": "text-gen", "input": "[REDACTED]" }', color: 'text-indigo-400', delay: 6000 },
-  { text: '<- RECV [event]: { "status": "completed", "id": "tx_9a2" }', color: 'text-emerald-400', delay: 7200 },
-  { text: '[SYSTEM] Session closed. Latency: 42ms', color: 'text-zinc-500', delay: 8200 },
+  { text: '[SYSTEM] ASAP Protocol v2.2.0 init — Protocol Hardening', color: 'text-zinc-500', delay: 400 },
+  { text: '[IDENTITY] Host authenticated · Agent Ed25519 key issued (typ: agent+jwt)', color: 'text-indigo-400', delay: 1000 },
+  { text: '-> POST /asap { "method": "capability.describe", "name": "transfer_funds" }', color: 'text-cyan-400', delay: 1800 },
+  { text: '<- RESP constraints: { amount: { max: 1000 }, currency: { in: ["USD","EUR"] } }', color: 'text-purple-400', delay: 2800 },
+  { text: '[APPROVAL] user_code AB-CD-34 via RFC 8628 Device Authorization', color: 'text-amber-400', delay: 3800 },
+  { text: '-> POST /asap/stream  Accept: text/event-stream  ASAP-Version: 2.2', color: 'text-indigo-400', delay: 4800 },
+  { text: 'event: task_stream  data: { chunk: "partial result...", progress: 0.5 }', color: 'text-emerald-400', delay: 6000 },
+  { text: 'event: task_stream  data: { final: true, status: "completed" }', color: 'text-emerald-400', delay: 7200 },
+  { text: '[AUDIT] 3 writes appended (hash chain verified) · latency 38ms', color: 'text-zinc-500', delay: 8200 },
 ];
 
 const LOOP_RESET_DELAY = 11000;
