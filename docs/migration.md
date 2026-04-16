@@ -716,6 +716,9 @@ v2.2.0 is a **Protocol Hardening** release. All features are additive — existi
 - [ ] Evaluate per-agent identity for your use case (optional)
 - [ ] Define capability grants if using multi-agent authorization (optional)
 - [ ] Adopt `RecoverableError` / `FatalError` in custom error handling (recommended)
+- [ ] Use `ASAPClient.batch()` for multi-request flows (optional)
+- [ ] Enable `audit_store` in `create_app()` for tamper-evident logging (optional)
+- [ ] Run `run_compliance_harness_v2(app)` to validate your server (recommended)
 
 ---
 

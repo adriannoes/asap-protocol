@@ -61,6 +61,23 @@ Protocol Hardening release: per-runtime agent identity, capability-based authori
 - **AsyncMeteringStore**: Async protocol (`record`, `query`, `aggregate`) replacing sync `MeteringStore` (deprecated) (`state/metering.py`)
 - **SQLite async**: `SQLiteAsyncSnapshotStore` with WAL mode and pragma cache (`state/stores/sqlite.py`)
 
+#### JSON-RPC Batch Operations (S5)
+- **Server-side batch**: `POST /asap` accepts JSON arrays per JSON-RPC 2.0 batch spec; processes each request independently and returns array of responses (`transport/server.py`)
+- **Batch size limit**: Configurable `max_batch_size` (default 50); oversized batches rejected with `INVALID_REQUEST` error
+- **Rate limit integration**: `ASAPRateLimiter.check_n()` counts batch sub-requests against rate limits (`transport/rate_limit.py`)
+- **Client batch**: `ASAPClient.batch(envelopes)` sends single HTTP request with JSON array body (`transport/client.py`)
+
+#### Tamper-Evident Audit Logging (S5)
+- **Audit models**: `AuditEntry` with SHA-256 hash chain (`prev_hash` → `hash`) for tamper detection (`economics/audit.py`)
+- **AuditStore protocol**: `append`, `query`, `verify_chain`, `count` — with `InMemoryAuditStore` and `SQLiteAuditStore` implementations
+- **Audit hooks**: Optional `audit_store` parameter in `create_app`; automatic logging of successful message processing
+- **Audit API**: `GET /audit` with `urn`, `start`, `end`, `limit`, `offset` query parameters
+
+#### Compliance Harness v2 (S5)
+- **Harness runner**: `run_compliance_harness_v2(app)` validates ASGI applications against v2.2 spec (`testing/compliance.py`)
+- **Check categories**: Identity, streaming, errors, versioning, batch, audit — each with multiple checks
+- **Compliance report**: `ComplianceReport` with score (0.0–1.0), check results, and JSON export via `to_json()`
+
 ### Security
 
 - **Dependency upgrades**: pillow 12.2.0 (CVE-2026-40192), pytest 9.0.3 (CVE-2025-71176), python-multipart 0.0.26 (CVE-2026-40347), langsmith 0.7.32 (GHSA-rr7j-v2q5-chgv)
@@ -75,7 +92,7 @@ Protocol Hardening release: per-runtime agent identity, capability-based authori
 ### Technical Details
 
 - **Python**: 3.13+
-- **Tests**: 2897 passed, 7 skipped; full CI green (ruff, mypy, pytest, pip-audit)
+- **Tests**: 2941 passed, 7 skipped; full CI green (ruff, mypy, pytest, pip-audit)
 - **Coverage**: ≥90% for new v2.2 modules
 - **Full Changelog**: https://github.com/adriannoes/asap-protocol/compare/v2.1.1...v2.2.0
 
