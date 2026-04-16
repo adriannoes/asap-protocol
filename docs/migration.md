@@ -612,6 +612,111 @@ v0.5.0 is a **security-hardened release** with zero breaking changes. All existi
 - Run compatibility tests: `tests/compatibility/test_v0_1_0_compatibility.py`
 - Guide for migrating from A2A, MCP, or older ASAP versions. See [CHANGELOG](../CHANGELOG.md) for version history.
 
+### Upgrading from v2.1.x to v2.2.0
+
+v2.2.0 is a **Protocol Hardening** release. All features are additive — existing v2.1.x deployments will work without changes.
+
+#### What's New in v2.2.0
+
+- **Per-Runtime Agent Identity** (optional): Ed25519-based Host/Agent JWT identity with registration, revocation, and key rotation endpoints
+- **Capability-Based Authorization** (optional): Define capabilities with constraints, grant/deny per agent, enforce at runtime
+- **Agent Lifecycle**: Session TTL, expiry checks, reactivation
+- **Approval Flows**: Device Authorization (RFC 8628) and CIBA-style approval for sensitive operations
+- **Self-Auth Prevention**: Fresh session windows and optional WebAuthn for high-risk registrations
+- **SSE Streaming**: `POST /asap/stream` endpoint with `TaskStream` payload and client-side `stream()` method
+- **Error Taxonomy**: `RecoverableError` / `FatalError` hierarchy with JSON-RPC codes (-32000 to -32059) and recovery hints
+- **ASAP-Version Header**: Wire-level version negotiation on `/asap` and `/asap/stream`
+- **Async State Stores**: `AsyncSnapshotStore` and `AsyncMeteringStore` protocols (sync variants deprecated)
+
+#### Upgrade Steps
+
+1. **Update dependency**:
+   ```bash
+   pip install --upgrade asap-protocol==2.2.0
+   # or
+   uv add asap-protocol==2.2.0
+   ```
+
+2. **Adopt ASAP-Version header** (recommended):
+   The server now includes `ASAPVersionMiddleware` by default. Clients sending requests to `/asap` or `/asap/stream` should include the `ASAP-Version` header. The client does this automatically:
+   ```python
+   from asap.transport.client import ASAPClient
+
+   async with ASAPClient("https://agent.example.com") as client:
+       # ASAP-Version header sent automatically
+       response = await client.send(envelope)
+   ```
+
+3. **Migrate to AsyncSnapshotStore** (recommended):
+   ```python
+   # Before (deprecated sync API)
+   from asap.state.snapshot import SnapshotStore
+
+   # After (async API)
+   from asap.state.snapshot import AsyncSnapshotStore, create_async_snapshot_store
+
+   store = create_async_snapshot_store("sqlite:///data.db")
+   await store.save(snapshot)
+   snapshot = await store.get(task_id)
+   ```
+
+4. **Adopt per-agent identity** (optional):
+   ```python
+   from asap.auth.identity import InMemoryHostStore, InMemoryAgentStore
+   from asap.auth.agent_jwt import create_host_jwt
+   from asap.transport.server import create_app
+
+   host_store = InMemoryHostStore()
+   agent_store = InMemoryAgentStore()
+
+   app = create_app(
+       manifest,
+       registry,
+       identity_host_store=host_store,
+       identity_agent_store=agent_store,
+   )
+   ```
+
+5. **Define capabilities** (optional):
+   ```python
+   from asap.auth.capabilities import CapabilityDefinition, CapabilityRegistry
+
+   registry = CapabilityRegistry()
+   registry.register(CapabilityDefinition(
+       name="task.execute",
+       description="Execute tasks",
+       constraints_schema={"max_concurrent": {"type": "integer"}},
+   ))
+   ```
+
+6. **Use streaming** (optional):
+   ```python
+   from asap.transport.client import ASAPClient
+
+   async with ASAPClient("https://agent.example.com") as client:
+       async for envelope in client.stream(request_envelope):
+           chunk = envelope.payload  # TaskStream with progress info
+           if chunk.final:
+               break
+   ```
+
+#### Backward Compatibility
+
+- ✅ **No breaking changes**: All v2.1.x APIs remain functional
+- ✅ **Identity is opt-in**: Existing agents work without Host/Agent JWT
+- ✅ **Version negotiation is backward compatible**: Servers accept both `2.1` and `2.2`
+- ✅ **Async stores coexist**: Sync `SnapshotStore` still works (deprecated, removal in v2.3)
+
+#### Migration Checklist
+
+- [ ] Update `asap-protocol` to v2.2.0
+- [ ] Run existing tests to verify compatibility
+- [ ] Migrate `SnapshotStore` → `AsyncSnapshotStore` (recommended)
+- [ ] Add `ASAP-Version` header handling (automatic with ASAPClient)
+- [ ] Evaluate per-agent identity for your use case (optional)
+- [ ] Define capability grants if using multi-agent authorization (optional)
+- [ ] Adopt `RecoverableError` / `FatalError` in custom error handling (recommended)
+
 ---
 
 ## Troubleshooting

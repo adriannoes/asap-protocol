@@ -8,7 +8,7 @@
 **ASAP Protocol** (Async Simple Agent Protocol) is a production-ready standard for agent-to-agent communication.
 - **Stack**: Python 3.13+, FastAPI, Pydantic v2.
 - **Transport**: JSON-RPC 2.0 over HTTP/WebSocket.
-- **Status**: v2.1.1 (Released).
+- **Status**: v2.2.0 (Released).
 - **Framework Integrations**: LangChain, CrewAI, PydanticAI, LlamaIndex, SmolAgents, Vercel AI SDK, MCP, OpenClaw, A2H.
 
 ## Quick Start
@@ -38,11 +38,12 @@ uv run mypy src/ scripts/ tests/ && uv run ruff check src/  # Verify quality
 ### Project Structure
 ```text
 src/asap/
-├── models/        # Data models (Envelope, TaskRequest)
-├── auth/          # OAuth2/OIDC & Auth Middleware
-├── transport/     # HTTP Client/Server, WebSocket, Webhook
-├── state/         # Persistence interfaces (SQLite/Memory)
+├── models/        # Data models (Envelope, TaskRequest, TaskStream)
+├── auth/          # OAuth2/OIDC, Agent Identity, Capabilities, Approval
+├── transport/     # HTTP Client/Server, WebSocket, SSE Streaming
+├── state/         # Async persistence (AsyncSnapshotStore/AsyncMeteringStore)
 ├── handlers/      # Task processing logic
+├── economics/     # Metering, Delegation, SLA
 └── discovery/     # Manifests, Health, Lite Registry
 ```
 
@@ -57,10 +58,13 @@ src/asap/
 1.  **Envelope Protocol**: All messages wrapped in `Envelope[T]` (`models/envelope.py`).
 2.  **State Machine**: Tasks strictly follow `PENDING → RUNNING → COMPLETED` (`models/files.py`).
 3.  **Circuit Breaker**: Transport reliability logic (`transport/http_client.py`).
+4.  **Agent Identity**: Per-runtime Ed25519 identity with Host/Agent JWT (`auth/agent_jwt.py`).
+5.  **Capability AuthZ**: Constraint-based capability grants (`auth/capabilities.py`).
 
 ## Security Context
 
-- **Auth**: OAuth2/OIDC for agent-to-agent (ADR-17).
-- **Identity**: Ed25519 Signed Manifests (v1.2).
-- **Transport**: mTLS optional (v1.2).
+- **Auth**: OAuth2/OIDC for agent-to-agent (ADR-17); Agent Identity with Host/Agent JWT (v2.2).
+- **Identity**: Ed25519 Signed Manifests (v1.2); Per-runtime agent identity with JWK thumbprint (v2.2).
+- **Capabilities**: Constraint-based authorization with approval flows (v2.2).
+- **Transport**: mTLS optional (v1.2); ASAP-Version negotiation (v2.2).
 - **Compliance**: `asap-compliance` package validates specs.

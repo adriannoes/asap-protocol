@@ -12,6 +12,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.2.0] - 2026-04-15
+
+Protocol Hardening release: per-runtime agent identity, capability-based authorization, approval flows, SSE streaming, structured error taxonomy, version negotiation, and async state stores.
+
+### Added
+
+#### Per-Runtime Agent Identity (S1, ADR-17 extension)
+- **Host/Agent JWT**: `create_host_jwt`, `create_agent_jwt`, `verify_host_jwt`, `verify_agent_jwt` — Ed25519 (EdDSA) JWTs with `jti` replay cache (`auth/agent_jwt.py`)
+- **Identity stores**: `HostIdentity`, `AgentSession`, `HostStore`, `AgentStore`, `InMemoryHostStore`, `InMemoryAgentStore` — per-host and per-agent identity with JWK thumbprint (RFC 7638) (`auth/identity.py`)
+- **Agent endpoints**: `POST /asap/agent/register`, `GET /asap/agent/status`, `POST /asap/agent/revoke`, `POST /asap/agent/rotate-key` — Host JWT Bearer authentication (`transport/agent_routes.py`)
+
+#### Capability-Based Authorization (S1)
+- **Capability system**: `CapabilityDefinition`, `CapabilityGrant`, `CapabilityRegistry`, `validate_constraints` — grants with constraints (`max`, `min`, `in`, `not_in`) (`auth/capabilities.py`)
+- **Capability endpoints**: `GET /asap/capability/list`, `GET /asap/capability/describe`, `POST /asap/capability/execute`, `POST /asap/agent/reactivate` (`transport/capability_routes.py`)
+
+#### Agent Lifecycle (S1)
+- **Session lifecycle**: `check_agent_expiry`, `extend_session`, `reactivate_agent` — TTL-based session management (`auth/lifecycle.py`)
+
+#### Approval Flows (S2)
+- **Device Authorization & CIBA**: `create_device_authorization`, `create_ciba_approval`, `select_approval_method`, `ApprovalStore`, `InMemoryApprovalStore` — RFC 8628 / CIBA-style approval (`auth/approval.py`)
+- **A2H channel**: `A2HApprovalChannel` for agent-to-human approval resolution
+
+#### Self-Auth Prevention (S2)
+- **Fresh session**: `FreshSessionConfig`, `check_fresh_session`, `fresh_session_violation_detail` — time-windowed Host JWT validation (`auth/self_auth.py`)
+- **WebAuthn**: Optional `WebAuthnVerifier` for high-risk capability registration
+
+#### SSE Streaming (S3)
+- **SSE endpoint**: `POST /asap/stream` returns `text/event-stream` with Envelope JSON events (`transport/server.py`)
+- **TaskStream payload**: Streaming chunks with `chunk`, `progress`, `final`, `status` fields (`models/payloads.py`)
+- **Client streaming**: `ASAPClient.stream(envelope)` parses SSE events into Envelope objects (`transport/client.py`)
+- **Streaming handlers**: `HandlerRegistry.register_streaming_handler`, `dispatch_stream_async` for async generator handlers (`transport/handlers.py`)
+
+#### Error Taxonomy (S3, PRD §4.7)
+- **Error hierarchy**: `RecoverableError` / `FatalError` base classes with taxonomy URIs and JSON-RPC codes (-32000 to -32059) (`errors.py`)
+- **Recovery hints**: `retry_after_ms`, `alternative_agents`, `fallback_action` on all ASAP errors
+- **Remote errors**: `RemoteFatalRPCError`, `RemoteRecoverableRPCError` for client-side error reconstruction
+- **Error code registry**: Documented in `docs/error-codes.md`
+
+#### ASAP-Version Negotiation (S4)
+- **Version header**: `ASAP-Version` request/response header for wire-level version negotiation (`models/constants.py`)
+- **Version middleware**: `ASAPVersionMiddleware` validates version on `POST /asap` and `POST /asap/stream`; returns `VERSION_INCOMPATIBLE` JSON-RPC error for unsupported versions (`transport/middleware.py`)
+- **Client negotiation**: `ASAPClient` sends supported versions and tracks `last_response_asap_version` (`transport/client.py`)
+- **Manifest field**: `Manifest.supported_versions` for discovery-time version advertisement
+
+#### Async State Stores (S4)
+- **AsyncSnapshotStore**: Async protocol (`save`, `get`, `list_versions`, `delete`) replacing sync `SnapshotStore` (deprecated) (`state/snapshot.py`)
+- **AsyncMeteringStore**: Async protocol (`record`, `query`, `aggregate`) replacing sync `MeteringStore` (deprecated) (`state/metering.py`)
+- **SQLite async**: `SQLiteAsyncSnapshotStore` with WAL mode and pragma cache (`state/stores/sqlite.py`)
+
+### Security
+
+- **Dependency upgrades**: pillow 12.2.0 (CVE-2026-40192), pytest 9.0.3 (CVE-2025-71176), python-multipart 0.0.26 (CVE-2026-40347), langsmith 0.7.32 (GHSA-rr7j-v2q5-chgv)
+- **Self-auth prevention**: Agents cannot register capabilities without fresh host session and optional WebAuthn verification
+- **JTI replay cache**: Prevents JWT replay on mutating agent identity endpoints
+
+### Changed
+
+- **Wire version**: Default transport version bumped from `2.1` to `2.2`; backward compatible with `2.1`
+- **State stores**: `SnapshotStore` and `MeteringStore` sync protocols deprecated in favor of async variants
+
+### Technical Details
+
+- **Python**: 3.13+
+- **Tests**: 2897 passed, 7 skipped; full CI green (ruff, mypy, pytest, pip-audit)
+- **Coverage**: ≥90% for new v2.2 modules
+- **Full Changelog**: https://github.com/adriannoes/asap-protocol/compare/v2.1.1...v2.2.0
+
+---
+
 ## [2.1.1] - 2026-03-01
 
 Patch release addressing tech debt and findings from the v2.1.0 Red-Team code review. Backward compatible with v2.1.0.
