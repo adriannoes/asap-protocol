@@ -239,8 +239,13 @@ class SQLiteAuditStore:
             clauses.append("timestamp <= ?")
             params.append(end.isoformat())
 
-        where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
-        sql = f"SELECT id, timestamp, operation, agent_urn, details, prev_hash, hash FROM audit_log{where} ORDER BY rowid LIMIT ? OFFSET ?"  # noqa: E501
+        select_from = (
+            "SELECT id, timestamp, operation, agent_urn, details, prev_hash, hash "
+            "FROM audit_log"
+        )
+        # WHERE fragments are fixed literals with ? placeholders; values are bound via params.
+        where_sql = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+        sql = select_from + where_sql + " ORDER BY rowid LIMIT ? OFFSET ?"
         params.extend([limit, offset])
 
         entries: list[AuditEntry] = []
