@@ -77,7 +77,7 @@ class TestAuditEntryModel:
             agent_urn="urn:asap:agent:test",
         )
         with pytest.raises(ValueError):
-            entry.operation = "changed"  # type: ignore[misc]
+            entry.operation = "changed"
 
     def test_conforms_to_protocol(self) -> None:
         assert isinstance(InMemoryAuditStore(), AuditStore)
