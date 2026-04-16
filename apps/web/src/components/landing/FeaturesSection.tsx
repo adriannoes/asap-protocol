@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Database, ShieldCheck, Zap, Activity, ArrowRight } from 'lucide-react';
+import { Database, ShieldCheck, Zap, Activity, ArrowRight, Fingerprint, KeySquare, Radio } from 'lucide-react';
 
 const features = [
   {
@@ -35,6 +35,30 @@ const features = [
     icon: Activity,
     className: 'md:col-span-2',
   },
+  {
+    title: 'Per-Agent Identity',
+    slug: 'per-agent-identity',
+    description:
+      'Every runtime agent gets its own Ed25519 keypair under a persistent Host. Audit, scope, and revoke individual sessions without touching the rest of your fleet.',
+    icon: Fingerprint,
+    className: 'md:col-span-1',
+  },
+  {
+    title: 'Scoped Capabilities',
+    slug: 'scoped-capabilities',
+    description:
+      'Fine-grained capabilities with constraint operators — transfer up to $1,000, only in USD, to one destination. Precise grants replace coarse OAuth scopes.',
+    icon: KeySquare,
+    className: 'md:col-span-1',
+  },
+  {
+    title: 'Streaming Responses',
+    slug: 'streaming-responses',
+    description:
+      'TaskStream chunks over Server-Sent Events. Show partial results and progress in real time instead of blocking until completion.',
+    icon: Radio,
+    className: 'md:col-span-1',
+  },
 ];
 
 export function FeaturesSection() {
@@ -46,7 +70,7 @@ export function FeaturesSection() {
             Protocol Features
           </h2>
           <p className="mx-auto max-w-[600px] text-zinc-400">
-            Everything you need to orchestrate complex multi-agent systems reliably.
+            Everything you need to orchestrate complex multi-agent systems reliably — now with enterprise-grade identity, scoped authorization, and streaming responses in v2.2.
           </p>
         </div>
 
