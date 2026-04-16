@@ -49,7 +49,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "brotli>=1.1.0",
-    "pytest>=8.0",
+    "pytest>=9.0.3",
     "pytest-asyncio>=0.24",
     "pytest-cov>=6.0",
     "pytest-benchmark>=5.1",
@@ -107,6 +107,9 @@ Issues = "https://github.com/adriannoes/asap-protocol/issues"
 # - tinytag>=2.2.1 for CVE-2026-32889
 # - cryptography>=46.0.7 for CVE-2026-39892 / CVE-2026-34073 (name-constraint / peer identity)
 # - requests>=2.33.0 for CVE-2026-25645 (extract_zipped_paths temp file)
+# - pillow>=12.2.0 for CVE-2026-40192 (transitive, e.g. pdf/vision stacks)
+# - pytest>=9.0.3 for CVE-2025-71176 (dev)
+# - python-multipart>=0.0.26 for CVE-2026-40347 (FastAPI stack)
 [tool.uv]
 override-dependencies = [
     "pyjwt>=2.12.0",
@@ -114,6 +117,9 @@ override-dependencies = [
     "tinytag>=2.2.1",
     "cryptography>=46.0.7",
     "requests>=2.33.0",
+    "pillow>=12.2.0",
+    "pytest>=9.0.3",
+    "python-multipart>=0.0.26",
 ]
 
 [project.scripts]
