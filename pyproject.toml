@@ -112,6 +112,7 @@ Issues = "https://github.com/adriannoes/asap-protocol/issues"
 # - pytest>=9.0.3 for CVE-2025-71176 (dev)
 # - python-multipart>=0.0.26 for CVE-2026-40347 (FastAPI stack)
 # - pygments>=2.20.0 for CVE-2026-4539
+# - langsmith>=0.7.31 for GHSA-rr7j-v2q5-chgv
 [tool.uv]
 override-dependencies = [
     "pyjwt>=2.12.0",
@@ -123,6 +124,7 @@ override-dependencies = [
     "pytest>=9.0.3",
     "python-multipart>=0.0.26",
     "pygments>=2.20.0",
+    "langsmith>=0.7.31",
 ]
 
 [project.scripts]
