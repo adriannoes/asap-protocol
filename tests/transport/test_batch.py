@@ -1,0 +1,240 @@
+"""Tests for JSON-RPC batch operations.
+
+Covers server-side batch handling (POST /asap with array body) and
+the client ``batch()`` method that sends a single HTTP call with an
+array body per JSON-RPC 2.0 batch specification.
+"""
+
+from __future__ import annotations
+
+import json
+from typing import TYPE_CHECKING, Any
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+
+from asap.models.entities import Capability, Endpoint, Manifest, Skill
+from asap.models.envelope import Envelope
+from asap.models.payloads import TaskRequest
+from asap.transport.jsonrpc import (
+    ASAP_METHOD,
+    INVALID_REQUEST,
+    PARSE_ERROR,
+)
+from asap.transport.rate_limit import create_test_limiter, get_remote_address
+from asap.transport.server import create_app
+
+if TYPE_CHECKING:
+    from asap.transport.rate_limit import ASAPRateLimiter
+
+from .conftest import NoRateLimitTestBase, TEST_RATE_LIMIT_DEFAULT
+
+
+def _make_manifest() -> Manifest:
+    return Manifest(
+        id="urn:asap:agent:batch-test",
+        name="Batch Test Agent",
+        version="1.0.0",
+        description="Agent for batch tests",
+        capabilities=Capability(
+            asap_version="0.1",
+            skills=[Skill(id="echo", description="Echo input")],
+            state_persistence=False,
+        ),
+        endpoints=Endpoint(asap="http://localhost:8000/asap"),
+    )
+
+
+def _make_rpc_request(envelope: Envelope, req_id: str | int = "r1") -> dict[str, Any]:
+    return {
+        "jsonrpc": "2.0",
+        "method": ASAP_METHOD,
+        "params": {"envelope": envelope.model_dump(mode="json")},
+        "id": req_id,
+    }
+
+
+def _make_envelope(skill_id: str = "echo", sender: str = "urn:asap:agent:client") -> Envelope:
+    return Envelope(
+        asap_version="0.1",
+        sender=sender,
+        recipient="urn:asap:agent:batch-test",
+        payload_type="task.request",
+        payload=TaskRequest(
+            conversation_id="conv-batch",
+            skill_id=skill_id,
+            input={"message": "batch-test"},
+        ).model_dump(),
+    )
+
+
+class TestBatchServer(NoRateLimitTestBase):
+    """Server-side JSON-RPC batch tests."""
+
+    @pytest.fixture()
+    def app(self, disable_rate_limiting: ASAPRateLimiter) -> Any:
+        """Create app with isolated rate limiter and small max_batch_size for tests."""
+        manifest = _make_manifest()
+        app_instance = create_app(
+            manifest,
+            rate_limit=TEST_RATE_LIMIT_DEFAULT,
+            max_batch_size=5,
+        )
+        app_instance.state.limiter = disable_rate_limiting
+        return app_instance
+
+    @pytest.fixture()
+    def transport(self, app: Any) -> ASGITransport:
+        return ASGITransport(app=app)
+
+    async def test_valid_batch_returns_array(self, transport: ASGITransport) -> None:
+        """A batch of valid requests returns an array of JSON-RPC responses."""
+        env1 = _make_envelope()
+        env2 = _make_envelope()
+        batch_body = [_make_rpc_request(env1, "r1"), _make_rpc_request(env2, "r2")]
+
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/asap", content=json.dumps(batch_body))
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert isinstance(data, list)
+        assert len(data) == 2
+        for item in data:
+            assert item["jsonrpc"] == "2.0"
+            assert "result" in item or "error" in item
+
+    async def test_empty_batch_returns_error(self, transport: ASGITransport) -> None:
+        """An empty batch array returns a single INVALID_REQUEST error."""
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/asap", content=json.dumps([]))
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["error"]["code"] == INVALID_REQUEST
+        assert "empty batch" in data["error"]["data"]["reason"]
+
+    async def test_oversized_batch_returns_error(self, transport: ASGITransport) -> None:
+        """A batch exceeding max_batch_size returns a single error."""
+        env = _make_envelope()
+        batch_body = [_make_rpc_request(env, f"r{i}") for i in range(6)]
+
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/asap", content=json.dumps(batch_body))
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["error"]["code"] == INVALID_REQUEST
+        assert "exceeds max" in data["error"]["data"]["reason"]
+
+    async def test_non_dict_items_return_errors(self, transport: ASGITransport) -> None:
+        """Non-dict items in the batch produce INVALID_REQUEST for those entries."""
+        env = _make_envelope()
+        batch_body: list[Any] = [42, "bad", _make_rpc_request(env, "good")]
+
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/asap", content=json.dumps(batch_body))
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert isinstance(data, list)
+        assert len(data) == 3
+        assert data[0]["error"]["code"] == INVALID_REQUEST
+        assert data[1]["error"]["code"] == INVALID_REQUEST
+        assert "result" in data[2] or "error" in data[2]
+
+    async def test_single_request_still_works(self, transport: ASGITransport) -> None:
+        """A single (non-array) JSON-RPC request continues to work normally."""
+        env = _make_envelope()
+        body = _make_rpc_request(env, "single")
+
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/asap", json=body)
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["jsonrpc"] == "2.0"
+        assert "result" in data or "error" in data
+
+    async def test_invalid_json_returns_parse_error(self, transport: ASGITransport) -> None:
+        """Completely invalid JSON returns PARSE_ERROR."""
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post(
+                "/asap",
+                content=b"{broken json",
+                headers={"content-type": "application/json"},
+            )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["error"]["code"] == PARSE_ERROR
+
+
+class TestBatchRateLimiting:
+    """Batch requests consume N rate-limit hits."""
+
+    async def test_batch_rate_limit_check_n(self) -> None:
+        """check_n on the rate limiter is invoked for batch length."""
+        manifest = _make_manifest()
+        limiter = create_test_limiter(["3/minute"], key_func=get_remote_address)
+
+        app_instance = create_app(
+            manifest,
+            rate_limit="100000/minute",
+            max_batch_size=10,
+        )
+        app_instance.state.limiter = limiter
+
+        env = _make_envelope()
+        batch_body = [_make_rpc_request(env, f"r{i}") for i in range(3)]
+
+        transport = ASGITransport(app=app_instance)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/asap", content=json.dumps(batch_body))
+        assert resp.status_code == 200
+
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/asap", content=json.dumps(batch_body))
+        assert resp.status_code == 429
+
+
+class TestBatchClient(NoRateLimitTestBase):
+    """Client-side batch() method tests."""
+
+    @pytest.fixture()
+    def app(self, disable_rate_limiting: ASAPRateLimiter) -> Any:
+        manifest = _make_manifest()
+        app_instance = create_app(manifest, rate_limit=TEST_RATE_LIMIT_DEFAULT)
+        app_instance.state.limiter = disable_rate_limiting
+        return app_instance
+
+    async def test_client_batch_sends_array(self, app: Any) -> None:
+        """ASAPClient.batch() sends a single HTTP request with JSON array body."""
+        from asap.transport.client import ASAPClient
+
+        transport = ASGITransport(app=app)
+        async with ASAPClient(
+            "http://test",
+            require_https=False,
+            transport=transport,
+        ) as client:
+            env1 = _make_envelope()
+            env2 = _make_envelope()
+            results = await client.batch([env1, env2])
+
+        assert len(results) == 2
+        for r in results:
+            assert isinstance(r, Envelope)
+
+    async def test_client_batch_empty_raises(self) -> None:
+        """ASAPClient.batch() raises ValueError for empty list."""
+        from asap.transport.client import ASAPClient
+
+        transport = ASGITransport(app=create_app(_make_manifest()))
+        async with ASAPClient(
+            "http://test",
+            require_https=False,
+            transport=transport,
+        ) as client:
+            with pytest.raises(ValueError, match="empty"):
+                await client.batch([])

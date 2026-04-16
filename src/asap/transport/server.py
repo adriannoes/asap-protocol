@@ -115,6 +115,7 @@ from asap.transport.handlers import (
 )
 from asap.transport.jsonrpc import (
     ASAP_METHOD,
+    DEFAULT_MAX_BATCH_SIZE,
     INTERNAL_ERROR,
     INVALID_PARAMS,
     INVALID_REQUEST,
@@ -133,6 +134,7 @@ from asap.transport.compression import (
 )
 from asap.state.metering import MeteringStore
 from asap.state.snapshot import SnapshotStore
+from asap.economics.audit import AuditEntry, AuditStore
 from asap.economics.sla_storage import SLAStorage
 from asap.economics.storage import MeteringStorage, metering_storage_adapter
 from asap.transport.agent_routes import create_agent_identity_router
@@ -1128,6 +1130,19 @@ class ASAPRequestHandler:
                 accept_header = request.headers.get("accept", "")
                 accept_lambda = LAMBDA_CONTENT_TYPE in accept_header
 
+                try:
+                    await _audit_log_operation(
+                        request.app.state,
+                        operation=payload_type,
+                        agent_urn=envelope.sender,
+                        details={
+                            "envelope_id": envelope.id,
+                            "response_id": response_envelope.id,
+                        },
+                    )
+                except Exception:
+                    logger.warning("asap.audit.log_failed", exc_info=True)
+
                 success_resp = self._build_success_response(
                     response_envelope, ctx, payload_type, accept_lambda=accept_lambda
                 )
@@ -1415,6 +1430,118 @@ class ASAPRequestHandler:
                 context.detach(trace_token)
 
 
+def _make_body_receive(body: bytes) -> Any:
+    """Create an ASGI receive callable that returns the given body bytes."""
+    sent = False
+
+    async def receive() -> dict[str, Any]:
+        nonlocal sent
+        if not sent:
+            sent = True
+            return {"type": "http.request", "body": body, "more_body": False}
+        return {"type": "http.disconnect"}
+
+    return receive
+
+
+async def _handle_batch(
+    request: Request,
+    items: list[Any],
+    handler: ASAPRequestHandler,
+    app: FastAPI,
+) -> JSONResponse:
+    """Process a JSON-RPC batch request (array of requests).
+
+    Empty batches and oversized batches return a single JSON-RPC error.
+    Each sub-request is processed independently; failures do not abort the batch.
+    """
+    if len(items) == 0:
+        return JSONResponse(
+            status_code=200,
+            content={
+                "jsonrpc": "2.0",
+                "error": {
+                    "code": INVALID_REQUEST,
+                    "message": "Invalid request",
+                    "data": {"reason": "empty batch"},
+                },
+                "id": None,
+            },
+        )
+
+    max_size: int = getattr(app.state, "max_batch_size", DEFAULT_MAX_BATCH_SIZE)
+    if len(items) > max_size:
+        return JSONResponse(
+            status_code=200,
+            content={
+                "jsonrpc": "2.0",
+                "error": {
+                    "code": INVALID_REQUEST,
+                    "message": "Invalid request",
+                    "data": {"reason": f"batch size {len(items)} exceeds max {max_size}"},
+                },
+                "id": None,
+            },
+        )
+
+    app.state.limiter.check_n(request, len(items))
+
+    results: list[dict[str, Any]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            results.append(
+                {
+                    "jsonrpc": "2.0",
+                    "error": {"code": INVALID_REQUEST, "message": "Invalid request"},
+                    "id": None,
+                }
+            )
+            continue
+        sub_body = json.dumps(item).encode("utf-8")
+        scope = dict(request.scope)
+        sub_request = Request(scope, receive=_make_body_receive(sub_body))
+        sub_response = await handler.handle_message(sub_request)
+        if isinstance(sub_response, JSONResponse):
+            raw = sub_response.body
+            results.append(json.loads(bytes(raw) if isinstance(raw, memoryview) else raw))
+        elif isinstance(sub_response, StreamingResponse):
+            parts: list[bytes] = []
+            async for chunk in sub_response.body_iterator:
+                parts.append(chunk if isinstance(chunk, bytes) else str(chunk).encode())
+            results.append(json.loads(b"".join(parts)))
+        else:
+            raw2 = sub_response.body
+            results.append(json.loads(bytes(raw2) if isinstance(raw2, memoryview) else raw2))
+
+    return JSONResponse(status_code=200, content=results)
+
+
+async def _audit_log_operation(
+    app_state: Any,
+    operation: str,
+    agent_urn: str,
+    details: dict[str, Any],
+) -> None:
+    """Append an audit entry if an audit store is configured.
+
+    Failures are logged but never propagate — audit must not break the
+    main request path.
+    """
+    store: AuditStore | None = getattr(app_state, "audit_store", None)
+    if store is None:
+        return
+    from datetime import datetime as _dt
+    from datetime import timezone as _tz
+
+    entry = AuditEntry(
+        timestamp=_dt.now(_tz.utc),
+        operation=operation,
+        agent_urn=agent_urn,
+        details=details,
+    )
+    await store.append(entry)
+
+
 def create_app(
     manifest: Manifest,
     registry: HandlerRegistry | None = None,
@@ -1433,6 +1560,7 @@ def create_app(
     delegation_key_store: Callable[[str], Any] | None = None,
     delegation_storage: object | None = None,
     sla_storage: object | None = None,
+    audit_store: AuditStore | None = None,
     identity_host_store: HostStore | None = None,
     identity_agent_store: AgentStore | None = None,
     identity_jti_cache: JtiReplayCache | None = None,
@@ -1443,6 +1571,7 @@ def create_app(
     identity_approval_a2h_channel: A2HApprovalChannel | None = None,
     identity_fresh_session_config: FreshSessionConfig | None = None,
     identity_webauthn_verifier: WebAuthnVerifier | None = None,
+    max_batch_size: int = DEFAULT_MAX_BATCH_SIZE,
 ) -> FastAPI:
     """Create and configure a FastAPI application for ASAP protocol.
 
@@ -1502,6 +1631,9 @@ def create_app(
             token IDs so only the delegator can revoke.
         sla_storage: Optional SLAStorage for SLA metrics and breaches. When provided,
             enables GET /sla, /sla/history, /sla/breaches for querying SLA status.
+        audit_store: Optional AuditStore for tamper-evident audit logging. When provided,
+            enables GET /audit for querying the log and automatically records successful
+            message processing events.
         identity_host_store: Optional HostStore; default in-memory when both stores omitted.
         identity_agent_store: Optional AgentStore; must be set with identity_host_store or both omitted.
         identity_jti_cache: Optional ``jti`` replay cache for Host JWT on mutating agent routes.
@@ -1822,8 +1954,10 @@ def create_app(
         key_func=_get_sender_from_envelope,
     )
     app.state.max_request_size = max_request_size
+    app.state.max_batch_size = max_batch_size
     app.state.snapshot_store = snapshot_store
     app.state.metering_store = metering_store
+    app.state.audit_store = audit_store
     app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
     logger.info(
         "asap.server.rate_limit_enabled",
@@ -1901,27 +2035,23 @@ def create_app(
 
     @app.post("/asap", response_model=None)
     async def handle_asap_message(request: Request) -> Response:
-        """Handle ASAP messages wrapped in JSON-RPC 2.0.
+        """Handle ASAP messages or JSON-RPC batch arrays."""
+        body = await request.body()
+        try:
+            parsed = json.loads(body)
+        except Exception:
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "jsonrpc": "2.0",
+                    "error": {"code": PARSE_ERROR, "message": "Parse error"},
+                    "id": None,
+                },
+            )
 
-        This endpoint:
-        1. Enforces rate limiting via ``app.state.limiter``
-        2. Receives JSON-RPC wrapped ASAP envelopes
-        3. Validates the request structure
-        4. Extracts and processes the ASAP envelope
-        5. Returns response wrapped in JSON-RPC
-        6. Records metrics for observability
+        if isinstance(parsed, list):
+            return await _handle_batch(request, parsed, handler, app)
 
-        Args:
-            request: FastAPI request object with JSON body
-
-        Returns:
-            JSON-RPC response or error response
-
-        Example:
-            >>> # Send JSON-RPC to POST /asap and receive JSON-RPC response.
-            >>> # See tests/transport/test_server.py for full request examples.
-        """
-        # Rate limit check — uses app.state.limiter so tests can override.
         app.state.limiter.check(request)
         return await handler.handle_message(request)
 
@@ -1942,6 +2072,41 @@ def create_app(
             app.state.websocket_connections,
             ws_message_rate_limit=ws_rate_limit,
             sla_breach_subscribers=sla_subscribers,
+        )
+
+    @app.get("/audit")
+    async def get_audit_log(
+        request: Request,
+        urn: str | None = None,
+        start: str | None = None,
+        end: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> JSONResponse:
+        """Query the tamper-evident audit log."""
+        store: AuditStore | None = getattr(app.state, "audit_store", None)
+        if store is None:
+            return JSONResponse(status_code=404, content={"detail": "audit not configured"})
+
+        from datetime import datetime as _dt
+        from datetime import timezone as _tz
+
+        start_dt = _dt.fromisoformat(start).replace(tzinfo=_tz.utc) if start else None
+        end_dt = _dt.fromisoformat(end).replace(tzinfo=_tz.utc) if end else None
+
+        entries = await store.query(
+            agent_urn=urn,
+            start=start_dt,
+            end=end_dt,
+            limit=min(limit, 1000),
+            offset=offset,
+        )
+        return JSONResponse(
+            status_code=200,
+            content={
+                "entries": [e.model_dump(mode="json") for e in entries],
+                "count": len(entries),
+            },
         )
 
     return app

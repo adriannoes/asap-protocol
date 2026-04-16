@@ -55,6 +55,9 @@ VERSION_INCOMPATIBLE = -32000
 # ASAP Protocol JSON-RPC Method Name
 ASAP_METHOD = "asap.send"
 
+# Maximum number of sub-requests in a single JSON-RPC batch array.
+DEFAULT_MAX_BATCH_SIZE = 50
+
 # Error code descriptions
 ERROR_MESSAGES: dict[int, str] = {
     PARSE_ERROR: "Parse error",

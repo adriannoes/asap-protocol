@@ -41,7 +41,7 @@ import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from email.utils import parsedate_to_datetime
-from typing import Literal, Mapping, Optional, Sequence
+from typing import Any, Literal, Mapping, Optional, Sequence
 from urllib.parse import ParseResult, urlparse, urlunparse
 
 import httpx
@@ -1676,3 +1676,73 @@ class ASAPClient:
         )
 
         return results
+
+    async def batch(self, envelopes: list[Envelope]) -> list[Envelope]:
+        """Send a JSON-RPC batch request (single HTTP call with array body).
+
+        Unlike ``send_batch`` (which sends individual requests in parallel),
+        this method serializes all requests into a single JSON array body
+        per the JSON-RPC 2.0 batch specification.
+
+        Args:
+            envelopes: List of envelopes to send as a batch.
+
+        Returns:
+            List of response envelopes (one per input).
+
+        Raises:
+            ValueError: If envelopes list is empty.
+            ASAPConnectionError: If client is not connected.
+            NotImplementedError: If WebSocket transport is active.
+            ASAPRemoteError: If any sub-request returns an error.
+        """
+        if not envelopes:
+            raise ValueError("envelopes list cannot be empty")
+        if self._ws_transport:
+            raise NotImplementedError("batch is not supported with WebSocket transport.")
+        if not self._client:
+            raise ASAPConnectionError(
+                "Client not connected. Use 'async with' context.",
+                url=sanitize_url(self.base_url),
+            )
+
+        batch_body: list[dict[str, Any]] = []
+        for env in envelopes:
+            rpc_req = {
+                "jsonrpc": "2.0",
+                "method": ASAP_METHOD,
+                "params": {"envelope": env.model_dump(mode="json")},
+                "id": env.id,
+            }
+            batch_body.append(rpc_req)
+
+        url = f"{self.base_url}/asap"
+        headers: dict[str, str] = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            ASAP_VERSION_HEADER: self._asap_version_header_value,
+        }
+        if self._auth_token:
+            headers["Authorization"] = f"Bearer {self._auth_token}"
+        response = await self._client.post(url, json=batch_body, headers=headers)
+        response.raise_for_status()
+
+        results = response.json()
+        if not isinstance(results, list):
+            raise ASAPRemoteError(
+                wire_jsonrpc_code=-32603,
+                message=f"Batch response is not an array from {sanitize_url(url)}",
+            )
+
+        out: list[Envelope] = []
+        for item in results:
+            if "error" in item:
+                err = item["error"]
+                wire_code = int(err.get("code", -32603))
+                err_msg = str(err.get("message", "Batch sub-request error"))
+                err_data = err.get("data") if isinstance(err.get("data"), dict) else None
+                raise remote_rpc_error_from_json(wire_code, err_msg, err_data)
+            result_data = item.get("result", {})
+            env_data = result_data.get("envelope", result_data)
+            out.append(Envelope.model_validate(env_data))
+        return out
