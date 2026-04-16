@@ -207,6 +207,24 @@ class TestInMemoryAuditStore:
         store = InMemoryAuditStore()
         assert await store.verify_chain() is True
 
+    async def test_concurrent_appends_preserve_chain(self) -> None:
+        """Concurrent appends must still produce a valid linear hash chain."""
+        import asyncio
+
+        store = InMemoryAuditStore()
+        entries = [
+            AuditEntry(
+                timestamp=datetime.now(timezone.utc),
+                operation=f"concurrent.{i}",
+                agent_urn="urn:asap:agent:test",
+                details={"index": i},
+            )
+            for i in range(20)
+        ]
+        await asyncio.gather(*[store.append(e) for e in entries])
+        assert await store.count() == 20
+        assert await store.verify_chain() is True
+
 
 class TestSQLiteAuditStore:
     """Tests for the SQLite-backed audit store implementation."""
@@ -298,3 +316,43 @@ class TestSQLiteAuditStore:
         )
         assert e2.prev_hash == e1.hash
         assert e1.prev_hash == ""
+
+    async def test_concurrent_appends_preserve_chain(
+        self, sqlite_audit_store: SQLiteAuditStore
+    ) -> None:
+        """Concurrent appends must still produce a valid linear hash chain."""
+        import asyncio
+
+        entries = [
+            AuditEntry(
+                timestamp=datetime.now(timezone.utc),
+                operation=f"concurrent.{i}",
+                agent_urn="urn:asap:agent:test",
+                details={"index": i},
+            )
+            for i in range(20)
+        ]
+        await asyncio.gather(*[sqlite_audit_store.append(e) for e in entries])
+        assert await sqlite_audit_store.count() == 20
+        assert await sqlite_audit_store.verify_chain() is True
+
+
+class TestSQLiteAuditStoreMemoryDefault:
+    """Tests that the default :memory: constructor works correctly."""
+
+    async def test_memory_default_append_query_verify(self) -> None:
+        """Default :memory: store supports append → query → verify_chain."""
+        store = SQLiteAuditStore()
+        for i in range(3):
+            await store.append(
+                AuditEntry(
+                    timestamp=datetime.now(timezone.utc),
+                    operation=f"mem.{i}",
+                    agent_urn="urn:asap:agent:test",
+                    details={"index": i},
+                )
+            )
+        assert await store.count() == 3
+        entries = await store.query()
+        assert len(entries) == 3
+        assert await store.verify_chain() is True

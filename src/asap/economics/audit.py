@@ -7,6 +7,7 @@ previous entry, making any retroactive modification detectable via
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 from datetime import datetime
@@ -99,15 +100,17 @@ class InMemoryAuditStore:
 
     def __init__(self) -> None:
         self._entries: list[AuditEntry] = []
+        self._lock = asyncio.Lock()
 
     async def append(self, entry: AuditEntry) -> AuditEntry:
         """Append an entry, computing and linking its hash to the chain."""
-        prev_hash = self._entries[-1].hash if self._entries else ""
-        computed_hash = compute_entry_hash(
-            prev_hash, entry.timestamp, entry.operation, entry.details
-        )
-        sealed = entry.model_copy(update={"prev_hash": prev_hash, "hash": computed_hash})
-        self._entries.append(sealed)
+        async with self._lock:
+            prev_hash = self._entries[-1].hash if self._entries else ""
+            computed_hash = compute_entry_hash(
+                prev_hash, entry.timestamp, entry.operation, entry.details
+            )
+            sealed = entry.model_copy(update={"prev_hash": prev_hash, "hash": computed_hash})
+            self._entries.append(sealed)
         return sealed
 
     async def query(
@@ -151,14 +154,37 @@ class SQLiteAuditStore:
     Uses ``aiosqlite`` for async access. The table is lazily created on first
     use so the store can be instantiated synchronously.
 
-    Each public method opens its own connection and calls ``_ensure_table``
-    within that connection context — required because ``:memory:`` databases
-    are per-connection in SQLite.
+    For ``:memory:`` databases a single persistent connection is kept alive
+    (because each ``aiosqlite.connect(":memory:")`` creates a *new* empty
+    database).  File-backed databases use per-call connections.  An
+    ``asyncio.Lock`` serialises all writes so the hash-chain stays linear.
     """
 
     def __init__(self, db_path: str = ":memory:") -> None:
         self._db_path = db_path
+        self._lock = asyncio.Lock()
         self._initialized = False
+        self._persistent_conn: Any | None = None
+
+    async def _get_connection(self) -> Any:
+        """Return an open ``aiosqlite`` connection.
+
+        For ``:memory:`` databases the same connection is reused for the
+        lifetime of the store; for file-backed databases a fresh connection
+        is returned (caller must close it).
+        """
+        import aiosqlite
+
+        if self._db_path == ":memory:":
+            if self._persistent_conn is None:
+                self._persistent_conn = await aiosqlite.connect(":memory:")
+            return self._persistent_conn
+        return await aiosqlite.connect(self._db_path)
+
+    async def _release_connection(self, conn: Any) -> None:
+        """Close *conn* unless it is the persistent in-memory connection."""
+        if conn is not self._persistent_conn:
+            await conn.close()
 
     async def _ensure_table(self, conn: Any) -> None:
         """Create the audit_log table and indexes if they don't exist yet."""
@@ -185,35 +211,39 @@ class SQLiteAuditStore:
 
     async def append(self, entry: AuditEntry) -> AuditEntry:
         """Append an entry, linking it to the last stored hash."""
-        import aiosqlite
+        async with self._lock:
+            conn = await self._get_connection()
+            try:
+                await self._ensure_table(conn)
+                cursor = await conn.execute(
+                    "SELECT hash FROM audit_log ORDER BY rowid DESC LIMIT 1"
+                )
+                row = await cursor.fetchone()
+                prev_hash = row[0] if row else ""
 
-        async with aiosqlite.connect(self._db_path) as db:
-            await self._ensure_table(db)
-            cursor = await db.execute("SELECT hash FROM audit_log ORDER BY rowid DESC LIMIT 1")
-            row = await cursor.fetchone()
-            prev_hash = row[0] if row else ""
+                computed_hash = compute_entry_hash(
+                    prev_hash, entry.timestamp, entry.operation, entry.details
+                )
+                sealed = entry.model_copy(update={"prev_hash": prev_hash, "hash": computed_hash})
 
-            computed_hash = compute_entry_hash(
-                prev_hash, entry.timestamp, entry.operation, entry.details
-            )
-            sealed = entry.model_copy(update={"prev_hash": prev_hash, "hash": computed_hash})
-
-            await db.execute(
-                """
-                INSERT INTO audit_log (id, timestamp, operation, agent_urn, details, prev_hash, hash)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    sealed.id,
-                    sealed.timestamp.isoformat(),
-                    sealed.operation,
-                    sealed.agent_urn,
-                    json.dumps(sealed.details, sort_keys=True, default=str),
-                    sealed.prev_hash,
-                    sealed.hash,
-                ),
-            )
-            await db.commit()
+                await conn.execute(
+                    """
+                    INSERT INTO audit_log (id, timestamp, operation, agent_urn, details, prev_hash, hash)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        sealed.id,
+                        sealed.timestamp.isoformat(),
+                        sealed.operation,
+                        sealed.agent_urn,
+                        json.dumps(sealed.details, sort_keys=True, default=str),
+                        sealed.prev_hash,
+                        sealed.hash,
+                    ),
+                )
+                await conn.commit()
+            finally:
+                await self._release_connection(conn)
         return sealed
 
     async def query(
@@ -225,8 +255,6 @@ class SQLiteAuditStore:
         offset: int = 0,
     ) -> list[AuditEntry]:
         """Query entries with optional filters, ordered by insertion order."""
-        import aiosqlite
-
         clauses: list[str] = []
         params: list[str | int] = []
         if agent_urn:
@@ -242,15 +270,15 @@ class SQLiteAuditStore:
         select_from = (
             "SELECT id, timestamp, operation, agent_urn, details, prev_hash, hash FROM audit_log"
         )
-        # WHERE fragments are fixed literals with ? placeholders; values are bound via params.
         where_sql = (" WHERE " + " AND ".join(clauses)) if clauses else ""
         sql = select_from + where_sql + " ORDER BY rowid LIMIT ? OFFSET ?"
         params.extend([limit, offset])
 
         entries: list[AuditEntry] = []
-        async with aiosqlite.connect(self._db_path) as db:
-            await self._ensure_table(db)
-            cursor = await db.execute(sql, params)
+        conn = await self._get_connection()
+        try:
+            await self._ensure_table(conn)
+            cursor = await conn.execute(sql, params)
             rows = await cursor.fetchall()
             for row in rows:
                 entries.append(
@@ -264,16 +292,17 @@ class SQLiteAuditStore:
                         hash=row[6],
                     )
                 )
+        finally:
+            await self._release_connection(conn)
         return entries
 
     async def verify_chain(self) -> bool:
         """Verify every hash link in insertion order."""
-        import aiosqlite
-
         prev_hash = ""
-        async with aiosqlite.connect(self._db_path) as db:
-            await self._ensure_table(db)
-            cursor = await db.execute(
+        conn = await self._get_connection()
+        try:
+            await self._ensure_table(conn)
+            cursor = await conn.execute(
                 "SELECT timestamp, operation, details, prev_hash, hash "
                 "FROM audit_log ORDER BY rowid"
             )
@@ -289,14 +318,17 @@ class SQLiteAuditStore:
                 if stored_hash != expected or stored_prev != prev_hash:
                     return False
                 prev_hash = stored_hash
+        finally:
+            await self._release_connection(conn)
         return True
 
     async def count(self) -> int:
         """Return total number of stored entries."""
-        import aiosqlite
-
-        async with aiosqlite.connect(self._db_path) as db:
-            await self._ensure_table(db)
-            cursor = await db.execute("SELECT COUNT(*) FROM audit_log")
+        conn = await self._get_connection()
+        try:
+            await self._ensure_table(conn)
+            cursor = await conn.execute("SELECT COUNT(*) FROM audit_log")
             row = await cursor.fetchone()
             return row[0] if row else 0
+        finally:
+            await self._release_connection(conn)
