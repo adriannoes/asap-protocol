@@ -111,4 +111,4 @@
 - [x] Audit query API working
 - [x] Compliance Harness v2 covers: identity, capabilities, streaming, errors, versioning, batch, audit
 - [x] Compliance report exportable as JSON
-- [ ] Test coverage >= 90% for new code
+- [x] Test coverage >= 90% for new code
