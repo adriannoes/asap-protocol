@@ -15,7 +15,7 @@ on:
       - 'pyproject.toml'
       - 'uv.lock'
       - 'mkdocs.yml'
-      - '.github/workflows/ci.yml'
+      - '.github/workflows/**'
       - '.github/actions/**'
   pull_request:
     branches: [main]
@@ -29,7 +29,7 @@ on:
       - 'pyproject.toml'
       - 'uv.lock'
       - 'mkdocs.yml'
-      - '.github/workflows/ci.yml'
+      - '.github/workflows/**'
       - '.github/actions/**'
 
 concurrency:
