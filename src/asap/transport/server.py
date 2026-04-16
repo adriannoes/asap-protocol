@@ -2040,14 +2040,8 @@ def create_app(
         try:
             parsed = json.loads(body)
         except Exception:
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "jsonrpc": "2.0",
-                    "error": {"code": PARSE_ERROR, "message": "Parse error"},
-                    "id": None,
-                },
-            )
+            app.state.limiter.check(request)
+            return await handler.handle_message(request)
 
         if isinstance(parsed, list):
             return await _handle_batch(request, parsed, handler, app)
