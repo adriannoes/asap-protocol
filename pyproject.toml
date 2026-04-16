@@ -63,6 +63,7 @@ docs = [
     "ghp-import>=2.1.0",
     "mkdocs-material>=9.5",
     "mkdocstrings[python]>=0.27",
+    "pymdown-extensions>=10.21",
 ]
 dns-sd = [
     "zeroconf>=0.80",
