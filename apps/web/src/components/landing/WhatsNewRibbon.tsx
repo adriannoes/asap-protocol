@@ -36,9 +36,9 @@ export function WhatsNewRibbon() {
       aria-label="What's new in ASAP Protocol v2.2"
       className="w-full border-y border-zinc-900 bg-zinc-950"
     >
-      <div className="container mx-auto flex max-w-5xl flex-col gap-4 px-4 py-8 md:flex-row md:items-center md:gap-6 md:px-6 md:py-12">
-        <div className="flex items-start gap-2 md:w-64 md:shrink-0">
-          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-indigo-400" aria-hidden />
+      <div className="container mx-auto flex max-w-5xl flex-col gap-4 px-4 py-8 md:flex-row md:items-center md:gap-4 md:px-6 md:py-10">
+        <div className="flex items-center gap-2 md:shrink-0 md:border-r md:border-zinc-800 md:pr-4">
+          <Sparkles className="h-4 w-4 shrink-0 text-indigo-400" aria-hidden />
           <div className="flex flex-col">
             <span className="font-mono text-xs uppercase tracking-wider text-indigo-400">
               What&apos;s new in v2.2
@@ -49,7 +49,7 @@ export function WhatsNewRibbon() {
           </div>
         </div>
 
-        <ul className="flex flex-wrap gap-2">
+        <ul className="flex flex-wrap items-center gap-2">
           {PILLS.map((pill) => {
             const Icon = pill.icon;
             const linkProps = pill.external
