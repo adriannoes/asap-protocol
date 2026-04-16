@@ -43,6 +43,7 @@ Example:
 
 from __future__ import annotations
 
+import asyncio
 import importlib
 import json
 import os
@@ -1486,34 +1487,33 @@ async def _handle_batch(
 
     app.state.limiter.check_n(request, len(items))
 
-    results: list[dict[str, Any]] = []
-    for item in items:
+    async def _process_one(item: Any) -> dict[str, Any]:
         if not isinstance(item, dict):
-            results.append(
-                {
-                    "jsonrpc": "2.0",
-                    "error": {"code": INVALID_REQUEST, "message": "Invalid request"},
-                    "id": None,
-                }
-            )
-            continue
+            return {
+                "jsonrpc": "2.0",
+                "error": {"code": INVALID_REQUEST, "message": "Invalid request"},
+                "id": None,
+            }
         sub_body = json.dumps(item).encode("utf-8")
         scope = dict(request.scope)
         sub_request = Request(scope, receive=_make_body_receive(sub_body))
         sub_response = await handler.handle_message(sub_request)
         if isinstance(sub_response, JSONResponse):
             raw = sub_response.body
-            results.append(json.loads(bytes(raw) if isinstance(raw, memoryview) else raw))
-        elif isinstance(sub_response, StreamingResponse):
+            result: dict[str, Any] = json.loads(bytes(raw) if isinstance(raw, memoryview) else raw)
+            return result
+        if isinstance(sub_response, StreamingResponse):
             parts: list[bytes] = []
             async for chunk in sub_response.body_iterator:
                 parts.append(chunk if isinstance(chunk, bytes) else str(chunk).encode())
-            results.append(json.loads(b"".join(parts)))
-        else:
-            raw2 = sub_response.body
-            results.append(json.loads(bytes(raw2) if isinstance(raw2, memoryview) else raw2))
+            streamed: dict[str, Any] = json.loads(b"".join(parts))
+            return streamed
+        raw2 = sub_response.body
+        fallback: dict[str, Any] = json.loads(bytes(raw2) if isinstance(raw2, memoryview) else raw2)
+        return fallback
 
-    return JSONResponse(status_code=200, content=results)
+    results = await asyncio.gather(*[_process_one(item) for item in items])
+    return JSONResponse(status_code=200, content=list(results))
 
 
 async def _audit_log_operation(
@@ -1958,6 +1958,15 @@ def create_app(
     app.state.snapshot_store = snapshot_store
     app.state.metering_store = metering_store
     app.state.audit_store = audit_store
+    if audit_store is not None:
+        logger.warning(
+            "asap.server.audit_api_unauthenticated",
+            message=(
+                "Audit API (/audit) is enabled but unauthenticated. "
+                "Intended for local/operator use only. "
+                "Protect with OAuth2 or network controls when exposed."
+            ),
+        )
     app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
     logger.info(
         "asap.server.rate_limit_enabled",
@@ -2035,11 +2044,16 @@ def create_app(
 
     @app.post("/asap", response_model=None)
     async def handle_asap_message(request: Request) -> Response:
-        """Handle ASAP messages or JSON-RPC batch arrays."""
+        """Handle ASAP messages or JSON-RPC batch arrays.
+
+        Uses ``request.body()`` (which Starlette caches) so that
+        ``parse_json_body`` inside ``handle_message`` can re-read via
+        ``request.stream()`` — Starlette yields the cached bytes.
+        """
         body = await request.body()
         try:
             parsed = json.loads(body)
-        except Exception:
+        except (json.JSONDecodeError, UnicodeDecodeError):
             app.state.limiter.check(request)
             return await handler.handle_message(request)
 
@@ -2082,11 +2096,23 @@ def create_app(
         if store is None:
             return JSONResponse(status_code=404, content={"detail": "audit not configured"})
 
+        if limit < 0 or offset < 0:
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "limit and offset must be non-negative"},
+            )
+
         from datetime import datetime as _dt
         from datetime import timezone as _tz
 
-        start_dt = _dt.fromisoformat(start).replace(tzinfo=_tz.utc) if start else None
-        end_dt = _dt.fromisoformat(end).replace(tzinfo=_tz.utc) if end else None
+        try:
+            start_dt = _dt.fromisoformat(start).replace(tzinfo=_tz.utc) if start else None
+            end_dt = _dt.fromisoformat(end).replace(tzinfo=_tz.utc) if end else None
+        except ValueError:
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "Invalid date format. Use ISO 8601 (e.g. 2026-01-01T00:00:00)"},
+            )
 
         entries = await store.query(
             agent_urn=urn,
