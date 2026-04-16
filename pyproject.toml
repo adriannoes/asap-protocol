@@ -63,6 +63,7 @@ docs = [
     "ghp-import>=2.1.0",
     "mkdocs-material>=9.5",
     "mkdocstrings[python]>=0.27",
+    "pymdown-extensions>=10.21",
 ]
 dns-sd = [
     "zeroconf>=0.80",
@@ -110,6 +111,7 @@ Issues = "https://github.com/adriannoes/asap-protocol/issues"
 # - pillow>=12.2.0 for CVE-2026-40192 (transitive, e.g. pdf/vision stacks)
 # - pytest>=9.0.3 for CVE-2025-71176 (dev)
 # - python-multipart>=0.0.26 for CVE-2026-40347 (FastAPI stack)
+# - pygments>=2.20.0 for CVE-2026-4539
 [tool.uv]
 override-dependencies = [
     "pyjwt>=2.12.0",
@@ -120,6 +122,7 @@ override-dependencies = [
     "pillow>=12.2.0",
     "pytest>=9.0.3",
     "python-multipart>=0.0.26",
+    "pygments>=2.20.0",
 ]
 
 [project.scripts]
