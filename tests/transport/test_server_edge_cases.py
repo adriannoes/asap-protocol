@@ -97,16 +97,18 @@ class TestMalformedBody(NoRateLimitTestBase):
         assert "error" in data
         assert data["error"]["code"] == PARSE_ERROR
 
-    def test_json_array_body_returns_invalid_request(self, client: TestClient) -> None:
-        """JSON array body (not object) returns invalid request error."""
+    def test_json_array_body_returns_batch_response(self, client: TestClient) -> None:
+        """JSON array body is handled as a JSON-RPC batch request."""
         response = client.post(
             "/asap",
             json=[1, 2, 3],
         )
         assert response.status_code == 200
         data = response.json()
-        assert "error" in data
-        assert data["error"]["code"] == INVALID_REQUEST
+        assert isinstance(data, list)
+        assert len(data) == 3
+        for item in data:
+            assert item["error"]["code"] == INVALID_REQUEST
 
     def test_empty_body_returns_parse_error(self, client: TestClient) -> None:
         """Empty body returns parse error."""
