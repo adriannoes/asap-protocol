@@ -1,11 +1,11 @@
 # ASAP Protocol: Roadmap to Marketplace
 
-> **Evolution Path**: v1.0.0 → v2.0.0 ✅ Released → v2.1.0 ✅ Released → v2.2.0 (next)
+> **Evolution Path**: v1.0.0 → v2.0.0 ✅ Released → v2.1.0 ✅ Released → v2.1.1 ✅ Released → v2.2.0 ✅ Released
 >
-> **Status**: v2.1.1 RELEASED — Planning v2.2.0
-> **Horizon**: v2.2.0 Protocol Hardening, v2.3.0 Scale, v2.4.0 Adoption, v3.0.0 Economy
+> **Status**: v2.2.0 RELEASED — Next focus: v2.3.0 Scale (see [prd-v2.3-scale.md](../prd/prd-v2.3-scale.md))
+> **Horizon**: v2.3.0 Scale, v2.4.0 Adoption, v3.0.0 Economy
 > **Created**: 2026-01-30
-> **Updated**: 2026-03-20
+> **Updated**: 2026-04-16
 
 ---
 
