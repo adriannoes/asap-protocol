@@ -35,7 +35,7 @@ product-specs/
 
 ### Strategy (`strategy/`)
 - **[Vision](./strategy/vision-agent-marketplace.md)**: North Star for the Agent Marketplace.
-- **[Roadmap](./strategy/roadmap-to-marketplace.md)**: Version sequencing from v1.0 to v2.0.
+- **[Roadmap](./strategy/roadmap-to-marketplace.md)**: Version sequencing from v1.0 through **v2.2.0** (released) toward v2.3+.
 - **[Deferred Backlog](./strategy/deferred-backlog.md)**: Features deprioritized for the Lean Pivot.
 
 ### Decisions (`decision-records/`)
