@@ -7,9 +7,9 @@
 
 > A production-ready protocol for agent-to-agent communication and task coordination.
 
-**Quick Info**: `v2.1.1` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
+**Quick Info**: `v2.2.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
 
-> 🚀 **Live now** our [**agentic marketplace**](https://asap-protocol.vercel.app/) — Browse agents, register yours, request verification.
+> 🚀 **Live now** our [**agentic marketplace**](https://asap-protocol.vercel.app/) — browse agents, register yours, request verification.
 
 ## Why ASAP?
 
@@ -30,6 +30,8 @@ For simple point-to-point communication, a basic HTTP API might suffice; ASAP sh
 - **MCP integration** — Tool execution and coordination in a single envelope.
 - **Observable** — `trace_id` and `correlation_id` for debugging.
 - **Security** — Bearer auth, OAuth2/JWT, Ed25519 signed manifests, optional mTLS, replay prevention, HTTPS, rate limiting. [Security Model](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/v1.1-security-model.md) (trust limits, Custom Claims).
+- **Identity & capabilities (v2.2)** — Per-runtime Host/Agent JWTs, capability grants with constraints (`max`, `min`, `in`, `not_in`), approval flows (device authorization / CIBA-style), optional WebAuthn for high-risk registration.
+- **Streaming & wire protocol (v2.2)** — `POST /asap/stream` (SSE / `TaskStream`), JSON-RPC 2.0 batch on `POST /asap`, `ASAP-Version` negotiation, tamper-evident audit logging, Compliance Harness v2.
 - **Economics** — Usage metering, delegation tokens, SLA framework with breach alerts.
 
 ### 🆕 Framework Ecosystem
@@ -103,7 +105,7 @@ See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/
 - [Observability](https://github.com/adriannoes/asap-protocol/blob/main/docs/observability.md) | [Testing](https://github.com/adriannoes/asap-protocol/blob/main/docs/testing.md)
 
 **Decisions & Operations**
-- [ADRs](https://github.com/adriannoes/asap-protocol/tree/main/docs/adr) — 17 Architecture Decision Records
+- [ADRs](https://github.com/adriannoes/asap-protocol/tree/main/docs/adr) — 19 Architecture Decision Records
 - [Tech Stack](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/dev-planning/architecture/tech-stack-decisions.md) — Rationale for Python, Pydantic, Next.js choices
 - [Deployment](https://github.com/adriannoes/asap-protocol/blob/main/docs/deployment/kubernetes.md) | [Troubleshooting](https://github.com/adriannoes/asap-protocol/blob/main/docs/troubleshooting.md)
 
@@ -112,9 +114,13 @@ See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/
 
 ## CLI
 
-- **v1.1** adds OAuth2, WebSocket, Discovery (well-known + Lite Registry), State Storage (SQLite) and Webhooks. 
-- **v1.2** adds Ed25519 signed manifests, trust levels, optional mTLS and the [Compliance Harness](https://github.com/adriannoes/asap-protocol/blob/main/asap-compliance/README.md). 
+- **v1.1** adds OAuth2, WebSocket, Discovery (well-known + Lite Registry), State Storage (SQLite) and Webhooks.
+- **v1.2** adds Ed25519 signed manifests, trust levels, optional mTLS and the [Compliance Harness](https://github.com/adriannoes/asap-protocol/blob/main/asap-compliance/README.md).
 - **v1.3** adds delegation commands (`asap delegation create`, `asap delegation revoke`).
+- **v2.0** adds the Lean Marketplace Web App (Next.js), Lite Registry on GitHub Pages, IssueOps registration, OAuth sign-in for developers, and Verified Badge flow.
+- **v2.1** adds the Consumer SDK (`MarketClient`), optional framework extras (LangChain, CrewAI, LlamaIndex, SmolAgents, OpenClaw, …), and registry UX improvements on PyPI.
+- **v2.1.1** is a patch release: JWT algorithm allowlist, SQLite async bridging, optional Redis-backed rate limits, SSRF hardening in the web app, and related reliability fixes (see [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)).
+- **v2.2** adds per-runtime agent identity, capability-based authorization, SSE streaming (`POST /asap/stream`), `ASAP-Version` negotiation, JSON-RPC batch requests, tamper-evident audit logging, async state stores, and Compliance Harness v2.
 
 ```bash
 asap --version                                    # Show version
