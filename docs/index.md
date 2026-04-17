@@ -2,13 +2,16 @@
 
 **ASAP (Async Simple Agent Protocol)** is a streamlined protocol for agent-to-agent communication, designed to be simpler than existing alternatives while maintaining modern standards functionality.
 
+**Latest reference implementation:** **v2.2.0** ([CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md), [PyPI](https://pypi.org/project/asap-protocol/)) — identity & capabilities, SSE streaming (`POST /asap/stream`), `ASAP-Version` negotiation, JSON-RPC batch, tamper-evident audit logging. Upgrade notes: [Migration (v2.1.x → v2.2.0)](migration.md).
+
 ## Features
 
 - **Typed Messages**: Full Pydantic type safety for all protocol messages
 - **Async-First**: Built on `asyncio` for high-performance agent communication
-- **State Management**: Built-in task state machine with persistence support
-- **Transport Agnostic**: Clean separation between protocol logic and transport capability (HTTP/JSON-RPC provided)
+- **State Management**: Built-in task state machine with persistence support (`AsyncSnapshotStore` / `AsyncMeteringStore` in v2.2+)
+- **Transport Agnostic**: Clean separation between protocol logic and transport capability (HTTP JSON-RPC, WebSocket, SSE)
 - **Observability**: First-class tracking with correlation IDs and trace IDs
+- **Security & authorization (v2.2+)**: Per-runtime Host/Agent JWTs, capability grants with constraints, approval flows — see [Security](security.md) and [Migration](migration.md)
 
 ## Installation
 
@@ -37,7 +40,7 @@ async def main():
         input={"message": "hello from client"},
     )
     envelope = Envelope(
-        asap_version="0.1",
+        asap_version="0.1",  # envelope schema version (see asap.models.constants.ASAP_PROTOCOL_VERSION)
         sender="urn:asap:agent:client",
         recipient="urn:asap:agent:echo-agent",
         payload_type="task.request",
@@ -50,6 +53,8 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 ```
+
+`ASAPClient` sends the **`ASAP-Version`** header for wire-level negotiation (`2.1` / `2.2`); that is separate from the envelope `asap_version` string above. See [Migration (v2.1.x → v2.2.0)](migration.md) and [ADR-019](adr/ADR-019-unified-versioning.md).
 
 ## CLI
 
@@ -84,7 +89,7 @@ See [Identity Signing](guides/identity-signing.md) for full CLI reference.
 - [Error Handling](error-handling.md)
 - [Testing](testing.md)
 - [Raw Fetch (non-Python)](raw-fetch.md) — Fetch registry.json and revoked_agents.json directly (curl, fetch); implement your own client in any language
-- [v1.1 Security Model](security/v1.1-security-model.md) — OAuth2 trust limitations, Custom Claims, allowlist (ADR-17)
+- [v1.1 Security Model](security/v1.1-security-model.md) — OAuth2 trust limitations, Custom Claims, allowlist (see also [decision record § security](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/decision-records/03-security.md))
 - [Registry verification review (admin)](guides/registry-verification-review.md) — How to vet and approve Verified badge requests for the Lite Registry
 
 ### v1.1 features (API reference & guides)
@@ -92,7 +97,7 @@ See [Identity Signing](guides/identity-signing.md) for full CLI reference.
 | Feature | Description | Where |
 |:--------|:-------------|:------|
 | **OAuth2 / Custom Claims** | Server and client auth; identity binding via JWT claims | [Transport](transport.md), [Security](security.md), examples: `auth_patterns` |
-| **WebSocket** | Real-time transport; MessageAck for reliability (ADR-16) | [Transport](transport.md), `asap.transport.websocket`, examples: `websocket_concept` |
+| **WebSocket** | Real-time transport; MessageAck for reliability (see [Q16 — WebSocket Message Ack](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/decision-records/02-protocol.md#question-16-websocket-message-acknowledgment)) | [Transport](transport.md), `asap.transport.websocket`, examples: `websocket_concept` |
 | **Webhooks** | Signed POST callbacks to URLs; SSRF checks, retry, DLQ | [API Reference](api-reference.md) (`asap.transport`), `WebhookDelivery`, `WebhookRetryManager` |
 | **Discovery** | Well-known manifest, Lite Registry, health endpoint | [Transport](transport.md), `asap.discovery` |
 | **State Storage** | SQLite backend, env-based backend selection | [State Management](state-management.md), [Best Practices: Failover](best-practices/agent-failover-migration.md), examples: `storage_backends`, `state_migration` |
