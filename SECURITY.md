@@ -10,6 +10,8 @@ The following versions of the ASAP Protocol specification and reference implemen
 | 1.x.x   | :white_check_mark: |
 | < 1.0.0 | :x:                |
 
+The `>= 2.0.0` line includes all current **2.x** reference releases on PyPI (including **2.2.x**). Install the latest patch with `pip install -U asap-protocol`.
+
 ## Scope of Coverage
 
 This security policy applies to the **ASAP Protocol** ecosystem. Vulnerabilities in the following components are considered **in-scope**:
