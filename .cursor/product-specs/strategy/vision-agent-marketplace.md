@@ -3,8 +3,9 @@
 > **The End Goal**: A decentralized ecosystem where AI agents discover, trust, and collaborate autonomously.
 >
 > **Status**: VISION DOCUMENT
-> **Horizon**: v2.0.0+
+> **Horizon**: Marketplace foundation (v2.0) through **protocol hardening (v2.2.0 released)**; centralized registry, scale, and TS SDK **v2.3+**
 > **Created**: 2026-01-30
+> **Updated**: 2026-04-16
 
 ---
 
@@ -212,7 +213,7 @@ graph TD
 
 **Purpose**: Enable value exchange between agents.
 
-#### 3.1 Pricing Models
+#### 4.1 Pricing Models
 
 | Model | Use Case | Example |
 |-------|----------|---------|
@@ -222,7 +223,7 @@ graph TD
 | **Auction** | Competitive pricing | "Bid for priority" |
 | **Free Tier** | Community/OSS | "100 tasks/day free" |
 
-#### 3.2 SLA Framework
+#### 4.2 SLA Framework
 
 > [!NOTE]
 > **v1.3 scope**: SLAs are trust signals (availability, latency, error rate). Financial compensation (refunds, credits) is deferred to v3.0+ marketplace economics.
@@ -249,7 +250,7 @@ graph TD
 }
 ```
 
-#### 3.3 Settlement
+#### 4.3 Settlement
 
 | Method | Latency | Trust Required | Backend |
 |--------|---------|----------------|---------|
@@ -269,12 +270,12 @@ graph TD
 
 Evals serve as the "Certification" mechanism within the Trust Layer. The marketplace MVP focuses on **Protocol Compliance (Shell)** — ensuring agents are "good citizens" of the network.
 
-### 4.1 Protocol Compliance ("Shell")
+### 5.1 Protocol Compliance ("Shell")
 
 | Layer | Focus | Tooling | Example Metric |
 |-------|-------|---------|----------------|
 | **1. Compliance (Shell)** | Protocol Adherence | **ASAP Native** (pytest) | "Handles 429 backoff correctly" |
-| **2. Intelligence (Brain)** | Reasoning & Safety | **Deferred (v2.2+)** | "Response is faithful to context" |
+| **2. Intelligence (Brain)** | Reasoning & Safety | **Deferred (v2.3+)** | "Response is faithful to context" |
 
 #### Layer 1: Protocol Compliance (The Shell)
 Built directly into the ASAP SDK test suite. Verifies that the agent is a "good citizen" of the network.
@@ -286,9 +287,9 @@ Built directly into the ASAP SDK test suite. Verifies that the agent is a "good 
 #### Layer 2: Cognitive Intelligence (The Brain) — Deferred
 
 > [!NOTE]
-> Intelligence evaluation (DeepEval integration) is deferred to v2.2+. The marketplace does not require AI quality scoring to function — it requires protocol compliance. See [Deferred Backlog](./deferred-backlog.md#2-deepeval-intelligence-layer-originally-v12-sprint-t61).
+> Intelligence evaluation (DeepEval integration) is deferred to **v2.3+** (not part of v2.2 Protocol Hardening). The marketplace does not require AI quality scoring to function — it requires protocol compliance. See [Deferred Backlog](./deferred-backlog.md#2-deepeval-intelligence-layer-originally-v12-sprint-t61).
 
-### 4.2 Evaluation Workflow
+### 5.2 Evaluation Workflow
 
 ```mermaid
 graph TD
@@ -417,7 +418,7 @@ ASAP follows a **Hybrid strategy** for state management, balancing developer exp
 |-------|------|-------|---------|
 | **Protocol Interface** | `SnapshotStore`, `MeteringStore` | ASAP SDK (open source) | Agent's choice |
 | **Reference Impls** | SQLite, Redis, PostgreSQL adapters | Separate packages | Agent's infra |
-| **Marketplace Metadata** | Manifests, trust scores, SLA metrics | ASAP centrally | Lite Registry (v2.0), PostgreSQL (v2.1+) |
+| **Marketplace Metadata** | Manifests, trust scores, SLA metrics | ASAP centrally | Lite Registry (v2.0), PostgreSQL **(v2.3+**, when Registry API Backend ships) |
 | **Agent Task State** | Snapshots, event history, artifacts | Agent developer | Agent's choice |
 | **ASAP Cloud** (future) | Managed storage, backups | ASAP premium | Managed infra |
 
@@ -473,13 +474,13 @@ ASAP follows a **Hybrid strategy** for state management, balancing developer exp
 
 ---
 
-## 5. Sustainability & Commercial Strategy
+## 6. Sustainability & Commercial Strategy
 
 We adopt an **Open Core** model (similar to LangChain/LangSmith). The Goal: ubiquity for the protocol, profitability for the ecosystem.
 
 **Strategic Priority**: Adoption first, monetization later.
 
-### 5.1 Target Audience (ICP)
+### 6.1 Target Audience (ICP)
 
 | Priority | Segment | Why |
 |----------|---------|-----|
@@ -487,13 +488,13 @@ We adopt an **Open Core** model (similar to LangChain/LangSmith). The Goal: ubiq
 | 2 | Individual Developers | Experiment, prototype, contribute |
 | Future | Enterprise Direct | After protocol adoption is proven |
 
-### 5.2 The Open Source Core (Free forever)
+### 6.2 The Open Source Core (Free forever)
 
 *   **The Standard**: Protocol specs, SDKs (Python/Node), CLI tools.
 *   **The "Shell"**: ASAP Compliance Harness (pytest-based testing).
 *   **License**: Permissive (MIT/Apache) to maximize adoption.
 
-### 5.3 Pricing Strategy
+### 6.3 Pricing Strategy
 
 **Phase 1: Free (v2.0 launch)**
 
@@ -511,7 +512,7 @@ Monetization model (Subscription, % of transactions, or Hybrid) deferred until c
 | Subscription ($49/mo) | If enterprise features dominate demand |
 | % of transactions | If Clearing House has volume |
 
-### 5.4 Monetization Areas (Deferred to v3.0)
+### 6.4 Monetization Areas (Deferred to v3.0)
 
 1.  **ASAP Cloud (Managed Infrastructure)**:
     *   "Vercel for Agents". Deploy ASAP-compliant agents with one command.
@@ -523,7 +524,7 @@ Monetization model (Subscription, % of transactions, or Hybrid) deferred until c
 3.  **Enterprise Observability**:
     *   Analytics on agent interactions, costs, content safety.
 
-### 5.5 Open Source vs. Proprietary Boundary (LangChain-style)
+### 6.5 Open Source vs. Proprietary Boundary (LangChain-style)
 
 We follow an **Open Core + SaaS** model: open source drives adoption; proprietary services drive revenue. The boundary defines what stays public vs. private.
 
@@ -540,7 +541,7 @@ We follow an **Open Core + SaaS** model: open source drives adoption; proprietar
 
 | Component | When | Rationale |
 |-----------|------|-----------|
-| **Registry API Backend** | v2.1 (500+ agents) | Search, scale, rate limits — runs on our infra |
+| **Registry API Backend** | **v2.3+** (triggers per [prd-v2.3-scale.md](../prd/prd-v2.3-scale.md)) | Search, scale, rate limits — runs on our infra |
 | **Billing / Stripe integration** | v3.0 | Payment processing, subscription logic |
 | **Economy Settlement** | v3.0 | Credits, clearing house, payouts |
 | **ASAP Cloud** (managed storage) | Future | Hosted infrastructure |
@@ -581,6 +582,8 @@ FUTURE SEPARATE REPO (asap-settlement-crypto, v4.0+)
 - **Roadmap**: [roadmap-to-marketplace.md](./roadmap-to-marketplace.md)
 - **Deferred Backlog**: [deferred-backlog.md](./deferred-backlog.md)
 - **v1.1 PRD**: [prd-v1.1-roadmap.md](../prd/prd-v1.1-roadmap.md)
+- **v2.2 Protocol Hardening (shipped)**: [prd-v2.2-protocol-hardening.md](../prd/prd-v2.2-protocol-hardening.md)
+- **v2.3 Scale (next)**: [prd-v2.3-scale.md](../prd/prd-v2.3-scale.md)
 - **Original Spec**: [v0-original-specs.md](./v0-original-specs.md)
 - **Repository Strategy**: [repository-strategy.md](./repository-strategy.md)
 - **Design Decisions**: [Decision Records](../decision-records/README.md)
@@ -601,3 +604,4 @@ FUTURE SEPARATE REPO (asap-settlement-crypto, v4.0+)
 | 2026-03-13 | **Strategic Review v2.2**: Added v2.1, v2.2, v2.3 building blocks. v2.2 re-scoped to Protocol Hardening (streaming, errors, versioning, batch, async, compliance, audit). Marketplace scale items deferred to v2.3. |
 | 2026-03-13 | **DeFi Settlement strategy**: Added pluggable SettlementBackend note to §3.3, updated Repository Strategy with `asap-settlement-crypto` as future separate repo. Crypto settlement is v4.0+ extension, not v3.0. See `crypto-settlement-strategy.md`. |
 | 2026-03-20 | **Identity & Authorization Layer**: Added §1 (Agent Identity & Authorization) with per-runtime-agent identity, capability-based authz with constraints, agent lifecycle (3 clocks), and approval flows (Device Auth, CIBA, WebAuthn). Added Identity & Auth Layer to Architecture. Updated building blocks with v2.2 identity features, v2.3 intent-based search/TS SDK/privacy/introspection, v2.4 OpenAPI adapter. Renumbered sections (Discovery→§2, Trust→§3, Economy→§4). |
+| 2026-04-16 | **Post–v2.2.0 hygiene**: Header horizon + **Updated** date; Economy subsections **4.1–4.3** (fix duplicate 3.x numbering); Agent Evaluations **5.1–5.2**; Sustainability **§6** (**6.1–6.5**, was duplicate §5); DeepEval / “Brain” deferred to **v2.3+** (v2.2 shipped without it); Registry API private **v2.3+** aligned with PRD; marketplace metadata PostgreSQL row aligned to v2.3+; Related Documents links to v2.2/v2.3 PRDs. |
