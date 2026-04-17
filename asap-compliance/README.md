@@ -36,6 +36,10 @@ ASAP_AGENT_URL=https://your-agent.example.com pytest -m asap_compliance
   TaskResponse, McpToolResult, MessageAck, extensions, extra='forbid')
 - **state**: Task state machine transitions
 
+### Protocol v2.2 and Compliance Harness v2
+
+This package focuses on **handshake**, **schema**, **state**, and **SLA** validators for third-party certification. **Compliance Harness v2** (identity, streaming, errors, versioning, batch, audit checks against the v2.2 spec) ships with the main [`asap-protocol`](https://pypi.org/project/asap-protocol/) library — use `from asap.testing.compliance import run_compliance_harness_v2` on an ASGI app. See the [changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md) for v2.2.0 details.
+
 ## Programmatic Usage
 
 ```python
