@@ -72,6 +72,10 @@ dns-sd = [
 redis = [
     "redis>=5.0.0",
 ]
+# WebAuthn: real attestation/assertion verification (Sprint S1 — opt-in, v2.2.1).
+webauthn = [
+    "webauthn>=2.6",
+]
 # Framework integrations (Sprint E3 — PKG-003).
 mcp = [
     "mcp>=1.0.0",

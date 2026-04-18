@@ -1,11 +1,13 @@
-# PRD: ASAP Protocol v2.4.0 — Adoption & Integration
+# PRD: ASAP Protocol v2.4.0 — Spec & Interop
 
 > **Product Requirements Document**
 >
 > **Version**: 2.4.0
-> **Status**: VISION DRAFT
+> **Status**: VISION DRAFT (rescoped 2026-04-17)
 > **Created**: 2026-03-20
-> **Last Updated**: 2026-03-20
+> **Last Updated**: 2026-04-17
+>
+> **Scope change (2026-04-17)**: OpenAPI Adapter (originally §4.1) was **pulled forward into v2.3.0** (Adoption Multiplier) to attack the missing 500-agent trigger directly. v2.4 now centers on **MCP Auth Bridge**, **Formal ASAP Specification**, **Cross-Protocol Compatibility**, and **Capability-Aware Introspection (RFC 7662)** + **Privacy Considerations spec** carried over from v2.3.
 
 ---
 
@@ -13,19 +15,21 @@
 
 ### 1.1 Purpose
 
-v2.4.0 lowers integration barriers to accelerate adoption. With identity/auth hardened (v2.2) and the ecosystem scaled (v2.3), this release focuses on making ASAP trivially adoptable for services with existing APIs and ensuring interoperability across the agent protocol landscape.
+v2.4.0 finalizes ASAP as a **standardizable** protocol and bridges it to adjacent ecosystems. With identity/auth hardened (v2.2), zero-code onboarding shipped (v2.3 OpenAPI Adapter), and TypeScript adoption underway (v2.3 SDK), v2.4 closes the standards-track loop and unblocks MCP integration.
 
 This release delivers:
-- **OpenAPI Adapter**: Auto-derive ASAP capabilities from existing OpenAPI specs (zero-code onboarding)
 - **MCP Auth Bridge**: ASAP identity layer for MCP servers (solve MCP's auth gap)
 - **Cross-Protocol Compatibility**: Thin adapters for interop with other agent auth protocols
 - **Formal ASAP Specification Document**: RFC-style specification for standardization track
+- **Capability-Aware Introspection (RFC 7662)**: carried over from v2.3 deferral list
+- **Privacy Considerations spec**: formal section in the spec, carried over from v2.3 deferral list
+- **TypeScript OpenAPI adapter package** *(if `@asap-protocol/openapi` did not ship in v2.3)*
 
 > [!CAUTION]
 > **Triggers required before starting this PRD**:
-> 1. v2.3 Scale released (TypeScript SDK, Registry API Backend, capability escalation stable)
-> 2. Demand from services wanting zero-code integration (3+ requests for OpenAPI onboarding)
-> 3. MCP ecosystem growth warrants auth bridge investment
+> 1. v2.3 Adoption Multiplier released (OpenAPI Adapter, TypeScript SDK, Auto-Registration shipped and stable)
+> 2. MCP ecosystem growth warrants auth bridge investment (3+ MCP server operators asking for ASAP-style auth, or MCP working group reaching out)
+> 3. Standards engagement signals (1+ standards body discussing agent protocol convergence)
 
 ### 1.2 Strategic Context
 
@@ -33,8 +37,9 @@ v2.4 is the **adoption multiplier** — it makes ASAP accessible to services tha
 
 | Layer | v2.4 Investment |
 |-------|----------------|
-| Integration (Adapters) | **Primary focus** — OpenAPI, MCP, cross-protocol |
-| Specification | Formal RFC-style document |
+| Integration (Adapters) | **Primary focus** — MCP Auth Bridge, cross-protocol |
+| Specification | **Primary focus** — Formal RFC-style document + Privacy Considerations |
+| Identity | Capability-Aware Introspection (RFC 7662) |
 | Protocol | No new protocol features (stabilization) |
 | Marketplace | No changes |
 
@@ -44,9 +49,10 @@ v2.4 is the **adoption multiplier** — it makes ASAP accessible to services tha
 
 | Goal | Metric | Priority |
 |------|--------|----------|
-| Zero-code onboarding | 20+ services onboarded via OpenAPI adapter | P1 |
-| MCP auth solved | ASAP identity layer operational for MCP servers | P2 |
-| Formal specification | Complete spec document published | P2 |
+| MCP auth solved | ASAP identity layer operational for 3+ MCP servers | P1 |
+| Formal specification | Complete spec document published at `docs.asap-protocol.com/specification` | P1 |
+| Capability-Aware Introspection | RFC 7662 endpoint + reference resource server | P2 |
+| Privacy spec | Formal Privacy Considerations section in spec | P2 |
 | Cross-protocol interop | Adapter for at least 1 other agent protocol | P3 |
 
 ---
@@ -69,50 +75,9 @@ v2.4 is the **adoption multiplier** — it makes ASAP accessible to services tha
 
 ## 4. Functional Requirements
 
-### 4.1 OpenAPI Adapter (P1)
+> **Note (2026-04-17)**: OpenAPI Adapter (formerly §4.1) shipped in **v2.3 §4.1** as part of the Adoption Multiplier rescope. This PRD now opens with MCP Auth Bridge.
 
-Auto-derive ASAP capabilities from existing OpenAPI specs. Each OpenAPI operation becomes a capability.
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| OA-001 | `create_from_openapi(spec)` — generates capabilities, execution handler, and provider config from OpenAPI spec | MUST |
-| OA-002 | OpenAPI `operationId` → capability `name` mapping | MUST |
-| OA-003 | OpenAPI `description`/`summary` → capability `description` | MUST |
-| OA-004 | OpenAPI parameters + request body → capability `input` (JSON Schema) | MUST |
-| OA-005 | OpenAPI 200/201 response body → capability `output` (JSON Schema) | MUST |
-| OA-006 | Execution handler maps arguments back to path params, query params, headers, request body | MUST |
-| OA-007 | `default_capabilities` filter: by HTTP method (`"GET"`, `["GET", "HEAD"]`), all, or callback | MUST |
-| OA-008 | `approval_strength` per capability or per HTTP method (`GET` → `session`, `POST` → `webauthn`) | SHOULD |
-| OA-009 | `resolve_headers` callback for upstream auth (e.g., inject `Authorization: Bearer` for user) | MUST |
-| OA-010 | Auto-detect response types: `202` → async, `text/event-stream` → streaming, `application/json` → sync | SHOULD |
-| OA-011 | Python package: `asap.adapters.openapi` | MUST |
-| OA-012 | TypeScript package: `@asap-protocol/openapi` | SHOULD |
-
-**Usage Example (Python)**:
-```python
-from asap.adapters.openapi import create_from_openapi
-
-config = create_from_openapi(
-    spec_url="https://api.example.com/openapi.json",
-    default_capabilities=["GET", "HEAD"],
-    approval_strength={"POST": "webauthn", "DELETE": "webauthn"},
-    resolve_headers=lambda session: {"Authorization": f"Bearer {get_token(session.user_id)}"},
-)
-```
-
-**Usage Example (TypeScript)**:
-```typescript
-import { createFromOpenAPI } from "@asap-protocol/openapi";
-
-const config = await createFromOpenAPI({
-  specUrl: "https://api.example.com/openapi.json",
-  defaultCapabilities: ["GET", "HEAD"],
-});
-```
-
----
-
-### 4.2 MCP Auth Bridge (P2)
+### 4.1 MCP Auth Bridge (P1) — promoted from P2
 
 ASAP identity and capability model as the auth layer for MCP servers.
 
@@ -128,7 +93,7 @@ ASAP identity and capability model as the auth layer for MCP servers.
 
 ---
 
-### 4.3 Cross-Protocol Compatibility (P3)
+### 4.2 Cross-Protocol Compatibility (P3)
 
 Thin adapters for interoperability with other agent authentication protocols.
 
@@ -141,7 +106,7 @@ Thin adapters for interoperability with other agent authentication protocols.
 
 ---
 
-### 4.4 Formal ASAP Specification Document (P2)
+### 4.3 Formal ASAP Specification Document (P1) — promoted from P2
 
 RFC-style specification covering the complete ASAP protocol.
 
@@ -155,6 +120,43 @@ RFC-style specification covering the complete ASAP protocol.
 | SPEC-006 | Security considerations section (key management, replay, SSRF, self-auth) | MUST |
 | SPEC-007 | Privacy considerations section | MUST |
 | SPEC-008 | Published at `docs.asap-protocol.com/specification` | SHOULD |
+
+---
+
+### 4.4 Capability-Aware Introspection (P2) — carried over from v2.3 deferral
+
+Extend token introspection for resource servers that validate agent JWTs (RFC 7662 style).
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| INTRO-001 | `POST /asap/agent/introspect` — accepts agent JWT, returns active/inactive + compact grants | MUST |
+| INTRO-002 | Response includes `agent_id`, `host_id`, `user_id`, `agent_capability_grants`, `mode` | MUST |
+| INTRO-003 | Compact grants (capability + status only) — no input/output schemas | MUST |
+| INTRO-004 | Endpoint protected with server-to-server auth (shared secret, mTLS, or IP restriction) | SHOULD |
+
+---
+
+### 4.5 Privacy Considerations Section (P2) — carried over from v2.3 deferral
+
+Formal privacy section in the ASAP specification.
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| PRIV-001 | Document host key correlation risk (same keypair across servers enables tracking) | SHOULD |
+| PRIV-002 | Data retention policy guidance for agent activity logs | SHOULD |
+| PRIV-003 | Capability requests as behavioral signals — treat with same data protection as grants | SHOULD |
+| PRIV-004 | Guidance on `reason` field sensitivity (may contain PII) | SHOULD |
+
+---
+
+### 4.6 TypeScript OpenAPI Adapter (P3 — only if not delivered in v2.3)
+
+If `@asap-protocol/openapi` did not ship as part of v2.3 §4.1 OA-012, complete it here.
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| TSOA-001 | TypeScript port of `asap.adapters.openapi` published as `@asap-protocol/openapi` | SHOULD |
+| TSOA-002 | Same API surface: `createFromOpenAPI(spec)` with default capabilities, approval strength, resolve headers | SHOULD |
 
 ---
 
@@ -236,3 +238,4 @@ Format: Markdown with numbered sections, following the style of established prot
 | Date | Version | Change |
 |------|---------|--------|
 | 2026-03-20 | 0.1.0 | Vision DRAFT — initial PRD for v2.4 Adoption & Integration. OpenAPI adapter, MCP Auth Bridge, cross-protocol compatibility, formal specification document. |
+| 2026-04-17 | 0.2.0 | **Rescoped to "Spec & Interop"**. OpenAPI Adapter pulled forward into v2.3 (Adoption Multiplier). Promoted MCP Auth Bridge and Formal Specification to P1. Carried Capability-Aware Introspection (§4.4) and Privacy Considerations (§4.5) over from v2.3 deferral list. Added TS OpenAPI adapter as conditional §4.6 (only if not delivered in v2.3). |
