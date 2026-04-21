@@ -33,6 +33,8 @@ and CI baselines.
 
 ### Security
 
+- **`python-dotenv`**: `tool.uv.override-dependencies` pins **≥ 1.2.2** (CVE-2026-28684)
+  on transitive installs.
 - **`apps/web`**: Dependency updates closing npm audit findings (Next.js 16.2.4;
   `micromatch` subtree forced to `picomatch` ≥ 2.3.2).
 
