@@ -26,6 +26,8 @@ from asap.testing.compliance import (
     CheckResult,
     ComplianceReport,
     run_compliance_harness_v2,
+    run_compliance_harness_v2_from_url,
+    run_compliance_harness_with_client,
 )
 from asap.testing.mocks import MockAgent
 
@@ -38,4 +40,6 @@ __all__ = [
     "assert_response_correlates",
     "assert_task_completed",
     "run_compliance_harness_v2",
+    "run_compliance_harness_v2_from_url",
+    "run_compliance_harness_with_client",
 ]

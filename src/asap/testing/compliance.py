@@ -1,8 +1,9 @@
 """Compliance Harness v2 for ASAP protocol.
 
-Runs validation checks against an ASGI application (via httpx
-``ASGITransport``) covering identity, streaming, errors,
-versioning, batch, and audit categories.
+Runs validation checks covering identity, streaming, errors,
+versioning, batch, and audit categories. Use ``run_compliance_harness_v2``
+with an ASGI app (``httpx.ASGITransport``) or ``run_compliance_harness_v2_from_url``
+with an HTTP(S) base URL for a remote agent.
 
 Example::
 
@@ -18,7 +19,8 @@ from collections.abc import Awaitable, Callable
 from datetime import datetime, timezone
 from typing import Any
 
-from httpx import ASGITransport, AsyncClient
+import httpx
+from httpx import ASGITransport, AsyncClient, Timeout
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -349,6 +351,34 @@ CATEGORY_CHECKS: dict[str, Callable[[AsyncClient], Awaitable[list[CheckResult]]]
 ALL_CATEGORIES: list[str] = list(CATEGORY_CHECKS.keys())
 
 
+async def run_compliance_harness_with_client(
+    client: AsyncClient,
+    *,
+    categories: list[str] | None = None,
+) -> ComplianceReport:
+    """Run harness checks using an existing ``httpx.AsyncClient`` (any transport/base_url)."""
+    cats = categories or list(ALL_CATEGORIES)
+    all_checks: list[CheckResult] = []
+
+    for cat in cats:
+        checker = CATEGORY_CHECKS.get(cat)
+        if checker is not None:
+            check_results = await checker(client)
+            all_checks.extend(check_results)
+
+    total = len(all_checks)
+    passed = sum(1 for c in all_checks if c.passed)
+    score = passed / total if total > 0 else 0.0
+
+    return ComplianceReport(
+        timestamp=datetime.now(timezone.utc),
+        categories_run=cats,
+        checks=all_checks,
+        score=score,
+        summary=f"{passed}/{total} checks passed ({score:.0%})",
+    )
+
+
 async def run_compliance_harness_v2(
     app: Any,
     *,
@@ -363,25 +393,47 @@ async def run_compliance_harness_v2(
     Returns:
         ComplianceReport with all check results and score.
     """
-    cats = categories or list(ALL_CATEGORIES)
-    all_checks: list[CheckResult] = []
-
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        for cat in cats:
-            checker = CATEGORY_CHECKS.get(cat)
-            if checker is not None:
-                check_results = await checker(client)
-                all_checks.extend(check_results)
+        return await run_compliance_harness_with_client(client, categories=categories)
 
-    total = len(all_checks)
-    passed = sum(1 for c in all_checks if c.passed)
-    score = passed / total if total > 0 else 0.0
 
-    return ComplianceReport(
-        timestamp=datetime.now(timezone.utc),
-        categories_run=cats,
-        checks=all_checks,
-        score=score,
-        summary=f"{passed}/{total} checks passed ({score:.0%})",
-    )
+async def run_compliance_harness_v2_from_url(
+    base_url: str,
+    *,
+    request_timeout: float = 60.0,
+    default_headers: dict[str, str] | None = None,
+    categories: list[str] | None = None,
+) -> ComplianceReport:
+    """Run compliance harness v2 against a remote ASAP agent over HTTP(S).
+
+    Args:
+        base_url: Agent root URL (e.g. ``http://127.0.0.1:8000``). Trailing slashes are stripped.
+        request_timeout: Per-request timeout in seconds.
+        default_headers: Optional headers merged into every request (e.g. ``ASAP-Version``).
+        categories: Categories to check. Defaults to all.
+
+    Returns:
+        ComplianceReport with all check results and score.
+
+    Raises:
+        httpx.ConnectError: If the TCP connection cannot be established (preflight ``GET /``).
+        httpx.TimeoutException: If the preflight request times out.
+    """
+    normalized = base_url.rstrip("/")
+    timeout_cfg = Timeout(request_timeout)
+    async with AsyncClient(
+        base_url=normalized,
+        timeout=timeout_cfg,
+        headers=default_headers,
+        follow_redirects=True,
+    ) as client:
+        # Fail fast on unreachable hosts so callers (e.g. CLI) can treat as transport error,
+        # instead of a synthetic all-failed report from per-check exception handlers.
+        try:
+            await client.get("/")
+        except httpx.ConnectError:
+            raise
+        except httpx.TimeoutException:
+            raise
+        return await run_compliance_harness_with_client(client, categories=categories)
