@@ -1,6 +1,6 @@
 [project]
 name = "asap-protocol"
-version = "2.2.0"
+version = "2.2.1"
 description = "Async Simple Agent Protocol - A streamlined protocol for agent-to-agent communication"
 authors = [
     {name = "ASAP Protocol Contributors"}
@@ -187,7 +187,7 @@ ignore = [
 "src/asap/transport/usage_api.py" = ["B008"]
 "src/asap/transport/delegation_api.py" = ["B008"]
 "src/asap/transport/sla_api.py" = ["B008"]
-"src/asap/cli.py" = ["B008"]
+"src/asap/cli/__init__.py" = ["B008"]
 
 [tool.ruff.format]
 quote-style = "double"
