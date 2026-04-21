@@ -8,16 +8,19 @@
 ## Relevant Files
 
 ### New Files
-- `src/asap/auth/webauthn.py` — `WebAuthnVerifierImpl`, `WebAuthnCredentialStore` Protocol, `InMemoryWebAuthnCredentialStore`, `SQLiteWebAuthnCredentialStore`
+- `src/asap/auth/webauthn.py` — Protocol + stores + `WebAuthnVerifierImpl` (registration + assertion ceremonies)
 - `tests/auth/test_webauthn.py` — TDD unit tests (NONE + EC2 vectors); RED until `asap.auth.webauthn` exists
-- `tests/auth/integration/test_webauthn_flow.py` — End-to-end registration + assertion flow
+- `tests/auth/integration/test_webauthn_flow.py` — Integration smoke: `WebAuthnVerifierImpl` registration + assertion + `WebAuthnSelfAuthVerifier` (requires `[webauthn]` extra)
 
 ### Modified Files
 - `pyproject.toml` — Optional extra `webauthn` → `webauthn>=2.6` (completed in 1.1)
-- `src/asap/auth/self_auth.py` — Wire `WebAuthnVerifierImpl` as default when extra is installed; keep placeholder fallback otherwise
+- `src/asap/auth/self_auth.py` — `default_webauthn_verifier()`, `check_webauthn_for_approval_path`, browser + real-verifier gate (`403 webauthn_required`), `verify(..., require_user_verification=)`
+- `src/asap/transport/server.py` — `create_app` sets `identity_webauthn_verifier` via `default_webauthn_verifier()` when not passed
+- `src/asap/transport/agent_routes.py` — pass `host_id` into `verify_webauthn_if_required`; fallback to `default_webauthn_verifier()`
 - `src/asap/auth/__init__.py` — Export new types behind `__all__`
 - `docs/security/self-authorization-prevention.md` — Section "Real WebAuthn" documenting the threat model with concrete verification
-- `docs/migration.md` — Note `[webauthn]` extra installation
+- `docs/migration.md` — Section "Upgrading from v2.2.0 to v2.2.1" (`[webauthn]` extra, env vars, production notes)
+- `CHANGELOG.md` — Unreleased entry cross-linking to the migration section
 
 ## Tasks
 
@@ -35,58 +38,61 @@
 
 ### 2.0 WebAuthn Verifier Implementation
 
-- [ ] 2.1 `WebAuthnCredentialStore` Protocol
+- [x] 2.1 `WebAuthnCredentialStore` Protocol
   - **File**: `src/asap/auth/webauthn.py` (create)
   - **What**: Protocol with `save_credential(host_id, credential_id, public_key, sign_count)`, `get_credential(host_id, credential_id)`, `update_sign_count(host_id, credential_id, new_count)`, `list_credentials(host_id)`
   - **Verify**: Protocol conformance test
 
-- [ ] 2.2 `InMemoryWebAuthnCredentialStore` and `SQLiteWebAuthnCredentialStore`
+- [x] 2.2 `InMemoryWebAuthnCredentialStore` and `SQLiteWebAuthnCredentialStore`
   - **File**: `src/asap/auth/webauthn.py` (extend)
   - **What**: Two implementations following SnapshotStore pattern
   - **Verify**: Both pass the same fixture suite
 
-- [ ] 2.3 `WebAuthnVerifierImpl` registration ceremony
+- [x] 2.3 `WebAuthnVerifierImpl` registration ceremony
   - **File**: `src/asap/auth/webauthn.py` (extend)
   - **What**: `start_webauthn_registration(host_id) -> challenge`, `finish_webauthn_registration(host_id, attestation) -> credential_id`. Use `webauthn.generate_registration_options` + `webauthn.verify_registration_response`. Persist via `WebAuthnCredentialStore`.
   - **Verify**: Test with `webauthn` test vectors
 
-- [ ] 2.4 `WebAuthnVerifierImpl` assertion ceremony
+- [x] 2.4 `WebAuthnVerifierImpl` assertion ceremony
   - **File**: `src/asap/auth/webauthn.py` (extend)
   - **What**: `start_webauthn_assertion(host_id) -> challenge`, `finish_webauthn_assertion(host_id, assertion) -> bool`. Use `webauthn.generate_authentication_options` + `webauthn.verify_authentication_response`. Update `sign_count` on success; reject if `sign_count` regresses.
   - **Verify**: Replay rejection + sign-count regression rejection tests
 
 ### 3.0 Integration with Self-Auth Prevention
 
-- [ ] 3.1 Wire `WebAuthnVerifierImpl` as default when extra is installed
+- [x] 3.1 Wire `WebAuthnVerifierImpl` as default when extra is installed
   - **File**: `src/asap/auth/self_auth.py` (modify)
-  - **What**: Conditional import: `try: from asap.auth.webauthn import WebAuthnVerifierImpl as _DefaultVerifier; except ImportError: from asap.auth.self_auth import _PlaceholderVerifier as _DefaultVerifier`. Document the fallback behavior.
+  - **What**: `default_webauthn_verifier()`: real `WebAuthnSelfAuthVerifier` when `webauthn` import works **and** `ASAP_WEBAUTHN_RP_ID` + `ASAP_WEBAUTHN_ORIGIN` are set; else `PlaceholderWebAuthnVerifier`. `create_app` wires default when `identity_webauthn_verifier` is omitted.
   - **Verify**: Two test runs: one with `[webauthn]` extra, one without — both pass
 
-- [ ] 3.2 Enforce `userVerification: "required"` on capability approval
-  - **File**: `src/asap/auth/self_auth.py` (modify)
-  - **What**: When `agent_controls_browser=True` AND `WebAuthnVerifierImpl` available, require successful `finish_webauthn_assertion` before allowing capability grant. Return `403 webauthn_required` error otherwise.
+- [x] 3.2 Enforce `userVerification: "required"` on capability approval
+  - **File**: `src/asap/auth/self_auth.py` + `agent_routes.py` + `webauthn.py` (modify)
+  - **What**: When `agent_controls_browser=True` AND real verifier (`WebAuthnSelfAuthVerifier`), require a valid `webauthn` body; verify with `require_user_verification` / `UserVerificationRequirement.REQUIRED` on authentication options when issuing challenges with `user_verification_required=True` on `start_webauthn_assertion`. Failures return **403** `{"detail": "webauthn_required"}`.
   - **Verify**: Integration test simulating browser-controlling agent without WebAuthn assertion → 403
 
 ### 4.0 Documentation
 
-- [ ] 4.1 Update self-authorization-prevention threat model
+- [x] 4.1 Update self-authorization-prevention threat model
   - **File**: `docs/security/self-authorization-prevention.md` (modify)
   - **What**: New section "Real WebAuthn" with: threat model with concrete verification, flow diagram, configuration example, fallback behavior when extra not installed
   - **Verify**: Markdown lint clean; reviewed against original threat-model section
 
-- [ ] 4.2 Migration note in docs/migration.md
+- [x] 4.2 Migration note in docs/migration.md
   - **File**: `docs/migration.md` (modify)
   - **What**: Section "v2.2.0 → v2.2.1": opt-in extra installation, behavior unchanged when not installed, recommendation for production (install extra)
   - **Verify**: Cross-link from CHANGELOG entry
 
 ## Acceptance Criteria
 
-- [ ] All tests pass (red → green via TDD)
-- [ ] Coverage ≥90% on `src/asap/auth/webauthn.py`
-- [ ] `uv run mypy src/asap/auth/webauthn.py` clean
-- [ ] `uv run ruff check src/asap/auth/webauthn.py` clean
-- [ ] Behavior unchanged when `[webauthn]` extra not installed (placeholder still resolves)
-- [ ] Documented threat model + migration note merged
+- [x] Unit tests green: `uv run pytest tests/auth/test_webauthn.py` (TDD scope)
+- [x] Coverage ≥90% on `src/asap/auth/webauthn.py` — verify:
+  `uv run coverage run --source=asap.auth.webauthn -m pytest tests/auth/test_webauthn.py -p no:cov && uv run coverage report --include='*/asap/auth/webauthn.py'`
+  (**Note:** `pytest --cov=asap.auth.webauthn` together with tests that exercise `create_host_jwt` / joserfc triggers a **pytest-cov** interaction where `isinstance(OKPKey)` fails; use `coverage run` + `-p no:cov` for this module’s report.)
+- [x] `uv run mypy src/asap/auth/webauthn.py` clean
+- [x] `uv run ruff check src/asap/auth/webauthn.py` clean
+- [x] Behavior unchanged when `[webauthn]` extra not installed (placeholder still resolves) — verify:
+  `uv run pytest tests/auth/test_self_auth.py tests/transport/test_server.py::TestAgentRegisterEndpoint::test_register_browser_agent_succeeds_without_webauthn_when_placeholder_verifier -q`
+- [x] Documented threat model + migration note merged (`docs/security/self-authorization-prevention.md`, `docs/migration.md`, `CHANGELOG.md`)
 
 ## Risks & Mitigations
 
