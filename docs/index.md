@@ -78,12 +78,20 @@ asap keys generate -o key.pem
 asap manifest sign -k key.pem manifest.json
 asap manifest verify signed.json
 asap manifest info signed.json
+
+# Compliance Harness v2 against a deployed agent (HTTP(S))
+asap compliance-check --url https://your-agent.example.com --exit-on-fail
+
+# Tamper-evident audit export (SQLite store)
+asap audit export --store sqlite --db ./asap_state.db --format json --verify-chain
 ```
 
-See [Identity Signing](guides/identity-signing.md) for full CLI reference.
+See [CLI reference](cli.md) (all commands, exit codes, `compliance-check`, `audit export`), [Audit log](audit.md), [CI: compliance gate](ci-compliance.md), and [Identity Signing](guides/identity-signing.md) for key and manifest workflows.
 
 ## Documentation
 
+- [CLI reference](cli.md) — all `asap` commands, including `compliance-check`, `audit export`, and exit codes
+- [Audit log](audit.md) — hash chain model, export formats, tamper checks
 - [API Reference](api-reference.md)
 - [Observability](observability.md)
 - [Error Handling](error-handling.md)
