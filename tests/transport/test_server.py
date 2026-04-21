@@ -1132,6 +1132,73 @@ class TestAgentRegisterEndpoint:
         assert stored.agent_id == data["agent_id"]
         assert stored.host_id == data["host_id"]
 
+    def test_register_browser_agent_returns_403_webauthn_when_real_verifier_configured(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: "ASAPRateLimiter | None",
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Browser-controlled registration requires WebAuthn when the real verifier is active."""
+        import importlib.util
+
+        if importlib.util.find_spec("webauthn") is None:
+            pytest.skip("webauthn extra not installed in this environment")
+
+        monkeypatch.setenv("ASAP_WEBAUTHN_RP_ID", "localhost")
+        monkeypatch.setenv("ASAP_WEBAUTHN_ORIGIN", "http://127.0.0.1")
+
+        app, _agent_store, _host_store = _app_with_identity_stores(
+            sample_manifest, isolated_rate_limiter
+        )
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        agent_jwk = ed25519_public_jwk(agent_sk)
+        token = create_host_jwt(
+            host_sk,
+            aud=_HOST_JWT_AUDIENCE,
+            agent_public_key=agent_jwk,
+            ttl_seconds=120,
+        )
+        client = TestClient(app)
+        r = client.post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"agent_controls_browser": True},
+        )
+        assert r.status_code == 403
+        assert r.json() == {"detail": "webauthn_required"}
+
+    def test_register_browser_agent_succeeds_without_webauthn_when_placeholder_verifier(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: "ASAPRateLimiter | None",
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Without RP/origin env, default verifier is placeholder — no WebAuthn gate."""
+        monkeypatch.delenv("ASAP_WEBAUTHN_RP_ID", raising=False)
+        monkeypatch.delenv("ASAP_WEBAUTHN_ORIGIN", raising=False)
+
+        app, _agent_store, _host_store = _app_with_identity_stores(
+            sample_manifest, isolated_rate_limiter
+        )
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        agent_jwk = ed25519_public_jwk(agent_sk)
+        token = create_host_jwt(
+            host_sk,
+            aud=_HOST_JWT_AUDIENCE,
+            agent_public_key=agent_jwk,
+            ttl_seconds=120,
+        )
+        client = TestClient(app)
+        r = client.post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"agent_controls_browser": True},
+        )
+        assert r.status_code == 200
+        assert r.json()["status"] == "pending"
+
     async def test_register_auto_approves_when_host_active_and_capabilities_in_defaults(
         self,
         sample_manifest: Manifest,

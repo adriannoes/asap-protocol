@@ -91,7 +91,11 @@ from asap.utils.sanitization import sanitize_nonce
 from asap.auth import OAuth2Config, OAuth2Middleware
 from asap.auth.agent_jwt import JtiReplayCache
 from asap.auth.approval import A2HApprovalChannel, ApprovalStore, InMemoryApprovalStore
-from asap.auth.self_auth import FreshSessionConfig, WebAuthnVerifier
+from asap.auth.self_auth import (
+    FreshSessionConfig,
+    WebAuthnVerifier,
+    default_webauthn_verifier,
+)
 from asap.auth.identity import (
     AgentStore,
     HostStore,
@@ -1653,7 +1657,10 @@ def create_app(
         identity_fresh_session_config: When set, registration requiring approval and
             pending approval polling require a Host JWT issued within ``window_seconds``.
         identity_webauthn_verifier: Optional async verifier for ``webauthn`` assertions
-            when ``require_webauthn_for`` lists requested capabilities.
+            when ``require_webauthn_for`` lists requested capabilities. When omitted,
+            :func:`asap.auth.self_auth.default_webauthn_verifier` is used (real verification
+            only if the ``webauthn`` extra is installed and ``ASAP_WEBAUTHN_RP_ID`` plus
+            ``ASAP_WEBAUTHN_ORIGIN`` are set; otherwise the placeholder verifier applies).
 
     Returns:
         Configured FastAPI application ready to run
@@ -1864,8 +1871,11 @@ def create_app(
         app.state.identity_approval_a2h_channel = identity_approval_a2h_channel
     if identity_fresh_session_config is not None:
         app.state.identity_fresh_session_config = identity_fresh_session_config
-    if identity_webauthn_verifier is not None:
-        app.state.identity_webauthn_verifier = identity_webauthn_verifier
+    app.state.identity_webauthn_verifier = (
+        identity_webauthn_verifier
+        if identity_webauthn_verifier is not None
+        else default_webauthn_verifier()
+    )
     # Dedicated rate limiter for /asap/agent/* (separate budget from main limiter)
     _identity_rl = identity_rate_limit or "5/second;30/minute"
     app.state.identity_limiter = create_limiter([_identity_rl])
