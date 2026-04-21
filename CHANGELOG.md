@@ -7,8 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [2.2.1] - 2026-04-21
+
+Patch release: optional WebAuthn verification, compliance and audit CLIs, docs,
+and CI baselines.
+
 ### Added
-- Future changes will be documented here.
+
+- **WebAuthn (optional extra)**: `asap-protocol[webauthn]` enables real
+  registration/assertion verification when `ASAP_WEBAUTHN_RP_ID` and
+  `ASAP_WEBAUTHN_ORIGIN` are set; otherwise behavior matches v2.2.0. See
+  [v2.2.0 → v2.2.1 migration](docs/migration.md#upgrading-from-v220-to-v221).
+- **`asap compliance-check`**: Runs Compliance Harness v2 against an agent
+  `HTTP(S)` base URL; `--output {text,json}`, `--exit-on-fail`, `--timeout`,
+  `--asap-version`. Documented in [docs/cli.md](docs/cli.md) and
+  [docs/ci-compliance.md](docs/ci-compliance.md) (Actions example with
+  `--exit-on-fail`).
+- **`asap audit export`**: Exports hash-chained audit rows from SQLite or an
+  in-memory store; `--verify-chain` fails on tampering. Documented in
+  [docs/cli.md](docs/cli.md#asap-audit-export) and [docs/audit.md](docs/audit.md).
+- **`apps/example-agent`**: Minimal installable example; CI runs Harness v2 and
+  fails on score < 1.0 (regression guard).
+
+### Security
+
+- **`apps/web`**: Dependency updates closing npm audit findings (Next.js 16.2.4;
+  `micromatch` subtree forced to `picomatch` ≥ 2.3.2).
+
+### Changed
+
+- **CLI package layout**: Typer subcommands live under `asap.cli` / `src/asap/cli/`
+  (replacing the monolithic `cli.py` module); `asap` console script unchanged.
 
 ---
 

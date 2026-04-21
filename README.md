@@ -121,18 +121,21 @@ See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/
 - **v2.1** adds the Consumer SDK (`MarketClient`), optional framework extras (LangChain, CrewAI, LlamaIndex, SmolAgents, OpenClaw, …), and registry UX improvements on PyPI.
 - **v2.1.1** is a patch release: JWT algorithm allowlist, SQLite async bridging, optional Redis-backed rate limits, SSRF hardening in the web app, and related reliability fixes (see [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)).
 - **v2.2** adds per-runtime agent identity, capability-based authorization, SSE streaming (`POST /asap/stream`), `ASAP-Version` negotiation, JSON-RPC batch requests, tamper-evident audit logging, async state stores, and Compliance Harness v2.
+- **v2.2.1** adds optional WebAuthn attestation/assertion (`asap-protocol[webauthn]`), `asap compliance-check` and `asap audit export` CLIs, and related docs / CI gates (see [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)).
 
 ```bash
 asap --version                                    # Show version
 asap list-schemas                                 # List all available schemas
 asap export-schemas                               # Export JSON schemas to file
+asap compliance-check --url https://agent.example # Compliance Harness v2 (HTTP(S))
+asap audit export --store memory --format json    # Export audit log (stdout)
 asap keys generate -o key.pem                     # Generate Ed25519 keypair
 asap manifest sign -k key.pem manifest.json       # Sign manifest
 asap manifest verify signed.json                  # Verify signature
 asap manifest info signed.json                    # Show trust level
 ```
 
-See [CLI reference](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/identity-signing.md) or run `asap --help`.
+See [CLI reference](docs/cli.md) (`compliance-check`, `audit export`), [CI compliance gate](docs/ci-compliance.md), [Audit export](docs/audit.md), [Identity Signing](docs/guides/identity-signing.md), or run `asap --help`.
 
 See [docs index](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#v11-features-api-reference--guides) and [Identity Signing](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/identity-signing.md) for details.
 
