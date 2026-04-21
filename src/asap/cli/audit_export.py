@@ -119,11 +119,15 @@ def register_audit_export_commands(root: typer.Typer) -> None:
         ] = None,
         since: Annotated[
             Optional[str],
-            typer.Option("--since", help="Include entries with timestamp >= this ISO-8601 instant."),
+            typer.Option(
+                "--since", help="Include entries with timestamp >= this ISO-8601 instant."
+            ),
         ] = None,
         until: Annotated[
             Optional[str],
-            typer.Option("--until", help="Include entries with timestamp <= this ISO-8601 instant."),
+            typer.Option(
+                "--until", help="Include entries with timestamp <= this ISO-8601 instant."
+            ),
         ] = None,
         urn: Annotated[
             Optional[str],

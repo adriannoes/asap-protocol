@@ -321,7 +321,10 @@ class WebAuthnVerifierImpl:
         self._ensure_webauthn_installed()
         from webauthn import generate_authentication_options
         from webauthn.helpers import bytes_to_base64url
-        from webauthn.helpers.structs import PublicKeyCredentialDescriptor, UserVerificationRequirement
+        from webauthn.helpers.structs import (
+            PublicKeyCredentialDescriptor,
+            UserVerificationRequirement,
+        )
 
         challenge = (
             self._fixed_authentication_challenge

@@ -173,9 +173,7 @@ async def test_verify_webauthn_success_with_placeholder() -> None:
     cfg = FreshSessionConfig(require_webauthn_for=["admin.task"])
     v = PlaceholderWebAuthnVerifier()
     body: dict[str, Any] = {"webauthn": {"challenge": "c1", "response": {}}}
-    err = await verify_webauthn_if_required(
-        ["admin.task"], body, cfg, v, host_id="urn:asap:host:x"
-    )
+    err = await verify_webauthn_if_required(["admin.task"], body, cfg, v, host_id="urn:asap:host:x")
     assert err is None
 
 
@@ -233,7 +231,9 @@ def test_placeholder_not_real_webauthn() -> None:
     assert uses_real_webauthn_verifier(PlaceholderWebAuthnVerifier()) is False
 
 
-def test_default_webauthn_verifier_is_placeholder_without_extra(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_default_webauthn_verifier_is_placeholder_without_extra(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr("asap.auth.self_auth._webauthn_extra_installed", lambda: False)
     v = default_webauthn_verifier()
     assert isinstance(v, PlaceholderWebAuthnVerifier)

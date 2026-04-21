@@ -58,9 +58,7 @@ _ASSERTION_EC2: dict[str, Any] = {
 _AUTH_CHALLENGE_B64 = (
     "xi30GPGAFYRxVDpY1sM10DaLzVQG66nv-_7RUazH0vI2YvG8LYgDEnvN5fZZNVuvEDuMi9te3VLqb42N0fkLGA"
 )
-_ASSERTION_CREDENTIAL_PUBLIC_KEY_B64 = (
-    "pQECAyYgASFYIIeDTe-gN8A-zQclHoRnGFWN8ehM1b7yAsa8I8KIvmplIlgg4nFGT5px8o6gpPZZhO01wdy9crDSA_Ngtkx0vGpvPHI"
-)
+_ASSERTION_CREDENTIAL_PUBLIC_KEY_B64 = "pQECAyYgASFYIIeDTe-gN8A-zQclHoRnGFWN8ehM1b7yAsa8I8KIvmplIlgg4nFGT5px8o6gpPZZhO01wdy9crDSA_Ngtkx0vGpvPHI"
 _ASSERTION_SIGN_COUNT_BEFORE = 77
 _EC2_CREDENTIAL_ID_B64 = (
     "EDx9FfAbp4obx6oll2oC4-CZuDidRVV4gZhxC529ytlnqHyqCStDUwfNdm1SNHAe3X5KvueWQdAX3x9R1a2b9Q"
@@ -271,7 +269,9 @@ async def test_sqlite_store_get_missing_returns_none(tmp_path: object) -> None:
     assert await store.get_credential("host-x", b"missing") is None
 
 
-def test_ensure_webauthn_installed_raises_without_distribution(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_ensure_webauthn_installed_raises_without_distribution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     import builtins
 
     real_import = builtins.__import__
@@ -301,7 +301,11 @@ def test_ensure_webauthn_installed_raises_without_distribution(monkeypatch: pyte
 
 @pytest.mark.asyncio
 async def test_finish_registration_invalid_attestation_raises() -> None:
-    from asap.auth.webauthn import InMemoryWebAuthnCredentialStore, WebAuthnCeremonyError, WebAuthnVerifierImpl
+    from asap.auth.webauthn import (
+        InMemoryWebAuthnCredentialStore,
+        WebAuthnCeremonyError,
+        WebAuthnVerifierImpl,
+    )
 
     store = InMemoryWebAuthnCredentialStore()
     impl = WebAuthnVerifierImpl(
@@ -341,7 +345,9 @@ async def test_finish_assertion_no_pending_returns_false() -> None:
 
 
 @pytest.mark.asyncio
-async def test_finish_assertion_claimed_challenge_decode_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_finish_assertion_claimed_challenge_decode_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from asap.auth.webauthn import InMemoryWebAuthnCredentialStore
 
     def _boom(_s: str) -> bytes:
@@ -426,13 +432,21 @@ async def test_finish_assertion_unknown_credential_id() -> None:
     store = InMemoryWebAuthnCredentialStore()
     impl = _verifier_for_vectors(store)
     await impl.start_webauthn_assertion("host-a")
-    unknown = {**_ASSERTION_EC2, "rawId": _EXPECTED_CREDENTIAL_ID_B64, "id": _EXPECTED_CREDENTIAL_ID_B64}
+    unknown = {
+        **_ASSERTION_EC2,
+        "rawId": _EXPECTED_CREDENTIAL_ID_B64,
+        "id": _EXPECTED_CREDENTIAL_ID_B64,
+    }
     assert await impl.finish_webauthn_assertion("host-a", unknown) is False
 
 
 @pytest.mark.asyncio
 async def test_self_auth_verifier_rejects_missing_host_id() -> None:
-    from asap.auth.webauthn import InMemoryWebAuthnCredentialStore, WebAuthnSelfAuthVerifier, WebAuthnVerifierImpl
+    from asap.auth.webauthn import (
+        InMemoryWebAuthnCredentialStore,
+        WebAuthnSelfAuthVerifier,
+        WebAuthnVerifierImpl,
+    )
 
     impl = WebAuthnVerifierImpl(InMemoryWebAuthnCredentialStore(), rp_id=_RP_ID, origin=_ORIGIN)
     v = WebAuthnSelfAuthVerifier(impl)
@@ -441,7 +455,11 @@ async def test_self_auth_verifier_rejects_missing_host_id() -> None:
 
 @pytest.mark.asyncio
 async def test_self_auth_verifier_rejects_non_dict_response() -> None:
-    from asap.auth.webauthn import InMemoryWebAuthnCredentialStore, WebAuthnSelfAuthVerifier, WebAuthnVerifierImpl
+    from asap.auth.webauthn import (
+        InMemoryWebAuthnCredentialStore,
+        WebAuthnSelfAuthVerifier,
+        WebAuthnVerifierImpl,
+    )
 
     impl = WebAuthnVerifierImpl(InMemoryWebAuthnCredentialStore(), rp_id=_RP_ID, origin=_ORIGIN)
     v = WebAuthnSelfAuthVerifier(impl)

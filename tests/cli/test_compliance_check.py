@@ -123,9 +123,7 @@ def failing_agent_base_url() -> Generator[str, None, None]:
 class TestComplianceCheckCli:
     """Target: ``asap compliance-check --url <base> --output json`` (see sprint S2)."""
 
-    def test_compliance_check_json_report_exit_zero(
-        self, compliance_base_url: str
-    ) -> None:
+    def test_compliance_check_json_report_exit_zero(self, compliance_base_url: str) -> None:
         """CLI hits a live ASAP app and prints a JSON ``ComplianceReport`` (score + checks)."""
         runner = CliRunner()
         result = runner.invoke(
