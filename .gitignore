@@ -194,3 +194,5 @@ node_modules/
 
 # ESLint report (generated)
 eslint-report.json
+.vercel
+.env*.local
