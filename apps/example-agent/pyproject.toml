@@ -1,0 +1,30 @@
+[project]
+name = "example-agent"
+version = "0.1.0"
+description = "Minimal ASAP example agent; CI baseline for Compliance Harness v2."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "asap-protocol",
+]
+
+[tool.uv.sources]
+asap-protocol = { path = "../..", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "pytest-asyncio>=0.24",
+]
+
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/example_agent"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
