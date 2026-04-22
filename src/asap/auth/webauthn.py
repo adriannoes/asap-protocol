@@ -1,11 +1,4 @@
-"""WebAuthn credential storage and verification (optional ``asap-protocol[webauthn]``).
-
-This module defines the persistence contract for verified passkeys. Callers that do not
-install the ``webauthn`` extra should not import verification helpers that depend on it;
-the Protocol and record types here have no third-party imports.
-
-Stores use ``aiosqlite`` for SQLite; that dependency is already part of the core package.
-"""
+"""WebAuthn credential storage and verification (optional ``asap-protocol[webauthn]`` extra)."""
 
 from __future__ import annotations
 
@@ -16,6 +9,10 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 import aiosqlite
+
+from asap.observability import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,7 +25,11 @@ class WebAuthnCredentialRecord:
 
 
 class WebAuthnCeremonyError(Exception):
-    """Raised when a WebAuthn registration or assertion ceremony cannot be completed."""
+    """Ceremony failed; ``detail`` is a stable machine-facing code (no PII in ``str``)."""
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(detail)
+        self.detail = detail
 
 
 @runtime_checkable
@@ -61,9 +62,6 @@ class WebAuthnCredentialStore(Protocol):
 
     async def list_credentials(self, host_id: str) -> list[bytes]:
         """Return credential ids registered for ``host_id`` (order is implementation-defined)."""
-
-
-_WEBAUTHN_CREDENTIALS_TABLE = "webauthn_credentials"
 
 
 class InMemoryWebAuthnCredentialStore:
@@ -126,8 +124,8 @@ class SQLiteWebAuthnCredentialStore:
 
     async def _ensure_schema(self, conn: aiosqlite.Connection) -> None:
         await conn.execute(
-            f"""
-            CREATE TABLE IF NOT EXISTS {_WEBAUTHN_CREDENTIALS_TABLE} (
+            """
+            CREATE TABLE IF NOT EXISTS webauthn_credentials (
                 host_id TEXT NOT NULL,
                 credential_id BLOB NOT NULL,
                 public_key BLOB NOT NULL,
@@ -147,8 +145,8 @@ class SQLiteWebAuthnCredentialStore:
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_schema(conn)
             await conn.execute(
-                f"""
-                INSERT OR REPLACE INTO {_WEBAUTHN_CREDENTIALS_TABLE}
+                """
+                INSERT OR REPLACE INTO webauthn_credentials
                     (host_id, credential_id, public_key, sign_count)
                 VALUES (?, ?, ?, ?)
                 """,
@@ -165,9 +163,9 @@ class SQLiteWebAuthnCredentialStore:
             await self._ensure_schema(conn)
             conn.row_factory = aiosqlite.Row
             cur = await conn.execute(
-                f"""
+                """
                 SELECT credential_id, public_key, sign_count
-                FROM {_WEBAUTHN_CREDENTIALS_TABLE}
+                FROM webauthn_credentials
                 WHERE host_id = ? AND credential_id = ?
                 """,
                 (host_id, credential_id),
@@ -190,8 +188,8 @@ class SQLiteWebAuthnCredentialStore:
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_schema(conn)
             cur = await conn.execute(
-                f"""
-                UPDATE {_WEBAUTHN_CREDENTIALS_TABLE}
+                """
+                UPDATE webauthn_credentials
                 SET sign_count = ?
                 WHERE host_id = ? AND credential_id = ?
                 """,
@@ -206,8 +204,8 @@ class SQLiteWebAuthnCredentialStore:
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_schema(conn)
             cur = await conn.execute(
-                f"""
-                SELECT credential_id FROM {_WEBAUTHN_CREDENTIALS_TABLE}
+                """
+                SELECT credential_id FROM webauthn_credentials
                 WHERE host_id = ?
                 """,
                 (host_id,),
@@ -217,15 +215,7 @@ class SQLiteWebAuthnCredentialStore:
 
 
 class WebAuthnVerifierImpl:
-    """Registration and assertion ceremonies using the optional ``webauthn`` package.
-
-    Requires ``pip install 'asap-protocol[webauthn]'``. Imports from ``webauthn`` are lazy so
-    modules that only need :class:`WebAuthnCredentialStore` stay usable without the extra.
-
-    For tests with pre-baked attestation/assertion vectors, pass fixed ``registration_challenge``
-    and ``authentication_challenge`` (raw challenge bytes). Production callers should omit them so
-    each ``start_*`` call issues a fresh random challenge.
-    """
+    """WebAuthn registration/assertion (lazy-imports ``webauthn``; needs ``[webauthn]`` extra)."""
 
     def __init__(
         self,
@@ -254,18 +244,18 @@ class WebAuthnVerifierImpl:
             msg = "WebAuthnVerifierImpl requires the optional extra: pip install 'asap-protocol[webauthn]'"
             raise ImportError(msg) from exc
 
-    async def start_webauthn_registration(self, host_id: str) -> str:
-        """Begin registration: return base64url challenge and remember it for ``host_id``."""
+    async def start_webauthn_registration(self, host_id: str) -> dict[str, Any]:
+        """Start registration; returns browser JSON dict and stores the challenge for ``host_id``."""
         self._ensure_webauthn_installed()
         from webauthn import generate_registration_options
-        from webauthn.helpers import bytes_to_base64url
+        from webauthn.helpers import options_to_json_dict
 
         challenge = (
             self._fixed_registration_challenge
             if self._fixed_registration_challenge is not None
             else secrets.token_bytes(32)
         )
-        generate_registration_options(
+        options = generate_registration_options(
             rp_id=self._rp_id,
             rp_name=self._rp_name,
             user_name=host_id,
@@ -274,10 +264,10 @@ class WebAuthnVerifierImpl:
         )
         async with self._lock:
             self._pending_registration[host_id] = challenge
-        return bytes_to_base64url(challenge)
+        return options_to_json_dict(options)
 
     async def finish_webauthn_registration(self, host_id: str, attestation: dict[str, Any]) -> str:
-        """Verify attestation, persist the credential, return base64url credential id."""
+        """Verify attestation, persist credential, return credential id (base64url)."""
         self._ensure_webauthn_installed()
         from webauthn import verify_registration_response
         from webauthn.helpers import bytes_to_base64url
@@ -285,9 +275,11 @@ class WebAuthnVerifierImpl:
 
         async with self._lock:
             if host_id not in self._pending_registration:
-                raise WebAuthnCeremonyError(
-                    f"no pending WebAuthn registration ceremony for host_id={host_id!r}"
+                logger.warning(
+                    "asap.webauthn.registration.no_pending_ceremony",
+                    host_id=host_id,
                 )
+                raise WebAuthnCeremonyError("webauthn_registration_state_missing")
             expected_challenge = self._pending_registration[host_id]
 
         try:
@@ -298,7 +290,12 @@ class WebAuthnVerifierImpl:
                 expected_origin=self._origin,
             )
         except InvalidRegistrationResponse as exc:
-            raise WebAuthnCeremonyError(str(exc)) from exc
+            logger.warning(
+                "asap.webauthn.registration.invalid",
+                host_id=host_id,
+                reason=str(exc),
+            )
+            raise WebAuthnCeremonyError("webauthn_registration_verification_failed") from exc
 
         async with self._lock:
             self._pending_registration.pop(host_id, None)
@@ -316,11 +313,11 @@ class WebAuthnVerifierImpl:
         host_id: str,
         *,
         user_verification_required: bool = False,
-    ) -> str:
-        """Begin assertion: return base64url challenge for an existing credential on ``host_id``."""
+    ) -> dict[str, Any]:
+        """Start assertion; returns browser JSON dict and stores the challenge for ``host_id``."""
         self._ensure_webauthn_installed()
         from webauthn import generate_authentication_options
-        from webauthn.helpers import bytes_to_base64url
+        from webauthn.helpers import options_to_json_dict
         from webauthn.helpers.structs import (
             PublicKeyCredentialDescriptor,
             UserVerificationRequirement,
@@ -338,7 +335,7 @@ class WebAuthnVerifierImpl:
             if user_verification_required
             else UserVerificationRequirement.PREFERRED
         )
-        generate_authentication_options(
+        options = generate_authentication_options(
             rp_id=self._rp_id,
             challenge=challenge,
             allow_credentials=allow_credentials,
@@ -346,7 +343,7 @@ class WebAuthnVerifierImpl:
         )
         async with self._lock:
             self._pending_authentication[host_id] = challenge
-        return bytes_to_base64url(challenge)
+        return options_to_json_dict(options)
 
     async def finish_webauthn_assertion(
         self,
@@ -356,37 +353,60 @@ class WebAuthnVerifierImpl:
         claimed_challenge_b64url: str | None = None,
         require_user_verification: bool = False,
     ) -> bool:
-        """Verify assertion, advance sign count on success; return False if verification fails.
-
-        When ``claimed_challenge_b64url`` is set (HTTP body ``webauthn.challenge``), it must
-        match the pending server-issued challenge for ``host_id`` before cryptographic verification.
-
-        When ``require_user_verification`` is True, the authenticator must have performed user
-        verification (browser-controlled agent / high-assurance paths).
-        """
+        """Verify assertion; optional ``claimed_challenge_b64url`` must match pending challenge."""
         self._ensure_webauthn_installed()
         from webauthn import verify_authentication_response
         from webauthn.helpers import base64url_to_bytes
+        from webauthn.helpers.exceptions import InvalidAuthenticationResponse
 
         async with self._lock:
             if host_id not in self._pending_authentication:
+                logger.warning(
+                    "asap.webauthn.assertion.no_pending_ceremony",
+                    host_id=host_id,
+                )
                 return False
             expected_challenge = self._pending_authentication[host_id]
             if claimed_challenge_b64url is not None:
                 try:
                     claimed = base64url_to_bytes(claimed_challenge_b64url.strip())
-                except Exception:
+                except (ValueError, TypeError) as exc:
+                    logger.warning(
+                        "asap.webauthn.assertion.malformed_challenge",
+                        host_id=host_id,
+                        error_class=type(exc).__name__,
+                    )
                     return False
                 if claimed != expected_challenge:
+                    logger.warning(
+                        "asap.webauthn.assertion.challenge_mismatch",
+                        host_id=host_id,
+                    )
                     return False
 
         raw_id = assertion.get("rawId", assertion.get("id"))
         if not isinstance(raw_id, str):
+            logger.warning(
+                "asap.webauthn.assertion.missing_raw_id",
+                host_id=host_id,
+            )
             return False
-        credential_id = base64url_to_bytes(raw_id)
+        try:
+            credential_id = base64url_to_bytes(raw_id)
+        except (ValueError, TypeError) as exc:
+            logger.warning(
+                "asap.webauthn.assertion.malformed_raw_id",
+                host_id=host_id,
+                error_class=type(exc).__name__,
+            )
+            return False
 
         row = await self._store.get_credential(host_id, credential_id)
         if row is None:
+            logger.warning(
+                "asap.webauthn.assertion.unknown_credential",
+                host_id=host_id,
+            )
             return False
 
         try:
@@ -399,7 +419,12 @@ class WebAuthnVerifierImpl:
                 credential_current_sign_count=row.sign_count,
                 require_user_verification=require_user_verification,
             )
-        except Exception:
+        except InvalidAuthenticationResponse as exc:
+            logger.warning(
+                "asap.webauthn.assertion.invalid",
+                host_id=host_id,
+                reason=str(exc),
+            )
             return False
 
         async with self._lock:
@@ -410,7 +435,7 @@ class WebAuthnVerifierImpl:
 
 
 class WebAuthnSelfAuthVerifier:
-    """Adapts :class:`WebAuthnVerifierImpl` to the ``WebAuthnVerifier`` protocol in ``asap.auth.self_auth``."""
+    """Wraps :class:`WebAuthnVerifierImpl` for :class:`WebAuthnVerifier`."""
 
     __asap_performs_real_webauthn__ = True
 

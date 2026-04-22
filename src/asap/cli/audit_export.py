@@ -12,7 +12,12 @@ from typing import Annotated, Optional
 
 import typer
 
-from asap.economics.audit import AuditEntry, InMemoryAuditStore, SQLiteAuditStore
+from asap.economics.audit import (
+    AuditChainBroken,
+    AuditEntry,
+    InMemoryAuditStore,
+    SQLiteAuditStore,
+)
 
 
 def _parse_iso_datetime(value: str) -> datetime:
@@ -49,7 +54,7 @@ def _render_jsonl(entries: list[AuditEntry]) -> str:
 def _render_csv(entries: list[AuditEntry]) -> str:
     buf = io.StringIO()
     fieldnames = ("id", "timestamp", "operation", "agent_urn", "details", "prev_hash", "hash")
-    writer = csv.DictWriter(buf, fieldnames=fieldnames)
+    writer = csv.DictWriter(buf, fieldnames=fieldnames, lineterminator="\n")
     writer.writeheader()
     for row in _entry_payloads(entries):
         line = {
@@ -78,7 +83,7 @@ async def _run_export(
     if verify_chain:
         ok = await store.verify_chain()
         if not ok:
-            raise ValueError("AUDIT_CHAIN_BROKEN")
+            raise AuditChainBroken("audit hash chain verification failed")
 
     entries = await store.query(
         agent_urn=agent_urn,
@@ -94,12 +99,10 @@ async def _run_export(
         return _render_jsonl(entries)
     if fmt == "csv":
         return _render_csv(entries)
-    raise AssertionError("unreachable format")
+    raise RuntimeError(f"unexpected format: {fmt!r}")
 
 
 def register_audit_export_commands(root: typer.Typer) -> None:
-    """Attach ``audit`` / ``export`` to the root Typer app."""
-
     audit_app = typer.Typer(help="Tamper-evident audit log operations.")
     root.add_typer(audit_app, name="audit")
 
@@ -157,8 +160,11 @@ def register_audit_export_commands(root: typer.Typer) -> None:
         if fmt not in ("json", "csv", "jsonl"):
             raise typer.BadParameter("--format must be 'json', 'csv', or 'jsonl'")
 
-        since_dt = _parse_iso_datetime(since) if since else None
-        until_dt = _parse_iso_datetime(until) if until else None
+        try:
+            since_dt = _parse_iso_datetime(since) if since else None
+            until_dt = _parse_iso_datetime(until) if until else None
+        except ValueError as exc:
+            raise typer.BadParameter(f"invalid ISO-8601 timestamp: {exc}") from exc
         agent_urn = urn.strip() if urn and urn.strip() else None
 
         backing = _make_store(store, db)
@@ -176,10 +182,10 @@ def register_audit_export_commands(root: typer.Typer) -> None:
 
         try:
             text = asyncio.run(_run())
+        except AuditChainBroken as exc:
+            typer.echo("Audit hash chain verification failed (possible tampering).", err=True)
+            raise typer.Exit(1) from exc
         except ValueError as exc:
-            if str(exc) == "AUDIT_CHAIN_BROKEN":
-                typer.echo("Audit hash chain verification failed (possible tampering).", err=True)
-                raise typer.Exit(1) from exc
             raise typer.BadParameter(str(exc)) from exc
         except OSError as exc:
             typer.echo(f"Could not read audit database: {exc}", err=True)

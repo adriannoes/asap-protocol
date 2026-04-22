@@ -37,8 +37,6 @@ def _transport_user_message(exc: BaseException) -> str:
 
 
 def register_compliance_check_command(root: typer.Typer) -> None:
-    """Attach ``compliance-check`` to the root Typer app."""
-
     @root.command(
         "compliance-check",
         help="Run Compliance Harness v2 against an ASAP agent at an HTTP(S) base URL.",
@@ -52,7 +50,9 @@ def register_compliance_check_command(root: typer.Typer) -> None:
         output_format: str = typer.Option(
             "text",
             "--output",
-            help="Report format: text (human) or json (machine).",
+            "--format",
+            "-f",
+            help="Report format: text or json (--format aliases --output).",
         ),
         exit_on_fail: bool = typer.Option(
             False,

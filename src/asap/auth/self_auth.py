@@ -22,6 +22,7 @@ __all__ = [
     "default_webauthn_verifier",
     "fresh_session_violation_detail",
     "host_jwt_issued_at_seconds",
+    "reset_default_webauthn_verifier_cache",
     "uses_real_webauthn_verifier",
     "verify_webauthn_if_required",
     "webauthn_required_capability_names",
@@ -99,12 +100,7 @@ class WebAuthnVerifier(Protocol):
         host_id: str | None = None,
         require_user_verification: bool = False,
     ) -> bool:
-        """Return True if ``response`` proves possession for ``challenge``.
-
-        Real verifiers should receive ``host_id`` (host principal from the Host JWT) so credential
-        state can be scoped; the placeholder ignores it. When ``require_user_verification`` is True,
-        implementations backed by WebAuthn MUST require the UV bit in authenticator data.
-        """
+        """Return True when ``response`` validates for ``challenge``."""
         ...
 
 
@@ -142,31 +138,46 @@ def _webauthn_extra_installed() -> bool:
     return True
 
 
+_DefaultVerifierKey = tuple[bool, str, str]
+_default_verifier_cache: tuple[_DefaultVerifierKey, "WebAuthnVerifier"] | None = None
+
+
+def reset_default_webauthn_verifier_cache() -> None:
+    """Clear cached default verifier (tests that change WebAuthn env between cases)."""
+    global _default_verifier_cache
+    _default_verifier_cache = None
+
+
 def default_webauthn_verifier() -> WebAuthnVerifier:
-    """Return a real WebAuthn verifier when the extra is installed and configured, else the placeholder.
+    """Cached verifier: real impl when ``[webauthn]`` + RP env vars set, else placeholder.
 
-    Without the ``webauthn`` distribution package, or without both ``ASAP_WEBAUTHN_RP_ID`` and
-    ``ASAP_WEBAUTHN_ORIGIN`` set in the environment, this returns :class:`PlaceholderWebAuthnVerifier`
-    so behavior stays backward-compatible until operators opt in to real verification.
-
-    ``create_app`` stores the result on ``app.state.identity_webauthn_verifier`` when callers do not
-    pass an explicit verifier.
+    Same instance is reused for a given (extra installed, rp_id, origin) so in-memory
+    ceremonies survive across requests; use a custom verifier on ``create_app`` for durable storage.
     """
-    if not _webauthn_extra_installed():
-        return PlaceholderWebAuthnVerifier()
+    global _default_verifier_cache
+    has_extra = _webauthn_extra_installed()
     rp_id = os.environ.get(_ASAP_WEBAUTHN_RP_ID_ENV, "").strip()
     origin = os.environ.get(_ASAP_WEBAUTHN_ORIGIN_ENV, "").strip()
-    if not rp_id or not origin:
-        return PlaceholderWebAuthnVerifier()
-    from asap.auth.webauthn import (
-        InMemoryWebAuthnCredentialStore,
-        WebAuthnSelfAuthVerifier,
-        WebAuthnVerifierImpl,
-    )
+    key: _DefaultVerifierKey = (has_extra, rp_id, origin)
+    if _default_verifier_cache is not None and _default_verifier_cache[0] == key:
+        return _default_verifier_cache[1]
 
-    store = InMemoryWebAuthnCredentialStore()
-    impl = WebAuthnVerifierImpl(store, rp_id=rp_id, origin=origin)
-    return WebAuthnSelfAuthVerifier(impl)
+    verifier: WebAuthnVerifier
+    if not has_extra or not rp_id or not origin:
+        verifier = PlaceholderWebAuthnVerifier()
+    else:
+        from asap.auth.webauthn import (
+            InMemoryWebAuthnCredentialStore,
+            WebAuthnSelfAuthVerifier,
+            WebAuthnVerifierImpl,
+        )
+
+        store = InMemoryWebAuthnCredentialStore()
+        impl = WebAuthnVerifierImpl(store, rp_id=rp_id, origin=origin)
+        verifier = WebAuthnSelfAuthVerifier(impl)
+
+    _default_verifier_cache = (key, verifier)
+    return verifier
 
 
 def uses_real_webauthn_verifier(verifier: object) -> bool:
@@ -176,13 +187,10 @@ def uses_real_webauthn_verifier(verifier: object) -> bool:
 
 @dataclass(frozen=True, slots=True)
 class WebAuthnApprovalCheckResult:
-    """Outcome of WebAuthn checks on an agent registration approval path."""
+    """WebAuthn gate result for agent register: ``detail`` if failed, ``http_status`` 400 or 403."""
 
     detail: str | None
-    """Human-readable error detail for HTTP 400 responses; ignored when ``http_status`` is 403."""
-
     http_status: int = 400
-    """400 for configuration/body issues on the high-risk capability path; 403 for ``webauthn_required``."""
 
     @property
     def failed(self) -> bool:
@@ -198,16 +206,7 @@ async def check_webauthn_for_approval_path(
     host_id: str | None,
     agent_controls_browser: bool,
 ) -> WebAuthnApprovalCheckResult:
-    """Validate WebAuthn on registration when policies require it.
-
-    Runs when (1) a requested capability is listed in ``config.require_webauthn_for``, and/or
-    (2) the client sets ``agent_controls_browser: true`` while a real WebAuthn verifier is in use.
-    Case (2) enforces ``userVerification`` (library flag ``require_user_verification``) on verify.
-
-    Returns :class:`WebAuthnApprovalCheckResult` with ``http_status`` 403 and a non-``None``
-    ``detail`` when the browser-controlled + real-verifier gate fails (response body should use
-    ``{"detail": "webauthn_required"}``).
-    """
+    """Require ``webauthn`` body when capabilities need it or browser-controlled + real verifier."""
     needed: list[str] = []
     if config is not None and config.require_webauthn_for:
         needed = webauthn_required_capability_names(requested_capabilities, config)
@@ -269,11 +268,7 @@ async def verify_webauthn_if_required(
     *,
     host_id: str | None = None,
 ) -> str | None:
-    """If high-risk capabilities are requested, validate the ``webauthn`` object in ``raw_body``.
-
-    Returns an error detail string on failure, or ``None`` if checks pass / not applicable.
-    Does not apply the browser-controlled agent gate (use :func:`check_webauthn_for_approval_path`).
-    """
+    """Validate ``webauthn`` for high-risk capabilities only (not the browser-controlled gate)."""
     result = await check_webauthn_for_approval_path(
         requested_capabilities,
         raw_body,
