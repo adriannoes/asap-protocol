@@ -25,7 +25,7 @@ class WebAuthnCredentialRecord:
 
 
 class WebAuthnCeremonyError(Exception):
-    """Ceremony failed; ``detail`` is a stable machine-facing code (no PII in ``str``)."""
+    """Ceremony failure; ``detail`` is a stable code (safe for logs)."""
 
     def __init__(self, detail: str) -> None:
         super().__init__(detail)
@@ -61,7 +61,7 @@ class WebAuthnCredentialStore(Protocol):
         """Persist the authenticator sign counter after a successful assertion."""
 
     async def list_credentials(self, host_id: str) -> list[bytes]:
-        """Return credential ids registered for ``host_id`` (order is implementation-defined)."""
+        """Return credential ids for ``host_id``."""
 
 
 class InMemoryWebAuthnCredentialStore:
