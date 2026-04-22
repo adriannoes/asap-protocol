@@ -253,6 +253,23 @@ OpenAPI Adapter and TypeScript SDK both depend on v2.2 protocol features:
 - **Error Taxonomy + Recovery Hints** for client retry semantics
 - **ASAP-Version Negotiation** for SDK ↔ server version handshake
 
+### 6.5 Carry-over: "extract when touched" refactor of transport/ monoliths
+
+Inherited as a conscious carry-over from the v2.2.1 tech-debt sweep (2026-04-22):
+
+- [`src/asap/transport/server.py`](../../../src/asap/transport/server.py) (~2160 LoC) and
+  [`src/asap/transport/client.py`](../../../src/asap/transport/client.py) (~1750 LoC) are
+  cognitively heavy but **coherent** around their primary types (`ASAPRequestHandler` +
+  `create_app`; `ASAPClient`). A speculative split would force an internal-API reshuffle
+  right before new routes land in v2.3.
+- **Rule for v2.3 contributors**: when a sprint task adds a route (Auto-Registration,
+  Runtime Capability Escalation) or a client method (TS SDK parity), **extract the new
+  surface into a dedicated module from day one** (e.g., `asap.transport.auto_registration`,
+  `asap.transport.capability_escalation`). Do not add a new method to `server.py` when a
+  new module is the natural home.
+- Do **not** ship a standalone "split transport/server.py" PR — the cost was assessed and
+  the value realizes only as features accrete.
+
 ---
 
 ## 7. Success Metrics

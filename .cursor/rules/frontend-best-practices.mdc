@@ -1,5 +1,5 @@
 ---
-description: "Standards for modern Frontend development using Next.js 15 (App Router), React 19, Tailwind CSS v4, and Shadcn/UI. Apply when working on `apps/web` or `packages/ui`."
+description: "Standards for modern Frontend development using Next.js 16 (App Router), React 19, Tailwind CSS v4, and Shadcn/UI. Apply when working on `apps/web` or `packages/ui`."
 globs:
   - "apps/web/**/*.ts"
   - "apps/web/**/*.tsx"
@@ -7,10 +7,10 @@ globs:
 alwaysApply: false
 ---
 
-# Frontend Best Practices (Next.js 15 + Tailwind)
+# Frontend Best Practices (Next.js 16 + Tailwind)
 
 ## 1. Core Stack
-- **Framework**: Next.js 15 (App Router). Do NOT use `pages/`.
+- **Framework**: Next.js 16 (App Router). Do NOT use `pages/`.
 - **Language**: TypeScript (Strict).
 - **Styling**: Tailwind CSS v4. No CSS-in-JS.
 - **Components**: Shadcn/UI (Radix Primitives).

@@ -35,16 +35,16 @@ S1 (WebAuthn) ──► S2 (CLIs + Maintenance) ──► S3 (Release)
 - [x] WAUTH-001..008 implemented and tested with real `webauthn` library — see [S1](./sprint-S1-webauthn.md)
 - [x] `asap compliance-check --url ...` CLI subcommand available and documented — see [S2](./sprint-S2-clis.md) §1
 - [x] `asap audit export --since ... --format {json,csv,jsonl}` CLI subcommand available and documented — see [S2](./sprint-S2-clis.md) §2
-- [ ] Test coverage ≥90% for **new CLI modules** (`compliance_check`, `audit_export`) — **gap** (~72–76% with current tests); widen tests or adjust DoD before calling patch “closed”
+- [x] Test coverage ≥90% for **new CLI modules** (`compliance_check` 97.10% / `audit_export` 92.59%, post PR-127 review fixes)
 - [x] `uv run mypy src/` passes with zero errors — verified locally (`143` files)
 - [x] `uv run ruff check .` passes — verified locally
-- [ ] `uv run pytest` green on **full** suite — **confirm in PR CI / before merge** (spot: `tests/cli/`, `apps/example-agent` green)
+- [x] `uv run pytest` green on **full** suite — 3013 passed, 7 skipped (2026-04-21)
 - [x] `pip-audit` clean (or documented overrides in `pyproject.toml`) — S2 §3.1
 - [x] `CHANGELOG.md` updated under **`[2.2.1]`** — S2 §4.2
 - [x] `pyproject.toml` and `src/asap/__init__.py` bumped to **`2.2.1`** — S2 §4.1
 - [x] `docs/migration.md` updated with WebAuthn extra installation note — S1 §4.2 + release notes
 - [x] `docs/cli.md` updated with `compliance-check` and `audit export` subcommands — S2 §1.5 / §2.4
-- [ ] Manual pass: **CLI help text** clarity (`asap compliance-check --help`, `asap audit export --help`) — [S2 acceptance](./sprint-S2-clis.md) still open
+- [x] Manual pass: **CLI help text** clarity (`asap compliance-check --help`, `asap audit export --help`) — `--format` alias added to `compliance-check`; `audit export` help covers `--store`, `--db`, `--format`, `--verify-chain`
 
 ### Release (S3 — after merge to `main`)
 

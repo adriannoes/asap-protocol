@@ -166,7 +166,7 @@ Focus shifted to verifiable agent identity and protocol compliance certification
 
 The shift from "Protocol" to "Product" with a lean approach — no backend API, Web App reads from Lite Registry.
 
-### 4.1 Frontend: Next.js 15 (App Router)
+### 4.1 Frontend: Next.js 16 (App Router)
 -   **Decision**: **Next.js** (over Vite/React SPA)
 -   **Rationale**:
     -   **SEO**: The Agent Registry must be indexable by Google. Server-Side Rendering (SSR) is non-negotiable here.
@@ -294,7 +294,7 @@ The `SnapshotStore` Protocol currently uses **sync** methods (inherited from v1.
 | **Signing** | cryptography (Ed25519) | Modern, fast, MCP-aligned | v1.2 | SD-4 |
 | **Evals** | pytest (Compliance Harness) | Shell-only (DeepEval deferred to v2.2+) | v1.2 | ADR-10 |
 | **Registry** | Lite Registry (GitHub Pages JSON) | Zero infrastructure, primary through v2.0 | v1.1-v2.0 | SD-11, ADR-15 |
-| **Web** | Next.js 15, TypeScript | SEO, type safety | v2.0 | |
+| **Web** | Next.js 16, TypeScript | SEO, type safety | v2.0 (bumped to 16 in v2.2.1) | |
 | **UI** | Tailwind v4, Shadcn | Development velocity | v2.0 | |
 | **Auth (web)** | GitHub + WebCrypto | Low friction signup | v2.0 | |
 | **Payments** | None (Deferred) | Deferred to v3.0 | v3.0 | SD-2 |

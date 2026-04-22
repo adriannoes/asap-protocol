@@ -100,7 +100,7 @@
 
 *   [x] **Optimization — Parallel Trust + Revocation Check:** Implemented with `asyncio.gather(asyncio.to_thread(verify_agent_trust, signed), is_revoked(...))`. ✅ Addressed.
 
-*   [ ] **Typing — `dict[str, Any]` Return Type on `run()`:** Deferred. Docstring documents return and branches; typed `TaskResponse`/TypedDict can be a follow-up.
+*   [x] **Typing — `dict[str, Any]` Return Type on `run()`:** Addressed in v2.2.1 tech-debt sweep. `ResolvedAgent.run` now requires a `TaskResponse` payload (raises `TypeError` otherwise) and always returns the unwrapped `result` dict (empty when `None`). Return type stays `dict[str, Any]` to preserve caller contracts; contract is documented in the method docstring.
 
 *   [x] **Readability — `DEFAULT_SENDER_URN` as Configurable:** `MarketClient.__init__` now accepts `sender_urn` (default `DEFAULT_SENDER_URN`) and `registry_cache_ttl_seconds`. `ResolvedAgent.run()` uses `self.client.sender_urn`. ✅ Addressed.
 
