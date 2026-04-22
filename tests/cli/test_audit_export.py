@@ -21,10 +21,20 @@ from asap.economics.audit import AuditEntry, SQLiteAuditStore, compute_entry_has
 
 @pytest.fixture(autouse=True)
 def _stable_typer_rich_console(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Fix Typer/Rich width so ``CliRunner`` captures full help and errors on CI."""
+    """Pin Typer/Rich formatting so ``--help`` and error output don't wrap on narrow CI.
+
+    GitHub Actions terminals default to 80 columns, which causes Rich to wrap long option
+    names like ``--store`` / ``--db`` inside box-draw panels and break substring assertions.
+    Forcing ``COLUMNS=200`` widens the Rich ``Console``, ``NO_COLOR=1`` strips ANSI, and
+    ``TERM=dumb`` disables interactive terminal detection as belt-and-suspenders. We also
+    pin ``typer.rich_utils.MAX_WIDTH`` so Typer's own wrap cap matches.
+    """
     import typer.rich_utils as tr
 
-    monkeypatch.setattr(tr, "MAX_WIDTH", 120)
+    monkeypatch.setenv("COLUMNS", "200")
+    monkeypatch.setenv("NO_COLOR", "1")
+    monkeypatch.setenv("TERM", "dumb")
+    monkeypatch.setattr(tr, "MAX_WIDTH", 200)
 
 
 def _assert_json_chain_valid(entries: list[dict[str, object]]) -> None:
@@ -371,6 +381,38 @@ def test_audit_export_invalid_since_rejected(sqlite_audit_db: Path) -> None:
         ],
     )
     assert result.exit_code != 0
+
+
+def test_audit_export_os_error_maps_to_exit_two(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An ``OSError`` while reading the audit DB surfaces as exit code 2 (transport error)."""
+    from asap.cli import audit_export as mod
+
+    db_file = tmp_path / "audit_os_error.db"
+    asyncio.run(_seed_sqlite_audit_store(db_file))
+
+    async def _raise_os_error(*_args: object, **_kwargs: object) -> str:
+        raise OSError("simulated disk read error")
+
+    monkeypatch.setattr(mod, "_run_export", _raise_os_error)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        [
+            "audit",
+            "export",
+            "--store",
+            "sqlite",
+            "--db",
+            str(db_file),
+            "--format",
+            "json",
+        ],
+    )
+    assert result.exit_code == 2, result.stdout + result.stderr
+    assert "Could not read audit database" in result.stderr
 
 
 def test_audit_export_fixture_ids_match_store(tmp_path: Path) -> None:
