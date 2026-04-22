@@ -128,13 +128,22 @@ def _approval_fresh_session_response(
 
 
 def _webauthn_verifier(request: Request) -> WebAuthnVerifier:
-    v: WebAuthnVerifier | None = getattr(
-        request.app.state,
-        "identity_webauthn_verifier",
-        None,
+    """Return the process-scoped verifier from ``app.state``, or the cached default fallback.
+
+    The fallback path exists for integrators that build the FastAPI app manually; it returns
+    the cached :func:`default_webauthn_verifier` instance so pending challenges persist across
+    requests (see ``default_webauthn_verifier`` docstring for state semantics).
+    """
+    configured = getattr(request.app.state, "identity_webauthn_verifier", None)
+    if configured is not None:
+        return cast("WebAuthnVerifier", configured)
+    logger.warning(
+        "asap.identity.webauthn_verifier_fallback",
+        detail=(
+            "identity_webauthn_verifier not set on app.state; using cached default_webauthn_verifier. "
+            "Pass identity_webauthn_verifier to create_app for deployments that need a durable store."
+        ),
     )
-    if v is not None:
-        return v
     return default_webauthn_verifier()
 
 

@@ -55,7 +55,7 @@ from contextlib import asynccontextmanager, suppress
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Optional, TypeVar, cast
+from typing import Any, Callable, Optional, TypeVar, Union
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
@@ -167,6 +167,11 @@ logger = get_logger(__name__)
 # Type variable for handler result pattern
 T = TypeVar("T")
 HandlerResult = tuple[Optional[T], Optional[JSONResponse]]
+
+# Discriminable union for helpers that either produce a success value + metadata or a fatal
+# ``JSONResponse`` error. Using a union instead of ``tuple[Envelope | None, JSONResponse | str]``
+# lets callers narrow via ``isinstance(x, JSONResponse)`` without spurious ``cast()`` calls.
+EnvelopeOrError = Union[JSONResponse, tuple["Envelope", str]]
 
 # Environment variable to enable handler hot reload (development)
 ENV_HOT_RELOAD = "ASAP_HOT_RELOAD"
@@ -372,10 +377,7 @@ class ASAPRequestHandler:
         ):
             metrics.increment_counter("asap_validation_errors_total", {"reason": error_type})
 
-    def _validate_envelope(
-        self,
-        ctx: RequestContext,
-    ) -> tuple[Envelope | None, JSONResponse | str]:
+    def _validate_envelope(self, ctx: RequestContext) -> EnvelopeOrError:
         rpc_request = ctx.rpc_request
         if not isinstance(rpc_request.params, dict):
             logger.warning(
@@ -396,7 +398,7 @@ class ASAPRequestHandler:
                 "invalid_params",
                 time.perf_counter() - ctx.start_time,
             )
-            return None, error_response
+            return error_response
 
         # Extract envelope from params
         envelope_data = rpc_request.params.get("envelope")
@@ -413,7 +415,7 @@ class ASAPRequestHandler:
                 "missing_envelope",
                 time.perf_counter() - ctx.start_time,
             )
-            return None, error_response
+            return error_response
 
         if not isinstance(envelope_data, dict):
             logger.warning(
@@ -431,7 +433,7 @@ class ASAPRequestHandler:
                 "invalid_envelope",
                 time.perf_counter() - ctx.start_time,
             )
-            return None, error_response
+            return error_response
 
         try:
             envelope = Envelope(**envelope_data)
@@ -447,7 +449,7 @@ class ASAPRequestHandler:
             logger.warning("asap.request.invalid_envelope", **log_data)
             duration_seconds = time.perf_counter() - ctx.start_time
             self.record_error_metrics(ctx.metrics, "unknown", "invalid_envelope", duration_seconds)
-            error_response = self.build_error_response(
+            return self.build_error_response(
                 INVALID_PARAMS,
                 data={
                     "error": "Invalid envelope structure",
@@ -455,13 +457,12 @@ class ASAPRequestHandler:
                 },
                 request_id=ctx.request_id,
             )
-            return None, error_response
 
     async def _dispatch_to_handler(
         self,
         envelope: Envelope,
         ctx: RequestContext,
-    ) -> tuple[Envelope | None, JSONResponse | str]:
+    ) -> EnvelopeOrError:
         """Dispatch envelope to registered handler.
 
         Looks up and executes the handler for the envelope's payload type.
@@ -496,7 +497,7 @@ class ASAPRequestHandler:
                 ctx.metrics, payload_type, "thread_pool_exhausted", duration_seconds
             )
             # Return HTTP 503 Service Unavailable (not JSON-RPC error)
-            error_response = JSONResponse(
+            return JSONResponse(
                 status_code=503,
                 content={
                     "error": "Service Temporarily Unavailable",
@@ -509,7 +510,6 @@ class ASAPRequestHandler:
                     "fallback_action": e.fallback_action,
                 },
             )
-            return None, error_response
         except HandlerNotFoundError as e:
             # No handler registered for this payload type
             logger.warning(
@@ -522,12 +522,11 @@ class ASAPRequestHandler:
             self.record_error_metrics(
                 ctx.metrics, payload_type, "handler_not_found", duration_seconds
             )
-            error_response = self.build_jsonrpc_error_for_asap_exception(
+            return self.build_jsonrpc_error_for_asap_exception(
                 e,
                 request_id=ctx.request_id,
                 extra_data={"error": str(e)},
             )
-            return None, error_response
 
     async def _authenticate_request(
         self,
@@ -1045,13 +1044,10 @@ class ASAPRequestHandler:
                 return auth_error
 
             envelope_result = self._validate_envelope(ctx)
-            envelope_or_none, result = envelope_result
-            if envelope_or_none is None:
-                error_resp = cast(JSONResponse, result)
-                self._log_response_debug(error_resp)
-                return error_resp
-            envelope = envelope_or_none
-            payload_type = cast(str, result)
+            if isinstance(envelope_result, JSONResponse):
+                self._log_response_debug(envelope_result)
+                return envelope_result
+            envelope, payload_type = envelope_result
 
             trace_token = extract_and_activate_envelope_trace_context(envelope)
             try:
@@ -1123,13 +1119,10 @@ class ASAPRequestHandler:
                 )
 
                 dispatch_result = await self._dispatch_to_handler(envelope, ctx)
-                response_or_none, result = dispatch_result
-                if response_or_none is None:
-                    error_resp = cast(JSONResponse, result)
-                    self._log_response_debug(error_resp)
-                    return error_resp
-                response_envelope = response_or_none
-                payload_type = cast(str, result)
+                if isinstance(dispatch_result, JSONResponse):
+                    self._log_response_debug(dispatch_result)
+                    return dispatch_result
+                response_envelope, payload_type = dispatch_result
 
                 # Check if client accepts Lambda-encoded responses
                 accept_header = request.headers.get("accept", "")
@@ -1213,13 +1206,10 @@ class ASAPRequestHandler:
             return auth_error
 
         envelope_result = self._validate_envelope(ctx)
-        envelope_or_none, result = envelope_result
-        if envelope_or_none is None:
-            error_resp = cast(JSONResponse, result)
-            self._log_response_debug(error_resp)
-            return error_resp
-        envelope = envelope_or_none
-        payload_type = cast(str, result)
+        if isinstance(envelope_result, JSONResponse):
+            self._log_response_debug(envelope_result)
+            return envelope_result
+        envelope, payload_type = envelope_result
 
         trace_token = extract_and_activate_envelope_trace_context(envelope)
         sender_error = self._verify_sender_matches_auth(
