@@ -9,25 +9,26 @@ S2 §4.0 *Release Prep* covers **version bump**, **CHANGELOG**, and **README** i
 
 | Gate | State |
 |------|--------|
-| S2 §4.0 (version / CHANGELOG / README) | **Done** on branch — re-verify no conflicts after S1 + S2 merge order you choose |
-| S3 (tag / PyPI / GitHub / Docker) | **Not started** — run only after `main` contains the release commit |
+| S2 §4.0 (version / CHANGELOG / README) | **Done** — merged on `main` (PR #127) |
+| S3 (tag / PyPI / GitHub / Docker) | **Done** (2026-04-22) — tag `v2.2.1` @ `56570b9`; workflow *Release (PyPI + Docker)* **success**; `asap-protocol==2.2.1` on PyPI; [GitHub Release v2.2.1](https://github.com/adriannoes/asap-protocol/releases/tag/v2.2.1) |
 
 ## Checklist (maps to [Definition of Done](./tasks-v2.2.1-patch.md#definition-of-done-v221))
 
 ### A — Before tagging (reviewer / merge)
 
-- [ ] **`main` green** after merge: PR CI passes (quality + tests), or locally `uv run pytest`, `uv run ruff check .`, `uv run mypy src/` on the merged result
+- [x] **`main` green** after merge: PR CI passes (quality + tests), or locally `uv run pytest`, `uv run ruff check .`, `uv run mypy src/` on the merged result
 - [x] **`pip-audit` / `npm audit`** clean or overrides documented — satisfied per S2 §3.1; **re-run once on `main`** post-merge
 - [x] **Release artefacts in tree**: `pyproject.toml` + `src/asap/__init__.py` at **2.2.1**, `CHANGELOG.md` has **`## [2.2.1]`**, README CLI snippet includes **`compliance-check`** and **`audit export`**
 
 ### B — S3 execution (release operator, on `main` only)
 
-- [ ] Tag **`v2.2.1`** on the release commit on `main`
-- [ ] **`asap-protocol==2.2.1`** published to **PyPI**
-- [ ] **GitHub Release** `v2.2.1` with notes (link CHANGELOG section)
-- [ ] **Docker**: `ghcr.io/adriannoes/asap-protocol:v2.2.1` and `:latest` rebuilt per project release process
+- [x] Tag **`v2.2.1`** on the release commit on `main` (`56570b9`)
+- [x] **`asap-protocol==2.2.1`** published to **PyPI**
+- [x] **GitHub Release** `v2.2.1` with notes (link CHANGELOG section)
+- [x] **Docker**: `ghcr.io/adriannoes/asap-protocol:v2.2.1` and `:latest` rebuilt per project release process (same workflow run)
 
 ## Notes
 
 - If S1 and S2 land as separate PRs, complete S2 §4.0 *before* tagging so `pyproject.toml` / `__version__` / CHANGELOG match the published artifact (already aligned in current workspace; resolve any merge conflict on CHANGELOG).
 - Do not duplicate version-bump steps in S3; single source of truth is S2 task **4.1** unless you intentionally defer bumps to a dedicated “release only” PR after both features merge.
+- **Executed 2026-04-22**: `git push origin v2.2.1` from commit `56570b938c9c8fa6d965635a65cbb24fa29c1fd0` on `main`; verified PyPI JSON includes `2.2.1`, GitHub Release API `200` for tag `v2.2.1`, Actions workflow *Release (PyPI + Docker)* conclusion `success`.
