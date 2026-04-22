@@ -21,13 +21,7 @@ from asap.economics.audit import AuditEntry, SQLiteAuditStore, compute_entry_has
 
 @pytest.fixture(autouse=True)
 def _stable_typer_rich_console(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Pin Rich console width for Typer output under ``CliRunner``.
-
-    When ``GITHUB_ACTIONS`` is set, Typer enables ``force_terminal`` for Rich. On Linux
-    CI, the inferred terminal width against Click's isolated stdio can collapse help
-    and error panels so captured output omits option names (e.g. ``--store``) and
-    error text. Setting ``MAX_WIDTH`` keeps layouts deterministic.
-    """
+    """Fix Typer/Rich width so ``CliRunner`` captures full help and errors on CI."""
     import typer.rich_utils as tr
 
     monkeypatch.setattr(tr, "MAX_WIDTH", 120)

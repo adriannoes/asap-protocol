@@ -22,8 +22,7 @@ classifiers = [
 
 dependencies = [
     "aiosqlite>=0.20",
-    # Security/crypto deps are upper-bounded to the next major to force a review
-    # before auto-upgrading across breaking boundaries (see SECURITY.md §Dependency policy).
+    # Upper-bound majors per SECURITY.md dependency policy.
     "cryptography>=46.0.7,<47",
     "jcs>=0.2.0",
     "jsonschema>=4.23.0",
@@ -74,8 +73,7 @@ dns-sd = [
 redis = [
     "redis>=5.0.0",
 ]
-# WebAuthn: real attestation/assertion verification (Sprint S1 — opt-in, v2.2.1).
-# Upper-bounded per SECURITY.md §Dependency policy.
+# Optional WebAuthn (real attestation/assertion when extra installed).
 webauthn = [
     "webauthn>=2.6,<3",
 ]

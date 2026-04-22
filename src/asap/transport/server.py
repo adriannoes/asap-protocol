@@ -168,9 +168,6 @@ logger = get_logger(__name__)
 T = TypeVar("T")
 HandlerResult = tuple[Optional[T], Optional[JSONResponse]]
 
-# Discriminable union for helpers that either produce a success value + metadata or a fatal
-# ``JSONResponse`` error. Using a union instead of ``tuple[Envelope | None, JSONResponse | str]``
-# lets callers narrow via ``isinstance(x, JSONResponse)`` without spurious ``cast()`` calls.
 EnvelopeOrError = Union[JSONResponse, tuple["Envelope", str]]
 
 # Environment variable to enable handler hot reload (development)
@@ -473,8 +470,8 @@ class ASAPRequestHandler:
             ctx: Request context with rpc_request, start_time, and metrics
 
         Returns:
-            Tuple of (response_envelope, payload_type) if successful,
-            or (None, error_response) if handler not found
+            ``(envelope, payload_type)``, a :class:`JSONResponse` (503), or a JSON-RPC error
+            response for handler-not-found.
         """
         payload_type = envelope.payload_type
         try:

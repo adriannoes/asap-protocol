@@ -149,11 +149,7 @@ def reset_default_webauthn_verifier_cache() -> None:
 
 
 def default_webauthn_verifier() -> WebAuthnVerifier:
-    """Cached verifier: real impl when ``[webauthn]`` + RP env vars set, else placeholder.
-
-    Same instance is reused for a given (extra installed, rp_id, origin) so in-memory
-    ceremonies survive across requests; use a custom verifier on ``create_app`` for durable storage.
-    """
+    """Return a cached verifier (real when extra + RP env are set, else placeholder)."""
     global _default_verifier_cache
     has_extra = _webauthn_extra_installed()
     rp_id = os.environ.get(_ASAP_WEBAUTHN_RP_ID_ENV, "").strip()
@@ -187,7 +183,7 @@ def uses_real_webauthn_verifier(verifier: object) -> bool:
 
 @dataclass(frozen=True, slots=True)
 class WebAuthnApprovalCheckResult:
-    """WebAuthn gate result for agent register: ``detail`` if failed, ``http_status`` 400 or 403."""
+    """Register-path WebAuthn gate outcome (``detail`` set on failure)."""
 
     detail: str | None
     http_status: int = 400
