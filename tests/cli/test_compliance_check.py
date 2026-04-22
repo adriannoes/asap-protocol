@@ -23,6 +23,22 @@ def _strip_ansi(text: str) -> str:
     return ANSI_ESCAPE_PATTERN.sub("", text)
 
 
+@pytest.fixture(autouse=True)
+def _stable_typer_rich_console(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin Typer/Rich formatting so ``--help`` / error output doesn't wrap on narrow CI.
+
+    GitHub Actions terminals default to 80 columns which makes Rich wrap long options and
+    error messages inside box-draw panels, breaking substring assertions. See the sibling
+    fixture in ``tests/cli/test_audit_export.py`` for rationale.
+    """
+    import typer.rich_utils as tr
+
+    monkeypatch.setenv("COLUMNS", "200")
+    monkeypatch.setenv("NO_COLOR", "1")
+    monkeypatch.setenv("TERM", "dumb")
+    monkeypatch.setattr(tr, "MAX_WIDTH", 200)
+
+
 def _free_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
