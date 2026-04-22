@@ -128,21 +128,13 @@ def _approval_fresh_session_response(
 
 
 def _webauthn_verifier(request: Request) -> WebAuthnVerifier:
-    """Return the process-scoped verifier from ``app.state``, or the cached default fallback.
-
-    The fallback path exists for integrators that build the FastAPI app manually; it returns
-    the cached :func:`default_webauthn_verifier` instance so pending challenges persist across
-    requests (see ``default_webauthn_verifier`` docstring for state semantics).
-    """
+    """Verifier from ``app.state``, or :func:`default_webauthn_verifier` if unset (logs warning)."""
     configured = getattr(request.app.state, "identity_webauthn_verifier", None)
     if configured is not None:
         return cast("WebAuthnVerifier", configured)
     logger.warning(
         "asap.identity.webauthn_verifier_fallback",
-        detail=(
-            "identity_webauthn_verifier not set on app.state; using cached default_webauthn_verifier. "
-            "Pass identity_webauthn_verifier to create_app for deployments that need a durable store."
-        ),
+        detail="app.state.identity_webauthn_verifier unset; using default_webauthn_verifier()",
     )
     return default_webauthn_verifier()
 
@@ -155,12 +147,7 @@ async def _approval_webauthn_response(
     *,
     agent_controls_browser: bool,
 ) -> JSONResponse | None:
-    """Reject registration when WebAuthn is required and missing or invalid.
-
-    Returns 403 ``webauthn_required`` when a browser-controlled agent must present a real
-    assertion while cryptographic verification is enabled; 400 for high-risk capability policy
-    violations otherwise.
-    """
+    """Reject registration when WebAuthn is required but missing or invalid."""
     cfg = _identity_fresh_session_config(request)
     result = await check_webauthn_for_approval_path(
         requested_names,
