@@ -398,6 +398,41 @@ async def test_finish_assertion_invalid_claimed_challenge_b64url() -> None:
 
 
 @pytest.mark.asyncio
+async def test_finish_assertion_rejects_malformed_raw_id_b64url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A ``rawId`` that fails base64url decoding logs and returns False without crashing.
+
+    Guards the ``except (ValueError, TypeError)`` branch around
+    ``base64url_to_bytes(raw_id)`` in :meth:`WebAuthnVerifierImpl.finish_webauthn_assertion`.
+    Patching the helper to raise is the most reliable way to exercise the branch because
+    py_webauthn's decoder is permissive about padding/length.
+    """
+    from asap.auth.webauthn import InMemoryWebAuthnCredentialStore
+
+    store = InMemoryWebAuthnCredentialStore()
+    impl = _verifier_for_vectors(store)
+    cid = base64url_to_bytes(_EC2_CREDENTIAL_ID_B64)
+    pk = base64url_to_bytes(_ASSERTION_CREDENTIAL_PUBLIC_KEY_B64)
+    await store.save_credential("host-a", cid, pk, _ASSERTION_SIGN_COUNT_BEFORE)
+    await impl.start_webauthn_assertion("host-a")
+
+    real_decode = base64url_to_bytes
+
+    def _raise_on_assertion_rawid(s: str) -> bytes:
+        # First call (challenge decode) is skipped because claimed_challenge_b64url is None;
+        # the only decode inside finish_webauthn_assertion is for raw_id itself.
+        if s == _EC2_CREDENTIAL_ID_B64:
+            raise ValueError("simulated bad raw_id")
+        return real_decode(s)
+
+    monkeypatch.setattr("webauthn.helpers.base64url_to_bytes", _raise_on_assertion_rawid)
+
+    result = await impl.finish_webauthn_assertion("host-a", _ASSERTION_EC2)
+    assert result is False
+
+
+@pytest.mark.asyncio
 async def test_finish_assertion_claimed_challenge_mismatch() -> None:
     from asap.auth.webauthn import InMemoryWebAuthnCredentialStore
 
