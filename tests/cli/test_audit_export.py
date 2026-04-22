@@ -19,6 +19,20 @@ from asap.cli import app
 from asap.economics.audit import AuditEntry, SQLiteAuditStore, compute_entry_hash
 
 
+@pytest.fixture(autouse=True)
+def _stable_typer_rich_console(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin Rich console width for Typer output under ``CliRunner``.
+
+    When ``GITHUB_ACTIONS`` is set, Typer enables ``force_terminal`` for Rich. On Linux
+    CI, the inferred terminal width against Click's isolated stdio can collapse help
+    and error panels so captured output omits option names (e.g. ``--store``) and
+    error text. Setting ``MAX_WIDTH`` keeps layouts deterministic.
+    """
+    import typer.rich_utils as tr
+
+    monkeypatch.setattr(tr, "MAX_WIDTH", 120)
+
+
 def _assert_json_chain_valid(entries: list[dict[str, object]]) -> None:
     """Re-verify SHA-256 chain from exported JSON (same rules as ``verify_chain``)."""
     prev_hash = ""
@@ -176,12 +190,10 @@ def test_audit_export_verify_chain_exits_nonzero_when_tampered(tmp_path: Path) -
 def test_audit_export_help_lists_flags() -> None:
     """``asap audit export --help`` exposes store, db, and format options."""
     runner = CliRunner()
-    # Rich/ Typer help truncates option names when COLUMNS is very small (common on CI).
     result = runner.invoke(
         app,
         ["audit", "export", "--help"],
         catch_exceptions=False,
-        env={"COLUMNS": "120", "LINES": "40"},
     )
     assert result.exit_code == 0
     assert "--store" in result.stdout
