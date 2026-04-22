@@ -130,16 +130,18 @@ See the [CLI reference](docs/cli.md) for `compliance-check` and `audit export` f
 
 ## Version History
 
-- **v1.1** adds OAuth2, WebSocket, Discovery (well-known + Lite Registry), State Storage (SQLite) and Webhooks.
-- **v1.2** adds Ed25519 signed manifests, trust levels, optional mTLS and the [Compliance Harness](https://github.com/adriannoes/asap-protocol/blob/main/asap-compliance/README.md).
-- **v1.3** adds delegation commands (`asap delegation create`, `asap delegation revoke`).
-- **v2.0** adds the Lean Marketplace Web App (Next.js), Lite Registry on GitHub Pages, IssueOps registration, OAuth sign-in for developers, and Verified Badge flow.
-- **v2.1** adds the Consumer SDK (`MarketClient`), optional framework extras (LangChain, CrewAI, LlamaIndex, SmolAgents, OpenClaw, …), and registry UX improvements on PyPI.
-- **v2.1.1** is a patch release: JWT algorithm allowlist, SQLite async bridging, optional Redis-backed rate limits, SSRF hardening in the web app, and related reliability fixes (see [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)).
-- **v2.2** adds per-runtime agent identity, capability-based authorization, SSE streaming (`POST /asap/stream`), `ASAP-Version` negotiation, JSON-RPC batch requests, tamper-evident audit logging, async state stores, and Compliance Harness v2.
-- **v2.2.1** closes the SELF-002 follow-up with **real WebAuthn** attestation/assertion via the opt-in `asap-protocol[webauthn]` extra, ships the `asap compliance-check` and `asap audit export` CLIs, promotes the client SDK `ResolvedAgent.run()` to a typed contract (raises `TypeError` on protocol violation), introduces the `asap.economics.audit.AuditChainBroken` exception for scripted tamper handling, and pins upper bounds on security-sensitive deps (`cryptography`, `authlib`, `joserfc`, `pyjwt`, `webauthn`, `pydantic`) — see [dependency policy](https://github.com/adriannoes/asap-protocol/blob/main/SECURITY.md#dependency-policy) and full notes in the [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md).
+High-level only — see **[Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)** and the **[docs index](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#v11-features-api-reference--guides)** for full notes.
 
-For a structured index of per-version features, see the [docs index](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#v11-features-api-reference--guides).
+| Version | What shipped |
+| :-- | :-- |
+| **v2.2.1** | Opt-in **WebAuthn** (`asap-protocol[webauthn]`) · `asap compliance-check` & `asap audit export` · stricter `ResolvedAgent.run()` · `AuditChainBroken` · [pinned security deps](https://github.com/adriannoes/asap-protocol/blob/main/SECURITY.md#dependency-policy) |
+| **v2.2** | Per-runtime identity & capability auth · SSE `POST /asap/stream` · `ASAP-Version` · JSON-RPC batch · tamper-evident audit · async state stores · Compliance Harness v2 |
+| **v2.1.1** | Patch: JWT allowlist · SQLite async bridge · optional Redis rate limits · web SSRF hardening |
+| **v2.1** | `MarketClient` · framework extras (LangChain, CrewAI, LlamaIndex, …) · registry UX |
+| **v2.0** | Marketplace web app · Lite Registry (GitHub Pages) · IssueOps · OAuth · verification flow |
+| **v1.3** | `asap delegation create` / `revoke` |
+| **v1.2** | Ed25519 manifests · trust levels · optional mTLS · [Compliance Harness](https://github.com/adriannoes/asap-protocol/blob/main/asap-compliance/README.md) |
+| **v1.1** | OAuth2 · WebSocket · discovery (well-known + Lite Registry) · SQLite state · webhooks |
 
 ## 🔭 What's Next?
 
@@ -159,4 +161,4 @@ This project is licensed under the Apache 2.0 License - see the [license](https:
 
 ---
 
-**Built with [Cursor](https://cursor.com/) and [Claude Code](https://claude.com/claude-code)** — primarily Claude Opus 4.7 (1M context) with Cursor Composer 1.5, Gemini 3.1 Pro, and Kimi K2.5 as collaborators.
+**Built with [Cursor](https://cursor.com/)** using Opus 4.6/4.7, Composer 1.5/2.0, Gemini 3.1 Pro and Kimi K2.5.
