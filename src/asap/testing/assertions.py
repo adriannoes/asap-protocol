@@ -8,6 +8,10 @@ Functions:
     assert_task_completed: Assert a TaskResponse or envelope payload indicates
                            task completion (e.g. status completed).
     assert_response_correlates: Assert response envelope correlates to request.
+
+Implementation note: these helpers raise ``AssertionError`` directly instead of using
+the ``assert`` statement so they keep working when the interpreter is invoked with
+``python -O`` (which strips ``assert``). This is the public contract of the module.
 """
 
 from __future__ import annotations
@@ -15,6 +19,10 @@ from __future__ import annotations
 from typing import Any
 
 from asap.models.envelope import Envelope
+
+
+def _fail(message: str) -> None:
+    raise AssertionError(message)
 
 
 def assert_envelope_valid(
@@ -35,19 +43,22 @@ def assert_envelope_valid(
     Raises:
         AssertionError: If any check fails.
     """
-    assert envelope is not None, "Envelope must not be None"  # nosec B101
-    if require_id:
-        assert envelope.id, "Envelope must have a non-empty id"  # nosec B101
-    if require_timestamp:
-        assert envelope.timestamp is not None, "Envelope must have a timestamp"  # nosec B101
-    assert envelope.sender, "Envelope must have a sender"  # nosec B101
-    assert envelope.recipient, "Envelope must have a recipient"  # nosec B101
-    assert envelope.payload_type, "Envelope must have a payload_type"  # nosec B101
-    assert envelope.payload is not None, "Envelope must have a payload"  # nosec B101
-    if allowed_payload_types is not None:
-        assert envelope.payload_type in allowed_payload_types, (  # nosec B101
-            f"payload_type {envelope.payload_type!r} not in {allowed_payload_types}"
-        )
+    if envelope is None:
+        _fail("Envelope must not be None")
+    if require_id and not envelope.id:
+        _fail("Envelope must have a non-empty id")
+    if require_timestamp and envelope.timestamp is None:
+        _fail("Envelope must have a timestamp")
+    if not envelope.sender:
+        _fail("Envelope must have a sender")
+    if not envelope.recipient:
+        _fail("Envelope must have a recipient")
+    if not envelope.payload_type:
+        _fail("Envelope must have a payload_type")
+    if envelope.payload is None:
+        _fail("Envelope must have a payload")
+    if allowed_payload_types is not None and envelope.payload_type not in allowed_payload_types:
+        _fail(f"payload_type {envelope.payload_type!r} not in {allowed_payload_types}")
 
 
 def assert_task_completed(
@@ -71,9 +82,11 @@ def assert_task_completed(
     """
     if isinstance(payload, Envelope):
         payload = payload.payload_dict
-    assert isinstance(payload, dict), "payload must be a dict or Envelope"  # nosec B101
+    if not isinstance(payload, dict):
+        _fail("payload must be a dict or Envelope")
     actual = payload.get(status_key)
-    assert actual == completed_value, f"Expected task status {completed_value!r}, got {actual!r}"  # nosec B101
+    if actual != completed_value:
+        _fail(f"Expected task status {completed_value!r}, got {actual!r}")
 
 
 def assert_response_correlates(
@@ -94,17 +107,20 @@ def assert_response_correlates(
         AssertionError: If request id or response correlation_id is missing or
             they do not match.
     """
-    assert request_envelope.id, "Request envelope must have a non-empty id"  # nosec B101
+    if not request_envelope.id:
+        _fail("Request envelope must have a non-empty id")
     correlation_id = getattr(response_envelope, correlation_id_field, None)
-    assert correlation_id is not None, f"Response envelope must have {correlation_id_field!r}"  # nosec B101
-    assert correlation_id == request_envelope.id, (  # nosec B101
-        f"Response {correlation_id_field!r} {correlation_id!r} does not match "
-        f"request id {request_envelope.id!r}"
-    )
+    if correlation_id is None:
+        _fail(f"Response envelope must have {correlation_id_field!r}")
+    if correlation_id != request_envelope.id:
+        _fail(
+            f"Response {correlation_id_field!r} {correlation_id!r} does not match "
+            f"request id {request_envelope.id!r}"
+        )
 
 
 __all__ = [
     "assert_envelope_valid",
-    "assert_task_completed",
     "assert_response_correlates",
+    "assert_task_completed",
 ]
