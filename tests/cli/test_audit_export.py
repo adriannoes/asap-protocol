@@ -176,7 +176,13 @@ def test_audit_export_verify_chain_exits_nonzero_when_tampered(tmp_path: Path) -
 def test_audit_export_help_lists_flags() -> None:
     """``asap audit export --help`` exposes store, db, and format options."""
     runner = CliRunner()
-    result = runner.invoke(app, ["audit", "export", "--help"], catch_exceptions=False)
+    # Rich/ Typer help truncates option names when COLUMNS is very small (common on CI).
+    result = runner.invoke(
+        app,
+        ["audit", "export", "--help"],
+        catch_exceptions=False,
+        env={"COLUMNS": "120", "LINES": "40"},
+    )
     assert result.exit_code == 0
     assert "--store" in result.stdout
     assert "--db" in result.stdout
