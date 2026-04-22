@@ -42,6 +42,80 @@ and CI baselines.
 
 - **CLI package layout**: Typer subcommands live under `asap.cli` / `src/asap/cli/`
   (replacing the monolithic `cli.py` module); `asap` console script unchanged.
+- **`ResolvedAgent.run()`**: Tightens the contract from "tri-branch dict[str, Any]" to
+  "the TaskResponse.result dict, or empty dict if result is None". A protocol violation
+  (server responds with anything other than a TaskResponse envelope) now raises
+  `TypeError` so it surfaces at the call site instead of silently coercing into a dict.
+  Return type annotation remains `dict[str, Any]`; no caller API change. Closes the
+  deferred follow-up from v2.1 PR-73 review.
+- **Dependency pins**: `cryptography`, `authlib`, `joserfc`, `pyjwt`, `webauthn` (extra),
+  and `pydantic` now carry explicit upper bounds to the next major version so breaking
+  upstream releases can't auto-install. Policy + bump procedure documented in
+  [SECURITY.md §Dependency policy](SECURITY.md#dependency-policy).
+- **ID generation**: `asap.state.stores.sqlite`, `asap.economics.storage`,
+  `asap.economics.sla`, and `asap.integrations.a2h` now generate entity IDs through
+  `asap.models.ids.generate_id()` (ULID) instead of ad-hoc `uuid.uuid4()`. The
+  slowapi storage-URI suffix in `asap.transport.rate_limit` remains `uuid.uuid4().hex`
+  because it is a backend namespace, not a domain identifier; an inline comment
+  documents the distinction.
+- **`asap.economics.storage` aggregate dispatch**: The six-branch `cast(list[UsageAggregate], ...)`
+  clusters in `InMemoryMeteringStorage.aggregate` and `SQLiteMeteringStorage.aggregate` are
+  consolidated into a single `_dispatch_aggregate(events, group_by)` helper. Eight
+  scattered casts become three, all documented in one place.
+- **`asap.transport.server` helper types**: `_validate_envelope` and `_dispatch_to_handler`
+  now return a discriminable `EnvelopeOrError = JSONResponse | tuple[Envelope, str]`
+  union instead of `tuple[Envelope | None, JSONResponse | str]`. Callers narrow via
+  `isinstance(result, JSONResponse)` and no longer need `cast()` at the three call
+  sites. Internal-only refactor; public API unchanged.
+- **`WebAuthnVerifierImpl.start_webauthn_*`**: Returns the full
+  `PublicKeyCredentialCreation/RequestOptions` dict from
+  `webauthn.helpers.options_to_json_dict` (previously a bare base64url
+  challenge). Integrators building a browser adapter get `rp`, `user`,
+  `pubKeyCredParams`, `allowCredentials`, and `userVerification` out of the
+  box and no longer need to hand-assemble the options envelope.
+- **`default_webauthn_verifier()`**: The returned verifier is now cached
+  per-process (keyed by `extra_installed / rp_id / origin`). Pending
+  WebAuthn challenges persist across requests when the defensive fallback in
+  `agent_routes._webauthn_verifier` is hit — previously each fallback call
+  rebuilt an empty `InMemoryWebAuthnCredentialStore`, silently discarding
+  any `start_webauthn_assertion` state. Tests can reset the cache with
+  `asap.auth.self_auth.reset_default_webauthn_verifier_cache()`.
+
+### Fixed
+
+- **Swallowed exceptions in `finish_webauthn_assertion`**: Bare
+  `except Exception:` blocks now catch the specific
+  `InvalidAuthenticationResponse` / `ValueError` / `TypeError` classes and
+  emit structured warnings (`asap.webauthn.assertion.invalid`,
+  `.malformed_challenge`, `.challenge_mismatch`, `.unknown_credential`)
+  via `asap.observability.get_logger` so SIEM rules can detect
+  cloned-authenticator and replay patterns.
+- **`WebAuthnCeremonyError` payload**: Public `detail` is now a stable,
+  PII-free identifier (`webauthn_registration_state_missing`,
+  `webauthn_registration_verification_failed`). `host_id` and the upstream
+  library reason are logged internally instead of leaking into the error
+  surface.
+- **`audit export --verify-chain`**: Replaces fragile string-matching on
+  `"AUDIT_CHAIN_BROKEN"` with a dedicated `asap.economics.audit.AuditChainBroken`
+  exception. Invalid `--since` / `--until` ISO-8601 values now surface as
+  `typer.BadParameter` instead of an unhandled traceback.
+- **CSV export determinism**: `asap audit export --format csv` now writes
+  rows with `lineterminator="\n"` for reproducible diffs on Linux CI.
+- **Test fixtures**: `tests/cli/test_compliance_check.py` uvicorn fixtures
+  now stop the server cooperatively via `server.should_exit = True` +
+  `thread.join`, preventing the leaked-socket flakes flagged under
+  `pytest-xdist` on long suites.
+
+### Known limitations
+
+- **No reference HTTP enrollment route** for the WebAuthn registration
+  ceremony. `WebAuthnVerifierImpl.start_webauthn_registration` /
+  `.finish_webauthn_registration` are Python-only helpers in v2.2.1;
+  integrators must expose their own adapter route (see
+  [docs/security/self-authorization-prevention.md](docs/security/self-authorization-prevention.md#known-limitation-no-reference-http-enrollment-route-in-v221)).
+  A first-class `POST /asap/agent/webauthn/register/{begin,finish}` is
+  tracked for v2.3 (Adoption Multiplier), where new endpoint surface area
+  is permitted.
 
 ---
 

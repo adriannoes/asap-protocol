@@ -157,6 +157,40 @@ Pass a custom `identity_webauthn_verifier` when you need a **durable**
 `WebAuthnCredentialStore` (for example `SQLiteWebAuthnCredentialStore`) or
 non-default `rp_name`.
 
+### Known limitation: no reference HTTP enrollment route in v2.2.1
+
+The reference FastAPI router under `src/asap/transport/agent_routes.py`
+**does not expose** HTTP endpoints for the registration ceremony
+(`start_webauthn_registration` / `finish_webauthn_registration`). In v2.2.1
+those are Python-only helpers on
+`WebAuthnVerifierImpl` (`src/asap/auth/webauthn.py`). That means a
+server booted with `pip install 'asap-protocol[webauthn]'` plus
+`ASAP_WEBAUTHN_RP_ID` / `ASAP_WEBAUTHN_ORIGIN` has a **real verifier** but
+**no built-in enrollment path** — every browser-controlled `register` call
+will return `403 webauthn_required` until at least one credential is
+enrolled by the operator.
+
+Integrators have two options today:
+
+1. **Expose a small adapter route** in your own FastAPI app that calls
+   `impl.start_webauthn_registration(host_id)` and
+   `impl.finish_webauthn_registration(host_id, attestation)` behind Host
+   JWT authentication. The helpers now return the full
+   `PublicKeyCredentialCreationOptions` / `PublicKeyCredentialRequestOptions`
+   dict produced by `webauthn.helpers.options_to_json_dict`, ready to ship
+   to `navigator.credentials.create` / `.get`.
+2. **Keep the placeholder verifier** by not setting `ASAP_WEBAUTHN_RP_ID` /
+   `ASAP_WEBAUTHN_ORIGIN` (and/or not installing the `[webauthn]` extra).
+   High-risk flows that need WebAuthn should then opt in only when a
+   custom `identity_webauthn_verifier` backed by the integrator's durable
+   store is passed to `create_app`.
+
+A first-class `POST /asap/agent/webauthn/register/{begin,finish}` router is
+tracked as follow-up scope for **v2.3 (Adoption Multiplier)**, where new
+endpoint surface area is permitted. It is deliberately **out of scope** for
+v2.2.1 which is strictly a carry-over patch (see
+[PRD v2.2.1 §5 — Non-Goals](../../.cursor/product-specs/prd/prd-v2.2.1-patch.md)).
+
 ### Fallback when the extra is not installed (or env is incomplete)
 
 `default_webauthn_verifier()` returns `PlaceholderWebAuthnVerifier` when:
