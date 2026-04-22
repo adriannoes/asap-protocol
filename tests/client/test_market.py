@@ -296,6 +296,89 @@ async def test_resolve_429_then_200_succeeds() -> None:
 
 
 @pytest.mark.asyncio
+async def test_run_raises_type_error_when_server_returns_non_task_response() -> None:
+    """PR-73 follow-up contract: non-``TaskResponse`` payload must surface as ``TypeError``.
+
+    This closes the v2.2.1 tightening where ``run()`` used to coerce any payload into a dict
+    via a three-branch fallback; now a protocol violation fails loudly at the call site.
+    """
+    from asap.models.payloads import TaskUpdate
+
+    # Server mistakenly responds with a TaskUpdate instead of TaskResponse — valid payload
+    # type-wise, but not the contract ``run()`` expects.
+    wrong_payload = TaskUpdate(
+        task_id="task-wrong",
+        update_type="progress",
+        status="working",
+    )
+    response_envelope = AsyncMock()
+    response_envelope.payload = wrong_payload
+
+    mock_send = AsyncMock(return_value=response_envelope)
+    mock_transport = AsyncMock()
+    mock_transport.send = mock_send
+    mock_transport.__aenter__ = AsyncMock(return_value=mock_transport)
+    mock_transport.__aexit__ = AsyncMock(return_value=None)
+
+    with patch("asap.client.market.ASAPClient", return_value=mock_transport):
+        client = MarketClient()
+        agent = ResolvedAgent(manifest=_manifest(), entry=_registry_entry(), client=client)
+        with pytest.raises(TypeError, match="expected TaskResponse"):
+            await agent.run({"conversation_id": "c", "skill_id": "echo", "input": {}})
+
+
+@pytest.mark.asyncio
+async def test_run_raises_value_error_when_entry_has_no_http_endpoint() -> None:
+    """``run()`` refuses to dispatch when the registry entry lacks an HTTP endpoint."""
+    bad_entry = RegistryEntry(
+        id=TEST_URN,
+        name="Test Agent",
+        description="Test",
+        endpoints={"manifest": TEST_MANIFEST_URL},  # no "http" key
+        skills=[],
+        asap_version="0.1",
+    )
+    client = MarketClient()
+    agent = ResolvedAgent(manifest=_manifest(), entry=bad_entry, client=client)
+    with pytest.raises(ValueError, match="has no 'http' endpoint"):
+        await agent.run({"conversation_id": "c", "skill_id": "echo", "input": {}})
+
+
+def test_manifest_url_from_entry_requires_manifest_or_http_endpoint() -> None:
+    """Resolving a manifest URL fails explicitly when the registry entry is under-populated."""
+    from asap.client.market import _manifest_url_from_entry
+
+    bad_entry = RegistryEntry(
+        id=TEST_URN,
+        name="Test Agent",
+        description="Test",
+        endpoints={},
+        skills=[],
+        asap_version="0.1",
+    )
+    with pytest.raises(ValueError, match="no 'manifest' or 'http' endpoint"):
+        _manifest_url_from_entry(bad_entry)
+
+
+def test_manifest_url_from_entry_derives_from_http_when_manifest_missing() -> None:
+    """When only ``http`` is set, the well-known manifest path is appended."""
+    from asap.client.market import _manifest_url_from_entry
+    from asap.discovery.wellknown import WELLKNOWN_MANIFEST_PATH
+
+    http_only = RegistryEntry(
+        id=TEST_URN,
+        name="Test Agent",
+        description="Test",
+        endpoints={"http": "https://agent.example.com/asap"},
+        skills=[],
+        asap_version="0.1",
+    )
+    assert _manifest_url_from_entry(http_only) == (
+        "https://agent.example.com/asap" + WELLKNOWN_MANIFEST_PATH
+    )
+
+
+@pytest.mark.asyncio
 async def test_resolve_429_four_times_raises() -> None:
     resp_429 = httpx.Response(
         429,
