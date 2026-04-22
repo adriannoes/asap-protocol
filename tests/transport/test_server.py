@@ -474,8 +474,8 @@ class TestASAPRequestHandlerHelpers:
         )
         result = handler._validate_envelope(ctx)
 
+        assert not isinstance(result, JSONResponse)
         envelope_result, payload_type = result
-        assert envelope_result is not None
         assert isinstance(envelope_result, Envelope)
         assert envelope_result.payload_type == "task.request"
         assert payload_type == "task.request"
@@ -500,9 +500,8 @@ class TestASAPRequestHandlerHelpers:
         )
         result = handler._validate_envelope(ctx)
 
-        envelope_result, error_response = result
-        assert envelope_result is None
-        assert isinstance(error_response, JSONResponse)
+        assert isinstance(result, JSONResponse)
+        error_response = result
         assert error_response.status_code == 200
 
         content = bytes(error_response.body).decode()
@@ -528,9 +527,8 @@ class TestASAPRequestHandlerHelpers:
         )
         result = handler._validate_envelope(ctx)
 
-        envelope_result, error_response = result
-        assert envelope_result is None
-        assert isinstance(error_response, JSONResponse)
+        assert isinstance(result, JSONResponse)
+        error_response = result
 
         content = bytes(error_response.body).decode()
         error_data = json.loads(content)
@@ -556,9 +554,8 @@ class TestASAPRequestHandlerHelpers:
         )
         result = handler._validate_envelope(ctx)
 
-        envelope_result, error_response = result
-        assert envelope_result is None
-        assert isinstance(error_response, JSONResponse)
+        assert isinstance(result, JSONResponse)
+        error_response = result
 
         content = bytes(error_response.body).decode()
         error_data = json.loads(content)
@@ -589,9 +586,8 @@ class TestASAPRequestHandlerHelpers:
         )
         result = handler._validate_envelope(ctx)
 
-        envelope_result, error_response = result
-        assert envelope_result is None
-        assert isinstance(error_response, JSONResponse)
+        assert isinstance(result, JSONResponse)
+        error_response = result
 
         content = bytes(error_response.body).decode()
         error_data = json.loads(content)
@@ -645,8 +641,8 @@ class TestASAPRequestHandlerHelpers:
         )
         result = await handler._dispatch_to_handler(envelope, ctx)
 
+        assert not isinstance(result, JSONResponse)
         response_envelope, payload_type = result
-        assert response_envelope is not None
         assert isinstance(response_envelope, Envelope)
         assert response_envelope.payload_type == "task.response"
         assert payload_type == "task.request"
@@ -679,9 +675,8 @@ class TestASAPRequestHandlerHelpers:
         )
         result = await handler._dispatch_to_handler(envelope, ctx)
 
-        response_envelope, error_response = result
-        assert response_envelope is None
-        assert isinstance(error_response, JSONResponse)
+        assert isinstance(result, JSONResponse)
+        error_response = result
 
         content = bytes(error_response.body).decode()
         error_data = json.loads(content)

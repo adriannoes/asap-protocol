@@ -184,6 +184,183 @@ def test_audit_export_help_lists_flags() -> None:
     assert "--verify-chain" in result.stdout
 
 
+def test_audit_export_invalid_format_rejected(sqlite_audit_db: Path) -> None:
+    """``--format xml`` is rejected up-front with a BadParameter exit."""
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        [
+            "audit",
+            "export",
+            "--store",
+            "sqlite",
+            "--db",
+            str(sqlite_audit_db),
+            "--format",
+            "xml",
+        ],
+    )
+    assert result.exit_code != 0
+    assert "must be 'json', 'csv', or 'jsonl'" in (result.stderr + result.stdout)
+
+
+def test_audit_export_invalid_limit_rejected(sqlite_audit_db: Path) -> None:
+    """``--limit 0`` fails validation before any IO."""
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        [
+            "audit",
+            "export",
+            "--store",
+            "sqlite",
+            "--db",
+            str(sqlite_audit_db),
+            "--limit",
+            "0",
+        ],
+    )
+    assert result.exit_code != 0
+    assert "at least 1" in (result.stderr + result.stdout)
+
+
+def test_audit_export_unknown_store_rejected(tmp_path: Path) -> None:
+    """``--store postgres`` surfaces a BadParameter (only sqlite/memory are supported)."""
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        [
+            "audit",
+            "export",
+            "--store",
+            "postgres",
+            "--db",
+            str(tmp_path / "x.db"),
+            "--format",
+            "json",
+        ],
+    )
+    assert result.exit_code != 0
+    assert "sqlite" in (result.stderr + result.stdout).lower()
+
+
+def test_audit_export_sqlite_requires_db(tmp_path: Path) -> None:
+    """``--store sqlite`` without ``--db`` is a configuration error."""
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        ["audit", "export", "--store", "sqlite", "--format", "json"],
+    )
+    assert result.exit_code != 0
+    assert "--db" in (result.stderr + result.stdout)
+
+
+def test_audit_export_memory_store_returns_empty_list() -> None:
+    """``--store memory`` prints an empty JSON array (fresh per-process store)."""
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        ["audit", "export", "--store", "memory", "--format", "json"],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0
+    assert json.loads(result.stdout.strip()) == []
+
+
+def test_audit_export_since_until_trailing_z_parsed(sqlite_audit_db: Path) -> None:
+    """``--since`` / ``--until`` accept trailing-Z ISO-8601 (treated as UTC)."""
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        [
+            "audit",
+            "export",
+            "--store",
+            "sqlite",
+            "--db",
+            str(sqlite_audit_db),
+            "--format",
+            "json",
+            "--since",
+            "2026-04-01T12:00:00Z",
+            "--until",
+            "2026-04-01T12:00:00Z",
+        ],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0
+    data = json.loads(result.stdout.strip())
+    assert len(data) == 1
+    assert data[0]["operation"] == "fixture.op.0"
+
+
+def test_audit_export_filter_by_urn_returns_matching_entries(sqlite_audit_db: Path) -> None:
+    """``--urn`` filters rows to a single agent."""
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        [
+            "audit",
+            "export",
+            "--store",
+            "sqlite",
+            "--db",
+            str(sqlite_audit_db),
+            "--format",
+            "json",
+            "--urn",
+            "urn:asap:agent:cli-fixture",
+        ],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0
+    data = json.loads(result.stdout.strip())
+    assert len(data) == 3
+    assert all(row["agent_urn"] == "urn:asap:agent:cli-fixture" for row in data)
+
+
+def test_audit_export_csv_uses_unix_line_endings(sqlite_audit_db: Path) -> None:
+    """CSV output is deterministic on Linux/mac CI — no embedded CRLF."""
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        [
+            "audit",
+            "export",
+            "--store",
+            "sqlite",
+            "--db",
+            str(sqlite_audit_db),
+            "--format",
+            "csv",
+        ],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0
+    assert "\r\n" not in result.stdout
+
+
+def test_audit_export_invalid_since_rejected(sqlite_audit_db: Path) -> None:
+    """Unparseable ISO-8601 in ``--since`` fails with a ValueError surfaced as BadParameter."""
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        [
+            "audit",
+            "export",
+            "--store",
+            "sqlite",
+            "--db",
+            str(sqlite_audit_db),
+            "--format",
+            "json",
+            "--since",
+            "not-a-date",
+        ],
+    )
+    assert result.exit_code != 0
+
+
 def test_audit_export_fixture_ids_match_store(tmp_path: Path) -> None:
     """Exported ``id`` values match the sealed entries from the fixture."""
     db_file = tmp_path / "audit_ids.db"

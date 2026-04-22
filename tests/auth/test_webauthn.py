@@ -177,8 +177,11 @@ async def test_finish_registration_validates_none_attestation() -> None:
 
     store = InMemoryWebAuthnCredentialStore()
     impl = _verifier_for_vectors(store)
-    challenge = await impl.start_webauthn_registration("host-a")
-    assert challenge == _REG_CHALLENGE_B64
+    options = await impl.start_webauthn_registration("host-a")
+    assert isinstance(options, dict)
+    assert options["challenge"] == _REG_CHALLENGE_B64
+    assert options["rp"]["id"] == _RP_ID
+    assert any(p.get("type") == "public-key" for p in options["pubKeyCredParams"])
 
     cred_id = await impl.finish_webauthn_registration("host-a", _NONE_ATTESTATION)
     assert cred_id == _EXPECTED_CREDENTIAL_ID_B64
@@ -196,8 +199,10 @@ async def test_finish_assertion_validates_ec2_response() -> None:
     pk = base64url_to_bytes(_ASSERTION_CREDENTIAL_PUBLIC_KEY_B64)
     await store.save_credential("host-a", cid, pk, _ASSERTION_SIGN_COUNT_BEFORE)
 
-    challenge = await impl.start_webauthn_assertion("host-a")
-    assert challenge == _AUTH_CHALLENGE_B64
+    options = await impl.start_webauthn_assertion("host-a")
+    assert isinstance(options, dict)
+    assert options["challenge"] == _AUTH_CHALLENGE_B64
+    assert options["rpId"] == _RP_ID
 
     ok = await impl.finish_webauthn_assertion("host-a", _ASSERTION_EC2)
     assert ok is True
@@ -331,8 +336,9 @@ async def test_start_assertion_with_user_verification_required() -> None:
         authentication_challenge=base64url_to_bytes(_AUTH_CHALLENGE_B64),
     )
     await store.save_credential("host-a", b"cid", b"pk", 1)
-    ch = await impl.start_webauthn_assertion("host-a", user_verification_required=True)
-    assert ch == _AUTH_CHALLENGE_B64
+    options = await impl.start_webauthn_assertion("host-a", user_verification_required=True)
+    assert options["challenge"] == _AUTH_CHALLENGE_B64
+    assert options["userVerification"] == "required"
 
 
 @pytest.mark.asyncio

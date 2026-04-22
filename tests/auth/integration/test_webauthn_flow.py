@@ -39,8 +39,8 @@ async def test_webauthn_verifier_registration_then_assertion_smoke() -> None:
     store = InMemoryWebAuthnCredentialStore()
     impl = _verifier_for_vectors(store)
 
-    reg_challenge = await impl.start_webauthn_registration("host-reg")
-    assert reg_challenge == _REG_CHALLENGE_B64
+    reg_options = await impl.start_webauthn_registration("host-reg")
+    assert reg_options["challenge"] == _REG_CHALLENGE_B64
     cred_id_b64 = await impl.finish_webauthn_registration("host-reg", _NONE_ATTESTATION)
     assert cred_id_b64 == _EXPECTED_CREDENTIAL_ID_B64
 
@@ -48,8 +48,8 @@ async def test_webauthn_verifier_registration_then_assertion_smoke() -> None:
     pk = base64url_to_bytes(_ASSERTION_CREDENTIAL_PUBLIC_KEY_B64)
     await store.save_credential("host-as", cid, pk, _ASSERTION_SIGN_COUNT_BEFORE)
 
-    auth_challenge = await impl.start_webauthn_assertion("host-as")
-    assert auth_challenge == _AUTH_CHALLENGE_B64
+    auth_options = await impl.start_webauthn_assertion("host-as")
+    assert auth_options["challenge"] == _AUTH_CHALLENGE_B64
     assert await impl.finish_webauthn_assertion("host-as", _ASSERTION_EC2) is True
 
     row = await store.get_credential("host-as", cid)

@@ -44,25 +44,26 @@ def _wait_for_port(host: str, port: int, timeout: float = 10.0) -> bool:
     return False
 
 
-@pytest.fixture
-def compliance_base_url() -> Generator[str, None, None]:
-    """Serve ``make_compliance_test_app()`` on loopback; yield HTTP base URL."""
+def _serve_with_cooperative_shutdown(fastapi_app: FastAPI, port: int) -> Generator[str, None, None]:
+    """Run ``fastapi_app`` on ``127.0.0.1:port`` and stop uvicorn on fixture teardown.
+
+    The server's ``should_exit`` flag plus ``thread.join`` prevents the leaked-socket /
+    leaked-coroutine pattern flagged in the PR-127 review (§2.5).
+    """
     import asyncio
 
     import uvicorn
 
-    port = _free_port()
-    fastapi_app = make_compliance_test_app()
+    config = uvicorn.Config(
+        fastapi_app,
+        host="127.0.0.1",
+        port=port,
+        log_level="warning",
+    )
+    server = uvicorn.Server(config)
     server_started = threading.Event()
 
     def run_server() -> None:
-        config = uvicorn.Config(
-            fastapi_app,
-            host="127.0.0.1",
-            port=port,
-            log_level="warning",
-        )
-        server = uvicorn.Server(config)
         server_started.set()
         asyncio.run(server.serve())
 
@@ -73,7 +74,19 @@ def compliance_base_url() -> Generator[str, None, None]:
     if not _wait_for_port("127.0.0.1", port, timeout=10.0):
         pytest.fail("Server port did not become reachable in time")
 
-    yield f"http://127.0.0.1:{port}"
+    try:
+        yield f"http://127.0.0.1:{port}"
+    finally:
+        server.should_exit = True
+        thread.join(timeout=5.0)
+
+
+@pytest.fixture
+def compliance_base_url() -> Generator[str, None, None]:
+    """Serve ``make_compliance_test_app()`` on loopback; yield HTTP base URL."""
+    port = _free_port()
+    fastapi_app = make_compliance_test_app()
+    yield from _serve_with_cooperative_shutdown(fastapi_app, port)
 
 
 def _minimal_non_asap_app() -> FastAPI:
@@ -91,33 +104,9 @@ def _minimal_non_asap_app() -> FastAPI:
 @pytest.fixture
 def failing_agent_base_url() -> Generator[str, None, None]:
     """Loopback server that is not an ASAP agent (low compliance score)."""
-    import asyncio
-
-    import uvicorn
-
     port = _free_port()
     fastapi_app = _minimal_non_asap_app()
-    server_started = threading.Event()
-
-    def run_server() -> None:
-        config = uvicorn.Config(
-            fastapi_app,
-            host="127.0.0.1",
-            port=port,
-            log_level="warning",
-        )
-        server = uvicorn.Server(config)
-        server_started.set()
-        asyncio.run(server.serve())
-
-    thread = threading.Thread(target=run_server, daemon=True)
-    thread.start()
-    if not server_started.wait(timeout=5.0):
-        pytest.fail("Uvicorn did not start in time")
-    if not _wait_for_port("127.0.0.1", port, timeout=10.0):
-        pytest.fail("Server port did not become reachable in time")
-
-    yield f"http://127.0.0.1:{port}"
+    yield from _serve_with_cooperative_shutdown(fastapi_app, port)
 
 
 class TestComplianceCheckCli:
@@ -195,3 +184,144 @@ class TestComplianceCheckCli:
         assert result.exit_code == 2, result.stdout + result.stderr
         err = _strip_ansi(result.stderr)
         assert "connect" in err.lower() or "Could not connect" in err
+
+    def test_invalid_output_format_rejected(self) -> None:
+        """``--output yaml`` (unsupported) fails validation before any IO."""
+        runner = CliRunner()
+        result = runner.invoke(
+            app,
+            ["compliance-check", "--url", "http://127.0.0.1:1", "--output", "yaml"],
+        )
+        assert result.exit_code != 0
+        assert "must be 'text' or 'json'" in (result.stdout + result.stderr)
+
+    def test_zero_or_negative_timeout_rejected(self) -> None:
+        """``--timeout 0`` is rejected as BadParameter."""
+        runner = CliRunner()
+        result = runner.invoke(
+            app,
+            ["compliance-check", "--url", "http://127.0.0.1:1", "--timeout", "0"],
+        )
+        assert result.exit_code != 0
+        assert "must be positive" in (result.stdout + result.stderr)
+
+    def test_format_alias_accepts_json(self, compliance_base_url: str) -> None:
+        """``--format json`` is accepted as an alias for ``--output json``."""
+        runner = CliRunner()
+        result = runner.invoke(
+            app,
+            ["compliance-check", "--url", compliance_base_url, "--format", "json"],
+        )
+        assert result.exit_code == 0, result.stdout + result.stderr
+        data = json.loads(_strip_ansi(result.stdout.strip()))
+        assert "score" in data
+
+    def test_timeout_maps_to_exit_two(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """``httpx.TimeoutException`` during the harness run exits 2 with a helpful message."""
+        import httpx
+
+        from asap.cli import compliance_check as mod
+
+        async def _raise_timeout(*_args: object, **_kwargs: object) -> ComplianceReport:
+            raise httpx.TimeoutException("simulated")
+
+        monkeypatch.setattr(mod, "run_compliance_harness_v2_from_url", _raise_timeout)
+        runner = CliRunner()
+        result = runner.invoke(
+            app,
+            ["compliance-check", "--url", "http://127.0.0.1:1", "--output", "text"],
+        )
+        assert result.exit_code == 2, result.stdout + result.stderr
+        assert "timed out" in _strip_ansi(result.stderr).lower()
+
+    def test_asap_version_header_forwarded(
+        self, monkeypatch: pytest.MonkeyPatch, compliance_base_url: str
+    ) -> None:
+        """``--asap-version`` is propagated as the default ``ASAP-Version`` header."""
+        from asap.cli import compliance_check as mod
+
+        seen: dict[str, object] = {}
+
+        async def _spy(
+            url: str,
+            *,
+            request_timeout: float,
+            default_headers: dict[str, str] | None,
+        ) -> ComplianceReport:
+            seen["url"] = url
+            seen["timeout"] = request_timeout
+            seen["headers"] = default_headers
+            from datetime import datetime, timezone
+
+            return ComplianceReport(
+                version="2.0",
+                timestamp=datetime.now(timezone.utc),
+                score=1.0,
+                summary="ok",
+                categories_run=[],
+                checks=[],
+            )
+
+        monkeypatch.setattr(mod, "run_compliance_harness_v2_from_url", _spy)
+        runner = CliRunner()
+        result = runner.invoke(
+            app,
+            [
+                "compliance-check",
+                "--url",
+                compliance_base_url,
+                "--output",
+                "json",
+                "--asap-version",
+                "2.2",
+            ],
+        )
+        assert result.exit_code == 0, result.stdout + result.stderr
+        assert seen["headers"] == {"ASAP-Version": "2.2"}
+
+    def test_generic_request_error_maps_to_exit_two(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Non-connect/timeout transport errors still exit 2 with a class-named message."""
+        import httpx
+
+        from asap.cli import compliance_check as mod
+
+        async def _raise_req(*_args: object, **_kwargs: object) -> ComplianceReport:
+            raise httpx.ReadError("simulated read error")
+
+        monkeypatch.setattr(mod, "run_compliance_harness_v2_from_url", _raise_req)
+        runner = CliRunner()
+        result = runner.invoke(
+            app,
+            ["compliance-check", "--url", "http://127.0.0.1:1", "--output", "text"],
+        )
+        assert result.exit_code == 2, result.stdout + result.stderr
+        assert "ReadError" in _strip_ansi(result.stderr)
+
+    def test_text_output_renders_human_readable_report(self, compliance_base_url: str) -> None:
+        """``--output text`` prints the harness header + per-check PASS/FAIL list."""
+        runner = CliRunner()
+        result = runner.invoke(
+            app,
+            ["compliance-check", "--url", compliance_base_url, "--output", "text"],
+        )
+        assert result.exit_code == 0, result.stdout + result.stderr
+        body = _strip_ansi(result.stdout)
+        assert "Compliance Harness v2" in body
+        assert "Score:" in body
+        assert "[PASS]" in body or "[FAIL]" in body
+
+    def test_os_error_maps_to_exit_two(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A raw OSError from the harness (e.g., DNS failure) surfaces as exit 2."""
+        from asap.cli import compliance_check as mod
+
+        async def _raise_os(*_args: object, **_kwargs: object) -> ComplianceReport:
+            raise OSError("simulated dns failure")
+
+        monkeypatch.setattr(mod, "run_compliance_harness_v2_from_url", _raise_os)
+        runner = CliRunner()
+        result = runner.invoke(
+            app,
+            ["compliance-check", "--url", "http://127.0.0.1:1", "--output", "text"],
+        )
+        assert result.exit_code == 2, result.stdout + result.stderr
+        assert "Transport error" in _strip_ansi(result.stderr)
