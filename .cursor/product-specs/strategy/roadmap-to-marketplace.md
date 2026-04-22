@@ -2,10 +2,15 @@
 
 > **Evolution Path**: v1.0.0 → v2.0.0 ✅ Released → v2.1.0 ✅ Released → v2.1.1 ✅ Released → v2.2.0 ✅ Released
 >
-> **Status**: v2.2.0 RELEASED — Next focus: v2.3.0 Scale (see [prd-v2.3-scale.md](../prd/prd-v2.3-scale.md))
-> **Horizon**: v2.3.0 Scale, v2.4.0 Adoption, v3.0.0 Economy
+> **Status**: v2.2.0 RELEASED — Next focus: **v2.2.1 patch** (carry-over) → **v2.3.0 Adoption Multiplier** (OpenAPI + TS SDK + Auto-Reg)
+> **Horizon**: v2.2.1 patch, v2.3.0 Adoption Multiplier, v2.4.0 Spec & Interop, v3.0.0 Economy
 > **Created**: 2026-01-30
-> **Updated**: 2026-04-16
+> **Updated**: 2026-04-17
+>
+> **2026-04-17 update**: After v2.2.0 audit (38/38 MUST + 17/18 SHOULD shipped against PRs #92, #102, #105, #106, #110, #115, #121, #122; ADR-019-unified-versioning published), the roadmap was **rebalanced**:
+> - v2.3 was rescoped from "Scale & Registry" to **"Adoption Multiplier"** because its 500-agent trigger remains unmet (current: 120 agents). New v2.3 pulls OpenAPI Adapter forward from v2.4 and combines it with TypeScript SDK + Auto-Registration to *generate* the agent volume the original v2.3 was waiting on.
+> - v2.4 was rescoped from "Adoption & Integration" to **"Spec & Interop"** centered on MCP Auth Bridge, Formal Specification, Capability-Aware Introspection, and Privacy Considerations.
+> - Registry API Backend (PostgreSQL), Intent-Based Search, Orchestration Primitives, and DeepEval remain in the deferred backlog with explicit return-triggers.
 
 ---
 

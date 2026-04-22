@@ -7,7 +7,7 @@
 
 > A production-ready protocol for agent-to-agent communication and task coordination.
 
-**Quick Info**: `v2.2.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
+**Quick Info**: `v2.2.1` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
 
 > 🚀 **Live now** our [**agentic marketplace**](https://asap-protocol.vercel.app/) — browse agents, register yours, request verification.
 
@@ -30,7 +30,7 @@ For simple point-to-point communication, a basic HTTP API might suffice; ASAP sh
 - **MCP integration** — Tool execution and coordination in a single envelope.
 - **Observable** — `trace_id` and `correlation_id` for debugging.
 - **Security** — Bearer auth, OAuth2/JWT, Ed25519 signed manifests, optional mTLS, replay prevention, HTTPS, rate limiting. [Security Model](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/v1.1-security-model.md) (trust limits, Custom Claims).
-- **Identity & capabilities (v2.2)** — Per-runtime Host/Agent JWTs, capability grants with constraints (`max`, `min`, `in`, `not_in`), approval flows (device authorization / CIBA-style), optional WebAuthn for high-risk registration.
+- **Identity & capabilities (v2.2, WebAuthn real in v2.2.1)** — Per-runtime Host/Agent JWTs, capability grants with constraints (`max`, `min`, `in`, `not_in`), approval flows (device authorization / CIBA-style), real WebAuthn attestation/assertion for high-risk registration (opt-in via `asap-protocol[webauthn]`).
 - **Streaming & wire protocol (v2.2)** — `POST /asap/stream` (SSE / `TaskStream`), JSON-RPC 2.0 batch on `POST /asap`, `ASAP-Version` negotiation, tamper-evident audit logging, Compliance Harness v2.
 - **Economics** — Usage metering, delegation tokens, SLA framework with breach alerts.
 
@@ -114,6 +114,22 @@ See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/
 
 ## CLI
 
+```bash
+asap --version                                    # Show version
+asap list-schemas                                 # List all available schemas
+asap export-schemas                               # Export JSON schemas to file
+asap compliance-check --url https://agent.example # Compliance Harness v2 (HTTP(S))
+asap audit export --store memory --format json    # Export audit log (stdout)
+asap keys generate -o key.pem                     # Generate Ed25519 keypair
+asap manifest sign -k key.pem manifest.json       # Sign manifest
+asap manifest verify signed.json                  # Verify signature
+asap manifest info signed.json                    # Show trust level
+```
+
+See the [CLI reference](docs/cli.md) for `compliance-check` and `audit export` flag details, the [CI compliance gate](docs/ci-compliance.md) for wiring `compliance-check` into GitHub Actions, the [audit export guide](docs/audit.md), [Identity Signing](docs/guides/identity-signing.md), or run `asap --help` for the full command surface.
+
+## Version History
+
 - **v1.1** adds OAuth2, WebSocket, Discovery (well-known + Lite Registry), State Storage (SQLite) and Webhooks.
 - **v1.2** adds Ed25519 signed manifests, trust levels, optional mTLS and the [Compliance Harness](https://github.com/adriannoes/asap-protocol/blob/main/asap-compliance/README.md).
 - **v1.3** adds delegation commands (`asap delegation create`, `asap delegation revoke`).
@@ -121,20 +137,9 @@ See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/
 - **v2.1** adds the Consumer SDK (`MarketClient`), optional framework extras (LangChain, CrewAI, LlamaIndex, SmolAgents, OpenClaw, …), and registry UX improvements on PyPI.
 - **v2.1.1** is a patch release: JWT algorithm allowlist, SQLite async bridging, optional Redis-backed rate limits, SSRF hardening in the web app, and related reliability fixes (see [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)).
 - **v2.2** adds per-runtime agent identity, capability-based authorization, SSE streaming (`POST /asap/stream`), `ASAP-Version` negotiation, JSON-RPC batch requests, tamper-evident audit logging, async state stores, and Compliance Harness v2.
+- **v2.2.1** closes the SELF-002 follow-up with **real WebAuthn** attestation/assertion via the opt-in `asap-protocol[webauthn]` extra, ships the `asap compliance-check` and `asap audit export` CLIs, promotes the client SDK `ResolvedAgent.run()` to a typed contract (raises `TypeError` on protocol violation), introduces the `asap.economics.audit.AuditChainBroken` exception for scripted tamper handling, and pins upper bounds on security-sensitive deps (`cryptography`, `authlib`, `joserfc`, `pyjwt`, `webauthn`, `pydantic`) — see [dependency policy](https://github.com/adriannoes/asap-protocol/blob/main/SECURITY.md#dependency-policy) and full notes in the [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md).
 
-```bash
-asap --version                                    # Show version
-asap list-schemas                                 # List all available schemas
-asap export-schemas                               # Export JSON schemas to file
-asap keys generate -o key.pem                     # Generate Ed25519 keypair
-asap manifest sign -k key.pem manifest.json       # Sign manifest
-asap manifest verify signed.json                  # Verify signature
-asap manifest info signed.json                    # Show trust level
-```
-
-See [CLI reference](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/identity-signing.md) or run `asap --help`.
-
-See [docs index](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#v11-features-api-reference--guides) and [Identity Signing](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/identity-signing.md) for details.
+For a structured index of per-version features, see the [docs index](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#v11-features-api-reference--guides).
 
 ## 🔭 What's Next?
 
@@ -154,4 +159,4 @@ This project is licensed under the Apache 2.0 License - see the [license](https:
 
 ---
 
-**Built with [Cursor](https://cursor.com/)** using Composer 1.5, Claude Opus 4.6, Gemini 3.1 Pro and Kimi K2.5.
+**Built with [Cursor](https://cursor.com/) and [Claude Code](https://claude.com/claude-code)** — primarily Claude Opus 4.7 (1M context) with Cursor Composer 1.5, Gemini 3.1 Pro, and Kimi K2.5 as collaborators.

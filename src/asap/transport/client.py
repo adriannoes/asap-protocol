@@ -34,7 +34,7 @@ from __future__ import annotations
 import asyncio
 import itertools
 import json
-import random
+import secrets
 import re
 import threading
 import time
@@ -449,7 +449,7 @@ class ASAPClient:
         delay = min(delay, self.max_delay)
 
         if self.jitter:
-            jitter_amount: float = random.uniform(0, delay * 0.1)  # nosec B311
+            jitter_amount: float = secrets.SystemRandom().uniform(0, delay * 0.1)
             delay += jitter_amount
 
         return float(delay)
@@ -761,7 +761,10 @@ class ASAPClient:
                 if self._auth_token:
                     headers["Authorization"] = f"Bearer {self._auth_token}"
 
-                assert self._client is not None  # HTTP path: __aenter__ set it  # nosec B101
+                if self._client is None:
+                    raise RuntimeError(
+                        "ASAPClient must be used as an async context manager before sending"
+                    )
                 response = await self._client.post(
                     f"{self.base_url}/asap",
                     headers=headers,
@@ -1200,7 +1203,10 @@ class ASAPClient:
         if self._auth_token:
             headers["Authorization"] = f"Bearer {self._auth_token}"
 
-        assert self._client is not None  # nosec B101
+        if self._client is None:
+            raise RuntimeError(
+                "ASAPClient must be used as an async context manager before streaming"
+            )
         async with self._client.stream(
             "POST",
             f"{self.base_url}/asap/stream",

@@ -19,6 +19,14 @@ from asap.models.base import ASAPBaseModel
 from asap.models.ids import generate_id
 
 
+class AuditChainBroken(Exception):
+    """Raised when an audit hash chain fails :meth:`AuditStore.verify_chain`.
+
+    Carrying a dedicated type avoids fragile string-matching in CLI error handling
+    (see ``asap audit export --verify-chain``).
+    """
+
+
 class AuditEntry(ASAPBaseModel):
     """A single tamper-evident audit log entry.
 

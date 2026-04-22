@@ -65,6 +65,8 @@ async def get_with_429_retry(
             max_retries=max_retries,
         )
         await asyncio.sleep(_delay_seconds_for_429(resp, attempt))
-    # Type narrowing for mypy only; unreachable (loop returns or raises on final 429).
-    assert resp is not None  # nosec B101
+    # Loop always returns or raises on final 429; this branch is unreachable in practice,
+    # but surface it as a real error so ``python -O`` cannot silently turn the invariant off.
+    if resp is None:
+        raise RuntimeError("get_with_429_retry exhausted retries without a response")
     return resp

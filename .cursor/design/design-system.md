@@ -6,7 +6,7 @@
 - **Aesthetics**: Minimalist, high contrast, focus on typography and clear visual hierarchy.
 
 ## 2. Technology Stack
-- **Framework**: Next.js 15 (App Router) + React 19
+- **Framework**: Next.js 16 (App Router) + React 19
 - **Styling**: Tailwind CSS v4
 - **UI Components**: Shadcn/UI (Style: `new-york`)
 - **Animation**: Framer Motion (`framer-motion`)

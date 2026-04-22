@@ -1,6 +1,6 @@
 [project]
 name = "asap-protocol"
-version = "2.2.0"
+version = "2.2.1"
 description = "Async Simple Agent Protocol - A streamlined protocol for agent-to-agent communication"
 authors = [
     {name = "ASAP Protocol Contributors"}
@@ -22,14 +22,15 @@ classifiers = [
 
 dependencies = [
     "aiosqlite>=0.20",
-    "cryptography>=46.0.7",
+    # Upper-bound majors per SECURITY.md dependency policy.
+    "cryptography>=46.0.7,<47",
     "jcs>=0.2.0",
     "jsonschema>=4.23.0",
-    "pydantic>=2.12.5",
+    "pydantic>=2.12.5,<3",
     "fastapi>=0.128.0",
     "httpx[http2]>=0.28.1",
-    "authlib>=1.6.11",
-    "joserfc>=1.6.3",
+    "authlib>=1.6.11,<2",
+    "joserfc>=1.6.3,<2",
     "uvicorn>=0.34",
     "python-ulid>=3.0",
     "packaging>=25.0",
@@ -72,6 +73,10 @@ dns-sd = [
 redis = [
     "redis>=5.0.0",
 ]
+# Optional WebAuthn (real attestation/assertion when extra installed).
+webauthn = [
+    "webauthn>=2.6,<3",
+]
 # Framework integrations (Sprint E3 — PKG-003).
 mcp = [
     "mcp>=1.0.0",
@@ -113,18 +118,20 @@ Issues = "https://github.com/adriannoes/asap-protocol/issues"
 # - python-multipart>=0.0.26 for CVE-2026-40347 (FastAPI stack)
 # - pygments>=2.20.0 for CVE-2026-4539
 # - langsmith>=0.7.31 for GHSA-rr7j-v2q5-chgv
+# - python-dotenv>=1.2.2 for CVE-2026-28684 (transitive, e.g. pydantic-settings / uvicorn stacks)
 [tool.uv]
 override-dependencies = [
-    "pyjwt>=2.12.0",
+    "pyjwt>=2.12.0,<3",
     "pyasn1>=0.6.3",
     "tinytag>=2.2.1",
-    "cryptography>=46.0.7",
+    "cryptography>=46.0.7,<47",
     "requests>=2.33.0",
     "pillow>=12.2.0",
     "pytest>=9.0.3",
     "python-multipart>=0.0.26",
     "pygments>=2.20.0",
     "langsmith>=0.7.31",
+    "python-dotenv>=1.2.2",
 ]
 
 [project.scripts]
@@ -183,7 +190,7 @@ ignore = [
 "src/asap/transport/usage_api.py" = ["B008"]
 "src/asap/transport/delegation_api.py" = ["B008"]
 "src/asap/transport/sla_api.py" = ["B008"]
-"src/asap/cli.py" = ["B008"]
+"src/asap/cli/__init__.py" = ["B008"]
 
 [tool.ruff.format]
 quote-style = "double"

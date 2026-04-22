@@ -580,6 +580,13 @@ def trace(
         typer.echo(diagram)
 
 
+from asap.cli.audit_export import register_audit_export_commands  # noqa: E402
+from asap.cli.compliance_check import register_compliance_check_command  # noqa: E402
+
+register_compliance_check_command(app)
+register_audit_export_commands(app)
+
+
 def main() -> None:
     """Run the ASAP Protocol CLI."""
     app()

@@ -720,6 +720,47 @@ v2.2.0 is a **Protocol Hardening** release. All features are additive — existi
 - [ ] Enable `audit_store` in `create_app()` for tamper-evident logging (optional)
 - [ ] Run `run_compliance_harness_v2(app)` to validate your server (recommended)
 
+### Upgrading from v2.2.0 to v2.2.1
+
+v2.2.1 adds an **optional** WebAuthn stack for real proof-of-possession on
+high-risk registration paths. If you do nothing, behavior stays the same as
+v2.2.0.
+
+#### Optional extra
+
+Install the PyPI extra so the `webauthn` library is available:
+
+```bash
+pip install 'asap-protocol[webauthn]'
+# or
+uv sync --extra webauthn
+```
+
+#### Default behavior (unchanged without configuration)
+
+`create_app` still uses `default_webauthn_verifier()` from
+`asap.auth.self_auth`. That returns `PlaceholderWebAuthnVerifier` when:
+
+- the `webauthn` package is not installed, **or**
+- `ASAP_WEBAUTHN_RP_ID` or `ASAP_WEBAUTHN_ORIGIN` is not set.
+
+In that case, WebAuthn checks in the reference server **do not** perform
+cryptographic verification (same as v2.2.0).
+
+#### Production recommendation
+
+For deployments that enforce self-authorization prevention with real passkeys:
+
+1. Install `asap-protocol[webauthn]`.
+2. Set `ASAP_WEBAUTHN_RP_ID` (no scheme; e.g. `app.example.com`) and
+   `ASAP_WEBAUTHN_ORIGIN` (full origin; e.g. `https://app.example.com`).
+3. Optionally pass a durable `WebAuthnCredentialStore` (see
+   `asap.auth.webauthn`) via a custom `identity_webauthn_verifier` instead of
+   the in-memory default.
+
+See [Self-authorization prevention](security/self-authorization-prevention.md)
+(**Real WebAuthn**) for the threat model and ceremony flow.
+
 ---
 
 ## Troubleshooting

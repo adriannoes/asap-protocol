@@ -5,7 +5,7 @@ import {
   Radio,
   GitBranch,
   Layers,
-  ScrollText,
+  ShieldCheck,
   Sparkles,
   ArrowUpRight,
 } from 'lucide-react';
@@ -19,7 +19,7 @@ type Pill = {
 };
 
 const CHANGELOG_URL =
-  'https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#220---2026-04-15';
+  'https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#221---2026-04-21';
 
 const PILLS: Pill[] = [
   { label: 'Identity', href: '/features/per-agent-identity', icon: Fingerprint },
@@ -27,13 +27,13 @@ const PILLS: Pill[] = [
   { label: 'Streaming', href: '/features/streaming-responses', icon: Radio },
   { label: 'Versioning', href: CHANGELOG_URL, icon: GitBranch, external: true },
   { label: 'Batch', href: CHANGELOG_URL, icon: Layers, external: true },
-  { label: 'Audit', href: CHANGELOG_URL, icon: ScrollText, external: true },
+  { label: 'WebAuthn', href: CHANGELOG_URL, icon: ShieldCheck, external: true },
 ];
 
 export function WhatsNewRibbon() {
   return (
     <aside
-      aria-label="What's new in ASAP Protocol v2.2"
+      aria-label="What's new in ASAP Protocol v2.2.1"
       className="w-full border-y border-zinc-900 bg-zinc-950"
     >
       <div className="container mx-auto flex max-w-5xl flex-col gap-4 px-4 py-8 md:flex-row md:items-center md:gap-4 md:px-6 md:py-10">
@@ -41,10 +41,10 @@ export function WhatsNewRibbon() {
           <Sparkles className="h-4 w-4 shrink-0 text-indigo-400" aria-hidden />
           <div className="flex flex-col">
             <span className="font-mono text-xs uppercase tracking-wider text-indigo-400">
-              What&apos;s new in v2.2
+              What&apos;s new in v2.2.1
             </span>
             <span className="text-xs text-zinc-500">
-              Protocol Hardening — released Apr 2026
+              Protocol Hardening + real WebAuthn — released Apr 2026
             </span>
           </div>
         </div>

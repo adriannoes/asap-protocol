@@ -35,10 +35,10 @@ from asap.auth.approval import (
 )
 from asap.auth.self_auth import (
     FreshSessionConfig,
-    PlaceholderWebAuthnVerifier,
     WebAuthnVerifier,
+    check_webauthn_for_approval_path,
+    default_webauthn_verifier,
     fresh_session_violation_detail,
-    verify_webauthn_if_required,
 )
 from asap.auth.capabilities import CapabilityRegistry
 from asap.auth.identity import (
@@ -128,34 +128,40 @@ def _approval_fresh_session_response(
 
 
 def _webauthn_verifier(request: Request) -> WebAuthnVerifier:
-    v: WebAuthnVerifier | None = getattr(
-        request.app.state,
-        "identity_webauthn_verifier",
-        None,
+    """Verifier from ``app.state``, or :func:`default_webauthn_verifier` if unset (logs warning)."""
+    configured = getattr(request.app.state, "identity_webauthn_verifier", None)
+    if configured is not None:
+        return cast("WebAuthnVerifier", configured)
+    logger.warning(
+        "asap.identity.webauthn_verifier_fallback",
+        detail="app.state.identity_webauthn_verifier unset; using default_webauthn_verifier()",
     )
-    if v is not None:
-        return v
-    return PlaceholderWebAuthnVerifier()
+    return default_webauthn_verifier()
 
 
 async def _approval_webauthn_response(
     request: Request,
     raw_body: dict[str, Any],
     requested_names: list[str],
+    host_id: str,
+    *,
+    agent_controls_browser: bool,
 ) -> JSONResponse | None:
-    """400 when high-risk capabilities are requested without a valid WebAuthn payload."""
+    """Reject registration when WebAuthn is required but missing or invalid."""
     cfg = _identity_fresh_session_config(request)
-    if cfg is None or not cfg.require_webauthn_for:
-        return None
-    err = await verify_webauthn_if_required(
+    result = await check_webauthn_for_approval_path(
         requested_names,
         raw_body,
         cfg,
         _webauthn_verifier(request),
+        host_id=host_id,
+        agent_controls_browser=agent_controls_browser,
     )
-    if err is None:
+    if result.detail is None:
         return None
-    return JSONResponse(status_code=400, content={"detail": err})
+    if result.http_status == 403:
+        return JSONResponse(status_code=403, content={"detail": "webauthn_required"})
+    return JSONResponse(status_code=400, content={"detail": result.detail})
 
 
 def _needs_registration_approval(host: HostIdentity, requested_names: list[str]) -> bool:
@@ -433,7 +439,13 @@ async def _handle_agent_register(
         fresh_err = _approval_fresh_session_response(request, claims)
         if fresh_err is not None:
             return fresh_err
-        wa_err = await _approval_webauthn_response(request, raw_body, requested_names)
+        wa_err = await _approval_webauthn_response(
+            request,
+            raw_body,
+            requested_names,
+            host_id,
+            agent_controls_browser=agent_controls_browser,
+        )
         if wa_err is not None:
             return wa_err
 

@@ -3,10 +3,14 @@
 > **Product Requirements Document**
 >
 > **Version**: 2.2.0
-> **Status**: DRAFT
+> **Status**: ✅ SHIPPED (2026-04-15, tag `v2.2.0`, GitHub Release 2026-04-16)
 > **Created**: 2026-03-13
-> **Last Updated**: 2026-03-20
+> **Last Updated**: 2026-04-17
 > **Supersedes**: [prd-v2.2-scale.md](./prd-v2.2-scale.md) (scope revised per strategic review)
+>
+> **Delivery Summary**: 38/38 MUST + 17/18 SHOULD entregues. Único pendente: SELF-002 (WebAuthn real — hoje placeholder via `WebAuthnVerifier` Protocol). 2 COULD adiados (COMP-006 CLI `asap compliance-check`, AUD-005 export CLI dedicado).
+>
+> **Evidence (merged PRs)**: #92 (A2H), #102 (Identity S0), #105 (Capabilities/Lifecycle S1), #106 (Approval/Self-Auth S2), #110 (Errors/Streaming S3), #115 (Versioning/Async S4), #121 (Batch/Audit/Compliance S5), #122 (regression + CVE-2026-4539). ADR-019-unified-versioning publicado (resolve VER-007).
 
 ---
 
@@ -452,3 +456,4 @@ None required. All features use existing dependencies (FastAPI, httpx, Pydantic 
 |------|---------|--------|
 | 2026-03-13 | 1.0.0 | Initial DRAFT — strategic review re-scoped v2.2 from "Scale & Registry" to "Protocol Hardening". Marketplace items deferred to v2.3 (triggers not met). |
 | 2026-03-20 | 2.0.0 | **Identity & Auth Hardening**: Added §4.1–4.5 (Per-Runtime-Agent Identity, Capability-Based Authorization, Agent Lifecycle, Approval Flows, Self-Authorization Prevention). Renumbered existing sections to §4.6–4.13. Updated goals, user stories, non-goals, success metrics, and prerequisites. |
+| 2026-04-17 | 2.1.0 | **Status update to SHIPPED**. v2.2.0 released on 2026-04-15. Delivery confirmed against PRs #92, #102, #105, #106, #110, #115, #121, #122. Carry-over backlog (small): SELF-002 WebAuthn real implementation (SHOULD), COMP-006 `asap compliance-check` CLI subcommand (COULD), AUD-005 audit export CLI (COULD) → candidates for v2.2.1 patch or fold into the next minor release. |

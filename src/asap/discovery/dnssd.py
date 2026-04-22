@@ -121,7 +121,8 @@ class DNSSDAdvertiser:
 
     def _create_service_info(self) -> ServiceInfo:
         """Create the ServiceInfo for registration."""
-        assert self._host is not None  # nosec B101
+        if self._host is None:
+            raise RuntimeError("_create_service_info requires a resolved host address")
         host = self._host
         instance_name = _sanitize_instance_name(self._manifest.name)
         qualified_name = f"{instance_name}.{ASAP_SERVICE_TYPE}"

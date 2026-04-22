@@ -1,12 +1,14 @@
-# PRD: ASAP Protocol v2.3.0 — Scale & Registry
+# PRD: ASAP Protocol v2.3.0 — Adoption Multiplier
 
 > **Product Requirements Document**
 >
 > **Version**: 2.3.0
-> **Status**: VISION DRAFT
+> **Status**: DRAFT (rescoped 2026-04-17)
 > **Created**: 2026-03-13
-> **Last Updated**: 2026-03-20
-> **Origin**: Items deferred from [prd-v2.2-scale.md](./prd-v2.2-scale.md) per strategic review (2026-03)
+> **Last Updated**: 2026-04-17
+> **Origin**: Items deferred from [prd-v2.2-scale.md](./prd-v2.2-scale.md) per strategic review (2026-03), then **rescoped** in 2026-04 after v2.2.0 audit.
+> **Predecessor**: [prd-v2.2.1-patch.md](./prd-v2.2.1-patch.md) (carry-over patch)
+> **Successor**: [prd-v2.4-adoption.md](./prd-v2.4-adoption.md)
 
 ---
 
@@ -14,34 +16,45 @@
 
 ### 1.1 Purpose
 
-v2.3.0 addresses marketplace scale. These items were originally scoped for v2.2 but deferred because their triggers had not been met. With protocol hardening complete in v2.2, the foundation is stronger for scaling the registry infrastructure.
+v2.3.0 has been **rescoped** to attack the missing v2.3 trigger directly. The original v2.3 scope assumed 500+ real agents in the registry; reality at 2026-04-17 is **120 agents**. Building a PostgreSQL Registry API Backend before adoption pulls is over-engineering and contradicts the project's "Lean/Defer" pattern (v1.2 deferred Registry API, v2.0 deferred PostgreSQL, v2.2 deferred marketplace).
+
+Instead, v2.3 ships the **Adoption Multiplier**: three features that *generate* the agent volume the original v2.3 was waiting on.
 
 This release delivers:
-- **Registry API Backend**: PostgreSQL-backed search, CRUD, and trust scoring
-- **Auto-Registration**: Self-service registration without PR (with compliance gating)
-- **TypeScript Client SDK**: Official npm package with AI framework adapters
-- **Intent-Based Directory Search**: Natural-language queries across the registry
-- **Delegated/Autonomous Mode Formalization**: Explicit mode support in manifests and registration
-- **Runtime Capability Escalation**: Request additional capabilities without re-registration
-- **Capability-Aware Introspection**: RFC 7662 introspection returning grant info
-- **Orchestration Primitives**: Protocol-level coordinator pattern for multi-agent workflows
-- **Privacy Considerations**: Formal spec section on data retention and behavioral signals
-- **DeepEval Intelligence Layer** *(conditional)*: If marketplace user demand for quality filtering materializes
 
-> [!CAUTION]
-> **Triggers required before starting this PRD**:
-> 1. Lite Registry exceeds **500 real agents** OR IssueOps registration becomes a bottleneck for adoption
-> 2. v2.2 Protocol Hardening is released (streaming, versioning, batch, error taxonomy evolution)
-> 3. For DeepEval: 3+ user requests for quality filtering OR Verified Badge applicants request standardized evaluation
+- **OpenAPI Adapter** *(pulled forward from v2.4 §4.1)*: zero-code onboarding — any existing OpenAPI spec becomes ASAP capabilities.
+- **TypeScript Client SDK**: official npm package with Vercel AI SDK / OpenAI / Anthropic adapters.
+- **Auto-Registration**: self-service registration without PR, gated by Compliance Harness v2 (from v2.2).
+- **Runtime Capability Escalation** *(supporting feature)*: agents request additional capabilities without re-registering — needed for evolving OpenAPI-derived agents.
+- **WWW-Authenticate ASAP Challenge** *(supporting feature)*: resource servers redirect unknown agents to ASAP discovery, enabling silent uplift of existing APIs.
+
+> [!NOTE]
+> **Deferred from v2.3 (will return only when triggers materialize)**:
+> - Registry API Backend (PostgreSQL) — gated by 500+ agents OR IssueOps becoming the bottleneck
+> - Intent-Based Directory Search — gated by Registry API Backend
+> - Orchestration Primitives — gated by demand for multi-agent workflows
+> - Delegated/Autonomous Mode formalization — gated by capability escalation usage data
+> - Capability-Aware Introspection — gated by resource-server demand
+> - Privacy Considerations spec — moved to v2.4 specification work
+> - DeepEval Intelligence Layer — gated by 3+ user requests for quality filtering
 
 ### 1.2 Strategic Context
 
-v2.3 is the point where the ASAP Protocol begins separating into its **Open Core + SaaS** architecture (per `vision-agent-marketplace.md §5.5`):
+v2.3 is the **adoption flywheel**. Each of the three core features removes a specific friction:
 
-| Component | v2.3 Status |
-|-----------|------------|
-| SDK, Web App frontend, Lite Registry | Public (stays in repo) |
-| Registry API Backend | **Moves to private infra** (runs on our servers) |
+| Friction | Multiplier | Source |
+|----------|-----------|--------|
+| "I have an API, not an agent" | OpenAPI Adapter (zero-code) | New, pulled from v2.4 |
+| "I write TypeScript, not Python" | TypeScript SDK | Original v2.3 §4.4 |
+| "Waiting for PR review to register" | Auto-Registration | Original v2.3 §4.2 |
+
+| Layer | v2.3 Investment |
+|-------|----------------|
+| Adapters / Integrations | **Primary focus** — OpenAPI |
+| Client SDKs | **Primary focus** — TypeScript |
+| Registry | **Lean** — Auto-Registration only (no PostgreSQL backend) |
+| Identity & Auth | Capability escalation + ASAP Challenge |
+| Marketplace backend | Deferred until trigger met |
 
 ---
 
@@ -49,97 +62,70 @@ v2.3 is the point where the ASAP Protocol begins separating into its **Open Core
 
 | Goal | Metric | Priority |
 |------|--------|----------|
-| Search performance | Full-text + intent-based results < 200ms p95 | P1 |
-| Registration friction | Self-service without PR for compliant agents | P1 |
-| TypeScript adoption | 500+ weekly npm downloads within 3 months | P1 |
-| Intent-based discovery | 100+ daily intent queries | P1 |
-| Capability escalation | Runtime capability request flow operational | P2 |
-| Orchestration support | Coordinator pattern with streaming (v2.2) support | P2 |
-| Intelligence filtering | Ability to filter by DeepEval quality scores | P3 (conditional) |
+| Zero-code agent onboarding | 20+ agents onboarded via OpenAPI adapter within 90 days | P0 |
+| TypeScript adoption | 500+ weekly npm downloads of `@asap-protocol/client` within 3 months | P0 |
+| Registration friction removed | > 70% of new registrations via Auto-Registration (vs IssueOps) | P0 |
+| Registry growth | 500+ real agents (the original v2.3 trigger, now an outcome metric) | P1 |
+| Capability escalation | Runtime capability request flow operational | P1 |
+| Silent uplift via challenge | At least one reference resource server using `WWW-Authenticate: ASAP` | P2 |
 
 ---
 
 ## 3. User Stories
 
-### Agent Developer (Provider)
-> As an **agent developer**, I want to **register my agent via API with my ASAP OAuth token** so that **I don't need to wait for a PR review to be listed**.
-
-### Registry Consumer (Semantic Search)
-> As a **developer**, I want to **search agents by capability using natural language** (e.g., "find me agents that do PDF extraction") so that **I discover relevant agents faster than scanning 500+ entries**.
+### API Provider (OpenAPI)
+> As an **API provider with an OpenAPI spec**, I want to **auto-derive ASAP capabilities from my spec** so that **agents can discover and use my API without me writing protocol code**.
 
 ### TypeScript Developer
 > As a **TypeScript developer**, I want to **use an official ASAP SDK with Vercel AI SDK adapters** so that **I can integrate ASAP agents into my Next.js application without writing protocol code**.
 
+### Agent Developer (Provider)
+> As an **agent developer**, I want to **register my agent via API with my ASAP OAuth token** so that **I don't need to wait for a PR review to be listed**.
+
 ### Agent Developer (Capability Escalation)
 > As an **agent developer**, I want to **request additional capabilities at runtime without re-registering** so that **my agent can adapt to new tasks as they arise**.
 
-### Orchestrator Agent
-> As an **orchestrator agent**, I want to **discover and coordinate multiple agents using protocol-level primitives** so that **multi-agent workflows are reliable and observable without ad-hoc coordination logic**.
-
-### Platform Operator (Privacy)
-> As a **platform operator**, I want to **have formal privacy guidelines for agent activity data** so that **I can comply with data protection requirements**.
+### Resource Server Operator (ASAP Challenge)
+> As a **resource server operator**, I want to **emit `WWW-Authenticate: ASAP` on 401** so that **unknown agents are nudged into ASAP discovery and registration without me hand-rolling integration docs**.
 
 ---
 
 ## 4. Functional Requirements
 
-### 4.1 Registry API Backend (P1)
+### 4.1 OpenAPI Adapter (P0) — pulled forward from v2.4
 
-Migrates from static `registry.json` to a PostgreSQL-backed service. Lite Registry is preserved as a read-only public mirror.
-
-Scope preserved from original [prd-v2.2-scale.md](./prd-v2.2-scale.md) §4.1:
+Auto-derive ASAP capabilities from existing OpenAPI specs. Each OpenAPI operation becomes a capability.
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| REG-API-001 | `POST /registry/agents` — authenticated self-registration (ASAP OAuth2 token) | MUST |
-| REG-API-002 | `GET /registry/agents` — paginated list with filter support (skill, category, trust level) | MUST |
-| REG-API-003 | `GET /registry/agents/{urn}` — agent detail by URN | MUST |
-| REG-API-004 | `PUT /registry/agents/{urn}` — update metadata (authenticated, own agent only) | MUST |
-| REG-API-005 | `DELETE /registry/agents/{urn}` — revoke and remove (authenticated) | MUST |
-| REG-API-006 | Full-text search (`q=` param) across name, description, skills | MUST |
-| REG-API-007 | Trust score display (reputation floating 0.0-5.0, computed from metrics) | SHOULD |
-| REG-API-008 | Bootstrap from Lite Registry — import existing `registry.json` on first deploy | MUST |
-| REG-API-009 | Generate and publish updated `registry.json` mirror for backward compatibility | MUST |
+| OA-001 | `create_from_openapi(spec)` — generates capabilities, execution handler, and provider config from OpenAPI spec | MUST |
+| OA-002 | OpenAPI `operationId` → capability `name` mapping | MUST |
+| OA-003 | OpenAPI `description`/`summary` → capability `description` | MUST |
+| OA-004 | OpenAPI parameters + request body → capability `input` (JSON Schema) | MUST |
+| OA-005 | OpenAPI 200/201 response body → capability `output` (JSON Schema) | MUST |
+| OA-006 | Execution handler maps arguments back to path params, query params, headers, request body | MUST |
+| OA-007 | `default_capabilities` filter: by HTTP method (`"GET"`, `["GET", "HEAD"]`), all, or callback | MUST |
+| OA-008 | `approval_strength` per capability or per HTTP method (`GET` → `session`, `POST` → `webauthn`) | SHOULD |
+| OA-009 | `resolve_headers` callback for upstream auth (e.g., inject `Authorization: Bearer` for user) | MUST |
+| OA-010 | Auto-detect response types: `202` → async, `text/event-stream` → streaming, `application/json` → sync | SHOULD |
+| OA-011 | Python package: `asap.adapters.openapi` | MUST |
+| OA-012 | TypeScript package: `@asap-protocol/openapi` | SHOULD (deferred to v2.4 if TS SDK ships first without it) |
 
-**Schema (PostgreSQL)**:
-```sql
-agents (urn, name, description, category, tags, skills, trust_level, trust_score, created_at, updated_at)
-manifests (urn, payload_json, signature, public_key, created_at)
-trust_scores (urn, success_rate, response_time_ms, sla_compliance, tenure_days, computed_at)
+**Usage Example (Python)**:
+```python
+from asap.adapters.openapi import create_from_openapi
+
+config = create_from_openapi(
+    spec_url="https://api.example.com/openapi.json",
+    default_capabilities=["GET", "HEAD"],
+    approval_strength={"POST": "webauthn", "DELETE": "webauthn"},
+    resolve_headers=lambda session: {"Authorization": f"Bearer {get_token(session.user_id)}"},
+)
 ```
 
 ---
 
-### 4.2 Auto-Registration (P1)
-
-Scope preserved from original [prd-v2.2-scale.md](./prd-v2.2-scale.md) §4.2:
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| AUTO-001 | Self-registration endpoint: agent submits manifest URL + ASAP auth token | MUST |
-| AUTO-002 | Compliance gating: agent must pass Compliance Harness v2 (from v2.2) before listing | MUST |
-| AUTO-003 | Rate limiting: max 5 registration attempts per token per hour | MUST |
-| AUTO-004 | IssueOps remains available as human-review path for edge cases | SHOULD |
-| AUTO-005 | Anti-spam: trust level starts at `self-signed`, manual review required for `verified` | MUST |
-
----
-
-### 4.3 Orchestration Primitives (P1)
-
-New scope. Enables protocol-level multi-agent coordination.
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| ORCH-001 | `CoordinatorEnvelope` — envelope variant for fan-out task distribution | MUST |
-| ORCH-002 | `TaskGroup` model — tracks related tasks across agents with shared correlation_id | MUST |
-| ORCH-003 | Aggregation patterns: wait-all, wait-any, first-success | MUST |
-| ORCH-004 | Streaming aggregation — coordinator streams partial results from multiple agents (builds on v2.2 SSE) | SHOULD |
-| ORCH-005 | Failure propagation — coordinator handles partial failures with configurable strategy | SHOULD |
-| ORCH-006 | Orchestration compliance checks in Compliance Harness | SHOULD |
-
----
-
-### 4.4 TypeScript Client SDK (P1)
+### 4.2 TypeScript Client SDK (P0)
 
 Official npm package for ASAP Protocol with AI framework adapters.
 
@@ -150,43 +136,34 @@ Official npm package for ASAP Protocol with AI framework adapters.
 | TS-003 | Capabilities: `listCapabilities()`, `describeCapability(name)`, `executeCapability(name, args)` | MUST |
 | TS-004 | Connection: `connectAgent(provider, capabilities, mode)`, `disconnectAgent(agentId)` | MUST |
 | TS-005 | Lifecycle: `reactivateAgent(agentId)`, `agentStatus(agentId)`, `requestCapability(agentId, caps)` | MUST |
-| TS-006 | Vercel AI SDK adapter — ASAP capabilities as Vercel AI tools | SHOULD |
+| TS-006 | Vercel AI SDK adapter — ASAP capabilities as Vercel AI tools | MUST |
 | TS-007 | OpenAI SDK adapter — ASAP capabilities as function calls | SHOULD |
 | TS-008 | Anthropic SDK adapter — ASAP capabilities as tool use | SHOULD |
-| TS-009 | Pluggable storage interface for key persistence (memory, file, keychain) | SHOULD |
+| TS-009 | Pluggable storage interface for key persistence (memory, file, browser localStorage, keychain) | SHOULD |
+| TS-010 | Type-safe envelopes: `Envelope<TaskRequest>`, `Envelope<TaskStream>`, etc. | MUST |
+| TS-011 | Streaming consumer: `client.stream(envelope)` returns `AsyncIterable<Envelope<TaskStream>>` | MUST |
 
 ---
 
-### 4.5 Intent-Based Directory Search (P1)
+### 4.3 Auto-Registration (P0)
 
-Natural-language search across the registry, beyond categories and keywords.
+Replaces IssueOps for compliant agents. **Lite Registry remains** as the storage layer — no PostgreSQL backend in v2.3.
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| INTENT-001 | `GET /registry/search?intent=<natural-language>&limit=N` — NL search endpoint | MUST |
-| INTENT-002 | BM25 full-text search as baseline | MUST |
-| INTENT-003 | Optional embedding-based semantic search (when available) | SHOULD |
-| INTENT-004 | Results return standard discovery documents (name, description, issuer, endpoints) | MUST |
-| INTENT-005 | Integration with `search_providers` client tool | MUST |
+| AUTO-001 | Self-registration endpoint: agent submits manifest URL + ASAP auth token | MUST |
+| AUTO-002 | Compliance gating: agent must pass Compliance Harness v2 (from v2.2) before listing | MUST |
+| AUTO-003 | Rate limiting: max 5 registration attempts per token per hour | MUST |
+| AUTO-004 | IssueOps remains available as human-review path for edge cases | SHOULD |
+| AUTO-005 | Anti-spam: trust level starts at `self-signed`, manual review required for `verified` | MUST |
+| AUTO-006 | Auto-Registration writes to current `registry.json` mirror via Git PR (bot-driven) until Registry API Backend exists | MUST |
+| AUTO-007 | Registration receipt with `agent_id`, `urn`, and Compliance Harness v2 score | MUST |
 
 ---
 
-### 4.6 Delegated/Autonomous Mode Formalization (P2)
+### 4.4 Runtime Capability Escalation (P1) — supporting feature
 
-Explicit mode support in manifests and agent registration.
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| MODE-001 | `supported_modes` field in manifest: `["delegated", "autonomous"]` | MUST |
-| MODE-002 | Mode validation on registration: reject unsupported modes | MUST |
-| MODE-003 | Autonomous agent claiming when host becomes linked to a user | SHOULD |
-| MODE-004 | Mode-specific default capabilities per host | SHOULD |
-
----
-
-### 4.7 Runtime Capability Escalation (P2)
-
-Allow agents to request additional capabilities without re-registration.
+Allow agents to request additional capabilities without re-registration. Required so OpenAPI-derived agents can grow over time without re-onboarding.
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
@@ -197,57 +174,16 @@ Allow agents to request additional capabilities without re-registration.
 
 ---
 
-### 4.8 Capability-Aware Introspection (P2)
+### 4.5 WWW-Authenticate ASAP Challenge (P2)
 
-Extend token introspection for resource servers that validate agent JWTs.
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| INTRO-001 | `POST /asap/agent/introspect` — accepts agent JWT, returns active/inactive + compact grants | MUST |
-| INTRO-002 | Response includes `agent_id`, `host_id`, `user_id`, `agent_capability_grants`, `mode` | MUST |
-| INTRO-003 | Compact grants (capability + status only) — no input/output schemas | MUST |
-| INTRO-004 | Endpoint protected with server-to-server auth (shared secret, mTLS, or IP restriction) | SHOULD |
-
----
-
-### 4.9 WWW-Authenticate ASAP Challenge (P3)
-
-Resource servers redirect unknown agents to ASAP discovery.
+Resource servers redirect unknown agents to ASAP discovery — enables silent uplift of existing APIs onto ASAP.
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
 | CHAL-001 | `WWW-Authenticate: ASAP discovery="https://example.com/.well-known/asap/manifest.json"` on 401 | SHOULD |
 | CHAL-002 | Client recognizes `ASAP` scheme and initiates discovery/registration | SHOULD |
 | CHAL-003 | Return `403` with `capability_not_granted` when JWT present but capability missing | SHOULD |
-
----
-
-### 4.10 Privacy Considerations (P3)
-
-Formal privacy section in the ASAP specification.
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| PRIV-001 | Document host key correlation risk (same keypair across servers enables tracking) | SHOULD |
-| PRIV-002 | Data retention policy guidance for agent activity logs | SHOULD |
-| PRIV-003 | Capability requests as behavioral signals — treat with same data protection as grants | SHOULD |
-| PRIV-004 | Guidance on `reason` field sensitivity (may contain PII) | SHOULD |
-
----
-
-### 4.11 DeepEval Intelligence Layer (P3 — Conditional)
-
-Scope preserved from original [prd-v2.2-scale.md](./prd-v2.2-scale.md) §4.4:
-
-> [!IMPORTANT]
-> Only implement if marketplace users actively request quality filtering. Trigger: 3+ user requests OR Verified Badge applicants request standardized evaluation.
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| EVAL-001 | Optional dependency: `asap-protocol[evals]` installs `deepeval>=0.21` | COULD |
-| EVAL-002 | Evaluation harness: hallucination, bias, toxicity, G-Eval reasoning | COULD |
-| EVAL-003 | Evaluation scores exposed in Registry API as optional metadata | COULD |
-| EVAL-004 | Filter agents by min evaluation score in Registry API | COULD |
+| CHAL-004 | Reference implementation: middleware in `asap.adapters.openapi` for auto-emitted challenges | SHOULD |
 
 ---
 
@@ -255,53 +191,97 @@ Scope preserved from original [prd-v2.2-scale.md](./prd-v2.2-scale.md) §4.4:
 
 | Feature | Reason | When |
 |---------|--------|------|
-| OpenAPI adapter | Requires stable capability model from v2.2–v2.3 | v2.4 |
-| MCP Auth Bridge | Requires stable identity model | v2.4 |
-| Formal ASAP Specification Document | Requires all protocol features stable | v2.4 |
-| Economy Settlement / Billing | No live transactions yet | v3.0 |
-| Payment Processing (Stripe) | Trigger not met (100+ Verified Agents) | v3.0 |
-| Node.js / Go SDKs | Demand-driven | TBD |
-| Federated Registry | Centralized approach still validates | v3.x+ |
-| ASAP Cloud | Requires economy layer | v3.0 |
+| **Registry API Backend (PostgreSQL)** | Trigger not met (120/500 agents); Auto-Registration on Lite Registry suffices | Returns when 500+ agents OR IssueOps bottleneck materialize |
+| **Intent-Based Directory Search** | Depends on Registry API Backend | Same trigger as Registry API Backend |
+| **Orchestration Primitives** | Demand-driven; v2.2 streaming + batch unblock workarounds | Returns when 10+ users request multi-agent flows |
+| **Delegated/Autonomous Mode formalization** | Optimization on top of identity (already implicit via `mode` field on `AgentSession`) | Driven by usage data from capability escalation |
+| **Capability-Aware Introspection (RFC 7662)** | Resource-server feature; no current asks | Returns with v2.4 spec work |
+| **Privacy Considerations spec** | Document deliverable, fits better with v2.4 formal spec | v2.4 |
+| **DeepEval Intelligence Layer** | Trigger not met (no requests) | Conditional |
+| **MCP Auth Bridge** | v2.4 scope | v2.4 |
+| **Formal ASAP Specification Document** | v2.4 scope | v2.4 |
+| **Economy / Settlement / Billing** | No live transactions yet | v3.0 |
+| **Federated Registry** | Centralised approach still validates | v3.x+ |
 
 ---
 
 ## 6. Technical Considerations
 
-### 6.1 Infrastructure
+### 6.1 OpenAPI Adapter Architecture
 
 | Component | Choice | Rationale |
 |-----------|--------|-----------|
-| Database | PostgreSQL (asyncpg) | ACID, full-text (`tsvector`), proven at scale |
-| ORM/Migrations | SQLAlchemy async + Alembic | Type-safe, migration tooling |
-| Hosting | Railway or Fly.io | Low ops overhead, scale-on-demand |
-| Auth | ASAP OAuth2 (existing) | Dogfooding |
+| Spec parsing | `openapi-pydantic` (Python), `openapi-types` (TS) | Type-safe OpenAPI 3.x parsing |
+| HTTP proxying | `httpx` (Python), `fetch` (TS) | Existing dependencies (ADR-008) |
+| Schema derivation | JSON Schema subset from OpenAPI | Direct mapping, no conversion needed |
+| Discovery integration | OpenAPI adapter emits `/.well-known/asap/manifest.json` automatically | Consistent with v1.2 discovery |
 
-### 6.2 Open Core Boundary
+### 6.2 TypeScript SDK Architecture
 
-The Registry API Backend **leaves the public repo** and becomes private infrastructure (per `vision-agent-marketplace.md §5.5`). The public repo retains the SDK and Web App frontend.
+| Component | Choice | Rationale |
+|-----------|--------|-----------|
+| Build | `tsup` + `tshy` (dual ESM/CJS) | Standard for modern npm packages |
+| Crypto | Web Crypto API (Ed25519) with `@noble/ed25519` fallback | Browser + Node compatibility |
+| Transport | `fetch` + `EventSource` for SSE | Native runtime support |
+| Adapters location | `@asap-protocol/client/adapters/{vercel-ai,openai,anthropic}` | Tree-shakeable |
 
-### 6.3 v2.2 Dependencies
+### 6.3 Auto-Registration on Lite Registry
 
-Orchestration Primitives depend on v2.2 features:
-- **Streaming** (SSE) for real-time result aggregation
-- **Batch Operations** for fan-out task distribution
-- **Error Taxonomy Evolution** for failure propagation strategies
-- **Version Negotiation** for multi-version agent coordination
+Auto-Registration writes to `registry.json` via a **bot-authored PR** (not direct write to disk). This avoids needing a Postgres backend while still gating via Compliance Harness v2 + manual review for `verified` trust level.
+
+```
+Agent → POST /registry/agents (auth: ASAP OAuth2)
+        ↓
+   Compliance Harness v2 (synchronous check)
+        ↓
+   PR opened by `asap-bot` against registry.json
+        ↓
+   Auto-merge if Harness passed AND trust_level == "self-signed"
+        ↓
+   GitHub Pages serves updated registry.json mirror
+```
+
+When the 500-agent trigger fires, this flow is replaced by the (deferred) Registry API Backend — but the public contract stays identical.
+
+### 6.4 v2.2 Dependencies
+
+OpenAPI Adapter and TypeScript SDK both depend on v2.2 protocol features:
+
+- **Streaming SSE** for OpenAPI `text/event-stream` responses and TypeScript streaming consumer
+- **Capability-Based Authorization** with constraints (`max`, `min`, `in`, `not_in`) for OpenAPI parameter limits
+- **Per-Runtime-Agent Identity** for TypeScript host/agent JWT generation
+- **Error Taxonomy + Recovery Hints** for client retry semantics
+- **ASAP-Version Negotiation** for SDK ↔ server version handshake
+
+### 6.5 Carry-over: "extract when touched" refactor of transport/ monoliths
+
+Inherited as a conscious carry-over from the v2.2.1 tech-debt sweep (2026-04-22):
+
+- [`src/asap/transport/server.py`](../../../src/asap/transport/server.py) (~2160 LoC) and
+  [`src/asap/transport/client.py`](../../../src/asap/transport/client.py) (~1750 LoC) are
+  cognitively heavy but **coherent** around their primary types (`ASAPRequestHandler` +
+  `create_app`; `ASAPClient`). A speculative split would force an internal-API reshuffle
+  right before new routes land in v2.3.
+- **Rule for v2.3 contributors**: when a sprint task adds a route (Auto-Registration,
+  Runtime Capability Escalation) or a client method (TS SDK parity), **extract the new
+  surface into a dedicated module from day one** (e.g., `asap.transport.auto_registration`,
+  `asap.transport.capability_escalation`). Do not add a new method to `server.py` when a
+  new module is the natural home.
+- Do **not** ship a standalone "split transport/server.py" PR — the cost was assessed and
+  the value realizes only as features accrete.
 
 ---
 
 ## 7. Success Metrics
 
-| Metric | Target |
-|--------|--------|
-| Real agents (non-seed) in Registry | 500+ |
-| Auto-registration adoption | > 70% of new registrations via API (vs IssueOps) |
-| Search p95 latency | < 200ms |
-| TypeScript SDK weekly downloads | 500+ on npm |
-| Intent-based searches | 100+ daily queries |
-| Runtime capability escalation | 10+ agents using escalation flow |
-| Multi-agent workflows | 10+ orchestration flows using ORCH primitives |
+| Metric | Target | Time Horizon |
+|--------|--------|--------------|
+| Agents onboarded via OpenAPI adapter | 20+ | 90 days post-release |
+| `@asap-protocol/client` weekly npm downloads | 500+ | 3 months post-release |
+| Auto-registration adoption | > 70% of new registrations | 6 months post-release |
+| Real agents (non-seed) in Registry | 500+ | Outcome metric — unlocks deferred Registry API Backend |
+| Runtime capability escalation flows | 10+ agents using escalation | 6 months post-release |
+| WWW-Authenticate ASAP reference deployment | 1+ | 90 days post-release |
 
 ---
 
@@ -309,20 +289,23 @@ Orchestration Primitives depend on v2.2 features:
 
 | Prerequisite | Source |
 |-------------|--------|
-| v2.2.0 Protocol Hardening released | This PRD |
-| 500+ real agents in Lite Registry | Growth trigger |
-| ASAP OAuth2 infrastructure working | v1.1+ |
-| Streaming/SSE operational | v2.2 |
-| Batch Operations operational | v2.2 |
+| v2.2.0 Protocol Hardening released | ✅ 2026-04-15 |
+| v2.2.1 carry-over patch released | [prd-v2.2.1-patch.md](./prd-v2.2.1-patch.md) |
+| Capability model stable | ✅ v2.2 |
+| Identity model stable | ✅ v2.2 |
+| Streaming/SSE operational | ✅ v2.2 |
+| Compliance Harness v2 operational | ✅ v2.2 |
+| ASAP OAuth2 infrastructure working | ✅ v1.1+ |
 
 ---
 
 ## 9. Related Documents
 
-- **Origin PRD (deferred scope)**: [prd-v2.2-scale.md](./prd-v2.2-scale.md)
-- **Protocol Hardening**: [prd-v2.2-protocol-hardening.md](./prd-v2.2-protocol-hardening.md)
-- **Previous Version**: [prd-v2.1-ecosystem.md](./prd-v2.1-ecosystem.md)
-- **Next Version**: [prd-v2.4-adoption.md](./prd-v2.4-adoption.md)
+- **Origin PRD (deferred scope, superseded)**: [prd-v2.2-scale.md](./prd-v2.2-scale.md)
+- **Carry-over Patch**: [prd-v2.2.1-patch.md](./prd-v2.2.1-patch.md)
+- **Protocol Hardening (foundation)**: [prd-v2.2-protocol-hardening.md](./prd-v2.2-protocol-hardening.md)
+- **Previous Major Release**: [prd-v2.1-ecosystem.md](./prd-v2.1-ecosystem.md)
+- **Next Version**: [prd-v2.4-adoption.md](./prd-v2.4-adoption.md) (MCP Auth Bridge, Formal Spec, cross-protocol)
 - **Deferred Backlog**: [deferred-backlog.md](../strategy/deferred-backlog.md)
 - **Vision**: [vision-agent-marketplace.md](../strategy/vision-agent-marketplace.md)
 - **Roadmap**: [roadmap-to-marketplace.md](../strategy/roadmap-to-marketplace.md)
@@ -334,4 +317,5 @@ Orchestration Primitives depend on v2.2 features:
 | Date | Version | Change |
 |------|---------|--------|
 | 2026-03-13 | 0.1.0 | Vision DRAFT — marketplace items deferred from v2.2 per strategic review. Added Orchestration Primitives (new). |
-| 2026-03-20 | 0.2.0 | **Expanded scope**: Added §4.4 TypeScript SDK, §4.5 Intent-Based Search, §4.6 Delegated/Autonomous Modes, §4.7 Capability Escalation, §4.8 Capability-Aware Introspection, §4.9 ASAP Challenge, §4.10 Privacy Considerations. Updated goals, user stories, non-goals, success metrics. |
+| 2026-03-20 | 0.2.0 | **Expanded scope**: Added §4.4 TypeScript SDK, §4.5 Intent-Based Search, §4.6 Delegated/Autonomous Modes, §4.7 Capability Escalation, §4.8 Capability-Aware Introspection, §4.9 ASAP Challenge, §4.10 Privacy Considerations. |
+| 2026-04-17 | 0.3.0 | **Rescoped to "Adoption Multiplier"** after v2.2.0 audit confirmed 120/500 agents (trigger unmet). Pulled OpenAPI Adapter forward from v2.4 §4.1. Kept TypeScript SDK, Auto-Registration, Capability Escalation, ASAP Challenge. **Deferred** Registry API Backend, Intent-Based Search, Orchestration Primitives, Delegated/Autonomous Mode formalization, Capability-Aware Introspection, Privacy spec, DeepEval — each with explicit return-trigger. |

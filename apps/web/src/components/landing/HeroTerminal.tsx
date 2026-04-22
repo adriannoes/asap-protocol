@@ -4,7 +4,7 @@ import { Terminal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const TERMINAL_LINES = [
-  { text: '[SYSTEM] ASAP Protocol v2.2.0 init — Protocol Hardening', color: 'text-zinc-500', delay: 400 },
+  { text: '[SYSTEM] ASAP Protocol v2.2.1 init — Protocol Hardening + real WebAuthn', color: 'text-zinc-500', delay: 400 },
   { text: '[IDENTITY] Host authenticated · Agent Ed25519 key issued (typ: agent+jwt)', color: 'text-indigo-400', delay: 1000 },
   { text: '-> POST /asap { "method": "capability.describe", "name": "transfer_funds" }', color: 'text-cyan-400', delay: 1800 },
   { text: '<- RESP constraints: { amount: { max: 1000 }, currency: { in: ["USD","EUR"] } }', color: 'text-purple-400', delay: 2800 },

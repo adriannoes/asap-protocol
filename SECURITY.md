@@ -105,3 +105,24 @@ If you install `[crewai]` or `[llamaindex]`, run `pip-audit` separately on that 
 - **Version Updates**: Monthly checks for non-security updates. This project relies on [Dependabot](.github/dependabot.yml) to monitor and bump dependency versions.
 
 For more information on reviewing Dependabot PRs, see [CONTRIBUTING.md](../CONTRIBUTING.md#reviewing-dependabot-prs).
+
+## Dependency policy
+
+We pin **upper bounds** on the security- and protocol-sensitive libraries listed below to prevent silent major-version bumps through `pip install -U`. Major releases of these packages change cryptographic primitives, JWT validation semantics, or WebAuthn verification contracts — we want an explicit review before absorbing that change.
+
+| Package | Pin | Why |
+|---------|-----|-----|
+| `cryptography` | `>=46.0.7,<47` | CVE-2026-39892 / CVE-2026-34073 baseline; v47 changes serialization API (Rust backend migration) |
+| `authlib` | `>=1.6.11,<2` | GHSA-jj8c-mmj3-mmgv baseline; v2 reworks JWS header policy |
+| `joserfc` | `>=1.6.3,<2` | JWT / JWS / JWE primitives powering Host JWT verification |
+| `pyjwt` (override) | `>=2.12.0,<3` | CVE-2026-32597 baseline; v3 changes default `options` behavior for token introspection |
+| `webauthn` (optional extra) | `>=2.6,<3` | Assertion/attestation verification for SELF-002 |
+| `pydantic` | `>=2.12.5,<3` | Model validation contract across all payloads; v3 is a breaking rewrite |
+
+**Bumping a pinned upper bound**:
+1. Read the upstream release notes and diff the deprecations / security-impacting changes
+2. Run the full `pytest` + `mypy` + Compliance Harness v2 against the new major
+3. Update both `pyproject.toml` and the table above in the same PR
+4. Add a CHANGELOG entry under `### Changed` describing the audit
+
+Other dependencies (fastapi, httpx, uvicorn, structlog, opentelemetry-*) are intentionally **unpinned at the top** to keep resolution flexible for downstream consumers. Dependabot bumps are reviewed per the response-time table above, but they do not carry the same cryptographic-primitive risk.

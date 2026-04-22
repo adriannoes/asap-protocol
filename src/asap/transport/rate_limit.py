@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import os
 import time
-import uuid
+import uuid  # noqa: I001 -- used only for slowapi ``memory://{hex}`` namespace suffix; domain entity IDs use asap.models.ids.generate_id
 from collections.abc import Callable, Sequence
 
 from fastapi import Request

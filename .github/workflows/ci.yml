@@ -12,6 +12,7 @@ on:
       - 'asap-compliance/**'
       - 'docs/**'
       - 'apps/web/**'
+      - 'apps/example-agent/**'
       - 'pyproject.toml'
       - 'uv.lock'
       - 'mkdocs.yml'
@@ -26,6 +27,7 @@ on:
       - 'asap-compliance/**'
       - 'docs/**'
       - 'apps/web/**'
+      - 'apps/example-agent/**'
       - 'pyproject.toml'
       - 'uv.lock'
       - 'mkdocs.yml'
@@ -97,6 +99,11 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}:${{ github.workspace }}/asap-compliance
         run: uv run pytest asap-compliance/tests/ -q --tb=short
+      - name: Example agent Compliance Harness v2 baseline
+        working-directory: apps/example-agent
+        run: |
+          uv sync --frozen --group dev
+          uv run pytest tests/ -q --tb=short
 
   test-web:
     name: test (web)
