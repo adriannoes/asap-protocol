@@ -8,10 +8,6 @@ Functions:
     assert_task_completed: Assert a TaskResponse or envelope payload indicates
                            task completion (e.g. status completed).
     assert_response_correlates: Assert response envelope correlates to request.
-
-Implementation note: these helpers raise ``AssertionError`` directly instead of using
-the ``assert`` statement so they keep working when the interpreter is invoked with
-``python -O`` (which strips ``assert``). This is the public contract of the module.
 """
 
 from __future__ import annotations
@@ -121,6 +117,6 @@ def assert_response_correlates(
 
 __all__ = [
     "assert_envelope_valid",
-    "assert_response_correlates",
     "assert_task_completed",
+    "assert_response_correlates",
 ]
