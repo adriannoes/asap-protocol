@@ -2,7 +2,7 @@
 
 **ASAP (Async Simple Agent Protocol)** is a streamlined protocol for agent-to-agent communication, designed to be simpler than existing alternatives while maintaining modern standards functionality.
 
-**Latest reference implementation:** **v2.2.0** ([CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md), [PyPI](https://pypi.org/project/asap-protocol/)) — identity & capabilities, SSE streaming (`POST /asap/stream`), `ASAP-Version` negotiation, JSON-RPC batch, tamper-evident audit logging. Upgrade notes: [Migration (v2.1.x → v2.2.0)](migration.md).
+**Latest reference implementation:** **v2.2.1** ([CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md), [PyPI](https://pypi.org/project/asap-protocol/)) — builds on the v2.2.0 hardening release (identity & capabilities, SSE streaming via `POST /asap/stream`, `ASAP-Version` negotiation, JSON-RPC batch, tamper-evident audit logging) and adds **real WebAuthn** attestation/assertion behind the `asap-protocol[webauthn]` extra, the `asap compliance-check` and `asap audit export` CLIs, and upper-bound pins on security-sensitive dependencies ([policy](https://github.com/adriannoes/asap-protocol/blob/main/SECURITY.md#dependency-policy)). Upgrade notes: [Migration (v2.1.x → v2.2.0 → v2.2.1)](migration.md).
 
 ## Features
 
@@ -11,7 +11,7 @@
 - **State Management**: Built-in task state machine with persistence support (`AsyncSnapshotStore` / `AsyncMeteringStore` in v2.2+)
 - **Transport Agnostic**: Clean separation between protocol logic and transport capability (HTTP JSON-RPC, WebSocket, SSE)
 - **Observability**: First-class tracking with correlation IDs and trace IDs
-- **Security & authorization (v2.2+)**: Per-runtime Host/Agent JWTs, capability grants with constraints, approval flows — see [Security](security.md) and [Migration](migration.md)
+- **Security & authorization (v2.2+, WebAuthn real in v2.2.1)**: Per-runtime Host/Agent JWTs, capability grants with constraints, approval flows, opt-in WebAuthn (`asap-protocol[webauthn]`) for browser-controlled and high-risk capability registration — see [Security](security.md) and [Migration](migration.md)
 
 ## Installation
 
