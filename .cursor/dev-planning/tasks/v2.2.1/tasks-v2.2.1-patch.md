@@ -1,6 +1,6 @@
 # Tasks: v2.2.1 Carry-over Patch — Sprint Index
 
-**Status: 🟢 READY FOR CODE REVIEW** — S1 and S2 implementation tasks are marked complete in their sprint files; workspace carries **2.2.1** release prep (CHANGELOG, version, README). **S3** (tag / PyPI / GitHub Release / Docker) stays **pending merge to `main`**.
+**Status: 🟢 Released v2.2.1** — S1–S3 complete: merge on `main` (PR #127), tag `v2.2.1`, PyPI + GitHub Release + Docker workflow **success** (2026-04-22). See [S3 sprint](./sprint-S3-release.md).
 
 Targets the carry-over identified in the v2.2.0 audit (2026-04-17).
 
@@ -18,7 +18,7 @@ Based on [PRD v2.2.1 Patch](../../../product-specs/prd/prd-v2.2.1-patch.md). Str
 |--------|-------|--------------|----------|--------|
 | **S1** | [Real WebAuthn Verification](./sprint-S1-webauthn.md) | §4.1 (WAUTH-001..008) | P0 | 🟢 **Done** (all tasks `[x]` in sprint file) |
 | **S2** | [Compliance & Audit CLIs + Maintenance](./sprint-S2-clis.md) | §4.2 (CLI-COMP), §4.3 (CLI-AUD), §4.4 (MAINT), §4.0 Release Prep | P1/P2 | 🟢 **Done** (incl. §4.0) |
-| **S3** | [Release v2.2.1](./sprint-S3-release.md) | — | — | ⏳ **Pending** merge + tag + publish |
+| **S3** | [Release v2.2.1](./sprint-S3-release.md) | — | — | 🟢 **Done** (tag `v2.2.1`, publish 2026-04-22) |
 
 ## Dependency Graph
 
@@ -48,10 +48,10 @@ S1 (WebAuthn) ──► S2 (CLIs + Maintenance) ──► S3 (Release)
 
 ### Release (S3 — after merge to `main`)
 
-- [ ] Tag `v2.2.1` created on `main`
-- [ ] `asap-protocol==2.2.1` published to PyPI
-- [ ] GitHub Release v2.2.1 published with notes
-- [ ] Docker `ghcr.io/adriannoes/asap-protocol:v2.2.1` and `:latest` rebuilt
+- [x] Tag `v2.2.1` created on `main` (`56570b9`)
+- [x] `asap-protocol==2.2.1` published to PyPI
+- [x] GitHub Release v2.2.1 published with notes
+- [x] Docker `ghcr.io/adriannoes/asap-protocol:v2.2.1` and `:latest` rebuilt (Release workflow success)
 
 ## Estimated Effort
 
