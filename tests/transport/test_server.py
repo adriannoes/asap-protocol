@@ -18,7 +18,7 @@ import collections.abc
 import json
 import time
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -49,6 +49,7 @@ from asap.transport.jsonrpc import (
     JsonRpcRequest,
 )
 from asap.auth.agent_jwt import create_agent_jwt, create_host_jwt, verify_agent_jwt
+from asap.auth.self_auth import FreshSessionConfig
 from asap.auth.identity import (
     HostIdentity,
     InMemoryAgentStore,
@@ -67,6 +68,26 @@ from tests.crypto.jwk_helpers import ed25519_public_jwk
 
 # Host JWT ``aud`` must match ``create_app`` default (``identity_jwt_audience`` == ``manifest.id``).
 _HOST_JWT_AUDIENCE = "urn:asap:agent:test-server"
+
+
+class _RejectingWebAuthnVerifier:
+    """Test verifier that records calls and rejects assertions."""
+
+    def __init__(self) -> None:
+        """Initialize an empty call log."""
+        self.calls: list[tuple[str, Any, str | None, bool]] = []
+
+    async def verify(
+        self,
+        challenge: str,
+        response: Any,
+        *,
+        host_id: str | None = None,
+        require_user_verification: bool = False,
+    ) -> bool:
+        """Record the verification request and reject it."""
+        self.calls.append((challenge, response, host_id, require_user_verification))
+        return False
 
 
 def _host_jwt_without_agent_claim(host_sk: Ed25519PrivateKey, *, ttl_seconds: int = 120) -> str:
@@ -1193,6 +1214,140 @@ class TestAgentRegisterEndpoint:
         )
         assert r.status_code == 200
         assert r.json()["status"] == "pending"
+
+    def test_register_rejects_stale_host_jwt_before_pending_approval(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: "ASAPRateLimiter | None",
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Approval-bound registration rejects stale Host JWTs at the HTTP boundary."""
+        agent_store = InMemoryAgentStore()
+        host_store = InMemoryHostStore(agent_store=agent_store)
+        app = create_app(
+            sample_manifest,
+            rate_limit="999999/minute",
+            identity_host_store=host_store,
+            identity_agent_store=agent_store,
+            identity_rate_limit="999999/minute",
+            identity_fresh_session_config=FreshSessionConfig(window_seconds=60),
+        )
+        if isolated_rate_limiter is not None:
+            app.state.limiter = isolated_rate_limiter
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        issued_at = int(time.time()) - 120
+        monkeypatch.setattr("asap.auth.agent_jwt.time.time", lambda: float(issued_at))
+        token = create_host_jwt(
+            host_sk,
+            aud=_HOST_JWT_AUDIENCE,
+            agent_public_key=ed25519_public_jwk(agent_sk),
+            ttl_seconds=3600,
+        )
+
+        r = TestClient(app).post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert r.status_code == 403
+        assert r.json() == {
+            "detail": "stale host session; re-authenticate within the fresh-session window "
+            "(60s) to use approval endpoints"
+        }
+
+    def test_register_requires_webauthn_for_high_risk_capability(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: "ASAPRateLimiter | None",
+    ) -> None:
+        """High-risk capabilities require a WebAuthn block before pending approval is created."""
+        verifier = _RejectingWebAuthnVerifier()
+        agent_store = InMemoryAgentStore()
+        host_store = InMemoryHostStore(agent_store=agent_store)
+        app = create_app(
+            sample_manifest,
+            rate_limit="999999/minute",
+            identity_host_store=host_store,
+            identity_agent_store=agent_store,
+            identity_rate_limit="999999/minute",
+            identity_fresh_session_config=FreshSessionConfig(
+                window_seconds=300,
+                require_webauthn_for=["admin.task"],
+            ),
+            identity_webauthn_verifier=verifier,
+        )
+        if isolated_rate_limiter is not None:
+            app.state.limiter = isolated_rate_limiter
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        token = create_host_jwt(
+            host_sk,
+            aud=_HOST_JWT_AUDIENCE,
+            agent_public_key=ed25519_public_jwk(agent_sk),
+            ttl_seconds=120,
+        )
+
+        r = TestClient(app).post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"capabilities": ["admin.task"]},
+        )
+
+        assert r.status_code == 400
+        assert r.json() == {"detail": "webauthn object required for high-risk capabilities"}
+        assert verifier.calls == []
+
+    def test_register_reports_failed_webauthn_for_high_risk_capability(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: "ASAPRateLimiter | None",
+    ) -> None:
+        """Invalid WebAuthn assertions fail closed for high-risk capability requests."""
+        verifier = _RejectingWebAuthnVerifier()
+        agent_store = InMemoryAgentStore()
+        host_store = InMemoryHostStore(agent_store=agent_store)
+        app = create_app(
+            sample_manifest,
+            rate_limit="999999/minute",
+            identity_host_store=host_store,
+            identity_agent_store=agent_store,
+            identity_rate_limit="999999/minute",
+            identity_fresh_session_config=FreshSessionConfig(
+                window_seconds=300,
+                require_webauthn_for=["admin.task"],
+            ),
+            identity_webauthn_verifier=verifier,
+        )
+        if isolated_rate_limiter is not None:
+            app.state.limiter = isolated_rate_limiter
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        token = create_host_jwt(
+            host_sk,
+            aud=_HOST_JWT_AUDIENCE,
+            agent_public_key=ed25519_public_jwk(agent_sk),
+            ttl_seconds=120,
+        )
+
+        r = TestClient(app).post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "capabilities": ["admin.task"],
+                "webauthn": {"challenge": "challenge-1", "response": {"id": "cred-1"}},
+            },
+        )
+
+        assert r.status_code == 400
+        assert r.json() == {"detail": "webauthn verification failed"}
+        assert len(verifier.calls) == 1
+        challenge, response, host_id, require_user_verification = verifier.calls[0]
+        assert challenge == "challenge-1"
+        assert response == {"id": "cred-1"}
+        assert host_id is not None
+        assert host_id.startswith("urn:asap:host:")
+        assert require_user_verification is False
 
     async def test_register_auto_approves_when_host_active_and_capabilities_in_defaults(
         self,
