@@ -1237,13 +1237,14 @@ class TestAgentRegisterEndpoint:
         host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
         issued_at = int(time.time()) - 120
-        monkeypatch.setattr("asap.auth.agent_jwt.time.time", lambda: float(issued_at))
-        token = create_host_jwt(
-            host_sk,
-            aud=_HOST_JWT_AUDIENCE,
-            agent_public_key=ed25519_public_jwk(agent_sk),
-            ttl_seconds=3600,
-        )
+        with monkeypatch.context() as time_patch:
+            time_patch.setattr("asap.auth.agent_jwt.time.time", lambda: float(issued_at))
+            token = create_host_jwt(
+                host_sk,
+                aud=_HOST_JWT_AUDIENCE,
+                agent_public_key=ed25519_public_jwk(agent_sk),
+                ttl_seconds=3600,
+            )
 
         r = TestClient(app).post(
             "/asap/agent/register",
