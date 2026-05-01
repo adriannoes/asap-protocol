@@ -388,7 +388,7 @@ The ASAP Protocol ecosystem now spans two deployed applications:
 
 | Application | Vercel Project | Current URL |
 |-------------|---------------|-------------|
-| ASAP Protocol (Web App) | `asap-protocol` | `asap-protocol.vercel.app` |
+| ASAP Protocol (Web App) | `asap-protocol` | `https://asap-protocol.com` (canonical; `asap-protocol.vercel.app` remains as Vercel host) |
 | Agent Builder (agentic-orchestration) | `v0-agent-kit` | `open-agentic-flow.vercel.app` |
 
 These are separate Next.js apps on separate Vercel deployments. The cross-platform integration (see `prd-cross-platform-integration-asap.md` and `prd-cross-platform-integration-agentic.md`) introduces bidirectional navigation and shared authentication between them.
@@ -431,19 +431,19 @@ The question: should we acquire a custom domain now, or defer?
 
 ### Expert Assessment
 
-Acquiring a domain is important for branding and SSO but is not a blocker for the integration. The integration is designed with environment variables for all cross-app URLs, making domain migration a configuration change (not a code change). Deferring the domain purchase is the pragmatic choice: it avoids premature optimization and allows the team to validate the integration UX before investing in branding.
+Acquiring a domain is important for branding and SSO but is not a blocker for the integration. The integration is designed with environment variables for all cross-app URLs, making domain migration a configuration change (not a code change). The ASAP Protocol marketplace now uses **`https://asap-protocol.com`** as the canonical production URL; a paired custom domain for Agent Builder (`open-agentic-flow.vercel.app` today) may follow later under the same env-var-first pattern.
 
 ### Decision
 
 > [!IMPORTANT]
-> **ADR-26**: The cross-platform integration proceeds with **Vercel subdomains** (`asap-protocol.vercel.app` and `open-agentic-flow.vercel.app`). Custom domain acquisition is **deferred** to a future milestone.
+> **ADR-26**: Cross-platform URLs use environment variables (`NEXT_PUBLIC_*`). The ASAP Protocol marketplace **production** URL is **`https://asap-protocol.com`** (canonical). The Agent Builder remains on **`open-agentic-flow.vercel.app`** until a paired custom domain is acquired; **`asap-protocol.vercel.app`** remains available as the Vercel deployment hostname (typically redirecting to the custom domain).
 >
-> **Rationale**: The integration uses environment variables for all cross-app URLs, ensuring zero-code-change migration when a domain is purchased. SSO works via shared GitHub OAuth App (1-click sign-in). The current priority is validating the integration UX, not branding.
+> **Rationale**: The integration uses environment variables for all cross-app URLs, enabling domain changes without hardcoding. SSO works via shared GitHub OAuth App (1-click sign-in); OAuth callback URLs MUST include **`https://asap-protocol.com/api/auth/callback/github`** alongside any legacy `.vercel.app` entries while redirects are phased out.
 >
 > **Constraints**:
 > - All cross-app URLs MUST use environment variables (never hardcoded).
-> - The shared GitHub OAuth App MUST have both callback URLs registered.
-> - When a domain is acquired, follow the Migration Checklist above.
+> - The shared GitHub OAuth App MUST register production callback URLs (including **`https://asap-protocol.com/api/auth/callback/github`**) plus any transitional `.vercel.app` URLs as needed.
+> - For further domain changes (e.g., Agent Builder), follow the Migration Checklist above.
 >
 > **Recommended Domain TLDs** (for future reference): `.dev`, `.app`, `.io`, `.protocol`
 >

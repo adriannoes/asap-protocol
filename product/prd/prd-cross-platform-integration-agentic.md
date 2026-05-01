@@ -26,7 +26,7 @@ The Agent Builder is a visual drag-and-drop platform for creating, configuring, 
 
 | Application | Vercel Project | Production URL | Auth Stack |
 |-------------|---------------|----------------|------------|
-| ASAP Protocol | `asap-protocol` | `asap-protocol.vercel.app` | NextAuth v5 + GitHub OAuth |
+| ASAP Protocol | `asap-protocol` | `https://asap-protocol.com` | NextAuth v5 + GitHub OAuth |
 | Agent Builder | `v0-agent-kit` | `open-agentic-flow.vercel.app` | NextAuth v5 + GitHub OAuth + Supabase (optional) |
 
 ### 1.3 Current State (What Exists Today)
@@ -263,7 +263,7 @@ callbacks: {
 
 | Variable | Default Value | Purpose |
 |----------|--------------|---------|
-| `NEXT_PUBLIC_ASAP_PROTOCOL_URL` | `https://asap-protocol.vercel.app` | Back-navigation links |
+| `NEXT_PUBLIC_ASAP_PROTOCOL_URL` | `https://asap-protocol.com` | Back-navigation links |
 | `NEXT_PUBLIC_REGISTRY_URL` | `https://raw.githubusercontent.com/adriannoes/asap-protocol/main/registry.json` | Registry data source |
 | `NEXT_PUBLIC_REVOKED_URL` | `https://raw.githubusercontent.com/adriannoes/asap-protocol/main/revoked_agents.json` | Revoked agents list |
 | `AUTH_GITHUB_ID` | (shared with ASAP Protocol) | SSO |
@@ -503,7 +503,7 @@ This repo (agentic-orchestration) MUST be implemented and deployed **before** as
 #### Step 0: GitHub OAuth App (both repos — config only)
 1. Go to `github.com/settings/developers` → select (or create) the OAuth App.
 2. Add **both** callback URLs:
-   - `https://asap-protocol.vercel.app/api/auth/callback/github`
+   - `https://asap-protocol.com/api/auth/callback/github`
    - `https://open-agentic-flow.vercel.app/api/auth/callback/github`
 3. Copy the Client ID and Client Secret.
 4. In Vercel dashboard, set `AUTH_GITHUB_ID` and `AUTH_GITHUB_SECRET` on **both** projects with the same values.
