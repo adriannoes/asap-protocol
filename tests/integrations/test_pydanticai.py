@@ -136,6 +136,30 @@ def test_asap_tool_for_urn_returns_tool_with_mock_client() -> None:
     mock_send.assert_awaited_once()
 
 
+def test_pydantic_tool_invocation_value_error_returns_error_string() -> None:
+    """When agent.run raises ValueError, tool function returns error text."""
+    mock_send = AsyncMock(side_effect=ValueError("upstream boom"))
+    mock_transport = AsyncMock()
+    mock_transport.send = mock_send
+    mock_transport.__aenter__ = AsyncMock(return_value=mock_transport)
+    mock_transport.__aexit__ = AsyncMock(return_value=None)
+
+    p_get, p_verify, p_revoked, p_http = _resolve_patches()
+    with p_get as mock_get, p_verify as mock_verify, p_revoked as mock_revoked, p_http:
+        mock_get.return_value = _lite_registry()
+        mock_verify.return_value = True
+        mock_revoked.return_value = False
+        with patch("asap.client.market.ASAPClient", return_value=mock_transport):
+            tool = asap_tool_for_urn(
+                TEST_URN,
+                client=MarketClient(registry_url="https://reg.example/registry.json"),
+            )
+            result = asyncio.run(tool.function(input={"message": "hello"}))
+
+    assert isinstance(result, str)
+    assert "upstream boom" in result
+
+
 def test_asap_tool_for_urn_raises_value_error_when_resolve_fails() -> None:
     """When resolve fails (e.g. agent revoked), asap_tool_for_urn raises ValueError."""
     p_get, p_verify, p_revoked, p_http = _resolve_patches()
