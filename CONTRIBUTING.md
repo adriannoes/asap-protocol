@@ -146,6 +146,8 @@ Understanding the "why" behind our code is crucial. Please review:
 
 Check [Discussions](https://github.com/adriannoes/asap-protocol/discussions) or open an [Issue](https://github.com/adriannoes/asap-protocol/issues).
 
+For **general, non-security inquiries** (coordination, integrations, press), you can reach maintainers at **[info@asap-protocol.com](mailto:info@asap-protocol.com)**. **Do not** use this address for vulnerability reports — follow [SECURITY.md](SECURITY.md) instead.
+
 **Using AI coding tools?** See [AGENTS.md](AGENTS.md) for project-specific instructions optimized for Cursor, Copilot, Codex and other AI assistants.
 
 By contributing, you agree to the [Code of Conduct](CODE_OF_CONDUCT.md) and license your code under Apache 2.0.

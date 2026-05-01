@@ -13,6 +13,6 @@ We are committed to making participation in this project a harassment-free exper
 
 ## Enforcement
 
-If you see behavior that violates these rules, please report it to the maintainers (e.g., via private email or GitHub issue if appropriate). Violators may be warned or banned from the project at the maintainers' discretion.
+If you see behavior that violates these rules, please report it to the maintainers via **[info@asap-protocol.com](mailto:info@asap-protocol.com)** (or use a GitHub issue if the report is not sensitive). **Security vulnerabilities** must not be sent by email — use [SECURITY.md](SECURITY.md). Violators may be warned or banned from the project at the maintainers' discretion.
 
 Basically: **Don't be a jerk.** :)
