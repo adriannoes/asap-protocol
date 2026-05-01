@@ -83,7 +83,7 @@ Repeat the same scenarios covered by CI without running the full suite:
 
 ## 11. Security audit (same graph as CI)
 
-- [ ] `uv sync --frozen --all-extras --dev --no-extra crewai --no-extra llamaindex && uv run pip-audit` — see `SECURITY.md` / CI job for ignores
+- [ ] `uv sync --frozen --all-extras --dev --no-extra crewai --no-extra llamaindex && uv run pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-3219` — matches CI (see `SECURITY.md` if flags change)
 
 ---
 

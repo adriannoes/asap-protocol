@@ -93,9 +93,11 @@ We continuously monitor dependencies using:
 
 CI runs `pip-audit` after a sync that **excludes** the optional extras `crewai` and `llamaindex`, because those graphs currently pull transitive packages (`diskcache`, `nltk`) that OSV still lists with no fixed release on PyPI. To match the security job locally:
 
-`uv sync --frozen --all-extras --dev --no-extra crewai --no-extra llamaindex` then `uv run pip-audit --ignore-vuln CVE-2026-4539` (matches CI).
+`uv sync --frozen --all-extras --dev --no-extra crewai --no-extra llamaindex` then `uv run pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-3219` (matches CI).
 
-**CVE-2026-4539 (Pygments)**: OSV lists this advisory while the latest release on PyPI remains `2.19.2`. CI uses `--ignore-vuln CVE-2026-4539` until a patched `pygments` release is published; remove the flag when upgrading resolves the advisory.
+**CVE-2026-4539 (Pygments)**: CI uses `--ignore-vuln CVE-2026-4539` until a patched `pygments` release on PyPI resolves the advisory (`tool.uv.override-dependencies` prefers `pygments>=2.20.0` when resolvable).
+
+**CVE-2026-3219 (pip)**: `[dev]` pulls `pip-audit` → `pip-api`, which resolves `pip` from PyPI. [GHSA-58qw-9mgm-455v](https://github.com/advisories/GHSA-58qw-9mgm-455v) reports ambiguous handling of concatenated tar/ZIP archives; OSV marks `last_affected` **`26.0.1`** with **no fixed version** listed yet. CI ignores this CVE until a patched `pip` release is published; remove the flag when `pip-audit` reports zero hits without it.
 
 If you install `[crewai]` or `[llamaindex]`, run `pip-audit` separately on that environment and expect possible advisories until upstream publishes patched releases. Integration tests for those extras still run in CI with the full dependency tree.
 
