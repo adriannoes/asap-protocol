@@ -139,7 +139,7 @@ Currently, auto-merge is disabled. All Dependabot PRs require manual review to e
 
 Understanding the "why" behind our code is crucial. Please review:
 
--   **Tech Stack Decisions**: [.cursor/dev-planning/architecture/tech-stack-decisions.md](.cursor/dev-planning/architecture/tech-stack-decisions.md)
+-   **Tech Stack Decisions**: [engineering/architecture/tech-stack-decisions.md](engineering/architecture/tech-stack-decisions.md)
 -   **ADRs**: [docs/adr](docs/adr)
 
 ## Need Help?

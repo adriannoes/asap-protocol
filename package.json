@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "slop-scan": "^0.3.0"
+  }
+}

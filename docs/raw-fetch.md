@@ -137,6 +137,6 @@ Before running a task against an agent, check that its URN is **not** in `revoke
 
 ## See also
 
-- [Lite Registry (ADR-15)](../.cursor/product-specs/decision-records/README.md) — design of the static registry.
-- [SDK cache strategy (ADR-25)](../.cursor/product-specs/decision-records/04-technology.md) — registry cache TTL; revocation never cached.
+- [Lite Registry (ADR-15)](../product/decision-records/README.md) — design of the static registry.
+- [SDK cache strategy (ADR-25)](../product/decision-records/04-technology.md) — registry cache TTL; revocation never cached.
 - Python SDK: `from asap.client import MarketClient` — resolve, trust, revocation, and run in one flow.

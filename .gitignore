@@ -178,8 +178,20 @@ cython_debug/
 # Project specific
 !/.cursor/
 /drafts/
-# Strategy docs (private — do not commit)
-.cursor/product-specs/strategy/
+/.claude/
+# Local agent state / tooling (ignore everywhere, not only repo root)
+.agents/
+# Strategic and commercial planning (private - do not commit)
+product/strategy/
+product/private/
+product/private-roadmap/
+product/prd/private/
+# Tactical PRDs outside private/ (patch train); single-digit and double-digit patch (e.g. v2.3.10)
+product/prd/prd-v2.3.[1-9]-*.md
+product/prd/prd-v2.3.[1-9][0-9]-*.md
+engineering/private/
+engineering/tasks/private/
+engineering/tasks/v2.3.[1-9]*/
 node_modules/
 .pnpm-store/
 .github/wiki/

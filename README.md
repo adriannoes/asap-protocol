@@ -20,7 +20,7 @@ Building multi-agent systems today suffers from three core technical challenges 
 
 **ASAP** provides a production-ready communication layer that simplifies these complexities. It's ideal for **multi-agent orchestration**, **stateful workflows** (persistence, resumability), **MCP support** and **production systems** requiring high-performance, type-safe agent communication. 
 
-For simple point-to-point communication, a basic HTTP API might suffice; ASAP shines when you need orchestration, state management and multi-agent coordination. See the [spec](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/strategy/v0-original-specs.md) for details.
+For simple point-to-point communication, a basic HTTP API might suffice; ASAP shines when you need orchestration, state management and multi-agent coordination. See the [documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) for the current protocol overview and features.
 
 ### Key Features
 
@@ -106,7 +106,7 @@ See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/
 
 **Decisions & Operations**
 - [ADRs](https://github.com/adriannoes/asap-protocol/tree/main/docs/adr) — 19 Architecture Decision Records
-- [Tech Stack](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/dev-planning/architecture/tech-stack-decisions.md) — Rationale for Python, Pydantic, Next.js choices
+- [Tech Stack](https://github.com/adriannoes/asap-protocol/blob/main/engineering/architecture/tech-stack-decisions.md) — Rationale for Python, Pydantic, Next.js choices
 - [Deployment](https://github.com/adriannoes/asap-protocol/blob/main/docs/deployment/kubernetes.md) | [Troubleshooting](https://github.com/adriannoes/asap-protocol/blob/main/docs/troubleshooting.md)
 
 **Release**
@@ -145,7 +145,7 @@ High-level only — see **[Changelog](https://github.com/adriannoes/asap-protoco
 
 ## 🔭 What's Next?
 
-ASAP is evolving toward an **Agent Marketplace** — an open ecosystem where AI agents discover, trust and collaborate autonomously. See our [vision document](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/strategy/vision-agent-marketplace.md) for the full roadmap.
+ASAP is evolving toward an **Agent Marketplace** — an open ecosystem where AI agents discover, trust and collaborate autonomously. See the [ADR index](https://github.com/adriannoes/asap-protocol/blob/main/product/decision-records/README.md) and [v2.0 roadmap PRD](https://github.com/adriannoes/asap-protocol/blob/main/product/prd/prd-v2.0-roadmap.md). Detailed long-term strategy narratives are maintained privately (not shipped in this repository).
 
 ## Contributing
 

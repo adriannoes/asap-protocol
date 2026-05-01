@@ -7,9 +7,9 @@ To guide an AI assistant in creating a detailed, step-by-step task list in Markd
 ## Output
 
 - **Format:** Markdown (`.md`)
-- **Location:** `/.cursor/dev-planning/tasks/`
+- **Location:** `/engineering/tasks/`
 - **Filename:** `tasks-[prd-file-name].md` (e.g., `tasks-prd-user-profile-editing.md`)
-- **Template:** See [task-template.md](../dev-planning/templates/task-template.md) for detailed format
+- **Template:** See [task-template.md](../../engineering/templates/task-template.md) for detailed format
 
 ## Process
 
@@ -22,7 +22,7 @@ To guide an AI assistant in creating a detailed, step-by-step task list in Markd
 7.  **Make dependencies explicit:** For any task that is part of a larger flow or has dependencies (user journey, pipeline step, API consumer, script that reads another task's output), add **Trigger/entry point**, **Enables**, and **Depends on** (see "Dependencies and integration" below). Ensure acceptance criteria belong to the task that delivers them—no AC from another task.
 8.  **Generate Final Output:** Combine the parent tasks, sub-tasks, relevant files, dependency notes, and acceptance criteria into the final Markdown structure.
 9.  **Post-generation checklist:** Before saving, verify: (a) tasks with dependencies have Trigger/Enables/Depends on where relevant; (b) each task has its own acceptance criteria and none describe another task's outcome; (c) integration points (where one task's output is another's input) are stated in sub-tasks or task notes.
-10. **Save Task List:** Save the generated document in the `/.cursor/dev-planning/tasks/` directory with the filename `tasks-[prd-file-name].md`. For large PRDs (e.g. multi-sprint releases), organize output in a versioned folder (e.g. `v2.1.0/`) with a roadmap file (`tasks-v2.1.0-roadmap.md`) and per-sprint files (`sprint-E1-*.md`, etc.); the PRD's Related Documents should link to the roadmap.
+10. **Save Task List:** Save the generated document in the `/engineering/tasks/` directory with the filename `tasks-[prd-file-name].md`. For large PRDs (e.g. multi-sprint releases), organize output in a versioned folder (e.g. `v2.1.0/`) with a roadmap file (`tasks-v2.1.0-roadmap.md`) and per-sprint files (`sprint-E1-*.md`, etc.); the PRD's Related Documents should link to the roadmap.
 
 ## Output Format
 
@@ -121,5 +121,5 @@ Both require clear, unambiguous instructions with sufficient context to understa
 
 ## Related Templates
 
-- **Task Template**: [task-template.md](../dev-planning/templates/task-template.md) - Full template with examples
+- **Task Template**: [task-template.md](../../engineering/templates/task-template.md) - Full template with examples
 - **PRD Template**: [create-prd.md](./create-prd.md) - How to create PRDs
