@@ -176,8 +176,8 @@ For wire-level JSON helpers, see **`remoteRpcErrorFromJson`** and related export
 
 ## Security
 
-- **Private key material in JavaScript**: runtimes cannot reliably **zero or wipe** sensitive values from the heap after use. The SDK clears the parsed JWK **`d`** field after importing the signing key as a modest defense-in-depth measure; treat devices and bundles as trusted boundaries for persisted keys (see **Identity and storage**).
-- **Retries**: when enabling **`fallbackBackoffMs`**, ensure total retry duration and concurrency match your gateway’s rate limits and operational expectations.
+- JS heaps cannot reliably wipe key material; the SDK clears the JWK `d` field after `importKey` as minor hardening.
+- If you use `fallbackBackoffMs`, size retries to your gateway limits.
 
 ## Reference app
 

@@ -107,7 +107,6 @@ function extractSseDataJson(eventBlock: string): string | undefined {
   const dataLines: string[] = [];
   for (const rawLine of eventBlock.split("\n")) {
     const line = rawLine.replace(/\r$/u, "");
-    // ASAP stream wire uses only `data:` payloads today; named SSE fields below are ignored for forward compatibility with full SSE parsers.
     if (line.startsWith("event:")) {
       continue;
     }

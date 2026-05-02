@@ -72,7 +72,7 @@ export interface ReactivateAgentResult {
 
 export type CapabilityRequestSpec = string | { readonly name: string; readonly constraints?: Record<string, unknown> };
 
-/** Parsed JSON body from a successful `POST /asap/agent/request-capability` response. */
+/** Successful `POST /asap/agent/request-capability` JSON body. */
 export interface RequestCapabilityResult {
   readonly status?: string;
   readonly [key: string]: unknown;

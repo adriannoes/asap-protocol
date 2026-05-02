@@ -74,7 +74,6 @@ function stripPrivateJwk(jwk: JsonWebKey): JsonWebKey {
   return rest;
 }
 
-/** Private OKP material may include `d`; used only after parsing stored JSON. */
 type Ed25519PrivateJwk = JsonWebKey & { d?: string };
 
 async function importEd25519PrivateFromJwk(jwk: JsonWebKey): Promise<CryptoKey> {
@@ -157,7 +156,7 @@ async function signHostJwtInternal(input: {
   }
   const privateJwk = JSON.parse(raw) as Ed25519PrivateJwk;
   const signKey = await importEd25519PrivateFromJwk(privateJwk);
-  privateJwk.d = undefined; // defense-in-depth: drop secret from parsed object; JS cannot secure-wipe heap
+  privateJwk.d = undefined;
 
   const now = Math.floor(Date.now() / 1000);
   const ttl = input.ttlSeconds ?? DEFAULT_HOST_JWT_TTL_SECONDS;
@@ -288,7 +287,7 @@ async function signAgentJwtInternal(input: {
   }
   const privateJwk = JSON.parse(raw) as Ed25519PrivateJwk;
   const signKey = await importEd25519PrivateFromJwk(privateJwk);
-  privateJwk.d = undefined; // defense-in-depth: drop secret from parsed object; JS cannot secure-wipe heap
+  privateJwk.d = undefined;
 
   const now = Math.floor(Date.now() / 1000);
   const jti = `jwt_${ulid()}`;

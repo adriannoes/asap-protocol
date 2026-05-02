@@ -1,9 +1,6 @@
 /**
- * Transport helpers: retry on recoverable errors (TS-011).
- *
- * Default behaviour matches Python `ASAPClient.send`: retry when `retry_after_ms` is present on
- * {@link RecoverableError} or {@link RemoteRecoverableRPCError}. Optional {@link RecoverableRetryOptions.fallbackBackoffMs}
- * adds bounded exponential backoff when those errors omit `retryAfterMs`.
+ * Recoverable JSON-RPC retries (TS-011). Matches Python `ASAPClient.send` when `retry_after_ms`
+ * is set; optional `fallbackBackoffMs` retries recoverable errors without that hint.
  */
 
 import { RecoverableError, RemoteRecoverableRPCError } from "./errors.js";
@@ -11,11 +8,7 @@ import { RecoverableError, RemoteRecoverableRPCError } from "./errors.js";
 export interface RecoverableRetryOptions {
   /** Maximum number of attempts including the first (default 8). */
   readonly maxRetries?: number;
-  /**
-   * When set, {@link RecoverableError} / {@link RemoteRecoverableRPCError} without `retryAfterMs`
-   * still retry using bounded exponential backoff: `min(60_000, fallbackBackoffMs * 2 ** attempt)`.
-   * Omit to match Python client behaviour (retry only when `retry_after_ms` is present).
-   */
+  /** Bounded exponential backoff when `retryAfterMs` is missing (cap 60s). */
   readonly fallbackBackoffMs?: number;
   /** Injected sleep for tests (default `setTimeout` promise). */
   readonly sleep?: (ms: number) => Promise<void>;
@@ -55,12 +48,7 @@ function recoverableRetryDelayMs(
   return undefined;
 }
 
-/**
- * Runs `op`, retrying when it throws {@link RecoverableError} or {@link RemoteRecoverableRPCError}.
- * By default (no `fallbackBackoffMs`), retries only when `retryAfterMs` is set — aligned with the Python
- * client’s use of `retry_after_ms`. Pass `fallbackBackoffMs` to opt into bounded exponential backoff
- * when the error is recoverable but omits `retryAfterMs`.
- */
+/** Runs `op`, retrying on recoverable errors per delay rules above. */
 export async function callWithRecoverableRetry<T>(
   op: () => Promise<T>,
   options?: RecoverableRetryOptions,
