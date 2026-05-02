@@ -1,0 +1,128 @@
+# Auto-registration PRs: validate registry-only diff, LiteRegistry schema, and
+# self-signed verification policy; enable squash auto-merge when safe.
+name: Auto-merge registry (auto-registration)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: auto-merge-registry-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  policy:
+    name: auto-registration merge policy
+    if: contains(github.event.pull_request.labels.*.name, 'auto-registration')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Fetch base commit for diff
+        run: git fetch --no-tags origin ${{ github.event.pull_request.base.sha }}
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python
+
+      - name: List changed files (base…head)
+        id: files
+        run: |
+          set -euo pipefail
+          mapfile -t CHANGED < <(git diff --name-only \
+            "${{ github.event.pull_request.base.sha }}" \
+            "${{ github.event.pull_request.head.sha }}")
+          printf '%s\n' "${CHANGED[@]}"
+          only_registry=true
+          for f in "${CHANGED[@]}"; do
+            if [ "$f" != "registry.json" ]; then
+              only_registry=false
+              break
+            fi
+          done
+          echo "only_registry=${only_registry}" >> "$GITHUB_OUTPUT"
+          {
+            echo 'list<<__CHANGED_FILES__'
+            printf '%s\n' "${CHANGED[@]}"
+            echo '__CHANGED_FILES__'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Validate registry.json schema
+        id: schema
+        run: uv run python scripts/validate_registry.py registry.json
+
+      - name: Export base registry.json
+        run: |
+          set -euo pipefail
+          git show "${{ github.event.pull_request.base.sha }}:registry.json" > base-registry.json
+
+      - name: Check verification policy (self-signed path)
+        id: trust
+        if: steps.files.outputs.only_registry == 'true'
+        run: |
+          set -euo pipefail
+          if uv run python scripts/check_auto_registration_merge_eligible.py \
+            --base-file base-registry.json \
+            --head-file registry.json; then
+            echo "eligible=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+      - name: Decide auto-merge (same-repo PRs only)
+        id: decision
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          PR="${{ github.event.pull_request.number }}"
+          REPO="${{ github.repository }}"
+          FORK="${{ github.event.pull_request.head.repo.full_name }}"
+          BASE_REPO="${{ github.repository }}"
+
+          comment() {
+            gh pr comment "$PR" --repo "$REPO" --body "$1"
+          }
+
+          if [ "$FORK" != "$BASE_REPO" ]; then
+            comment "## Auto-registration merge policy
+
+          **Human review required** — pull request head is from a fork (\`$FORK\`). Auto-merge is not enabled for fork PRs."
+            echo "enable=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "${{ steps.files.outputs.only_registry }}" != "true" ]; then
+            comment "## Auto-registration merge policy
+
+          **Human review required** — this PR changes files other than \`registry.json\`:
+
+          \`\`\`
+          ${{ steps.files.outputs.list }}
+          \`\`\`"
+            echo "enable=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "${{ steps.trust.outputs.eligible }}" != "true" ]; then
+            comment "## Auto-registration merge policy
+
+          **Human review required** — verification policy failed (new or promoted \`verified\` entries are not allowed on the self-signed auto-registration path). See the **Check verification policy** step log."
+            echo "enable=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          comment "## Auto-registration merge policy
+
+          **Squash auto-merge enabled** — only \`registry.json\` changed, schema is valid, and no \`verified\` badge was added or promoted. This PR will merge automatically when required checks pass."
+          gh pr merge "$PR" --repo "$REPO" --auto --squash
+          echo "enable=true" >> "$GITHUB_OUTPUT"
