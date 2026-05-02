@@ -14,6 +14,7 @@ import pytest
 pytest.importorskip("mcp")
 
 from asap.discovery.registry import LiteRegistry, RegistryEntry
+import asap.mcp.serve as mcp_serve
 from asap.mcp.serve import (
     _create_mcp_server,
     _parse_args,
@@ -122,6 +123,42 @@ class TestSearchRegistry:
         )
         result = _search_registry(registry, "nonexistent")
         assert result == []
+
+    def test_query_strips_whitespace(self) -> None:
+        registry = LiteRegistry(
+            version="1.0",
+            updated_at=datetime.now(timezone.utc),
+            agents=[
+                RegistryEntry(
+                    id="urn:asap:agent:z",
+                    name="Z",
+                    description="Z",
+                    endpoints={"http": "https://z.example.com"},
+                    skills=[],
+                    asap_version="1.0",
+                ),
+            ],
+        )
+        assert _search_registry(registry, "  \t  ") == _search_registry(registry, "")
+
+    def test_query_matches_agent_id_substring(self) -> None:
+        registry = LiteRegistry(
+            version="1.0",
+            updated_at=datetime.now(timezone.utc),
+            agents=[
+                RegistryEntry(
+                    id="urn:asap:agent:weather-service-v2",
+                    name="Svc",
+                    description="Svc",
+                    endpoints={"http": "https://w.example.com"},
+                    skills=[],
+                    asap_version="1.0",
+                ),
+            ],
+        )
+        result = _search_registry(registry, "weather-service")
+        assert len(result) == 1
+        assert result[0]["id"] == "urn:asap:agent:weather-service-v2"
 
 
 class TestParseArgs:
@@ -240,6 +277,32 @@ class TestCreateMcpServer:
         parsed = json.loads(text)
         assert "error" in parsed
         assert "not found" in parsed["error"].lower() or "fake" in parsed["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_asap_discover_returns_error_payload_when_registry_unavailable(self) -> None:
+        with patch("asap.mcp.serve.get_registry", new_callable=AsyncMock) as mock_gr:
+            mock_gr.side_effect = RuntimeError("registry unreachable")
+            mcp = _create_mcp_server()
+            result = await mcp.call_tool("asap_discover", {"query": ""})
+        content, _ = result
+        text = content[0].text if hasattr(content[0], "text") else str(content[0])
+        parsed = json.loads(text)
+        assert "error" in parsed
+        assert "unreachable" in parsed["error"].lower()
+
+    def test_create_mcp_server_requires_fastmcp_when_unavailable(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(mcp_serve, "FastMCP", None)
+        monkeypatch.setattr(
+            mcp_serve,
+            "_mcp_import_error",
+            ImportError("no mcp"),
+            raising=False,
+        )
+        with pytest.raises(RuntimeError, match="mcp package is required"):
+            mcp_serve._create_mcp_server()
 
 
 class TestMain:

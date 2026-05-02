@@ -69,7 +69,7 @@ export function Footer() {
         </div>
 
         <div className="mt-16 pt-8 border-t border-zinc-900 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-zinc-600">
-          <p>© {new Date().getFullYear()} ASAP Protocol Authors.</p>
+          <p>© {new Date().getFullYear()} ASAP Protocol contributors.</p>
           <div className="flex items-center gap-4">
             <span>From agents, for agents. Delivering reliability, as soon as possible.</span>
           </div>

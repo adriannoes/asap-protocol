@@ -10,6 +10,7 @@
 - **Transport**: JSON-RPC 2.0 over HTTP/WebSocket.
 - **Status**: v2.2.1 (Released); next planning focus is the v2.3.x adoption train.
 - **Framework Integrations**: LangChain, CrewAI, PydanticAI, LlamaIndex, SmolAgents, Vercel AI SDK, MCP, OpenClaw, A2H.
+- **General contact** (humans coordinating on the protocol; not security): [info@asap-protocol.com](mailto:info@asap-protocol.com) — vulnerabilities: [SECURITY.md](SECURITY.md).
 
 ## Quick Start
 

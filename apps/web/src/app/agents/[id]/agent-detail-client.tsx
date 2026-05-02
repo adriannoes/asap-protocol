@@ -5,8 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, ExternalLink, ShieldAlert, ShieldCheck, TerminalSquare } from 'lucide-react';
+import { ArrowLeft, ExternalLink, ShieldAlert, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
+import { AgentConnectActions } from './agent-connect-actions';
 import { UsageSnippets } from './usage-snippets';
 
 interface AgentDetailClientProps {
@@ -23,6 +24,7 @@ function safeAuthHref(url: unknown): string {
 
 export function AgentDetailClient({ agent, isRevoked }: AgentDetailClientProps) {
     const agentEndpoint = agent.endpoints?.asap ?? (agent.endpoints as { http?: string })?.http;
+    const protocolVersion = agent.capabilities?.asap_version ?? agent.version;
 
     const renderBooleanBadge = (value: boolean | undefined | null, label: string) => {
         if (value === undefined || value === null) return null;
@@ -60,9 +62,9 @@ export function AgentDetailClient({ agent, isRevoked }: AgentDetailClientProps) 
                             <Badge variant="outline" className="text-xs font-mono py-1">
                                 {agent.id}
                             </Badge>
-                            {agent.version && (
-                                <Badge variant="secondary" className="text-xs">
-                                    v{agent.version}
+                            {protocolVersion && (
+                                <Badge variant="secondary" className="text-xs font-mono">
+                                    ASAP {protocolVersion}
                                 </Badge>
                             )}
                             {agent.built_with && (
@@ -87,11 +89,14 @@ export function AgentDetailClient({ agent, isRevoked }: AgentDetailClientProps) 
                     </div>
 
                     <div className="flex flex-col gap-3 min-w-48 shrink-0">
-                        <Button className="w-full font-semibold shadow-md gap-2" size="lg">
-                            <TerminalSquare className="w-4 h-4" /> Connect Agent
-                        </Button>
-                        <div className="p-3 bg-muted/50 border rounded-md text-xs font-mono break-all selection:bg-indigo-500/30">
-                            {agent.endpoints?.asap ?? (agent.endpoints as { http?: string })?.http}
+                        <AgentConnectActions endpoint={agentEndpoint} />
+                        <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1.5">
+                                Endpoint URL
+                            </p>
+                            <div className="p-3 bg-muted/50 border rounded-md text-xs font-mono break-all selection:bg-indigo-500/30">
+                                {agent.endpoints?.asap ?? (agent.endpoints as { http?: string })?.http}
+                            </div>
                         </div>
                         {(agent.repository_url || agent.documentation_url) && (
                             <div className="flex flex-wrap gap-2">
@@ -124,15 +129,15 @@ export function AgentDetailClient({ agent, isRevoked }: AgentDetailClientProps) 
                             <CardTitle>Capabilities & Skills</CardTitle>
                             <CardDescription>
                                 Discover what this agent can do via ASAP Protocol.
+                                {protocolVersion ? (
+                                    <> Negotiates protocol version {protocolVersion}.</>
+                                ) : null}
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="flex flex-wrap gap-2 mb-4 cursor-default">
                                 {renderBooleanBadge(agent.capabilities?.state_persistence, 'State Persistence')}
                                 {renderBooleanBadge(agent.capabilities?.streaming, 'Streaming')}
-                                {agent.capabilities?.asap_version && (
-                                    <Badge variant="outline">ASAP Protocol {agent.capabilities.asap_version}</Badge>
-                                )}
                             </div>
 
                             <Separator />

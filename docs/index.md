@@ -90,6 +90,7 @@ See [CLI reference](cli.md) (all commands, exit codes, `compliance-check`, `audi
 
 ## Documentation
 
+- [OpenAPI adapter](adapters/openapi.md) — derive ASAP skills and an upstream proxy from OpenAPI 3.x (`asap.adapters.openapi`)
 - [CLI reference](cli.md) — all `asap` commands, including `compliance-check`, `audit export`, and exit codes
 - [Audit log](audit.md) — hash chain model, export formats, tamper checks
 - [API Reference](api-reference.md)
@@ -110,3 +111,9 @@ See [CLI reference](cli.md) (all commands, exit codes, `compliance-check`, `audi
 | **Discovery** | Well-known manifest, Lite Registry, health endpoint | [Transport](transport.md), `asap.discovery` |
 | **State Storage** | SQLite backend, env-based backend selection | [State Management](state-management.md), [Best Practices: Failover](best-practices/agent-failover-migration.md), examples: `storage_backends`, `state_migration` |
 | **Health** | `GET /.well-known/asap/health` for liveness | [Transport](transport.md), `asap.discovery.health` |
+
+## Contact
+
+**General inquiries** about the protocol or project: [info@asap-protocol.com](mailto:info@asap-protocol.com).
+
+For vulnerability reports, use **[SECURITY.md](../SECURITY.md)** (GitHub Private Vulnerability Reporting), not email. Technical questions work well via [GitHub Discussions](https://github.com/adriannoes/asap-protocol/discussions) or [Issues](https://github.com/adriannoes/asap-protocol/issues).

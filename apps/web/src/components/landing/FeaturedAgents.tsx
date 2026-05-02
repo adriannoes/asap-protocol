@@ -32,8 +32,8 @@ export function FeaturedAgents({ agents }: FeaturedAgentsProps) {
           </p>
         </div>
 
-        <div className="mx-auto max-w-5xl px-8">
-          {/* We add px-8 to Carousel wrapper so arrows have space without overlapping cards */}
+        <div className="mx-auto max-w-5xl px-12 md:px-16">
+          {/* We add px-12 to Carousel wrapper so arrows have space without overlapping cards */}
           <Carousel
             opts={{
               align: 'start',
@@ -48,7 +48,7 @@ export function FeaturedAgents({ agents }: FeaturedAgentsProps) {
                   className="basis-full pl-2 md:basis-1/2 md:pl-4 lg:basis-1/3"
                 >
                   <div className="p-1">
-                    <Card className="border-zinc-800 bg-zinc-950/50 backdrop-blur-sm transition-all hover:border-indigo-500/30 hover:bg-zinc-900/80">
+                    <Card className="border-white/10 bg-zinc-950/50 backdrop-blur-sm transition-all hover:border-indigo-500/30 hover:bg-zinc-900/80 shadow-[0_0_15px_rgba(0,0,0,0.5)]">
                       <CardHeader className="pb-4">
                         <div className="mb-2 flex items-start justify-between">
                           <CardTitle className="line-clamp-1 text-xl text-white">
@@ -86,8 +86,8 @@ export function FeaturedAgents({ agents }: FeaturedAgentsProps) {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="border-zinc-800 bg-zinc-950 text-white hover:bg-zinc-800 hover:text-white" />
-            <CarouselNext className="border-zinc-800 bg-zinc-950 text-white hover:bg-zinc-800 hover:text-white" />
+            <CarouselPrevious className="border-white/10 bg-zinc-950 text-white hover:bg-zinc-800 hover:text-white sm:-left-12 -left-4" />
+            <CarouselNext className="border-white/10 bg-zinc-950 text-white hover:bg-zinc-800 hover:text-white sm:-right-12 -right-4" />
           </Carousel>
         </div>
       </div>

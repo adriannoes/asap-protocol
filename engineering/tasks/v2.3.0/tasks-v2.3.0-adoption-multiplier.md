@@ -1,6 +1,6 @@
 # Tasks: v2.3.0 Adoption Multiplier — Sprint Index
 
-**Status: 🟡 PLANNED** — Rescoped 2026-04-17 from "Scale & Registry" after v2.2.0 audit confirmed 120/500 agents (trigger unmet).
+**Status: 🟢 IN PROGRESS** — Rescoped 2026-04-17 from "Scale & Registry" after v2.2.0 audit confirmed 120/500 agents (trigger unmet). **S1 (OpenAPI adapter)** is **complete in-repo** (2026-05-01); S2–S5 and PyPI/npm release remain.
 
 Based on [PRD v2.3 Adoption Multiplier](../../../product/prd/prd-v2.3-scale.md). Each sprint maps to a PR sequence.
 
@@ -16,7 +16,7 @@ Based on [PRD v2.3 Adoption Multiplier](../../../product/prd/prd-v2.3-scale.md).
 
 | Sprint | Focus | PRD Sections | Priority | Status |
 |--------|-------|--------------|----------|--------|
-| **S1** | [OpenAPI Adapter (Python)](./sprint-S1-openapi-adapter.md) | §4.1 (OA-001..011) | P0 | 🟡 |
+| **S1** | [OpenAPI Adapter (Python)](./sprint-S1-openapi-adapter.md) | §4.1 (OA-001..011) | P0 | 🟢 **Done (repo)** — PyPI with `2.3.0` via **S5** |
 | **S2** | [TypeScript Client SDK](./sprint-S2-typescript-sdk.md) | §4.2 (TS-001..011) | P0 | 🟡 |
 | **S3** | [Auto-Registration](./sprint-S3-auto-registration.md) | §4.3 (AUTO-001..007) | P0 | 🟡 |
 | **S4** | [Capability Escalation + ASAP Challenge](./sprint-S4-escalation-challenge.md) | §4.4 (ESC-001..004), §4.5 (CHAL-001..004) | P1/P2 | 🟡 |
@@ -27,28 +27,29 @@ Based on [PRD v2.3 Adoption Multiplier](../../../product/prd/prd-v2.3-scale.md).
 ```
 S1 (OpenAPI Adapter ─ Python) ──► S4 (Escalation + Challenge) ──► S5 (Release)
                                               ▲
-S2 (TypeScript SDK) ─────────────────────────┤
+S2 (TypeScript SDK) ──────────────────────────┤
                                               │
-S3 (Auto-Registration) ──────────────────────┘
+S3 (Auto-Registration) ───────────────────────┘
 ```
 
 S1, S2, and S3 are independent and can run in parallel with three contributors. S4 depends on S1 (escalation flow used by OpenAPI-derived agents) and on S2 (escalation client method needed in TS SDK). S5 depends on S1–S4.
 
 ## Definition of Done (v2.3.0)
 
-- [ ] **OpenAPI Adapter**: Python package `asap.adapters.openapi` published; reference example onboards a public OpenAPI spec end-to-end
+- [x] **OpenAPI Adapter (repo)**: `asap.adapters.openapi` implemented (`create_from_openapi`, PetStore example `examples/openapi_petstore/`, docs `docs/adapters/openapi.md`) — see [sprint-S1-openapi-adapter.md](./sprint-S1-openapi-adapter.md). *Acceptance: sprint checklist complete; release packaging tracked separately.*
+- [ ] **OpenAPI Adapter (release)**: `asap-protocol==2.3.0` on **PyPI** includes the `[openapi]` extra and adapter surface (closes when S5 ships)
 - [ ] **TypeScript SDK**: `@asap-protocol/client@2.3.0` published to npm with Vercel AI / OpenAI / Anthropic adapters
 - [ ] **Auto-Registration**: `POST /registry/agents` endpoint live; bot-driven PR flow merging into `registry.json` automatically when Compliance Harness v2 passes
 - [ ] **Capability Escalation**: `POST /asap/agent/request-capability` operational with approval flow integration
 - [ ] **ASAP Challenge**: `WWW-Authenticate: ASAP discovery=...` middleware shipped; client recognizes scheme
-- [ ] Test coverage ≥90% for new modules (Python and TS)
+- [ ] Test coverage ≥90% for new modules (Python and TS) — *OpenAPI package: bring `src/asap/adapters/openapi/` to ≥90% before release or document exception; see [sprint-S1-openapi-adapter.md](./sprint-S1-openapi-adapter.md) acceptance block.*
 - [ ] `uv run mypy src/` and `uv run ruff check .` pass
 - [ ] TS SDK passes `pnpm test`, `pnpm lint`, `pnpm typecheck`
 - [ ] E2E test: spec URL → onboarded agent → invocable capability with constraints
 - [ ] `apps/web` landing page, feature cards, and docs links updated to announce the backend/protocol improvements
 - [ ] Public docs route users from the homepage to GitHub documentation for OpenAPI, TypeScript SDK, and adapter examples
 - [ ] CHANGELOG.md updated under `[2.3.0]`
-- [ ] `asap-protocol==2.3.0` published to PyPI
+- [ ] `asap-protocol==2.3.0` published to PyPI *(full package; confirms **OpenAPI Adapter (release)** above)*
 - [ ] `@asap-protocol/client@2.3.0` published to npm
 - [ ] Tag `v2.3.0` on `main` + GitHub Release notes
 - [ ] Docker `ghcr.io/adriannoes/asap-protocol:v2.3.0` and `:latest` rebuilt
