@@ -1,4 +1,5 @@
-// Minimal demo layout: Suspense and error boundaries are intentionally omitted.
+// Demo layout: no Suspense or app/error.tsx (kept minimal on purpose).
+
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
