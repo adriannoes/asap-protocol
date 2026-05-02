@@ -27,12 +27,12 @@ uv run mypy src/ scripts/ tests/ && uv run ruff check src/  # Verify quality
 - **Vision & Roadmap**: ADRs and PRDs (`product/decision-records/`, `product/prd/`). Narrative vision files under `product/strategy/` are **local-only** (ignored on the remote).
 - **Feature Specs (PRDs)**: `product/prd/`
 - **Arch Decisions (ADRs)**: `product/decision-records/`
+- **Documentation checkpoints** (post-release PRD follow-up): `product/checkpoints.md`
 - **Tech Stack**: `engineering/architecture/tech-stack-decisions.md`
 
 ### 2. Development Status
 - **Active Sprint**: `engineering/tasks/`
 - **Adoption Roadmap**: v2.3.0 OpenAPI + TypeScript SDK foundations, followed by private v2.3.x adapter/distribution planning.
-- **Checkpoints**: `engineering/checkpoints.md`
 - **Code Reviews**: `engineering/code-review/`
 
 ## Organization

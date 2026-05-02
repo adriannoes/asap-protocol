@@ -261,7 +261,14 @@ class TestAckTimeoutAndRetransmit:
         )
         transport._register_pending_ack(envelope)
         try:
-            await asyncio.sleep(0.25)
+            # Wait until max-retry path removes the pending ack (needs one full
+            # ack_timeout after the last retransmit); avoid racing cancellation.
+            for _ in range(100):
+                if envelope.id not in transport._pending_acks:
+                    break
+                await asyncio.sleep(0.02)
+            else:
+                pytest.fail("pending ack was not removed after max retries")
         finally:
             transport._closed = True
             if transport._ack_check_task:

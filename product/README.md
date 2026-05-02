@@ -9,6 +9,7 @@ This folder holds **product-level** documentation for the ASAP Protocol: PRDs, a
 | **`prd/`** | Product Requirements Documents — versioned specs and shipped scope. |
 | **`decision-records/`** | ADRs (indexed via `README.md` and `ADR-INDEX.md`). |
 | **`design/`** | UI/UX source of truth (`design-system.md`, mobile strategy, references). |
+| **`checkpoints.md`** | Post-release documentation review schedule (PRD updates, velocity, retros). |
 
 ## Local-only / ignored paths
 
@@ -24,6 +25,7 @@ Public READMEs and docs should prefer **`decision-records/`**, **`prd/`** (publi
 ```
 product/
 ├── README.md                 # This file
+├── checkpoints.md          # Post-release doc review milestones (follow-up)
 ├── strategy/                 # Local-only when ignored (vision, roadmap, backlog)
 ├── decision-records/         # ADRs
 ├── design/                   # Design system & UX references
@@ -51,4 +53,5 @@ product/
 ## Key entrypoints
 
 - **[Decision index](./decision-records/README.md)** — ADR catalog.
+- **[Documentation checkpoints](./checkpoints.md)** — When to refresh PRDs and retros after releases.
 - **`prd/`** — Versioned requirements; open files matching shipped releases for authoritative scope.
