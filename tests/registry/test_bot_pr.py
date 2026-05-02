@@ -1,0 +1,257 @@
+"""Unit tests for Lite Registry bot PR helpers."""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from typing import Any
+
+import httpx
+import pytest
+
+from asap.discovery.registry import LiteRegistry, RegistryEntry
+from asap.models.enums import VerificationState
+from asap.registry import bot_pr
+from asap.registry.bot_pr import (
+    BotPRSettings,
+    _github_create_pull_request,
+    _sanitize_urn_for_branch,
+    conventional_commit_message,
+    merge_lite_registry,
+    merge_lite_registry_json_text,
+    open_registry_pull_request,
+)
+
+
+def test_merge_lite_registry_sorted_deduped() -> None:
+    existing = RegistryEntry(
+        id="urn:asap:agent:b",
+        name="B",
+        description="d",
+        endpoints={"http": "https://b.example/asap", "manifest": "https://b.example/m"},
+        skills=["s"],
+        asap_version="2.0.0",
+    )
+    newer = RegistryEntry(
+        id="urn:asap:agent:a",
+        name="A",
+        description="d",
+        endpoints={"http": "https://a.example/asap", "manifest": "https://a.example/m"},
+        skills=["s"],
+        asap_version="2.0.0",
+    )
+    lr = LiteRegistry(
+        version="1.0",
+        updated_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        agents=[existing],
+    )
+    merged = merge_lite_registry(lr, newer)
+    ids = [a.id for a in merged.agents]
+    assert ids == sorted(ids)
+    assert {a.id for a in merged.agents} == {"urn:asap:agent:a", "urn:asap:agent:b"}
+
+
+def test_merge_lite_registry_json_roundtrip() -> None:
+    lr = LiteRegistry(
+        version="1.0",
+        updated_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        agents=[],
+    )
+    entry = RegistryEntry(
+        id="urn:asap:agent:new",
+        name="New",
+        description="d",
+        endpoints={"http": "https://n.example/asap", "manifest": "https://n.example/m"},
+        skills=["echo"],
+        asap_version="2.2.0",
+        verification=None,
+    )
+    text = lr.model_dump_json()
+    out = merge_lite_registry_json_text(text, entry)
+    parsed = LiteRegistry.model_validate_json(out)
+    assert len(parsed.agents) == 1
+    assert parsed.agents[0].id == entry.id
+
+
+def test_conventional_commit_message_format() -> None:
+    entry = RegistryEntry(
+        id="urn:asap:agent:demo",
+        name="Demo Agent",
+        description="d",
+        endpoints={"http": "https://x/asap", "manifest": "https://x/m"},
+        skills=[],
+        asap_version="1.0.0",
+    )
+    msg = conventional_commit_message(entry)
+    assert msg == "feat(registry): auto-register Demo Agent (urn:asap:agent:demo)"
+
+
+def test_merge_invalid_json_raises() -> None:
+    with pytest.raises(ValueError, match="not valid LiteRegistry"):
+        merge_lite_registry_json_text("{not json", _dummy_entry())
+
+
+def _dummy_entry() -> RegistryEntry:
+    return RegistryEntry(
+        id="urn:asap:agent:x",
+        name="X",
+        description="d",
+        endpoints={"http": "https://x/asap", "manifest": "https://x/m"},
+        skills=[],
+        asap_version="1.0.0",
+        verification=None,
+    )
+
+
+def test_authenticated_clone_url_inserts_token() -> None:
+    s = BotPRSettings(owner="a", repo="b", github_token="ghp_test")
+    out = s._authenticated_clone_url("https://github.com/a/b.git")
+    assert "x-access-token:ghp_test@" in out
+
+
+def test_is_reserved_destination() -> None:
+    assert bot_pr.is_reserved_destination("https://127.0.0.1/m")
+    assert not bot_pr.is_reserved_destination("https://example.com/m")
+
+
+def test_is_reserved_destination_private_ipv4() -> None:
+    assert bot_pr.is_reserved_destination("https://10.0.0.1/path")
+
+
+@pytest.mark.asyncio
+async def test_github_create_pull_request_success() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert "/repos/o/r/pulls" in str(request.url)
+        return httpx.Response(201, json={"html_url": "https://github.com/o/r/pull/42"})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        settings = BotPRSettings(owner="o", repo="r", github_token="tok")
+        url = await _github_create_pull_request(
+            settings=settings,
+            head_branch="auto-reg/x",
+            title="t",
+            body="b",
+            http_client=client,
+        )
+    assert url == "https://github.com/o/r/pull/42"
+
+
+@pytest.mark.asyncio
+async def test_github_create_pull_request_requires_token() -> None:
+    settings = BotPRSettings(owner="o", repo="r", github_token="")
+    with pytest.raises(ValueError, match="GITHUB_TOKEN"):
+        await _github_create_pull_request(
+            settings=settings,
+            head_branch="h",
+            title="t",
+            body="b",
+            http_client=None,
+        )
+
+
+def test_verification_pending_enum() -> None:
+    """Marketplace verification pending aligns with trust badge schema."""
+    assert VerificationState.PENDING.value == "pending"
+
+
+def test_sanitize_urn_non_alphanumeric_defaults_unknown() -> None:
+    assert _sanitize_urn_for_branch("@@@") == "unknown"
+
+
+def test_authenticated_clone_url_without_token_is_unchanged() -> None:
+    s = BotPRSettings(owner="a", repo="b", github_token="")
+    url = "https://github.com/a/b.git"
+    assert s._authenticated_clone_url(url) == url
+
+
+def test_authenticated_clone_url_non_https_scheme_untouched() -> None:
+    s = BotPRSettings(owner="a", repo="b", github_token="secret")
+    ssh = "git@github.com:a/b.git"
+    assert s._authenticated_clone_url(ssh) == ssh
+
+
+@pytest.mark.asyncio
+async def test_github_create_pull_response_without_html_url_raises() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(201, json={"id": 42})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        settings = BotPRSettings(owner="o", repo="r", github_token="tok")
+        with pytest.raises(RuntimeError, match="html_url"):
+            await _github_create_pull_request(
+                settings=settings,
+                head_branch="h",
+                title="t",
+                body="b",
+                http_client=client,
+            )
+
+
+@pytest.mark.asyncio
+async def test_github_create_pull_request_spawns_client_when_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(201, json={"html_url": "https://github.com/o/r/pull/implicit"})
+
+    transport = httpx.MockTransport(handler)
+    real_client = httpx.AsyncClient
+
+    def factory(**kwargs: Any) -> httpx.AsyncClient:
+        merged = {**kwargs, "transport": transport}
+        return real_client(**merged)
+
+    monkeypatch.setattr("asap.registry.bot_pr.httpx.AsyncClient", factory)
+    settings = BotPRSettings(owner="o", repo="r", github_token="tok")
+    url = await _github_create_pull_request(
+        settings=settings,
+        head_branch="auto-reg/x",
+        title="t",
+        body="b",
+        http_client=None,
+    )
+    assert url == "https://github.com/o/r/pull/implicit"
+
+
+@pytest.mark.asyncio
+async def test_open_registry_pull_request_threads_then_github_api(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_to_thread(_fn: Any, *args: Any, **kwargs: Any) -> None:
+        return None
+
+    monkeypatch.setattr("asap.registry.bot_pr.asyncio.to_thread", fake_to_thread)
+
+    async def fake_gh(
+        *,
+        settings: BotPRSettings,
+        head_branch: str,
+        title: str,
+        body: str,
+        http_client: httpx.AsyncClient | None,
+    ) -> str:
+        assert settings.owner == "org"
+        assert head_branch.startswith("auto-reg/")
+        assert "Manifest" in body
+        return "https://github.com/org/repo/pull/500"
+
+    monkeypatch.setattr("asap.registry.bot_pr._github_create_pull_request", fake_gh)
+
+    entry = RegistryEntry(
+        id="urn:asap:agent:mock-bot",
+        name="Mock",
+        description="d",
+        endpoints={"http": "https://x/asap", "manifest": "https://x/m"},
+        skills=["echo"],
+        asap_version="2.2.0",
+    )
+    settings = BotPRSettings(owner="org", repo="repo", github_token="tok")
+    result = await open_registry_pull_request(
+        entry,
+        manifest_url="https://cdn.example/m.json",
+        settings=settings,
+    )
+    assert result.pr_url == "https://github.com/org/repo/pull/500"
+    assert result.branch_name.startswith("auto-reg/")
