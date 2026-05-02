@@ -49,7 +49,7 @@ const storage = typeof localStorage !== "undefined"
   : new MemoryStorage();
 
 const host = await createHost({ storage });
-const agent = await createAgent(host, { mode: "ephemeral" });
+const agent = await createAgent(host, { mode: "delegated" });
 // Use host.agentJwt / agent metadata as required by your gateway.
 ```
 
@@ -163,15 +163,21 @@ The SDK maps JSON-RPC errors into typed classes (aligned with [ADR-012](../adr/A
 - **`RecoverableError`** / **`RemoteRecoverableRPCError`** — may include `retryAfterMs`; safe to retry with backoff.
 - **`FatalError`** / **`RemoteFatalRPCError`** — do not blindly retry.
 
-Use **`callWithRecoverableRetry`** for call sites that should automatically retry recoverable failures using `retry_after_ms` when present.
+Use **`callWithRecoverableRetry`** for call sites that should automatically retry recoverable failures using `retry_after_ms` when present (Python client parity). Optionally pass **`fallbackBackoffMs`** so recoverable errors **without** `retryAfterMs` still retry using bounded exponential backoff (capped at 60 seconds per wait).
 
 ```ts
 import { callWithRecoverableRetry } from "@asap-protocol/client";
 
-await callWithRecoverableRetry(() => doRpcCall(), { maxAttempts: 3 });
+await callWithRecoverableRetry(() => doRpcCall(), { maxRetries: 3 });
+await callWithRecoverableRetry(() => doRpcCall(), { fallbackBackoffMs: 500 });
 ```
 
 For wire-level JSON helpers, see **`remoteRpcErrorFromJson`** and related exports in [`errors.ts`](https://github.com/adriannoes/asap-protocol/blob/main/packages/typescript/client/src/errors.ts).
+
+## Security
+
+- **Private key material in JavaScript**: runtimes cannot reliably **zero or wipe** sensitive values from the heap after use. The SDK clears the parsed JWK **`d`** field after importing the signing key as a modest defense-in-depth measure; treat devices and bundles as trusted boundaries for persisted keys (see **Identity and storage**).
+- **Retries**: when enabling **`fallbackBackoffMs`**, ensure total retry duration and concurrency match your gateway’s rate limits and operational expectations.
 
 ## Reference app
 

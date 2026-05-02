@@ -4,6 +4,8 @@
  * @see `src/asap/discovery/registry.py`, `src/asap/discovery/wellknown.py`
  */
 
+import { isRecord } from "./internal/type-guards.js";
+
 /** Standard ASAP manifest path (RFC 8615). */
 export const WELLKNOWN_MANIFEST_PATH = "/.well-known/asap/manifest.json" as const;
 
@@ -80,10 +82,6 @@ export interface AsapManifest {
   readonly sla?: unknown;
   readonly verification?: unknown;
   readonly ttl_seconds?: number;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function parseRegistryEntry(raw: unknown, index: number): RegistryEntry {

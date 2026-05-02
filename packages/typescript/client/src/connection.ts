@@ -5,6 +5,7 @@
  */
 
 import type { AgentContext, AgentMode, HostContext } from "./identity.js";
+import { isRecord } from "./internal/type-guards.js";
 
 export type ConnectionFetch = typeof fetch;
 
@@ -71,13 +72,15 @@ export interface ReactivateAgentResult {
 
 export type CapabilityRequestSpec = string | { readonly name: string; readonly constraints?: Record<string, unknown> };
 
+/** Parsed JSON body from a successful `POST /asap/agent/request-capability` response. */
+export interface RequestCapabilityResult {
+  readonly status?: string;
+  readonly [key: string]: unknown;
+}
+
 function asapUrl(provider: URL, relativePath: string): string {
   const base = provider.pathname.endsWith("/") ? provider.href : `${provider.href}/`;
   return new URL(relativePath.replace(/^\//u, ""), base).href;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function httpErrorDetailFromBodyText(text: string): string {
@@ -347,7 +350,7 @@ export async function requestCapability(
   agent: AgentContext,
   capabilities: CapabilityRequestSpec[],
   options: ConnectionJwtOptions,
-): Promise<unknown> {
+): Promise<RequestCapabilityResult> {
   const names = capabilities.map((c) => (typeof c === "string" ? c : c.name));
   const token = await agent.signAgentJwt({ aud: options.audience, capabilities: names });
   const body = JSON.stringify({ capabilities: normalizeCapabilitySpecs(capabilities) });
@@ -373,5 +376,8 @@ export async function requestCapability(
   if (!res.ok) {
     throw new Error(`requestCapability failed: HTTP ${String(res.status)} ${httpErrorDetailFromBodyText(text)}`);
   }
-  return parsed;
+  if (!isRecord(parsed)) {
+    throw new Error("requestCapability: expected JSON object response body");
+  }
+  return parsed as RequestCapabilityResult;
 }

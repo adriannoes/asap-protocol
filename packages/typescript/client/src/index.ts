@@ -142,4 +142,5 @@ export type {
   ConnectionJwtOptions,
   DisconnectAgentResult,
   ReactivateAgentResult,
+  RequestCapabilityResult,
 } from "./connection.js";

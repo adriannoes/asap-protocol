@@ -84,4 +84,42 @@ describe("transport retry (TS-011)", () => {
     ).rejects.toMatchObject({ code: "NO_RETRY" });
     expect(op).toHaveBeenCalledTimes(1);
   });
+
+  it("retries RecoverableError without retryAfterMs when fallbackBackoffMs is set", async () => {
+    let calls = 0;
+    const op = vi.fn().mockImplementation(async () => {
+      calls += 1;
+      if (calls === 1) {
+        throw new RecoverableError({ code: "TRANSIENT_NO_HINT" });
+      }
+      return { ok: true as const };
+    });
+    const sleep = vi.fn(async () => {
+      /* noop */
+    });
+    const result = await callWithRecoverableRetry(op, { fallbackBackoffMs: 100, sleep });
+    expect(result).toEqual({ ok: true });
+    expect(op).toHaveBeenCalledTimes(2);
+    expect(sleep).toHaveBeenCalledWith(100);
+  });
+
+  it("caps fallback exponential backoff at 60 seconds", async () => {
+    let calls = 0;
+    const op = vi.fn().mockImplementation(async () => {
+      calls += 1;
+      if (calls <= 10) {
+        throw new RecoverableError({ code: "TRANSIENT_NO_HINT" });
+      }
+      return calls;
+    });
+    const sleep = vi.fn(async () => {
+      /* noop */
+    });
+    await callWithRecoverableRetry(op, {
+      fallbackBackoffMs: 50_000,
+      maxRetries: 12,
+      sleep,
+    });
+    expect(sleep).toHaveBeenLastCalledWith(60_000);
+  });
 });

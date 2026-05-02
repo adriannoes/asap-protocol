@@ -7,6 +7,7 @@
 
 import { ulid } from "ulid";
 
+import { isRecord } from "./internal/type-guards.js";
 import type { Envelope, EnvelopeFor, IsoDateTimeString, TaskStreamPayload } from "./types/envelope.js";
 import { narrowEnvelope } from "./types/envelope.js";
 
@@ -19,10 +20,6 @@ export const ASAP_VERSION_HEADER = "ASAP-Version" as const;
 const DEFAULT_ASAP_VERSION = "2.2";
 
 export type StreamFetch = typeof fetch;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function providerBaseHref(baseUrl: URL | string): string {
   const u = typeof baseUrl === "string" ? new URL(baseUrl) : baseUrl;
@@ -110,6 +107,16 @@ function extractSseDataJson(eventBlock: string): string | undefined {
   const dataLines: string[] = [];
   for (const rawLine of eventBlock.split("\n")) {
     const line = rawLine.replace(/\r$/u, "");
+    // ASAP stream wire uses only `data:` payloads today; named SSE fields below are ignored for forward compatibility with full SSE parsers.
+    if (line.startsWith("event:")) {
+      continue;
+    }
+    if (line.startsWith("id:")) {
+      continue;
+    }
+    if (line.startsWith("retry:")) {
+      continue;
+    }
     if (line.startsWith("data:")) {
       dataLines.push(line.slice(5).trimStart());
     }

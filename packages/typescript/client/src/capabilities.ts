@@ -5,6 +5,7 @@
  */
 
 import { RecoverableError, type ConstraintViolation } from "./errors.js";
+import { isRecord } from "./internal/type-guards.js";
 
 export interface ListCapabilitiesItem {
   readonly name: string;
@@ -42,10 +43,6 @@ export interface ListCapabilitiesOptions extends CapabilityRequestOptions {
 }
 
 export interface ExecuteCapabilityOptions extends CapabilityRequestOptions {}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /** Base URL with trailing slash for safe relative resolution of `asap/...` paths. */
 function providerBaseHref(provider: URL): string {

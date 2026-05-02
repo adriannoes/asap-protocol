@@ -95,6 +95,29 @@ describe("streaming (TS-010, task 4.2)", () => {
     expect(body.params?.envelope?.payload_type).toBe("TaskRequest");
   });
 
+  it("parses SSE blocks that include ignored event/id/retry lines", async () => {
+    const wire = JSON.stringify(taskStreamEnvelope({ id: "s1", final: true, chunk: "done" }));
+    const sse =
+      `event: message\nid: abc-123\nretry: 3000\ndata: ${wire}\n\n`;
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(sse, {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        }),
+    );
+    const client = createAsapStreamClient({
+      baseUrl: "https://provider.example/",
+      fetch: fetchMock as typeof fetch,
+    });
+    const chunks: EnvelopeFor<"TaskStream">[] = [];
+    for await (const env of client.stream(taskRequestEnvelope())) {
+      chunks.push(env);
+    }
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0]?.payload.final).toBe(true);
+  });
+
   it("stops iteration when AbortSignal aborts (ReadableStream cancellation)", async () => {
     const wire1 = JSON.stringify(taskStreamEnvelope({ id: "s1", final: false, chunk: "x" }));
 

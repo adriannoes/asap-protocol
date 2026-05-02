@@ -5,6 +5,8 @@
  * helpers, and recoverability hints (`recoverable`, `retry_after_ms` in error data).
  */
 
+import { isRecord } from "./internal/type-guards.js";
+
 // --- JSON-RPC application error range (PRD §4.7) ---------------------------------
 
 export const JSON_RPC_ASAP_MIN = -32059;
@@ -106,10 +108,6 @@ export class FatalError extends Error {
     this.alternativeAgents = opts.alternativeAgents;
     this.fallbackAction = opts.fallbackAction;
   }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export interface PoppedAsapRemoteMeta {

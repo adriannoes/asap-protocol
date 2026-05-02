@@ -169,5 +169,13 @@ describe("connection error and branch paths", () => {
         fetch: http as typeof fetch,
       }),
     ).rejects.toThrow(/requestCapability failed/u);
+
+    const notObject = vi.fn().mockResolvedValue(new Response(JSON.stringify(null), { status: 200 }));
+    await expect(
+      requestCapability(new URL("https://p.example/"), agent, ["x"], {
+        audience: AUD,
+        fetch: notObject as typeof fetch,
+      }),
+    ).rejects.toThrow(/expected JSON object response body/u);
   });
 });
