@@ -185,7 +185,7 @@ async def test_manifest_streaming_true_when_operation_is_sse() -> None:
 
 
 @pytest.mark.asyncio
-async def test_kwargs_are_ignored_for_forward_compatibility() -> None:
+async def test_kwargs_unknown_keys_emit_warning() -> None:
     payload = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -196,9 +196,19 @@ async def test_kwargs_are_ignored_for_forward_compatibility() -> None:
     }
     transport = _transport_json(payload)
     async with httpx.AsyncClient(transport=transport) as client:
-        bundle = await create_from_openapi(
-            spec_url="https://ex/o.json",
-            http_client=client,
-            _forward_compat_reserved=True,
-        )
+        with pytest.warns(
+            UserWarning, match=r"create_from_openapi ignored unexpected keyword arguments"
+        ):
+            bundle = await create_from_openapi(
+                spec_url="https://ex/o.json",
+                http_client=client,
+                _forward_compat_reserved=True,
+            )
     assert bundle.upstream_base_url == "https://api.example"
+
+
+def test_asap_package_lazy_exports_create_from_openapi() -> None:
+    """Top-level ``asap.create_from_openapi`` is a lazy alias (RF-3)."""
+    import asap as asap_mod
+
+    assert asap_mod.create_from_openapi is create_from_openapi

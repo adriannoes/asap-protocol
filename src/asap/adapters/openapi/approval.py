@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping, Sequence
 from typing import Literal, cast
 
 from asap.adapters.openapi.capability_mapper import OpenAPICapability
+
+logger = logging.getLogger(__name__)
 
 ApprovalStrength = Literal["session", "webauthn"]
 
@@ -92,6 +95,7 @@ def collect_webauthn_required_capability_names(
             if name not in seen:
                 seen.add(name)
                 ordered.append(name)
+    logger.debug("collect_webauthn_required_capability_names: %s name(s)", len(ordered))
     return ordered
 
 

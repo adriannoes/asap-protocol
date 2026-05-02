@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from collections.abc import Callable, Iterable, Mapping
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, cast
 from urllib.parse import quote
 
 import httpx
@@ -24,6 +25,8 @@ from asap.models.ids import generate_id
 from asap.models.payloads import TaskRequest, TaskResponse
 from asap.transport.handlers import AsyncHandler
 
+logger = logging.getLogger(__name__)
+
 _UNKNOWN_CAPABILITY = "asap:adapters/openapi/unknown_capability"
 _INVOCATION = "asap:adapters/openapi/invocation"
 _PATH_PARAMS = "asap:adapters/openapi/path_parameters"
@@ -31,6 +34,10 @@ _UPSTREAM = "asap:adapters/openapi/upstream_connection"
 _UPSTREAM_5XX = "asap:adapters/openapi/upstream_server_error"
 _UPSTREAM_4XX = "asap:adapters/openapi/upstream_client_error"
 _RESOLVE_HEADERS = "asap:adapters/openapi/resolve_headers"
+
+# Bound upstream HTTP error payloads copied into FatalError/RecoverableError details to
+# reduce accidental leakage of large or sensitive bodies (prefer server logs for triage).
+_UPSTREAM_CLIENT_ERROR_BODY_MAX_LEN = 200
 
 ResolveHeaders: TypeAlias = Callable[[object | None], dict[str, str]]
 
@@ -63,15 +70,39 @@ class OpenAPIInvocationError(FatalError):
 class OpenAPIPathParameterError(FatalError):
     """Path template could not be fully substituted from *args*."""
 
-    def __init__(self, *, path_template: str, missing: list[str]) -> None:
+    def __init__(
+        self,
+        *,
+        path_template: str,
+        missing: list[str] | None = None,
+        invalid: list[str] | None = None,
+    ) -> None:
+        miss = list(missing) if missing else []
+        inv = list(invalid) if invalid else []
+        if bool(miss) == bool(inv):
+            raise ValueError(
+                "OpenAPIPathParameterError requires exactly one of missing= or invalid=."
+            )
+        if miss:
+            message = (
+                f"Missing path parameter(s) for template {path_template!r}: {', '.join(miss)}."
+            )
+            details: dict[str, Any] = {"path_template": path_template, "missing": miss}
+        else:
+            message = (
+                f"Invalid path parameter value(s) for template {path_template!r}: "
+                f"{', '.join(inv)} (must not be None, empty, or whitespace-only)."
+            )
+            details = {"path_template": path_template, "invalid": inv}
         super().__init__(
             _PATH_PARAMS,
-            f"Missing path parameter(s) for template {path_template!r}: {', '.join(missing)}.",
-            {"path_template": path_template, "missing": missing},
+            message,
+            details,
             rpc_code=RPC_REMOTE_GENERIC,
         )
         self.path_template = path_template
-        self.missing = missing
+        self.missing = miss
+        self.invalid = inv
 
 
 def index_capabilities(caps: Iterable[OpenAPICapability]) -> dict[str, OpenAPICapability]:
@@ -248,12 +279,22 @@ def _headers_from_resolve_callback(
 
 
 def _fill_path_template(path_template: str, path_params: Mapping[str, Any]) -> str:
-    names = re.findall(r"\{([^}]+)\}", path_template)
-    missing = [n for n in names if n not in path_params]
+    raw_names = re.findall(r"\{([^}]+)\}", path_template)
+    names_order = list(dict.fromkeys(raw_names))
+    missing = [n for n in names_order if n not in path_params]
     if missing:
         raise OpenAPIPathParameterError(path_template=path_template, missing=missing)
+    invalid_names = [
+        n
+        for n in names_order
+        if path_params[n] is None
+        or (isinstance(path_params[n], str) and cast(str, path_params[n]).strip() == "")
+    ]
+    if invalid_names:
+        raise OpenAPIPathParameterError(path_template=path_template, invalid=invalid_names)
     out = path_template
-    for name, raw in path_params.items():
+    for name in names_order:
+        raw = path_params[name]
         out = out.replace("{" + name + "}", quote(str(raw), safe=""))
     return out
 
@@ -311,7 +352,8 @@ class OpenAPIUpstreamHandler:
         Raises:
             UnknownOpenAPICapabilityError: *capability_name* is not registered.
             OpenAPIInvocationError: *args* are inconsistent with the input schema.
-            OpenAPIPathParameterError: Path placeholders remain after substitution.
+            OpenAPIPathParameterError: Path placeholders unchanged, missing arguments,
+                or path values that are ``None`` / empty / whitespace-only strings.
             RecoverableError: Network failure, HTTP 5xx from upstream, or *resolve_headers* failure.
             FatalError: HTTP 4xx from upstream.
         """
@@ -341,6 +383,12 @@ class OpenAPIUpstreamHandler:
                 json=json_body,
             )
         except httpx.RequestError as exc:
+            logger.warning(
+                "OpenAPI upstream request failed capability_name=%r url=%r error=%s",
+                capability_name,
+                url,
+                exc,
+            )
             raise RecoverableError(
                 _UPSTREAM,
                 f"Upstream request failed: {exc!s}.",
@@ -355,20 +403,41 @@ class OpenAPIUpstreamHandler:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
-            snippet = exc.response.text[:500]
-            details = {
-                "capability_name": capability_name,
-                "url": str(exc.request.url),
-                "status_code": status,
-                "body_snippet": snippet,
-            }
+            req_url = str(exc.request.url)
+            # Client-facing details: omit upstream body snippets for 5xx (internal errors /
+            # possible sensitive stack hints); truncate 4xx bodies to mitigate leakage while
+            # retaining some operator context.
             if status >= 500:
+                details: dict[str, Any] = {
+                    "capability_name": capability_name,
+                    "url": req_url,
+                    "status_code": status,
+                }
+                logger.warning(
+                    "OpenAPI upstream server error capability_name=%r url=%r status=%s",
+                    capability_name,
+                    req_url,
+                    status,
+                )
                 raise RecoverableError(
                     _UPSTREAM_5XX,
                     f"Upstream HTTP {status}.",
                     details,
                     rpc_code=RPC_REMOTE_GENERIC,
                 ) from exc
+            snippet = exc.response.text[:_UPSTREAM_CLIENT_ERROR_BODY_MAX_LEN]
+            details = {
+                "capability_name": capability_name,
+                "url": req_url,
+                "status_code": status,
+                "body_snippet": snippet,
+            }
+            logger.error(
+                "OpenAPI upstream client error capability_name=%r url=%r status=%s",
+                capability_name,
+                req_url,
+                status,
+            )
             raise FatalError(
                 _UPSTREAM_4XX,
                 f"Upstream HTTP {status}.",
@@ -401,9 +470,15 @@ async def execute(
 
 
 def create_openapi_task_handler(upstream: OpenAPIUpstreamHandler) -> AsyncHandler:
-    """Build an async ``task.request`` handler that proxies to *upstream*."""
+    """Build an async ``task.request`` handler that proxies to *upstream*.
+
+    The nested ``openapi_task_request_handler`` always passes ``session=None`` into
+    :meth:`OpenAPIUpstreamHandler.execute` today. OA-009 header resolution from Host-held
+    context likely needs envelope- or TaskRequest-level session wiring in a future change.
+    """
 
     async def openapi_task_request_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+        """Translate ``task.request`` envelopes through *upstream* (``session`` is always ``None``)."""
         task_request = TaskRequest.model_validate(envelope.payload_dict)
         result = await upstream.execute(
             task_request.skill_id,

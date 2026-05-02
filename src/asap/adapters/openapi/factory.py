@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -25,7 +27,24 @@ from asap.adapters.openapi.spec_loader import OpenAPISpecError, OpenAPIDocument,
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.transport.handlers import HandlerRegistry
 
+logger = logging.getLogger(__name__)
+
 PETSTORE_OPENAPI_URL = "https://petstore3.swagger.io/api/v3/openapi.json"
+
+_KNOWN_CREATE_FROM_OPENAPI_KEYS: frozenset[str] = frozenset(
+    (
+        "spec_url",
+        "spec_path",
+        "http_client",
+        "upstream_base_url",
+        "default_capabilities",
+        "approval_strength",
+        "resolve_headers",
+        "manifest_id",
+        "manifest_name",
+        "asap_endpoint",
+    ),
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,7 +157,7 @@ async def create_from_openapi(
         manifest_id: ``Manifest.id`` (also Host JWT ``aud`` when using identity routes).
         manifest_name: Override manifest display name (default: ``info.title``).
         asap_endpoint: Advertised ``/asap`` URL in the manifest.
-        **kwargs: Reserved for forward compatibility (ignored).
+        **kwargs: Reserved; unknown keys emit :class:`UserWarning` to surface typos.
 
     Returns:
         Bundle containing manifest, handler registry, and metadata.
@@ -147,7 +166,16 @@ async def create_from_openapi(
         OpenAPISpecError: Invalid document, unsupported server URL, etc.
         ValueError: Duplicate capability ids in the spec.
     """
-    _ = kwargs
+    remainder = dict(kwargs)
+    for _key in _KNOWN_CREATE_FROM_OPENAPI_KEYS:
+        remainder.pop(_key, None)
+    if remainder:
+        warnings.warn(
+            "create_from_openapi ignored unexpected keyword arguments: "
+            + ", ".join(sorted(remainder)),
+            UserWarning,
+            stacklevel=2,
+        )
     if (spec_url is None) == (spec_path is None):
         msg = "Exactly one of spec_url or spec_path must be set."
         raise OpenAPISpecError(msg)
@@ -161,6 +189,11 @@ async def create_from_openapi(
         doc = await load_spec(spec_path)
         resolution_base = None
     caps = map_openapi_to_capabilities(doc, default_capabilities=default_capabilities)
+    logger.info(
+        "OpenAPI capabilities mapped count=%s manifest_id=%s",
+        len(caps),
+        manifest_id,
+    )
     base = _infer_upstream_base_url(doc, upstream_base_url, resolution_base=resolution_base)
     require_wa = (
         collect_webauthn_required_capability_names(caps, approval_strength)

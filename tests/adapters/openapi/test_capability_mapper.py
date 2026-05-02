@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
@@ -11,21 +10,18 @@ import pytest
 from asap.adapters.openapi.capability_mapper import (
     OpenAPIExecutionKind,
     OpenAPIOperationContext,
+    _SchemaResolver,
     map_openapi_to_capabilities,
 )
 from asap.adapters.openapi.spec_loader import load_spec
 
+from tests.adapters.openapi.conftest import tmp_openapi_spec
+
 _FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "openapi"
 
 
-def _write_tmp(data: dict[str, Any], name: str) -> Path:
-    path = _FIXTURES / f"_tmp_{name}.json"
-    path.write_text(json.dumps(data), encoding="utf-8")
-    return path
-
-
 @pytest.mark.asyncio
-async def test_get_maps_path_and_query_parameters() -> None:
+async def test_get_maps_path_and_query_parameters(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -65,8 +61,7 @@ async def test_get_maps_path_and_query_parameters() -> None:
             },
         },
     }
-    path = _write_tmp(raw, "get_path_query")
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "get_path_query") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         assert len(caps) == 1
@@ -87,12 +82,10 @@ async def test_get_maps_path_and_query_parameters() -> None:
         out = c0.skill.output_schema
         assert out is not None
         assert out["properties"]["id"]["type"] == "integer"
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_post_merges_json_body_with_allof() -> None:
+async def test_post_merges_json_body_with_allof(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -135,8 +128,7 @@ async def test_post_merges_json_body_with_allof() -> None:
             },
         },
     }
-    path = _write_tmp(raw, "post_body")
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "post_body") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         assert len(caps) == 1
@@ -148,12 +140,10 @@ async def test_post_merges_json_body_with_allof() -> None:
         assert param_obj["properties"]["dryRun"]["x-openapi-param-in"] == "query"
         assert body_obj["properties"]["name"]["type"] == "string"
         assert body_obj["required"] == ["name"]
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_response_resolves_component_schema_ref() -> None:
+async def test_response_resolves_component_schema_ref(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -186,20 +176,17 @@ async def test_response_resolves_component_schema_ref() -> None:
             },
         },
     }
-    path = _write_tmp(raw, "ref_response")
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "ref_response") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         out = caps[0].skill.output_schema
         assert out is not None
         assert "$ref" not in out
         assert out["properties"]["name"]["type"] == "string"
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_missing_operation_id_uses_method_and_path_fallback() -> None:
+async def test_missing_operation_id_uses_method_and_path_fallback(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -212,19 +199,16 @@ async def test_missing_operation_id_uses_method_and_path_fallback() -> None:
             },
         },
     }
-    path = _write_tmp(raw, "no_op_id")
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "no_op_id") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         assert len(caps) == 1
         assert caps[0].skill.id == "get_pets_petId"
         assert caps[0].operation_id is None
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_parameter_reference_from_components() -> None:
+async def test_parameter_reference_from_components(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -248,15 +232,12 @@ async def test_parameter_reference_from_components() -> None:
             },
         },
     }
-    path = _write_tmp(raw, "param_ref")
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "param_ref") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         inp = caps[0].skill.input_schema
         assert inp is not None
         assert inp["properties"]["petId"]["type"] == "string"
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
@@ -300,56 +281,43 @@ _MULTI_OP_RAW: dict[str, Any] = {
 
 
 @pytest.mark.asyncio
-async def test_default_capabilities_single_method_keeps_get_operations() -> None:
-    path = _write_tmp(_MULTI_OP_RAW, "filter_get")
-    try:
+async def test_default_capabilities_single_method_keeps_get_operations(tmp_path: Path) -> None:
+    with tmp_openapi_spec(tmp_path, _MULTI_OP_RAW, "filter_get") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc, default_capabilities="GET")
         ids = {c.skill.id for c in caps}
         assert ids == {"listItems", "getItem"}
         assert all(c.http_method == "get" for c in caps)
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_default_capabilities_single_method_post_case_insensitive() -> None:
-    path = _write_tmp(_MULTI_OP_RAW, "filter_post")
-    try:
+async def test_default_capabilities_single_method_post_case_insensitive(tmp_path: Path) -> None:
+    with tmp_openapi_spec(tmp_path, _MULTI_OP_RAW, "filter_post") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc, default_capabilities="post")
         assert [c.skill.id for c in caps] == ["createItem"]
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_default_capabilities_single_method_no_match_returns_empty() -> None:
-    path = _write_tmp(_MULTI_OP_RAW, "filter_patch")
-    try:
+async def test_default_capabilities_single_method_no_match_returns_empty(tmp_path: Path) -> None:
+    with tmp_openapi_spec(tmp_path, _MULTI_OP_RAW, "filter_patch") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc, default_capabilities="patch")
         assert caps == []
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_default_capabilities_sequence_get_and_head() -> None:
-    path = _write_tmp(_MULTI_OP_RAW, "filter_get_head")
-    try:
+async def test_default_capabilities_sequence_get_and_head(tmp_path: Path) -> None:
+    with tmp_openapi_spec(tmp_path, _MULTI_OP_RAW, "filter_get_head") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc, default_capabilities=["GET", "HEAD"])
         ids = {c.skill.id for c in caps}
         assert ids == {"listItems", "listItemsHead", "getItem"}
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_default_capabilities_sequence_excludes_unlisted_verbs() -> None:
-    path = _write_tmp(_MULTI_OP_RAW, "filter_no_delete")
-    try:
+async def test_default_capabilities_sequence_excludes_unlisted_verbs(tmp_path: Path) -> None:
+    with tmp_openapi_spec(tmp_path, _MULTI_OP_RAW, "filter_no_delete") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(
             doc,
@@ -358,14 +326,11 @@ async def test_default_capabilities_sequence_excludes_unlisted_verbs() -> None:
         ids = {c.skill.id for c in caps}
         assert "deleteItem" not in ids
         assert "createItem" in ids
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_default_capabilities_sequence_is_case_insensitive() -> None:
-    path = _write_tmp(_MULTI_OP_RAW, "filter_mixed_case")
-    try:
+async def test_default_capabilities_sequence_is_case_insensitive(tmp_path: Path) -> None:
+    with tmp_openapi_spec(tmp_path, _MULTI_OP_RAW, "filter_mixed_case") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(
             doc,
@@ -373,14 +338,11 @@ async def test_default_capabilities_sequence_is_case_insensitive() -> None:
         )
         ids = {c.skill.id for c in caps}
         assert ids == {"listItems", "listItemsHead", "getItem"}
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_default_capabilities_all_includes_every_operation() -> None:
-    path = _write_tmp(_MULTI_OP_RAW, "filter_all")
-    try:
+async def test_default_capabilities_all_includes_every_operation(tmp_path: Path) -> None:
+    with tmp_openapi_spec(tmp_path, _MULTI_OP_RAW, "filter_all") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc, default_capabilities="all")
         assert len(caps) == 5
@@ -391,21 +353,16 @@ async def test_default_capabilities_all_includes_every_operation() -> None:
             "getItem",
             "deleteItem",
         }
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_default_capabilities_default_equals_explicit_all() -> None:
-    path = _write_tmp(_MULTI_OP_RAW, "filter_default_all")
-    try:
+async def test_default_capabilities_default_equals_explicit_all(tmp_path: Path) -> None:
+    with tmp_openapi_spec(tmp_path, _MULTI_OP_RAW, "filter_default_all") as path:
         doc = await load_spec(path)
         assert map_openapi_to_capabilities(doc) == map_openapi_to_capabilities(
             doc,
             default_capabilities="all",
         )
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
@@ -415,9 +372,8 @@ async def test_default_capabilities_all_on_empty_paths() -> None:
 
 
 @pytest.mark.asyncio
-async def test_default_capabilities_callable_filters_by_operation_id() -> None:
-    path = _write_tmp(_MULTI_OP_RAW, "filter_callable_id")
-    try:
+async def test_default_capabilities_callable_filters_by_operation_id(tmp_path: Path) -> None:
+    with tmp_openapi_spec(tmp_path, _MULTI_OP_RAW, "filter_callable_id") as path:
         doc = await load_spec(path)
 
         def _pred(ctx: OpenAPIOperationContext) -> bool:
@@ -426,14 +382,11 @@ async def test_default_capabilities_callable_filters_by_operation_id() -> None:
         caps = map_openapi_to_capabilities(doc, default_capabilities=_pred)
         ids = {c.skill.id for c in caps}
         assert ids == {"listItems", "listItemsHead"}
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_default_capabilities_callable_filters_by_path_and_method() -> None:
-    path = _write_tmp(_MULTI_OP_RAW, "filter_callable_path")
-    try:
+async def test_default_capabilities_callable_filters_by_path_and_method(tmp_path: Path) -> None:
+    with tmp_openapi_spec(tmp_path, _MULTI_OP_RAW, "filter_callable_path") as path:
         doc = await load_spec(path)
 
         def _pred(ctx: OpenAPIOperationContext) -> bool:
@@ -441,23 +394,18 @@ async def test_default_capabilities_callable_filters_by_path_and_method() -> Non
 
         caps = map_openapi_to_capabilities(doc, default_capabilities=_pred)
         assert [c.skill.id for c in caps] == ["getItem"]
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_default_capabilities_callable_rejects_everything() -> None:
-    path = _write_tmp(_MULTI_OP_RAW, "filter_callable_empty")
-    try:
+async def test_default_capabilities_callable_rejects_everything(tmp_path: Path) -> None:
+    with tmp_openapi_spec(tmp_path, _MULTI_OP_RAW, "filter_callable_empty") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc, default_capabilities=lambda _ctx: False)
         assert caps == []
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_execution_kind_streaming_when_text_event_stream_response() -> None:
+async def test_execution_kind_streaming_when_text_event_stream_response(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -477,18 +425,15 @@ async def test_execution_kind_streaming_when_text_event_stream_response() -> Non
             },
         },
     }
-    path = _write_tmp(raw, "exec_sse")
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "exec_sse") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         assert len(caps) == 1
         assert caps[0].execution_kind == OpenAPIExecutionKind.STREAMING
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_execution_kind_async_polling_when_202_and_location_header() -> None:
+async def test_execution_kind_async_polling_when_202_and_location_header(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -508,18 +453,15 @@ async def test_execution_kind_async_polling_when_202_and_location_header() -> No
             },
         },
     }
-    path = _write_tmp(raw, "exec_202")
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "exec_202") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         assert len(caps) == 1
         assert caps[0].execution_kind == OpenAPIExecutionKind.ASYNC_POLLING
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_execution_kind_sync_for_typical_json_ok_response() -> None:
+async def test_execution_kind_sync_for_typical_json_ok_response(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -541,18 +483,15 @@ async def test_execution_kind_sync_for_typical_json_ok_response() -> None:
             },
         },
     }
-    path = _write_tmp(raw, "exec_sync")
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "exec_sync") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         assert len(caps) == 1
         assert caps[0].execution_kind == OpenAPIExecutionKind.SYNC
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_default_capabilities_invalid_type_raises_type_error() -> None:
+async def test_default_capabilities_invalid_type_raises_type_error(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -560,10 +499,22 @@ async def test_default_capabilities_invalid_type_raises_type_error() -> None:
             "/z": {"get": {"operationId": "z", "responses": {"200": {"description": "ok"}}}},
         },
     }
-    path = _write_tmp(raw, "bad_filter_type")
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "bad_filter_type") as path:
         doc = await load_spec(path)
         with pytest.raises(TypeError, match="default_capabilities"):
             map_openapi_to_capabilities(doc, default_capabilities=object())
-    finally:
-        path.unlink(missing_ok=True)
+
+
+def test_expand_refs_depth_returns_early_without_error_on_deep_trees() -> None:
+    """Regression: pathological schema-shape dicts cannot recurse deeper than depth 51."""
+    resolver = _SchemaResolver({})
+    root: dict[str, Any] = {"top": 1}
+    cur = root
+    for _ in range(52):
+        nxt: dict[str, Any] = {}
+        cur["child"] = nxt
+        cur = nxt
+    cur["leaf"] = 2
+    result = resolver.expand_refs(root, frozenset())
+    assert result["top"] == 1
+    assert isinstance(result["child"], dict)

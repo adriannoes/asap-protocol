@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from enum import Enum, StrEnum
@@ -9,6 +10,12 @@ from typing import Any, Literal, Protocol, TypeAlias, cast
 
 from asap.adapters.openapi.spec_loader import OpenAPIDocument
 from asap.models.entities import Skill
+
+logger = logging.getLogger(__name__)
+
+# ``cast(...)`` usages below compensate for incomplete / structural typing from
+# openapi-pydantic stubs: paths, responses, headers, and parameters are modeled
+# as generic objects at compile time though runtime layout matches OpenAPI 3.x.
 
 _HTTP_METHODS: tuple[str, ...] = (
     "get",
@@ -118,8 +125,15 @@ class _SchemaResolver:
             raw[name] = schema_obj.model_dump(mode="json", by_alias=True, exclude_none=True)
         return cls(raw)
 
-    def expand_refs(self, node: Any, seen: frozenset[str]) -> Any:
+    def expand_refs(self, node: Any, seen: frozenset[str], depth: int = 0) -> Any:
         """Inline internal component schema refs; leave unknown or cyclic ``$ref`` as-is."""
+        if depth > 50:
+            logger.debug(
+                "OpenAPI schema $ref expansion stopped at depth %s (limit 50); node left as-is.",
+                depth,
+            )
+            return node
+        next_depth = depth + 1
         if isinstance(node, dict):
             ref = node.get("$ref")
             if isinstance(ref, str):
@@ -128,10 +142,10 @@ class _SchemaResolver:
                     if name in seen:
                         return {"$ref": ref}
                     base = self._raw_by_name[name]
-                    return self.expand_refs(base, seen | {name})
-            return {k: self.expand_refs(v, seen) for k, v in node.items()}
+                    return self.expand_refs(base, seen | {name}, next_depth)
+            return {k: self.expand_refs(v, seen, next_depth) for k, v in node.items()}
         if isinstance(node, list):
-            return [self.expand_refs(item, seen) for item in node]
+            return [self.expand_refs(item, seen, next_depth) for item in node]
         return node
 
     def materialize(self, schema_or_ref: object | None) -> dict[str, Any] | None:
@@ -144,12 +158,12 @@ class _SchemaResolver:
                 return {"$ref": ref}
             return cast(
                 dict[str, Any],
-                self.expand_refs(self._raw_by_name[name], frozenset({name})),
+                self.expand_refs(self._raw_by_name[name], frozenset({name}), 0),
             )
         model_dump = getattr(schema_or_ref, "model_dump", None)
         if callable(model_dump):
             dumped = model_dump(mode="json", by_alias=True, exclude_none=True)
-            return cast(dict[str, Any], self.expand_refs(dumped, frozenset()))
+            return cast(dict[str, Any], self.expand_refs(dumped, frozenset(), 0))
         return None
 
 
@@ -471,6 +485,7 @@ def map_openapi_to_capabilities(
                 ),
             )
 
+    logger.debug("map_openapi_to_capabilities produced %s capability(ies)", len(capabilities))
     return capabilities
 
 

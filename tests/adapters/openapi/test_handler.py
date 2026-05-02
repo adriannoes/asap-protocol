@@ -5,10 +5,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any, cast
+from unittest.mock import AsyncMock
 
 import httpx
 import pytest
-from unittest.mock import AsyncMock
 
 from asap.adapters.openapi.capability_mapper import (
     OpenAPIExecutionKind,
@@ -29,17 +29,11 @@ from asap.errors import FatalError, RecoverableError
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.envelope import Envelope
 
-_FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "openapi"
-
-
-def _write_tmp(data: dict[str, Any], name: str) -> Path:
-    path = _FIXTURES / f"_tmp_handler_{name}.json"
-    path.write_text(json.dumps(data), encoding="utf-8")
-    return path
+from tests.adapters.openapi.conftest import tmp_openapi_spec
 
 
 @pytest.mark.asyncio
-async def test_execute_get_path_and_query_via_mocked_httpx() -> None:
+async def test_execute_get_path_and_query_via_mocked_httpx(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -66,7 +60,6 @@ async def test_execute_get_path_and_query_via_mocked_httpx() -> None:
             },
         },
     }
-    path = _write_tmp(raw, "get_proxy")
     seen: dict[str, Any] = {}
 
     def transport_handler(request: httpx.Request) -> httpx.Response:
@@ -76,7 +69,7 @@ async def test_execute_get_path_and_query_via_mocked_httpx() -> None:
         assert request.url.params.get("verbose") == "false"
         return httpx.Response(200, json={"ok": True})
 
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "get_proxy") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         transport = httpx.MockTransport(transport_handler)
@@ -94,12 +87,10 @@ async def test_execute_get_path_and_query_via_mocked_httpx() -> None:
         assert out == {"ok": True}
         assert seen["method"] == "GET"
         assert str(httpx.URL(seen["url"]).host) == "upstream.test"
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_execute_post_json_body_and_query_via_mocked_httpx() -> None:
+async def test_execute_post_json_body_and_query_via_mocked_httpx(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -130,7 +121,6 @@ async def test_execute_post_json_body_and_query_via_mocked_httpx() -> None:
             },
         },
     }
-    path = _write_tmp(raw, "post_proxy")
     captured: dict[str, Any] = {}
 
     def transport_handler(request: httpx.Request) -> httpx.Response:
@@ -140,7 +130,7 @@ async def test_execute_post_json_body_and_query_via_mocked_httpx() -> None:
         assert request.url.path == "/pets"
         return httpx.Response(201, json={"id": 42})
 
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "post_proxy") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         transport = httpx.MockTransport(transport_handler)
@@ -159,12 +149,10 @@ async def test_execute_post_json_body_and_query_via_mocked_httpx() -> None:
         assert captured["method"] == "POST"
         assert captured["query"].get("dryRun") == "true"
         assert captured["json"] == {"name": "Neko"}
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_execute_unknown_capability_raises() -> None:
+async def test_execute_unknown_capability_raises(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -172,12 +160,11 @@ async def test_execute_unknown_capability_raises() -> None:
             "/x": {"get": {"operationId": "onlyOne", "responses": {"200": {"description": "ok"}}}},
         },
     }
-    path = _write_tmp(raw, "unknown_cap")
 
     def transport_handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(500)
 
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "unknown_cap") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         transport = httpx.MockTransport(transport_handler)
@@ -190,12 +177,10 @@ async def test_execute_unknown_capability_raises() -> None:
             with pytest.raises(UnknownOpenAPICapabilityError) as exc_info:
                 await handler.execute("missingCapability", {})
         assert exc_info.value.capability_name == "missingCapability"
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_execute_module_wrapper_delegates() -> None:
+async def test_execute_module_wrapper_delegates(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -203,12 +188,11 @@ async def test_execute_module_wrapper_delegates() -> None:
             "/ping": {"get": {"operationId": "ping", "responses": {"200": {"description": "ok"}}}},
         },
     }
-    path = _write_tmp(raw, "wrapper")
 
     def transport_handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(204)
 
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "wrapper") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         transport = httpx.MockTransport(transport_handler)
@@ -219,12 +203,10 @@ async def test_execute_module_wrapper_delegates() -> None:
                 http_client=client,
             )
             assert await execute(handler, "ping", {}) == {}
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_resolve_headers_merged_with_openapi_header_params() -> None:
+async def test_resolve_headers_merged_with_openapi_header_params(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -245,7 +227,6 @@ async def test_resolve_headers_merged_with_openapi_header_params() -> None:
             },
         },
     }
-    path = _write_tmp(raw, "resolve_merge")
     seen: dict[str, Any] = {}
 
     def transport_handler(request: httpx.Request) -> httpx.Response:
@@ -257,7 +238,7 @@ async def test_resolve_headers_merged_with_openapi_header_params() -> None:
     class _Session:
         token = "secret"
 
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "resolve_merge") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
 
@@ -285,12 +266,10 @@ async def test_resolve_headers_merged_with_openapi_header_params() -> None:
         assert seen["authorization"] == "Bearer secret"
         assert seen["x_request_label"] == "job-1"
         assert seen["x_session"] == "host"
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_resolve_headers_openapi_header_params_override_callback() -> None:
+async def test_resolve_headers_openapi_header_params_override_callback(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -310,14 +289,13 @@ async def test_resolve_headers_openapi_header_params_override_callback() -> None
             },
         },
     }
-    path = _write_tmp(raw, "resolve_override")
     seen: dict[str, Any] = {}
 
     def transport_handler(request: httpx.Request) -> httpx.Response:
         seen["x_trace"] = request.headers.get("x-trace")
         return httpx.Response(200, json={})
 
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "resolve_override") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
 
@@ -334,12 +312,10 @@ async def test_resolve_headers_openapi_header_params_override_callback() -> None
             )
             await handler.execute("r", {"X-Trace": "from-args"}, session=None)
         assert seen["x_trace"] == "from-args"
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_resolve_headers_callback_failure_is_recoverable_unauthorized() -> None:
+async def test_resolve_headers_callback_failure_is_recoverable_unauthorized(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -347,12 +323,11 @@ async def test_resolve_headers_callback_failure_is_recoverable_unauthorized() ->
             "/z": {"get": {"operationId": "z", "responses": {"200": {"description": "ok"}}}},
         },
     }
-    path = _write_tmp(raw, "resolve_fail")
 
     def transport_handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(500)
 
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "resolve_fail") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
 
@@ -369,12 +344,10 @@ async def test_resolve_headers_callback_failure_is_recoverable_unauthorized() ->
             )
             with pytest.raises(RecoverableError, match="resolve_headers callback failed"):
                 await handler.execute("z", {}, session=None)
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_resolve_headers_invalid_return_type_is_recoverable() -> None:
+async def test_resolve_headers_invalid_return_type_is_recoverable(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -382,9 +355,8 @@ async def test_resolve_headers_invalid_return_type_is_recoverable() -> None:
             "/z": {"get": {"operationId": "z2", "responses": {"200": {"description": "ok"}}}},
         },
     }
-    path = _write_tmp(raw, "resolve_bad_type")
 
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "resolve_bad_type") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
 
@@ -402,8 +374,6 @@ async def test_resolve_headers_invalid_return_type_is_recoverable() -> None:
             )
             with pytest.raises(RecoverableError, match="resolve_headers must return dict"):
                 await handler.execute("z2", {}, session=None)
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
@@ -426,7 +396,7 @@ async def test_index_capabilities_duplicate_skill_id_raises() -> None:
 
 
 @pytest.mark.asyncio
-async def test_execute_cookie_parameter_sets_cookie_header() -> None:
+async def test_execute_cookie_parameter_sets_cookie_header(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -447,14 +417,13 @@ async def test_execute_cookie_parameter_sets_cookie_header() -> None:
             },
         },
     }
-    path = _write_tmp(raw, "cookie_param")
     seen: dict[str, Any] = {}
 
     def transport_handler(request: httpx.Request) -> httpx.Response:
         seen["cookie"] = request.headers.get("cookie")
         return httpx.Response(200, json={"ok": True})
 
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "cookie_param") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         transport = httpx.MockTransport(transport_handler)
@@ -466,12 +435,10 @@ async def test_execute_cookie_parameter_sets_cookie_header() -> None:
             )
             await handler.execute("withCookie", {"sid": "abc123"}, session=None)
         assert seen.get("cookie") == "sid=abc123"
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_execute_missing_path_parameter_raises() -> None:
+async def test_execute_missing_path_parameter_raises(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -492,8 +459,7 @@ async def test_execute_missing_path_parameter_raises() -> None:
             },
         },
     }
-    path = _write_tmp(raw, "missing_path")
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "missing_path") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         async with httpx.AsyncClient(
@@ -506,12 +472,126 @@ async def test_execute_missing_path_parameter_raises() -> None:
             )
             with pytest.raises(OpenAPIPathParameterError, match="Missing path parameter"):
                 await handler.execute("getPet", {}, session=None)
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_execute_unexpected_argument_raises() -> None:
+async def test_execute_empty_path_parameter_string_raises(tmp_path: Path) -> None:
+    raw = {
+        "openapi": "3.0.3",
+        "info": {"title": "T", "version": "1"},
+        "paths": {
+            "/pets/{petId}": {
+                "get": {
+                    "operationId": "getPet",
+                    "parameters": [
+                        {
+                            "name": "petId",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "string"},
+                        },
+                    ],
+                    "responses": {"200": {"description": "ok"}},
+                },
+            },
+        },
+    }
+    with tmp_openapi_spec(tmp_path, raw, "empty_path_val") as path:
+        doc = await load_spec(path)
+        caps = map_openapi_to_capabilities(doc)
+        async with httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda _r: httpx.Response(200))
+        ) as client:
+            handler = OpenAPIUpstreamHandler.from_capabilities(
+                base_url="https://u.test",
+                capabilities=caps,
+                http_client=client,
+            )
+            with pytest.raises(OpenAPIPathParameterError, match="Invalid path parameter"):
+                await handler.execute("getPet", {"petId": ""}, session=None)
+
+
+@pytest.mark.asyncio
+async def test_execute_whitespace_only_path_parameter_raises(tmp_path: Path) -> None:
+    raw = {
+        "openapi": "3.0.3",
+        "info": {"title": "T", "version": "1"},
+        "paths": {
+            "/pets/{petId}": {
+                "get": {
+                    "operationId": "getPet",
+                    "parameters": [
+                        {
+                            "name": "petId",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "string"},
+                        },
+                    ],
+                    "responses": {"200": {"description": "ok"}},
+                },
+            },
+        },
+    }
+    with tmp_openapi_spec(tmp_path, raw, "ws_path_val") as path:
+        doc = await load_spec(path)
+        caps = map_openapi_to_capabilities(doc)
+        async with httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda _r: httpx.Response(200))
+        ) as client:
+            handler = OpenAPIUpstreamHandler.from_capabilities(
+                base_url="https://u.test",
+                capabilities=caps,
+                http_client=client,
+            )
+            with pytest.raises(OpenAPIPathParameterError) as exc_info:
+                await handler.execute("getPet", {"petId": " \t "}, session=None)
+            assert "petId" in exc_info.value.invalid
+
+
+@pytest.mark.asyncio
+async def test_execute_none_path_parameter_raises(tmp_path: Path) -> None:
+    raw = {
+        "openapi": "3.0.3",
+        "info": {"title": "T", "version": "1"},
+        "paths": {
+            "/pets/{petId}": {
+                "get": {
+                    "operationId": "getPet",
+                    "parameters": [
+                        {
+                            "name": "petId",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "string"},
+                        },
+                    ],
+                    "responses": {"200": {"description": "ok"}},
+                },
+            },
+        },
+    }
+    with tmp_openapi_spec(tmp_path, raw, "none_path_val") as path:
+        doc = await load_spec(path)
+        caps = map_openapi_to_capabilities(doc)
+        async with httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda _r: httpx.Response(200))
+        ) as client:
+            handler = OpenAPIUpstreamHandler.from_capabilities(
+                base_url="https://u.test",
+                capabilities=caps,
+                http_client=client,
+            )
+            with pytest.raises(OpenAPIPathParameterError, match="Invalid path parameter"):
+                await handler.execute(
+                    "getPet",
+                    cast("dict[str, Any]", {"petId": None}),
+                    session=None,
+                )
+
+
+@pytest.mark.asyncio
+async def test_execute_unexpected_argument_raises(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -519,8 +599,7 @@ async def test_execute_unexpected_argument_raises() -> None:
             "/z": {"get": {"operationId": "z", "responses": {"200": {"description": "ok"}}}},
         },
     }
-    path = _write_tmp(raw, "unexpected_arg")
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "unexpected_arg") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         async with httpx.AsyncClient(
@@ -533,12 +612,10 @@ async def test_execute_unexpected_argument_raises() -> None:
             )
             with pytest.raises(OpenAPIInvocationError, match="Unexpected argument"):
                 await handler.execute("z", {"extra": "nope"}, session=None)
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_resolve_headers_non_string_values_are_recoverable() -> None:
+async def test_resolve_headers_non_string_values_are_recoverable(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -546,9 +623,8 @@ async def test_resolve_headers_non_string_values_are_recoverable() -> None:
             "/z": {"get": {"operationId": "z3", "responses": {"200": {"description": "ok"}}}},
         },
     }
-    path = _write_tmp(raw, "resolve_non_str")
 
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "resolve_non_str") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
 
@@ -566,12 +642,10 @@ async def test_resolve_headers_non_string_values_are_recoverable() -> None:
             )
             with pytest.raises(RecoverableError, match="str keys and str values"):
                 await handler.execute("z3", {}, session=None)
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_execute_upstream_connection_error_is_recoverable() -> None:
+async def test_execute_upstream_connection_error_is_recoverable(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -579,9 +653,8 @@ async def test_execute_upstream_connection_error_is_recoverable() -> None:
             "/z": {"get": {"operationId": "z4", "responses": {"200": {"description": "ok"}}}},
         },
     }
-    path = _write_tmp(raw, "conn_err")
     req = httpx.Request("GET", "https://upstream.test/z")
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "conn_err") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         mock_http = AsyncMock()
@@ -595,12 +668,10 @@ async def test_execute_upstream_connection_error_is_recoverable() -> None:
         )
         with pytest.raises(RecoverableError, match="Upstream request failed"):
             await handler.execute("z4", {}, session=None)
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_execute_upstream_502_is_recoverable() -> None:
+async def test_execute_upstream_502_is_recoverable(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -608,8 +679,7 @@ async def test_execute_upstream_502_is_recoverable() -> None:
             "/z": {"get": {"operationId": "z5", "responses": {"200": {"description": "ok"}}}},
         },
     }
-    path = _write_tmp(raw, "502")
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "502") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         async with httpx.AsyncClient(
@@ -620,14 +690,13 @@ async def test_execute_upstream_502_is_recoverable() -> None:
                 capabilities=caps,
                 http_client=client,
             )
-            with pytest.raises(RecoverableError, match="Upstream HTTP 502"):
+            with pytest.raises(RecoverableError, match="Upstream HTTP 502") as exc_info:
                 await handler.execute("z5", {}, session=None)
-    finally:
-        path.unlink(missing_ok=True)
+            assert "body_snippet" not in exc_info.value.details
 
 
 @pytest.mark.asyncio
-async def test_execute_upstream_404_is_fatal() -> None:
+async def test_execute_upstream_404_is_fatal(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -635,26 +704,26 @@ async def test_execute_upstream_404_is_fatal() -> None:
             "/z": {"get": {"operationId": "z6", "responses": {"200": {"description": "ok"}}}},
         },
     }
-    path = _write_tmp(raw, "404")
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "404") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
+        long_body = "x" * 500
         async with httpx.AsyncClient(
-            transport=httpx.MockTransport(lambda _r: httpx.Response(404))
+            transport=httpx.MockTransport(lambda _r: httpx.Response(404, text=long_body))
         ) as client:
             handler = OpenAPIUpstreamHandler.from_capabilities(
                 base_url="https://upstream.test",
                 capabilities=caps,
                 http_client=client,
             )
-            with pytest.raises(FatalError, match="Upstream HTTP 404"):
+            with pytest.raises(FatalError, match="Upstream HTTP 404") as fi:
                 await handler.execute("z6", {}, session=None)
-    finally:
-        path.unlink(missing_ok=True)
+            snippet = fi.value.details.get("body_snippet", "") if fi.value.details else ""
+            assert len(snippet) <= 200
 
 
 @pytest.mark.asyncio
-async def test_execute_non_json_response_wraps_text() -> None:
+async def test_execute_non_json_response_wraps_text(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -662,8 +731,7 @@ async def test_execute_non_json_response_wraps_text() -> None:
             "/z": {"get": {"operationId": "z7", "responses": {"200": {"description": "ok"}}}},
         },
     }
-    path = _write_tmp(raw, "plain_text")
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "plain_text") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         async with httpx.AsyncClient(
@@ -681,12 +749,10 @@ async def test_execute_non_json_response_wraps_text() -> None:
             out = await handler.execute("z7", {}, session=None)
         assert out["_text"] == "hello"
         assert out["content_type"] == "text/plain"
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_execute_json_array_body_wraps_under_json_key() -> None:
+async def test_execute_json_array_body_wraps_under_json_key(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -694,8 +760,7 @@ async def test_execute_json_array_body_wraps_under_json_key() -> None:
             "/z": {"get": {"operationId": "z8", "responses": {"200": {"description": "ok"}}}},
         },
     }
-    path = _write_tmp(raw, "json_arr")
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "json_arr") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         async with httpx.AsyncClient(
@@ -714,12 +779,10 @@ async def test_execute_json_array_body_wraps_under_json_key() -> None:
             )
             out = await handler.execute("z8", {}, session=None)
         assert out == {"_json": [1, 2, 3]}
-    finally:
-        path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
-async def test_create_openapi_task_handler_returns_task_response_envelope() -> None:
+async def test_create_openapi_task_handler_returns_task_response_envelope(tmp_path: Path) -> None:
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -727,8 +790,7 @@ async def test_create_openapi_task_handler_returns_task_response_envelope() -> N
             "/ping": {"get": {"operationId": "ping", "responses": {"200": {"description": "ok"}}}},
         },
     }
-    path = _write_tmp(raw, "task_handler")
-    try:
+    with tmp_openapi_spec(tmp_path, raw, "task_handler") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         transport = httpx.MockTransport(lambda _r: httpx.Response(200, json={"pong": True}))
@@ -766,5 +828,3 @@ async def test_create_openapi_task_handler_returns_task_response_envelope() -> N
         assert envelope_out.payload_type == "task.response"
         assert envelope_out.payload_dict["result"] == {"pong": True}
         assert envelope_out.correlation_id == envelope_in.id
-    finally:
-        path.unlink(missing_ok=True)
