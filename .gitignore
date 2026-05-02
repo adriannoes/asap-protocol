@@ -193,6 +193,10 @@ engineering/private/
 engineering/tasks/private/
 engineering/tasks/v2.3.[1-9]*/
 node_modules/
+# Next.js build output (examples and apps)
+.next/
+# tshy generated tsconfig fragments (regenerated on build)
+.tshy/
 .pnpm-store/
 .github/wiki/
 
