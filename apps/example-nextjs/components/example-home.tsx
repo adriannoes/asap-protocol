@@ -1,5 +1,3 @@
-"use client";
-
 import { AsapDemo } from "@/components/asap-demo";
 
 export function ExampleHome() {

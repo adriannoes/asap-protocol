@@ -1,3 +1,4 @@
+// Minimal demo layout: Suspense and error boundaries are intentionally omitted.
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";

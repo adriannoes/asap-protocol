@@ -1,34 +1,38 @@
 import { openai } from "@ai-sdk/openai";
 import { asapToolsForVercel } from "@asap-protocol/client/adapters/vercel-ai";
-import { convertToModelMessages, stepCountIs, streamText } from "ai";
+import { convertToModelMessages, stepCountIs, streamText, type UIMessage } from "ai";
+import { z } from "zod";
 
 export const maxDuration = 60;
+
+const chatBodySchema = z
+  .object({
+    messages: z.array(z.unknown()),
+    providerUrl: z.string().url(),
+    capabilities: z.array(z.string()).min(1),
+    agentJwt: z.string().optional(),
+  })
+  .passthrough();
 
 export async function POST(req: Request) {
   if (!process.env.OPENAI_API_KEY?.trim()) {
     return Response.json({ error: "Set OPENAI_API_KEY to enable the chat route." }, { status: 503 });
   }
 
-  const body = (await req.json()) as Record<string, unknown>;
-  const messages = body.messages;
-  const providerUrl = typeof body.providerUrl === "string" ? body.providerUrl : "";
-  const agentJwt = typeof body.agentJwt === "string" ? body.agentJwt : undefined;
-
-  let capabilities: string[] = [];
-  if (Array.isArray(body.capabilities)) {
-    capabilities = body.capabilities.filter((x): x is string => typeof x === "string");
-  }
-
-  if (!providerUrl || capabilities.length === 0) {
-    return Response.json({ error: "providerUrl and capabilities are required." }, { status: 400 });
-  }
-
-  let provider: URL;
+  let json: unknown;
   try {
-    provider = new URL(providerUrl);
+    json = await req.json();
   } catch {
-    return Response.json({ error: "Invalid providerUrl." }, { status: 400 });
+    return Response.json({ error: "Invalid JSON body." }, { status: 400 });
   }
+
+  const parsed = chatBodySchema.safeParse(json);
+  if (!parsed.success) {
+    return Response.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const { messages, providerUrl, capabilities, agentJwt } = parsed.data;
+  const provider = new URL(providerUrl);
 
   const tools = asapToolsForVercel({
     provider,
@@ -36,13 +40,13 @@ export async function POST(req: Request) {
     agentJwt,
   });
 
-  const uiMessages = Array.isArray(messages) ? messages : [];
+  const uiMessages = messages as UIMessage[];
 
   const result = streamText({
     model: openai("gpt-4o-mini"),
     system:
       "You are a concise assistant. Use ASAP tools when the user wants to run a registered capability on the gateway.",
-    messages: await convertToModelMessages(uiMessages as never),
+    messages: await convertToModelMessages(uiMessages),
     tools,
     stopWhen: stepCountIs(12),
   });

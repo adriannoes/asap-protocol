@@ -208,6 +208,9 @@ node_modules/
 .benchmarks/
 .uv-cache/
 
+# TypeScript incremental build info (local / IDE)
+*.tsbuildinfo
+
 # ESLint report (generated)
 eslint-report.json
 .vercel
