@@ -1,0 +1,57 @@
+name: TypeScript SDK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/typescript/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/typescript-sdk.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/typescript/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/typescript-sdk.yml"
+
+concurrency:
+  group: typescript-sdk-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality-and-test:
+    name: lint, typecheck, test, treeshake
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm --filter @asap-protocol/client lint
+
+      - name: Typecheck
+        run: pnpm --filter @asap-protocol/client run typecheck
+
+      - name: Test with coverage
+        run: pnpm --filter @asap-protocol/client test
+
+      - name: Tree-shake check (agadoo)
+        run: pnpm --filter @asap-protocol/client run check:treeshake
