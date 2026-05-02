@@ -100,6 +100,7 @@ See [CLI reference](cli.md) (all commands, exit codes, `compliance-check`, `audi
 - [Raw Fetch (non-Python)](raw-fetch.md) — Fetch registry.json and revoked_agents.json directly (curl, fetch); implement your own client in any language
 - [v1.1 Security Model](security/v1.1-security-model.md) — OAuth2 trust limitations, Custom Claims, allowlist (see also [decision record § security](https://github.com/adriannoes/asap-protocol/blob/main/product/decision-records/03-security.md))
 - [Registry verification review (admin)](guides/registry-verification-review.md) — How to vet and approve Verified badge requests for the Lite Registry
+- [Lite Registry auto-registration](registry/auto-registration.md) — Bot PR flow, OAuth2, payloads, rejections, and upgrading to Verified
 
 ### v1.1 features (API reference & guides)
 
