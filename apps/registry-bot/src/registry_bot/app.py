@@ -48,6 +48,7 @@ def create_app() -> FastAPI:
             AutoRegistrationConfig,
             create_auto_registration_router,
         )
+        from asap.registry.receipt_cache import create_registration_receipt_cache
         from asap.transport.rate_limit import create_registration_rate_limiter
     except ModuleNotFoundError:
 
@@ -78,7 +79,7 @@ def create_app() -> FastAPI:
 
     cfg = AutoRegistrationConfig(bot_settings=_bot_settings_from_env())
     app.state.registration_limiter = create_registration_rate_limiter()
-    app.state.registration_receipt_cache = {}
+    app.state.registration_receipt_cache = create_registration_receipt_cache()
     app.include_router(create_auto_registration_router(cfg))
     return app
 
