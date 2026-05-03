@@ -22,11 +22,11 @@ from asap.auth.identity import HostIdentity
 from asap.models.base import ASAPBaseModel
 from asap.observability import get_logger
 from asap.transport.agent_routes import (
-    _apply_capability_specs_to_registry,
-    _background_a2h_resolve,
-    _parse_capability_registration_body,
+    apply_capability_specs_to_registry,
+    background_a2h_resolve,
+    parse_capability_registration_body,
 )
-from asap.transport.capability_routes import _verify_agent_bearer
+from asap.transport.capability_routes import verify_agent_bearer
 
 logger = get_logger(__name__)
 
@@ -49,7 +49,7 @@ async def _handle_request_capability(
 ) -> JSONResponse:
     """Request additional capabilities for an active agent (Agent JWT)."""
     jti_cache = request.app.state.identity_jti_cache
-    result, err = await _verify_agent_bearer(request, jti_replay_cache=jti_cache)
+    result, err = await verify_agent_bearer(request, jti_replay_cache=jti_cache)
     if err is not None:
         return err
     if result is None or result.agent is None or result.host is None:
@@ -75,7 +75,7 @@ async def _handle_request_capability(
     except ValidationError as e:
         return JSONResponse(status_code=400, content={"detail": e.errors()})
 
-    _names, capability_specs = _parse_capability_registration_body(
+    _names, capability_specs = parse_capability_registration_body(
         {"capabilities": body.capabilities},
     )
     if not _names:
@@ -98,11 +98,12 @@ async def _handle_request_capability(
     host_id = host.host_id
     agent_id = agent.agent_id
 
-    grant_payloads: list[dict[str, Any]] = []
-    for spec in auto_specs:
-        grant_payloads.extend(
-            _apply_capability_specs_to_registry(registry, agent_id, host_id, [spec]),
-        )
+    grant_payloads: list[dict[str, Any]] = apply_capability_specs_to_registry(
+        registry,
+        agent_id,
+        host_id,
+        auto_specs,
+    )
 
     if not needs_specs:
         return JSONResponse(
@@ -149,8 +150,14 @@ async def _handle_request_capability(
     ch = getattr(request.app.state, "identity_approval_a2h_channel", None)
     if ch is not None:
         principal = host.user_id if host.user_id else host_id
+        if not host.user_id:
+            logger.warning(
+                "asap.identity.escalation_a2h_principal_fallback",
+                host_id=host_id,
+                agent_id=agent_id,
+            )
         background_tasks.add_task(
-            _background_a2h_resolve,
+            background_a2h_resolve,
             ch,
             agent_id,
             context=f"ASAP capability escalation {agent_id} for host {host_id}",

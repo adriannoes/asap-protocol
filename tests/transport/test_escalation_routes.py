@@ -330,7 +330,7 @@ class TestEscalationRoutesErrorsAndBranches:
             )
 
         monkeypatch.setattr(
-            "asap.transport.escalation_routes._verify_agent_bearer",
+            "asap.transport.escalation_routes.verify_agent_bearer",
             _fake_verify,
         )
         tok = _agent_token(agent_sk, host_sk, aid)
@@ -487,7 +487,7 @@ class TestEscalationRoutesErrorsAndBranches:
             return SimpleNamespace(agent=None, host=SimpleNamespace()), None
 
         monkeypatch.setattr(
-            "asap.transport.escalation_routes._verify_agent_bearer",
+            "asap.transport.escalation_routes.verify_agent_bearer",
             _fake_verify,
         )
         client = TestClient(app)

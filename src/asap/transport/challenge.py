@@ -17,6 +17,15 @@ from asap.models.base import ASAPBaseModel
 # HTTP 401
 HTTP_UNAUTHORIZED = 401
 
+__all__ = [
+    "HTTP_UNAUTHORIZED",
+    "WWWAuthenticateASAPChallenge",
+    "WWWAuthenticateASAPMiddleware",
+    "default_manifest_discovery_url",
+    "format_www_authenticate_asap",
+    "parse_www_authenticate_asap",
+]
+
 _ASAP_SCHEME_RE = re.compile(r"\bASAP\b", re.IGNORECASE)
 
 
@@ -60,7 +69,11 @@ def default_manifest_discovery_url(asap_http_endpoint: str) -> str:
 
 
 class WWWAuthenticateASAPMiddleware(BaseHTTPMiddleware):
-    """Attach ``WWW-Authenticate: ASAP discovery=\"...\"`` to selected HTTP 401 responses."""
+    """Attach ``WWW-Authenticate: ASAP`` to selected HTTP 401 responses.
+
+    ``BaseHTTPMiddleware`` buffers the full response body; challenge 401s stay small.
+    Prefer plain ASGI middleware if large or streaming 401 bodies appear on matched paths.
+    """
 
     def __init__(
         self,

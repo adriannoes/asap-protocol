@@ -81,7 +81,7 @@ class AgentRotateKeyBody(ASAPBaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _parse_capability_registration_body(
+def parse_capability_registration_body(
     raw_body: dict[str, Any],
 ) -> tuple[list[str], list[dict[str, Any]]]:
     """Extract capability names and raw spec dicts from a register JSON body."""
@@ -169,7 +169,7 @@ def _needs_registration_approval(host: HostIdentity, requested_names: list[str])
     return escalation_requires_user_consent(host, requested_names)
 
 
-def _apply_capability_specs_to_registry(
+def apply_capability_specs_to_registry(
     registry: CapabilityRegistry,
     agent_id: str,
     host_id: str,
@@ -219,7 +219,7 @@ def _grants_for_agent(registry: CapabilityRegistry, agent_id: str) -> list[dict[
     return [_grant_to_dict(g) for g in registry.get_grants(agent_id)]
 
 
-async def _background_a2h_resolve(
+async def background_a2h_resolve(
     channel: A2HApprovalChannel,
     agent_id: str,
     *,
@@ -406,7 +406,7 @@ async def _handle_agent_register(
     if not isinstance(raw_body, dict):
         raw_body = {}
 
-    requested_names, capability_specs = _parse_capability_registration_body(raw_body)
+    requested_names, capability_specs = parse_capability_registration_body(raw_body)
     preferred_raw = raw_body.get("approval_method")
     preferred_method: ApprovalMethod | None = None
     if preferred_raw == "device_authorization":
@@ -461,7 +461,7 @@ async def _handle_agent_register(
     if not needs:
         capability_grants: list[dict[str, Any]] = []
         if registry is not None and capability_specs:
-            capability_grants = _apply_capability_specs_to_registry(
+            capability_grants = apply_capability_specs_to_registry(
                 registry,
                 agent_id,
                 host_id,
@@ -515,8 +515,14 @@ async def _handle_agent_register(
     ch = getattr(request.app.state, "identity_approval_a2h_channel", None)
     if ch is not None:
         principal = host.user_id if host.user_id else host_id
+        if not host.user_id:
+            logger.warning(
+                "asap.identity.a2h_principal_fallback",
+                host_id=host_id,
+                agent_id=agent_id,
+            )
         background_tasks.add_task(
-            _background_a2h_resolve,
+            background_a2h_resolve,
             ch,
             agent_id,
             context=f"ASAP agent registration {agent_id} for host {host_id}",
@@ -593,7 +599,7 @@ async def _handle_agent_status(request: Request, agent_id: str) -> JSONResponse:
     ):
         if appr.status == "approved":
             if registry is not None and appr.capability_specs:
-                _apply_capability_specs_to_registry(
+                apply_capability_specs_to_registry(
                     registry,
                     agent_id,
                     host_id,
@@ -608,7 +614,7 @@ async def _handle_agent_status(request: Request, agent_id: str) -> JSONResponse:
     if session.status == "pending" and appr is not None:
         if appr.status == "approved":
             if registry is not None and appr.capability_specs:
-                _apply_capability_specs_to_registry(
+                apply_capability_specs_to_registry(
                     registry,
                     agent_id,
                     host_id,
@@ -637,6 +643,7 @@ async def _handle_agent_status(request: Request, agent_id: str) -> JSONResponse:
         "host_id": session.host_id,
         "status": session.status,
         "capabilities": caps_out,
+        "agent_capability_grants": list(caps_out),
         "lifecycle": _agent_lifecycle_json(session),
     }
     if appr is not None:
