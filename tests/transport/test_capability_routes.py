@@ -342,6 +342,7 @@ class TestCapabilityExecute:
         err = body["error"]
         assert err["code"] == "capability_not_granted"
         assert err["data"]["required_capability"] == "file:read"
+        assert "request_id" in err and err["request_id"]
 
     async def test_execute_agent_expired_by_max_lifetime_returns_403(
         self,
@@ -374,6 +375,7 @@ class TestCapabilityExecute:
         )
         assert r.status_code == 403
         assert "expired" in r.json()["detail"].lower()
+        assert "request_id" in r.json() and r.json()["request_id"]
 
     async def test_execute_constraint_violated_returns_403_with_violations(
         self,
@@ -401,6 +403,7 @@ class TestCapabilityExecute:
         assert len(body["violations"]) == 1
         assert body["violations"][0]["field"] == "path"
         assert body["violations"][0]["operator"] == "in"
+        assert "request_id" in body and body["request_id"]
 
     async def test_execute_no_auth_returns_401(
         self,
