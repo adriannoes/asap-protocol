@@ -17,4 +17,4 @@ DEFAULT_AUTO_REGISTER_VERIFICATION = VerificationStatus(status=VerificationState
 
 def auto_register_verification() -> VerificationStatus:
     """Return verification block for a new auto-registered Lite Registry entry."""
-    return DEFAULT_AUTO_REGISTER_VERIFICATION
+    return DEFAULT_AUTO_REGISTER_VERIFICATION.model_copy()
