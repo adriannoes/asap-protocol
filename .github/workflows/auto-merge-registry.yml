@@ -7,7 +7,7 @@ on:
     types: [opened, synchronize, reopened, labeled]
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 concurrency:
@@ -121,8 +121,21 @@ jobs:
             exit 0
           fi
 
+          set +e
+          gh pr merge "$PR" --repo "$REPO" --auto --squash
+          merge_rc=$?
+          set -e
+          if [ "$merge_rc" -ne 0 ]; then
+            comment "## Auto-registration merge policy
+
+          **Could not enable squash auto-merge** — \`gh pr merge --auto\` failed (exit code ${merge_rc}).
+
+          Check **Settings → General → Pull requests → Allow auto-merge** and ensure the workflow token can merge (this workflow uses \`contents: write\` and \`pull-requests: write\`)."
+            echo "enable=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
           comment "## Auto-registration merge policy
 
           **Squash auto-merge enabled** — only \`registry.json\` changed, schema is valid, and no \`verified\` badge was added or promoted. This PR will merge automatically when required checks pass."
-          gh pr merge "$PR" --repo "$REPO" --auto --squash
           echo "enable=true" >> "$GITHUB_OUTPUT"
