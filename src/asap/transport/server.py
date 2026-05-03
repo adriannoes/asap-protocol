@@ -55,7 +55,7 @@ from contextlib import asynccontextmanager, suppress
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
@@ -110,7 +110,11 @@ from asap.transport.middleware import (
     _get_sender_from_envelope,
     rate_limit_handler,
 )
-from asap.transport.rate_limit import RateLimitExceeded, create_limiter
+from asap.transport.rate_limit import (
+    RateLimitExceeded,
+    create_limiter,
+    create_registration_rate_limiter,
+)
 from asap.observability.metrics import MetricsCollector
 from asap.transport.executors import BoundedExecutor
 from asap.transport.handlers import (
@@ -160,6 +164,9 @@ from asap.transport.websocket import (
     handle_websocket_connection,
 )
 from asap.transport.mtls import MTLSConfig
+
+if TYPE_CHECKING:
+    from asap.registry.auto_registration import AutoRegistrationConfig
 
 # Module logger
 logger = get_logger(__name__)
@@ -1563,6 +1570,7 @@ def create_app(
     identity_fresh_session_config: FreshSessionConfig | None = None,
     identity_webauthn_verifier: WebAuthnVerifier | None = None,
     max_batch_size: int = DEFAULT_MAX_BATCH_SIZE,
+    registry_auto_registration: AutoRegistrationConfig | None = None,
 ) -> FastAPI:
     """Create and configure a FastAPI application for ASAP protocol.
 
@@ -1648,6 +1656,11 @@ def create_app(
             :func:`asap.auth.self_auth.default_webauthn_verifier` is used (real verification
             only if the ``webauthn`` extra is installed and ``ASAP_WEBAUTHN_RP_ID`` plus
             ``ASAP_WEBAUTHN_ORIGIN`` are set; otherwise the placeholder verifier applies).
+        registry_auto_registration: When set, mounts ``POST /registry/agents`` for Lite Registry
+            self-service registration. Requires OAuth2 JWT validation on this path: set
+            ``oauth2_config.path_prefix`` to ``"/"`` (or a prefix covering ``/registry``) so
+            :class:`~asap.auth.middleware.OAuth2Middleware` applies; rate limits use
+            ``app.state.registration_limiter`` (5/hour per Bearer token).
 
     Returns:
         Configured FastAPI application ready to run
@@ -1874,6 +1887,17 @@ def create_app(
     if not hasattr(app.state, "capability_registry"):
         app.state.capability_registry = CapabilityRegistry()
     app.include_router(create_capability_router())
+    if registry_auto_registration is not None:
+        from asap.registry.auto_registration import create_auto_registration_router
+        from asap.registry.receipt_cache import create_registration_receipt_cache
+
+        app.state.registration_limiter = create_registration_rate_limiter()
+        app.state.registration_receipt_cache = create_registration_receipt_cache()
+        app.include_router(create_auto_registration_router(registry_auto_registration))
+        logger.info(
+            "asap.server.registry_auto_registration_enabled",
+            manifest_id=manifest.id,
+        )
     if metering_storage is not None and isinstance(metering_storage, MeteringStorage):
         app.state.metering_storage = metering_storage
         app.include_router(create_usage_router())
