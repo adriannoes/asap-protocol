@@ -20,7 +20,7 @@
 
 ### Modified Files
 - `src/asap/transport/server.py` — `create_escalation_router()`, `WWWAuthenticateASAPMiddleware` (`asap_challenge_*` kwargs), JSON-RPC error strips internal `_www_authenticate_asap` into `WWW-Authenticate` response header
-- `src/asap/auth/capabilities.py` — `escalation_requires_user_consent`, `partition_escalation_capability_specs`, `request_capability()` planner (ESC helper)
+- `src/asap/auth/capabilities.py` — `escalation_requires_user_consent`, `partition_escalation_capability_specs` (ESC consent vs auto-grant split)
 - `src/asap/auth/approval.py` — `ApprovalKind`, `approval_kind` on state/store `create`/`remove`, idempotent device/CIBA by kind
 - `src/asap/transport/agent_routes.py` — Escalation apply-on-status + escalation pending UX; `_needs_registration_approval` → `escalation_requires_user_consent`
 - `src/asap/transport/capability_routes.py` — CHAL-003 structured `403` `error.code = capability_not_granted` + `required_capability`

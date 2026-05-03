@@ -36,7 +36,7 @@ receipt = await client.request_capability(
 )
 ```
 
-Domain helper: `asap.auth.capabilities.request_capability(host, capability_specs)` partitions specs into consent vs auto paths.
+Domain helper: `partition_escalation_capability_specs()` in `asap.auth.capabilities` splits specs into **needs user consent** vs **auto-grant** buckets (same policy as the server).
 
 ## TypeScript
 
