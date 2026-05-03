@@ -32,7 +32,6 @@ Example:
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import itertools
 import json
 import secrets
@@ -483,8 +482,14 @@ class ASAPClient:
         self._last_asap_challenge_discovery_url = disc
         if not disc or not self._auto_register_on_asap_challenge:
             return
-        with contextlib.suppress(Exception):
+        try:
             await self.get_manifest(disc)
+        except Exception:
+            logger.debug(
+                "asap.client.asap_challenge_prefetch_failed",
+                discovery_url=disc,
+                exc_info=True,
+            )
 
     @property
     def last_asap_challenge_discovery_url(self) -> str | None:
@@ -1449,7 +1454,10 @@ class ASAPClient:
         poll_interval_seconds: float = 0.15,
         status_timeout_seconds: float = 90.0,
     ) -> CapabilityRequestReceipt:
-        """POST ``/asap/agent/request-capability`` and poll status until escalation settles."""
+        """POST ``/asap/agent/request-capability`` and poll status until escalation settles.
+
+        Poll responses may list grants under ``capabilities`` and/or ``agent_capability_grants``.
+        """
         if not self._client:
             raise ASAPConnectionError(
                 "Client not connected. Use 'async with' context.",
@@ -1500,13 +1508,20 @@ class ASAPClient:
                 timeout=self.timeout,
             )
             if st.status_code != 200:
+                if st.status_code in (401, 403, 404):
+                    raise ASAPConnectionError(
+                        f"Escalation status polling failed with HTTP {st.status_code}",
+                        url=sanitize_url(st_url),
+                    )
                 continue
             sj = st.json()
             if not isinstance(sj, dict):
                 continue
             ap_st = sj.get("approval_status")
             if ap_st != "pending":
-                caps_raw = sj.get("capabilities")
+                caps_raw = sj.get("agent_capability_grants")
+                if not isinstance(caps_raw, list):
+                    caps_raw = sj.get("capabilities")
                 grants = tuple(caps_raw) if isinstance(caps_raw, list) else ()
                 return CapabilityRequestReceipt(
                     agent_id=str(sj.get("agent_id", agent_id)),
