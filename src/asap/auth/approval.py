@@ -21,6 +21,7 @@ __all__ = [
     "create_ciba_approval",
     "create_device_authorization",
     "select_approval_method",
+    "ApprovalKind",
 ]
 
 import asyncio
@@ -36,6 +37,7 @@ from asap.models.base import ASAPBaseModel
 
 ApprovalMethod = Literal["device_authorization", "ciba"]
 ApprovalStatus = Literal["pending", "approved", "denied", "expired"]
+ApprovalKind = Literal["registration", "escalation"]
 
 USER_CODE_LENGTH = 8
 USER_CODE_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -74,6 +76,7 @@ class ApprovalRequestState(ASAPBaseModel):
     method: ApprovalMethod
     capabilities: list[str]
     capability_specs: list[dict[str, Any]] = Field(default_factory=list)
+    approval_kind: ApprovalKind = "registration"
     status: ApprovalStatus
     user_code: str | None = None
     verification_uri: str | None = None
@@ -180,8 +183,13 @@ class ApprovalStore(Protocol):
         verification_uri_complete: str | None = None,
         binding_message: str | None = None,
         capability_specs: list[dict[str, Any]] | None = None,
+        approval_kind: ApprovalKind = "registration",
     ) -> None:
         """Create a new pending approval request for ``agent_id``."""
+        ...
+
+    async def remove(self, agent_id: str) -> None:
+        """Remove any approval record for ``agent_id`` (e.g. after escalation is applied)."""
         ...
 
     async def get(self, agent_id: str) -> ApprovalRequestState | None:
@@ -217,6 +225,7 @@ class InMemoryApprovalStore:
         verification_uri_complete: str | None = None,
         binding_message: str | None = None,
         capability_specs: list[dict[str, Any]] | None = None,
+        approval_kind: ApprovalKind = "registration",
     ) -> None:
         specs = [dict(x) for x in capability_specs] if capability_specs else []
         state = ApprovalRequestState(
@@ -224,6 +233,7 @@ class InMemoryApprovalStore:
             method=method,
             capabilities=list(capabilities),
             capability_specs=specs,
+            approval_kind=approval_kind,
             status="pending",
             user_code=user_code,
             verification_uri=verification_uri,
@@ -235,6 +245,10 @@ class InMemoryApprovalStore:
         )
         async with self._lock:
             self._by_agent[agent_id] = state
+
+    async def remove(self, agent_id: str) -> None:
+        async with self._lock:
+            self._by_agent.pop(agent_id, None)
 
     async def get(self, agent_id: str) -> ApprovalRequestState | None:
         async with self._lock:
@@ -292,6 +306,7 @@ async def create_device_authorization(
     interval: int = DEFAULT_POLL_INTERVAL_SECONDS,
     verification_uri: str | None = None,
     capability_specs: list[dict[str, Any]] | None = None,
+    approval_kind: ApprovalKind = "registration",
 ) -> ApprovalObject:
     """Start or reuse a Device Authorization (RFC 8628) approval for an agent.
 
@@ -304,6 +319,7 @@ async def create_device_authorization(
         existing is not None
         and existing.method == "device_authorization"
         and existing.status == "pending"
+        and existing.approval_kind == approval_kind
     ):
         return _state_to_approval_object(existing)
 
@@ -319,6 +335,7 @@ async def create_device_authorization(
         verification_uri=base_uri,
         verification_uri_complete=verification_uri_complete,
         capability_specs=capability_specs,
+        approval_kind=approval_kind,
     )
     fresh = await store.get(agent_id)
     if fresh is None:
@@ -336,11 +353,17 @@ async def create_ciba_approval(
     expires_in: int = DEFAULT_DEVICE_EXPIRES_IN_SECONDS,
     interval: int = DEFAULT_POLL_INTERVAL_SECONDS,
     capability_specs: list[dict[str, Any]] | None = None,
+    approval_kind: ApprovalKind = "registration",
 ) -> ApprovalObject:
     """Create a CIBA-style approval (no ``verification_uri``; push via separate channel)."""
     msg = binding_message if binding_message is not None else DEFAULT_CIBA_BINDING_MESSAGE
     existing = await store.get(agent_id)
-    if existing is not None and existing.method == "ciba" and existing.status == "pending":
+    if (
+        existing is not None
+        and existing.method == "ciba"
+        and existing.status == "pending"
+        and existing.approval_kind == approval_kind
+    ):
         return _state_to_approval_object(existing)
 
     await store.create(
@@ -351,6 +374,7 @@ async def create_ciba_approval(
         interval=interval,
         binding_message=msg,
         capability_specs=capability_specs,
+        approval_kind=approval_kind,
     )
     fresh = await store.get(agent_id)
     if fresh is None:

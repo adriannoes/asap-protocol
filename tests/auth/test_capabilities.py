@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Any, get_args
+from typing import Any, cast, get_args
 
 import pytest
 from pydantic import ValidationError
@@ -14,9 +14,19 @@ from asap.auth.capabilities import (
     CapabilityRegistry,
     ConstraintViolation,
     GrantStatus,
+    escalation_requires_user_consent,
     map_scopes_to_capabilities,
+    partition_escalation_capability_specs,
+    request_capability,
     validate_constraints,
 )
+from asap.auth.identity import (
+    HostIdentity,
+    HostStatus,
+    host_urn_from_thumbprint,
+    jwk_thumbprint_sha256,
+)
+from tests.crypto.jwk_helpers import make_ed25519_jwk
 
 
 # ---------------------------------------------------------------------------
@@ -388,3 +398,61 @@ class TestMapScopesToCapabilities:
         grants = map_scopes_to_capabilities(["asap:admin"], registry)
         names = [g.capability for g in grants]
         assert names == sorted(names)
+
+
+# ---------------------------------------------------------------------------
+# Escalation helpers (ESC policy on capability specs)
+# ---------------------------------------------------------------------------
+
+
+class TestEscalationCapabilityHelpers:
+    """``partition_escalation_capability_specs`` / ``request_capability`` edge cases."""
+
+    @staticmethod
+    def _host(
+        *,
+        status: HostStatus = "active",
+        default_capabilities: list[str] | None = None,
+    ) -> HostIdentity:
+        now = datetime.now(timezone.utc)
+        pk = make_ed25519_jwk()
+        hid = host_urn_from_thumbprint(jwk_thumbprint_sha256(pk))
+        return HostIdentity(
+            host_id=hid,
+            public_key=pk,
+            user_id=None,
+            status=status,
+            default_capabilities=default_capabilities or [],
+            created_at=now,
+            updated_at=now,
+        )
+
+    def test_escalation_requires_consent_when_host_inactive(self) -> None:
+        host = self._host(status="pending", default_capabilities=["a"])
+        assert escalation_requires_user_consent(host, ["a"]) is True
+
+    def test_partition_skips_non_dict_specs(self) -> None:
+        host = self._host(default_capabilities=["foo"])
+        needs, autos = partition_escalation_capability_specs(
+            host,
+            cast(
+                list[dict[str, Any]],
+                [{"name": "foo"}, "ignored-string", {"name": "extra"}],
+            ),
+        )
+        assert [s["name"] for s in autos] == ["foo"]
+        assert [s["name"] for s in needs] == ["extra"]
+
+    def test_partition_skips_blank_and_non_string_names(self) -> None:
+        host = self._host(default_capabilities=["x"])
+        needs, autos = partition_escalation_capability_specs(
+            host,
+            [{"name": ""}, {"name": "  "}, {"name": 99}],
+        )
+        assert needs == []
+        assert autos == []
+
+    def test_request_capability_matches_partition(self) -> None:
+        host = self._host(default_capabilities=["a"])
+        specs: list[dict[str, Any]] = [{"name": "a"}, {"name": "z"}]
+        assert request_capability(host, specs) == partition_escalation_capability_specs(host, specs)
