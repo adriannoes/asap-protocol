@@ -237,8 +237,11 @@ async def _handle_capability_execute(request: Request) -> JSONResponse:
         return JSONResponse(
             status_code=403,
             content={
-                "error": "no_grant",
-                "detail": f"agent has no active grant for {body.capability!r}",
+                "error": {
+                    "code": "capability_not_granted",
+                    "message": f"agent has no active grant for {body.capability!r}",
+                    "data": {"required_capability": body.capability},
+                },
             },
         )
 

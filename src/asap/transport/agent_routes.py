@@ -40,7 +40,7 @@ from asap.auth.self_auth import (
     default_webauthn_verifier,
     fresh_session_violation_detail,
 )
-from asap.auth.capabilities import CapabilityRegistry
+from asap.auth.capabilities import CapabilityRegistry, escalation_requires_user_consent
 from asap.auth.identity import (
     AgentSession,
     AgentStore,
@@ -166,9 +166,7 @@ async def _approval_webauthn_response(
 
 def _needs_registration_approval(host: HostIdentity, requested_names: list[str]) -> bool:
     """Hosts that are not yet active, or requests outside default caps, need approval."""
-    if host.status != "active":
-        return True
-    return not set(requested_names).issubset(set(host.default_capabilities))
+    return escalation_requires_user_consent(host, requested_names)
 
 
 def _apply_capability_specs_to_registry(
@@ -587,6 +585,26 @@ async def _handle_agent_status(request: Request, agent_id: str) -> JSONResponse:
         if fresh_poll is not None:
             return fresh_poll
 
+    if (
+        session.status == "active"
+        and appr is not None
+        and appr.approval_kind == "escalation"
+        and approval_store is not None
+    ):
+        if appr.status == "approved":
+            if registry is not None and appr.capability_specs:
+                _apply_capability_specs_to_registry(
+                    registry,
+                    agent_id,
+                    host_id,
+                    appr.capability_specs,
+                )
+            await approval_store.remove(agent_id)
+            appr = None
+        elif appr.status in ("denied", "expired"):
+            await approval_store.remove(agent_id)
+            appr = None
+
     if session.status == "pending" and appr is not None:
         if appr.status == "approved":
             if registry is not None and appr.capability_specs:
@@ -623,7 +641,11 @@ async def _handle_agent_status(request: Request, agent_id: str) -> JSONResponse:
     }
     if appr is not None:
         content["approval_status"] = appr.status
-        if session.status == "pending" and appr.status in ("pending", "expired"):
+        if (session.status == "pending" and appr.status in ("pending", "expired")) or (
+            session.status == "active"
+            and appr.approval_kind == "escalation"
+            and appr.status == "pending"
+        ):
             base = approval_object_for_client(appr).model_dump(mode="json")
             content["approval"] = {**base, "state": appr.status}
         elif session.status == "rejected" and appr.deny_reason:
