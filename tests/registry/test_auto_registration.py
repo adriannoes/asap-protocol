@@ -219,11 +219,15 @@ def test_registration_rate_limit_sixth_request_429(
 
     client = TestClient(app)
     headers = {"Authorization": "Bearer rl-token"}
-    body = {"manifest_url": "https://example.org/m1.json"}
     for i in range(5):
+        body = {"manifest_url": f"https://example.org/rate-m{i}.json"}
         r = client.post("/registry/agents", json=body, headers=headers)
         assert r.status_code == 200, f"iteration {i}"
-    r6 = client.post("/registry/agents", json=body, headers=headers)
+    r6 = client.post(
+        "/registry/agents",
+        json={"manifest_url": "https://example.org/rate-m5.json"},
+        headers=headers,
+    )
     assert r6.status_code == 429
 
 
@@ -612,7 +616,9 @@ def test_register_agent_pr_unexpected_error_502(
         headers={"Authorization": "Bearer boom"},
     )
     assert resp.status_code == 502
-    assert "Pull request flow failed" in resp.json()["detail"]
+    detail = resp.json()["detail"]
+    assert detail == "Pull request flow failed. Check server logs for details."
+    assert "github unavailable" not in detail
 
 
 def test_register_agent_manifest_fetch_http_error_mapped_to_400(
@@ -835,7 +841,9 @@ def test_open_pull_request_bad_return_type_returns_502(
         headers={"Authorization": "Bearer wp"},
     )
     assert resp.status_code == 502
-    assert "Pull request flow failed" in resp.json()["detail"]
+    detail = resp.json()["detail"]
+    assert detail == "Pull request flow failed. Check server logs for details."
+    assert "nope" not in detail
 
 
 def test_registration_skips_rate_limit_when_limiter_missing(
