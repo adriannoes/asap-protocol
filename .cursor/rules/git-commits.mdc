@@ -34,6 +34,7 @@ Use the [Conventional Commits](https://www.conventionalcommits.org/) specificati
 3. **Description**: Short, imperative summary of the change.
 4. **Body**: Longer description of "what" and "why" (not "how").
 5. **Footers**: Used for tracking issues (e.g., `Refs: #123`) or breaking changes.
+6. **No agent co-author or Cursor attribution**: Do not append `Co-authored-by:` (including Cursor Bot / cursoragent), `Made with Cursor`, or similar trailers to commit messages or pull request bodies. Commits must reflect only the human author's git identity for this project—same intent as **Cursor Settings → Agent → Attribution** off.
 
 ## Pre-Push CI Verification
 
