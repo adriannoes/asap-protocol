@@ -11,6 +11,9 @@ Policy (Sprint S3 / AUTO-006):
 
 Exit code ``0`` = eligible for auto-merge; ``1`` = requires human review. Reason printed to
 stdout (and stderr on failure).
+
+Run from the repo root with ``uv run python scripts/check_auto_registration_merge_eligible.py``
+so the editable ``asap`` package is on ``sys.path``.
 """
 
 from __future__ import annotations
@@ -22,14 +25,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent
-if str(_REPO_ROOT / "src") not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT / "src"))
+from pydantic import ValidationError
 
-from pydantic import ValidationError  # noqa: E402
-
-from asap.discovery.registry import LiteRegistry, RegistryEntry  # noqa: E402
-from asap.models.enums import VerificationState  # noqa: E402
+from asap.discovery.registry import LiteRegistry, RegistryEntry
+from asap.models.enums import VerificationState
 
 
 def _is_verified(entry: RegistryEntry) -> bool:
