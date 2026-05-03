@@ -25,6 +25,7 @@ from asap.adapters.openapi.handler import (
 )
 from asap.adapters.openapi.spec_loader import OpenAPISpecError, OpenAPIDocument, load_spec
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
+from asap.transport.challenge import default_manifest_discovery_url
 from asap.transport.handlers import HandlerRegistry
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,7 @@ _KNOWN_CREATE_FROM_OPENAPI_KEYS: frozenset[str] = frozenset(
         "manifest_id",
         "manifest_name",
         "asap_endpoint",
+        "asap_challenge_discovery_url",
     ),
 )
 
@@ -140,6 +142,7 @@ async def create_from_openapi(
     manifest_id: str = "urn:asap:agent:openapi-adapter",
     manifest_name: str = "",
     asap_endpoint: str = "http://localhost:8000/asap",
+    asap_challenge_discovery_url: str | None = None,
     **kwargs: Any,
 ) -> OpenAPIAdapterBundle:
     """Load OpenAPI 3.x, map operations to skills, and wire an upstream proxy handler.
@@ -157,6 +160,9 @@ async def create_from_openapi(
         manifest_id: ``Manifest.id`` (also Host JWT ``aud`` when using identity routes).
         manifest_name: Override manifest display name (default: ``info.title``).
         asap_endpoint: Advertised ``/asap`` URL in the manifest.
+        asap_challenge_discovery_url: Manifest URL for ``WWW-Authenticate`` / JSON-RPC
+            challenge metadata when the upstream returns HTTP 401 (CHAL-004). Defaults to
+            ``/.well-known/asap/manifest.json`` on the same origin as *asap_endpoint*.
         **kwargs: Reserved; unknown keys emit :class:`UserWarning` to surface typos.
 
     Returns:
@@ -207,11 +213,17 @@ async def create_from_openapi(
         manifest_name=manifest_name,
         asap_endpoint=asap_endpoint,
     )
+    challenge_url = (
+        asap_challenge_discovery_url
+        if asap_challenge_discovery_url is not None
+        else default_manifest_discovery_url(asap_endpoint)
+    )
     upstream = OpenAPIUpstreamHandler.from_capabilities(
         base_url=base,
         capabilities=caps,
         http_client=http_client,
         resolve_headers=resolve_headers,
+        asap_challenge_discovery_url=challenge_url,
     )
     registry = HandlerRegistry()
     registry.register("task.request", create_openapi_task_handler(upstream))
