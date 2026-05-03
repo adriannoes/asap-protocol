@@ -309,11 +309,13 @@ class OpenAPIUpstreamHandler:
         capabilities: dict[str, OpenAPICapability],
         http_client: httpx.AsyncClient,
         resolve_headers: ResolveHeaders | None = None,
+        asap_challenge_discovery_url: str | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._capabilities = capabilities
         self._http_client = http_client
         self._resolve_headers = resolve_headers
+        self._asap_challenge_discovery_url = asap_challenge_discovery_url
 
     @classmethod
     def from_capabilities(
@@ -323,6 +325,7 @@ class OpenAPIUpstreamHandler:
         capabilities: Iterable[OpenAPICapability],
         http_client: httpx.AsyncClient,
         resolve_headers: ResolveHeaders | None = None,
+        asap_challenge_discovery_url: str | None = None,
     ) -> OpenAPIUpstreamHandler:
         """Build a handler from a list of :class:`OpenAPICapability` records."""
         return cls(
@@ -330,6 +333,7 @@ class OpenAPIUpstreamHandler:
             capabilities=index_capabilities(capabilities),
             http_client=http_client,
             resolve_headers=resolve_headers,
+            asap_challenge_discovery_url=asap_challenge_discovery_url,
         )
 
     async def execute(
@@ -432,6 +436,12 @@ class OpenAPIUpstreamHandler:
                 "status_code": status,
                 "body_snippet": snippet,
             }
+            if status == 401 and self._asap_challenge_discovery_url:
+                from asap.transport.challenge import format_www_authenticate_asap
+
+                details["_www_authenticate_asap"] = format_www_authenticate_asap(
+                    self._asap_challenge_discovery_url,
+                )
             logger.error(
                 "OpenAPI upstream client error capability_name=%r url=%r status=%s",
                 capability_name,

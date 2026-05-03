@@ -148,6 +148,7 @@ from asap.economics.sla_storage import SLAStorage
 from asap.economics.storage import MeteringStorage, metering_storage_adapter
 from asap.transport.agent_routes import create_agent_identity_router
 from asap.transport.capability_routes import create_capability_router
+from asap.transport.escalation_routes import create_escalation_router
 from asap.transport.delegation_api import create_delegation_router
 from asap.transport.sla_api import create_sla_router
 from asap.transport.usage_api import create_usage_router
@@ -335,10 +336,20 @@ class ASAPRequestHandler:
         data = jsonrpc_error_data_for_asap_exception(exc)
         if extra_data:
             data = {**data, **extra_data}
+        extra_headers: dict[str, str] = {}
+        details = data.get("details")
+        if isinstance(details, dict):
+            wa = details.pop("_www_authenticate_asap", None)
+            if isinstance(wa, str):
+                extra_headers["WWW-Authenticate"] = wa
         payload = JsonRpcErrorResponse(
             error=JsonRpcError(code=exc.rpc_code, message=exc.message, data=data),
             id=request_id,
         )
+        if extra_headers:
+            return JSONResponse(
+                status_code=200, content=payload.model_dump(), headers=extra_headers
+            )
         return JSONResponse(status_code=200, content=payload.model_dump())
 
     def record_error_metrics(
@@ -1571,6 +1582,12 @@ def create_app(
     identity_webauthn_verifier: WebAuthnVerifier | None = None,
     max_batch_size: int = DEFAULT_MAX_BATCH_SIZE,
     registry_auto_registration: AutoRegistrationConfig | None = None,
+    asap_challenge_enabled: bool = True,
+    asap_challenge_discovery_url: str | None = None,
+    asap_challenge_path_prefixes: tuple[str, ...] | None = (
+        "/asap/capability",
+        "/asap/agent",
+    ),
 ) -> FastAPI:
     """Create and configure a FastAPI application for ASAP protocol.
 
@@ -1880,6 +1897,7 @@ def create_app(
     _identity_rl = identity_rate_limit or "5/second;30/minute"
     app.state.identity_limiter = create_limiter([_identity_rl])
     app.include_router(create_agent_identity_router())
+    app.include_router(create_escalation_router())
 
     # Capability-based authorization (S1)
     from asap.auth.capabilities import CapabilityRegistry
@@ -2148,6 +2166,21 @@ def create_app(
                 "entries": [e.model_dump(mode="json") for e in entries],
                 "count": len(entries),
             },
+        )
+
+    if asap_challenge_enabled:
+        from asap.transport.challenge import (
+            WWWAuthenticateASAPMiddleware,
+            default_manifest_discovery_url,
+        )
+
+        disc = asap_challenge_discovery_url or default_manifest_discovery_url(
+            manifest.endpoints.asap
+        )
+        app.add_middleware(
+            WWWAuthenticateASAPMiddleware,
+            default_discovery_url=disc,
+            path_prefixes=asap_challenge_path_prefixes,
         )
 
     return app
