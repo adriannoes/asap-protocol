@@ -28,6 +28,9 @@ from asap.discovery.registry import LiteRegistry, RegistryEntry
 logger = logging.getLogger(__name__)
 
 GITHUB_API = "https://api.github.com"
+AUTO_REGISTRATION_PR_LABEL = "auto-registration"
+# Blocking git/network operations should release the thread pool worker eventually.
+_GIT_SUBPROCESS_TIMEOUT_SEC = 120
 
 BranchPrepFn = Callable[[Path, RegistryEntry, str, "BotPRSettings"], None]
 PushFn = Callable[[Path, str, "BotPRSettings"], None]
@@ -115,6 +118,7 @@ def _default_branch_prep(
         check=True,
         capture_output=True,
         text=True,
+        timeout=_GIT_SUBPROCESS_TIMEOUT_SEC,
     )
     subprocess.run(
         [
@@ -128,6 +132,7 @@ def _default_branch_prep(
         check=True,
         capture_output=True,
         text=True,
+        timeout=_GIT_SUBPROCESS_TIMEOUT_SEC,
     )
 
 
@@ -145,6 +150,7 @@ def _default_git_push(worktree: Path, branch: str, settings: BotPRSettings) -> N
         check=True,
         capture_output=True,
         text=True,
+        timeout=_GIT_SUBPROCESS_TIMEOUT_SEC,
     )
 
 
@@ -166,12 +172,14 @@ def _run_local_git_flow(
         check=True,
         capture_output=True,
         text=True,
+        timeout=_GIT_SUBPROCESS_TIMEOUT_SEC,
     )
     subprocess.run(
         ["git", "-C", str(worktree), "checkout", "-b", branch_name],
         check=True,
         capture_output=True,
         text=True,
+        timeout=_GIT_SUBPROCESS_TIMEOUT_SEC,
     )
     branch_prep(worktree, entry, manifest_url, settings)
     push_fn(worktree, branch_name, settings)
@@ -242,6 +250,27 @@ async def open_registry_pull_request(
     return BotPRResult(pr_url=pr_url, branch_name=branch_name)
 
 
+async def _github_add_auto_registration_label(
+    *,
+    settings: BotPRSettings,
+    issue_number: int,
+    http_client: httpx.AsyncClient,
+) -> None:
+    """Apply the label required by ``auto-merge-registry.yml`` gating."""
+    label_url = f"{GITHUB_API}/repos/{settings.owner}/{settings.repo}/issues/{issue_number}/labels"
+    headers = {
+        "Authorization": f"Bearer {settings.github_token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    resp = await http_client.post(
+        label_url,
+        headers=headers,
+        json={"labels": [AUTO_REGISTRATION_PR_LABEL]},
+    )
+    resp.raise_for_status()
+
+
 async def _github_create_pull_request(
     *,
     settings: BotPRSettings,
@@ -278,6 +307,14 @@ async def _github_create_pull_request(
         html_url = data.get("html_url")
         if not isinstance(html_url, str):
             raise RuntimeError("GitHub API response missing html_url")
+        number = data.get("number")
+        if not isinstance(number, int):
+            raise RuntimeError("GitHub API response missing pull request number")
+        await _github_add_auto_registration_label(
+            settings=settings,
+            issue_number=number,
+            http_client=http_client,
+        )
         return html_url
     finally:
         if close_client:

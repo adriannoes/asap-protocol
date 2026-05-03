@@ -12,6 +12,7 @@ from asap.discovery.registry import LiteRegistry, RegistryEntry
 from asap.models.enums import VerificationState
 from asap.registry import bot_pr
 from asap.registry.bot_pr import (
+    AUTO_REGISTRATION_PR_LABEL,
     BotPRSettings,
     _github_create_pull_request,
     _sanitize_urn_for_branch,
@@ -119,10 +120,19 @@ def test_is_reserved_destination_private_ipv4() -> None:
 
 @pytest.mark.asyncio
 async def test_github_create_pull_request_success() -> None:
+    requests_log: list[str] = []
+
     def handler(request: httpx.Request) -> httpx.Response:
-        assert request.method == "POST"
-        assert "/repos/o/r/pulls" in str(request.url)
-        return httpx.Response(201, json={"html_url": "https://github.com/o/r/pull/42"})
+        requests_log.append(str(request.url))
+        if request.method == "POST" and "/repos/o/r/pulls" in str(request.url):
+            return httpx.Response(
+                201,
+                json={"html_url": "https://github.com/o/r/pull/42", "number": 42},
+            )
+        if request.method == "POST" and "/repos/o/r/issues/42/labels" in str(request.url):
+            assert AUTO_REGISTRATION_PR_LABEL.encode() in request.content
+            return httpx.Response(200, json=[{"name": AUTO_REGISTRATION_PR_LABEL}])
+        return httpx.Response(404, json={"message": "unexpected"})
 
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport) as client:
@@ -135,6 +145,7 @@ async def test_github_create_pull_request_success() -> None:
             http_client=client,
         )
     assert url == "https://github.com/o/r/pull/42"
+    assert any("/issues/42/labels" in u for u in requests_log)
 
 
 @pytest.mark.asyncio
@@ -174,7 +185,7 @@ def test_authenticated_clone_url_non_https_scheme_untouched() -> None:
 @pytest.mark.asyncio
 async def test_github_create_pull_response_without_html_url_raises() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(201, json={"id": 42})
+        return httpx.Response(201, json={"id": 42, "number": 7})
 
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport) as client:
@@ -190,11 +201,36 @@ async def test_github_create_pull_response_without_html_url_raises() -> None:
 
 
 @pytest.mark.asyncio
+async def test_github_create_pull_response_without_number_raises() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(201, json={"html_url": "https://github.com/o/r/pull/1"})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        settings = BotPRSettings(owner="o", repo="r", github_token="tok")
+        with pytest.raises(RuntimeError, match="pull request number"):
+            await _github_create_pull_request(
+                settings=settings,
+                head_branch="h",
+                title="t",
+                body="b",
+                http_client=client,
+            )
+
+
+@pytest.mark.asyncio
 async def test_github_create_pull_request_spawns_client_when_none(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(201, json={"html_url": "https://github.com/o/r/pull/implicit"})
+        if "/pulls" in str(request.url):
+            return httpx.Response(
+                201,
+                json={"html_url": "https://github.com/o/r/pull/implicit", "number": 99},
+            )
+        if "/issues/99/labels" in str(request.url):
+            return httpx.Response(200, json=[{"name": AUTO_REGISTRATION_PR_LABEL}])
+        return httpx.Response(404, json={"message": "unexpected"})
 
     transport = httpx.MockTransport(handler)
     real_client = httpx.AsyncClient
