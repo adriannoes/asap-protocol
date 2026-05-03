@@ -6,6 +6,7 @@ import hashlib
 import inspect
 import logging
 from collections.abc import Awaitable, Callable, MutableMapping
+from dataclasses import dataclass
 from typing import Any, Literal, cast
 from urllib.parse import urlparse, urlunparse
 
@@ -30,25 +31,18 @@ logger = logging.getLogger(__name__)
 REGISTRY_REGISTER_SCOPE = "asap:registry"
 
 
+@dataclass
 class AutoRegistrationConfig:
     """Pluggable behaviour for :func:`create_auto_registration_router`."""
 
-    def __init__(
-        self,
-        *,
-        required_scope: str = REGISTRY_REGISTER_SCOPE,
-        oauth_claims_dependency: Callable[..., Any] | None = None,
-        run_compliance: Callable[[str], Awaitable[ComplianceReport]] | None = None,
-        open_pull_request: Callable[[RegistryEntry, str], Awaitable[BotPRResult]] | None = None,
-        bot_settings: BotPRSettings | None = None,
-        httpx_timeout: float = 60.0,
-    ) -> None:
-        self.required_scope = required_scope
-        self.oauth_claims_dependency = oauth_claims_dependency
-        self.run_compliance = run_compliance
-        self.open_pull_request = open_pull_request
-        self.bot_settings = bot_settings
-        self.httpx_timeout = httpx_timeout
+    required_scope: str = REGISTRY_REGISTER_SCOPE
+    oauth_claims_dependency: Callable[..., OAuth2Claims | Awaitable[OAuth2Claims]] | None = None
+    run_compliance: Callable[[str], ComplianceReport | Awaitable[ComplianceReport]] | None = None
+    open_pull_request: (
+        Callable[[RegistryEntry, str], BotPRResult | Awaitable[BotPRResult]] | None
+    ) = None
+    bot_settings: BotPRSettings | None = None
+    httpx_timeout: float = 60.0
 
 
 class RegisterAgentRequest(BaseModel):
@@ -261,9 +255,12 @@ def create_auto_registration_router(config: AutoRegistrationConfig | None = None
             raise
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        except Exception as exc:
+        except Exception:
             logger.exception("registry.bot_pr_failed")
-            raise HTTPException(status_code=502, detail=f"Pull request flow failed: {exc}") from exc
+            raise HTTPException(
+                status_code=502,
+                detail="Pull request flow failed. Check server logs for details.",
+            ) from None
 
         receipt = RegistrationReceipt(
             agent_id=agent_id,
