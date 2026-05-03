@@ -178,4 +178,27 @@ describe("connection error and branch paths", () => {
       }),
     ).rejects.toThrow(/expected JSON object response body/u);
   });
+
+  it("requestCapability accepts active escalation JSON (ESC TS parity)", async () => {
+    const host = await createHost({ storage: new MemoryStorage() });
+    const agent = await createAgent(host, { mode: "delegated" });
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          agent_id: "a1",
+          host_id: "h1",
+          status: "active",
+          agent_capability_grants: [{ capability: "extra:write", status: "active" }],
+        }),
+        { status: 200 },
+      ),
+    );
+    const out = await requestCapability(
+      new URL("https://p.example/"),
+      agent,
+      [{ name: "extra:write" }],
+      { audience: AUD, fetch: fetchMock as typeof fetch },
+    );
+    expect(out).toMatchObject({ status: "active", agent_id: "a1", host_id: "h1" });
+  });
 });
