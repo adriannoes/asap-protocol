@@ -288,17 +288,6 @@ def partition_escalation_capability_specs(
     return needs_consent, auto_grant
 
 
-def request_capability(
-    host: HostIdentity,
-    capability_specs: list[dict[str, Any]],
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Plan capability escalation: same partitioning as :func:`partition_escalation_capability_specs`.
-
-    This helper keeps escalation routing aligned with host consent policy (ESC-002).
-    """
-    return partition_escalation_capability_specs(host, capability_specs)
-
-
 # ---------------------------------------------------------------------------
 # OAuth2 scope → capability mapping (backward compatibility)
 # ---------------------------------------------------------------------------

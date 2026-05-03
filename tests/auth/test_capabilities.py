@@ -17,7 +17,6 @@ from asap.auth.capabilities import (
     escalation_requires_user_consent,
     map_scopes_to_capabilities,
     partition_escalation_capability_specs,
-    request_capability,
     validate_constraints,
 )
 from asap.auth.identity import (
@@ -406,7 +405,7 @@ class TestMapScopesToCapabilities:
 
 
 class TestEscalationCapabilityHelpers:
-    """``partition_escalation_capability_specs`` / ``request_capability`` edge cases."""
+    """Edge cases for :func:`partition_escalation_capability_specs`."""
 
     @staticmethod
     def _host(
@@ -451,8 +450,3 @@ class TestEscalationCapabilityHelpers:
         )
         assert needs == []
         assert autos == []
-
-    def test_request_capability_matches_partition(self) -> None:
-        host = self._host(default_capabilities=["a"])
-        specs: list[dict[str, Any]] = [{"name": "a"}, {"name": "z"}]
-        assert request_capability(host, specs) == partition_escalation_capability_specs(host, specs)
