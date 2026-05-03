@@ -1889,9 +1889,10 @@ def create_app(
     app.include_router(create_capability_router())
     if registry_auto_registration is not None:
         from asap.registry.auto_registration import create_auto_registration_router
+        from asap.registry.receipt_cache import create_registration_receipt_cache
 
         app.state.registration_limiter = create_registration_rate_limiter()
-        app.state.registration_receipt_cache = {}
+        app.state.registration_receipt_cache = create_registration_receipt_cache()
         app.include_router(create_auto_registration_router(registry_auto_registration))
         logger.info(
             "asap.server.registry_auto_registration_enabled",
