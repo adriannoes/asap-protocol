@@ -1178,9 +1178,7 @@ class ASAPRequestHandler:
                     rpc_request=temp_rpc_request,
                 )
             duration_seconds = time.perf_counter() - ctx.start_time
-            self.record_error_metrics(
-                ctx.metrics, payload_type, type(e).__name__, duration_seconds
-            )
+            self.record_error_metrics(ctx.metrics, payload_type, type(e).__name__, duration_seconds)
             logger.warning(
                 "asap.request.protocol_error",
                 error=str(e),
