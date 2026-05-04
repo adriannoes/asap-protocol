@@ -3,9 +3,9 @@
 > **Product Requirements Document**
 >
 > **Version**: 2.3.0
-> **Status**: DRAFT (adoption-first rescope, updated 2026-04-28)
+> **Status**: ✅ SHIPPED (2026-05-04; tag `v2.3.0` — PyPI/npm publish via maintainer release workflow after merge)
 > **Created**: 2026-03-13
-> **Last Updated**: 2026-04-28
+> **Last Updated**: 2026-05-04
 > **Origin**: Items deferred from [prd-v2.2-scale.md](./prd-v2.2-scale.md) per strategic review (2026-03), then **rescoped** in 2026-04 after v2.2.0 audit.
 > **Predecessor**: [prd-v2.2.1-patch.md](./prd-v2.2.1-patch.md) (carry-over patch)
 > **Successor**: [prd-v2.4-adoption.md](./prd-v2.4-adoption.md)

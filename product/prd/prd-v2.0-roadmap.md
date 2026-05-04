@@ -255,6 +255,7 @@ Before announcing v2.0.0:
 
 | Date | Version | Change |
 |------|---------|--------|
+| 2026-05-04 | — | Cross-link: [PRD v2.3.0 Adoption Multiplier](./prd/prd-v2.3-scale.md) shipped as **v2.3.0** (OpenAPI adapter, TypeScript SDK, auto-registration, escalation, ASAP challenge); see root `CHANGELOG.md` and `docs/migration.md`. |
 | 2026-02-06 | 1.0.0 | Initial PRD for v2.0.0 |
 | 2026-02-07 | 1.1.0 | Updated architecture diagram with Storage Layer (SD-9), ASAP Cloud reference |
 | 2026-02-12 | 1.2.0 | **Lean Marketplace pivot**: Replaced Production Registry with Lite Registry integration, removed FastAPI backend/PostgreSQL, simplified architecture to Next.js + GitHub Pages JSON, updated goals/launch criteria (100+ instead of 10k+), added Economy Settlement to non-goals (v3.0) |

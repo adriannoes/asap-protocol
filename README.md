@@ -7,7 +7,7 @@
 
 > A production-ready protocol for agent-to-agent communication and task coordination.
 
-**Quick Info**: `v2.2.1` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | **[Protocol package on PyPI (`asap-protocol`)](https://pypi.org/project/asap-protocol/)** | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
+**Quick Info**: `v2.3.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | **[PyPI `asap-protocol`](https://pypi.org/project/asap-protocol/)** | **[npm `@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client)** | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
 
 > 📦 Install the ASAP **Python SDK / protocol** from **`https://pypi.org/project/asap-protocol/`** — package name **`asap-protocol`** on [PyPI](https://pypi.org/project/asap-protocol/).
 
@@ -34,6 +34,7 @@ For simple point-to-point communication, a basic HTTP API might suffice; ASAP sh
 - **Security** — Bearer auth, OAuth2/JWT, Ed25519 signed manifests, optional mTLS, replay prevention, HTTPS, rate limiting. [Security Model](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/v1.1-security-model.md) (trust limits, Custom Claims).
 - **Identity & capabilities (v2.2, WebAuthn real in v2.2.1)** — Per-runtime Host/Agent JWTs, capability grants with constraints (`max`, `min`, `in`, `not_in`), approval flows (device authorization / CIBA-style), real WebAuthn attestation/assertion for high-risk registration (opt-in via `asap-protocol[webauthn]`).
 - **Streaming & wire protocol (v2.2)** — `POST /asap/stream` (SSE / `TaskStream`), JSON-RPC 2.0 batch on `POST /asap`, `ASAP-Version` negotiation, tamper-evident audit logging, Compliance Harness v2.
+- **Adoption multiplier (v2.3.0)** — Python **OpenAPI adapter** (`pip install 'asap-protocol[openapi]'`), **`@asap-protocol/client`** on npm (Vercel AI / OpenAI / Anthropic adapters), optional **`POST /registry/agents`** auto-registration, **capability escalation** endpoint + client helpers, and **`WWW-Authenticate: ASAP`** discovery challenges — see [docs/index.md](docs/index.md) and [docs/migration.md](docs/migration.md).
 - **Economics** — Usage metering, delegation tokens, SLA framework with breach alerts.
 
 ### 🆕 Framework Ecosystem
