@@ -43,8 +43,7 @@ schemas remain backward compatible with v2.2.x.
 
 ### Security
 
-- **Dependency sweep**: Re-run `pip-audit` / `npm audit` per [SECURITY.md](SECURITY.md)
-  before tagging; document any `--ignore-vuln` overrides in CI/security notes.
+- **Dependency sweep (pre-tag)**: `uv run pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-3219` (after `uv sync` per [SECURITY.md](SECURITY.md)) reported **no known vulnerabilities** (same ignores as CI). **`apps/web`**: `npm audit` (2026-05-04) still reports **moderate** `postcss` via `next@16.2.4` (GHSA-qx2v-qp2m-jg93); upstream fix may require a newer Next.js line — track before treating web audits as fully clean.
 
 ---
 

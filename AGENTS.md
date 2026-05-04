@@ -8,7 +8,7 @@
 **ASAP Protocol** (Async Simple Agent Protocol) is a production-ready standard for agent-to-agent communication.
 - **Stack**: Python 3.13+, FastAPI, Pydantic v2.
 - **Transport**: JSON-RPC 2.0 over HTTP/WebSocket.
-- **Status**: v2.3.0 (release PR on `release/2.3.0`; run `git tag v2.3.0` + publish workflows to update PyPI/npm “latest”).
+- **Status**: v2.3.0 (Released in tree; PyPI/npm `latest` updates when maintainers push tag `v2.3.0` and publish workflows complete).
 - **Framework Integrations**: LangChain, CrewAI, PydanticAI, LlamaIndex, SmolAgents, Vercel AI SDK, MCP, OpenClaw, A2H.
 - **General contact** (humans coordinating on the protocol; not security): [info@asap-protocol.com](mailto:info@asap-protocol.com) — vulnerabilities: [SECURITY.md](SECURITY.md).
 

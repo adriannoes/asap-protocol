@@ -92,6 +92,7 @@ See [CLI reference](cli.md) (all commands, exit codes, `compliance-check`, `audi
 ## Documentation
 
 - [OpenAPI adapter](adapters/openapi.md) — derive ASAP skills and an upstream proxy from OpenAPI 3.x (`asap.adapters.openapi`)
+- [TypeScript client SDK](sdks/typescript.md) — `@asap-protocol/client` on npm (browser + Node; optional LLM adapters)
 - [CLI reference](cli.md) — all `asap` commands, including `compliance-check`, `audit export`, and exit codes
 - [Audit log](audit.md) — hash chain model, export formats, tamper checks
 - [API Reference](api-reference.md)

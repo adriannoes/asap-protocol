@@ -34,7 +34,7 @@ For simple point-to-point communication, a basic HTTP API might suffice; ASAP sh
 - **Security** — Bearer auth, OAuth2/JWT, Ed25519 signed manifests, optional mTLS, replay prevention, HTTPS, rate limiting. [Security Model](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/v1.1-security-model.md) (trust limits, Custom Claims).
 - **Identity & capabilities (v2.2, WebAuthn real in v2.2.1)** — Per-runtime Host/Agent JWTs, capability grants with constraints (`max`, `min`, `in`, `not_in`), approval flows (device authorization / CIBA-style), real WebAuthn attestation/assertion for high-risk registration (opt-in via `asap-protocol[webauthn]`).
 - **Streaming & wire protocol (v2.2)** — `POST /asap/stream` (SSE / `TaskStream`), JSON-RPC 2.0 batch on `POST /asap`, `ASAP-Version` negotiation, tamper-evident audit logging, Compliance Harness v2.
-- **Adoption multiplier (v2.3.0)** — Python **OpenAPI adapter** (`pip install 'asap-protocol[openapi]'`), **`@asap-protocol/client`** on npm (Vercel AI / OpenAI / Anthropic adapters), optional **`POST /registry/agents`** auto-registration, **capability escalation** endpoint + client helpers, and **`WWW-Authenticate: ASAP`** discovery challenges — see [docs/index.md](docs/index.md) and [docs/migration.md](docs/migration.md).
+- **Adoption Multiplier (v2.3.0)** — OpenAPI → ASAP via `create_from_openapi` (`[openapi]` extra), official **`@asap-protocol/client`** on npm (Vercel AI / OpenAI / Anthropic adapters), optional **Auto-Registration** (`POST /registry/agents`), **capability escalation**, and **ASAP `WWW-Authenticate`** discovery challenges. All opt-in; wire protocol unchanged. See [docs/index.md](docs/index.md) and [docs/migration.md](docs/migration.md).
 - **Economics** — Usage metering, delegation tokens, SLA framework with breach alerts.
 
 ### 🆕 Framework Ecosystem
@@ -138,6 +138,7 @@ High-level only — see **[Changelog](https://github.com/adriannoes/asap-protoco
 
 | Version | What shipped |
 | :-- | :-- |
+| **v2.3.0** | **OpenAPI Adapter** (`[openapi]`) · **TypeScript client** (`@asap-protocol/client`) · **Auto-Registration** · **Capability escalation** · **ASAP HTTP challenge** — see [CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#230---2026-05-04) and [Migration](https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md#upgrading-from-v22x-to-v230) |
 | **v2.2.1** | Opt-in **WebAuthn** (`asap-protocol[webauthn]`) · `asap compliance-check` & `asap audit export` · stricter `ResolvedAgent.run()` · `AuditChainBroken` · [pinned security deps](https://github.com/adriannoes/asap-protocol/blob/main/SECURITY.md#dependency-policy) |
 | **v2.2** | Per-runtime identity & capability auth · SSE `POST /asap/stream` · `ASAP-Version` · JSON-RPC batch · tamper-evident audit · async state stores · Compliance Harness v2 |
 | **v2.1.1** | Patch: JWT allowlist · SQLite async bridge · optional Redis rate limits · web SSRF hardening |
