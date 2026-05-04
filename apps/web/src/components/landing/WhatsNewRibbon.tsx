@@ -2,7 +2,6 @@ import Link from 'next/link';
 import {
   Fingerprint,
   KeySquare,
-  Radio,
   GitBranch,
   Layers,
   ShieldCheck,
@@ -21,16 +20,23 @@ type Pill = {
 
 const CHANGELOG_URL =
   'https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#230---2026-05-04';
+const DOCS_OPENAPI =
+  'https://github.com/adriannoes/asap-protocol/blob/main/docs/adapters/openapi.md';
+const DOCS_TS_SDK =
+  'https://github.com/adriannoes/asap-protocol/blob/main/docs/sdks/typescript.md';
+const DOCS_AUTO_REG =
+  'https://github.com/adriannoes/asap-protocol/blob/main/docs/registry/auto-registration.md';
+const DOCS_ESCALATION =
+  'https://github.com/adriannoes/asap-protocol/blob/main/docs/capabilities/escalation.md';
 
 const PILLS: Pill[] = [
-  { label: 'OpenAPI', href: CHANGELOG_URL, icon: Layers, external: true },
-  { label: 'TypeScript SDK', href: CHANGELOG_URL, icon: Code, external: true },
-  { label: 'Auto-Reg', href: CHANGELOG_URL, icon: Sparkles, external: true },
+  { label: 'OpenAPI', href: DOCS_OPENAPI, icon: Layers, external: true },
+  { label: 'TypeScript SDK', href: DOCS_TS_SDK, icon: Code, external: true },
+  { label: 'Auto-Reg', href: DOCS_AUTO_REG, icon: Sparkles, external: true },
   { label: 'Identity', href: '/features/per-agent-identity', icon: Fingerprint },
   { label: 'Capabilities', href: '/features/scoped-capabilities', icon: KeySquare },
-  { label: 'Streaming', href: '/features/streaming-responses', icon: Radio },
-  { label: 'Versioning', href: CHANGELOG_URL, icon: GitBranch, external: true },
-  { label: 'Escalation', href: CHANGELOG_URL, icon: ShieldCheck, external: true },
+  { label: 'Escalation', href: DOCS_ESCALATION, icon: ShieldCheck, external: true },
+  { label: 'Changelog', href: CHANGELOG_URL, icon: GitBranch, external: true },
 ];
 
 export function WhatsNewRibbon() {
