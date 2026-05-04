@@ -1,12 +1,15 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import type { LucideIcon } from 'lucide-react';
-import { ArrowLeft, Database, ShieldCheck, Zap, Activity, Globe, Lock, Code, Fingerprint, KeySquare, Radio, Clock, GaugeCircle, Layers, Waypoints } from 'lucide-react';
+import { ArrowLeft, Database, ShieldCheck, Zap, Activity, Globe, Lock, Code, Fingerprint, KeySquare, Radio, Clock, GaugeCircle, Layers, Waypoints, FileCode, Braces, CloudUpload } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid';
 
 export function generateStaticParams() {
     return [
+        { slug: 'openapi-adapter' },
+        { slug: 'typescript-sdk' },
+        { slug: 'auto-registration' },
         { slug: 'lite-registry' },
         { slug: 'verified-trust' },
         { slug: '1-click-integration' },
@@ -200,6 +203,68 @@ const FEATURE_CONTENT: Record<
                 </p>
                 <p>
                     Capabilities are introspectable via <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">GET /asap/capability/list</code> and <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">/describe</code>, so consumers always know the exact surface they&apos;re granting.
+                </p>
+            </>
+        ),
+    },
+    'openapi-adapter': {
+        title: 'OpenAPI Adapter',
+        description: 'Turn OpenAPI operations into ASAP capabilities.',
+        icon: FileCode,
+        capabilities: [
+            { title: 'Spec-driven', description: 'Load OpenAPI 3.0 / 3.1 JSON or YAML and derive capability definitions.', icon: Code },
+            { title: 'Python-first', description: 'Ships with asap-protocol[openapi]; maps paths and methods to callable skills.', icon: Globe },
+            { title: 'Challenge-aware', description: 'Pairs with ASAP HTTP discovery challenges for silent uplift of existing APIs.', icon: ShieldCheck },
+        ],
+        content: (
+            <>
+                <p className="mb-6">
+                    Most enterprises already have an OpenAPI document for their REST surface. The adapter lets you reuse that contract as the source of truth for ASAP capability names, constraints, and handler wiring — instead of hand-maintaining parallel manifests.
+                </p>
+                <p className="mb-6">
+                    See the repository docs for installing the optional OpenAPI extra, calling{' '}
+                    <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">create_from_openapi</code>, and the PetStore walkthrough.
+                </p>
+            </>
+        ),
+    },
+    'typescript-sdk': {
+        title: 'TypeScript SDK',
+        description: 'Official npm client for browsers and Node.',
+        icon: Braces,
+        capabilities: [
+            { title: 'Typed envelopes', description: 'Zod-friendly models for TaskRequest, TaskResponse, and streaming chunks.', icon: Code },
+            { title: 'AI SDK adapters', description: 'Optional paths for Vercel AI SDK, OpenAI, and Anthropic tool loops.', icon: Zap },
+            { title: 'Pluggable storage', description: 'Bring your own secure storage for Host/Agent key material.', icon: Lock },
+        ],
+        content: (
+            <>
+                <p className="mb-6">
+                    Install <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">@asap-protocol/client</code> to call ASAP agents from Next.js, edge workers, or automation scripts with the same semantics as the Python reference client.
+                </p>
+                <p className="mb-6">
+                    The monorepo ships <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">apps/example-nextjs</code> as a runnable integration sample alongside the package sources under{' '}
+                    <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">packages/typescript/client/</code>.
+                </p>
+            </>
+        ),
+    },
+    'auto-registration': {
+        title: 'Auto-Registration',
+        description: 'Harness-gated submissions to the Lite Registry.',
+        icon: CloudUpload,
+        capabilities: [
+            { title: 'Compliance gate', description: 'Compliance Harness v2 must pass before a bot opens the registry PR.', icon: ShieldCheck },
+            { title: 'Token + rate limits', description: 'Registration tokens and dedicated rate limits reduce spam and abuse.', icon: Clock },
+            { title: 'Ops-friendly', description: 'Automates the mirror PR flow while keeping humans in the loop for policy.', icon: Activity },
+        ],
+        content: (
+            <>
+                <p className="mb-6">
+                    Operators enable `registry_auto_registration` on `create_app` to expose `POST /registry/agents`. Agents post manifests and proofs; the server validates, runs the harness against the declared base URL, and hands off to the registry bot for merge automation.
+                </p>
+                <p className="mb-6">
+                    Read <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">docs/registry/auto-registration.md</code> for token issuance, trust tiers, and rollback guidance.
                 </p>
             </>
         ),

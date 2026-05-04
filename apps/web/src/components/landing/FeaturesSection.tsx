@@ -1,8 +1,32 @@
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Database, ShieldCheck, Zap, Activity, ArrowRight, Fingerprint, KeySquare, Radio } from 'lucide-react';
+import { Database, ShieldCheck, Zap, Activity, ArrowRight, Fingerprint, KeySquare, Radio, FileCode, Braces, CloudUpload } from 'lucide-react';
 
 const features = [
+  {
+    title: 'OpenAPI Adapter',
+    slug: 'openapi-adapter',
+    description:
+      'Generate ASAP capabilities from an OpenAPI 3.x document so existing HTTP APIs become agent-callable with minimal glue code.',
+    icon: FileCode,
+    className: 'md:col-span-2',
+  },
+  {
+    title: 'TypeScript SDK',
+    slug: 'typescript-sdk',
+    description:
+      'Official `@asap-protocol/client` on npm — discovery, envelopes, streaming, plus optional Vercel AI, OpenAI, and Anthropic adapters.',
+    icon: Braces,
+    className: 'md:col-span-1',
+  },
+  {
+    title: 'Auto-Registration',
+    slug: 'auto-registration',
+    description:
+      'POST /registry/agents with Compliance Harness gating — shrink the time from “working agent” to “listed in the Lite Registry” without manual PR steps.',
+    icon: CloudUpload,
+    className: 'md:col-span-1',
+  },
   {
     title: 'Lite Registry',
     slug: 'lite-registry',
@@ -70,7 +94,7 @@ export function FeaturesSection() {
             Protocol Features
           </h2>
           <p className="mx-auto max-w-[600px] text-zinc-400">
-            Everything you need to orchestrate complex multi-agent systems reliably — now with enterprise-grade identity, scoped authorization, and streaming responses in v2.2.
+            Everything you need to orchestrate complex multi-agent systems reliably — identity, capabilities, streaming, and v2.3 adoption tools (OpenAPI, TypeScript SDK, auto-registration).
           </p>
         </div>
 
