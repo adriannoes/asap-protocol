@@ -32,14 +32,15 @@ from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
 
-from asap.errors import RPC_HANDLER_NOT_FOUND
+from asap.errors import FatalError, RPC_HANDLER_NOT_FOUND, RPC_REMOTE_GENERIC
 from asap.models.entities import Manifest
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest
 from asap.observability import get_metrics, reset_metrics
 from asap.observability.metrics import MetricsCollector
-from asap.transport.handlers import HandlerRegistry
 from asap.models.constants import ASAP_DEFAULT_TRANSPORT_VERSION
+from asap.transport.challenge import format_www_authenticate_asap
+from asap.transport.handlers import HandlerRegistry
 from asap.transport.jsonrpc import (
     INTERNAL_ERROR,
     INVALID_PARAMS,
@@ -275,6 +276,65 @@ class TestASAPVersionMiddleware:
         assert response.status_code == 200
         assert response.headers.get("ASAP-Version") == "2.2"
         assert "result" in response.json()
+
+
+class TestASAPChallengePropagation:
+    """Tests for preserving upstream ASAP challenges across JSON-RPC responses."""
+
+    def test_post_asap_moves_internal_asap_challenge_detail_to_header(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: "ASAPRateLimiter | None",
+    ) -> None:
+        """Handler-provided upstream challenges become HTTP headers, not JSON body leaks."""
+        challenge = format_www_authenticate_asap(
+            "https://upstream.example/.well-known/asap/manifest.json"
+        )
+
+        async def challenge_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
+            raise FatalError(
+                code="asap:transport/upstream_unauthorized",
+                message="Upstream authorization challenge",
+                details={
+                    "_www_authenticate_asap": challenge,
+                    "upstream_status": 401,
+                },
+            )
+
+        registry = HandlerRegistry()
+        registry.register("task.request", challenge_handler)
+        app = create_app(sample_manifest, registry, rate_limit="999999/minute")
+        if isolated_rate_limiter is not None:
+            app.state.limiter = isolated_rate_limiter
+
+        envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:test-server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-challenge-1",
+                skill_id="needs-upstream",
+                input={"message": "hello"},
+            ).model_dump(),
+        )
+        body = {
+            "jsonrpc": "2.0",
+            "method": "asap.send",
+            "params": {"envelope": envelope.model_dump(mode="json")},
+            "id": "challenge-1",
+        }
+
+        response = TestClient(app).post("/asap", json=body)
+
+        assert response.status_code == 200
+        assert response.headers.get("WWW-Authenticate") == challenge
+        payload = response.json()
+        assert payload["id"] == "challenge-1"
+        assert payload["error"]["code"] == RPC_REMOTE_GENERIC
+        details = payload["error"]["data"]["details"]
+        assert details["upstream_status"] == 401
+        assert "_www_authenticate_asap" not in details
 
 
 class TestRegistryHolder:
