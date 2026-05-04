@@ -338,7 +338,44 @@ class TestCapabilityExecute:
             json={"capability": "file:read"},
         )
         assert r.status_code == 403
-        assert r.json()["error"] == "no_grant"
+        body = r.json()
+        err = body["error"]
+        assert err["code"] == "capability_not_granted"
+        assert err["data"]["required_capability"] == "file:read"
+        assert "request_id" in err and err["request_id"]
+
+    async def test_execute_agent_expired_by_max_lifetime_returns_403(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: ASAPRateLimiter | None,
+    ) -> None:
+        app, agent_store, _, registry = _setup(
+            sample_manifest, isolated_rate_limiter, capabilities=_DEFAULT_CAPS
+        )
+        client = TestClient(app)
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        past = datetime.now(timezone.utc) - timedelta(hours=2)
+        aid = await _register_and_activate(
+            client,
+            app,
+            agent_store,
+            host_sk,
+            agent_sk,
+            activated_at=past,
+            max_lifetime=timedelta(hours=1),
+        )
+        registry.grant(aid, "file:read")
+
+        token = _agent_jwt(agent_sk, host_sk, aid)
+        r = client.post(
+            "/asap/capability/execute",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"capability": "file:read"},
+        )
+        assert r.status_code == 403
+        assert "expired" in r.json()["detail"].lower()
+        assert "request_id" in r.json() and r.json()["request_id"]
 
     async def test_execute_constraint_violated_returns_403_with_violations(
         self,
@@ -366,6 +403,7 @@ class TestCapabilityExecute:
         assert len(body["violations"]) == 1
         assert body["violations"][0]["field"] == "path"
         assert body["violations"][0]["operator"] == "in"
+        assert "request_id" in body and body["request_id"]
 
     async def test_execute_no_auth_returns_401(
         self,
@@ -378,6 +416,9 @@ class TestCapabilityExecute:
             json={"capability": "file:read"},
         )
         assert r.status_code == 401
+        www = r.headers.get("www-authenticate", "")
+        assert "Bearer" in www
+        assert "ASAP" in www
 
     async def test_execute_invalid_json_returns_400(
         self,

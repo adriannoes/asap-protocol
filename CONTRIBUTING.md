@@ -139,12 +139,14 @@ Currently, auto-merge is disabled. All Dependabot PRs require manual review to e
 
 Understanding the "why" behind our code is crucial. Please review:
 
--   **Tech Stack Decisions**: [.cursor/dev-planning/architecture/tech-stack-decisions.md](.cursor/dev-planning/architecture/tech-stack-decisions.md)
+-   **Tech Stack Decisions**: [engineering/architecture/tech-stack-decisions.md](engineering/architecture/tech-stack-decisions.md)
 -   **ADRs**: [docs/adr](docs/adr)
 
 ## Need Help?
 
 Check [Discussions](https://github.com/adriannoes/asap-protocol/discussions) or open an [Issue](https://github.com/adriannoes/asap-protocol/issues).
+
+For **general, non-security inquiries** (coordination, integrations, press), you can reach maintainers at **[info@asap-protocol.com](mailto:info@asap-protocol.com)**. **Do not** use this address for vulnerability reports — follow [SECURITY.md](SECURITY.md) instead.
 
 **Using AI coding tools?** See [AGENTS.md](AGENTS.md) for project-specific instructions optimized for Cursor, Copilot, Codex and other AI assistants.
 

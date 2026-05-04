@@ -253,6 +253,36 @@ def get_remote_address(request: Request) -> str:
     return "127.0.0.1"
 
 
+def registration_token_key(request: Request) -> str:
+    """Rate-limit key: SHA-256 of Bearer token, else client IP fallback."""
+    import hashlib
+
+    auth = request.headers.get("Authorization") or ""
+    if auth.startswith("Bearer "):
+        token = auth[7:].strip().encode()
+        if token:
+            return f"regtok:{hashlib.sha256(token).hexdigest()}"
+    return f"ip:{get_remote_address(request)}"
+
+
+# Registration endpoint budget (AUTO-003): 5 POSTs per token per hour.
+REGISTRATION_RATE_LIMIT = "5/hour"
+
+
+def create_registration_rate_limiter(
+    *,
+    storage_uri: str | None = None,
+) -> ASAPRateLimiter:
+    """Limiter for ``POST /registry/agents`` — isolated storage recommended in tests."""
+    if storage_uri is None:
+        storage_uri = f"memory://{uuid.uuid4().hex}"
+    return ASAPRateLimiter(
+        key_func=registration_token_key,
+        limits=[REGISTRATION_RATE_LIMIT],
+        storage_uri=storage_uri,
+    )
+
+
 # ------------------------------------------------------------------
 # WebSocket token bucket
 # ------------------------------------------------------------------
@@ -306,9 +336,12 @@ __all__ = [
     "ASAPRateLimiter",
     "RateLimitExceeded",
     "DEFAULT_RATE_LIMIT",
+    "REGISTRATION_RATE_LIMIT",
     "create_limiter",
+    "create_registration_rate_limiter",
     "create_test_limiter",
     "get_remote_address",
+    "registration_token_key",
     # WebSocket rate limiting
     "DEFAULT_WS_MESSAGES_PER_SECOND",
     "WebSocketTokenBucket",
