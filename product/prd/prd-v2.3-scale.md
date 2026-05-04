@@ -10,6 +10,16 @@
 > **Predecessor**: [prd-v2.2.1-patch.md](./prd-v2.2.1-patch.md) (carry-over patch)
 > **Successor**: [prd-v2.4-adoption.md](./prd-v2.4-adoption.md)
 
+### Delivery summary (2026-05-04)
+
+| Sprint | Shipped in tree |
+|--------|-----------------|
+| **S1** | OpenAPI adapter (`asap.adapters.openapi`, `[openapi]` extra), PetStore example, docs |
+| **S2** | `@asap-protocol/client` package, adapters, `apps/example-nextjs`, publish workflow |
+| **S3** | `POST /registry/agents`, harness gating, bot PR + auto-merge docs/workflows |
+| **S4** | Capability escalation route + clients; ASAP `WWW-Authenticate` challenge middleware + TS recognition |
+| **S5** | Version **2.3.0**, CHANGELOG, migration, marketing/docs refresh; **PyPI / npm / tag / Docker / GitHub Release** via [engineering/tasks/v2.3.0/release-checklist.md](../../engineering/tasks/v2.3.0/release-checklist.md) |
+
 ---
 
 ## 1. Executive Summary
