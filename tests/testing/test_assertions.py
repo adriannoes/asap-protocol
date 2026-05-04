@@ -74,6 +74,73 @@ class TestAssertEnvelopeValid:
             allowed_payload_types=["TaskRequest", "TaskResponse"],
         )
 
+    def test_empty_sender_raises(self) -> None:
+        """Sender must be non-empty for assertion helper."""
+        payload = TaskRequest(conversation_id="c", skill_id="echo", input={}).model_dump()
+        envelope = Envelope.model_construct(
+            id="r1",
+            asap_version="0.1",
+            sender="",
+            recipient="urn:asap:agent:b",
+            payload_type="TaskRequest",
+            payload=payload,
+            timestamp=None,
+        )
+        with pytest.raises(AssertionError, match="sender"):
+            assert_envelope_valid(envelope, require_timestamp=False)
+
+    def test_empty_recipient_raises(self) -> None:
+        payload = TaskRequest(conversation_id="c", skill_id="echo", input={}).model_dump()
+        envelope = Envelope.model_construct(
+            id="r1",
+            asap_version="0.1",
+            sender="urn:asap:agent:a",
+            recipient="",
+            payload_type="TaskRequest",
+            payload=payload,
+            timestamp=None,
+        )
+        with pytest.raises(AssertionError, match="recipient"):
+            assert_envelope_valid(envelope, require_timestamp=False)
+
+    def test_empty_payload_type_raises(self) -> None:
+        payload = TaskRequest(conversation_id="c", skill_id="echo", input={}).model_dump()
+        envelope = Envelope.model_construct(
+            id="r1",
+            asap_version="0.1",
+            sender="urn:asap:agent:a",
+            recipient="urn:asap:agent:b",
+            payload_type="",
+            payload=payload,
+            timestamp=None,
+        )
+        with pytest.raises(AssertionError, match="payload_type"):
+            assert_envelope_valid(envelope, require_timestamp=False)
+
+    def test_none_payload_raises(self) -> None:
+        envelope = Envelope.model_construct(
+            id="r1",
+            asap_version="0.1",
+            sender="urn:asap:agent:a",
+            recipient="urn:asap:agent:b",
+            payload_type="TaskRequest",
+            payload=None,
+            timestamp=None,
+        )
+        with pytest.raises(AssertionError, match="payload"):
+            assert_envelope_valid(envelope, require_timestamp=False)
+
+    def test_missing_timestamp_allowed_when_not_required(self) -> None:
+        envelope = _make_request_envelope()
+        object.__setattr__(envelope, "timestamp", None)
+        assert_envelope_valid(envelope, require_timestamp=False)
+
+    def test_missing_timestamp_raises_when_required(self) -> None:
+        envelope = _make_request_envelope()
+        object.__setattr__(envelope, "timestamp", None)
+        with pytest.raises(AssertionError, match="timestamp"):
+            assert_envelope_valid(envelope, require_timestamp=True)
+
 
 class TestAssertTaskCompleted:
     """Tests for assert_task_completed."""
@@ -109,6 +176,10 @@ class TestAssertTaskCompleted:
             status_key="result",
             completed_value="done",
         )
+
+    def test_non_dict_non_envelope_raises(self) -> None:
+        with pytest.raises(AssertionError, match="dict or Envelope"):
+            assert_task_completed(["not", "a", "dict"])
 
 
 class TestAssertResponseCorrelates:

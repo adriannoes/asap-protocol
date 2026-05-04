@@ -761,6 +761,59 @@ For deployments that enforce self-authorization prevention with real passkeys:
 See [Self-authorization prevention](security/self-authorization-prevention.md)
 (**Real WebAuthn**) for the threat model and ceremony flow.
 
+### Upgrading from v2.2.x to v2.3.0
+
+v2.3.0 is an **Adoption Multiplier** release. JSON-RPC envelopes, batching, and
+`ASAP-Version` negotiation are unchanged; new surfaces are **opt-in** behind
+explicit `create_app` flags and optional extras.
+
+#### What is new
+
+- **OpenAPI Adapter**: Install `asap-protocol[openapi]`, then use
+  `asap.create_from_openapi` (or `from asap import create_from_openapi`) to map
+  an OpenAPI 3.x document to ASAP capabilities. See
+  [OpenAPI adapter](adapters/openapi.md).
+- **TypeScript client**: Publish/consume via npm package
+  `@asap-protocol/client@2.3.0` (see repository `packages/typescript/client/`).
+- **Auto-Registration**: When `registry_auto_registration` is configured on
+  `create_app`, clients can call `POST /registry/agents` with a registration
+  token; Compliance Harness v2 gates merges. See
+  [Auto-registration](registry/auto-registration.md).
+- **Capability escalation**: Agents may call
+  `POST /asap/agent/request-capability` to request additional grants; Python
+  `ASAPClient.request_capability` and the TS client expose the same flow. See
+  [Capability escalation](capabilities/escalation.md).
+- **ASAP challenge**: Resource servers may attach
+  `WWW-Authenticate: ASAP discovery="<manifest-url>"` on selected 401/403
+  responses; enable via `create_app` challenge middleware when integrating
+  unknown callers. See [ASAP challenge](transport/asap-challenge.md).
+
+#### Upgrade steps
+
+1. **Bump dependencies**:
+   ```bash
+   pip install --upgrade 'asap-protocol[openapi]==2.3.0'
+   # or
+   uv add 'asap-protocol[openapi]==2.3.0'
+   ```
+   TypeScript consumers: `npm install @asap-protocol/client@2.3.0`.
+
+2. **Adopt features incrementally**: Add OpenAPI-derived agents, TS clients,
+   auto-registration, escalation, or challenge middleware only where your
+   deployment needs them — defaults preserve v2.2.x routing.
+
+3. **Re-run Compliance Harness v2** against every production agent base URL
+   after enabling new routes (`asap compliance-check --exit-on-fail`).
+
+#### Backward compatibility
+
+- **Wire protocol**: Compatible with v2.2.x clients and servers when new routes
+  are not enabled.
+- **Security posture**: Treat auto-registration tokens, escalation approvals,
+  and discovery URLs as security-sensitive configuration (rate limits, HTTPS,
+  manifest integrity). See PRD
+  [`prd-v2.3-scale.md`](https://github.com/adriannoes/asap-protocol/blob/main/product/prd/prd-v2.3-scale.md).
+
 ---
 
 ## Troubleshooting

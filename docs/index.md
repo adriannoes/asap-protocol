@@ -2,7 +2,7 @@
 
 **ASAP (Async Simple Agent Protocol)** is a streamlined protocol for agent-to-agent communication, designed to be simpler than existing alternatives while maintaining modern standards functionality.
 
-**Latest reference implementation:** **v2.2.1** ([CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md), [PyPI](https://pypi.org/project/asap-protocol/)) — builds on the v2.2.0 hardening release (identity & capabilities, SSE streaming via `POST /asap/stream`, `ASAP-Version` negotiation, JSON-RPC batch, tamper-evident audit logging) and adds **real WebAuthn** attestation/assertion behind the `asap-protocol[webauthn]` extra, the `asap compliance-check` and `asap audit export` CLIs, and upper-bound pins on security-sensitive dependencies ([policy](https://github.com/adriannoes/asap-protocol/blob/main/SECURITY.md#dependency-policy)). Upgrade notes: [Migration (v2.1.x → v2.2.0 → v2.2.1)](migration.md).
+**Latest reference implementation:** **v2.3.0** ([CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md), [PyPI](https://pypi.org/project/asap-protocol/), npm [`@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client)) — **Adoption Multiplier** on top of v2.2.x: **OpenAPI Adapter** (`create_from_openapi`, optional `[openapi]` extra), **TypeScript client** with framework adapters, **Auto-Registration** (`POST /registry/agents`), **capability escalation** (`POST /asap/agent/request-capability`), and **ASAP `WWW-Authenticate` challenges** for discovery. v2.2.1 WebAuthn, compliance/audit CLIs, and dependency policy remain as documented. Upgrade notes: [Migration (v2.2.x → v2.3.0)](migration.md#upgrading-from-v22x-to-v230).
 
 ## Features
 
@@ -12,6 +12,7 @@
 - **Transport Agnostic**: Clean separation between protocol logic and transport capability (HTTP JSON-RPC, WebSocket, SSE)
 - **Observability**: First-class tracking with correlation IDs and trace IDs
 - **Security & authorization (v2.2+, WebAuthn real in v2.2.1)**: Per-runtime Host/Agent JWTs, capability grants with constraints, approval flows, opt-in WebAuthn (`asap-protocol[webauthn]`) for browser-controlled and high-risk capability registration — see [Security](security.md) and [Migration](migration.md)
+- **Adoption tools (v2.3.0)**: [OpenAPI adapter](adapters/openapi.md), TypeScript client ([`packages/typescript/client`](https://github.com/adriannoes/asap-protocol/tree/main/packages/typescript/client)), [Auto-registration](registry/auto-registration.md), [Capability escalation](capabilities/escalation.md), [ASAP HTTP challenge](transport/asap-challenge.md)
 
 ## Installation
 
@@ -91,6 +92,7 @@ See [CLI reference](cli.md) (all commands, exit codes, `compliance-check`, `audi
 ## Documentation
 
 - [OpenAPI adapter](adapters/openapi.md) — derive ASAP skills and an upstream proxy from OpenAPI 3.x (`asap.adapters.openapi`)
+- [TypeScript client SDK](sdks/typescript.md) — `@asap-protocol/client` on npm (browser + Node; optional LLM adapters)
 - [CLI reference](cli.md) — all `asap` commands, including `compliance-check`, `audit export`, and exit codes
 - [Audit log](audit.md) — hash chain model, export formats, tamper checks
 - [API Reference](api-reference.md)
