@@ -20,7 +20,7 @@ Based on [PRD v2.3 Adoption Multiplier](../../../product/prd/prd-v2.3-scale.md).
 | **S2** | [TypeScript Client SDK](./sprint-S2-typescript-sdk.md) | §4.2 (TS-001..011) | P0 | 🟡 |
 | **S3** | [Auto-Registration](./sprint-S3-auto-registration.md) | §4.3 (AUTO-001..007) | P0 | 🟡 |
 | **S4** | [Capability Escalation + ASAP Challenge](./sprint-S4-escalation-challenge.md) | §4.4 (ESC-001..004), §4.5 (CHAL-001..004) | P1/P2 | 🟡 |
-| **S5** | Release v2.3.0 | — | — | 🟡 |
+| **S5** | Release v2.3.0 | — | — | 🟡 **In progress** — branch `release/2.3.0` (PR prep; tag/npm/PyPI post-merge) |
 
 ## Dependency Graph
 
