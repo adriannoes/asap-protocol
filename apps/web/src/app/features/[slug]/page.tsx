@@ -261,7 +261,14 @@ const FEATURE_CONTENT: Record<
         content: (
             <>
                 <p className="mb-6">
-                    Operators enable `registry_auto_registration` on `create_app` to expose `POST /registry/agents`. Agents post manifests and proofs; the server validates, runs the harness against the declared base URL, and hands off to the registry bot for merge automation.
+                    Operators enable{' '}
+                    <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">registry_auto_registration</code>{' '}
+                    on{' '}
+                    <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">create_app</code>{' '}
+                    to expose{' '}
+                    <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">POST /registry/agents</code>. Agents post
+                    manifests and proofs; the server validates, runs the harness against the declared base URL, and hands off to the
+                    registry bot for merge automation.
                 </p>
                 <p className="mb-6">
                     Read <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">docs/registry/auto-registration.md</code> for token issuance, trust tiers, and rollback guidance.

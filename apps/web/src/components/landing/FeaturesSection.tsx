@@ -1,8 +1,19 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Database, ShieldCheck, Zap, Activity, ArrowRight, Fingerprint, KeySquare, Radio, FileCode, Braces, CloudUpload } from 'lucide-react';
 
-const features = [
+const INLINE_CODE = 'rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300';
+
+type FeatureCard = {
+  title: string;
+  slug: string;
+  description: ReactNode;
+  icon: typeof Database;
+  className: string;
+};
+
+const features: FeatureCard[] = [
   {
     title: 'OpenAPI Adapter',
     slug: 'openapi-adapter',
@@ -14,16 +25,24 @@ const features = [
   {
     title: 'TypeScript SDK',
     slug: 'typescript-sdk',
-    description:
-      'Official `@asap-protocol/client` on npm — discovery, envelopes, streaming, plus optional Vercel AI, OpenAI, and Anthropic adapters.',
+    description: (
+      <>
+        Official <code className={INLINE_CODE}>@asap-protocol/client</code> on npm — discovery, envelopes, streaming, plus optional
+        Vercel AI, OpenAI, and Anthropic adapters.
+      </>
+    ),
     icon: Braces,
     className: 'md:col-span-1',
   },
   {
     title: 'Auto-Registration',
     slug: 'auto-registration',
-    description:
-      'POST /registry/agents with Compliance Harness gating — shrink the time from “working agent” to “listed in the Lite Registry” without manual PR steps.',
+    description: (
+      <>
+        <code className={INLINE_CODE}>POST /registry/agents</code> with Compliance Harness gating — shrink the time from
+        &quot;working agent&quot; to &quot;listed in the Lite Registry&quot; without manual PR steps.
+      </>
+    ),
     icon: CloudUpload,
     className: 'md:col-span-1',
   },
