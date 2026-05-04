@@ -99,6 +99,10 @@ pydanticai = [
 openclaw = [
     "openclaw-sdk>=2.0",
 ]
+# OpenAPI 3.x spec parsing for asap.adapters.openapi (Sprint S1).
+openapi = [
+    "openapi-pydantic>=0.5",
+]
 
 [project.urls]
 Homepage = "https://github.com/adriannoes/asap-protocol"
@@ -185,6 +189,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "scripts/**" = ["T201"]
 "src/asap/examples/**" = ["T201", "ASYNC210"]
+"examples/**" = ["T201"]
 "benchmarks/**" = ["T201"]
 "tests/**" = ["B008"]
 "src/asap/transport/usage_api.py" = ["B008"]

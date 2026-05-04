@@ -167,6 +167,29 @@ def test_smolagents_tool_returns_error_string_on_signature_error() -> None:
     assert "Error:" in out
 
 
+def test_smolagents_tool_reports_value_error_when_run_fails() -> None:
+    """When agent.run raises ValueError, forward returns error string."""
+    mock_send = AsyncMock(side_effect=ValueError("run failed"))
+    mock_transport = AsyncMock()
+    mock_transport.send = mock_send
+    mock_transport.__aenter__ = AsyncMock(return_value=mock_transport)
+    mock_transport.__aexit__ = AsyncMock(return_value=None)
+
+    p_get, p_verify, p_revoked, p_http = _resolve_patches()
+    with p_get as mock_get, p_verify as mock_verify, p_revoked as mock_revoked, p_http:
+        mock_get.return_value = _lite_registry()
+        mock_verify.return_value = True
+        mock_revoked.return_value = False
+        with patch("asap.client.market.ASAPClient", return_value=mock_transport):
+            tool = SmolAgentsAsapTool(
+                TEST_URN, client=MarketClient(registry_url="https://reg.example/registry.json")
+            )
+            out = tool(input={"message": "hello"})
+
+    assert isinstance(out, str)
+    assert "run failed" in out
+
+
 def test_smolagents_tool_has_valid_attributes() -> None:
     """SmolAgentsAsapTool has name, description, inputs, output_type for smolagents agent."""
     p_get, p_verify, p_revoked, p_http = _resolve_patches()

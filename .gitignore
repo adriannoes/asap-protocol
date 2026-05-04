@@ -193,6 +193,10 @@ engineering/private/
 engineering/tasks/private/
 engineering/tasks/v2.3.[1-9]*/
 node_modules/
+# Next.js build output (examples and apps)
+.next/
+# tshy generated tsconfig fragments (regenerated on build)
+.tshy/
 .pnpm-store/
 .github/wiki/
 
@@ -203,6 +207,9 @@ node_modules/
 # Benchmark and cache artifacts
 .benchmarks/
 .uv-cache/
+
+# TypeScript incremental build info (local / IDE)
+*.tsbuildinfo
 
 # ESLint report (generated)
 eslint-report.json

@@ -178,7 +178,7 @@ v1.3.0 is the **final infrastructure release** before v2.0 Marketplace:
 
 ## Checkpoint: Post-v1.3.0 Review
 
-v1.3.0 released 2026-02-18. Conduct checkpoint review (see [checkpoints.md](../../checkpoints.md) CP-3):
+v1.3.0 released 2026-02-18. Conduct checkpoint review (see [checkpoints.md](../../../product/checkpoints.md) CP-3):
 
 - [ ] Update v2.0.0 PRD with learnings
 - [ ] Review and update v2.0.0 sprint estimates

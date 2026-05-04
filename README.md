@@ -7,9 +7,11 @@
 
 > A production-ready protocol for agent-to-agent communication and task coordination.
 
-**Quick Info**: `v2.2.1` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
+**Quick Info**: `v2.2.1` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | **[Protocol package on PyPI (`asap-protocol`)](https://pypi.org/project/asap-protocol/)** | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
 
-> 🚀 **Live now** our [**agentic marketplace**](https://asap-protocol.vercel.app/) — browse agents, register yours, request verification.
+> 📦 Install the ASAP **Python SDK / protocol** from **`https://pypi.org/project/asap-protocol/`** — package name **`asap-protocol`** on [PyPI](https://pypi.org/project/asap-protocol/).
+
+> 🚀 **Live now** our [**agentic marketplace**](https://asap-protocol.com/) — browse agents, register yours, request verification.
 
 ## Why ASAP?
 
@@ -51,7 +53,7 @@ Or with pip:
 pip install asap-protocol
 ```
 
-📦 **Available on [PyPI](https://pypi.org/project/asap-protocol/)** — for reproducible environments, prefer `uv` when possible.
+📦 **Canonical listing:** **[https://pypi.org/project/asap-protocol/](https://pypi.org/project/asap-protocol/)** — package **`asap-protocol`** (`pip install asap-protocol`). Prefer `uv` for reproducible environments when possible.
 
 ## Quick Start
 
@@ -94,6 +96,7 @@ See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/
 
 **Learn**
 - [Docs](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [API Reference](https://github.com/adriannoes/asap-protocol/blob/main/docs/api-reference.md)
+- [TypeScript client SDK](https://github.com/adriannoes/asap-protocol/blob/main/docs/sdks/typescript.md) — `@asap-protocol/client` (identity, capabilities, streaming, adapters)
 - [Tutorials](https://github.com/adriannoes/asap-protocol/tree/main/docs/tutorials) — First agent to production checklist
 - [Migration from A2A/MCP](https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md)
 - [Raw Fetch (non-Python)](https://github.com/adriannoes/asap-protocol/blob/main/docs/raw-fetch.md) — Fetch registry.json and revoked_agents.json with curl/fetch; implement your own client.
@@ -110,7 +113,7 @@ See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/
 - [Deployment](https://github.com/adriannoes/asap-protocol/blob/main/docs/deployment/kubernetes.md) | [Troubleshooting](https://github.com/adriannoes/asap-protocol/blob/main/docs/troubleshooting.md)
 
 **Release**
-- [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md) | [PyPI](https://pypi.org/project/asap-protocol/)
+- [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md) | **[PyPI listing](https://pypi.org/project/asap-protocol/)** — `https://pypi.org/project/asap-protocol/` (install: `pip install asap-protocol`)
 
 ## CLI
 
@@ -154,6 +157,14 @@ ASAP is evolving toward an **Agent Marketplace** — an open ecosystem where AI 
 Every contribution, from bug reports to feature suggestions, documentation improvements and code contributions, makes a real difference.
 
 Check out our [contributing guidelines](https://github.com/adriannoes/asap-protocol/blob/main/CONTRIBUTING.md) to get started. It's easier than you think! 🚀
+
+## Contact
+
+For **general questions** about the protocol, the marketplace, partnerships, or press (not security vulnerabilities — use [SECURITY.md](https://github.com/adriannoes/asap-protocol/blob/main/SECURITY.md) for those):
+
+- **Email:** [info@asap-protocol.com](mailto:info@asap-protocol.com)
+
+You can also use [GitHub Discussions](https://github.com/adriannoes/asap-protocol/discussions) or [Issues](https://github.com/adriannoes/asap-protocol/issues) for public project topics.
 
 ## License
 

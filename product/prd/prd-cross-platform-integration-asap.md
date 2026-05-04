@@ -26,7 +26,7 @@ The ASAP Protocol and Agent Builder are deployed as separate Next.js application
 
 | Application | Vercel Project | Production URL | Auth Stack |
 |-------------|---------------|----------------|------------|
-| ASAP Protocol | `asap-protocol` | `asap-protocol.vercel.app` | NextAuth v5 + GitHub OAuth |
+| ASAP Protocol | `asap-protocol` | `https://asap-protocol.com` | NextAuth v5 + GitHub OAuth |
 | Agent Builder | `v0-agent-kit` | `open-agentic-flow.vercel.app` | NextAuth v5 + GitHub OAuth + Supabase (optional) |
 
 Both apps share the **same auth provider** (GitHub OAuth via NextAuth v5), which is the foundation for the SSO strategy.
@@ -134,7 +134,7 @@ Both applications MUST use the **same GitHub OAuth App** credentials:
 - Same `AUTH_GITHUB_ID` (Client ID)
 - Same `AUTH_GITHUB_SECRET` (Client Secret)
 - The GitHub OAuth App must have **both** callback URLs registered:
-  - `https://asap-protocol.vercel.app/api/auth/callback/github`
+  - `https://asap-protocol.com/api/auth/callback/github`
   - `https://open-agentic-flow.vercel.app/api/auth/callback/github`
 
 **Vercel Configuration**:
@@ -322,7 +322,7 @@ The agentic-orchestration MUST be implemented and deployed **before** asap-proto
 #### Step 0: GitHub OAuth App (both repos — config only)
 1. Go to `github.com/settings/developers` → select (or create) the OAuth App.
 2. Add **both** callback URLs:
-   - `https://asap-protocol.vercel.app/api/auth/callback/github`
+   - `https://asap-protocol.com/api/auth/callback/github`
    - `https://open-agentic-flow.vercel.app/api/auth/callback/github`
 3. Copy the Client ID and Client Secret.
 4. In Vercel dashboard, set `AUTH_GITHUB_ID` and `AUTH_GITHUB_SECRET` on **both** projects with the same values.

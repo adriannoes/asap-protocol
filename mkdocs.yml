@@ -43,6 +43,8 @@ plugins:
 
 nav:
   - Home: index.md
+  - SDKs:
+      - TypeScript client: sdks/typescript.md
   - Tutorials:
       - Building Your First Agent: tutorials/first-agent.md
       - Stateful Workflows: tutorials/stateful-workflows.md
@@ -72,6 +74,7 @@ nav:
       - Identity Signing (v1.2): guides/identity-signing.md
       - Compliance Testing (v1.2): guides/compliance-testing.md
       - Migration v1.1 → v1.2: guides/migration-v1.1-to-v1.2.md
+      - Lite Registry auto-registration: registry/auto-registration.md
       - Security: security.md
       - State Management: state-management.md
       - Transport: transport.md

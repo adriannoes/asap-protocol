@@ -50,7 +50,7 @@ export function UsageSnippets({ agentId, agent }: UsageSnippetsProps) {
         setTimeout(() => setOpenclawCopied(false), 2000);
     }, [agentId, agent]);
     return (
-        <Card className="border-indigo-500/20 shadow-sm shadow-indigo-500/5">
+        <Card id="integration" className="scroll-mt-24 border-indigo-500/20 shadow-sm shadow-indigo-500/5">
             <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
                     <Code2 className="w-5 h-5 text-indigo-400" />
@@ -61,8 +61,8 @@ export function UsageSnippets({ agentId, agent }: UsageSnippetsProps) {
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <Tabs defaultValue="node" className="w-full">
-                    <TabsList className="flex flex-wrap h-auto w-full justify-start gap-1 p-1">
+                <Tabs defaultValue="node" className="w-full gap-0">
+                    <TabsList className="flex flex-wrap h-auto w-full justify-start gap-x-5 gap-y-4 p-2">
                         <TabsTrigger value="node" className="flex-grow sm:flex-grow-0">Node.js</TabsTrigger>
                         <TabsTrigger value="langchain">LangChain</TabsTrigger>
                         <TabsTrigger value="llamaindex">LlamaIndex</TabsTrigger>
@@ -73,7 +73,7 @@ export function UsageSnippets({ agentId, agent }: UsageSnippetsProps) {
                         <TabsTrigger value="mcp">MCP</TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="node" className="mt-4">
+                    <TabsContent value="node" className="mt-6 sm:mt-7">
                         <div className="group relative rounded-md bg-zinc-950 p-4 font-mono text-sm text-zinc-300 border border-zinc-800 overflow-x-auto">
                             <pre className="leading-relaxed">
                                 <span className="text-zinc-500"># 1. Install the client</span>{'\n'}
@@ -90,7 +90,7 @@ export function UsageSnippets({ agentId, agent }: UsageSnippetsProps) {
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="langchain" className="mt-4">
+                    <TabsContent value="langchain" className="mt-6 sm:mt-7">
                         <div className="group relative rounded-md bg-zinc-950 p-4 font-mono text-sm text-zinc-300 border border-zinc-800 overflow-x-auto">
                             <pre className="leading-relaxed">
                                 <span className="text-zinc-500"># 1. Install the provider</span>{'\n'}
@@ -105,7 +105,7 @@ export function UsageSnippets({ agentId, agent }: UsageSnippetsProps) {
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="llamaindex" className="mt-4">
+                    <TabsContent value="llamaindex" className="mt-6 sm:mt-7">
                         <div className="group relative rounded-md bg-zinc-950 p-4 font-mono text-sm text-zinc-300 border border-zinc-800 overflow-x-auto">
                             <pre className="leading-relaxed">
                                 <span className="text-zinc-500"># 1. Install the provider</span>{'\n'}
@@ -120,7 +120,7 @@ export function UsageSnippets({ agentId, agent }: UsageSnippetsProps) {
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="crewai" className="mt-4">
+                    <TabsContent value="crewai" className="mt-6 sm:mt-7">
                         <div className="group relative rounded-md bg-zinc-950 p-4 font-mono text-sm text-zinc-300 border border-zinc-800 overflow-x-auto">
                             <pre className="leading-relaxed">
                                 <span className="text-zinc-500"># 1. Install the provider</span>{'\n'}
@@ -136,7 +136,7 @@ export function UsageSnippets({ agentId, agent }: UsageSnippetsProps) {
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="smolagents" className="mt-4">
+                    <TabsContent value="smolagents" className="mt-6 sm:mt-7">
                         <div className="group relative rounded-md bg-zinc-950 p-4 font-mono text-sm text-zinc-300 border border-zinc-800 overflow-x-auto">
                             <pre className="leading-relaxed">
                                 <span className="text-zinc-500"># 1. Install the provider</span>{'\n'}
@@ -149,7 +149,7 @@ export function UsageSnippets({ agentId, agent }: UsageSnippetsProps) {
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="pydanticai" className="mt-4">
+                    <TabsContent value="pydanticai" className="mt-6 sm:mt-7">
                         <div className="group relative rounded-md bg-zinc-950 p-4 font-mono text-sm text-zinc-300 border border-zinc-800 overflow-x-auto">
                             <pre className="leading-relaxed">
                                 <span className="text-zinc-500"># 1. Install the provider</span>{'\n'}
@@ -164,7 +164,7 @@ export function UsageSnippets({ agentId, agent }: UsageSnippetsProps) {
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="openclaw" className="mt-4">
+                    <TabsContent value="openclaw" className="mt-6 sm:mt-7">
                         <div className="group relative rounded-md bg-zinc-950 p-4 font-mono text-sm text-zinc-300 border border-zinc-800 overflow-x-auto">
                             <Button
                                 variant="ghost"
@@ -194,7 +194,7 @@ export function UsageSnippets({ agentId, agent }: UsageSnippetsProps) {
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="mcp" className="mt-4">
+                    <TabsContent value="mcp" className="mt-6 sm:mt-7">
                         <div className="group relative rounded-md bg-zinc-950 p-4 font-mono text-sm text-zinc-300 border border-zinc-800 overflow-x-auto">
                             <pre className="leading-relaxed">
                                 <span className="text-zinc-500"># Use ASAP Protocol as an MCP Server (e.g. Claude Desktop)</span>{'\n'}

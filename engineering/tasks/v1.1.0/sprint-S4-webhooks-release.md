@@ -323,7 +323,7 @@ Sprint S4 wraps up v1.1.0 with webhook support for event-driven callbacks, addre
   - **Verify**: Security Model document accurate
 
 - [x] 4.6.6 Complete checkpoint CP-1
-  - **File**: [checkpoints.md](../../checkpoints.md#cp-1-post-v110-release)
+  - **File**: [checkpoints.md](../../../product/checkpoints.md#cp-1-post-v110-release)
   - **Review**: Learnings and update velocity tracking
 
 - [x] 4.6.7 Create `examples/secure_agent.py`

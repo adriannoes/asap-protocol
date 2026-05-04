@@ -140,7 +140,7 @@ Sprint T6 adds optional intelligence metrics via DeepEval and prepares the v1.2.
   - **Add**: Trust levels and verification info
 
 - [ ] 6.3.7 Complete checkpoint CP-2
-  - **File**: [checkpoints.md](../../../checkpoints.md#cp-2-post-v120-release)
+  - **File**: [checkpoints.md](../../../../product/checkpoints.md#cp-2-post-v120-release)
   - Review learnings and update velocity tracking
 
 **Acceptance Criteria**:

@@ -10,6 +10,7 @@
 - **Transport**: JSON-RPC 2.0 over HTTP/WebSocket.
 - **Status**: v2.2.1 (Released); next planning focus is the v2.3.x adoption train.
 - **Framework Integrations**: LangChain, CrewAI, PydanticAI, LlamaIndex, SmolAgents, Vercel AI SDK, MCP, OpenClaw, A2H.
+- **General contact** (humans coordinating on the protocol; not security): [info@asap-protocol.com](mailto:info@asap-protocol.com) — vulnerabilities: [SECURITY.md](SECURITY.md).
 
 ## Quick Start
 
@@ -26,12 +27,12 @@ uv run mypy src/ scripts/ tests/ && uv run ruff check src/  # Verify quality
 - **Vision & Roadmap**: ADRs and PRDs (`product/decision-records/`, `product/prd/`). Narrative vision files under `product/strategy/` are **local-only** (ignored on the remote).
 - **Feature Specs (PRDs)**: `product/prd/`
 - **Arch Decisions (ADRs)**: `product/decision-records/`
+- **Documentation checkpoints** (post-release PRD follow-up): `product/checkpoints.md`
 - **Tech Stack**: `engineering/architecture/tech-stack-decisions.md`
 
 ### 2. Development Status
 - **Active Sprint**: `engineering/tasks/`
 - **Adoption Roadmap**: v2.3.0 OpenAPI + TypeScript SDK foundations, followed by private v2.3.x adapter/distribution planning.
-- **Checkpoints**: `engineering/checkpoints.md`
 - **Code Reviews**: `engineering/code-review/`
 
 ## Organization

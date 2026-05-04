@@ -82,6 +82,7 @@ from asap.models.envelope import Envelope
 from asap.models.ids import generate_id
 from asap.observability import get_logger, get_metrics
 from asap.transport.cache import DEFAULT_MAX_SIZE, ManifestCache
+from asap.transport.challenge import parse_www_authenticate_asap
 from asap.transport.mtls import MTLSConfig, create_ssl_context
 from asap.transport.circuit_breaker import CircuitBreaker, CircuitState, get_registry
 from asap.transport.codecs import lambda_codec
@@ -98,6 +99,7 @@ from asap.utils.sanitization import sanitize_url
 __all__ = [
     "ASAPClient",
     "RetryConfig",
+    "CapabilityRequestReceipt",
     "ASAPConnectionError",
     "ASAPRemoteError",
     "ASAPTimeoutError",
@@ -146,6 +148,17 @@ def _record_send_error_metrics(start_time: float, error: BaseException) -> None:
         duration_seconds,
         {"status": "error"},
     )
+
+
+@dataclass
+class CapabilityRequestReceipt:
+    """Structured result of ``POST /asap/agent/request-capability`` plus optional polling."""
+
+    agent_id: str
+    host_id: str
+    status: str
+    approval: dict[str, Any] | None = None
+    agent_capability_grants: tuple[dict[str, Any], ...] = ()
 
 
 @dataclass
@@ -268,6 +281,7 @@ class ASAPClient:
         mtls_config: Optional[MTLSConfig] = None,
         supported_transport_versions: Sequence[str] | None = None,
         auth_token: str | None = None,
+        auto_register_on_asap_challenge: bool = False,
     ) -> None:
         # Extract retry config values
         if retry_config is not None:
@@ -430,6 +444,8 @@ class ASAPClient:
             self._transport_versions = tv
         self._asap_version_header_value = ", ".join(self._transport_versions)
         self._last_response_asap_version: str | None = None
+        self._auto_register_on_asap_challenge = auto_register_on_asap_challenge
+        self._last_asap_challenge_discovery_url: str | None = None
 
     @staticmethod
     def _is_localhost(parsed_url: ParseResult) -> bool:
@@ -458,6 +474,27 @@ class ASAPClient:
         """Store ``ASAP-Version`` from an HTTP response for inspection."""
         raw = response.headers.get(ASAP_VERSION_HEADER.lower())
         self._last_response_asap_version = raw.strip() if raw else None
+
+    async def _ingest_asap_challenge_401(self, response: httpx.Response) -> None:
+        """Record ASAP discovery from ``WWW-Authenticate`` and optionally prefetch manifest."""
+        raw = response.headers.get("www-authenticate")
+        disc = parse_www_authenticate_asap(raw)
+        self._last_asap_challenge_discovery_url = disc
+        if not disc or not self._auto_register_on_asap_challenge:
+            return
+        try:
+            await self.get_manifest(disc)
+        except Exception:
+            logger.debug(
+                "asap.client.asap_challenge_prefetch_failed",
+                discovery_url=disc,
+                exc_info=True,
+            )
+
+    @property
+    def last_asap_challenge_discovery_url(self) -> str | None:
+        """Discovery URL from the last HTTP 401 ``WWW-Authenticate: ASAP`` response."""
+        return self._last_asap_challenge_discovery_url
 
     @property
     def last_response_asap_version(self) -> str | None:
@@ -771,6 +808,8 @@ class ASAPClient:
                     content=request_body,
                 )
                 self._capture_asap_version_header(response)
+                if response.status_code == 401:
+                    await self._ingest_asap_challenge_401(response)
 
                 # Log HTTP protocol version for debugging fallback behavior
                 if self._http2 and response.http_version != "HTTP/2":
@@ -1388,6 +1427,114 @@ class ASAPClient:
                     cause=e,
                     url=sanitize_url(url),
                 ) from e
+
+    def _capability_receipt_from_register_json(
+        self, data: dict[str, Any]
+    ) -> CapabilityRequestReceipt:
+        """Build a receipt from ``/asap/agent/request-capability`` JSON."""
+        grants_raw = data.get("agent_capability_grants")
+        grants = tuple(grants_raw) if isinstance(grants_raw, list) else ()
+        appr = data.get("approval")
+        appr_dict = appr if isinstance(appr, dict) else None
+        return CapabilityRequestReceipt(
+            agent_id=str(data["agent_id"]),
+            host_id=str(data["host_id"]),
+            status=str(data["status"]),
+            approval=appr_dict,
+            agent_capability_grants=grants,
+        )
+
+    async def request_capability(
+        self,
+        agent_id: str,
+        capabilities: Sequence[dict[str, Any] | str],
+        *,
+        agent_bearer_token: str,
+        host_bearer_token_for_status: str,
+        poll_interval_seconds: float = 0.15,
+        status_timeout_seconds: float = 90.0,
+    ) -> CapabilityRequestReceipt:
+        """POST ``/asap/agent/request-capability`` and poll status until escalation settles.
+
+        Poll responses may list grants under ``capabilities`` and/or ``agent_capability_grants``.
+        """
+        if not self._client:
+            raise ASAPConnectionError(
+                "Client not connected. Use 'async with' context.",
+                url=sanitize_url(self.base_url),
+            )
+
+        norm_caps: list[dict[str, Any]] = []
+        for c in capabilities:
+            if isinstance(c, str):
+                norm_caps.append({"name": c})
+            elif isinstance(c, dict):
+                norm_caps.append(dict(c))
+
+        post_url = f"{self._http_base_url.rstrip('/')}/asap/agent/request-capability"
+        resp = await self._client.post(
+            post_url,
+            headers={
+                "Authorization": f"Bearer {agent_bearer_token}",
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
+            json={"capabilities": norm_caps},
+            timeout=self.timeout,
+        )
+        if resp.status_code >= 400:
+            raise ASAPConnectionError(
+                f"HTTP {resp.status_code} from request-capability: {resp.text[:300]!r}",
+                url=sanitize_url(post_url),
+            )
+        raw = resp.json()
+        if not isinstance(raw, dict):
+            raise ASAPConnectionError(
+                "Invalid JSON object from request-capability",
+                url=sanitize_url(post_url),
+            )
+        data: dict[str, Any] = raw
+        if data.get("status") != "pending" or "approval" not in data:
+            return self._capability_receipt_from_register_json(data)
+
+        deadline = time.monotonic() + status_timeout_seconds
+        while time.monotonic() < deadline:
+            await asyncio.sleep(poll_interval_seconds)
+            st_url = f"{self._http_base_url.rstrip('/')}/asap/agent/status"
+            st = await self._client.get(
+                st_url,
+                params={"agent_id": agent_id},
+                headers={"Authorization": f"Bearer {host_bearer_token_for_status}"},
+                timeout=self.timeout,
+            )
+            if st.status_code != 200:
+                if st.status_code in (401, 403, 404):
+                    raise ASAPConnectionError(
+                        f"Escalation status polling failed with HTTP {st.status_code}",
+                        url=sanitize_url(st_url),
+                    )
+                continue
+            sj = st.json()
+            if not isinstance(sj, dict):
+                continue
+            ap_st = sj.get("approval_status")
+            if ap_st != "pending":
+                caps_raw = sj.get("agent_capability_grants")
+                if not isinstance(caps_raw, list):
+                    caps_raw = sj.get("capabilities")
+                grants = tuple(caps_raw) if isinstance(caps_raw, list) else ()
+                return CapabilityRequestReceipt(
+                    agent_id=str(sj.get("agent_id", agent_id)),
+                    host_id=str(sj.get("host_id", data.get("host_id", ""))),
+                    status=str(sj.get("status", "active")),
+                    approval=None,
+                    agent_capability_grants=grants,
+                )
+
+        raise ASAPTimeoutError(
+            f"Timed out after {status_timeout_seconds}s waiting for capability escalation",
+            timeout=status_timeout_seconds,
+        )
 
     async def discover(self, base_url: str) -> Manifest:
         """Discover agent manifest from its base URL (well-known URI).

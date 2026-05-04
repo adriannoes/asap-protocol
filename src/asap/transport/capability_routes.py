@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Request
@@ -23,6 +24,14 @@ from asap.observability import get_logger
 from asap.transport._auth_helpers import bearer_token_from_request
 
 logger = get_logger(__name__)
+
+
+def http_error_request_id(request: Request) -> str:
+    """Return ``request.state.request_id`` when set, else a new UUID string."""
+    rid = getattr(request.state, "request_id", None)
+    if rid is not None and rid != "":
+        return str(rid)
+    return str(uuid.uuid4())
 
 
 # ---------------------------------------------------------------------------
@@ -74,7 +83,7 @@ async def _verify_host_bearer(
     return result, None
 
 
-async def _verify_agent_bearer(
+async def verify_agent_bearer(
     request: Request,
     *,
     jti_replay_cache: JtiReplayCache | None = None,
@@ -100,7 +109,13 @@ async def _verify_agent_bearer(
     )
     if not result.ok:
         status = 403 if result.error in ("agent_expired", "agent_revoked") else 401
-        return None, JSONResponse(status_code=status, content={"detail": result.error})
+        return None, JSONResponse(
+            status_code=status,
+            content={
+                "detail": result.error,
+                "request_id": http_error_request_id(request),
+            },
+        )
     return result, None
 
 
@@ -201,7 +216,7 @@ async def _handle_capability_describe(request: Request, name: str) -> JSONRespon
 
 async def _handle_capability_execute(request: Request) -> JSONResponse:
     """Execute a capability (Agent JWT required)."""
-    result, err = await _verify_agent_bearer(request)
+    result, err = await verify_agent_bearer(request)
     if err is not None:
         return err
     if result is None or result.agent is None:
@@ -232,13 +247,18 @@ async def _handle_capability_execute(request: Request) -> JSONResponse:
                     "error": "constraint_violated",
                     "capability": body.capability,
                     "violations": violations,
+                    "request_id": http_error_request_id(request),
                 },
             )
         return JSONResponse(
             status_code=403,
             content={
-                "error": "no_grant",
-                "detail": f"agent has no active grant for {body.capability!r}",
+                "error": {
+                    "code": "capability_not_granted",
+                    "message": f"agent has no active grant for {body.capability!r}",
+                    "data": {"required_capability": body.capability},
+                    "request_id": http_error_request_id(request),
+                },
             },
         )
 

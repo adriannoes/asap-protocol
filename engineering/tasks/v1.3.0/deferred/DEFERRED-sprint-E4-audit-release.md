@@ -196,7 +196,7 @@ Sprint E4 implements tamper-evident audit logging for compliance and prepares th
 - [ ] 4.5.7 Create GitHub release
 
 - [ ] 4.5.8 Complete checkpoint CP-3
-  - **File**: [checkpoints.md](../../../checkpoints.md#cp-3-post-v130-release)
+  - **File**: [checkpoints.md](../../../../product/checkpoints.md#cp-3-post-v130-release)
   - Review learnings and update velocity tracking
 
 **Acceptance Criteria**:
