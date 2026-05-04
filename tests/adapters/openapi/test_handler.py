@@ -828,3 +828,40 @@ async def test_create_openapi_task_handler_returns_task_response_envelope(tmp_pa
         assert envelope_out.payload_type == "task.response"
         assert envelope_out.payload_dict["result"] == {"pong": True}
         assert envelope_out.correlation_id == envelope_in.id
+
+
+def test_openapi_path_parameter_error_requires_exactly_one_of_missing_or_invalid() -> None:
+    with pytest.raises(ValueError, match="exactly one of missing="):
+        OpenAPIPathParameterError(path_template="/x/{a}", missing=[], invalid=[])
+    with pytest.raises(ValueError, match="exactly one of missing="):
+        OpenAPIPathParameterError(path_template="/x/{a}", missing=["a"], invalid=["a"])
+
+
+@pytest.mark.asyncio
+async def test_execute_unsupported_param_in_raises_invocation_error() -> None:
+    skill = Skill(
+        id="badLoc",
+        description="test",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "x": {"type": "string", "x-openapi-param-in": "matrix"},
+            },
+        },
+        output_schema={"type": "object"},
+    )
+    cap = OpenAPICapability(
+        skill=skill,
+        http_method="get",
+        path_template="/items",
+        execution_kind=OpenAPIExecutionKind.SYNC,
+    )
+    transport = httpx.MockTransport(lambda _r: httpx.Response(200))
+    async with httpx.AsyncClient(transport=transport) as client:
+        handler = OpenAPIUpstreamHandler.from_capabilities(
+            base_url="https://u.test",
+            capabilities=[cap],
+            http_client=client,
+        )
+        with pytest.raises(OpenAPIInvocationError, match="Unsupported OpenAPI parameter location"):
+            await handler.execute("badLoc", {"x": "v"}, session=None)
