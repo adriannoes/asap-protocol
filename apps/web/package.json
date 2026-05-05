@@ -23,7 +23,7 @@
     "@radix-ui/react-scroll-area": "^1.2.2",
     "@radix-ui/react-separator": "^1.1.1",
     "@radix-ui/react-slot": "^1.1.1",
-    "@react-three/fiber": "^9.6.0",
+    "@react-three/fiber": "^9.6.1",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.24",
     "@types/three": "^0.184.0",
@@ -43,12 +43,12 @@
     "radix-ui": "^1.4.3",
     "react": "19.2.5",
     "react-dom": "19.2.5",
-    "react-hook-form": "^7.73.1",
+    "react-hook-form": "^7.75.0",
     "sharp": "^0.34.5",
     "swr": "^2.4.1",
     "tailwind-merge": "^3.5.0",
     "three": "^0.184.0",
-    "zod": "^4.3.6"
+    "zod": "^4.4.3"
   },
   "overrides": {
     "minimatch": "^10.2.1",
