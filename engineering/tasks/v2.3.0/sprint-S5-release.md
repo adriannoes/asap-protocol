@@ -88,10 +88,10 @@
 ### 3.0 Publish (manual — do not execute unless explicitly requested)
 
 - [x] 3.1 Tag and push — `git tag -a v2.3.0 -m "…" && git push origin v2.3.0` ✅ (2026-05-06)
-- [ ] 3.2 PyPI publish — CI/trusted publishing after tag
-- [ ] 3.3 npm publish — workflow after tag
-- [ ] 3.4 Docker build / GHCR — `docker pull ghcr.io/adriannoes/asap-protocol:v2.3.0`
-- [ ] 3.5 GitHub Release — draft/publish with notes + links
+- [x] 3.2 PyPI publish — **OK** — `asap-protocol==2.3.0` em [PyPI](https://pypi.org/project/asap-protocol/) (workflow [25432265870](https://github.com/adriannoes/asap-protocol/actions/runs/25432265870))
+- [ ] 3.3 npm publish — **falhou** — [run 25432265924](https://github.com/adriannoes/asap-protocol/actions/runs/25432265924): `npm ERR! 404 Not Found - PUT ... @asap-protocol/client` (escopo/org no npm, Trusted Publishing OIDC ou primeiro publish ainda não configurado)
+- [x] 3.4 Docker build / GHCR — imagem publicada no job **Build and push Docker image** do mesmo workflow; verificar: `docker pull ghcr.io/adriannoes/asap-protocol:v2.3.0`
+- [x] 3.5 GitHub Release — [v2.3.0](https://github.com/adriannoes/asap-protocol/releases/tag/v2.3.0) (artefatos `.whl` / `.tar.gz` anexados)
 
 ### 4.0 Post-release (product + web)
 
@@ -113,12 +113,12 @@
 ## Acceptance Criteria (DoD)
 
 - [x] Sprint DoD verified for **in-repo** scope (see adoption multiplier file)
-- [ ] CI green on `main` HEAD at merge time — **maintainer**: confirm GitHub Actions after PR
+- [ ] CI green on `main` HEAD at merge time — **maintainer**: confirm GitHub Actions (push só de docs pode não acionar `ci.yml` por *path filter*; após tag, workflow **Release** ficou verde)
 - [x] Tag `v2.3.0` pushed ✅ (2026-05-06)
-- [ ] `asap-protocol==2.3.0` on PyPI
-- [ ] `@asap-protocol/client@2.3.0` on npm
-- [ ] Docker `:v2.3.0` and `:latest` on GHCR
-- [ ] GitHub Release published
+- [x] `asap-protocol==2.3.0` on PyPI ✅
+- [ ] `@asap-protocol/client@2.3.0` on npm — **bloqueado** até corrigir publicação (ver 3.3)
+- [x] Docker `:v2.3.0` and `:latest` on GHCR — **build/push OK** no workflow Release; confirmar digest localmente com `docker pull`
+- [x] GitHub Release published — [releases/tag/v2.3.0](https://github.com/adriannoes/asap-protocol/releases/tag/v2.3.0)
 - [x] PRD + roadmap + README + docs + web copy updated for **shipped** narrative (publish caveat where artifacts not yet live)
 - [ ] Adoption metrics dashboard live — see [#141](https://github.com/adriannoes/asap-protocol/issues/141)
 - [ ] No P0/P1 regressions in 7 days — **post-release observation**

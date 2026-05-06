@@ -93,23 +93,23 @@ Compliance is enforced on the **Python agent** side in CI; Next.js app follows S
 
 ### 4.2 PyPI
 
-- [ ] Workflow publishes `asap-protocol==2.3.0` (and `asap-compliance` if its version bumped)
+- [x] Workflow publishes `asap-protocol==2.3.0` (and `asap-compliance` if its version bumped) — [run 25432265870](https://github.com/adriannoes/asap-protocol/actions/runs/25432265870)
 - [ ] Verify: `pip install asap-protocol==2.3.0` in a **clean** venv → `import asap; asap.__version__ == "2.3.0"`
 - [ ] Confirm `[openapi]` extra installable: `pip install 'asap-protocol[openapi]==2.3.0'`
 
 ### 4.3 npm
 
-- [ ] `@asap-protocol/client@2.3.0` published with provenance (per workflow)
+- [ ] `@asap-protocol/client@2.3.0` published with provenance (per workflow) — **Publish TypeScript SDK** falhou: [run 25432265924](https://github.com/adriannoes/asap-protocol/actions/runs/25432265924) (`404` no `PUT` — org `@asap-protocol` / Trusted Publishing / primeiro publish)
 - [ ] Verify: `npm install @asap-protocol/client@2.3.0` in empty project
 
 ### 4.4 Docker (GHCR)
 
-- [ ] `docker pull ghcr.io/adriannoes/asap-protocol:v2.3.0` (digest recorded)
+- [ ] `docker pull ghcr.io/adriannoes/asap-protocol:v2.3.0` (digest recorded) — build CI OK; pull local recomendado
 - [ ] `:latest` points to expected digest post-promotion
 
 ### 4.5 GitHub Release
 
-- [ ] Draft/publish release for `v2.3.0` with: PRD link, sprint summary, install snippets (Python + npm), migration link, full CHANGELOG link
+- [x] Draft/publish release for `v2.3.0` with: PRD link, sprint summary, install snippets (Python + npm), migration link, full CHANGELOG link — [v2.3.0](https://github.com/adriannoes/asap-protocol/releases/tag/v2.3.0)
 
 ---
 
