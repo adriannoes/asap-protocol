@@ -87,9 +87,9 @@ Compliance is enforced on the **Python agent** side in CI; Next.js app follows S
 
 ### 4.1 Git tag
 
-- [ ] On correct branch (`main` or approved `release/2.3.0`), clean working tree
-- [ ] `git tag -a v2.3.0 -m "Release v2.3.0 — Adoption Multiplier"`
-- [ ] `git push origin v2.3.0`
+- [x] On correct branch (`main` or approved `release/2.3.0`), clean working tree ✅ (2026-05-06, `main`)
+- [x] `git tag -a v2.3.0 -m "Release v2.3.0 — Adoption Multiplier"` ✅
+- [x] `git push origin v2.3.0` ✅
 
 ### 4.2 PyPI
 

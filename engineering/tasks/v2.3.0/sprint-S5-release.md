@@ -47,6 +47,7 @@
 | S1–S4 DoD (adoption index) | **Repo scope done**; S1 acceptance still notes **OpenAPI coverage below 90%**; S4 narrow-cov caveat documented |
 | GitHub Actions **CI** (`ci.yml`) on `main` | **success** (2026-05-04) — [run 25347366275](https://github.com/adriannoes/asap-protocol/actions/runs/25347366275); **re-check** after the next push to `main` |
 | Post-release follow-ups | Issues [#139](https://github.com/adriannoes/asap-protocol/issues/139)–[#142](https://github.com/adriannoes/asap-protocol/issues/142) (label `deferred`); index [deferred-backlog.md](./deferred-backlog.md) |
+| Git tag **`v2.3.0`** | **Pushed** (2026-05-06) — triggers [Release (PyPI + Docker)](https://github.com/adriannoes/asap-protocol/actions/workflows/release.yml) + [Publish TypeScript SDK](https://github.com/adriannoes/asap-protocol/actions/workflows/publish-typescript.yml); **maintainer**: confirm green + artifacts (PyPI, npm, GHCR, GitHub Release) |
 
 ---
 
@@ -86,7 +87,7 @@
 
 ### 3.0 Publish (manual — do not execute unless explicitly requested)
 
-- [ ] 3.1 Tag and push — `git tag -a v2.3.0 -m "…" && git push origin v2.3.0`
+- [x] 3.1 Tag and push — `git tag -a v2.3.0 -m "…" && git push origin v2.3.0` ✅ (2026-05-06)
 - [ ] 3.2 PyPI publish — CI/trusted publishing after tag
 - [ ] 3.3 npm publish — workflow after tag
 - [ ] 3.4 Docker build / GHCR — `docker pull ghcr.io/adriannoes/asap-protocol:v2.3.0`
@@ -113,7 +114,7 @@
 
 - [x] Sprint DoD verified for **in-repo** scope (see adoption multiplier file)
 - [ ] CI green on `main` HEAD at merge time — **maintainer**: confirm GitHub Actions after PR
-- [ ] Tag `v2.3.0` pushed
+- [x] Tag `v2.3.0` pushed ✅ (2026-05-06)
 - [ ] `asap-protocol==2.3.0` on PyPI
 - [ ] `@asap-protocol/client@2.3.0` on npm
 - [ ] Docker `:v2.3.0` and `:latest` on GHCR
