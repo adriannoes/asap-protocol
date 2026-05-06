@@ -121,7 +121,7 @@ Track outside this checklist or as GitHub issues (label `deferred` where applica
 |------|--------|--------|
 | **Adoption metrics dashboard** (OpenAPI-derived agents, npm weekly downloads, auto-reg %, registry count) | Maintainer | PRD goal; Grafana/GitHub Pages — not automated in-repo |
 | **Deferred Registry API Backend** | Product | Gated (500+ agents or IssueOps bottleneck) |
-| **Follow-up GitHub issues** | Maintainer | Intent search, orchestration primitives, DeepEval, etc. (link `deferred-backlog.md` if present) |
+| **Follow-up GitHub issues** | Maintainer | [deferred-backlog.md](./deferred-backlog.md) — issues **#139–#142** (label `deferred`); broader themes (intent search, orchestration, DeepEval) as needed |
 | **Vercel preview** for `apps/example-nextjs` | Maintainer | S2 sprint optional item |
 | **OpenAPI module coverage ≥90%** | Engineering | Close S1 acceptance debt |
 | **npm audit clean on `apps/web`** | Engineering | Likely requires Next.js minor/major bump |

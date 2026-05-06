@@ -54,6 +54,12 @@ Or with pip:
 pip install asap-protocol
 ```
 
+**npm** (TypeScript / JavaScript — [`@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client), aligned with protocol **v2.3.0**):
+
+```bash
+npm install @asap-protocol/client
+```
+
 📦 **Canonical listing:** **[https://pypi.org/project/asap-protocol/](https://pypi.org/project/asap-protocol/)** — package **`asap-protocol`** (`pip install asap-protocol`). Prefer `uv` for reproducible environments when possible.
 
 ## Quick Start

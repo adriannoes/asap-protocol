@@ -26,6 +26,7 @@
 - `product/prd/prd-v2.3-scale.md` — Status SHIPPED (with publish caveat)
 - `engineering/tasks/v2.3.0/tasks-v2.3.0-adoption-multiplier.md` — Sprint index + DoD refresh
 - **`engineering/tasks/v2.3.0/release-checklist.md`** — Maintainer pre-flight + manual steps
+- **`engineering/tasks/v2.3.0/deferred-backlog.md`** — Post-release GitHub issue index (`deferred` label)
 
 ### New / optional
 
@@ -44,6 +45,8 @@
 | `uv run mypy src/ scripts/ tests/` | **Success** (396 files) |
 | `cd apps/web && npm audit` | **2 moderate** (`postcss` via `next`) — documented in CHANGELOG + release-checklist |
 | S1–S4 DoD (adoption index) | **Repo scope done**; S1 acceptance still notes **OpenAPI coverage below 90%**; S4 narrow-cov caveat documented |
+| GitHub Actions **CI** (`ci.yml`) on `main` | **success** (2026-05-04) — [run 25347366275](https://github.com/adriannoes/asap-protocol/actions/runs/25347366275); **re-check** after the next push to `main` |
+| Post-release follow-ups | Issues [#139](https://github.com/adriannoes/asap-protocol/issues/139)–[#142](https://github.com/adriannoes/asap-protocol/issues/142) (label `deferred`); index [deferred-backlog.md](./deferred-backlog.md) |
 
 ---
 
@@ -101,8 +104,8 @@
 - [x] 4.3 Refresh `apps/web` with v2.3 highlights
   - **Files**: Hero, ribbon, feature cards, metadata ✅
 
-- [ ] 4.4 Open follow-up tracking issues — **manual** (deferred backlog, coverage, npm audit)
-- [ ] 4.5 Adoption metrics dashboard — **manual** (PRD metric; not in-repo)
+- [x] 4.4 Open follow-up tracking issues — GitHub **#139–#142** + [deferred-backlog.md](./deferred-backlog.md); label **`deferred`** created on repo
+- [ ] 4.5 Adoption metrics dashboard — **manual** (PRD metric; not in-repo); tracked by [#141](https://github.com/adriannoes/asap-protocol/issues/141)
 
 ---
 
@@ -116,7 +119,7 @@
 - [ ] Docker `:v2.3.0` and `:latest` on GHCR
 - [ ] GitHub Release published
 - [x] PRD + roadmap + README + docs + web copy updated for **shipped** narrative (publish caveat where artifacts not yet live)
-- [ ] Adoption metrics dashboard live
+- [ ] Adoption metrics dashboard live — see [#141](https://github.com/adriannoes/asap-protocol/issues/141)
 - [ ] No P0/P1 regressions in 7 days — **post-release observation**
 
 ---
