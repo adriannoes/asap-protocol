@@ -26,6 +26,7 @@
 - `product/prd/prd-v2.3-scale.md` — Status SHIPPED (with publish caveat)
 - `engineering/tasks/v2.3.0/tasks-v2.3.0-adoption-multiplier.md` — Sprint index + DoD refresh
 - **`engineering/tasks/v2.3.0/release-checklist.md`** — Maintainer pre-flight + manual steps
+- **`engineering/tasks/v2.3.0/deferred-backlog.md`** — Post-release GitHub issue index (`deferred` label)
 
 ### New / optional
 
@@ -44,6 +45,9 @@
 | `uv run mypy src/ scripts/ tests/` | **Success** (396 files) |
 | `cd apps/web && npm audit` | **2 moderate** (`postcss` via `next`) — documented in CHANGELOG + release-checklist |
 | S1–S4 DoD (adoption index) | **Repo scope done**; S1 acceptance still notes **OpenAPI coverage below 90%**; S4 narrow-cov caveat documented |
+| GitHub Actions **CI** (`ci.yml`) on `main` | **success** (2026-05-04) — [run 25347366275](https://github.com/adriannoes/asap-protocol/actions/runs/25347366275); **re-check** after the next push to `main` |
+| Post-release follow-ups | Issues [#139](https://github.com/adriannoes/asap-protocol/issues/139)–[#142](https://github.com/adriannoes/asap-protocol/issues/142) (label `deferred`); index [deferred-backlog.md](./deferred-backlog.md) |
+| Git tag **`v2.3.0`** | **Pushed** (2026-05-06) — triggers [Release (PyPI + Docker)](https://github.com/adriannoes/asap-protocol/actions/workflows/release.yml) + [Publish TypeScript SDK](https://github.com/adriannoes/asap-protocol/actions/workflows/publish-typescript.yml); **maintainer**: confirm green + artifacts (PyPI, npm, GHCR, GitHub Release) |
 
 ---
 
@@ -83,11 +87,11 @@
 
 ### 3.0 Publish (manual — do not execute unless explicitly requested)
 
-- [ ] 3.1 Tag and push — `git tag -a v2.3.0 -m "…" && git push origin v2.3.0`
-- [ ] 3.2 PyPI publish — CI/trusted publishing after tag
-- [ ] 3.3 npm publish — workflow after tag
-- [ ] 3.4 Docker build / GHCR — `docker pull ghcr.io/adriannoes/asap-protocol:v2.3.0`
-- [ ] 3.5 GitHub Release — draft/publish with notes + links
+- [x] 3.1 Tag and push — `git tag -a v2.3.0 -m "…" && git push origin v2.3.0` ✅ (2026-05-06)
+- [x] 3.2 PyPI publish — **OK** — `asap-protocol==2.3.0` em [PyPI](https://pypi.org/project/asap-protocol/) (workflow [25432265870](https://github.com/adriannoes/asap-protocol/actions/runs/25432265870))
+- [ ] 3.3 npm publish — **falhou** — [run 25432265924](https://github.com/adriannoes/asap-protocol/actions/runs/25432265924): `npm ERR! 404 Not Found - PUT ... @asap-protocol/client` (escopo/org no npm, Trusted Publishing OIDC ou primeiro publish ainda não configurado)
+- [x] 3.4 Docker build / GHCR — imagem publicada no job **Build and push Docker image** do mesmo workflow; verificar: `docker pull ghcr.io/adriannoes/asap-protocol:v2.3.0`
+- [x] 3.5 GitHub Release — [v2.3.0](https://github.com/adriannoes/asap-protocol/releases/tag/v2.3.0) (artefatos `.whl` / `.tar.gz` anexados)
 
 ### 4.0 Post-release (product + web)
 
@@ -101,22 +105,22 @@
 - [x] 4.3 Refresh `apps/web` with v2.3 highlights
   - **Files**: Hero, ribbon, feature cards, metadata ✅
 
-- [ ] 4.4 Open follow-up tracking issues — **manual** (deferred backlog, coverage, npm audit)
-- [ ] 4.5 Adoption metrics dashboard — **manual** (PRD metric; not in-repo)
+- [x] 4.4 Open follow-up tracking issues — GitHub **#139–#142** + [deferred-backlog.md](./deferred-backlog.md); label **`deferred`** created on repo
+- [ ] 4.5 Adoption metrics dashboard — **manual** (PRD metric; not in-repo); tracked by [#141](https://github.com/adriannoes/asap-protocol/issues/141)
 
 ---
 
 ## Acceptance Criteria (DoD)
 
 - [x] Sprint DoD verified for **in-repo** scope (see adoption multiplier file)
-- [ ] CI green on `main` HEAD at merge time — **maintainer**: confirm GitHub Actions after PR
-- [ ] Tag `v2.3.0` pushed
-- [ ] `asap-protocol==2.3.0` on PyPI
-- [ ] `@asap-protocol/client@2.3.0` on npm
-- [ ] Docker `:v2.3.0` and `:latest` on GHCR
-- [ ] GitHub Release published
+- [ ] CI green on `main` HEAD at merge time — **maintainer**: confirm GitHub Actions (push só de docs pode não acionar `ci.yml` por *path filter*; após tag, workflow **Release** ficou verde)
+- [x] Tag `v2.3.0` pushed ✅ (2026-05-06)
+- [x] `asap-protocol==2.3.0` on PyPI ✅
+- [ ] `@asap-protocol/client@2.3.0` on npm — **bloqueado** até corrigir publicação (ver 3.3)
+- [x] Docker `:v2.3.0` and `:latest` on GHCR — **build/push OK** no workflow Release; confirmar digest localmente com `docker pull`
+- [x] GitHub Release published — [releases/tag/v2.3.0](https://github.com/adriannoes/asap-protocol/releases/tag/v2.3.0)
 - [x] PRD + roadmap + README + docs + web copy updated for **shipped** narrative (publish caveat where artifacts not yet live)
-- [ ] Adoption metrics dashboard live
+- [ ] Adoption metrics dashboard live — see [#141](https://github.com/adriannoes/asap-protocol/issues/141)
 - [ ] No P0/P1 regressions in 7 days — **post-release observation**
 
 ---
