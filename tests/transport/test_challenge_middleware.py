@@ -50,6 +50,13 @@ def test_format_and_parse_roundtrip() -> None:
     assert parse_www_authenticate_asap(header) == url
 
 
+def test_format_and_parse_roundtrip_escapes_quotes_and_backslashes() -> None:
+    url = r'https://ex.test/path?q="quoted"\backslash'
+    header = format_www_authenticate_asap(url)
+
+    assert parse_www_authenticate_asap(header) == url
+
+
 def test_parse_www_authenticate_returns_none_when_missing() -> None:
     assert parse_www_authenticate_asap(None) is None
     assert parse_www_authenticate_asap("") is None
