@@ -41,7 +41,7 @@
 | `uv sync --frozen --all-extras --dev --no-extra crewai --no-extra llamaindex` | OK |
 | `PYTHONPATH=src uv run pytest` | **3213 passed**, 11 skipped (~2m18s) |
 | `pnpm` (root) | `pnpm test` in `packages/typescript/client` — **Vitest green**, statements ~87.7% / lines ~90.9% coverage |
-| `uv run pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-3219` | **0 vulns** (2 CVEs ignored per SECURITY.md) |
+| `uv run pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-4963 --ignore-vuln CVE-2026-2654` | **0 vulns** (3 CVEs ignored per SECURITY.md) |
 | `uv run mypy src/ scripts/ tests/` | **Success** (396 files) |
 | `cd apps/web && npm audit` | **2 moderate** (`postcss` via `next`) — documented in CHANGELOG + release-checklist |
 | S1–S4 DoD (adoption index) | **Repo scope done**; S1 acceptance still notes **OpenAPI coverage below 90%**; S4 narrow-cov caveat documented |
@@ -89,7 +89,7 @@
 
 - [x] 3.1 Tag and push — `git tag -a v2.3.0 -m "…" && git push origin v2.3.0` ✅ (2026-05-06)
 - [x] 3.2 PyPI publish — **OK** — `asap-protocol==2.3.0` em [PyPI](https://pypi.org/project/asap-protocol/) (workflow [25432265870](https://github.com/adriannoes/asap-protocol/actions/runs/25432265870))
-- [ ] 3.3 npm publish — **falhou** — [run 25432265924](https://github.com/adriannoes/asap-protocol/actions/runs/25432265924): `npm ERR! 404 Not Found - PUT ... @asap-protocol/client` (escopo/org no npm, Trusted Publishing OIDC ou primeiro publish ainda não configurado)
+- [x] 3.3 npm publish — **OK** — [@asap-protocol/client@2.3.0](https://www.npmjs.com/package/@asap-protocol/client) no registry (bootstrap via maintainer após falha do workflow [25432265924](https://github.com/adriannoes/asap-protocol/actions/runs/25432265924)); OIDC/provenance de rotina: [S0 unblock npm](../private/v2.3.1/sprint-S0-unblock-npm.md)
 - [x] 3.4 Docker build / GHCR — imagem publicada no job **Build and push Docker image** do mesmo workflow; verificar: `docker pull ghcr.io/adriannoes/asap-protocol:v2.3.0`
 - [x] 3.5 GitHub Release — [v2.3.0](https://github.com/adriannoes/asap-protocol/releases/tag/v2.3.0) (artefatos `.whl` / `.tar.gz` anexados)
 
@@ -116,7 +116,7 @@
 - [ ] CI green on `main` HEAD at merge time — **maintainer**: confirm GitHub Actions (push só de docs pode não acionar `ci.yml` por *path filter*; após tag, workflow **Release** ficou verde)
 - [x] Tag `v2.3.0` pushed ✅ (2026-05-06)
 - [x] `asap-protocol==2.3.0` on PyPI ✅
-- [ ] `@asap-protocol/client@2.3.0` on npm — **bloqueado** até corrigir publicação (ver 3.3)
+- [x] `@asap-protocol/client@2.3.0` on npm — [package](https://www.npmjs.com/package/@asap-protocol/client) (ver 3.3)
 - [x] Docker `:v2.3.0` and `:latest` on GHCR — **build/push OK** no workflow Release; confirmar digest localmente com `docker pull`
 - [x] GitHub Release published — [releases/tag/v2.3.0](https://github.com/adriannoes/asap-protocol/releases/tag/v2.3.0)
 - [x] PRD + roadmap + README + docs + web copy updated for **shipped** narrative (publish caveat where artifacts not yet live)

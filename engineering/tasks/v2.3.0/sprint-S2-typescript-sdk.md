@@ -158,7 +158,7 @@ Verification: root `package.json` defines `pnpm test`, `pnpm typecheck`, and `pn
 | Bundle core <50KB gzipped (excl. adapters) | Yes | Core ESM bundle gzip ≈ **14KB** (same methodology as prior audit). |
 | Tree-shakeable adapters (`agadoo`) | Yes | `pnpm --filter @asap-protocol/client run check:treeshake` runs **agadoo** on main + adapter entrypoints after `tshy` build. |
 | Reference Next.js app on **Vercel preview** | Pending ops | Deploy `apps/example-nextjs` from maintainer account / project settings. |
-| **`@asap-protocol/client@2.3.0` on npm** | Pending release | Tag `v2.3.*` + `.github/workflows/publish-typescript.yml`; bump package version at release time (source may stay `0.0.0` until publish). |
+| **`@asap-protocol/client@2.3.0` on npm** | Yes | [npmjs.com/package/@asap-protocol/client](https://www.npmjs.com/package/@asap-protocol/client) (**2026-05-13**); routine CI publish + provenance: `.github/workflows/publish-typescript.yml` + Trusted Publishing ([S0 unblock](../private/v2.3.1/sprint-S0-unblock-npm.md)). |
 
 Checklist:
 
@@ -168,7 +168,7 @@ Checklist:
 - [x] Bundle size: SDK core <50KB gzipped (excluding adapters)
 - [x] Tree-shakeable adapters verified (`agadoo` script + CI)
 - [ ] Reference Next.js app deployed to Vercel preview *(maintainer)*
-- [ ] Package published to npm `@asap-protocol/client@2.3.0` *(release/tag)*
+- [x] Package published to npm `@asap-protocol/client@2.3.0` — [registry](https://www.npmjs.com/package/@asap-protocol/client)
 
 ## Risks & Mitigations
 

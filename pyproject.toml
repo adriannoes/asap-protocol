@@ -82,7 +82,7 @@ mcp = [
     "mcp>=1.0.0",
 ]
 langchain = [
-    "langchain-core>=0.2",
+    "langchain-core>=1.3.3",
 ]
 crewai = [
     "crewai>=0.80",
@@ -91,7 +91,7 @@ llamaindex = [
     "llama-index-core>=0.10",
 ]
 smolagents = [
-    "smolagents>=1.0",
+    "smolagents>=1.24.0",
 ]
 pydanticai = [
     "pydantic-ai>=0.2",
@@ -119,9 +119,12 @@ Issues = "https://github.com/adriannoes/asap-protocol/issues"
 # - requests>=2.33.0 for CVE-2026-25645 (extract_zipped_paths temp file)
 # - pillow>=12.2.0 for CVE-2026-40192 (transitive, e.g. pdf/vision stacks)
 # - pytest>=9.0.3 for CVE-2025-71176 (dev)
-# - python-multipart>=0.0.26 for CVE-2026-40347 (FastAPI stack)
+# - python-multipart>=0.0.27 for CVE-2026-42561 / CVE-2026-40347 (FastAPI stack)
 # - pygments>=2.20.0 for CVE-2026-4539
-# - langsmith>=0.7.31 for GHSA-rr7j-v2q5-chgv
+# - langsmith>=0.8.0 for CVE-2026-45134 (prior: GHSA-rr7j-v2q5-chgv)
+# - langchain-core>=1.3.3 for CVE-2026-44843
+# - urllib3>=2.7.0 for CVE-2026-44431 / CVE-2026-44432
+# - pip>=26.1 for CVE-2026-6357 (transitive via pip-api / venv)
 # - python-dotenv>=1.2.2 for CVE-2026-28684 (transitive, e.g. pydantic-settings / uvicorn stacks)
 [tool.uv]
 override-dependencies = [
@@ -132,9 +135,12 @@ override-dependencies = [
     "requests>=2.33.0",
     "pillow>=12.2.0",
     "pytest>=9.0.3",
-    "python-multipart>=0.0.26",
+    "python-multipart>=0.0.27",
     "pygments>=2.20.0",
-    "langsmith>=0.7.31",
+    "langsmith>=0.8.0",
+    "langchain-core>=1.3.3",
+    "urllib3>=2.7.0",
+    "pip>=26.1",
     "python-dotenv>=1.2.2",
 ]
 
