@@ -1,6 +1,11 @@
 # npm publishing runbook (`@asap-protocol/client`)
 
-Maintainer guide for scoped package bootstrap, Trusted Publishing (OIDC), and recovery when the registry or OIDC path fails.
+Maintainer guide for scoped package bootstrap, Trusted Publishing (OIDC), and recovery when the registry or OIDC path fails. Read this before rotating secrets or doing a break-glass publish; no prior npm-org context is assumed beyond repo membership.
+
+## Maintainer cross-links
+
+- **Release checklist (npm gate)**: [engineering/tasks/v2.3.0/release-checklist.md](../../engineering/tasks/v2.3.0/release-checklist.md) — §**4.3** (verify install after publish).
+- **Sprint notes (historical)**: [engineering/tasks/private/v2.3.1/sprint-S0-unblock-npm.md](../../engineering/tasks/private/v2.3.1/sprint-S0-unblock-npm.md) — first-publish / OIDC troubleshooting narrative.
 
 ## Normal path (after bootstrap)
 
