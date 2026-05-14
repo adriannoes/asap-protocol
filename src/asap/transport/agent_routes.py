@@ -35,12 +35,12 @@ from asap.auth.approval import (
 )
 from asap.auth.self_auth import (
     FreshSessionConfig,
-    PlaceholderWebAuthnVerifier,
     WebAuthnVerifier,
+    check_webauthn_for_approval_path,
+    default_webauthn_verifier,
     fresh_session_violation_detail,
-    verify_webauthn_if_required,
 )
-from asap.auth.capabilities import CapabilityRegistry
+from asap.auth.capabilities import CapabilityRegistry, escalation_requires_user_consent
 from asap.auth.identity import (
     AgentSession,
     AgentStore,
@@ -81,7 +81,7 @@ class AgentRotateKeyBody(ASAPBaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _parse_capability_registration_body(
+def parse_capability_registration_body(
     raw_body: dict[str, Any],
 ) -> tuple[list[str], list[dict[str, Any]]]:
     """Extract capability names and raw spec dicts from a register JSON body."""
@@ -128,44 +128,48 @@ def _approval_fresh_session_response(
 
 
 def _webauthn_verifier(request: Request) -> WebAuthnVerifier:
-    v: WebAuthnVerifier | None = getattr(
-        request.app.state,
-        "identity_webauthn_verifier",
-        None,
+    """Verifier from ``app.state``, or :func:`default_webauthn_verifier` if unset (logs warning)."""
+    configured = getattr(request.app.state, "identity_webauthn_verifier", None)
+    if configured is not None:
+        return cast("WebAuthnVerifier", configured)
+    logger.warning(
+        "asap.identity.webauthn_verifier_fallback",
+        detail="app.state.identity_webauthn_verifier unset; using default_webauthn_verifier()",
     )
-    if v is not None:
-        return v
-    return PlaceholderWebAuthnVerifier()
+    return default_webauthn_verifier()
 
 
 async def _approval_webauthn_response(
     request: Request,
     raw_body: dict[str, Any],
     requested_names: list[str],
+    host_id: str,
+    *,
+    agent_controls_browser: bool,
 ) -> JSONResponse | None:
-    """400 when high-risk capabilities are requested without a valid WebAuthn payload."""
+    """Reject registration when WebAuthn is required but missing or invalid."""
     cfg = _identity_fresh_session_config(request)
-    if cfg is None or not cfg.require_webauthn_for:
-        return None
-    err = await verify_webauthn_if_required(
+    result = await check_webauthn_for_approval_path(
         requested_names,
         raw_body,
         cfg,
         _webauthn_verifier(request),
+        host_id=host_id,
+        agent_controls_browser=agent_controls_browser,
     )
-    if err is None:
+    if result.detail is None:
         return None
-    return JSONResponse(status_code=400, content={"detail": err})
+    if result.http_status == 403:
+        return JSONResponse(status_code=403, content={"detail": "webauthn_required"})
+    return JSONResponse(status_code=400, content={"detail": result.detail})
 
 
 def _needs_registration_approval(host: HostIdentity, requested_names: list[str]) -> bool:
     """Hosts that are not yet active, or requests outside default caps, need approval."""
-    if host.status != "active":
-        return True
-    return not set(requested_names).issubset(set(host.default_capabilities))
+    return escalation_requires_user_consent(host, requested_names)
 
 
-def _apply_capability_specs_to_registry(
+def apply_capability_specs_to_registry(
     registry: CapabilityRegistry,
     agent_id: str,
     host_id: str,
@@ -215,7 +219,7 @@ def _grants_for_agent(registry: CapabilityRegistry, agent_id: str) -> list[dict[
     return [_grant_to_dict(g) for g in registry.get_grants(agent_id)]
 
 
-async def _background_a2h_resolve(
+async def background_a2h_resolve(
     channel: A2HApprovalChannel,
     agent_id: str,
     *,
@@ -402,7 +406,7 @@ async def _handle_agent_register(
     if not isinstance(raw_body, dict):
         raw_body = {}
 
-    requested_names, capability_specs = _parse_capability_registration_body(raw_body)
+    requested_names, capability_specs = parse_capability_registration_body(raw_body)
     preferred_raw = raw_body.get("approval_method")
     preferred_method: ApprovalMethod | None = None
     if preferred_raw == "device_authorization":
@@ -433,7 +437,13 @@ async def _handle_agent_register(
         fresh_err = _approval_fresh_session_response(request, claims)
         if fresh_err is not None:
             return fresh_err
-        wa_err = await _approval_webauthn_response(request, raw_body, requested_names)
+        wa_err = await _approval_webauthn_response(
+            request,
+            raw_body,
+            requested_names,
+            host_id,
+            agent_controls_browser=agent_controls_browser,
+        )
         if wa_err is not None:
             return wa_err
 
@@ -451,7 +461,7 @@ async def _handle_agent_register(
     if not needs:
         capability_grants: list[dict[str, Any]] = []
         if registry is not None and capability_specs:
-            capability_grants = _apply_capability_specs_to_registry(
+            capability_grants = apply_capability_specs_to_registry(
                 registry,
                 agent_id,
                 host_id,
@@ -505,8 +515,14 @@ async def _handle_agent_register(
     ch = getattr(request.app.state, "identity_approval_a2h_channel", None)
     if ch is not None:
         principal = host.user_id if host.user_id else host_id
+        if not host.user_id:
+            logger.warning(
+                "asap.identity.a2h_principal_fallback",
+                host_id=host_id,
+                agent_id=agent_id,
+            )
         background_tasks.add_task(
-            _background_a2h_resolve,
+            background_a2h_resolve,
             ch,
             agent_id,
             context=f"ASAP agent registration {agent_id} for host {host_id}",
@@ -575,10 +591,30 @@ async def _handle_agent_status(request: Request, agent_id: str) -> JSONResponse:
         if fresh_poll is not None:
             return fresh_poll
 
+    if (
+        session.status == "active"
+        and appr is not None
+        and appr.approval_kind == "escalation"
+        and approval_store is not None
+    ):
+        if appr.status == "approved":
+            if registry is not None and appr.capability_specs:
+                apply_capability_specs_to_registry(
+                    registry,
+                    agent_id,
+                    host_id,
+                    appr.capability_specs,
+                )
+            await approval_store.remove(agent_id)
+            appr = None
+        elif appr.status in ("denied", "expired"):
+            await approval_store.remove(agent_id)
+            appr = None
+
     if session.status == "pending" and appr is not None:
         if appr.status == "approved":
             if registry is not None and appr.capability_specs:
-                _apply_capability_specs_to_registry(
+                apply_capability_specs_to_registry(
                     registry,
                     agent_id,
                     host_id,
@@ -607,11 +643,16 @@ async def _handle_agent_status(request: Request, agent_id: str) -> JSONResponse:
         "host_id": session.host_id,
         "status": session.status,
         "capabilities": caps_out,
+        "agent_capability_grants": list(caps_out),
         "lifecycle": _agent_lifecycle_json(session),
     }
     if appr is not None:
         content["approval_status"] = appr.status
-        if session.status == "pending" and appr.status in ("pending", "expired"):
+        if (session.status == "pending" and appr.status in ("pending", "expired")) or (
+            session.status == "active"
+            and appr.approval_kind == "escalation"
+            and appr.status == "pending"
+        ):
             base = approval_object_for_client(appr).model_dump(mode="json")
             content["approval"] = {**base, "state": appr.status}
         elif session.status == "rejected" and appr.deny_reason:

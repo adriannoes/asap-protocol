@@ -36,6 +36,9 @@ SKILLS_POOL = [
 ]
 FRAMEWORKS = ["CrewAI", "LangChain", "AutoGen", "Custom", "PydanticAI"]
 
+# Rotated per agent index; keep in sync with scripts/diversify_registry_asap_versions.py
+PROTOCOL_VERSIONS = ("1.0.0", "1.1.0", "2.0.0", "2.1.0", "2.2.1")
+
 # New realistic name components
 NAME_ADJECTIVES = [
     "Global",
@@ -119,7 +122,7 @@ def build_seed_agents(count: int) -> list[RegistryEntry]:
             skills=skills,
             category=category,
             tags=tags,
-            asap_version="1.1.0",
+            asap_version=PROTOCOL_VERSIONS[i % len(PROTOCOL_VERSIONS)],
             repository_url="https://github.com/asap-protocol/examples" if i % 4 == 0 else None,
             documentation_url=None,
             built_with=FRAMEWORKS[i % len(FRAMEWORKS)],

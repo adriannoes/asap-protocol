@@ -2,7 +2,7 @@
 
 **ASAP (Async Simple Agent Protocol)** is a streamlined protocol for agent-to-agent communication, designed to be simpler than existing alternatives while maintaining modern standards functionality.
 
-**Latest reference implementation:** **v2.2.0** ([CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md), [PyPI](https://pypi.org/project/asap-protocol/)) — identity & capabilities, SSE streaming (`POST /asap/stream`), `ASAP-Version` negotiation, JSON-RPC batch, tamper-evident audit logging. Upgrade notes: [Migration (v2.1.x → v2.2.0)](migration.md).
+**Latest reference implementation:** **v2.3.0** ([CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md), [PyPI](https://pypi.org/project/asap-protocol/), npm [`@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client)) — **Adoption Multiplier** on top of v2.2.x: **OpenAPI Adapter** (`create_from_openapi`, optional `[openapi]` extra), **TypeScript client** with framework adapters, **Auto-Registration** (`POST /registry/agents`), **capability escalation** (`POST /asap/agent/request-capability`), and **ASAP `WWW-Authenticate` challenges** for discovery. v2.2.1 WebAuthn, compliance/audit CLIs, and dependency policy remain as documented. Upgrade notes: [Migration (v2.2.x → v2.3.0)](migration.md#upgrading-from-v22x-to-v230).
 
 ## Features
 
@@ -11,7 +11,8 @@
 - **State Management**: Built-in task state machine with persistence support (`AsyncSnapshotStore` / `AsyncMeteringStore` in v2.2+)
 - **Transport Agnostic**: Clean separation between protocol logic and transport capability (HTTP JSON-RPC, WebSocket, SSE)
 - **Observability**: First-class tracking with correlation IDs and trace IDs
-- **Security & authorization (v2.2+)**: Per-runtime Host/Agent JWTs, capability grants with constraints, approval flows — see [Security](security.md) and [Migration](migration.md)
+- **Security & authorization (v2.2+, WebAuthn real in v2.2.1)**: Per-runtime Host/Agent JWTs, capability grants with constraints, approval flows, opt-in WebAuthn (`asap-protocol[webauthn]`) for browser-controlled and high-risk capability registration — see [Security](security.md) and [Migration](migration.md)
+- **Adoption tools (v2.3.0)**: [OpenAPI adapter](adapters/openapi.md), TypeScript client ([`packages/typescript/client`](https://github.com/adriannoes/asap-protocol/tree/main/packages/typescript/client)), [Auto-registration](registry/auto-registration.md), [Capability escalation](capabilities/escalation.md), [ASAP HTTP challenge](transport/asap-challenge.md)
 
 ## Installation
 
@@ -78,27 +79,44 @@ asap keys generate -o key.pem
 asap manifest sign -k key.pem manifest.json
 asap manifest verify signed.json
 asap manifest info signed.json
+
+# Compliance Harness v2 against a deployed agent (HTTP(S))
+asap compliance-check --url https://your-agent.example.com --exit-on-fail
+
+# Tamper-evident audit export (SQLite store)
+asap audit export --store sqlite --db ./asap_state.db --format json --verify-chain
 ```
 
-See [Identity Signing](guides/identity-signing.md) for full CLI reference.
+See [CLI reference](cli.md) (all commands, exit codes, `compliance-check`, `audit export`), [Audit log](audit.md), [CI: compliance gate](ci-compliance.md), and [Identity Signing](guides/identity-signing.md) for key and manifest workflows.
 
 ## Documentation
 
+- [OpenAPI adapter](adapters/openapi.md) — derive ASAP skills and an upstream proxy from OpenAPI 3.x (`asap.adapters.openapi`)
+- [TypeScript client SDK](sdks/typescript.md) — `@asap-protocol/client` on npm (browser + Node; optional LLM adapters)
+- [CLI reference](cli.md) — all `asap` commands, including `compliance-check`, `audit export`, and exit codes
+- [Audit log](audit.md) — hash chain model, export formats, tamper checks
 - [API Reference](api-reference.md)
 - [Observability](observability.md)
 - [Error Handling](error-handling.md)
 - [Testing](testing.md)
 - [Raw Fetch (non-Python)](raw-fetch.md) — Fetch registry.json and revoked_agents.json directly (curl, fetch); implement your own client in any language
-- [v1.1 Security Model](security/v1.1-security-model.md) — OAuth2 trust limitations, Custom Claims, allowlist (see also [decision record § security](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/decision-records/03-security.md))
+- [v1.1 Security Model](security/v1.1-security-model.md) — OAuth2 trust limitations, Custom Claims, allowlist (see also [decision record § security](https://github.com/adriannoes/asap-protocol/blob/main/product/decision-records/03-security.md))
 - [Registry verification review (admin)](guides/registry-verification-review.md) — How to vet and approve Verified badge requests for the Lite Registry
+- [Lite Registry auto-registration](registry/auto-registration.md) — Bot PR flow, OAuth2, payloads, rejections, and upgrading to Verified
 
 ### v1.1 features (API reference & guides)
 
 | Feature | Description | Where |
 |:--------|:-------------|:------|
 | **OAuth2 / Custom Claims** | Server and client auth; identity binding via JWT claims | [Transport](transport.md), [Security](security.md), examples: `auth_patterns` |
-| **WebSocket** | Real-time transport; MessageAck for reliability (see [Q16 — WebSocket Message Ack](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/decision-records/02-protocol.md#question-16-websocket-message-acknowledgment)) | [Transport](transport.md), `asap.transport.websocket`, examples: `websocket_concept` |
+| **WebSocket** | Real-time transport; MessageAck for reliability (see [Q16 — WebSocket Message Ack](https://github.com/adriannoes/asap-protocol/blob/main/product/decision-records/02-protocol.md#question-16-websocket-message-acknowledgment)) | [Transport](transport.md), `asap.transport.websocket`, examples: `websocket_concept` |
 | **Webhooks** | Signed POST callbacks to URLs; SSRF checks, retry, DLQ | [API Reference](api-reference.md) (`asap.transport`), `WebhookDelivery`, `WebhookRetryManager` |
 | **Discovery** | Well-known manifest, Lite Registry, health endpoint | [Transport](transport.md), `asap.discovery` |
 | **State Storage** | SQLite backend, env-based backend selection | [State Management](state-management.md), [Best Practices: Failover](best-practices/agent-failover-migration.md), examples: `storage_backends`, `state_migration` |
 | **Health** | `GET /.well-known/asap/health` for liveness | [Transport](transport.md), `asap.discovery.health` |
+
+## Contact
+
+**General inquiries** about the protocol or project: [info@asap-protocol.com](mailto:info@asap-protocol.com).
+
+For vulnerability reports, use **[SECURITY.md](../SECURITY.md)** (GitHub Private Vulnerability Reporting), not email. Technical questions work well via [GitHub Discussions](https://github.com/adriannoes/asap-protocol/discussions) or [Issues](https://github.com/adriannoes/asap-protocol/issues).

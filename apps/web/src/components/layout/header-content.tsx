@@ -37,12 +37,13 @@ export function HeaderContent({ session }: HeaderContentProps) {
         <div className="flex items-center gap-2">
           <Link
             href="/"
-            className="flex items-center gap-2 text-white hover:text-indigo-400 transition-colors"
+            aria-label="ASAP Protocol — home"
+            className="flex items-center gap-1 md:gap-2 text-white hover:text-indigo-400 transition-colors"
           >
             <div className="bg-indigo-500/10 p-1.5 rounded-lg border border-indigo-500/20">
               <Terminal className="h-5 w-5 text-indigo-400" />
             </div>
-            <span className="font-bold text-lg tracking-tight">
+            <span className="hidden font-bold text-lg tracking-tight md:inline">
               ASAP Protocol
             </span>
           </Link>
@@ -57,7 +58,7 @@ export function HeaderContent({ session }: HeaderContentProps) {
 
         {/* Center Nav — hidden on dashboard routes (Sidebar provides nav) */}
         {!isDashboardRoute && (
-          <nav className="hidden items-center gap-6 md:flex">
+          <nav className="hidden items-center gap-8 md:flex">
             <Link
               href="/browse"
               className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"

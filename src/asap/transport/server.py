@@ -55,7 +55,7 @@ from contextlib import asynccontextmanager, suppress
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Optional, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
@@ -91,7 +91,11 @@ from asap.utils.sanitization import sanitize_nonce
 from asap.auth import OAuth2Config, OAuth2Middleware
 from asap.auth.agent_jwt import JtiReplayCache
 from asap.auth.approval import A2HApprovalChannel, ApprovalStore, InMemoryApprovalStore
-from asap.auth.self_auth import FreshSessionConfig, WebAuthnVerifier
+from asap.auth.self_auth import (
+    FreshSessionConfig,
+    WebAuthnVerifier,
+    default_webauthn_verifier,
+)
 from asap.auth.identity import (
     AgentStore,
     HostStore,
@@ -106,7 +110,11 @@ from asap.transport.middleware import (
     _get_sender_from_envelope,
     rate_limit_handler,
 )
-from asap.transport.rate_limit import RateLimitExceeded, create_limiter
+from asap.transport.rate_limit import (
+    RateLimitExceeded,
+    create_limiter,
+    create_registration_rate_limiter,
+)
 from asap.observability.metrics import MetricsCollector
 from asap.transport.executors import BoundedExecutor
 from asap.transport.handlers import (
@@ -140,6 +148,7 @@ from asap.economics.sla_storage import SLAStorage
 from asap.economics.storage import MeteringStorage, metering_storage_adapter
 from asap.transport.agent_routes import create_agent_identity_router
 from asap.transport.capability_routes import create_capability_router
+from asap.transport.escalation_routes import create_escalation_router
 from asap.transport.delegation_api import create_delegation_router
 from asap.transport.sla_api import create_sla_router
 from asap.transport.usage_api import create_usage_router
@@ -157,12 +166,17 @@ from asap.transport.websocket import (
 )
 from asap.transport.mtls import MTLSConfig
 
+if TYPE_CHECKING:
+    from asap.registry.auto_registration import AutoRegistrationConfig
+
 # Module logger
 logger = get_logger(__name__)
 
 # Type variable for handler result pattern
 T = TypeVar("T")
 HandlerResult = tuple[Optional[T], Optional[JSONResponse]]
+
+EnvelopeOrError = Union[JSONResponse, tuple["Envelope", str]]
 
 # Environment variable to enable handler hot reload (development)
 ENV_HOT_RELOAD = "ASAP_HOT_RELOAD"
@@ -322,10 +336,20 @@ class ASAPRequestHandler:
         data = jsonrpc_error_data_for_asap_exception(exc)
         if extra_data:
             data = {**data, **extra_data}
+        extra_headers: dict[str, str] = {}
+        details = data.get("details")
+        if isinstance(details, dict):
+            wa = details.pop("_www_authenticate_asap", None)
+            if isinstance(wa, str):
+                extra_headers["WWW-Authenticate"] = wa
         payload = JsonRpcErrorResponse(
             error=JsonRpcError(code=exc.rpc_code, message=exc.message, data=data),
             id=request_id,
         )
+        if extra_headers:
+            return JSONResponse(
+                status_code=200, content=payload.model_dump(), headers=extra_headers
+            )
         return JSONResponse(status_code=200, content=payload.model_dump())
 
     def record_error_metrics(
@@ -368,10 +392,7 @@ class ASAPRequestHandler:
         ):
             metrics.increment_counter("asap_validation_errors_total", {"reason": error_type})
 
-    def _validate_envelope(
-        self,
-        ctx: RequestContext,
-    ) -> tuple[Envelope | None, JSONResponse | str]:
+    def _validate_envelope(self, ctx: RequestContext) -> EnvelopeOrError:
         rpc_request = ctx.rpc_request
         if not isinstance(rpc_request.params, dict):
             logger.warning(
@@ -392,7 +413,7 @@ class ASAPRequestHandler:
                 "invalid_params",
                 time.perf_counter() - ctx.start_time,
             )
-            return None, error_response
+            return error_response
 
         # Extract envelope from params
         envelope_data = rpc_request.params.get("envelope")
@@ -409,7 +430,7 @@ class ASAPRequestHandler:
                 "missing_envelope",
                 time.perf_counter() - ctx.start_time,
             )
-            return None, error_response
+            return error_response
 
         if not isinstance(envelope_data, dict):
             logger.warning(
@@ -427,7 +448,7 @@ class ASAPRequestHandler:
                 "invalid_envelope",
                 time.perf_counter() - ctx.start_time,
             )
-            return None, error_response
+            return error_response
 
         try:
             envelope = Envelope(**envelope_data)
@@ -443,7 +464,7 @@ class ASAPRequestHandler:
             logger.warning("asap.request.invalid_envelope", **log_data)
             duration_seconds = time.perf_counter() - ctx.start_time
             self.record_error_metrics(ctx.metrics, "unknown", "invalid_envelope", duration_seconds)
-            error_response = self.build_error_response(
+            return self.build_error_response(
                 INVALID_PARAMS,
                 data={
                     "error": "Invalid envelope structure",
@@ -451,13 +472,12 @@ class ASAPRequestHandler:
                 },
                 request_id=ctx.request_id,
             )
-            return None, error_response
 
     async def _dispatch_to_handler(
         self,
         envelope: Envelope,
         ctx: RequestContext,
-    ) -> tuple[Envelope | None, JSONResponse | str]:
+    ) -> EnvelopeOrError:
         """Dispatch envelope to registered handler.
 
         Looks up and executes the handler for the envelope's payload type.
@@ -468,8 +488,8 @@ class ASAPRequestHandler:
             ctx: Request context with rpc_request, start_time, and metrics
 
         Returns:
-            Tuple of (response_envelope, payload_type) if successful,
-            or (None, error_response) if handler not found
+            ``(envelope, payload_type)``, a :class:`JSONResponse` (503), or a JSON-RPC error
+            response for handler-not-found.
         """
         payload_type = envelope.payload_type
         try:
@@ -492,7 +512,7 @@ class ASAPRequestHandler:
                 ctx.metrics, payload_type, "thread_pool_exhausted", duration_seconds
             )
             # Return HTTP 503 Service Unavailable (not JSON-RPC error)
-            error_response = JSONResponse(
+            return JSONResponse(
                 status_code=503,
                 content={
                     "error": "Service Temporarily Unavailable",
@@ -505,7 +525,6 @@ class ASAPRequestHandler:
                     "fallback_action": e.fallback_action,
                 },
             )
-            return None, error_response
         except HandlerNotFoundError as e:
             # No handler registered for this payload type
             logger.warning(
@@ -518,12 +537,11 @@ class ASAPRequestHandler:
             self.record_error_metrics(
                 ctx.metrics, payload_type, "handler_not_found", duration_seconds
             )
-            error_response = self.build_jsonrpc_error_for_asap_exception(
+            return self.build_jsonrpc_error_for_asap_exception(
                 e,
                 request_id=ctx.request_id,
                 extra_data={"error": str(e)},
             )
-            return None, error_response
 
     async def _authenticate_request(
         self,
@@ -1041,13 +1059,10 @@ class ASAPRequestHandler:
                 return auth_error
 
             envelope_result = self._validate_envelope(ctx)
-            envelope_or_none, result = envelope_result
-            if envelope_or_none is None:
-                error_resp = cast(JSONResponse, result)
-                self._log_response_debug(error_resp)
-                return error_resp
-            envelope = envelope_or_none
-            payload_type = cast(str, result)
+            if isinstance(envelope_result, JSONResponse):
+                self._log_response_debug(envelope_result)
+                return envelope_result
+            envelope, payload_type = envelope_result
 
             trace_token = extract_and_activate_envelope_trace_context(envelope)
             try:
@@ -1119,13 +1134,10 @@ class ASAPRequestHandler:
                 )
 
                 dispatch_result = await self._dispatch_to_handler(envelope, ctx)
-                response_or_none, result = dispatch_result
-                if response_or_none is None:
-                    error_resp = cast(JSONResponse, result)
-                    self._log_response_debug(error_resp)
-                    return error_resp
-                response_envelope = response_or_none
-                payload_type = cast(str, result)
+                if isinstance(dispatch_result, JSONResponse):
+                    self._log_response_debug(dispatch_result)
+                    return dispatch_result
+                response_envelope, payload_type = dispatch_result
 
                 # Check if client accepts Lambda-encoded responses
                 accept_header = request.headers.get("accept", "")
@@ -1209,13 +1221,10 @@ class ASAPRequestHandler:
             return auth_error
 
         envelope_result = self._validate_envelope(ctx)
-        envelope_or_none, result = envelope_result
-        if envelope_or_none is None:
-            error_resp = cast(JSONResponse, result)
-            self._log_response_debug(error_resp)
-            return error_resp
-        envelope = envelope_or_none
-        payload_type = cast(str, result)
+        if isinstance(envelope_result, JSONResponse):
+            self._log_response_debug(envelope_result)
+            return envelope_result
+        envelope, payload_type = envelope_result
 
         trace_token = extract_and_activate_envelope_trace_context(envelope)
         sender_error = self._verify_sender_matches_auth(
@@ -1572,6 +1581,13 @@ def create_app(
     identity_fresh_session_config: FreshSessionConfig | None = None,
     identity_webauthn_verifier: WebAuthnVerifier | None = None,
     max_batch_size: int = DEFAULT_MAX_BATCH_SIZE,
+    registry_auto_registration: AutoRegistrationConfig | None = None,
+    asap_challenge_enabled: bool = True,
+    asap_challenge_discovery_url: str | None = None,
+    asap_challenge_path_prefixes: tuple[str, ...] | None = (
+        "/asap/capability",
+        "/asap/agent",
+    ),
 ) -> FastAPI:
     """Create and configure a FastAPI application for ASAP protocol.
 
@@ -1653,7 +1669,15 @@ def create_app(
         identity_fresh_session_config: When set, registration requiring approval and
             pending approval polling require a Host JWT issued within ``window_seconds``.
         identity_webauthn_verifier: Optional async verifier for ``webauthn`` assertions
-            when ``require_webauthn_for`` lists requested capabilities.
+            when ``require_webauthn_for`` lists requested capabilities. When omitted,
+            :func:`asap.auth.self_auth.default_webauthn_verifier` is used (real verification
+            only if the ``webauthn`` extra is installed and ``ASAP_WEBAUTHN_RP_ID`` plus
+            ``ASAP_WEBAUTHN_ORIGIN`` are set; otherwise the placeholder verifier applies).
+        registry_auto_registration: When set, mounts ``POST /registry/agents`` for Lite Registry
+            self-service registration. Requires OAuth2 JWT validation on this path: set
+            ``oauth2_config.path_prefix`` to ``"/"`` (or a prefix covering ``/registry``) so
+            :class:`~asap.auth.middleware.OAuth2Middleware` applies; rate limits use
+            ``app.state.registration_limiter`` (5/hour per Bearer token).
 
     Returns:
         Configured FastAPI application ready to run
@@ -1864,12 +1888,16 @@ def create_app(
         app.state.identity_approval_a2h_channel = identity_approval_a2h_channel
     if identity_fresh_session_config is not None:
         app.state.identity_fresh_session_config = identity_fresh_session_config
-    if identity_webauthn_verifier is not None:
-        app.state.identity_webauthn_verifier = identity_webauthn_verifier
+    app.state.identity_webauthn_verifier = (
+        identity_webauthn_verifier
+        if identity_webauthn_verifier is not None
+        else default_webauthn_verifier()
+    )
     # Dedicated rate limiter for /asap/agent/* (separate budget from main limiter)
     _identity_rl = identity_rate_limit or "5/second;30/minute"
     app.state.identity_limiter = create_limiter([_identity_rl])
     app.include_router(create_agent_identity_router())
+    app.include_router(create_escalation_router())
 
     # Capability-based authorization (S1)
     from asap.auth.capabilities import CapabilityRegistry
@@ -1877,6 +1905,17 @@ def create_app(
     if not hasattr(app.state, "capability_registry"):
         app.state.capability_registry = CapabilityRegistry()
     app.include_router(create_capability_router())
+    if registry_auto_registration is not None:
+        from asap.registry.auto_registration import create_auto_registration_router
+        from asap.registry.receipt_cache import create_registration_receipt_cache
+
+        app.state.registration_limiter = create_registration_rate_limiter()
+        app.state.registration_receipt_cache = create_registration_receipt_cache()
+        app.include_router(create_auto_registration_router(registry_auto_registration))
+        logger.info(
+            "asap.server.registry_auto_registration_enabled",
+            manifest_id=manifest.id,
+        )
     if metering_storage is not None and isinstance(metering_storage, MeteringStorage):
         app.state.metering_storage = metering_storage
         app.include_router(create_usage_router())
@@ -2127,6 +2166,21 @@ def create_app(
                 "entries": [e.model_dump(mode="json") for e in entries],
                 "count": len(entries),
             },
+        )
+
+    if asap_challenge_enabled:
+        from asap.transport.challenge import (
+            WWWAuthenticateASAPMiddleware,
+            default_manifest_discovery_url,
+        )
+
+        disc = asap_challenge_discovery_url or default_manifest_discovery_url(
+            manifest.endpoints.asap
+        )
+        app.add_middleware(
+            WWWAuthenticateASAPMiddleware,
+            default_discovery_url=disc,
+            path_prefixes=asap_challenge_path_prefixes,
         )
 
     return app

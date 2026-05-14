@@ -134,34 +134,36 @@ def wrap_handler_with_metering(
     import time
     from typing import cast
 
-    from asap.models.envelope import Envelope
-
+    # The Handler alias is ``Union[SyncHandler, AsyncHandler]`` so the result of calling
+    # ``handler(...)`` is ``Envelope | Awaitable[Envelope]``. ``inspect.iscoroutinefunction``
+    # gives us runtime dispatch but the type checker cannot narrow through it — we narrow
+    # once at the branch entry instead of casting each ``result`` use.
     if inspect.iscoroutinefunction(handler):
+        async_handler = cast("AsyncHandler", handler)
 
-        async def async_wrapper(
-            envelope: Envelope,
-            mf: Manifest,
-        ) -> Envelope:
+        async def async_wrapper(envelope: Envelope, mf: Manifest) -> Envelope:
             start = time.perf_counter()
-            result = await handler(envelope, mf)
+            result: Envelope = await async_handler(envelope, mf)
             duration_ms = (time.perf_counter() - start) * 1000
-            await record_task_usage(store, envelope, cast(Envelope, result), duration_ms, manifest)
-            return cast(Envelope, result)
+            await record_task_usage(store, envelope, result, duration_ms, manifest)
+            return result
 
         return cast("Handler", async_wrapper)
+
+    sync_handler = cast("SyncHandler", handler)
 
     async def sync_wrapper(envelope: Envelope, mf: Manifest) -> Envelope:
         import asyncio
 
         loop = asyncio.get_running_loop()
         start = time.perf_counter()
-        result = await loop.run_in_executor(None, handler, envelope, mf)
+        result: Envelope = await loop.run_in_executor(None, sync_handler, envelope, mf)
         duration_ms = (time.perf_counter() - start) * 1000
-        await record_task_usage(store, envelope, cast(Envelope, result), duration_ms, manifest)
-        return cast(Envelope, result)
+        await record_task_usage(store, envelope, result, duration_ms, manifest)
+        return result
 
     return cast("Handler", sync_wrapper)
 
 
 if TYPE_CHECKING:
-    from asap.transport.handlers import Handler
+    from asap.transport.handlers import AsyncHandler, Handler, SyncHandler

@@ -463,7 +463,10 @@ class WebhookRetryManager:
             await asyncio.sleep(delay)
 
         # All retries exhausted → dead letter queue.
-        assert last_result is not None  # At least one attempt was made.  # nosec B101
+        if last_result is None:
+            # Defensive: the loop above always assigns ``last_result`` on at least one attempt.
+            # Raising here rather than asserting survives ``python -O``.
+            raise RuntimeError("webhook retry loop produced no result")
         await self._send_to_dead_letter(url, payload, last_result)
         return last_result
 

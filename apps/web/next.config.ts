@@ -3,6 +3,8 @@ import path from "path";
 const appRoot = path.resolve(__dirname, "./");
 
 const nextConfig = {
+  /** Avoid the bottom-left dev badge reading as a persistent “error” state in local runs. */
+  devIndicators: false,
   turbopack: {
     // Set root to current directory to ensure local package resolution
     root: appRoot,

@@ -12,7 +12,7 @@ from asap.client.market import MarketClient
 from asap.discovery.registry import LiteRegistry, RegistryEntry
 from asap.errors import SignatureVerificationError
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
-from asap.models.payloads import TaskResponse
+from asap.models.payloads import TaskRequest, TaskResponse
 
 pytest.importorskip("crewai")
 
@@ -197,3 +197,62 @@ def test_crewai_tool_returns_error_string_on_signature_error() -> None:
 
     assert isinstance(out, str)
     assert "Error:" in out
+
+
+@pytest.mark.asyncio
+async def test_crewai_tool_arun_value_error_returns_error_string() -> None:
+    """When agent.run raises ValueError, _arun returns a prefixed error string."""
+    mock_send = AsyncMock(side_effect=ValueError("upstream rejected"))
+    mock_transport = AsyncMock()
+    mock_transport.send = mock_send
+    mock_transport.__aenter__ = AsyncMock(return_value=mock_transport)
+    mock_transport.__aexit__ = AsyncMock(return_value=None)
+
+    p_get, p_verify, p_revoked, p_http = _resolve_patches()
+    with p_get as mock_get, p_verify as mock_verify, p_revoked as mock_revoked, p_http:
+        mock_get.return_value = _lite_registry()
+        mock_verify.return_value = True
+        mock_revoked.return_value = False
+        with patch("asap.client.market.ASAPClient", return_value=mock_transport):
+            tool = CrewAIAsapTool(
+                TEST_URN, client=MarketClient(registry_url="https://reg.example/registry.json")
+            )
+            out = await tool._arun(input={"q": "x"})
+
+    assert isinstance(out, str)
+    assert "Error:" in out
+    assert "upstream rejected" in out
+
+
+def test_crewai_tool_run_wraps_non_dict_positional_input() -> None:
+    """_run string input is wrapped; result is JSON string for CrewAI."""
+    task_response = TaskResponse(
+        task_id="task-1",
+        status="completed",
+        result={"ok": True},
+        final_state=None,
+        metrics=None,
+    )
+    response_envelope = AsyncMock()
+    response_envelope.payload = task_response
+    mock_send = AsyncMock(return_value=response_envelope)
+    mock_transport = AsyncMock()
+    mock_transport.send = mock_send
+    mock_transport.__aenter__ = AsyncMock(return_value=mock_transport)
+    mock_transport.__aexit__ = AsyncMock(return_value=None)
+
+    p_get, p_verify, p_revoked, p_http = _resolve_patches()
+    with p_get as mock_get, p_verify as mock_verify, p_revoked as mock_revoked, p_http:
+        mock_get.return_value = _lite_registry()
+        mock_verify.return_value = True
+        mock_revoked.return_value = False
+        with patch("asap.client.market.ASAPClient", return_value=mock_transport):
+            tool = CrewAIAsapTool(
+                TEST_URN, client=MarketClient(registry_url="https://reg.example/registry.json")
+            )
+            out = tool._run("literal")
+
+    assert json.loads(out) == {"ok": True}
+    sent_envelope = mock_send.await_args.args[0]
+    inner = TaskRequest.model_validate(sent_envelope.payload)
+    assert inner.input == {"raw": "literal"}

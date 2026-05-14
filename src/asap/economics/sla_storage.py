@@ -18,8 +18,6 @@ from asap.economics.metering import StorageStats
 from asap.economics.sla import SLABreach, SLAMetrics
 
 _DEFAULT_DB_PATH = "asap_state.db"
-_METRICS_TABLE = "sla_metrics"
-_BREACHES_TABLE = "sla_breaches"
 
 
 @runtime_checkable
@@ -196,8 +194,8 @@ class SQLiteSLAStorage(SLAStorageBase):
         if self._initialized:
             return
         await conn.execute(
-            f"""
-            CREATE TABLE IF NOT EXISTS {_METRICS_TABLE} (
+            """
+            CREATE TABLE IF NOT EXISTS sla_metrics (
                 agent_id TEXT NOT NULL,
                 period_start TEXT NOT NULL,
                 period_end TEXT NOT NULL,
@@ -210,14 +208,14 @@ class SQLiteSLAStorage(SLAStorageBase):
             """
         )
         await conn.execute(
-            f"""
+            """
             CREATE INDEX IF NOT EXISTS idx_sla_metrics_agent_period
-            ON {_METRICS_TABLE} (agent_id, period_start)
+            ON sla_metrics (agent_id, period_start)
             """
         )
         await conn.execute(
-            f"""
-            CREATE TABLE IF NOT EXISTS {_BREACHES_TABLE} (
+            """
+            CREATE TABLE IF NOT EXISTS sla_breaches (
                 id TEXT PRIMARY KEY,
                 agent_id TEXT NOT NULL,
                 breach_type TEXT NOT NULL,
@@ -230,9 +228,9 @@ class SQLiteSLAStorage(SLAStorageBase):
             """
         )
         await conn.execute(
-            f"""
+            """
             CREATE INDEX IF NOT EXISTS idx_sla_breaches_agent_detected
-            ON {_BREACHES_TABLE} (agent_id, detected_at)
+            ON sla_breaches (agent_id, detected_at)
             """
         )
         await conn.commit()
@@ -242,13 +240,13 @@ class SQLiteSLAStorage(SLAStorageBase):
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
             await conn.execute(
-                f"""
-                INSERT INTO {_METRICS_TABLE} (
+                """
+                INSERT INTO sla_metrics (
                     agent_id, period_start, period_end,
                     uptime_percent, latency_p95_ms, error_rate_percent,
                     tasks_completed, tasks_failed
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,  # nosec B608 - table name is module constant, values parameterized
+                """,
                 (
                     metrics.agent_id,
                     metrics.period_start.isoformat(),
@@ -274,7 +272,7 @@ class SQLiteSLAStorage(SLAStorageBase):
             raise ValueError("offset must be non-negative")
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
-            query = f"SELECT agent_id, period_start, period_end, uptime_percent, latency_p95_ms, error_rate_percent, tasks_completed, tasks_failed FROM {_METRICS_TABLE} WHERE 1=1"  # nosec B608
+            query = "SELECT agent_id, period_start, period_end, uptime_percent, latency_p95_ms, error_rate_percent, tasks_completed, tasks_failed FROM sla_metrics WHERE 1=1"
             params: list[object] = []
             if agent_id is not None:
                 query += " AND agent_id = ?"
@@ -316,7 +314,7 @@ class SQLiteSLAStorage(SLAStorageBase):
     ) -> int:
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
-            query = f"SELECT COUNT(*) FROM {_METRICS_TABLE} WHERE 1=1"  # nosec B608
+            query = "SELECT COUNT(*) FROM sla_metrics WHERE 1=1"
             params: list[object] = []
             if agent_id is not None:
                 query += " AND agent_id = ?"
@@ -335,8 +333,8 @@ class SQLiteSLAStorage(SLAStorageBase):
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
             await conn.execute(
-                f"""
-                INSERT OR REPLACE INTO {_BREACHES_TABLE} (id, agent_id, breach_type, threshold, actual, severity, detected_at, resolved_at)
+                """
+                INSERT OR REPLACE INTO sla_breaches (id, agent_id, breach_type, threshold, actual, severity, detected_at, resolved_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
@@ -360,7 +358,7 @@ class SQLiteSLAStorage(SLAStorageBase):
     ) -> list[SLABreach]:
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
-            query = f"SELECT id, agent_id, breach_type, threshold, actual, severity, detected_at, resolved_at FROM {_BREACHES_TABLE} WHERE 1=1"  # nosec B608
+            query = "SELECT id, agent_id, breach_type, threshold, actual, severity, detected_at, resolved_at FROM sla_breaches WHERE 1=1"
             params: list[object] = []
             if agent_id is not None:
                 query += " AND agent_id = ?"
@@ -391,13 +389,13 @@ class SQLiteSLAStorage(SLAStorageBase):
     async def stats(self) -> StorageStats:
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
-            cursor = await conn.execute(f"SELECT COUNT(*) FROM {_METRICS_TABLE}")  # nosec B608
+            cursor = await conn.execute("SELECT COUNT(*) FROM sla_metrics")
             m_count = (await cursor.fetchone() or (0,))[0]
-            cursor = await conn.execute(f"SELECT COUNT(*) FROM {_BREACHES_TABLE}")  # nosec B608
+            cursor = await conn.execute("SELECT COUNT(*) FROM sla_breaches")
             b_count = (await cursor.fetchone() or (0,))[0]
-            cursor = await conn.execute(f"SELECT MIN(period_start) FROM {_METRICS_TABLE}")  # nosec B608
+            cursor = await conn.execute("SELECT MIN(period_start) FROM sla_metrics")
             m_oldest = (await cursor.fetchone() or (None,))[0]
-            cursor = await conn.execute(f"SELECT MIN(detected_at) FROM {_BREACHES_TABLE}")  # nosec B608
+            cursor = await conn.execute("SELECT MIN(detected_at) FROM sla_breaches")
             b_oldest = (await cursor.fetchone() or (None,))[0]
         oldest_ts: datetime | None = None
         for raw in (m_oldest, b_oldest):

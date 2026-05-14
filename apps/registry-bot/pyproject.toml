@@ -1,0 +1,22 @@
+[project]
+name = "registry-bot"
+version = "0.1.0"
+description = "Deployable Lite Registry auto-registration HTTP service (FastAPI)."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "asap-protocol",
+]
+
+[project.scripts]
+registry-bot = "registry_bot.app:run"
+
+[tool.uv.sources]
+asap-protocol = { path = "../..", editable = true }
+
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/registry_bot"]

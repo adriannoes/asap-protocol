@@ -1,8 +1,51 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Database, ShieldCheck, Zap, Activity, ArrowRight, Fingerprint, KeySquare, Radio } from 'lucide-react';
+import { Database, ShieldCheck, Zap, Activity, ArrowRight, Fingerprint, KeySquare, Radio, FileCode, Braces, CloudUpload } from 'lucide-react';
 
-const features = [
+const INLINE_CODE = 'rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300';
+
+type FeatureCard = {
+  title: string;
+  slug: string;
+  description: ReactNode;
+  icon: typeof Database;
+  className: string;
+};
+
+const features: FeatureCard[] = [
+  {
+    title: 'OpenAPI Adapter',
+    slug: 'openapi-adapter',
+    description:
+      'Generate ASAP capabilities from an OpenAPI 3.x document so existing HTTP APIs become agent-callable with minimal glue code.',
+    icon: FileCode,
+    className: 'md:col-span-2',
+  },
+  {
+    title: 'TypeScript SDK',
+    slug: 'typescript-sdk',
+    description: (
+      <>
+        Official <code className={INLINE_CODE}>@asap-protocol/client</code> on npm — discovery, envelopes, streaming, plus optional
+        Vercel AI, OpenAI, and Anthropic adapters.
+      </>
+    ),
+    icon: Braces,
+    className: 'md:col-span-1',
+  },
+  {
+    title: 'Auto-Registration',
+    slug: 'auto-registration',
+    description: (
+      <>
+        <code className={INLINE_CODE}>POST /registry/agents</code> with Compliance Harness gating — shrink the time from
+        &quot;working agent&quot; to &quot;listed in the Lite Registry&quot; without manual PR steps.
+      </>
+    ),
+    icon: CloudUpload,
+    className: 'md:col-span-1',
+  },
   {
     title: 'Lite Registry',
     slug: 'lite-registry',
@@ -70,7 +113,7 @@ export function FeaturesSection() {
             Protocol Features
           </h2>
           <p className="mx-auto max-w-[600px] text-zinc-400">
-            Everything you need to orchestrate complex multi-agent systems reliably — now with enterprise-grade identity, scoped authorization, and streaming responses in v2.2.
+            Everything you need to orchestrate complex multi-agent systems reliably — identity, capabilities, streaming, and v2.3 adoption tools (OpenAPI, TypeScript SDK, auto-registration).
           </p>
         </div>
 

@@ -7,7 +7,6 @@ import atexit
 import concurrent.futures
 import json
 import threading
-import uuid
 import weakref
 from collections import OrderedDict
 from contextlib import asynccontextmanager
@@ -18,12 +17,11 @@ from typing import Any, cast
 import aiosqlite
 
 from asap.models.entities import StateSnapshot
+from asap.models.ids import generate_id
 from asap.models.types import TaskID
 from asap.state.metering import UsageAggregate, UsageEvent, UsageMetrics
 
 DEFAULT_DB_PATH = "asap_state.db"
-SNAPSHOTS_TABLE = "snapshots"
-USAGE_EVENTS_TABLE = "usage_events"
 
 # One asyncio lock per DB path: concurrent openings raced on journal_mode=WAL.
 # Weak values drop entries when locks are collectable (limits growth in long test runs).
@@ -183,8 +181,8 @@ class _SQLiteSnapshotBackend:
 
     async def _ensure_snapshots_table(self, conn: aiosqlite.Connection) -> None:
         await conn.execute(
-            f"""
-            CREATE TABLE IF NOT EXISTS {SNAPSHOTS_TABLE} (
+            """
+            CREATE TABLE IF NOT EXISTS snapshots (
                 task_id TEXT NOT NULL,
                 id TEXT NOT NULL,
                 version INTEGER NOT NULL,
@@ -202,8 +200,8 @@ class _SQLiteSnapshotBackend:
             await self._ensure_snapshots_table(conn)
             row = _snapshot_to_row(snapshot)
             await conn.execute(
-                f"""
-                INSERT OR REPLACE INTO {SNAPSHOTS_TABLE}
+                """
+                INSERT OR REPLACE INTO snapshots
                 (task_id, id, version, data, checkpoint, created_at)
                 VALUES (?, ?, ?, ?, ?, ?)
                 """,
@@ -220,22 +218,22 @@ class _SQLiteSnapshotBackend:
             await self._ensure_snapshots_table(conn)
             if version is not None:
                 cursor = await conn.execute(
-                    f"""
+                    """
                     SELECT task_id, id, version, data, checkpoint, created_at
-                    FROM {SNAPSHOTS_TABLE}
+                    FROM snapshots
                     WHERE task_id = ? AND version = ?
-                    """,  # nosec B608 - table name is module constant, values parameterized
+                    """,
                     (task_id, version),
                 )
                 row = await cursor.fetchone()
             else:
                 cursor = await conn.execute(
-                    f"""
+                    """
                     SELECT task_id, id, version, data, checkpoint, created_at
-                    FROM {SNAPSHOTS_TABLE}
+                    FROM snapshots
                     WHERE task_id = ?
                     ORDER BY version DESC LIMIT 1
-                    """,  # nosec B608 - table name is module constant, values parameterized
+                    """,
                     (task_id,),
                 )
                 row = await cursor.fetchone()
@@ -247,11 +245,11 @@ class _SQLiteSnapshotBackend:
         async with self._connect() as conn:
             await self._ensure_snapshots_table(conn)
             cursor = await conn.execute(
-                f"""
-                SELECT version FROM {SNAPSHOTS_TABLE}
+                """
+                SELECT version FROM snapshots
                 WHERE task_id = ?
                 ORDER BY version
-                """,  # nosec B608 - table name is module constant, values parameterized
+                """,
                 (task_id,),
             )
             rows = await cursor.fetchall()
@@ -266,12 +264,12 @@ class _SQLiteSnapshotBackend:
             await self._ensure_snapshots_table(conn)
             if version is not None:
                 cursor = await conn.execute(
-                    f"DELETE FROM {SNAPSHOTS_TABLE} WHERE task_id = ? AND version = ?",  # nosec B608
+                    "DELETE FROM snapshots WHERE task_id = ? AND version = ?",
                     (task_id, version),
                 )
             else:
                 cursor = await conn.execute(
-                    f"DELETE FROM {SNAPSHOTS_TABLE} WHERE task_id = ?",  # nosec B608
+                    "DELETE FROM snapshots WHERE task_id = ?",
                     (task_id,),
                 )
             await conn.commit()
@@ -398,8 +396,8 @@ class SQLiteMeteringStore:
 
     async def _ensure_usage_table(self, conn: aiosqlite.Connection) -> None:
         await conn.execute(
-            f"""
-            CREATE TABLE IF NOT EXISTS {USAGE_EVENTS_TABLE} (
+            """
+            CREATE TABLE IF NOT EXISTS usage_events (
                 id TEXT PRIMARY KEY,
                 task_id TEXT NOT NULL,
                 agent_id TEXT NOT NULL,
@@ -410,9 +408,9 @@ class SQLiteMeteringStore:
             """
         )
         await conn.execute(
-            f"""
+            """
             CREATE INDEX IF NOT EXISTS idx_usage_agent_timestamp
-            ON {USAGE_EVENTS_TABLE} (agent_id, timestamp)
+            ON usage_events (agent_id, timestamp)
             """
         )
         await conn.commit()
@@ -420,14 +418,14 @@ class SQLiteMeteringStore:
     async def _record_impl(self, event: UsageEvent) -> None:
         async with self._connect() as conn:
             await self._ensure_usage_table(conn)
-            event_id = f"evt_{uuid.uuid4().hex}"
+            event_id = f"evt_{generate_id()}"
             row = _event_to_row(event, event_id)
             await conn.execute(
-                f"""
-                INSERT INTO {USAGE_EVENTS_TABLE}
+                """
+                INSERT INTO usage_events
                 (id, task_id, agent_id, consumer_id, metrics, timestamp)
                 VALUES (?, ?, ?, ?, ?, ?)
-                """,  # nosec B608 - table name is module constant, values parameterized
+                """,
                 row,
             )
             await conn.commit()
@@ -444,12 +442,12 @@ class SQLiteMeteringStore:
             await self._ensure_usage_table(conn)
             start_s = start.isoformat()
             end_s = end.isoformat()
-            query = f"""
+            query = """
                 SELECT id, task_id, agent_id, consumer_id, metrics, timestamp
-                FROM {USAGE_EVENTS_TABLE}
+                FROM usage_events
                 WHERE agent_id = ? AND timestamp >= ? AND timestamp <= ?
                 ORDER BY timestamp
-            """  # nosec B608 - table name is module constant, values parameterized
+            """
             params: list[Any] = [agent_id, start_s, end_s]
             if limit is not None:
                 query += " LIMIT ? OFFSET ?"
@@ -465,15 +463,15 @@ class SQLiteMeteringStore:
         async with self._connect() as conn:
             await self._ensure_usage_table(conn)
             cursor = await conn.execute(
-                f"""
+                """
                 SELECT
                     SUM(CAST(json_extract(metrics, '$.tokens_in') AS INTEGER) + CAST(json_extract(metrics, '$.tokens_out') AS INTEGER)),
                     SUM(CAST(json_extract(metrics, '$.duration_ms') AS INTEGER)),
                     COUNT(*),
                     SUM(CAST(json_extract(metrics, '$.api_calls') AS INTEGER))
-                FROM {USAGE_EVENTS_TABLE}
+                FROM usage_events
                 WHERE agent_id = ?
-                """,  # nosec B608 - table name is module constant, values parameterized
+                """,
                 (agent_id,),
             )
             row = await cursor.fetchone()

@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "test": "pnpm --filter @asap-protocol/client test",
+    "typecheck": "pnpm --filter @asap-protocol/client run typecheck",
+    "lint": "pnpm --filter @asap-protocol/client lint && pnpm --filter example-nextjs lint"
+  },
+  "devDependencies": {
+    "slop-scan": "^0.3.0"
+  }
+}

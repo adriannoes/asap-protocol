@@ -1,0 +1,132 @@
+{
+  "name": "@asap-protocol/client",
+  "version": "2.3.0",
+  "description": "Official TypeScript client for the ASAP Protocol",
+  "type": "module",
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adriannoes/asap-protocol"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "peerDependencies": {
+    "ai": "^6.0.0",
+    "keytar": "^7.9.0",
+    "zod": "^3.25.76 || ^4.1.8"
+  },
+  "peerDependenciesMeta": {
+    "ai": {
+      "optional": true
+    },
+    "keytar": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@noble/ed25519": "^3.1.0",
+    "jose": "^6.0.10",
+    "ulid": "^3.0.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tshy",
+    "test": "vitest run --coverage",
+    "test:no-coverage": "vitest run",
+    "lint": "eslint .",
+    "check:treeshake": "pnpm run build && agadoo ./dist/esm/index.js && agadoo ./dist/esm/adapters/vercel-ai.js && agadoo ./dist/esm/adapters/openai.js && agadoo ./dist/esm/adapters/anthropic.js",
+    "test:types": "pnpm run build && node -e \"try{require('node:fs').rmSync('dist/node_modules',{recursive:true})}catch(_){}\" && tsd",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "tsd": {
+    "directory": "test-d"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.18.0",
+    "@types/node": "^20.19.0",
+    "@vitest/coverage-v8": "4.1.5",
+    "agadoo": "3.0.0",
+    "ai": "^6.0.174",
+    "eslint": "9.18.0",
+    "tsd": "^0.33.0",
+    "tshy": "^3.3.2",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "8.59.1",
+    "vitest": "^4.1.1",
+    "zod": "^4.4.2"
+  },
+  "tshy": {
+    "project": "./tsconfig.build.json",
+    "exports": {
+      ".": "./src/index.ts",
+      "./adapters/vercel-ai": "./src/adapters/vercel-ai.ts",
+      "./adapters/openai": "./src/adapters/openai.ts",
+      "./adapters/anthropic": "./src/adapters/anthropic.ts",
+      "./storage-node": "./src/storage-node.ts"
+    }
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/index.d.ts",
+        "default": "./dist/commonjs/index.js"
+      }
+    },
+    "./adapters/vercel-ai": {
+      "import": {
+        "types": "./dist/esm/adapters/vercel-ai.d.ts",
+        "default": "./dist/esm/adapters/vercel-ai.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/adapters/vercel-ai.d.ts",
+        "default": "./dist/commonjs/adapters/vercel-ai.js"
+      }
+    },
+    "./adapters/openai": {
+      "import": {
+        "types": "./dist/esm/adapters/openai.d.ts",
+        "default": "./dist/esm/adapters/openai.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/adapters/openai.d.ts",
+        "default": "./dist/commonjs/adapters/openai.js"
+      }
+    },
+    "./adapters/anthropic": {
+      "import": {
+        "types": "./dist/esm/adapters/anthropic.d.ts",
+        "default": "./dist/esm/adapters/anthropic.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/adapters/anthropic.d.ts",
+        "default": "./dist/commonjs/adapters/anthropic.js"
+      }
+    },
+    "./storage-node": {
+      "import": {
+        "types": "./dist/esm/storage-node.d.ts",
+        "default": "./dist/esm/storage-node.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/storage-node.d.ts",
+        "default": "./dist/commonjs/storage-node.js"
+      }
+    }
+  },
+  "main": "./dist/commonjs/index.js",
+  "types": "./dist/commonjs/index.d.ts",
+  "module": "./dist/esm/index.js"
+}

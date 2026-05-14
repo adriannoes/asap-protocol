@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import asyncio
 import time
-import uuid
 from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Any
@@ -19,6 +18,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict
 
 from asap.handlers.hitl import ApprovalDecision, ApprovalResult
+from asap.models.ids import generate_id
 
 
 class IntentType(StrEnum):
@@ -295,7 +295,7 @@ class A2HClient:
         links = {"a2a_thread": f"asap:conversation/{conversation_id}"} if conversation_id else None
         return A2HMessage(
             type=intent_type,
-            message_id=str(uuid.uuid4()),
+            message_id=generate_id(),
             agent_id=self.agent_id,
             principal_id=principal_id,
             channel=channel,

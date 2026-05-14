@@ -14,8 +14,8 @@ if (!authSecret || authSecret.length < 32) {
 }
 const secretKey = createHash('sha256').update(authSecret).digest();
 
-export async function encryptToken(token: string) {
-    return await new EncryptJWT({ token })
+export function encryptToken(token: string) {
+    return new EncryptJWT({ token })
         .setProtectedHeader({ alg: 'dir', enc: 'A256GCM' })
         .encrypt(secretKey);
 }

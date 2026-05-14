@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Literal
 
+from asap.auth.identity import HostIdentity
 from asap.models.base import ASAPBaseModel
 
 GrantStatus = Literal["active", "pending", "denied"]
@@ -245,6 +246,46 @@ class CapabilityRegistry:
                 return GrantCheckResult(allowed=False, violations=violations, grant=g)
 
         return GrantCheckResult(allowed=True, violations=[], grant=g)
+
+
+# ---------------------------------------------------------------------------
+# Capability escalation (ESC) — host policy vs requested names
+# ---------------------------------------------------------------------------
+
+
+def escalation_requires_user_consent(
+    host: HostIdentity, requested_capability_names: list[str]
+) -> bool:
+    """Return True when the host requires explicit user approval for these capability names.
+
+    Mirrors registration-time policy: inactive hosts always require approval; for active
+    hosts, any name outside :attr:`HostIdentity.default_capabilities` triggers consent.
+    """
+    if host.status != "active":
+        return True
+    defaults = set(host.default_capabilities or ())
+    return not set(requested_capability_names).issubset(defaults)
+
+
+def partition_escalation_capability_specs(
+    host: HostIdentity,
+    capability_specs: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Split capability specs into (needs_user_consent, auto_grant) buckets per host policy."""
+    needs_consent: list[dict[str, Any]] = []
+    auto_grant: list[dict[str, Any]] = []
+    for spec in capability_specs:
+        if not isinstance(spec, dict):
+            continue
+        raw_name = spec.get("name")
+        name = raw_name.strip() if isinstance(raw_name, str) else ""
+        if not name:
+            continue
+        if escalation_requires_user_consent(host, [name]):
+            needs_consent.append(dict(spec))
+        else:
+            auto_grant.append(dict(spec))
+    return needs_consent, auto_grant
 
 
 # ---------------------------------------------------------------------------

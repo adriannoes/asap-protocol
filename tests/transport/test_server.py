@@ -474,8 +474,8 @@ class TestASAPRequestHandlerHelpers:
         )
         result = handler._validate_envelope(ctx)
 
+        assert not isinstance(result, JSONResponse)
         envelope_result, payload_type = result
-        assert envelope_result is not None
         assert isinstance(envelope_result, Envelope)
         assert envelope_result.payload_type == "task.request"
         assert payload_type == "task.request"
@@ -500,9 +500,8 @@ class TestASAPRequestHandlerHelpers:
         )
         result = handler._validate_envelope(ctx)
 
-        envelope_result, error_response = result
-        assert envelope_result is None
-        assert isinstance(error_response, JSONResponse)
+        assert isinstance(result, JSONResponse)
+        error_response = result
         assert error_response.status_code == 200
 
         content = bytes(error_response.body).decode()
@@ -528,9 +527,8 @@ class TestASAPRequestHandlerHelpers:
         )
         result = handler._validate_envelope(ctx)
 
-        envelope_result, error_response = result
-        assert envelope_result is None
-        assert isinstance(error_response, JSONResponse)
+        assert isinstance(result, JSONResponse)
+        error_response = result
 
         content = bytes(error_response.body).decode()
         error_data = json.loads(content)
@@ -556,9 +554,8 @@ class TestASAPRequestHandlerHelpers:
         )
         result = handler._validate_envelope(ctx)
 
-        envelope_result, error_response = result
-        assert envelope_result is None
-        assert isinstance(error_response, JSONResponse)
+        assert isinstance(result, JSONResponse)
+        error_response = result
 
         content = bytes(error_response.body).decode()
         error_data = json.loads(content)
@@ -589,9 +586,8 @@ class TestASAPRequestHandlerHelpers:
         )
         result = handler._validate_envelope(ctx)
 
-        envelope_result, error_response = result
-        assert envelope_result is None
-        assert isinstance(error_response, JSONResponse)
+        assert isinstance(result, JSONResponse)
+        error_response = result
 
         content = bytes(error_response.body).decode()
         error_data = json.loads(content)
@@ -645,8 +641,8 @@ class TestASAPRequestHandlerHelpers:
         )
         result = await handler._dispatch_to_handler(envelope, ctx)
 
+        assert not isinstance(result, JSONResponse)
         response_envelope, payload_type = result
-        assert response_envelope is not None
         assert isinstance(response_envelope, Envelope)
         assert response_envelope.payload_type == "task.response"
         assert payload_type == "task.request"
@@ -679,9 +675,8 @@ class TestASAPRequestHandlerHelpers:
         )
         result = await handler._dispatch_to_handler(envelope, ctx)
 
-        response_envelope, error_response = result
-        assert response_envelope is None
-        assert isinstance(error_response, JSONResponse)
+        assert isinstance(result, JSONResponse)
+        error_response = result
 
         content = bytes(error_response.body).decode()
         error_data = json.loads(content)
@@ -1131,6 +1126,73 @@ class TestAgentRegisterEndpoint:
         assert jwk_thumbprint_sha256(stored.public_key) == thumb
         assert stored.agent_id == data["agent_id"]
         assert stored.host_id == data["host_id"]
+
+    def test_register_browser_agent_returns_403_webauthn_when_real_verifier_configured(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: "ASAPRateLimiter | None",
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Browser-controlled registration requires WebAuthn when the real verifier is active."""
+        import importlib.util
+
+        if importlib.util.find_spec("webauthn") is None:
+            pytest.skip("webauthn extra not installed in this environment")
+
+        monkeypatch.setenv("ASAP_WEBAUTHN_RP_ID", "localhost")
+        monkeypatch.setenv("ASAP_WEBAUTHN_ORIGIN", "http://127.0.0.1")
+
+        app, _agent_store, _host_store = _app_with_identity_stores(
+            sample_manifest, isolated_rate_limiter
+        )
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        agent_jwk = ed25519_public_jwk(agent_sk)
+        token = create_host_jwt(
+            host_sk,
+            aud=_HOST_JWT_AUDIENCE,
+            agent_public_key=agent_jwk,
+            ttl_seconds=120,
+        )
+        client = TestClient(app)
+        r = client.post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"agent_controls_browser": True},
+        )
+        assert r.status_code == 403
+        assert r.json() == {"detail": "webauthn_required"}
+
+    def test_register_browser_agent_succeeds_without_webauthn_when_placeholder_verifier(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: "ASAPRateLimiter | None",
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Without RP/origin env, default verifier is placeholder — no WebAuthn gate."""
+        monkeypatch.delenv("ASAP_WEBAUTHN_RP_ID", raising=False)
+        monkeypatch.delenv("ASAP_WEBAUTHN_ORIGIN", raising=False)
+
+        app, _agent_store, _host_store = _app_with_identity_stores(
+            sample_manifest, isolated_rate_limiter
+        )
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        agent_jwk = ed25519_public_jwk(agent_sk)
+        token = create_host_jwt(
+            host_sk,
+            aud=_HOST_JWT_AUDIENCE,
+            agent_public_key=agent_jwk,
+            ttl_seconds=120,
+        )
+        client = TestClient(app)
+        r = client.post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"agent_controls_browser": True},
+        )
+        assert r.status_code == 200
+        assert r.json()["status"] == "pending"
 
     async def test_register_auto_approves_when_host_active_and_capabilities_in_defaults(
         self,

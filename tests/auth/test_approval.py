@@ -27,7 +27,7 @@ from asap.auth.identity import (
     jwk_thumbprint_sha256,
 )
 from asap.handlers.hitl import ApprovalDecision, ApprovalResult
-from asap.transport.agent_routes import _background_a2h_resolve
+from asap.transport.agent_routes import background_a2h_resolve
 from tests.crypto.jwk_helpers import make_ed25519_jwk
 
 
@@ -165,7 +165,7 @@ async def test_approval_object_expires_in_reflects_remaining_seconds(
 async def test_background_a2h_resolve_swallows_provider_errors() -> None:
     ch = MagicMock(spec=A2HApprovalChannel)
     ch.resolve_via_a2h = AsyncMock(side_effect=RuntimeError("a2h unavailable"))
-    await _background_a2h_resolve(
+    await background_a2h_resolve(
         ch,
         "agent-z",
         context="ctx",

@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import uuid
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -36,12 +35,32 @@ from asap.economics.metering import (
     UsageSummary,
 )
 from asap.models.base import ASAPBaseModel
+from asap.models.ids import generate_id
 
 UsageAggregate = Union[
     UsageAggregateByAgent,
     UsageAggregateByConsumer,
     UsageAggregateByPeriod,
 ]
+
+
+_VALID_GROUP_BY = ("agent", "consumer", "day", "week")
+
+
+def _dispatch_aggregate(events: list[UsageMetrics], group_by: str) -> list[UsageAggregate]:
+    """Dispatch aggregation by ``group_by`` and widen the concrete result to ``UsageAggregate``.
+
+    Python's invariant ``list`` means a ``list[UsageAggregateByAgent]`` is not assignable to
+    ``list[UsageAggregate]`` even though the element types are compatible; the single ``cast``
+    centralized here is what the type system needs. Invalid ``group_by`` raises ``ValueError``.
+    """
+    if group_by == "agent":
+        return cast("list[UsageAggregate]", _aggregate_by_agent(events))
+    if group_by == "consumer":
+        return cast("list[UsageAggregate]", _aggregate_by_consumer(events))
+    if group_by in ("day", "week"):
+        return cast("list[UsageAggregate]", _aggregate_by_period(events, group_by))
+    raise ValueError(f"group_by must be one of {_VALID_GROUP_BY!r}; got {group_by!r}")
 
 
 class MeteringQuery(ASAPBaseModel):
@@ -266,17 +285,7 @@ class InMemoryMeteringStorage(MeteringStorageBase):
                 offset=0,
             )
             events = _apply_query_filters(events, agg_filters)
-        if group_by == "agent":
-            return cast(list[UsageAggregate], _aggregate_by_agent(events))
-        if group_by == "consumer":
-            return cast(list[UsageAggregate], _aggregate_by_consumer(events))
-        if group_by == "day":
-            return cast(list[UsageAggregate], _aggregate_by_period(events, "day"))
-        if group_by == "week":
-            return cast(list[UsageAggregate], _aggregate_by_period(events, "week"))
-        raise ValueError(
-            f"group_by must be one of 'agent', 'consumer', 'day', 'week'; got {group_by!r}"
-        )
+        return _dispatch_aggregate(events, group_by)
 
     async def summary(self, filters: MeteringQuery | None = None) -> UsageSummary:
         """Return dashboard summary, optionally filtered."""
@@ -401,7 +410,6 @@ def _period_to_metering_query(agent_id: str, period: str) -> MeteringQuery | Non
 # SQLite storage constants (aligned with state layer for shared DB).
 _DEFAULT_DB_PATH = "asap_state.db"
 # Safe to use in f-strings: compile-time constant, never user-controlled (no SQL injection).
-_USAGE_EVENTS_TABLE = "usage_events"
 
 
 async def _apply_wal_pragmas(conn: aiosqlite.Connection) -> None:
@@ -477,8 +485,8 @@ class SQLiteMeteringStorage(MeteringStorageBase):
 
     async def _ensure_table(self, conn: aiosqlite.Connection) -> None:
         await conn.execute(
-            f"""
-            CREATE TABLE IF NOT EXISTS {_USAGE_EVENTS_TABLE} (
+            """
+            CREATE TABLE IF NOT EXISTS usage_events (
                 id TEXT PRIMARY KEY,
                 task_id TEXT NOT NULL,
                 agent_id TEXT NOT NULL,
@@ -489,15 +497,15 @@ class SQLiteMeteringStorage(MeteringStorageBase):
             """
         )
         await conn.execute(
-            f"""
+            """
             CREATE INDEX IF NOT EXISTS idx_usage_agent_timestamp
-            ON {_USAGE_EVENTS_TABLE} (agent_id, timestamp)
+            ON usage_events (agent_id, timestamp)
             """
         )
         await conn.execute(
-            f"""
+            """
             CREATE INDEX IF NOT EXISTS idx_usage_consumer_timestamp
-            ON {_USAGE_EVENTS_TABLE} (consumer_id, timestamp)
+            ON usage_events (consumer_id, timestamp)
             """
         )
         await conn.commit()
@@ -513,17 +521,31 @@ class SQLiteMeteringStorage(MeteringStorageBase):
     async def _record_impl(self, metrics: UsageMetrics) -> None:
         async with self._connect() as conn:
             await self._ensure_table_once(conn)
-            event_id = f"evt_{uuid.uuid4().hex}"
+            event_id = f"evt_{generate_id()}"
             row = _metrics_to_row(metrics, event_id)
             await conn.execute(
-                f"""
-                INSERT INTO {_USAGE_EVENTS_TABLE}
+                """
+                INSERT INTO usage_events
                 (id, task_id, agent_id, consumer_id, metrics, timestamp)
                 VALUES (?, ?, ?, ?, ?, ?)
-                """,  # nosec B608 - table name is module constant, values parameterized
+                """,
                 row,
             )
             await conn.commit()
+
+    # Closed set of WHERE clause fragments. Each appends ``?`` placeholders; values are
+    # bound via the ``params`` list, never interpolated. Keeping this as a module-level
+    # frozenset lets the dynamic-SQL builder below assert no unexpected fragment can leak
+    # into the final query even if a future edit forgets to parameterize.
+    _ALLOWED_QUERY_FRAGMENTS: frozenset[str] = frozenset(
+        {
+            "agent_id = ?",
+            "consumer_id = ?",
+            "task_id = ?",
+            "timestamp >= ?",
+            "timestamp <= ?",
+        }
+    )
 
     async def _query_impl(self, filters: MeteringQuery) -> list[UsageMetrics]:
         async with self._connect() as conn:
@@ -545,14 +567,17 @@ class SQLiteMeteringStorage(MeteringStorageBase):
             if filters.end is not None:
                 conditions.append("timestamp <= ?")
                 params.append(filters.end.isoformat())
+            assert all(c in self._ALLOWED_QUERY_FRAGMENTS for c in conditions), (
+                "unexpected WHERE fragment"
+            )
             where = " AND ".join(conditions) if conditions else "1=1"
             sql = f"""
                 SELECT id, task_id, agent_id, consumer_id, metrics, timestamp
-                FROM {_USAGE_EVENTS_TABLE}
+                FROM usage_events
                 WHERE {where}
                 ORDER BY timestamp
                 LIMIT ? OFFSET ?
-            """  # nosec B608 - table name is module constant, where built from fixed keys
+            """  # nosec B608 - ``where`` is assembled from _ALLOWED_QUERY_FRAGMENTS only; values parameterized
             limit_val = filters.limit if filters.limit is not None else -1
             params.extend([limit_val, filters.offset])
             cursor = await conn.execute(sql, params)
@@ -579,25 +604,15 @@ class SQLiteMeteringStorage(MeteringStorageBase):
             async with self._connect() as conn:
                 await self._ensure_table_once(conn)
                 cursor = await conn.execute(
-                    f"""
+                    """
                     SELECT id, task_id, agent_id, consumer_id, metrics, timestamp
-                    FROM {_USAGE_EVENTS_TABLE}
+                    FROM usage_events
                     ORDER BY timestamp
-                    """,  # nosec B608 - table name is module constant
+                    """,
                 )
                 rows = await cursor.fetchall()
             events = [_row_to_metrics(tuple(r)) for r in rows]
-        if group_by == "agent":
-            return cast(list[UsageAggregate], _aggregate_by_agent(events))
-        if group_by == "consumer":
-            return cast(list[UsageAggregate], _aggregate_by_consumer(events))
-        if group_by == "day":
-            return cast(list[UsageAggregate], _aggregate_by_period(events, "day"))
-        if group_by == "week":
-            return cast(list[UsageAggregate], _aggregate_by_period(events, "week"))
-        raise ValueError(
-            f"group_by must be one of 'agent', 'consumer', 'day', 'week'; got {group_by!r}"
-        )
+        return _dispatch_aggregate(events, group_by)
 
     async def record(self, metrics: UsageMetrics) -> None:
         """Record a usage event."""
@@ -632,11 +647,11 @@ class SQLiteMeteringStorage(MeteringStorageBase):
             async with self._connect() as conn:
                 await self._ensure_table_once(conn)
                 cursor = await conn.execute(
-                    f"""
+                    """
                     SELECT id, task_id, agent_id, consumer_id, metrics, timestamp
-                    FROM {_USAGE_EVENTS_TABLE}
+                    FROM usage_events
                     ORDER BY timestamp
-                    """,  # nosec B608 - table name is module constant
+                    """,
                 )
                 rows = await cursor.fetchall()
             events = [_row_to_metrics(tuple(r)) for r in rows]
@@ -651,10 +666,10 @@ class SQLiteMeteringStorage(MeteringStorageBase):
         async with self._connect() as conn:
             await self._ensure_table_once(conn)
             cursor = await conn.execute(
-                f"""
+                """
                 SELECT COUNT(*), MIN(timestamp)
-                FROM {_USAGE_EVENTS_TABLE}
-                """,  # nosec B608 - table name is module constant
+                FROM usage_events
+                """,
             )
             row = await cursor.fetchone()
         count = row[0] if row and row[0] is not None else 0
@@ -683,10 +698,10 @@ class SQLiteMeteringStorage(MeteringStorageBase):
         async with self._connect() as conn:
             await self._ensure_table_once(conn)
             cursor = await conn.execute(
-                f"""
-                DELETE FROM {_USAGE_EVENTS_TABLE}
+                """
+                DELETE FROM usage_events
                 WHERE timestamp < ?
-                """,  # nosec B608 - table name is module constant, values parameterized
+                """,
                 (cutoff_str,),
             )
             deleted = cursor.rowcount if cursor.rowcount is not None else 0

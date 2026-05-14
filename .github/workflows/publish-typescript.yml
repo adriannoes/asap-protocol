@@ -1,0 +1,103 @@
+# Tags v2.3.* → npm publish --provenance (OIDC). PRs → npm publish --dry-run.
+name: Publish TypeScript SDK
+
+on:
+  push:
+    tags:
+      - "v2.3.*"
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/typescript/client/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/publish-typescript.yml"
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: publish-typescript-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    name: npm publish dry-run
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build @asap-protocol/client (tshy)
+        run: pnpm --filter @asap-protocol/client run build
+
+      - name: npm publish --dry-run
+        working-directory: packages/typescript/client
+        run: npm publish --dry-run --access public
+
+  publish:
+    name: Publish to npm
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 9.15.4
+
+      # No registry-url: avoid setup-node defaulting NODE_AUTH_TOKEN to GITHUB_TOKEN,
+      # which npm rejects for registry.npmjs.org and breaks OIDC Trusted Publishing.
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          # Trusted Publishing requires Node ≥22.14 and npm CLI ≥11.5.1 (npm docs).
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Upgrade npm for Trusted Publishing (OIDC)
+        run: npm install -g npm@11.5.1
+
+      - name: Set package version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          npm pkg set "version=${VERSION}" --prefix packages/typescript/client
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build @asap-protocol/client (tshy)
+        run: pnpm --filter @asap-protocol/client run build
+
+      - name: Publish to npm with provenance
+        working-directory: packages/typescript/client
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [[ "${VERSION}" == *-* ]]; then
+            npm publish --access public --provenance --tag rc
+          else
+            npm publish --access public --provenance
+          fi

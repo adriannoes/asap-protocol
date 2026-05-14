@@ -7,7 +7,7 @@ nonce validation for duplicate detection.
 
 from __future__ import annotations
 
-import random
+import secrets
 import threading
 import time
 from datetime import datetime, timezone
@@ -177,7 +177,10 @@ class InMemoryNonceStore:
 
     def _cleanup_expired(self) -> None:
         # Always cleanup when over cap; otherwise run with probability to bound memory.
-        if len(self._store) <= _MAX_NONCE_STORE_SIZE and random.random() >= _CLEANUP_PROBABILITY:  # nosec B311
+        if (
+            len(self._store) <= _MAX_NONCE_STORE_SIZE
+            and secrets.SystemRandom().random() >= _CLEANUP_PROBABILITY
+        ):
             return
         now = time.time()
         expired = [nonce for nonce, expiry in self._store.items() if expiry < now]

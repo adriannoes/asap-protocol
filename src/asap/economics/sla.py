@@ -20,7 +20,6 @@ Example:
 from __future__ import annotations
 
 import re
-import uuid
 from datetime import datetime, timezone
 from typing import Awaitable, Callable, Literal, Protocol, Union, runtime_checkable
 
@@ -28,6 +27,7 @@ from pydantic import Field
 
 from asap.models.base import ASAPBaseModel
 from asap.models.entities import SLADefinition
+from asap.models.ids import generate_id
 
 
 @runtime_checkable
@@ -307,7 +307,7 @@ class BreachDetector:
         recorded: list[SLABreach] = []
         for cond in conditions:
             breach = SLABreach(
-                id=f"breach_{uuid.uuid4().hex}",
+                id=f"breach_{generate_id()}",
                 agent_id=agent_id,
                 breach_type=cond.breach_type,
                 threshold=cond.threshold,

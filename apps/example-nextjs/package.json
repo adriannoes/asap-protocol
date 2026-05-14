@@ -1,0 +1,29 @@
+{
+  "name": "example-nextjs",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3010",
+    "build": "pnpm --filter @asap-protocol/client run build && next build",
+    "start": "next start --port 3010",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^3.0.58",
+    "@ai-sdk/react": "^3.0.176",
+    "@asap-protocol/client": "workspace:*",
+    "ai": "^6.0.174",
+    "next": "16.2.4",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "zod": "^4.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.4",
+    "typescript": "^5.8.3"
+  }
+}

@@ -11,6 +11,7 @@ ASAP uses HTTP as the transport layer with JSON-RPC 2.0 as the message framing p
 - **Standard HTTP semantics**: Familiar request/response model
 - **JSON-RPC 2.0**: Structured RPC with error handling and correlation
 - **Agent Discovery**: Well-known manifest endpoint for capability discovery
+- **ASAP HTTP challenge**: Optional `WWW-Authenticate: ASAP discovery="..."` on selected 401 responses — see [ASAP challenge](./transport/asap-challenge.md)
 
 ---
 

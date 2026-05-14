@@ -21,8 +21,11 @@ from asap.auth.self_auth import (
     PlaceholderWebAuthnVerifier,
     WebAuthnVerifier,
     check_fresh_session,
+    check_webauthn_for_approval_path,
+    default_webauthn_verifier,
     fresh_session_violation_detail,
     host_jwt_issued_at_seconds,
+    uses_real_webauthn_verifier,
     verify_webauthn_if_required,
     webauthn_required_capability_names,
 )
@@ -170,20 +173,95 @@ async def test_verify_webauthn_success_with_placeholder() -> None:
     cfg = FreshSessionConfig(require_webauthn_for=["admin.task"])
     v = PlaceholderWebAuthnVerifier()
     body: dict[str, Any] = {"webauthn": {"challenge": "c1", "response": {}}}
-    err = await verify_webauthn_if_required(["admin.task"], body, cfg, v)
+    err = await verify_webauthn_if_required(["admin.task"], body, cfg, v, host_id="urn:asap:host:x")
     assert err is None
 
 
 @pytest.mark.asyncio
 async def test_verify_webauthn_failure_when_verifier_rejects() -> None:
     class _Reject(WebAuthnVerifier):
-        async def verify(self, _challenge: str, _response: Any) -> bool:
+        async def verify(
+            self,
+            _challenge: str,
+            _response: Any,
+            *,
+            host_id: str | None = None,
+            require_user_verification: bool = False,
+        ) -> bool:
             return False
 
     cfg = FreshSessionConfig(require_webauthn_for=["admin.task"])
     body: dict[str, Any] = {"webauthn": {"challenge": "c1", "response": {}}}
-    err = await verify_webauthn_if_required(["admin.task"], body, cfg, _Reject())
+    err = await verify_webauthn_if_required(
+        ["admin.task"], body, cfg, _Reject(), host_id="urn:asap:host:x"
+    )
     assert err is not None
+
+
+@pytest.mark.asyncio
+async def test_check_webauthn_browser_gate_returns_403_without_payload() -> None:
+    class _Real(WebAuthnVerifier):
+        __asap_performs_real_webauthn__ = True
+
+        async def verify(
+            self,
+            _c: str,
+            _r: Any,
+            *,
+            host_id: str | None = None,
+            require_user_verification: bool = False,
+        ) -> bool:
+            return True
+
+    v = _Real()
+    assert uses_real_webauthn_verifier(v) is True
+    r = await check_webauthn_for_approval_path(
+        [],
+        {},
+        None,
+        v,
+        host_id="urn:asap:host:1",
+        agent_controls_browser=True,
+    )
+    assert r.detail is not None
+    assert r.http_status == 403
+
+
+def test_placeholder_not_real_webauthn() -> None:
+    assert uses_real_webauthn_verifier(PlaceholderWebAuthnVerifier()) is False
+
+
+def test_default_webauthn_verifier_is_placeholder_without_extra(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("asap.auth.self_auth._webauthn_extra_installed", lambda: False)
+    v = default_webauthn_verifier()
+    assert isinstance(v, PlaceholderWebAuthnVerifier)
+
+
+def test_default_webauthn_verifier_is_placeholder_when_rp_env_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("asap.auth.self_auth._webauthn_extra_installed", lambda: True)
+    monkeypatch.delenv("ASAP_WEBAUTHN_RP_ID", raising=False)
+    monkeypatch.delenv("ASAP_WEBAUTHN_ORIGIN", raising=False)
+    v = default_webauthn_verifier()
+    assert isinstance(v, PlaceholderWebAuthnVerifier)
+
+
+def test_default_webauthn_verifier_real_when_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+    import importlib.util
+
+    if importlib.util.find_spec("webauthn") is None:
+        pytest.skip("webauthn extra not installed in this environment")
+    monkeypatch.setattr("asap.auth.self_auth._webauthn_extra_installed", lambda: True)
+    monkeypatch.setenv("ASAP_WEBAUTHN_RP_ID", "localhost")
+    monkeypatch.setenv("ASAP_WEBAUTHN_ORIGIN", "http://localhost:8000")
+    from asap.auth.webauthn import WebAuthnSelfAuthVerifier
+
+    v = default_webauthn_verifier()
+    assert isinstance(v, WebAuthnSelfAuthVerifier)
+    assert isinstance(v, WebAuthnVerifier)
 
 
 def test_select_browser_controls_forces_ciba_despite_device_hint() -> None:

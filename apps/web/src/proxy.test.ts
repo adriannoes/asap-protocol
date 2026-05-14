@@ -53,6 +53,16 @@ describe('proxy (middleware)', () => {
             const res = (await proxy(req, middlewareContext)) as Response;
             expect(res.status).toBe(200);
         });
+
+        it('allows localhost with a different port when NODE_ENV is development', async () => {
+            vi.stubEnv('NODE_ENV', 'development');
+            const { default: proxy } = await import('@/proxy');
+            const req = createRequest('/api/health-check', { origin: 'http://localhost:3001' });
+            const res = (await proxy(req, middlewareContext)) as Response;
+            expect(res.status).toBe(200);
+            expect(res.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:3001');
+            vi.unstubAllEnvs();
+        });
     });
 
     describe('/api/fixtures excluded from strict CORS (server-side fetch)', () => {

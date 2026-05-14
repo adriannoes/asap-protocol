@@ -37,10 +37,6 @@ class TokenDetail:
 
 # Same default DB path as metering for a single shared SQLite file.
 _DEFAULT_DB_PATH = "asap_state.db"
-_REVOCATIONS_TABLE = "revocations"
-_ISSUED_TABLE = "issued_delegations"
-
-
 # Maximum cascade depth to prevent stack overflow / DoS from circular chains.
 _MAX_CASCADE_DEPTH = 50
 
@@ -227,8 +223,8 @@ class SQLiteDelegationStorage(DelegationStorageBase):
         if self._initialized:
             return
         await conn.execute(
-            f"""
-            CREATE TABLE IF NOT EXISTS {_REVOCATIONS_TABLE} (
+            """
+            CREATE TABLE IF NOT EXISTS revocations (
                 id TEXT PRIMARY KEY,
                 revoked_at TEXT NOT NULL,
                 reason TEXT
@@ -236,14 +232,14 @@ class SQLiteDelegationStorage(DelegationStorageBase):
             """
         )
         await conn.execute(
-            f"""
+            """
             CREATE INDEX IF NOT EXISTS idx_revocations_revoked_at
-            ON {_REVOCATIONS_TABLE} (revoked_at)
+            ON revocations (revoked_at)
             """
         )
         await conn.execute(
-            f"""
-            CREATE TABLE IF NOT EXISTS {_ISSUED_TABLE} (
+            """
+            CREATE TABLE IF NOT EXISTS issued_delegations (
                 id TEXT PRIMARY KEY,
                 delegator_urn TEXT NOT NULL,
                 delegate_urn TEXT,
@@ -252,17 +248,17 @@ class SQLiteDelegationStorage(DelegationStorageBase):
             """
         )
         await conn.execute(
-            f"""
+            """
             CREATE INDEX IF NOT EXISTS idx_issued_delegator
-            ON {_ISSUED_TABLE} (delegator_urn)
+            ON issued_delegations (delegator_urn)
             """
         )
         # Migrate existing DBs: add delegate_urn if missing (for cascade).
-        cursor = await conn.execute(f"PRAGMA table_info({_ISSUED_TABLE})")
+        cursor = await conn.execute("PRAGMA table_info(issued_delegations)")
         rows = await cursor.fetchall()
         columns = [row[1] for row in rows] if rows else []
         if "delegate_urn" not in columns:
-            await conn.execute(f"ALTER TABLE {_ISSUED_TABLE} ADD COLUMN delegate_urn TEXT")
+            await conn.execute("ALTER TABLE issued_delegations ADD COLUMN delegate_urn TEXT")
         await conn.commit()
         self._initialized = True
 
@@ -275,8 +271,8 @@ class SQLiteDelegationStorage(DelegationStorageBase):
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
             await conn.execute(
-                f"""
-                INSERT OR REPLACE INTO {_REVOCATIONS_TABLE} (id, revoked_at, reason)
+                """
+                INSERT OR REPLACE INTO revocations (id, revoked_at, reason)
                 VALUES (?, ?, ?)
                 """,
                 (token_id, now, reason),
@@ -287,9 +283,9 @@ class SQLiteDelegationStorage(DelegationStorageBase):
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
             cursor = await conn.execute(
-                f"""
-                SELECT 1 FROM {_REVOCATIONS_TABLE} WHERE id = ?
-                """,  # nosec B608 - table name is module constant, values parameterized
+                """
+                SELECT 1 FROM revocations WHERE id = ?
+                """,
                 (token_id,),
             )
             row = await cursor.fetchone()
@@ -305,8 +301,8 @@ class SQLiteDelegationStorage(DelegationStorageBase):
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
             await conn.execute(
-                f"""
-                INSERT OR REPLACE INTO {_ISSUED_TABLE} (id, delegator_urn, delegate_urn, created_at)
+                """
+                INSERT OR REPLACE INTO issued_delegations (id, delegator_urn, delegate_urn, created_at)
                 VALUES (?, ?, ?, ?)
                 """,
                 (token_id, delegator_urn, delegate_urn, now),
@@ -317,9 +313,9 @@ class SQLiteDelegationStorage(DelegationStorageBase):
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
             cursor = await conn.execute(
-                f"""
-                SELECT delegator_urn FROM {_ISSUED_TABLE} WHERE id = ?
-                """,  # nosec B608 - table name is module constant, values parameterized
+                """
+                SELECT delegator_urn FROM issued_delegations WHERE id = ?
+                """,
                 (token_id,),
             )
             row = await cursor.fetchone()
@@ -329,9 +325,9 @@ class SQLiteDelegationStorage(DelegationStorageBase):
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
             cursor = await conn.execute(
-                f"""
-                SELECT delegate_urn FROM {_ISSUED_TABLE} WHERE id = ?
-                """,  # nosec B608 - table name is module constant, values parameterized
+                """
+                SELECT delegate_urn FROM issued_delegations WHERE id = ?
+                """,
                 (token_id,),
             )
             row = await cursor.fetchone()
@@ -341,9 +337,9 @@ class SQLiteDelegationStorage(DelegationStorageBase):
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
             cursor = await conn.execute(
-                f"""
-                SELECT id FROM {_ISSUED_TABLE} WHERE delegator_urn = ?
-                """,  # nosec B608 - table name is module constant, values parameterized
+                """
+                SELECT id FROM issued_delegations WHERE delegator_urn = ?
+                """,
                 (delegator_urn,),
             )
             rows = await cursor.fetchall()
@@ -361,11 +357,11 @@ class SQLiteDelegationStorage(DelegationStorageBase):
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
             cursor = await conn.execute(
-                f"""
-                SELECT id, delegate_urn, created_at FROM {_ISSUED_TABLE}
+                """
+                SELECT id, delegate_urn, created_at FROM issued_delegations
                 WHERE delegator_urn = ?
                 ORDER BY created_at DESC
-                """,  # nosec B608 - table name is module constant, values parameterized
+                """,
                 (delegator_urn,),
             )
             rows = await cursor.fetchall()
@@ -382,9 +378,9 @@ class SQLiteDelegationStorage(DelegationStorageBase):
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
             cursor = await conn.execute(
-                f"""
-                SELECT created_at FROM {_ISSUED_TABLE} WHERE id = ?
-                """,  # nosec B608 - table name is module constant, values parameterized
+                """
+                SELECT created_at FROM issued_delegations WHERE id = ?
+                """,
                 (token_id,),
             )
             row = await cursor.fetchone()
@@ -394,9 +390,9 @@ class SQLiteDelegationStorage(DelegationStorageBase):
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
             cursor = await conn.execute(
-                f"""
-                SELECT revoked_at FROM {_REVOCATIONS_TABLE} WHERE id = ?
-                """,  # nosec B608 - table name is module constant, values parameterized
+                """
+                SELECT revoked_at FROM revocations WHERE id = ?
+                """,
                 (token_id,),
             )
             row = await cursor.fetchone()
@@ -408,9 +404,13 @@ class SQLiteDelegationStorage(DelegationStorageBase):
             return {}
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
+            # ``placeholders`` is built from ``len(token_ids)`` and can only contain ``?`` and
+            # ``,``; every value comes through the tuple passed to ``execute``. SQLite does
+            # not support binding a list to a single parameter, so dynamic SQL is required.
             placeholders = ",".join("?" for _ in token_ids)
+            assert set(placeholders) <= {"?", ","}, "placeholders must be `?,?,…` only"
             cursor = await conn.execute(
-                f"SELECT id FROM {_REVOCATIONS_TABLE} WHERE id IN ({placeholders})",  # nosec B608
+                f"SELECT id FROM revocations WHERE id IN ({placeholders})",  # nosec B608 - placeholders asserted to be `?,?,…`; values parameterized
                 token_ids,
             )
             revoked_rows = await cursor.fetchall()
@@ -422,13 +422,13 @@ class SQLiteDelegationStorage(DelegationStorageBase):
         async with aiosqlite.connect(self._db_path) as conn:
             await self._ensure_tables(conn)
             cursor = await conn.execute(
-                f"""
+                """
                 SELECT i.id, i.delegator_urn, i.delegate_urn, i.created_at,
                        r.revoked_at
-                FROM {_ISSUED_TABLE} i
-                LEFT JOIN {_REVOCATIONS_TABLE} r ON i.id = r.id
+                FROM issued_delegations i
+                LEFT JOIN revocations r ON i.id = r.id
                 WHERE i.id = ?
-                """,  # nosec B608 - table name is module constant, values parameterized
+                """,
                 (token_id,),
             )
             row = await cursor.fetchone()

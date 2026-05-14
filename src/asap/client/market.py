@@ -25,7 +25,7 @@ from asap.models.constants import ASAP_PROTOCOL_VERSION
 from asap.models.envelope import Envelope
 from asap.models.entities import Manifest
 from asap.models.ids import generate_id
-from asap.models.payloads import TaskRequest
+from asap.models.payloads import TaskRequest, TaskResponse
 from asap.observability import get_logger
 from asap.transport.client import ASAPClient
 
@@ -122,7 +122,26 @@ class ResolvedAgent:
         payload: dict[str, Any],
         auth_token: str | None = None,
     ) -> dict[str, Any]:
-        """Send task.request; return result dict. Uses client sender_urn and auth_token (or override)."""
+        """Send a ``task.request`` envelope and return the ``TaskResponse.result`` dict.
+
+        Contract (v2.2.1, formalizing PR-73 follow-up):
+
+        - The remote agent MUST respond with a ``task.response`` envelope whose payload is a
+          :class:`~asap.models.payloads.TaskResponse`. The ``result`` field is returned as a
+          ``dict[str, Any]``; when the server leaves ``result`` unset (``None``), an empty dict
+          is returned so callers can safely index into it.
+        - If the response payload is **not** a ``TaskResponse``, a :class:`TypeError` is raised
+          so protocol violations surface at the call site instead of being silently coerced
+          into a dict. Callers that need the full envelope (status, ``task_id``, metrics,
+          ``final_state``) should use :class:`~asap.transport.client.ASAPClient` directly.
+
+        Args:
+            payload: The ``TaskRequest`` payload as a plain dict (validated before sending).
+            auth_token: Optional bearer token override; falls back to the client default.
+
+        Returns:
+            The unwrapped ``TaskResponse.result`` dict (possibly empty).
+        """
         task_request = TaskRequest.model_validate(payload)
         sender = self.client.sender_urn
         envelope = Envelope(
@@ -143,8 +162,9 @@ class ResolvedAgent:
             response_envelope = await transport.send(envelope)
 
         resp_payload = response_envelope.payload
-        if hasattr(resp_payload, "result") and resp_payload.result is not None:
-            return resp_payload.result
-        if hasattr(resp_payload, "model_dump"):
-            return resp_payload.model_dump()
-        return dict(resp_payload) if isinstance(resp_payload, dict) else {"result": resp_payload}
+        if not isinstance(resp_payload, TaskResponse):
+            raise TypeError(
+                f"expected TaskResponse payload from {self.entry.id}, "
+                f"got {type(resp_payload).__name__}"
+            )
+        return resp_payload.result or {}

@@ -23,18 +23,13 @@ import json
 from pathlib import Path
 from typing import Any
 
-import pytest
 
-# Try to import jsonschema for validation
-try:
-    import jsonschema
-    from jsonschema import Draft7Validator, ValidationError
-
-    HAS_JSONSCHEMA = True
-except ImportError:
-    HAS_JSONSCHEMA = False
-    Draft7Validator = None
-    ValidationError = Exception
+# ``jsonschema`` is a core dependency (see pyproject.toml); the defensive ``HAS_JSONSCHEMA``
+# guard was historical. It is imported unconditionally so test coverage reflects the
+# real runtime graph and missing-dep regressions surface as import errors in CI instead
+# of silent skips.
+import jsonschema
+from jsonschema import Draft7Validator
 
 
 # Note: Rate limiting is automatically disabled for all tests in this package
@@ -73,8 +68,6 @@ def validate_data(data: dict[str, Any], schema: dict[str, Any]) -> bool:
     Returns:
         True if valid, raises ValidationError if invalid
     """
-    if not HAS_JSONSCHEMA:
-        pytest.skip("jsonschema not installed")
     jsonschema.validate(data, schema)
     return True
 
@@ -89,8 +82,6 @@ def is_valid(data: dict[str, Any], schema: dict[str, Any]) -> bool:
     Returns:
         True if valid, False if invalid
     """
-    if not HAS_JSONSCHEMA:
-        pytest.skip("jsonschema not installed")
     validator = Draft7Validator(schema)
     result: bool = validator.is_valid(data)
     return result
@@ -242,7 +233,6 @@ V100_MANIFEST_DATA = {
 }
 
 
-@pytest.mark.skipif(not HAS_JSONSCHEMA, reason="jsonschema not installed")
 class TestEnvelopeSchemaBackwardCompatibility:
     """Tests for envelope schema backward compatibility."""
 
@@ -274,7 +264,6 @@ class TestEnvelopeSchemaBackwardCompatibility:
         assert validate_data(minimal_envelope, schema)
 
 
-@pytest.mark.skipif(not HAS_JSONSCHEMA, reason="jsonschema not installed")
 class TestTaskRequestSchemaBackwardCompatibility:
     """Tests for TaskRequest schema backward compatibility."""
 
@@ -304,7 +293,6 @@ class TestTaskRequestSchemaBackwardCompatibility:
         assert validate_data(minimal_request, schema)
 
 
-@pytest.mark.skipif(not HAS_JSONSCHEMA, reason="jsonschema not installed")
 class TestTaskResponseSchemaBackwardCompatibility:
     """Tests for TaskResponse schema backward compatibility."""
 
@@ -333,7 +321,6 @@ class TestTaskResponseSchemaBackwardCompatibility:
             assert validate_data(response, schema), f"Status '{status}' should be valid"
 
 
-@pytest.mark.skipif(not HAS_JSONSCHEMA, reason="jsonschema not installed")
 class TestManifestSchemaBackwardCompatibility:
     """Tests for Manifest schema backward compatibility."""
 
@@ -366,7 +353,6 @@ class TestManifestSchemaBackwardCompatibility:
         assert validate_data(minimal_manifest, schema)
 
 
-@pytest.mark.skipif(not HAS_JSONSCHEMA, reason="jsonschema not installed")
 class TestSchemaForwardCompatibility:
     """Tests for forward compatibility (old clients reading new data)."""
 
@@ -438,7 +424,6 @@ class TestSchemaForwardCompatibility:
         assert validate_data(envelope_with_future_payload, schema)
 
 
-@pytest.mark.skipif(not HAS_JSONSCHEMA, reason="jsonschema not installed")
 class TestSchemaEvolutionPatterns:
     """Tests for common schema evolution patterns."""
 
@@ -513,7 +498,6 @@ class TestSchemaEvolutionPatterns:
         assert not is_valid(invalid_envelope_2, schema)
 
 
-@pytest.mark.skipif(not HAS_JSONSCHEMA, reason="jsonschema not installed")
 class TestTypeConstraintPreservation:
     """Tests for type constraint preservation across versions."""
 
@@ -566,7 +550,6 @@ class TestTypeConstraintPreservation:
         assert validate_data(manifest_with_skills, schema)
 
 
-@pytest.mark.skipif(not HAS_JSONSCHEMA, reason="jsonschema not installed")
 class TestCrossVersionDataExchange:
     """Tests for data exchange between different protocol versions."""
 

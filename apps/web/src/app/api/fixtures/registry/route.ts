@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { asapVersionForFixtureIndex } from '@/lib/protocol-versions';
+
 const MAX_FIXTURE_AGENTS = 2000;
 
 function buildFixtureAgents(count: number): Record<string, unknown>[] {
@@ -17,7 +19,7 @@ function buildFixtureAgents(count: number): Record<string, unknown>[] {
         http: `https://example.com/agents/${i}/asap`,
       },
       skills: skillsPool.slice(0, 2 + (i % 3)),
-      asap_version: '1.0',
+      asap_version: asapVersionForFixtureIndex(i),
       verification: i % 5 === 0 ? { status: 'verified' } : null,
     });
   }

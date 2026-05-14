@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 from fastapi import FastAPI
@@ -11,8 +12,11 @@ from fastapi.testclient import TestClient
 from asap.discovery.registry import LiteRegistry, RegistryEntry
 from asap.integrations.vercel_ai import (
     ASAP_INVOKE_TOOL_DEF,
+    _parameters_schema_from_manifest,
+    _search_registry,
     create_asap_tools_router,
 )
+from asap.models.entities import Capability, Endpoint, Manifest, Skill
 
 TEST_URN = "urn:asap:agent:test-agent"
 TEST_HTTP = "https://agent.example.com/asap"
@@ -31,8 +35,6 @@ def _registry_entry() -> RegistryEntry:
 
 
 def _lite_registry() -> LiteRegistry:
-    from datetime import datetime, timezone
-
     return LiteRegistry(
         version="1.0",
         updated_at=datetime.now(timezone.utc),
@@ -41,7 +43,8 @@ def _lite_registry() -> LiteRegistry:
 
 
 def _signed_manifest_json() -> str:
-    from asap.models.entities import Capability, Endpoint, Manifest, Skill
+    from asap.crypto.models import SignatureBlock, SignedManifest
+    from asap.crypto.trust_levels import TrustLevel
 
     manifest = Manifest(
         id=TEST_URN,
@@ -55,8 +58,6 @@ def _signed_manifest_json() -> str:
         ),
         endpoints=Endpoint(asap=TEST_HTTP),
     )
-    from asap.crypto.models import SignatureBlock, SignedManifest
-    from asap.crypto.trust_levels import TrustLevel
 
     sig = SignatureBlock(
         alg="ed25519",
@@ -240,3 +241,203 @@ def test_api_key_value_accepts_matching_value() -> None:
     assert r.status_code == 200
     data = r.json()
     assert "tools" in data
+
+
+def test_search_registry_matches_skill_string() -> None:
+    reg = LiteRegistry(
+        version="1.0",
+        updated_at=datetime.now(timezone.utc),
+        agents=[
+            RegistryEntry(
+                id="urn:asap:agent:x",
+                name="X",
+                description="Y",
+                endpoints={"http": "https://x.example.com"},
+                skills=["deep_research"],
+                asap_version="0.1",
+            ),
+        ],
+    )
+    hits = _search_registry(reg, "research")
+    assert len(hits) == 1
+    assert hits[0]["id"] == "urn:asap:agent:x"
+
+
+def test_parameters_schema_from_manifest_branches() -> None:
+    empty = Manifest(
+        id=TEST_URN,
+        name="N",
+        version="1",
+        description="D",
+        capabilities=Capability(asap_version="0.1", skills=[], state_persistence=False),
+        endpoints=Endpoint(asap=TEST_HTTP),
+    )
+    fallback = _parameters_schema_from_manifest(empty)
+    assert fallback["type"] == "object"
+    assert "input" in fallback["properties"]
+
+    rich = Manifest(
+        id=TEST_URN,
+        name="N",
+        version="1",
+        description="D",
+        capabilities=Capability(
+            asap_version="0.1",
+            skills=[
+                Skill(
+                    id="echo",
+                    description="E",
+                    input_schema={
+                        "type": "object",
+                        "properties": {"msg": {"type": "string"}},
+                    },
+                ),
+            ],
+            state_persistence=False,
+        ),
+        endpoints=Endpoint(asap=TEST_HTTP),
+    )
+    params = _parameters_schema_from_manifest(rich)
+    assert params["properties"]["msg"]["type"] == "string"
+
+
+def test_get_tools_whitelist_appends_resolved_tools() -> None:
+    manifest = Manifest(
+        id=TEST_URN,
+        name="WL Agent",
+        version="1.0.0",
+        description="With schema",
+        capabilities=Capability(
+            asap_version="0.1",
+            skills=[
+                Skill(
+                    id="do",
+                    description="d",
+                    input_schema={"type": "object", "properties": {"a": {"type": "integer"}}},
+                ),
+            ],
+            state_persistence=False,
+        ),
+        endpoints=Endpoint(asap=TEST_HTTP),
+    )
+    mock_agent = MagicMock()
+    mock_agent.manifest = manifest
+
+    with patch("asap.integrations.vercel_ai.MarketClient") as mc_class:
+        mc_class.return_value.resolve = AsyncMock(return_value=mock_agent)
+        app = FastAPI()
+        app.include_router(
+            create_asap_tools_router(whitelist_urns=[TEST_URN]),
+            prefix="/api/asap",
+        )
+        client = TestClient(app)
+        r = client.get("/api/asap/tools")
+
+    assert r.status_code == 200
+    tools = r.json()["tools"]
+    names = [t["name"] for t in tools]
+    assert "asap_invoke" in names
+    assert f"asap_{TEST_URN.replace(':', '_').replace('.', '_')}" in names
+
+
+def test_post_invoke_agent_without_skills_returns_error() -> None:
+    manifest = Manifest(
+        id=TEST_URN,
+        name="Empty",
+        version="1.0.0",
+        description="",
+        capabilities=Capability(asap_version="0.1", skills=[], state_persistence=False),
+        endpoints=Endpoint(asap=TEST_HTTP),
+    )
+    mock_agent = MagicMock()
+    mock_agent.manifest = manifest
+
+    with patch("asap.integrations.vercel_ai.MarketClient") as mc_class:
+        mc_class.return_value.resolve = AsyncMock(return_value=mock_agent)
+        app = FastAPI()
+        app.include_router(create_asap_tools_router(), prefix="/api/asap")
+        client = TestClient(app)
+        r = client.post(
+            "/api/asap/invoke",
+            json={"urn": TEST_URN, "payload": {}},
+        )
+
+    assert r.status_code == 200
+    assert r.json().get("error") == "Agent has no skills"
+
+
+def test_post_invoke_wraps_non_dict_upstream_result() -> None:
+    manifest = Manifest(
+        id=TEST_URN,
+        name="T",
+        version="1.0.0",
+        description="",
+        capabilities=Capability(
+            asap_version="0.1",
+            skills=[Skill(id="echo", description="E")],
+            state_persistence=False,
+        ),
+        endpoints=Endpoint(asap=TEST_HTTP),
+    )
+    mock_agent = MagicMock()
+    mock_agent.manifest = manifest
+    mock_agent.run = AsyncMock(return_value="plain-result")
+
+    with patch("asap.integrations.vercel_ai.MarketClient") as mc_class:
+        mc_class.return_value.resolve = AsyncMock(return_value=mock_agent)
+        app = FastAPI()
+        app.include_router(create_asap_tools_router(), prefix="/api/asap")
+        client = TestClient(app)
+        r = client.post(
+            "/api/asap/invoke",
+            json={"urn": TEST_URN, "payload": {"input": "raw"}},
+        )
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body.get("result") == {"value": "plain-result"}
+    mock_agent.run.assert_awaited_once()
+    payload_sent = mock_agent.run.await_args.args[0]
+    assert payload_sent["skill_id"] == "echo"
+
+
+def test_post_invoke_non_dict_input_nested_value() -> None:
+    manifest = Manifest(
+        id=TEST_URN,
+        name="T",
+        version="1.0.0",
+        description="",
+        capabilities=Capability(
+            asap_version="0.1",
+            skills=[Skill(id="echo", description="E")],
+            state_persistence=False,
+        ),
+        endpoints=Endpoint(asap=TEST_HTTP),
+    )
+    mock_agent = MagicMock()
+    mock_agent.manifest = manifest
+    mock_agent.run = AsyncMock(return_value={"ok": True})
+
+    with patch("asap.integrations.vercel_ai.MarketClient") as mc_class:
+        mc_class.return_value.resolve = AsyncMock(return_value=mock_agent)
+        app = FastAPI()
+        app.include_router(create_asap_tools_router(), prefix="/api/asap")
+        client = TestClient(app)
+        r = client.post(
+            "/api/asap/invoke",
+            json={"urn": TEST_URN, "payload": {"input": 99}},
+        )
+
+    assert r.status_code == 200
+    call_kw = mock_agent.run.await_args.args[0]
+    assert call_kw["input"] == {"value": 99}
+
+
+def test_get_discover_returns_502_when_registry_fails() -> None:
+    with patch("asap.integrations.vercel_ai.get_registry", new_callable=AsyncMock) as mock_gr:
+        mock_gr.side_effect = RuntimeError("network down")
+        app = _app_with_router()
+        client = TestClient(app)
+        r = client.get("/api/asap/discover")
+
+    assert r.status_code == 502

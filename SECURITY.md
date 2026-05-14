@@ -93,9 +93,13 @@ We continuously monitor dependencies using:
 
 CI runs `pip-audit` after a sync that **excludes** the optional extras `crewai` and `llamaindex`, because those graphs currently pull transitive packages (`diskcache`, `nltk`) that OSV still lists with no fixed release on PyPI. To match the security job locally:
 
-`uv sync --frozen --all-extras --dev --no-extra crewai --no-extra llamaindex` then `uv run pip-audit --ignore-vuln CVE-2026-4539` (matches CI).
+`uv sync --frozen --all-extras --dev --no-extra crewai --no-extra llamaindex` then `uv run pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-4963 --ignore-vuln CVE-2026-2654` (matches CI).
 
-**CVE-2026-4539 (Pygments)**: OSV lists this advisory while the latest release on PyPI remains `2.19.2`. CI uses `--ignore-vuln CVE-2026-4539` until a patched `pygments` release is published; remove the flag when upgrading resolves the advisory.
+**CVE-2026-4539 (Pygments)**: CI uses `--ignore-vuln CVE-2026-4539` until a patched `pygments` release on PyPI resolves the advisory (`tool.uv.override-dependencies` prefers `pygments>=2.20.0` when resolvable).
+
+**CVE-2026-4963 / CVE-2026-2654 (smolagents, optional `[smolagents]` extra)**: OSV reports these against current PyPI releases with **no `fix_versions`/`fixed` range** yet. CI ignores them until Hugging Face publishes patched `smolagents` wheels; remove the flags when `pip-audit` is clean without them. The reference package does not import smolagents unless that extra is installed.
+
+**pip**: `tool.uv.override-dependencies` requires `pip>=26.1` so **CVE-2026-3219** (GHSA affecting pip ≤26.0.1) no longer requires a `pip-audit` ignore.
 
 If you install `[crewai]` or `[llamaindex]`, run `pip-audit` separately on that environment and expect possible advisories until upstream publishes patched releases. Integration tests for those extras still run in CI with the full dependency tree.
 
@@ -105,3 +109,24 @@ If you install `[crewai]` or `[llamaindex]`, run `pip-audit` separately on that 
 - **Version Updates**: Monthly checks for non-security updates. This project relies on [Dependabot](.github/dependabot.yml) to monitor and bump dependency versions.
 
 For more information on reviewing Dependabot PRs, see [CONTRIBUTING.md](../CONTRIBUTING.md#reviewing-dependabot-prs).
+
+## Dependency policy
+
+We pin **upper bounds** on the security- and protocol-sensitive libraries listed below to prevent silent major-version bumps through `pip install -U`. Major releases of these packages change cryptographic primitives, JWT validation semantics, or WebAuthn verification contracts — we want an explicit review before absorbing that change.
+
+| Package | Pin | Why |
+|---------|-----|-----|
+| `cryptography` | `>=46.0.7,<47` | CVE-2026-39892 / CVE-2026-34073 baseline; v47 changes serialization API (Rust backend migration) |
+| `authlib` | `>=1.6.11,<2` | GHSA-jj8c-mmj3-mmgv baseline; v2 reworks JWS header policy |
+| `joserfc` | `>=1.6.3,<2` | JWT / JWS / JWE primitives powering Host JWT verification |
+| `pyjwt` (override) | `>=2.12.0,<3` | CVE-2026-32597 baseline; v3 changes default `options` behavior for token introspection |
+| `webauthn` (optional extra) | `>=2.6,<3` | Assertion/attestation verification for SELF-002 |
+| `pydantic` | `>=2.12.5,<3` | Model validation contract across all payloads; v3 is a breaking rewrite |
+
+**Bumping a pinned upper bound**:
+1. Read the upstream release notes and diff the deprecations / security-impacting changes
+2. Run the full `pytest` + `mypy` + Compliance Harness v2 against the new major
+3. Update both `pyproject.toml` and the table above in the same PR
+4. Add a CHANGELOG entry under `### Changed` describing the audit
+
+Other dependencies (fastapi, httpx, uvicorn, structlog, opentelemetry-*) are intentionally **unpinned at the top** to keep resolution flexible for downstream consumers. Dependabot bumps are reviewed per the response-time table above, but they do not carry the same cryptographic-primitive risk.
