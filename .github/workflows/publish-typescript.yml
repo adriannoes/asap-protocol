@@ -94,4 +94,10 @@ jobs:
 
       - name: Publish to npm with provenance
         working-directory: packages/typescript/client
-        run: npm publish --access public --provenance
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [[ "${VERSION}" == *-* ]]; then
+            npm publish --access public --provenance --tag rc
+          else
+            npm publish --access public --provenance
+          fi
