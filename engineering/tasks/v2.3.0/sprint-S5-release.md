@@ -41,7 +41,7 @@
 | `uv sync --frozen --all-extras --dev --no-extra crewai --no-extra llamaindex` | OK |
 | `PYTHONPATH=src uv run pytest` | **3213 passed**, 11 skipped (~2m18s) |
 | `pnpm` (root) | `pnpm test` in `packages/typescript/client` — **Vitest green**, statements ~87.7% / lines ~90.9% coverage |
-| `uv run pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-3219` | **0 vulns** (2 CVEs ignored per SECURITY.md) |
+| `uv run pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-4963 --ignore-vuln CVE-2026-2654` | **0 vulns** (3 CVEs ignored per SECURITY.md) |
 | `uv run mypy src/ scripts/ tests/` | **Success** (396 files) |
 | `cd apps/web && npm audit` | **2 moderate** (`postcss` via `next`) — documented in CHANGELOG + release-checklist |
 | S1–S4 DoD (adoption index) | **Repo scope done**; S1 acceptance still notes **OpenAPI coverage below 90%**; S4 narrow-cov caveat documented |

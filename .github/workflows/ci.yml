@@ -178,8 +178,8 @@ jobs:
           # Omit extras whose transitive deps have no OSV fix on PyPI (diskcache, nltk).
           sync-flags: --no-extra crewai --no-extra llamaindex
       # CVE-2026-4539: pygments advisory with no patched PyPI release yet (override pins >=2.20 when available).
-      # CVE-2026-3219: pip (GHSA-58qw-9mgm-455v); OSV marks last_affected 26.0.1 — no fixed pip on PyPI yet (transitive via pip-audit→pip-api).
+      # CVE-2026-4963 / CVE-2026-2654: smolagents optional extra; OSV lists no fix version on PyPI as of 2026-05 (see SECURITY.md).
       - name: Scan for vulnerabilities (pip-audit)
-        run: uv run pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-3219
+        run: uv run pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-4963 --ignore-vuln CVE-2026-2654
       - name: Scan for security issues (bandit)
         run: uv run bandit -r src/ -ll
