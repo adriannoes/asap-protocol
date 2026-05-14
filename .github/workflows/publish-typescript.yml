@@ -69,10 +69,11 @@ jobs:
         with:
           version: 9.15.4
 
+      # No registry-url: avoid setup-node defaulting NODE_AUTH_TOKEN to GITHUB_TOKEN,
+      # which npm rejects for registry.npmjs.org and breaks OIDC Trusted Publishing.
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 20
-          registry-url: https://registry.npmjs.org
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
