@@ -18,13 +18,16 @@ from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.registry.auto_registration import (
     AutoRegistrationConfig,
     create_auto_registration_router,
+    deterministic_registration_agent_id,
     fetch_manifest_at_url,
     harness_base_url_from_manifest,
+    manifest_url_cache_key,
 )
 from asap.registry.bot_pr import BotPRResult, BotPRSettings
 from asap.testing.compliance import CheckResult, ComplianceReport
 from asap.transport.rate_limit import create_registration_rate_limiter, create_test_limiter
 from asap.transport.rate_limit import registration_token_key
+from asap.transport.server import create_app
 
 
 async def _oauth_bypass(request: Request) -> OAuth2Claims:
@@ -190,6 +193,72 @@ def test_register_agent_idempotent_cache(
     assert r2.status_code == 200
     assert r1.json() == r2.json()
     assert len(pr_calls) == 1
+
+
+def test_create_app_wires_registry_auto_registration_router(
+    manifest_https: Manifest,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Factory configuration exposes the public registry registration route."""
+    pr_calls: list[tuple[RegistryEntry, str]] = []
+
+    async def _fake_fetch(_client: object, _url: str) -> Manifest:
+        return manifest_https
+
+    async def _fake_pr(entry: RegistryEntry, url: str) -> BotPRResult:
+        pr_calls.append((entry, url))
+        return BotPRResult(pr_url="https://github.com/o/r/pull/10", branch_name="auto-reg/10")
+
+    monkeypatch.setattr(
+        "asap.registry.auto_registration.fetch_manifest_at_url",
+        _fake_fetch,
+    )
+
+    app = create_app(
+        manifest_https,
+        rate_limit="100000/minute",
+        registry_auto_registration=AutoRegistrationConfig(
+            oauth_claims_dependency=_oauth_bypass,
+            run_compliance=lambda _base: _passing_report(),
+            open_pull_request=_fake_pr,
+        ),
+        asap_challenge_enabled=False,
+    )
+    app.state.registration_limiter = create_test_limiter(
+        ["100000/hour"],
+        key_func=registration_token_key,
+    )
+
+    assert hasattr(app.state, "registration_receipt_cache")
+    assert any(getattr(route, "path", None) == "/registry/agents" for route in app.routes)
+
+    response = TestClient(app).post(
+        "/registry/agents",
+        json={"manifest_url": "https://example.com/.well-known/asap/manifest.json"},
+        headers={"Authorization": "Bearer factory-token"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["urn"] == manifest_https.id
+    assert len(pr_calls) == 1
+
+
+def test_deterministic_registration_agent_id_is_stable_and_normalized() -> None:
+    """Registration ids remain stable across whitespace-normalized retries."""
+    url = "https://example.com/.well-known/asap/manifest.json"
+
+    assert deterministic_registration_agent_id(url) == deterministic_registration_agent_id(url)
+    assert deterministic_registration_agent_id(f"  {url}  ") == deterministic_registration_agent_id(
+        url
+    )
+
+
+def test_manifest_url_cache_key_matches_registration_agent_digest() -> None:
+    """Receipt cache keys and deterministic ids share the same URL digest."""
+    url = "https://example.com/.well-known/asap/manifest.json"
+    digest = manifest_url_cache_key(url)
+
+    assert deterministic_registration_agent_id(url) == f"urn:asap:registry:auto:{digest}"
 
 
 def test_registration_rate_limit_sixth_request_429(
