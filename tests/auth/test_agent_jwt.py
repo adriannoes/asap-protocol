@@ -545,7 +545,11 @@ async def test_verify_host_jwt_invalid_signature() -> None:
     sk = Ed25519PrivateKey.generate()
     token = create_host_jwt(sk, aud="x")
     parts = token.split(".")
-    parts[2] = ("X" + parts[2][1:]) if len(parts[2]) > 1 else "XXXX"
+    sig = parts[2]
+    # Must change at least one base64url character; a fixed "X" is a no-op when
+    # the signature already starts with "X" (~1/64), which flakes in CI.
+    flip = "A" if not sig or sig[0] != "A" else "B"
+    parts[2] = flip + sig[1:] if len(sig) > 1 else flip
     bad = ".".join(parts)
     res = await verify_host_jwt(bad, InMemoryHostStore())
     assert not res.ok
