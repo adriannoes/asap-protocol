@@ -1,6 +1,6 @@
 # Tasks: v2.3.0 Adoption Multiplier — Sprint Index
 
-**Status: 🟢 SHIPPED (code & docs 2026-05-04)** — PyPI `asap-protocol==2.3.0`, npm `@asap-protocol/client@2.3.0`, tag, Docker, and GitHub Release require maintainer actions per [release-checklist.md](./release-checklist.md).
+**Status: 🟢 SHIPPED (code & docs 2026-05-04)** — PyPI `asap-protocol==2.3.0`, npm `@asap-protocol/client@2.3.0` (**live 2026-05-13**; maintainer runbook [docs/maintainers/npm-publishing.md](../../../docs/maintainers/npm-publishing.md)), tag, Docker, and GitHub Release: see [release-checklist.md](./release-checklist.md) for remaining verify steps.
 
 Based on [PRD v2.3 Adoption Multiplier](../../../product/prd/prd-v2.3-scale.md). Each sprint maps to a PR sequence.
 
@@ -20,7 +20,7 @@ Based on [PRD v2.3 Adoption Multiplier](../../../product/prd/prd-v2.3-scale.md).
 | **S2** | [TypeScript Client SDK](./sprint-S2-typescript-sdk.md) | §4.2 (TS-001..011) | P0 | 🟢 **Done (repo)** — npm `@asap-protocol/client@2.3.0` via **S5** |
 | **S3** | [Auto-Registration](./sprint-S3-auto-registration.md) | §4.3 (AUTO-001..007) | P0 | 🟢 **Done (repo)** |
 | **S4** | [Capability Escalation + ASAP Challenge](./sprint-S4-escalation-challenge.md) | §4.4 (ESC-001..004), §4.5 (CHAL-001..004) | P1/P2 | 🟢 **Done (repo)** |
-| **S5** | Release v2.3.0 | — | — | 🟡 **In progress** — [release-checklist.md](./release-checklist.md) (tag / PyPI / npm / Docker / GitHub Release manual) |
+| **S5** | Release v2.3.0 | — | — | 🟡 **In progress** — [release-checklist.md](./release-checklist.md): npm **shipped** + runbook linked (§4.3); Docker pull verify / PyPI venv verify / housekeeping |
 
 ## Dependency Graph
 
@@ -38,7 +38,7 @@ S1, S2, and S3 are independent and can run in parallel with three contributors. 
 
 - [x] **OpenAPI Adapter (repo)**: `asap.adapters.openapi` implemented (`create_from_openapi`, PetStore example `examples/openapi_petstore/`, docs `docs/adapters/openapi.md`) — see [sprint-S1-openapi-adapter.md](./sprint-S1-openapi-adapter.md). *Acceptance: sprint checklist complete; release packaging tracked separately.*
 - [ ] **OpenAPI Adapter (release)**: `asap-protocol==2.3.0` on **PyPI** includes the `[openapi]` extra and adapter surface (closes when S5 ships)
-- [ ] **TypeScript SDK**: `@asap-protocol/client@2.3.0` published to npm with Vercel AI / OpenAI / Anthropic adapters
+- [x] **TypeScript SDK**: `@asap-protocol/client@2.3.0` published to npm with Vercel AI / OpenAI / Anthropic adapters — [npm](https://www.npmjs.com/package/@asap-protocol/client) (2026-05-13)
 - [x] **Auto-Registration (repo)**: `POST /registry/agents` + bot PR / merge workflows — see [sprint-S3-auto-registration.md](./sprint-S3-auto-registration.md). *Production registry-bot deployment is operator-specific.*
 - [x] **Capability Escalation (repo)**: `POST /asap/agent/request-capability` + client helpers — see [sprint-S4-escalation-challenge.md](./sprint-S4-escalation-challenge.md).
 - [x] **ASAP Challenge (repo)**: `WWW-Authenticate: ASAP` middleware + client recognition — see [sprint-S4-escalation-challenge.md](./sprint-S4-escalation-challenge.md).
@@ -51,7 +51,7 @@ S1, S2, and S3 are independent and can run in parallel with three contributors. 
 - [x] Public docs (`docs/index.md`, migration, adapter/TS guides) route users to OpenAPI, TypeScript SDK, and registry flows.
 - [x] CHANGELOG.md updated under `## [2.3.0]`
 - [ ] `asap-protocol==2.3.0` published to PyPI *(full package; confirms **OpenAPI Adapter (release)** above)*
-- [ ] `@asap-protocol/client@2.3.0` published to npm
+- [x] `@asap-protocol/client@2.3.0` published to npm
 - [ ] Tag `v2.3.0` on `main` + GitHub Release notes
 - [ ] Docker `ghcr.io/adriannoes/asap-protocol:v2.3.0` and `:latest` rebuilt
 

@@ -4,6 +4,9 @@
   "description": "Official TypeScript client for the ASAP Protocol",
   "type": "module",
   "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/adriannoes/asap-protocol"
