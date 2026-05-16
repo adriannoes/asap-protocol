@@ -215,3 +215,6 @@ node_modules/
 eslint-report.json
 .vercel
 .env*.local
+
+# Local weekly telemetry outputs (snapshots + dashboard; CI uses artifacts)
+private/telemetry/
