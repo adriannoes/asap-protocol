@@ -16,6 +16,8 @@ type Pill = {
   href: string;
   icon: LucideIcon;
   external?: boolean;
+  /** Stable id for analytics (Vercel / site→docs CTR). */
+  dataCta: string;
 };
 
 const CHANGELOG_URL =
@@ -30,13 +32,29 @@ const DOCS_ESCALATION =
   'https://github.com/adriannoes/asap-protocol/blob/main/docs/capabilities/escalation.md';
 
 const PILLS: Pill[] = [
-  { label: 'OpenAPI', href: DOCS_OPENAPI, icon: Layers, external: true },
-  { label: 'TypeScript SDK', href: DOCS_TS_SDK, icon: Code, external: true },
-  { label: 'Auto-Reg', href: DOCS_AUTO_REG, icon: Sparkles, external: true },
-  { label: 'Identity', href: '/features/per-agent-identity', icon: Fingerprint },
-  { label: 'Capabilities', href: '/features/scoped-capabilities', icon: KeySquare },
-  { label: 'Escalation', href: DOCS_ESCALATION, icon: ShieldCheck, external: true },
-  { label: 'Changelog', href: CHANGELOG_URL, icon: GitBranch, external: true },
+  { label: 'OpenAPI', href: DOCS_OPENAPI, icon: Layers, external: true, dataCta: 'docs-openapi' },
+  { label: 'TypeScript SDK', href: DOCS_TS_SDK, icon: Code, external: true, dataCta: 'docs-typescript' },
+  { label: 'Auto-Reg', href: DOCS_AUTO_REG, icon: Sparkles, external: true, dataCta: 'docs-auto-registration' },
+  {
+    label: 'Identity',
+    href: '/features/per-agent-identity',
+    icon: Fingerprint,
+    dataCta: 'feature-per-agent-identity',
+  },
+  {
+    label: 'Capabilities',
+    href: '/features/scoped-capabilities',
+    icon: KeySquare,
+    dataCta: 'feature-scoped-capabilities',
+  },
+  {
+    label: 'Escalation',
+    href: DOCS_ESCALATION,
+    icon: ShieldCheck,
+    external: true,
+    dataCta: 'docs-capabilities-escalation',
+  },
+  { label: 'Changelog', href: CHANGELOG_URL, icon: GitBranch, external: true, dataCta: 'release-changelog-github' },
 ];
 
 export function WhatsNewRibbon() {
@@ -68,6 +86,7 @@ export function WhatsNewRibbon() {
               <li key={pill.label}>
                 <Link
                   href={pill.href}
+                  data-cta={pill.dataCta}
                   {...linkProps}
                   className="group inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900/50 px-3 py-1.5 text-xs font-medium text-zinc-400 backdrop-blur-sm transition-colors hover:border-indigo-500/40 hover:bg-indigo-500/10 hover:text-indigo-300"
                 >

@@ -121,7 +121,12 @@ export function FeaturesSection() {
           {features.map((feature, i) => {
             const Icon = feature.icon;
             return (
-              <Link key={i} href={`/features/${feature.slug}`} className={`group ${feature.className}`}>
+              <Link
+                key={i}
+                href={`/features/${feature.slug}`}
+                data-cta={`feature-${feature.slug}`}
+                className={`group ${feature.className}`}
+              >
                 <Card
                   className={`relative h-full overflow-hidden border-zinc-800 bg-zinc-950 transition-all duration-300 hover:border-indigo-500/50`}
                 >
