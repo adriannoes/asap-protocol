@@ -58,7 +58,9 @@ class TestAuditApiValidation(NoRateLimitTestBase):
         expected_detail: str,
     ) -> None:
         """Negative limit/offset must return HTTP 400."""
-        async with AsyncClient(transport=ASGITransport(app=audit_app), base_url="http://test") as client:
+        async with AsyncClient(
+            transport=ASGITransport(app=audit_app), base_url="http://test"
+        ) as client:
             response = await client.get(f"/audit?{query}")
 
         assert response.status_code == 400
@@ -71,7 +73,9 @@ class TestAuditApiValidation(NoRateLimitTestBase):
         query: str,
     ) -> None:
         """Non-ISO start/end date values must return HTTP 400."""
-        async with AsyncClient(transport=ASGITransport(app=audit_app), base_url="http://test") as client:
+        async with AsyncClient(
+            transport=ASGITransport(app=audit_app), base_url="http://test"
+        ) as client:
             response = await client.get(f"/audit?{query}")
 
         assert response.status_code == 400
@@ -96,7 +100,9 @@ class TestAuditApiValidation(NoRateLimitTestBase):
                 )
             )
 
-        async with AsyncClient(transport=ASGITransport(app=audit_app), base_url="http://test") as client:
+        async with AsyncClient(
+            transport=ASGITransport(app=audit_app), base_url="http://test"
+        ) as client:
             response = await client.get("/audit?limit=5000")
 
         assert response.status_code == 200
