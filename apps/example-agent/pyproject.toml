@@ -5,7 +5,7 @@ description = "Minimal ASAP example agent; CI baseline for Compliance Harness v2
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "asap-protocol",
+    "asap-protocol>=2.3.0,<3",
 ]
 
 [tool.uv.sources]
