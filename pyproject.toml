@@ -103,6 +103,9 @@ openclaw = [
 openapi = [
     "openapi-pydantic>=0.5",
 ]
+telemetry = [
+    "pypistats>=1.11.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/adriannoes/asap-protocol"
