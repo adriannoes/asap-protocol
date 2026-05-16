@@ -189,7 +189,7 @@ A first-class `POST /asap/agent/webauthn/register/{begin,finish}` router is
 tracked as follow-up scope for **v2.3 (Adoption Multiplier)**, where new
 endpoint surface area is permitted. It is deliberately **out of scope** for
 v2.2.1 which is strictly a carry-over patch (see
-[PRD v2.2.1 §5 — Non-Goals](../../.cursor/product-specs/prd/prd-v2.2.1-patch.md)).
+[PRD v2.2.1 §5 — Non-Goals](../../product/prd/prd-v2.2.1-patch.md)).
 
 ### Fallback when the extra is not installed (or env is incomplete)
 

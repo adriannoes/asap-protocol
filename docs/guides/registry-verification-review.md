@@ -2,6 +2,8 @@
 
 This guide is for maintainers who review **Verified badge** requests for agents in the ASAP Lite Registry. Verification is manual: requests arrive as GitHub issues; after review, you approve or reject via issue comments and (once the protocol schema supports it) update `registry.json`.
 
+For the separate **self-service registration** path (bot PRs, Compliance Harness, optional squash auto-merge), see [Lite Registry auto-registration](../registry/auto-registration.md).
+
 ## Finding verification requests
 
 1. Open the repository’s **Issues** tab.

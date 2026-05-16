@@ -7,9 +7,11 @@
 
 > A production-ready protocol for agent-to-agent communication and task coordination.
 
-**Quick Info**: `v2.2.1` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [PyPI](https://pypi.org/project/asap-protocol/) | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
+**Quick Info**: `v2.3.0` | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | **[PyPI `asap-protocol`](https://pypi.org/project/asap-protocol/)** | **[npm `@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client)** | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
 
-> 🚀 **Live now** our [**agentic marketplace**](https://asap-protocol.vercel.app/) — browse agents, register yours, request verification.
+> 📦 Install the ASAP **Python SDK / protocol** from **`https://pypi.org/project/asap-protocol/`** — package name **`asap-protocol`** on [PyPI](https://pypi.org/project/asap-protocol/).
+
+> 🚀 **Live now** our [**agentic marketplace**](https://asap-protocol.com/) — browse agents, register yours, request verification.
 
 ## Why ASAP?
 
@@ -20,7 +22,7 @@ Building multi-agent systems today suffers from three core technical challenges 
 
 **ASAP** provides a production-ready communication layer that simplifies these complexities. It's ideal for **multi-agent orchestration**, **stateful workflows** (persistence, resumability), **MCP support** and **production systems** requiring high-performance, type-safe agent communication. 
 
-For simple point-to-point communication, a basic HTTP API might suffice; ASAP shines when you need orchestration, state management and multi-agent coordination. See the [spec](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/strategy/v0-original-specs.md) for details.
+For simple point-to-point communication, a basic HTTP API might suffice; ASAP shines when you need orchestration, state management and multi-agent coordination. See the [documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) for the current protocol overview and features.
 
 ### Key Features
 
@@ -32,6 +34,7 @@ For simple point-to-point communication, a basic HTTP API might suffice; ASAP sh
 - **Security** — Bearer auth, OAuth2/JWT, Ed25519 signed manifests, optional mTLS, replay prevention, HTTPS, rate limiting. [Security Model](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/v1.1-security-model.md) (trust limits, Custom Claims).
 - **Identity & capabilities (v2.2, WebAuthn real in v2.2.1)** — Per-runtime Host/Agent JWTs, capability grants with constraints (`max`, `min`, `in`, `not_in`), approval flows (device authorization / CIBA-style), real WebAuthn attestation/assertion for high-risk registration (opt-in via `asap-protocol[webauthn]`).
 - **Streaming & wire protocol (v2.2)** — `POST /asap/stream` (SSE / `TaskStream`), JSON-RPC 2.0 batch on `POST /asap`, `ASAP-Version` negotiation, tamper-evident audit logging, Compliance Harness v2.
+- **Adoption Multiplier (v2.3.0)** — OpenAPI → ASAP via `create_from_openapi` (`[openapi]` extra), official **`@asap-protocol/client`** on npm (Vercel AI / OpenAI / Anthropic adapters), optional **Auto-Registration** (`POST /registry/agents`), **capability escalation**, and **ASAP `WWW-Authenticate`** discovery challenges. All opt-in; wire protocol unchanged. See [docs/index.md](docs/index.md) and [docs/migration.md](docs/migration.md).
 - **Economics** — Usage metering, delegation tokens, SLA framework with breach alerts.
 
 ### 🆕 Framework Ecosystem
@@ -51,7 +54,15 @@ Or with pip:
 pip install asap-protocol
 ```
 
-📦 **Available on [PyPI](https://pypi.org/project/asap-protocol/)** — for reproducible environments, prefer `uv` when possible.
+**npm** (TypeScript / JavaScript — [`@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client), aligned with protocol **v2.3.0**). The `latest` dist-tag matches **`npm view @asap-protocol/client version`** (currently **2.3.0**).
+
+```bash
+npm install @asap-protocol/client
+# reproducible pin (same as latest today):
+# npm install @asap-protocol/client@2.3.0
+```
+
+📦 **Canonical listing:** **[https://pypi.org/project/asap-protocol/](https://pypi.org/project/asap-protocol/)** — package **`asap-protocol`** (`pip install asap-protocol`). Prefer `uv` for reproducible environments when possible.
 
 ## Quick Start
 
@@ -94,6 +105,7 @@ See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/
 
 **Learn**
 - [Docs](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [API Reference](https://github.com/adriannoes/asap-protocol/blob/main/docs/api-reference.md)
+- [TypeScript client SDK](https://github.com/adriannoes/asap-protocol/blob/main/docs/sdks/typescript.md) — `@asap-protocol/client` (identity, capabilities, streaming, adapters)
 - [Tutorials](https://github.com/adriannoes/asap-protocol/tree/main/docs/tutorials) — First agent to production checklist
 - [Migration from A2A/MCP](https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md)
 - [Raw Fetch (non-Python)](https://github.com/adriannoes/asap-protocol/blob/main/docs/raw-fetch.md) — Fetch registry.json and revoked_agents.json with curl/fetch; implement your own client.
@@ -106,11 +118,11 @@ See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/
 
 **Decisions & Operations**
 - [ADRs](https://github.com/adriannoes/asap-protocol/tree/main/docs/adr) — 19 Architecture Decision Records
-- [Tech Stack](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/dev-planning/architecture/tech-stack-decisions.md) — Rationale for Python, Pydantic, Next.js choices
+- [Tech Stack](https://github.com/adriannoes/asap-protocol/blob/main/engineering/architecture/tech-stack-decisions.md) — Rationale for Python, Pydantic, Next.js choices
 - [Deployment](https://github.com/adriannoes/asap-protocol/blob/main/docs/deployment/kubernetes.md) | [Troubleshooting](https://github.com/adriannoes/asap-protocol/blob/main/docs/troubleshooting.md)
 
 **Release**
-- [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md) | [PyPI](https://pypi.org/project/asap-protocol/)
+- [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md) | **[PyPI listing](https://pypi.org/project/asap-protocol/)** — `https://pypi.org/project/asap-protocol/` (install: `pip install asap-protocol`)
 
 ## CLI
 
@@ -134,6 +146,7 @@ High-level only — see **[Changelog](https://github.com/adriannoes/asap-protoco
 
 | Version | What shipped |
 | :-- | :-- |
+| **v2.3.0** | **OpenAPI Adapter** (`[openapi]`) · **TypeScript client** (`@asap-protocol/client`) · **Auto-Registration** · **Capability escalation** · **ASAP HTTP challenge** — see [CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#230---2026-05-04) and [Migration](https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md#upgrading-from-v22x-to-v230) |
 | **v2.2.1** | Opt-in **WebAuthn** (`asap-protocol[webauthn]`) · `asap compliance-check` & `asap audit export` · stricter `ResolvedAgent.run()` · `AuditChainBroken` · [pinned security deps](https://github.com/adriannoes/asap-protocol/blob/main/SECURITY.md#dependency-policy) |
 | **v2.2** | Per-runtime identity & capability auth · SSE `POST /asap/stream` · `ASAP-Version` · JSON-RPC batch · tamper-evident audit · async state stores · Compliance Harness v2 |
 | **v2.1.1** | Patch: JWT allowlist · SQLite async bridge · optional Redis rate limits · web SSRF hardening |
@@ -145,7 +158,7 @@ High-level only — see **[Changelog](https://github.com/adriannoes/asap-protoco
 
 ## 🔭 What's Next?
 
-ASAP is evolving toward an **Agent Marketplace** — an open ecosystem where AI agents discover, trust and collaborate autonomously. See our [vision document](https://github.com/adriannoes/asap-protocol/blob/main/.cursor/product-specs/strategy/vision-agent-marketplace.md) for the full roadmap.
+ASAP is evolving toward an **Agent Marketplace** — an open ecosystem where AI agents discover, trust and collaborate autonomously. See the [ADR index](https://github.com/adriannoes/asap-protocol/blob/main/product/decision-records/README.md) and [v2.0 roadmap PRD](https://github.com/adriannoes/asap-protocol/blob/main/product/prd/prd-v2.0-roadmap.md). Detailed long-term strategy narratives are maintained privately (not shipped in this repository).
 
 ## Contributing
 
@@ -154,6 +167,14 @@ ASAP is evolving toward an **Agent Marketplace** — an open ecosystem where AI 
 Every contribution, from bug reports to feature suggestions, documentation improvements and code contributions, makes a real difference.
 
 Check out our [contributing guidelines](https://github.com/adriannoes/asap-protocol/blob/main/CONTRIBUTING.md) to get started. It's easier than you think! 🚀
+
+## Contact
+
+For **general questions** about the protocol, the marketplace, partnerships, or press (not security vulnerabilities — use [SECURITY.md](https://github.com/adriannoes/asap-protocol/blob/main/SECURITY.md) for those):
+
+- **Email:** [info@asap-protocol.com](mailto:info@asap-protocol.com)
+
+You can also use [GitHub Discussions](https://github.com/adriannoes/asap-protocol/discussions) or [Issues](https://github.com/adriannoes/asap-protocol/issues) for public project topics.
 
 ## License
 

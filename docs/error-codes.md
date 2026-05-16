@@ -45,5 +45,5 @@ JSON-RPC error responses from ASAP servers include the numeric `rpc_code` as the
 
 ## References
 
-- PRD: `.cursor/product-specs/prd/prd-v2.2-protocol-hardening.md` §4.7
+- PRD: `product/prd/prd-v2.2-protocol-hardening.md` §4.7
 - ADR-012: `docs/adr/ADR-012-error-taxonomy.md`

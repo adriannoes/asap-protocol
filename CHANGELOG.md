@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **CI security (`pip-audit`)**: Bumped transitive pins (`langchain-core`, `langsmith`, `python-multipart`, `urllib3`, `pip`, `smolagents`) and adjusted documented `--ignore-vuln` flags (pygments + **smolagents** CVEs with no PyPI fix yet; pip ≥26.1 clears prior pip ignore). See [SECURITY.md](SECURITY.md).
+
+---
+
+## [2.3.0] - 2026-05-04
+
+**Adoption Multiplier** — OpenAPI-derived agents, first-class TypeScript, lean
+registry auto-registration, runtime capability escalation, and opt-in
+`WWW-Authenticate: ASAP` discovery challenges. Wire JSON-RPC and envelope
+schemas remain backward compatible with v2.2.x.
+
+### Added
+
+- **OpenAPI Adapter (Python)**: `asap.adapters.openapi.create_from_openapi` maps
+  OpenAPI 3.x operations to ASAP capabilities; optional `[openapi]` extra.
+  See [docs/adapters/openapi.md](docs/adapters/openapi.md).
+- **Official TypeScript client**: npm package `@asap-protocol/client` with
+  discovery, capability helpers, streaming consumer, and optional adapters for
+  Vercel AI SDK, OpenAI, and Anthropic (`packages/typescript/client/`).
+- **Auto-Registration**: `POST /registry/agents` for Compliance Harness–gated
+  Lite Registry submissions (optional `registry_auto_registration` on
+  `create_app`). See [docs/registry/auto-registration.md](docs/registry/auto-registration.md).
+- **Capability escalation**: `POST /asap/agent/request-capability` plus Python
+  `ASAPClient.request_capability` / TypeScript client support for approval
+  flows without re-registering the agent.
+- **ASAP HTTP challenge**: `WWW-Authenticate: ASAP` with `discovery=` manifest
+  URL on selected 401/403 responses; clients can record discovery metadata from
+  the challenge header.
+
+### Changed
+
+- **Reference server**: New optional routers and middleware wiring are
+  **opt-in** behind constructor flags — existing deployments keep v2.2.x
+  behavior until they enable OpenAPI surfaces, auto-registration, escalation
+  routes, or challenge middleware.
+
+### Security
+
+- **Dependency sweep (pre-tag)**: `uv run pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-3219` (after `uv sync` per [SECURITY.md](SECURITY.md)) reported **no known vulnerabilities** (same ignores as CI). **`apps/web`**: `npm audit` (2026-05-04) still reports **moderate** `postcss` via `next@16.2.4` (GHSA-qx2v-qp2m-jg93); upstream fix may require a newer Next.js line — track before treating web audits as fully clean.
+
 ---
 
 ## [2.2.1] - 2026-04-21

@@ -59,6 +59,6 @@ def test_something(
 
 - For tests that do not require rate-limit enforcement, prefer `NoRateLimitTestBase` / isolated fixtures from `tests/transport/conftest.py`.
 - For full historical context, read:
-  - `.cursor/dev-planning/architecture/rate-limiting.md`
+  - `engineering/architecture/rate-limiting.md`
   - `tests/transport/conftest.py`
   - `tests/conftest.py`

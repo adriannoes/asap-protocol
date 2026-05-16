@@ -1,5 +1,5 @@
-# CI: quality (lint+typecheck), test, coverage, security.
-# 6 jobs total. Branch protection: require quality (python), quality (web), test (python), test (web), coverage, security.
+# CI: quality (lint+typecheck), transport surface lint (D4), test, coverage, security.
+# 7 jobs total. Branch protection: require quality (python), lint transport growth (D4), quality (web), test (python), test (web), coverage, security.
 name: CI
 
 on:
@@ -42,6 +42,15 @@ permissions:
   contents: read
 
 jobs:
+  lint-transport-growth:
+    name: lint transport growth (D4)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - name: Enforce transport monolith baseline
+        run: python3 scripts/lint_no_transport_growth.py
+
   quality-python:
     name: quality (python)
     runs-on: ubuntu-latest
@@ -66,7 +75,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - name: Setup Node
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # v6.3.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
         with:
           node-version: 20
           cache: 'npm'
@@ -84,7 +93,7 @@ jobs:
   test-python:
     name: test (python)
     runs-on: ubuntu-latest
-    needs: [quality-python]
+    needs: [quality-python, lint-transport-growth]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
@@ -113,7 +122,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - name: Setup Node
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # v6.3.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
         with:
           node-version: 20
           cache: 'npm'
@@ -128,7 +137,7 @@ jobs:
   coverage:
     name: coverage
     runs-on: ubuntu-latest
-    needs: [quality-python]
+    needs: [quality-python, lint-transport-growth]
     timeout-minutes: 18
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
@@ -159,7 +168,7 @@ jobs:
   security:
     name: security
     runs-on: ubuntu-latest
-    needs: [quality-python]
+    needs: [quality-python, lint-transport-growth]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
@@ -168,8 +177,9 @@ jobs:
         with:
           # Omit extras whose transitive deps have no OSV fix on PyPI (diskcache, nltk).
           sync-flags: --no-extra crewai --no-extra llamaindex
-      # Pygments 2.19.2 is the latest PyPI release; OSV reports CVE-2026-4539 with no fix published yet.
+      # CVE-2026-4539: pygments advisory with no patched PyPI release yet (override pins >=2.20 when available).
+      # CVE-2026-4963 / CVE-2026-2654: smolagents optional extra; OSV lists no fix version on PyPI as of 2026-05 (see SECURITY.md).
       - name: Scan for vulnerabilities (pip-audit)
-        run: uv run pip-audit --ignore-vuln CVE-2026-4539
+        run: uv run pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-4963 --ignore-vuln CVE-2026-2654
       - name: Scan for security issues (bandit)
         run: uv run bandit -r src/ -ll

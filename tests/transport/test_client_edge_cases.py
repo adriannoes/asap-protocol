@@ -10,7 +10,7 @@ Covers retry behavior, connection errors, and error paths in:
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
@@ -316,3 +316,62 @@ class TestHealthCheckErrorPaths:
         client = ASAPClient("http://localhost:8000")
         with pytest.raises(ASAPConnectionError, match="Client not connected"):
             await client.health_check("http://localhost:8000")
+
+
+class TestAsapChallengePrefetchAndEscalationPoll:
+    """ASAP 401 challenge prefetch logging and request_capability status polling."""
+
+    @pytest.mark.asyncio
+    async def test_challenge_prefetch_failure_logs_debug_with_exc_info(self) -> None:
+        """Prefetch after 401 challenge logs debug with exc_info on failure."""
+        from asap.transport.challenge import format_www_authenticate_asap
+
+        disc = "http://127.0.0.1:9/.well-known/asap/manifest.json"
+        resp401 = httpx.Response(
+            401,
+            headers={"www-authenticate": format_www_authenticate_asap(disc)},
+        )
+        async with ASAPClient(
+            "http://localhost:8000",
+            auto_register_on_asap_challenge=True,
+        ) as client:
+            mock_transport = AsyncMock()
+            mock_transport.handle_async_request.side_effect = httpx.ConnectError("refused")
+            client._client = httpx.AsyncClient(transport=mock_transport)
+            with patch("asap.transport.client.logger.debug") as dbg:
+                await client._ingest_asap_challenge_401(resp401)
+        events = [c.args[0] for c in dbg.call_args_list]
+        assert "asap.client.asap_challenge_prefetch_failed" in events
+        fail_calls = [
+            c
+            for c in dbg.call_args_list
+            if c.args[0] == "asap.client.asap_challenge_prefetch_failed"
+        ]
+        assert len(fail_calls) == 1
+        assert fail_calls[0].kwargs.get("exc_info") is True
+
+    @pytest.mark.asyncio
+    async def test_request_capability_status_404_raises_immediately(self) -> None:
+        """Status poll raises ASAPConnectionError on HTTP 404 instead of waiting out the timeout."""
+        post_json: dict[str, object] = {
+            "agent_id": "urn:asap:agent:a1",
+            "host_id": "urn:asap:host:h1",
+            "status": "pending",
+            "approval": {"state": "pending"},
+        }
+        mock_transport = AsyncMock()
+        mock_transport.handle_async_request.side_effect = [
+            httpx.Response(200, json=post_json),
+            httpx.Response(404, text="unknown agent"),
+        ]
+        async with ASAPClient("http://localhost:9000", timeout=5.0) as client:
+            client._client = httpx.AsyncClient(transport=mock_transport)
+            with pytest.raises(ASAPConnectionError, match="HTTP 404"):
+                await client.request_capability(
+                    "urn:asap:agent:a1",
+                    ["file:read"],
+                    agent_bearer_token="agent-jwt",
+                    host_bearer_token_for_status="host-jwt",
+                    poll_interval_seconds=0.01,
+                    status_timeout_seconds=3.0,
+                )
