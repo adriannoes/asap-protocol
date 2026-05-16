@@ -17,7 +17,7 @@ Run from repository root (`/Users/adrianno/GitHub/asap-protocol` or CI clone):
 | Format | `uv run ruff format --check .` | |
 | Types | `uv run mypy src/ scripts/ tests/` | |
 | Python tests | `PYTHONPATH=src uv run pytest --cov=src --cov-report=xml` | **2026-05-04**: 3213 passed, 11 skipped (requires extras incl. `webauthn` for full collection) |
-| pip-audit | `uv run pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-3219` | Same ignores as CI |
+| pip-audit | `uv run pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-4963 --ignore-vuln CVE-2026-2654` | Same ignores as CI |
 | TS client | `pnpm install && pnpm test && pnpm typecheck && pnpm lint` | Root `package.json` delegates to `@asap-protocol/client` + `example-nextjs` lint |
 | Web app (if touched) | `cd apps/web && pnpm test` | Vitest; Playwright E2E optional for release gate |
 
@@ -99,8 +99,10 @@ Compliance is enforced on the **Python agent** side in CI; Next.js app follows S
 
 ### 4.3 npm
 
-- [ ] `@asap-protocol/client@2.3.0` published with provenance (per workflow) — **Publish TypeScript SDK** falhou: [run 25432265924](https://github.com/adriannoes/asap-protocol/actions/runs/25432265924) (`404` no `PUT` — org `@asap-protocol` / Trusted Publishing / primeiro publish)
-- [ ] Verify: `npm install @asap-protocol/client@2.3.0` in empty project
+Maintainer runbook: [docs/maintainers/npm-publishing.md](../../../docs/maintainers/npm-publishing.md).
+
+- [x] `@asap-protocol/client@2.3.0` on [npm](https://www.npmjs.com/package/@asap-protocol/client) — bootstrap publish **2026-05-13** (maintainer machine; primeiro `PUT` falhou no CI: [run 25432265924](https://github.com/adriannoes/asap-protocol/actions/runs/25432265924)). **Provenance via workflow** → Trusted Publishing / `publish-typescript.yml`: follow [S0 unblock npm](../private/v2.3.1/sprint-S0-unblock-npm.md).
+- [x] Verify: `npm install @asap-protocol/client@2.3.0` in empty project — **OK** (2026-05-14; `require('@asap-protocol/client')` resolves)
 
 ### 4.4 Docker (GHCR)
 

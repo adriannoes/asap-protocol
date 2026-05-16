@@ -3,9 +3,9 @@
 > **Product Requirements Document**
 >
 > **Version**: 2.3.0
-> **Status**: ✅ SHIPPED (2026-05-04; tag `v2.3.0` — PyPI/npm publish via maintainer release workflow after merge)
+> **Status**: ✅ SHIPPED (tag `v2.3.0`, code + **PyPI** aligned with **2026-05-04** release; **`@asap-protocol/client@2.3.0` on npm** completed **2026-05-13** — registry bootstrap; CI provenance/OIDC follow-up in [S0 unblock npm](../../engineering/tasks/private/v2.3.1/sprint-S0-unblock-npm.md))
 > **Created**: 2026-03-13
-> **Last Updated**: 2026-05-04
+> **Last Updated**: 2026-05-14
 > **Origin**: Items deferred from [prd-v2.2-scale.md](./prd-v2.2-scale.md) per strategic review (2026-03), then **rescoped** in 2026-04 after v2.2.0 audit.
 > **Predecessor**: [prd-v2.2.1-patch.md](./prd-v2.2.1-patch.md) (carry-over patch)
 > **Successor**: [prd-v2.4-adoption.md](./prd-v2.4-adoption.md)
@@ -18,7 +18,7 @@
 | **S2** | `@asap-protocol/client` package, adapters, `apps/example-nextjs`, publish workflow |
 | **S3** | `POST /registry/agents`, harness gating, bot PR + auto-merge docs/workflows |
 | **S4** | Capability escalation route + clients; ASAP `WWW-Authenticate` challenge middleware + TS recognition |
-| **S5** | Version **2.3.0**, CHANGELOG, migration, marketing/docs refresh; **PyPI / npm / tag / Docker / GitHub Release** via [engineering/tasks/v2.3.0/release-checklist.md](../../engineering/tasks/v2.3.0/release-checklist.md) |
+| **S5** | Version **2.3.0**, CHANGELOG, migration, marketing/docs refresh; **PyPI / tag / Docker / GitHub Release** via [engineering/tasks/v2.3.0/release-checklist.md](../../engineering/tasks/v2.3.0/release-checklist.md); **npm registry** `@asap-protocol/client@2.3.0` **2026-05-13** (see checklist §4.3 + [S0 unblock](../../engineering/tasks/private/v2.3.1/sprint-S0-unblock-npm.md)) |
 
 ---
 
