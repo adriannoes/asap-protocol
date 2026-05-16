@@ -1,0 +1,57 @@
+name: Adapter request
+description: Request a new framework adapter (telemetry label adapter-request).
+title: "[adapter]: "
+labels: ["adapter-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping prioritize adapters. **Automation:** weekly telemetry parses **Framework name**
+        below (or a line `Framework: YourFramework` in the description) to roll up demand — see
+        `docs/maintainers/telemetry.md`.
+
+  - type: input
+    id: framework
+    attributes:
+      label: Framework name
+      description: Short name (e.g. Mastra, LangGraph, Microsoft Agent Framework).
+      placeholder: e.g. Mastra
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use case
+      description: What you are building and why this adapter matters.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: test_prerelease
+    attributes:
+      label: Willing to test a pre-release adapter?
+      options:
+        - "Yes"
+        - "No"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: company_integrate
+    attributes:
+      label: Willing to integrate at your company (if applicable)?
+      options:
+        - "Yes"
+        - "No"
+        - "Maybe"
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context (optional)
+      description: Links, constraints, versions, corporate policies, etc.
+    validations:
+      required: false
