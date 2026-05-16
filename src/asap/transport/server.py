@@ -1165,6 +1165,34 @@ class ASAPRequestHandler:
                 if trace_token is not None:
                     context.detach(trace_token)
 
+        except ASAPError as e:
+            # Preserve protocol-level errors raised by handlers as JSON-RPC ASAP errors.
+            if "ctx" not in locals():
+                temp_rpc_request = JsonRpcRequest(
+                    jsonrpc="2.0", method=ASAP_METHOD, params={}, id=""
+                )
+                ctx = RequestContext(
+                    request_id="",
+                    start_time=start_time,
+                    metrics=metrics,
+                    rpc_request=temp_rpc_request,
+                )
+            duration_seconds = time.perf_counter() - ctx.start_time
+            self.record_error_metrics(ctx.metrics, payload_type, type(e).__name__, duration_seconds)
+            logger.warning(
+                "asap.request.protocol_error",
+                error=str(e),
+                error_type=type(e).__name__,
+                duration_ms=round(duration_seconds * 1000, 2),
+                exc_info=True,
+            )
+            err_resp = self.build_jsonrpc_error_for_asap_exception(
+                e,
+                request_id=ctx.request_id,
+                extra_data={"error": str(e)},
+            )
+            self._log_response_debug(err_resp)
+            return err_resp
         except Exception as e:
             # Create minimal context for error handling if we don't have rpc_request yet
             if "ctx" not in locals():
