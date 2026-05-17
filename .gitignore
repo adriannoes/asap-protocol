@@ -204,6 +204,8 @@ node_modules/
 # Next.js app lib (do not ignore; root lib/ is for Python)
 !apps/web/src/lib/
 !apps/web/src/lib/**
+!apps/example-mastra/src/lib/
+!apps/example-mastra/src/lib/**
 
 # Benchmark and cache artifacts
 .benchmarks/

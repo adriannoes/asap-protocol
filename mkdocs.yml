@@ -45,6 +45,8 @@ nav:
   - Home: index.md
   - SDKs:
       - TypeScript client: sdks/typescript.md
+  - Integrations:
+      - Mastra: integrations/mastra.md
   - Tutorials:
       - Building Your First Agent: tutorials/first-agent.md
       - Stateful Workflows: tutorials/stateful-workflows.md
