@@ -47,6 +47,7 @@ nav:
       - TypeScript client: sdks/typescript.md
   - Integrations:
       - Mastra: integrations/mastra.md
+      - OpenAI Agents SDK: integrations/openai-agents.md
   - Tutorials:
       - Building Your First Agent: tutorials/first-agent.md
       - Stateful Workflows: tutorials/stateful-workflows.md
