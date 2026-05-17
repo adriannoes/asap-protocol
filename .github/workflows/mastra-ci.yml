@@ -70,6 +70,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
+      # Mastra imports `@asap-protocol/client` via package exports that resolve to `dist/*`.
+      # Fresh CI checkouts have no build output until we run `tshy` on the client.
+      - name: Build @asap-protocol/client
+        run: pnpm --filter @asap-protocol/client run build
+
       - name: Lint
         run: pnpm --filter @asap-protocol/mastra run lint
 
