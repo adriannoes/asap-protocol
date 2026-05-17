@@ -23,6 +23,8 @@ from urllib.parse import urlparse
 
 import httpx
 
+from scripts.lib.safe_url import is_safe_http_url
+
 DEFAULT_REGISTRY_URL = (
     "https://raw.githubusercontent.com/adriannoes/asap-protocol/main/registry.json"
 )
@@ -55,18 +57,27 @@ def detect_registry_format(raw: object) -> str:
 
 
 def fetch_registry_json(url: str, client: httpx.Client | None = None) -> object:
-    """GET JSON from ``url`` (``http`` or ``https`` only)."""
+    """GET JSON from ``url`` (HTTPS only; SSRF-safe; redirects disabled)."""
     parsed = urlparse(url)
-    if parsed.scheme not in ("https", "http"):
-        msg = f"unsupported URL scheme for registry fetch: {parsed.scheme!r}"
+    if parsed.scheme != "https":
+        msg = "registry fetch requires https://"
+        raise ValueError(msg)
+    if not parsed.netloc:
+        msg = "registry URL must include a host"
+        raise ValueError(msg)
+    if not is_safe_http_url(url):
+        msg = f"blocked registry URL: {url}"
         raise ValueError(msg)
     close_client = client is None
     http = client or httpx.Client(
         timeout=REQUEST_TIMEOUT_SECONDS,
-        follow_redirects=True,
+        follow_redirects=False,
     )
     try:
         response = http.get(url)
+        if response.is_redirect:
+            msg = "registry URL must not redirect (use the final HTTPS URL)"
+            raise ValueError(msg)
         response.raise_for_status()
         return response.json()
     finally:

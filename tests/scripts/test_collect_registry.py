@@ -57,9 +57,37 @@ class TestLoadPreviousCount:
 
 
 class TestFetchRegistryJson:
-    def test_https_only(self) -> None:
-        with pytest.raises(ValueError, match="scheme"):
+    def test_rejects_non_https_scheme(self) -> None:
+        with pytest.raises(ValueError, match="https"):
             fetch_registry_json("file:///etc/passwd")
+
+    def test_rejects_http_scheme(self) -> None:
+        with pytest.raises(ValueError, match="https"):
+            fetch_registry_json("http://example.com/registry.json")
+
+    def test_rejects_missing_host(self) -> None:
+        with pytest.raises(ValueError, match="host"):
+            fetch_registry_json("https:///registry.json")
+
+    def test_rejects_localhost(self) -> None:
+        with pytest.raises(ValueError, match="blocked"):
+            fetch_registry_json("https://localhost/registry.json")
+
+    def test_rejects_redirect_response(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            assert request.url.host == "example.com"
+            return httpx.Response(
+                302,
+                headers={"Location": "https://example.com/foo"},
+                request=request,
+            )
+
+        transport = httpx.MockTransport(handler)
+        with (
+            httpx.Client(transport=transport) as client,
+            pytest.raises(ValueError, match="redirect"),
+        ):
+            fetch_registry_json("https://example.com/registry.json", client=client)
 
     def test_gets_json(self) -> None:
         payload: dict[str, object] = {"agents": []}
@@ -133,4 +161,42 @@ class TestMainCli:
                 str(tmp_path / "nope.json"),
             ]
         )
+        assert rc == 1
+
+    def test_invalid_previous_json_errors(self, tmp_path: Path) -> None:
+        reg = tmp_path / "registry.json"
+        reg.write_text(json.dumps({"agents": []}), encoding="utf-8")
+        prev = tmp_path / "bad-prev.json"
+        prev.write_text("{", encoding="utf-8")
+        rc = main(
+            [
+                "--registry-path",
+                str(reg),
+                "--previous",
+                str(prev),
+            ]
+        )
+        assert rc == 1
+
+    def test_missing_registry_path_errors(self, tmp_path: Path) -> None:
+        rc = main(
+            [
+                "--registry-path",
+                str(tmp_path / "missing.json"),
+            ]
+        )
+        assert rc == 1
+
+    def test_http_status_error_from_url_errors(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        def _boom(url: str, client: httpx.Client | None = None) -> object:
+            _ = (url, client)
+            req = httpx.Request("GET", "https://example.com/registry.json")
+            resp = httpx.Response(500, request=req)
+            raise httpx.HTTPStatusError("server error", request=req, response=resp)
+
+        monkeypatch.setattr(
+            "scripts.telemetry.collect_registry.fetch_registry_json",
+            _boom,
+        )
+        rc = main(["--url", "https://example.com/registry.json"])
         assert rc == 1
