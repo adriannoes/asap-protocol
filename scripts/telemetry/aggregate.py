@@ -16,6 +16,9 @@ Operator hints for **site / CTR**:
     Vercel Web Analytics aggregates are not available via a public REST API. The
     snapshot's ``site.ctr_per_cta`` is filled from ``--site-endpoint`` (GET with
     ``Authorization: Bearer <TELEMETRY_TOKEN>``) when passed, else placeholders.
+
+    NPM/PyPI collectors run **serially** in this script so weekly CI stays friendly
+    to upstream rate limits as additional packages are added.
 """
 
 from __future__ import annotations
@@ -25,9 +28,11 @@ import json
 import os
 import re
 import sys
+from collections.abc import Mapping
 from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict, cast
+from urllib.parse import urlparse
 
 import httpx
 from jsonschema import Draft202012Validator
@@ -42,6 +47,86 @@ from scripts.telemetry.collect_npm import DEFAULT_PACKAGES, collect_npm_weekly
 from scripts.telemetry.collect_pypi import collect_pypi_recent
 from scripts.telemetry.collect_registry import DEFAULT_REGISTRY_URL, collect_registry_snapshot
 from scripts.telemetry.collect_registry import fetch_registry_json
+from scripts.lib.safe_url import is_safe_http_url
+
+
+class NpmPackageRow(TypedDict, total=False):
+    """One package entry from ``collect_npm_weekly``."""
+
+    downloads: int
+    package: str
+    period: str
+
+
+class NpmWeeklyIngress(TypedDict, total=False):
+    """npm collector JSON consumed by ``build_npm_summary``."""
+
+    packages: dict[str, NpmPackageRow]
+
+
+class PyPiDownloadsIngress(TypedDict):
+    """Recent download windows from ``pypistats``."""
+
+    last_day: int
+    last_week: int
+    last_month: int
+
+
+class PyPiPackageIngress(TypedDict):
+    package: str
+    downloads: PyPiDownloadsIngress
+
+
+class PyPiWeeklyIngress(TypedDict, total=False):
+    """PyPI collector JSON merged into the snapshot ``pypi`` field."""
+
+    source: str
+    collected_at: str
+    packages: dict[str, PyPiPackageIngress]
+
+
+class AdapterRequestsIngress(TypedDict, total=False):
+    """GitHub collector ``adapter_requests`` block."""
+
+    label: str
+    open_count: int
+    by_framework: dict[str, int]
+    unparsed_open_count: int
+
+
+class GitHubTelemetryIngress(TypedDict, total=False):
+    """GitHub collector or placeholder payload stored under snapshot ``github``."""
+
+    source: str
+    repository: str
+    collected_at: str
+    skipped: bool
+    reason: str
+    repo: dict[str, int]
+    adapter_requests: AdapterRequestsIngress
+
+
+class RegistryTelemetryIngress(TypedDict, total=False):
+    """Registry snapshot block written into the weekly snapshot."""
+
+    source: str
+    registry_ref: str
+    format: str
+    collected_at: str
+    agent_count: int
+    previous_agent_count: int | None
+    growth: int | None
+
+
+class SiteCtrIngress(TypedDict, total=False):
+    """Site CTR payload from ``/api/telemetry`` or skipped/error placeholders."""
+
+    ctr_per_cta: dict[str, Any]
+    fetch_error: bool
+    note: str
+    skipped: bool
+    reason: str
+
 
 # ruff: noqa: E501 — valid JSON Schema string
 SNAPSHOT_SCHEMA: dict[str, Any] = {
@@ -63,15 +148,45 @@ SNAPSHOT_SCHEMA: dict[str, Any] = {
     "properties": {
         "snapshot_version": {"type": "integer", "const": 1},
         "collected_at": {"type": "string", "minLength": 10},
-        "npm": {"type": "object"},
-        "pypi": {"type": "object"},
-        "github": {"type": "object"},
-        "registry": {"type": "object"},
+        "npm": {
+            "type": "object",
+            "additionalProperties": {"type": "integer"},
+        },
+        "pypi": {
+            "type": "object",
+            "required": ["packages"],
+            "properties": {"packages": {"type": "object"}},
+        },
+        "github": {
+            "type": "object",
+            "required": ["adapter_requests"],
+            "properties": {
+                "adapter_requests": {
+                    "type": "object",
+                    "required": ["by_framework"],
+                    "properties": {
+                        "by_framework": {
+                            "type": "object",
+                            "additionalProperties": {"type": "integer"},
+                        },
+                    },
+                },
+            },
+        },
+        "registry": {
+            "type": "object",
+            "required": ["agent_count"],
+            "properties": {"agent_count": {"type": "integer"}},
+        },
         "site": {
             "type": "object",
             "required": ["ctr_per_cta"],
             "properties": {
                 "ctr_per_cta": {"type": "object"},
+                "fetch_error": {"type": "boolean"},
+                "note": {"type": "string"},
+                "skipped": {"type": "boolean"},
+                "reason": {"type": "string"},
             },
         },
         "adapter_requests": {
@@ -128,7 +243,7 @@ def registry_count_from_snapshot(snapshot_path: Path) -> int | None:
     return count if isinstance(count, int) else None
 
 
-def build_npm_summary(report: dict[str, Any]) -> dict[str, int]:
+def build_npm_summary(report: Mapping[str, object]) -> dict[str, int]:
     """Flatten npm collector output to ``{package: downloads}``."""
     pkgs = report.get("packages")
     if not isinstance(pkgs, dict):
@@ -143,7 +258,7 @@ def build_npm_summary(report: dict[str, Any]) -> dict[str, int]:
     return out
 
 
-def flatten_adapter_request_counts(github_report: dict[str, Any]) -> dict[str, int]:
+def flatten_adapter_request_counts(github_report: Mapping[str, object]) -> dict[str, int]:
     """Build snapshot ``adapter_requests`` counts from GitHub collector output."""
     block = github_report.get("adapter_requests")
     if not isinstance(block, dict):
@@ -160,61 +275,90 @@ def flatten_adapter_request_counts(github_report: dict[str, Any]) -> dict[str, i
     return dict(sorted(out.items(), key=lambda kv: (-kv[1], kv[0])))
 
 
+def validate_site_endpoint(endpoint: str) -> None:
+    """Require a public HTTPS URL before attaching a Bearer secret."""
+    parsed = urlparse(endpoint)
+    if parsed.scheme != "https":
+        msg = "TELEMETRY_SITE_ENDPOINT must use https://"
+        raise ValueError(msg)
+    if not parsed.netloc:
+        msg = "TELEMETRY_SITE_ENDPOINT must include a host"
+        raise ValueError(msg)
+    if not is_safe_http_url(endpoint):
+        msg = "TELEMETRY_SITE_ENDPOINT must be a public HTTPS URL"
+        raise ValueError(msg)
+
+
 def fetch_site_ctr(
     endpoint: str,
     bearer: str,
     *,
     timeout: float = _REQUEST_TIMEOUT,
-) -> dict[str, Any]:
+) -> SiteCtrIngress:
     """GET a protected telemetry route and return its JSON ``site`` object or empty."""
+    validate_site_endpoint(endpoint)
     headers = {"Authorization": f"Bearer {bearer}"}
     try:
-        with httpx.Client(timeout=timeout, follow_redirects=True) as client:
+        with httpx.Client(timeout=timeout, follow_redirects=False) as client:
             response = client.get(endpoint, headers=headers)
+            if response.is_redirect:
+                msg = "TELEMETRY_SITE_ENDPOINT must not redirect when sending Authorization"
+                raise ValueError(msg)
             response.raise_for_status()
             payload: object = response.json()
-    except (httpx.HTTPError, json.JSONDecodeError, ValueError):
+    except json.JSONDecodeError:
+        return {"ctr_per_cta": {}, "fetch_error": True}
+    except ValueError:
+        raise
+    except httpx.HTTPError:
         return {"ctr_per_cta": {}, "fetch_error": True}
     if not isinstance(payload, dict):
-        return {"ctr_per_cta": {}}
+        return {"ctr_per_cta": {}, "fetch_error": True}
     site = payload.get("site")
     if isinstance(site, dict) and isinstance(site.get("ctr_per_cta"), dict):
-        return site
-    return {"ctr_per_cta": {}}
+        return cast(SiteCtrIngress, site)
+    return {"ctr_per_cta": {}, "fetch_error": True}
 
 
 def collect_github_or_placeholder(
     owner: str,
     repo: str,
     token: str,
-) -> dict[str, Any]:
-    """Run GitHub collector or return a non-fatal placeholder."""
+) -> GitHubTelemetryIngress:
+    """Run GitHub collector or return a non-fatal placeholder (``--allow-github-skip`` only)."""
     if not token:
-        return {
-            "source": "github_rest_api",
-            "skipped": True,
-            "reason": "GITHUB_TOKEN not set",
-            "repository": f"{owner}/{repo}",
-            "adapter_requests": {
-                "label": "adapter-request",
-                "open_count": 0,
-                "by_framework": {},
+        return cast(
+            GitHubTelemetryIngress,
+            {
+                "source": "github_rest_api",
+                "skipped": True,
+                "reason": "TELEMETRY_GITHUB_TOKEN / GITHUB_TOKEN not set",
+                "repository": f"{owner}/{repo}",
+                "adapter_requests": {
+                    "label": "adapter-request",
+                    "open_count": 0,
+                    "by_framework": {},
+                },
             },
-        }
+        )
     try:
-        return collect_github_signals(owner, repo, token=token)
+        return cast(GitHubTelemetryIngress, collect_github_signals(owner, repo, token=token))
     except (httpx.HTTPError, ValueError) as exc:
-        return {
-            "source": "github_rest_api",
-            "skipped": True,
-            "reason": str(exc),
-            "repository": f"{owner}/{repo}",
-            "adapter_requests": {
-                "label": "adapter-request",
-                "open_count": 0,
-                "by_framework": {},
+        print(f"GitHub telemetry skipped: {exc}", file=sys.stderr)
+        return cast(
+            GitHubTelemetryIngress,
+            {
+                "source": "github_rest_api",
+                "skipped": True,
+                "reason": "GitHub telemetry failed; see CI logs.",
+                "repository": f"{owner}/{repo}",
+                "adapter_requests": {
+                    "label": "adapter-request",
+                    "open_count": 0,
+                    "by_framework": {},
+                },
             },
-        }
+        )
 
 
 def render_dashboard(
@@ -307,6 +451,21 @@ def render_dashboard(
         for name, count in items:
             ad_lines.append(f"| `{name}` | {count} |")
     lines.extend(ad_lines)
+
+    degraded: list[str] = []
+    gh_obj = snapshot.get("github")
+    if isinstance(gh_obj, dict) and gh_obj.get("skipped"):
+        reason = gh_obj.get("reason", "unknown")
+        degraded.append(
+            f"GitHub telemetry skipped ({reason}); adapter-request counts may be zeroed."
+        )
+    site_obj = snapshot.get("site")
+    if isinstance(site_obj, dict) and site_obj.get("fetch_error"):
+        degraded.append("Site CTR fetch failed; see `site.fetch_error` in the snapshot JSON.")
+    if degraded:
+        lines.extend(["", "## Data quality warnings", ""])
+        lines.extend(f"- {note}" for note in degraded)
+
     lines.append("")
     return "\n".join(lines)
 
@@ -359,6 +518,14 @@ def main(argv: list[str] | None = None) -> int:
         default="TELEMETRY_TOKEN",
         help="Env var for Bearer token when fetching --site-endpoint.",
     )
+    parser.add_argument(
+        "--allow-github-skip",
+        action="store_true",
+        help=(
+            "Allow missing or failing GitHub REST telemetry (placeholder snapshot data). "
+            "Do not use for CI promotion gates."
+        ),
+    )
     args = parser.parse_args(argv)
 
     output_dir: Path = args.output_dir
@@ -370,11 +537,42 @@ def main(argv: list[str] | None = None) -> int:
     prev_path = resolve_previous_snapshot_path(output_dir, snap_day)
     previous_registry_count = registry_count_from_snapshot(prev_path) if prev_path else None
 
-    npm_report = collect_npm_weekly(DEFAULT_PACKAGES)
-    pypi_report = collect_pypi_recent(("asap-protocol",))
+    npm_report = cast(NpmWeeklyIngress, collect_npm_weekly(DEFAULT_PACKAGES))
+    pypi_report = cast(PyPiWeeklyIngress, collect_pypi_recent(("asap-protocol",)))
 
-    token = os.environ.get("GITHUB_TOKEN", "").strip()
-    github_report = collect_github_or_placeholder(args.github_owner, args.github_repo, token)
+    allow_github_skip: bool = args.allow_github_skip
+    github_report: GitHubTelemetryIngress
+    if allow_github_skip:
+        gh_token = (
+            os.environ.get("TELEMETRY_GITHUB_TOKEN", "").strip()
+            or os.environ.get("GITHUB_TOKEN", "").strip()
+        )
+        github_report = collect_github_or_placeholder(
+            args.github_owner,
+            args.github_repo,
+            gh_token,
+        )
+    else:
+        gh_token = os.environ.get("TELEMETRY_GITHUB_TOKEN", "").strip()
+        if not gh_token:
+            print(
+                "Missing TELEMETRY_GITHUB_TOKEN; GitHub telemetry is required "
+                "(pass --allow-github-skip for local placeholder runs only).",
+                file=sys.stderr,
+            )
+            return 1
+        try:
+            github_report = cast(
+                GitHubTelemetryIngress,
+                collect_github_signals(
+                    args.github_owner,
+                    args.github_repo,
+                    token=gh_token,
+                ),
+            )
+        except (httpx.HTTPError, ValueError) as exc:
+            print(f"GitHub telemetry failed: {exc}", file=sys.stderr)
+            return 1
 
     try:
         raw_registry = fetch_registry_json(args.registry_url)
@@ -382,21 +580,33 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Registry fetch failed: {exc}", file=sys.stderr)
         return 1
 
-    registry_report = collect_registry_snapshot(
-        raw_registry,
-        registry_ref=args.registry_url,
-        previous_count=previous_registry_count,
+    registry_report = cast(
+        RegistryTelemetryIngress,
+        collect_registry_snapshot(
+            raw_registry,
+            registry_ref=args.registry_url,
+            previous_count=previous_registry_count,
+        ),
     )
 
-    site: dict[str, Any]
+    site_details: SiteCtrIngress
     telemetry_secret = os.environ.get(args.telemetry_token_env, "").strip()
     if args.site_endpoint and telemetry_secret:
-        site = fetch_site_ctr(args.site_endpoint, telemetry_secret)
+        try:
+            site_details = fetch_site_ctr(args.site_endpoint, telemetry_secret)
+        except ValueError as exc:
+            print(f"Site telemetry misconfigured: {exc}", file=sys.stderr)
+            return 1
     else:
-        site = {
+        site_details = {
             "ctr_per_cta": {},
             "note": "Site metrics skipped (set TELEMETRY_SITE_ENDPOINT and TELEMETRY_TOKEN to pull /api/telemetry).",
         }
+
+    snapshot_site: dict[str, Any] = {"ctr_per_cta": site_details.get("ctr_per_cta", {})}
+    for copy_key in ("fetch_error", "note", "skipped", "reason"):
+        if copy_key in site_details:
+            snapshot_site[copy_key] = site_details[copy_key]
 
     snapshot: dict[str, Any] = {
         "snapshot_version": 1,
@@ -405,7 +615,7 @@ def main(argv: list[str] | None = None) -> int:
         "pypi": pypi_report,
         "github": github_report,
         "registry": registry_report,
-        "site": {"ctr_per_cta": site.get("ctr_per_cta", {})},
+        "site": snapshot_site,
         "adapter_requests": flatten_adapter_request_counts(github_report),
     }
 

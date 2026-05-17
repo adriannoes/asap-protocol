@@ -2,9 +2,14 @@
 """Collect public GitHub repository metrics and traffic (clones, referrers) via REST API.
 
 **Stars** and **forks** are available without auth, but **traffic** endpoints require a
-`GITHUB_TOKEN` with **push** access to the target repository (same as the Insights tab).
+token with **push** access to the target repository (same as the Insights tab).
 
-Uses ``GITHUB_TOKEN`` from the environment by default (never print or log the token).
+Weekly aggregation in CI should use ``TELEMETRY_GITHUB_TOKEN`` (fine-grained or classic PAT
+with traffic scope). The legacy ``GITHUB_TOKEN`` env name is still accepted when
+``scripts/telemetry/aggregate.py`` is run with ``--allow-github-skip`` only.
+
+Uses ``GITHUB_TOKEN`` / ``TELEMETRY_GITHUB_TOKEN`` from the environment by default (never
+print or log the token).
 
 API: https://docs.github.com/en/rest
 """
