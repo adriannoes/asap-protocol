@@ -53,4 +53,29 @@ describe("errors RPC taxonomy (TS-011)", () => {
     });
     expect(err).toBeInstanceOf(RemoteRecoverableRPCError);
   });
+
+  it("pop remote meta filters alternative_agents and maps fallback_action", () => {
+    const err = RemoteFatalRPCError.fromJsonRpc(RPC_REMOTE_GENERIC, "try others", {
+      alternative_agents: ["urn:a:ok", 42, "urn:b:ok"],
+      fallback_action: "retry_later",
+    });
+    expect(err.alternativeAgents).toEqual(["urn:a:ok", "urn:b:ok"]);
+    expect(err.fallbackAction).toBe("retry_later");
+  });
+
+  it("pop remote meta applies asap taxonomy from data.code when present", () => {
+    const err = RemoteFatalRPCError.fromJsonRpc(RPC_REMOTE_GENERIC, "typed", {
+      code: "asap:capabilities/unsupported",
+      detail: "x",
+    });
+    expect(err.taxonomyCode).toBe("asap:capabilities/unsupported");
+    expect((err.details as { detail?: string }).detail).toBe("x");
+  });
+
+  it("omits alternativeAgents when every entry is non-string", () => {
+    const err = RemoteFatalRPCError.fromJsonRpc(RPC_REMOTE_GENERIC, "none", {
+      alternative_agents: [1, {}, null],
+    });
+    expect(err.alternativeAgents).toBeUndefined();
+  });
 });

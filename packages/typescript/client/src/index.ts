@@ -1,6 +1,4 @@
-/**
- * Public API for @asap-protocol/client (expanded in later sprint tasks).
- */
+/** TypeScript client for ASAP Protocol (JSON-RPC over HTTP). */
 export const SDK_NAME = "@asap-protocol/client" as const;
 
 export {
@@ -120,6 +118,9 @@ export type {
   TaskUpdatePayload,
 } from "./types/envelope.js";
 export { isKnownPayloadType, narrowEnvelope } from "./types/envelope.js";
+
+/** Adapter authoring surface (also available from `@asap-protocol/client/adapters/shared`). */
+export type { AsapCapabilityList, AsapExecuteClient } from "./adapters/shared.js";
 
 export type { Storage, WebStorageLike } from "./storage-local.js";
 export { MemoryStorage, LocalStorage } from "./storage-local.js";

@@ -118,6 +118,37 @@ describe("streaming (TS-010, task 4.2)", () => {
     expect(chunks[0]?.payload.final).toBe(true);
   });
 
+  it("parses SSE split across multiple stream chunks", async () => {
+    const wire = JSON.stringify(taskStreamEnvelope({ id: "s1", final: true, chunk: "done" }));
+    const payload = `data: ${wire}\n\n`;
+    const enc = new TextEncoder();
+    const cut = 7;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(enc.encode(payload.slice(0, cut)));
+        controller.enqueue(enc.encode(payload.slice(cut)));
+        controller.close();
+      },
+    });
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(stream, {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        }),
+    );
+    const client = createAsapStreamClient({
+      baseUrl: "https://provider.example",
+      fetch: fetchMock as typeof fetch,
+    });
+    const chunks: EnvelopeFor<"TaskStream">[] = [];
+    for await (const env of client.stream(taskRequestEnvelope())) {
+      chunks.push(env);
+    }
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0]?.payload.final).toBe(true);
+  });
+
   it("stops iteration when AbortSignal aborts (ReadableStream cancellation)", async () => {
     const wire1 = JSON.stringify(taskStreamEnvelope({ id: "s1", final: false, chunk: "x" }));
 
