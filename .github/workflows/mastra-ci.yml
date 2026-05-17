@@ -67,12 +67,17 @@ jobs:
           fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
           NODE
 
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+      - name: Install dependencies (mastra slice)
+        run: pnpm install --no-frozen-lockfile --filter "@asap-protocol/mastra..." --filter example-mastra
 
-      # Mastra imports `@asap-protocol/client` via package exports that resolve to `dist/*`.
-      # Fresh CI checkouts have no build output until we run `tshy` on the client.
+      - uses: actions/cache@v4
+        id: client-dist
+        with:
+          path: packages/typescript/client/dist
+          key: ${{ runner.os }}-asap-ts-client-${{ hashFiles('packages/typescript/client/src/**', 'packages/typescript/client/package.json', 'packages/typescript/client/tsconfig.build.json') }}
+
       - name: Build @asap-protocol/client
+        if: steps.client-dist.outputs.cache-hit != 'true'
         run: pnpm --filter @asap-protocol/client run build
 
       - name: Lint
