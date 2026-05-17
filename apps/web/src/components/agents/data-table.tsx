@@ -80,7 +80,7 @@ export function DataTable<TData, TValue>({
         }
     };
 
-    // eslint-disable-next-line react-hooks/incompatible-library
+    /* eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table: rule flags useReactTable with controlled filter/sort state (library pattern). */
     const table = useReactTable({
         data,
         columns,
