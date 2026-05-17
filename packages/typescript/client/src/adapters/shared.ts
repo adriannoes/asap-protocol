@@ -45,3 +45,21 @@ export function jsonSchemaForCapabilityInput(inputSchema: unknown | undefined): 
     properties: {},
   };
 }
+
+/**
+ * Normalizes describe `output_schema` into a JSON Schema object for tool output typing.
+ *
+ * Unlike {@link jsonSchemaForCapabilityInput}, the fallback omits `properties: {}` so consumers
+ * that treat "empty object schema" specially still see a conventional open object.
+ */
+export function jsonSchemaForCapabilityOutput(outputSchema: unknown | undefined): Record<string, unknown> {
+  if (
+    typeof outputSchema === "object" &&
+    outputSchema !== null &&
+    !Array.isArray(outputSchema) &&
+    typeof (outputSchema as { type?: unknown }).type === "string"
+  ) {
+    return outputSchema as Record<string, unknown>;
+  }
+  return { type: "object", additionalProperties: true };
+}
