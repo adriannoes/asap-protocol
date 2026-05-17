@@ -1,15 +1,26 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { capabilityToolKey } from "@asap-protocol/client/adapters/shared";
 import { createAsapMastraAgent } from "../src/asap-mastra-agent.js";
 
+const describeCapabilityMock = vi.fn();
+
+vi.mock("@asap-protocol/client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@asap-protocol/client")>();
+  return {
+    ...actual,
+    describeCapability: (...args: unknown[]) => describeCapabilityMock(...args),
+  };
+});
+
 describe("createAsapMastraAgent", () => {
   it("exposes ASAP capabilities under deterministic Mastra tool keys", async () => {
+    describeCapabilityMock.mockResolvedValue({ name: "demo_echo", description: "d" });
     const client = {
       provider: new URL("http://localhost:8080/"),
       capabilities: ["urn:asap:cap:demo_echo"],
     };
-    const agent = createAsapMastraAgent({
+    const agent = await createAsapMastraAgent({
       client,
       capabilities: client.capabilities,
       model: "openai/gpt-4o-mini",
@@ -19,12 +30,16 @@ describe("createAsapMastraAgent", () => {
   });
 
   it("registers one Mastra tool per capability", async () => {
+    describeCapabilityMock.mockImplementation(async (_p, name: string) => ({
+      name,
+      description: "d",
+    }));
     const caps = ["urn:asap:cap:echo", "urn:asap:cap:demo_other"];
     const client = {
       provider: new URL("http://localhost:8080/"),
       capabilities: caps,
     };
-    const agent = createAsapMastraAgent({
+    const agent = await createAsapMastraAgent({
       client,
       capabilities: caps,
       model: "openai/gpt-4o-mini",
@@ -36,11 +51,12 @@ describe("createAsapMastraAgent", () => {
   });
 
   it("uses default instructions that reference configured capabilities", async () => {
+    describeCapabilityMock.mockResolvedValue({ name: "alpha", description: "d" });
     const client = {
       provider: new URL("http://localhost:8080/"),
       capabilities: ["urn:asap:cap:alpha"],
     };
-    const agent = createAsapMastraAgent({
+    const agent = await createAsapMastraAgent({
       client,
       capabilities: client.capabilities,
       model: "openai/gpt-4o-mini",
@@ -51,11 +67,12 @@ describe("createAsapMastraAgent", () => {
   });
 
   it("honors custom instructions when provided", async () => {
+    describeCapabilityMock.mockResolvedValue({ name: "alpha", description: "d" });
     const client = {
       provider: new URL("http://localhost:8080/"),
       capabilities: ["urn:asap:cap:alpha"],
     };
-    const agent = createAsapMastraAgent({
+    const agent = await createAsapMastraAgent({
       client,
       capabilities: client.capabilities,
       model: "openai/gpt-4o-mini",

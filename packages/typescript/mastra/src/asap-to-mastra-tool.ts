@@ -1,7 +1,8 @@
-import { executeCapability, type CapabilityFetch } from "@asap-protocol/client";
+import { describeCapability, executeCapability, type CapabilityFetch } from "@asap-protocol/client";
 import {
   capabilityToolKey,
   jsonSchemaForCapabilityInput,
+  jsonSchemaForCapabilityOutput,
   type AsapExecuteClient,
 } from "@asap-protocol/client/adapters/shared";
 import { createTool, type Tool } from "@mastra/core/tools";
@@ -15,12 +16,23 @@ export interface AsapToolsForMastraOptions {
    * Use this to trigger `request-capability` / host approval flows.
    */
   readonly requestCapability?: (requiredCapability: string) => void | Promise<void>;
+  /** Pre-fetched per-capability input schemas (parity with adapters/openai|anthropic). */
+  readonly inputSchemas?: Readonly<Record<string, unknown>>;
+  /** Pre-fetched per-capability output schemas. */
+  readonly outputSchemas?: Readonly<Record<string, unknown>>;
 }
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return typeof x === "object" && x !== null && !Array.isArray(x);
 }
 
+/**
+ * Wraps a {@link CapabilityFetch} to map select provider **403** JSON error payloads into typed errors.
+ *
+ * **Unary JSON only:** non-403 responses are returned as-is so bodies are not buffered. Do not use this
+ * wrapper for SSE or other streaming responses; the contract assumes small JSON payloads suitable for
+ * `describeCapability` / `executeCapability`.
+ */
 function wrapFetchWithCapabilityErrors(
   base: CapabilityFetch | undefined,
   options: AsapToolsForMastraOptions | undefined,
@@ -28,10 +40,10 @@ function wrapFetchWithCapabilityErrors(
   const impl = base ?? globalThis.fetch;
   return async (input, init) => {
     const res = await impl(input, init);
-    const text = await res.text();
     if (res.status !== 403) {
-      return new Response(text, { status: res.status, statusText: res.statusText, headers: res.headers });
+      return res;
     }
+    const text = await res.clone().text();
     let parsed: unknown;
     try {
       parsed = text.length === 0 ? {} : JSON.parse(text);
@@ -64,25 +76,34 @@ function wrapFetchWithCapabilityErrors(
   };
 }
 
-/**
- * Build Mastra {@link createTool} instances for each ASAP capability on the client.
- */
-export function asapToolsForMastra(
+function buildTools(
   client: AsapExecuteClient,
-  options?: AsapToolsForMastraOptions,
+  fetchFn: CapabilityFetch,
+  describedByCapability: ReadonlyMap<
+    string,
+    | {
+        readonly description: string;
+        readonly input_schema?: unknown;
+        readonly output_schema?: unknown;
+      }
+    | undefined
+  >,
+  options: AsapToolsForMastraOptions | undefined,
 ): readonly Tool[] {
-  const fetchFn = wrapFetchWithCapabilityErrors(client.fetch, options);
   const tools: Tool[] = [];
-
   for (const capabilityId of client.capabilities) {
     const id = capabilityToolKey(capabilityId);
-    const inputJson = jsonSchemaForCapabilityInput(undefined);
-    const outputJson = jsonSchemaForCapabilityInput(undefined);
+    const described = describedByCapability.get(capabilityId);
+    const inputJson = jsonSchemaForCapabilityInput(
+      options?.inputSchemas?.[capabilityId] ?? described?.input_schema,
+    );
+    const outputRaw = options?.outputSchemas?.[capabilityId] ?? described?.output_schema;
+    const outputJson = jsonSchemaForCapabilityOutput(outputRaw);
 
     tools.push(
       createTool({
         id,
-        description: `ASAP capability: ${capabilityId}`,
+        description: described?.description ?? `ASAP capability: ${capabilityId}`,
         inputSchema: zodFromJsonSchema(inputJson),
         outputSchema: zodFromJsonSchema(outputJson),
         execute: async (inputData: unknown) => {
@@ -98,6 +119,74 @@ export function asapToolsForMastra(
       }),
     );
   }
-
   return tools;
+}
+
+/**
+ * Build Mastra {@link createTool} instances for each ASAP capability on the client.
+ *
+ * When {@link AsapToolsForMastraOptions.inputSchemas} does not define a capability entry, this calls
+ * {@link describeCapability} once per capability to recover JSON Schemas and descriptions.
+ */
+export async function asapToolsForMastra(
+  client: AsapExecuteClient,
+  options?: AsapToolsForMastraOptions,
+): Promise<readonly Tool[]> {
+  const fetchFn = wrapFetchWithCapabilityErrors(client.fetch, options);
+  const describedByCapability = new Map<
+    string,
+    | {
+        readonly description: string;
+        readonly input_schema?: unknown;
+        readonly output_schema?: unknown;
+      }
+    | undefined
+  >();
+
+  for (const capabilityId of client.capabilities) {
+    if (options?.inputSchemas?.[capabilityId] !== undefined) {
+      describedByCapability.set(capabilityId, undefined);
+      continue;
+    }
+    const described = await describeCapability(client.provider, capabilityId, {
+      fetch: fetchFn,
+      agentJwt: client.agentJwt,
+    }).catch(() => undefined);
+
+    if (described === undefined) {
+      describedByCapability.set(capabilityId, undefined);
+    } else {
+      describedByCapability.set(capabilityId, {
+        description: described.description,
+        input_schema: described.input_schema,
+        output_schema: described.output_schema,
+      });
+    }
+  }
+
+  return buildTools(client, fetchFn, describedByCapability, options);
+}
+
+/**
+ * Synchronous variant for callers that already have per-capability {@link AsapToolsForMastraOptions.inputSchemas}
+ * / {@link AsapToolsForMastraOptions.outputSchemas} and want to avoid {@link describeCapability} round-trips.
+ */
+export function asapToolsForMastraSync(
+  client: AsapExecuteClient,
+  options?: AsapToolsForMastraOptions,
+): readonly Tool[] {
+  const fetchFn = wrapFetchWithCapabilityErrors(client.fetch, options);
+  const describedByCapability = new Map<
+    string,
+    | {
+        readonly description: string;
+        readonly input_schema?: unknown;
+        readonly output_schema?: unknown;
+      }
+    | undefined
+  >();
+  for (const capabilityId of client.capabilities) {
+    describedByCapability.set(capabilityId, undefined);
+  }
+  return buildTools(client, fetchFn, describedByCapability, options);
 }

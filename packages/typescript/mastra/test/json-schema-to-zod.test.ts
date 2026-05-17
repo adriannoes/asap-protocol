@@ -27,6 +27,16 @@ describe("zodFromJsonSchema", () => {
     expect(s.safeParse({ x: 1 }).success).toBe(true);
   });
 
+  it("maps object properties with required keys", () => {
+    const s = zodFromJsonSchema({
+      type: "object",
+      properties: { message: { type: "string" } },
+      required: ["message"],
+    });
+    expect(s.safeParse({ message: "hi" }).success).toBe(true);
+    expect(s.safeParse({}).success).toBe(false);
+  });
+
   it("maps integer, boolean, and array schemas", () => {
     expect(zodFromJsonSchema({ type: "integer" }).safeParse(7).success).toBe(true);
     expect(zodFromJsonSchema({ type: "boolean" }).safeParse(false).success).toBe(true);

@@ -1,14 +1,19 @@
-import { Agent } from "@mastra/core/agent";
+import { Agent, type AgentConfig } from "@mastra/core/agent";
 
 import type { AsapExecuteClient } from "@asap-protocol/client/adapters/shared";
 
-import { asapToolsForMastra } from "./asap-to-mastra-tool.js";
+import { type AsapToolsForMastraOptions, asapToolsForMastra } from "./asap-to-mastra-tool.js";
+
+/** Mastra {@link Agent} model slot — sourced from Mastra's {@link AgentConfig} instead of `ConstructorParameters`. */
+export type AsapMastraAgentModel = AgentConfig["model"];
 
 export interface CreateAsapMastraAgentParams {
   readonly client: AsapExecuteClient;
   readonly capabilities: readonly string[];
   /** Mastra model id or config (passed through to {@link Agent}). */
-  readonly model: ConstructorParameters<typeof Agent>[0]["model"];
+  readonly model: AsapMastraAgentModel;
+  /** Optional hooks / schema overrides forwarded to {@link asapToolsForMastra}. */
+  readonly toolsOptions?: AsapToolsForMastraOptions;
   /** Overrides {@link Agent} id (default: `asap-mastra-agent`). */
   readonly agentId?: string;
   /** Overrides display name (default: `ASAP Mastra Agent`). */
@@ -35,12 +40,11 @@ function defaultInstructions(capabilities: readonly string[]): string {
  *
  * @see sprint task 3.1 for wiring {@link asapToolsForMastra}.
  */
-export function createAsapMastraAgent(params: CreateAsapMastraAgentParams): Agent {
-  const clientForTools: AsapExecuteClient = {
-    ...params.client,
-    capabilities: params.capabilities,
-  };
-  const asapTools = asapToolsForMastra(clientForTools);
+export async function createAsapMastraAgent(params: CreateAsapMastraAgentParams): Promise<Agent> {
+  const asapTools = await asapToolsForMastra(
+    { ...params.client, capabilities: params.capabilities },
+    params.toolsOptions,
+  );
   const tools: Record<string, (typeof asapTools)[number]> = {};
   for (const t of asapTools) {
     tools[t.id] = t;

@@ -12,17 +12,26 @@ function isRecord(x: unknown): x is Record<string, unknown> {
 }
 
 export async function* asapStreamToMastraTextStream(source: AsyncIterable<unknown>): AsyncIterable<string> {
-  for await (const event of source) {
-    if (!isRecord(event) || event.type !== "task_stream") {
-      continue;
+  const it = source[Symbol.asyncIterator]();
+  try {
+    while (true) {
+      const { value: event, done } = await it.next();
+      if (done) {
+        return;
+      }
+      if (!isRecord(event) || event.type !== "task_stream") {
+        continue;
+      }
+      const payload = event.payload;
+      if (!isRecord(payload)) {
+        continue;
+      }
+      const chunk = payload.chunk;
+      if (typeof chunk === "string") {
+        yield chunk;
+      }
     }
-    const payload = event.payload;
-    if (!isRecord(payload)) {
-      continue;
-    }
-    const chunk = payload.chunk;
-    if (typeof chunk === "string") {
-      yield chunk;
-    }
+  } finally {
+    await it.return?.();
   }
 }

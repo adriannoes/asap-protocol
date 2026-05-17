@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { asapStreamToMastraTextStream } from "../src/streaming.js";
 
@@ -51,5 +51,24 @@ describe("asapStreamToMastraTextStream", () => {
     const second = await it.next();
     expect(second.value).toBe("b");
     expect(pulled).toBe(2);
+  });
+
+  it("closes the upstream async iterator when the consumer breaks early", async () => {
+    const returned = vi.fn();
+    async function* mockSource(): AsyncIterable<{ type: string; payload: { chunk: string } }> {
+      try {
+        yield { type: "task_stream", payload: { chunk: "a" } };
+        yield { type: "task_stream", payload: { chunk: "b" } };
+      } finally {
+        returned();
+      }
+    }
+
+    for await (const chunk of asapStreamToMastraTextStream(mockSource())) {
+      void chunk;
+      break;
+    }
+
+    expect(returned).toHaveBeenCalled();
   });
 });

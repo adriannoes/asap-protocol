@@ -18,8 +18,31 @@ export function zodFromJsonSchema(schema: Record<string, unknown>): ZodType<unkn
         : z.union(branches as [ZodType<unknown>, ZodType<unknown>, ...ZodType<unknown>[]]);
   }
   switch (schema.type) {
-    case "object":
+    case "object": {
+      const maybeProps = schema.properties;
+      if (
+        maybeProps !== undefined &&
+        typeof maybeProps === "object" &&
+        maybeProps !== null &&
+        !Array.isArray(maybeProps)
+      ) {
+        const propsRecord = maybeProps as Record<string, unknown>;
+        const required = new Set(
+          Array.isArray(schema.required) ? schema.required.filter((k): k is string => typeof k === "string") : [],
+        );
+        const shape: Record<string, ZodType<unknown>> = {};
+        for (const [key, val] of Object.entries(propsRecord)) {
+          if (typeof val === "object" && val !== null && !Array.isArray(val)) {
+            const child = zodFromJsonSchema(val as Record<string, unknown>);
+            shape[key] = required.has(key) ? child : child.optional();
+          }
+        }
+        if (Object.keys(shape).length > 0) {
+          return z.object(shape);
+        }
+      }
       return z.record(z.string(), z.unknown());
+    }
     case "string":
       return z.string();
     case "number":
