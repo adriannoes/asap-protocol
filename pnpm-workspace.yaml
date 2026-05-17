@@ -1,4 +1,6 @@
 packages:
   - "packages/typescript/*"
+  - "packages/typescript/openai-agents"
   - "apps/example-nextjs"
   - "apps/example-mastra"
+  - "apps/example-openai-agents"
