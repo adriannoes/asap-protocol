@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { LANDING_FEATURE_SLUGS } from '@/lib/telemetry/homepage-cta-ids';
 import { Database, ShieldCheck, Zap, Activity, ArrowRight, Fingerprint, KeySquare, Radio, FileCode, Braces, CloudUpload } from 'lucide-react';
 
 const INLINE_CODE = 'rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300';
@@ -13,18 +14,18 @@ type FeatureCard = {
   className: string;
 };
 
-const features: FeatureCard[] = [
-  {
+type FeatureSlug = (typeof LANDING_FEATURE_SLUGS)[number];
+
+const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
+  'openapi-adapter': {
     title: 'OpenAPI Adapter',
-    slug: 'openapi-adapter',
     description:
       'Generate ASAP capabilities from an OpenAPI 3.x document so existing HTTP APIs become agent-callable with minimal glue code.',
     icon: FileCode,
     className: 'md:col-span-2',
   },
-  {
+  'typescript-sdk': {
     title: 'TypeScript SDK',
-    slug: 'typescript-sdk',
     description: (
       <>
         Official <code className={INLINE_CODE}>@asap-protocol/client</code> on npm — discovery, envelopes, streaming, plus optional
@@ -34,9 +35,8 @@ const features: FeatureCard[] = [
     icon: Braces,
     className: 'md:col-span-1',
   },
-  {
+  'auto-registration': {
     title: 'Auto-Registration',
-    slug: 'auto-registration',
     description: (
       <>
         <code className={INLINE_CODE}>POST /registry/agents</code> with Compliance Harness gating — shrink the time from
@@ -46,63 +46,61 @@ const features: FeatureCard[] = [
     icon: CloudUpload,
     className: 'md:col-span-1',
   },
-  {
+  'lite-registry': {
     title: 'Lite Registry',
-    slug: 'lite-registry',
     description:
       'Built for speed and resilience. Pull agent manifests directly from a statically served JSON registry with zero database overhead.',
     icon: Database,
     className: 'md:col-span-2',
   },
-  {
+  'verified-trust': {
     title: 'Verified Trust',
-    slug: 'verified-trust',
     description:
       'Manual operations-based verification processes to ensure quality and safety across the ecosystem.',
     icon: ShieldCheck,
     className: 'md:col-span-1',
   },
-  {
+  '1-click-integration': {
     title: '1-Click Integration',
-    slug: '1-click-integration',
     description:
       'Launch sub-agents through a standard protocol that orchestrates connections over WebSockets natively.',
     icon: Zap,
     className: 'md:col-span-1',
   },
-  {
+  'full-observability': {
     title: 'Full Observability',
-    slug: 'full-observability',
     description:
       'Real-time stream of agent events, state snapshots, and task updates standardized across the network.',
     icon: Activity,
     className: 'md:col-span-2',
   },
-  {
+  'per-agent-identity': {
     title: 'Per-Agent Identity',
-    slug: 'per-agent-identity',
     description:
       'Every runtime agent gets its own Ed25519 keypair under a persistent Host. Audit, scope, and revoke individual sessions without touching the rest of your fleet.',
     icon: Fingerprint,
     className: 'md:col-span-1',
   },
-  {
+  'scoped-capabilities': {
     title: 'Scoped Capabilities',
-    slug: 'scoped-capabilities',
     description:
       'Fine-grained capabilities with constraint operators — transfer up to $1,000, only in USD, to one destination. Precise grants replace coarse OAuth scopes.',
     icon: KeySquare,
     className: 'md:col-span-1',
   },
-  {
+  'streaming-responses': {
     title: 'Streaming Responses',
-    slug: 'streaming-responses',
     description:
       'TaskStream chunks over Server-Sent Events. Show partial results and progress in real time instead of blocking until completion.',
     icon: Radio,
     className: 'md:col-span-1',
   },
-];
+};
+
+const features: FeatureCard[] = LANDING_FEATURE_SLUGS.map((slug) => ({
+  slug,
+  ...FEATURE_DEFINITIONS[slug],
+}));
 
 export function FeaturesSection() {
   return (

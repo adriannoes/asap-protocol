@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { WHATS_NEW_RIBBON_CTA_IDS } from '@/lib/telemetry/homepage-cta-ids';
 import {
   Fingerprint,
   KeySquare,
@@ -32,29 +33,53 @@ const DOCS_ESCALATION =
   'https://github.com/adriannoes/asap-protocol/blob/main/docs/capabilities/escalation.md';
 
 const PILLS: Pill[] = [
-  { label: 'OpenAPI', href: DOCS_OPENAPI, icon: Layers, external: true, dataCta: 'docs-openapi' },
-  { label: 'TypeScript SDK', href: DOCS_TS_SDK, icon: Code, external: true, dataCta: 'docs-typescript' },
-  { label: 'Auto-Reg', href: DOCS_AUTO_REG, icon: Sparkles, external: true, dataCta: 'docs-auto-registration' },
+  {
+    label: 'OpenAPI',
+    href: DOCS_OPENAPI,
+    icon: Layers,
+    external: true,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsOpenapi,
+  },
+  {
+    label: 'TypeScript SDK',
+    href: DOCS_TS_SDK,
+    icon: Code,
+    external: true,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsTypescript,
+  },
+  {
+    label: 'Auto-Reg',
+    href: DOCS_AUTO_REG,
+    icon: Sparkles,
+    external: true,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsAutoRegistration,
+  },
   {
     label: 'Identity',
     href: '/features/per-agent-identity',
     icon: Fingerprint,
-    dataCta: 'feature-per-agent-identity',
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.featurePerAgentIdentity,
   },
   {
     label: 'Capabilities',
     href: '/features/scoped-capabilities',
     icon: KeySquare,
-    dataCta: 'feature-scoped-capabilities',
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.featureScopedCapabilities,
   },
   {
     label: 'Escalation',
     href: DOCS_ESCALATION,
     icon: ShieldCheck,
     external: true,
-    dataCta: 'docs-capabilities-escalation',
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsCapabilitiesEscalation,
   },
-  { label: 'Changelog', href: CHANGELOG_URL, icon: GitBranch, external: true, dataCta: 'release-changelog-github' },
+  {
+    label: 'Changelog',
+    href: CHANGELOG_URL,
+    icon: GitBranch,
+    external: true,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.releaseChangelogGithub,
+  },
 ];
 
 export function WhatsNewRibbon() {

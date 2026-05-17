@@ -2,6 +2,14 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 
 import { NextResponse } from 'next/server';
 
+import { HOMEPAGE_CTA_IDS } from '@/lib/telemetry/homepage-cta-ids';
+import {
+  computeCtr,
+  emptyCtrShell,
+  mergeCtrPerCta,
+  parseOptionalSiteMetricsJsonFromEnv,
+} from '@/lib/telemetry/site-metrics';
+
 /**
  * Server-only telemetry snapshot for weekly aggregation (S1 adoption telemetry).
  *
@@ -18,38 +26,6 @@ import { NextResponse } from 'next/server';
  * Token comparison uses fixed-length SHA-256 digests (timingSafeEqual) to reduce timing leaks.
  */
 export const runtime = 'nodejs';
-
-/** Known homepage `data-cta` values (keep in sync with landing components). */
-const HOMEPAGE_CTA_IDS = [
-  'hero-release-badge',
-  'hero-explore-agents',
-  'hero-register-agent',
-  'docs-openapi',
-  'docs-typescript',
-  'docs-auto-registration',
-  'docs-capabilities-escalation',
-  'feature-openapi-adapter',
-  'feature-typescript-sdk',
-  'feature-auto-registration',
-  'feature-lite-registry',
-  'feature-verified-trust',
-  'feature-1-click-integration',
-  'feature-full-observability',
-  'feature-per-agent-identity',
-  'feature-scoped-capabilities',
-  'feature-streaming-responses',
-  'release-changelog-github',
-] as const;
-
-type CtaMetrics = {
-  clicks?: number;
-  views?: number;
-  ctr?: number;
-};
-
-type SiteMetricsFile = {
-  ctr_per_cta?: Record<string, CtaMetrics>;
-};
 
 function tokensEqual(provided: string, expected: string): boolean {
   const left = createHash('sha256').update(provided, 'utf8').digest();
@@ -69,48 +45,6 @@ function parseBearerToken(request: Request): string | null {
   return raw.slice(prefix.length).trim();
 }
 
-function computeCtr(metrics: CtaMetrics): CtaMetrics {
-  const { clicks, views } = metrics;
-  if (typeof clicks === 'number' && typeof views === 'number' && views > 0) {
-    return { ...metrics, ctr: clicks / views };
-  }
-  return { ...metrics };
-}
-
-function mergeCtrPerCta(
-  base: Record<string, CtaMetrics>,
-  fromEnv?: Record<string, CtaMetrics>,
-): Record<string, CtaMetrics> {
-  const out: Record<string, CtaMetrics> = { ...base };
-  if (!fromEnv) {
-    return out;
-  }
-  for (const [k, v] of Object.entries(fromEnv)) {
-    out[k] = { ...(out[k] ?? {}), ...v };
-  }
-  return out;
-}
-
-function parseOptionalSiteMetricsJson(): SiteMetricsFile | null {
-  const raw = process.env.TELEMETRY_SITE_METRICS_JSON?.trim();
-  if (!raw) {
-    return null;
-  }
-  try {
-    return JSON.parse(raw) as SiteMetricsFile;
-  } catch {
-    return null;
-  }
-}
-
-function emptyCtrShell(): Record<string, CtaMetrics> {
-  const shell: Record<string, CtaMetrics> = {};
-  for (const id of HOMEPAGE_CTA_IDS) {
-    shell[id] = {};
-  }
-  return shell;
-}
-
 export async function GET(request: Request): Promise<NextResponse> {
   const expected = process.env.TELEMETRY_TOKEN?.trim() ?? '';
   if (!expected) {
@@ -125,13 +59,22 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  let parsedEnv;
+  try {
+    parsedEnv = parseOptionalSiteMetricsJsonFromEnv();
+  } catch {
+    return NextResponse.json(
+      { error: 'Invalid TELEMETRY_SITE_METRICS_JSON (malformed JSON or schema).' },
+      { status: 503 },
+    );
+  }
+
   const collectedAt = new Date().toISOString();
-  const parsed = parseOptionalSiteMetricsJson();
-  const fromEnv = parsed?.ctr_per_cta;
+  const fromEnv = parsedEnv?.ctr_per_cta;
 
   let shell = emptyCtrShell();
   shell = mergeCtrPerCta(shell, fromEnv ?? undefined);
-  const ctrPerCta: Record<string, CtaMetrics> = {};
+  const ctrPerCta: Record<string, { clicks?: number; views?: number; ctr?: number }> = {};
   for (const [k, v] of Object.entries(shell)) {
     ctrPerCta[k] = computeCtr(v);
   }

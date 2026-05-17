@@ -49,6 +49,20 @@ describe('GET /api/telemetry', () => {
     expect(bad.status).toBe(401);
   });
 
+  it('returns 503 when TELEMETRY_SITE_METRICS_JSON is invalid JSON', async () => {
+    process.env.TELEMETRY_SITE_METRICS_JSON = '{';
+    const res = await GET(createRequest({ Authorization: 'Bearer test-telemetry-token' }));
+    expect(res.status).toBe(503);
+  });
+
+  it('returns 503 when TELEMETRY_SITE_METRICS_JSON fails schema validation', async () => {
+    process.env.TELEMETRY_SITE_METRICS_JSON = JSON.stringify({
+      ctr_per_cta: { x: { clicks: -1 } },
+    });
+    const res = await GET(createRequest({ Authorization: 'Bearer test-telemetry-token' }));
+    expect(res.status).toBe(503);
+  });
+
   it('returns ctr_per_cta with merged env metrics when authorized', async () => {
     process.env.TELEMETRY_SITE_METRICS_JSON = JSON.stringify({
       ctr_per_cta: {
