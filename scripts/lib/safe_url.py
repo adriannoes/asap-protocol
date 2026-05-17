@@ -1,0 +1,54 @@
+"""Shared SSRF-safe URL checks for scripts (IssueOps, telemetry collectors).
+
+Mirrors the IssueOps guard used by agent registration: blocks private IPs, loopback,
+link-local targets, and cloud metadata hosts after optional DNS resolution.
+"""
+
+from __future__ import annotations
+
+import ipaddress
+import socket
+from urllib.parse import urlparse
+
+_BLOCKED_HOSTS = frozenset(
+    {
+        "localhost",
+        "127.0.0.1",
+        "::1",
+        "0.0.0.0",
+        "metadata.google.internal",
+        "metadata.aws.internal",
+        "169.254.169.254",
+    }
+)
+
+
+def is_safe_http_url(url: str) -> bool:
+    """Return True if ``url`` may be fetched (HTTP/HTTPS) without obvious SSRF risk.
+
+    Blocks non-http(s) schemes, blocked hostnames, literal private/link-local IPs,
+    and hostnames whose DNS resolution includes private/link-local addresses.
+    """
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return False
+    hostname = (parsed.hostname or "").lower()
+    if hostname in _BLOCKED_HOSTS:
+        return False
+    try:
+        addr = ipaddress.ip_address(hostname)
+    except ValueError:
+        addr = None
+    else:
+        assert addr is not None
+        if addr.is_private or addr.is_loopback or addr.is_link_local:
+            return False
+    try:
+        resolved = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC)
+        for _, _, _, _, sockaddr in resolved:
+            resolved_addr = ipaddress.ip_address(sockaddr[0])
+            if resolved_addr.is_private or resolved_addr.is_loopback or resolved_addr.is_link_local:
+                return False
+    except (socket.gaierror, ValueError, OSError):
+        return False
+    return True

@@ -176,6 +176,10 @@ For **general questions** about the protocol, the marketplace, partnerships, or 
 
 You can also use [GitHub Discussions](https://github.com/adriannoes/asap-protocol/discussions) or [Issues](https://github.com/adriannoes/asap-protocol/issues) for public project topics.
 
+## Privacy
+
+See [PRIVACY.md](PRIVACY.md) for how the public site and maintainer telemetry use aggregate metrics (including Vercel Web Analytics) without collecting agent IDs or end-user PII in repository outputs.
+
 ## License
 
 This project is licensed under the Apache 2.0 License - see the [license](https://github.com/adriannoes/asap-protocol/blob/main/LICENSE) file for details.

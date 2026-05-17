@@ -12,14 +12,11 @@ Usage (from GitHub Actions):
 from __future__ import annotations
 
 import argparse
-import ipaddress
 import json
 import logging
 import re
-import socket
 import sys
 from pathlib import Path
-from urllib.parse import urlparse
 
 import httpx
 from pydantic import ValidationError
@@ -40,48 +37,9 @@ from lib.registry_io import (  # noqa: E402
     save_registry,
     write_validation_result,
 )
+from lib.safe_url import is_safe_http_url  # noqa: E402
 
 logger = logging.getLogger(__name__)
-
-# Blocked hosts for SSRF protection (CWE-918)
-_BLOCKED_HOSTS = frozenset(
-    {
-        "localhost",
-        "127.0.0.1",
-        "::1",
-        "0.0.0.0",
-        "metadata.google.internal",
-        "metadata.aws.internal",
-        "169.254.169.254",
-    }
-)
-
-
-def _is_safe_url(url: str) -> bool:
-    """SSRF protection: block private IPs, loopback, cloud metadata (with DNS resolution)."""
-    parsed = urlparse(url)
-    if parsed.scheme not in ("http", "https"):
-        return False
-    hostname = (parsed.hostname or "").lower()
-    if hostname in _BLOCKED_HOSTS:
-        return False
-    try:
-        addr = ipaddress.ip_address(hostname)
-    except ValueError:
-        addr = None
-    else:
-        assert addr is not None  # mypy: else implies try succeeded
-        if addr.is_private or addr.is_loopback or addr.is_link_local:
-            return False
-    try:
-        resolved = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC)
-        for _, _, _, _, sockaddr in resolved:
-            addr = ipaddress.ip_address(sockaddr[0])
-            if addr.is_private or addr.is_loopback or addr.is_link_local:
-                return False
-    except (socket.gaierror, ValueError, OSError):
-        return False
-    return True
 
 
 def _fail_registration(output_path: str, errors: list[str], issue_number: str) -> None:
@@ -144,7 +102,7 @@ def parse_issue_body(body: str) -> dict[str, str]:
 
 
 def fetch_manifest(url: str, timeout: float = 15.0) -> Manifest:
-    if not _is_safe_url(url):
+    if not is_safe_http_url(url):
         raise ValueError(f"Blocked URL (private/metadata): {url}")
     with httpx.Client(timeout=timeout, follow_redirects=False) as client:
         resp = client.get(url)

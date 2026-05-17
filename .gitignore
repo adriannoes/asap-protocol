@@ -186,6 +186,7 @@ product/strategy/
 product/private/
 product/private-roadmap/
 product/prd/private/
+engineering/code-review/private/
 # Tactical PRDs outside private/ (patch train); single-digit and double-digit patch (e.g. v2.3.10)
 product/prd/prd-v2.3.[1-9]-*.md
 product/prd/prd-v2.3.[1-9][0-9]-*.md
@@ -215,3 +216,6 @@ node_modules/
 eslint-report.json
 .vercel
 .env*.local
+
+# Local weekly telemetry outputs (snapshots + dashboard; CI uses artifacts)
+private/telemetry/

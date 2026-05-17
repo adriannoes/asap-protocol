@@ -103,6 +103,10 @@ CI runs `pip-audit` after a sync that **excludes** the optional extras `crewai` 
 
 If you install `[crewai]` or `[llamaindex]`, run `pip-audit` separately on that environment and expect possible advisories until upstream publishes patched releases. Integration tests for those extras still run in CI with the full dependency tree.
 
+**Optional `[telemetry]` extra**: Weekly PyPI stats use `pypistats`, declared under `[telemetry]` in `pyproject.toml` so default installs avoid that dependency graph. The composite `.github/actions/setup-python` step runs `uv sync --frozen --all-extras --dev`, which installs `[telemetry]` for workflows that use it (including the weekly telemetry job). When auditing **without** `--all-extras`, refresh an environment that includes telemetry before judging related CVEs:
+
+`uv sync --frozen --extra telemetry --dev` then `uv run pip-audit` (reuse the same `--ignore-vuln` flags as in the Monitoring section above when you need parity with CI).
+
 ### Version Update Schedule
 
 - **Security Updates**: Automatic and immediate (no schedule)

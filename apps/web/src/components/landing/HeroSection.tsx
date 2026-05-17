@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { BackgroundPaths } from '@/components/ui/background-paths';
 import { HeroTerminal } from '@/components/landing/HeroTerminal';
 import Link from 'next/link';
+import { HOMEPAGE_HERO_CTA_IDS } from '@/lib/telemetry/homepage-cta-ids';
 
 export function HeroSection() {
   return (
@@ -20,6 +21,7 @@ export function HeroSection() {
                 href="https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#230---2026-05-04"
                 target="_blank"
                 rel="noopener noreferrer"
+                data-cta={HOMEPAGE_HERO_CTA_IDS.releaseBadge}
                 aria-label="View ASAP Protocol v2.3.0 changelog on GitHub"
               >
                 <div className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-sm font-medium text-indigo-300 backdrop-blur-sm transition-colors hover:border-indigo-500/60 hover:bg-indigo-500/15">
@@ -45,7 +47,7 @@ export function HeroSection() {
                 size="lg"
                 className="w-full bg-white text-black hover:bg-zinc-200 min-[400px]:w-auto"
               >
-                <Link href="/browse">
+                <Link href="/browse" data-cta={HOMEPAGE_HERO_CTA_IDS.exploreAgents}>
                   Explore Agents
                 </Link>
               </Button>
@@ -55,7 +57,7 @@ export function HeroSection() {
                 variant="outline"
                 className="w-full border-zinc-800 text-zinc-300 hover:bg-zinc-900 hover:text-white min-[400px]:w-auto"
               >
-                <Link href="/dashboard/register">
+                <Link href="/dashboard/register" data-cta={HOMEPAGE_HERO_CTA_IDS.registerAgent}>
                   Register Agent
                 </Link>
               </Button>

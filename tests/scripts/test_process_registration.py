@@ -191,7 +191,7 @@ class TestProcessRegistrationRun:
     @pytest.fixture(autouse=True)
     def _patch_dns(self) -> None:
         """Mock getaddrinfo so test URLs resolve to public IP."""
-        with patch("scripts.process_registration.socket.getaddrinfo", _fake_getaddrinfo_public):
+        with patch("scripts.lib.safe_url.socket.getaddrinfo", _fake_getaddrinfo_public):
             yield
 
     def test_valid_issue_writes_registry_and_valid_result(

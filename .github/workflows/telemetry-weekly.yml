@@ -1,0 +1,48 @@
+# Weekly adoption telemetry: public-source collectors + optional site CTR fetch.
+# Does not commit to main; uploads JSON + dashboard as workflow artifacts.
+# Optional: copy artifacts to a private branch manually if you want git history.
+#
+# Dependency graph: `.github/actions/setup-python` runs `uv sync --frozen --all-extras --dev`,
+# which installs `[telemetry]` (pypistats). To audit that optional graph locally, see
+# SECURITY.md ("Optional `[telemetry]` extra"): sync with `--extra telemetry` or `--all-extras`,
+# then run `uv run pip-audit` with the same CI ignore flags where applicable.
+name: Telemetry (weekly)
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Python (uv)
+        uses: ./.github/actions/setup-python
+
+      - name: Run telemetry aggregate
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          # Traffic + labeled issue reads need a maintainer PAT (default GITHUB_TOKEN lacks traffic).
+          TELEMETRY_GITHUB_TOKEN: ${{ secrets.TELEMETRY_GITHUB_TOKEN }}
+          # Optional: production `/api/telemetry` URL (must be https://, no redirects).
+          TELEMETRY_SITE_ENDPOINT: ${{ vars.TELEMETRY_SITE_ENDPOINT }}
+          # Required only when TELEMETRY_SITE_ENDPOINT is set (Bearer must match the web app).
+          TELEMETRY_TOKEN: ${{ secrets.TELEMETRY_TOKEN }}
+        run: uv run python scripts/telemetry/aggregate.py
+
+      - name: Upload snapshot and dashboard
+        uses: actions/upload-artifact@v4
+        with:
+          name: telemetry-${{ github.run_id }}
+          path: |
+            private/telemetry/snapshot-*.json
+            private/telemetry/dashboard.md
+          if-no-files-found: error
