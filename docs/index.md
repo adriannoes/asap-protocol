@@ -12,7 +12,7 @@
 - **Transport Agnostic**: Clean separation between protocol logic and transport capability (HTTP JSON-RPC, WebSocket, SSE)
 - **Observability**: First-class tracking with correlation IDs and trace IDs
 - **Security & authorization (v2.2+, WebAuthn real in v2.2.1)**: Per-runtime Host/Agent JWTs, capability grants with constraints, approval flows, opt-in WebAuthn (`asap-protocol[webauthn]`) for browser-controlled and high-risk capability registration — see [Security](security.md) and [Migration](migration.md)
-- **Adoption tools (v2.3.0)**: [OpenAPI adapter](adapters/openapi.md), TypeScript client ([`packages/typescript/client`](https://github.com/adriannoes/asap-protocol/tree/main/packages/typescript/client)), [Auto-registration](registry/auto-registration.md), [Capability escalation](capabilities/escalation.md), [ASAP HTTP challenge](transport/asap-challenge.md)
+- **Adoption tools (v2.3.0)**: [OpenAPI adapter](adapters/openapi.md), TypeScript client ([`packages/typescript/client`](https://github.com/adriannoes/asap-protocol/tree/main/packages/typescript/client)), Mastra adapter ([`integrations/mastra.md`](integrations/mastra.md) · `@asap-protocol/mastra`), [Auto-registration](registry/auto-registration.md), [Capability escalation](capabilities/escalation.md), [ASAP HTTP challenge](transport/asap-challenge.md)
 
 ## Installation
 
@@ -93,6 +93,7 @@ See [CLI reference](cli.md) (all commands, exit codes, `compliance-check`, `audi
 
 - [OpenAPI adapter](adapters/openapi.md) — derive ASAP skills and an upstream proxy from OpenAPI 3.x (`asap.adapters.openapi`)
 - [TypeScript client SDK](sdks/typescript.md) — `@asap-protocol/client` on npm (browser + Node; optional LLM adapters)
+- [Mastra integration](integrations/mastra.md) — `@asap-protocol/mastra`: ASAP capabilities as Mastra tools (`@mastra/core` ^1.5)
 - [CLI reference](cli.md) — all `asap` commands, including `compliance-check`, `audit export`, and exit codes
 - [Audit log](audit.md) — hash chain model, export formats, tamper checks
 - [API Reference](api-reference.md)
