@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * LAB1-004: Runs `asap compliance-check` against the ASAP gateway URL wired for this demo.
+ * Runs `asap compliance-check` against `ASAP_PROVIDER_URL` (repo root, `--exit-on-fail`).
  *
  * Expects `uv` on PATH and ASAP checked out locally (Compliance Harness bundled with asap-protocol).
  * Configure `ASAP_PROVIDER_URL` in `.env` or the environment — see `.env.example`.

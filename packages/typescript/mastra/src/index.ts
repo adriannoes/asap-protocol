@@ -1,6 +1,4 @@
-/**
- * Public API for @asap-protocol/mastra (implemented in sprint tasks 2.x–4.x).
- */
+/** Mastra integration: ASAP capabilities as Mastra `createTool` definitions. */
 
 export {
   asapToolsForMastra,
