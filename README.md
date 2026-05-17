@@ -56,6 +56,8 @@ pip install asap-protocol
 
 **npm** (TypeScript / JavaScript — [`@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client), aligned with protocol **v2.3.0**). The `latest` dist-tag matches **`npm view @asap-protocol/client version`** (currently **2.3.0**).
 
+**npm** Mastra (**[`@asap-protocol/mastra`](https://www.npmjs.com/package/@asap-protocol/mastra)** when published — today also via monorepo `workspace:*`) bridges ASAP capabilities onto **`@mastra/core`** tools alongside the TypeScript SDK; docs live under [`docs/integrations/mastra.md`](docs/integrations/mastra.md) and runnable UI under [`apps/example-mastra/README.md`](apps/example-mastra/README.md).
+
 ```bash
 npm install @asap-protocol/client
 # reproducible pin (same as latest today):
