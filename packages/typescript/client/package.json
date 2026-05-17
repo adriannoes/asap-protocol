@@ -68,6 +68,7 @@
     "project": "./tsconfig.build.json",
     "exports": {
       ".": "./src/index.ts",
+      "./adapters/shared": "./src/adapters/shared.ts",
       "./adapters/vercel-ai": "./src/adapters/vercel-ai.ts",
       "./adapters/openai": "./src/adapters/openai.ts",
       "./adapters/anthropic": "./src/adapters/anthropic.ts",
@@ -83,6 +84,16 @@
       "require": {
         "types": "./dist/commonjs/index.d.ts",
         "default": "./dist/commonjs/index.js"
+      }
+    },
+    "./adapters/shared": {
+      "import": {
+        "types": "./dist/esm/adapters/shared.d.ts",
+        "default": "./dist/esm/adapters/shared.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/adapters/shared.d.ts",
+        "default": "./dist/commonjs/adapters/shared.js"
       }
     },
     "./adapters/vercel-ai": {
