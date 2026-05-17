@@ -45,8 +45,9 @@ Import from **`@asap-protocol/mastra`**:
 
 | Export | Role |
 |--------|------|
-| `asapToolsForMastra(client)` | Build Mastra **`createTool`** instances for each listed capability |
-| `createAsapMastraAgent({ client, capabilities, model, … })` | Convenience **`Agent`** with ASAP tools wired in (optional **`agentId`**, **`name`**, **`instructions`** override defaults) |
+| `asapToolsForMastra(client)` | `async` — build Mastra **`createTool`** instances for each listed capability (calls **`describeCapability`** unless **`inputSchemas`** are pre-supplied) |
+| `asapToolsForMastraSync(client)` | Synchronous tools builder when **`inputSchemas` / `outputSchemas`** are already materialized (skips **`describeCapability`**) |
+| `createAsapMastraAgent({ client, capabilities, model, … })` | `async` convenience **`Agent`** with ASAP tools wired in (optional **`toolsOptions`**, **`agentId`**, **`name`**, **`instructions`** override defaults) |
 | `asapStreamToMastraTextStream(source)` | Map an ASAP-style async iterable (for example SSE-derived parts) into **UTF-8 text chunks** |
 | `CreateAsapMastraAgentParams` | Type-only params for **`createAsapMastraAgent`** |
 | `FatalError`, `RecoverableError`, `RemoteFatalRPCError`, `RemoteRecoverableRPCError` | Re-exported ASAP errors for consistent handling |
@@ -62,16 +63,23 @@ import { asapToolsForMastra } from "@asap-protocol/mastra";
 declare const client: AsapExecuteClient;
 // Populate client.provider URL, JWTs, and capabilities from discovery / escalation flows.
 
-const tools = asapToolsForMastra(client);
+const tools = await asapToolsForMastra(client);
 // Pass `tools` into your Mastra Agent or workflow where Mastra expects tool instances.
 ```
+
+!!! tip "Schema discovery"
+
+    When you omit **`AsapToolsForMastraOptions.inputSchemas`**, the adapter calls **`describeCapability`**
+    per capability so Mastra tools get provider JSON Schemas (instead of falling back to permissive records).
+    Use **`asapToolsForMastraSync`** only when you already have **`inputSchemas`** / **`outputSchemas`** and
+    want zero describe round-trips.
 
 Each tool **`execute`** path calls ASAP **`executeCapability`** with the **`provider`** URL, capability **URN**, **`context`** args, and **optional** JWT / headers from the **`AsapExecuteClient`**.
 
 Typical pitfalls:
 
 - **Missing capability escalation** — the client must list capabilities the model is allowed to call; escalate via **`POST /asap/agent/request-capability`** when the server returns **`capability_not_granted`**.
-- **`approval_required`** — surface **approval-required** payloads from **`executeCapability`** / tool **`execute`** in your Mastra error hooks (structured ASAP codes are propagated through **`@asap-protocol/client`).
+- **`approval_required`** — surface **approval-required** payloads from **`executeCapability`** / tool **`execute`** in your Mastra error hooks (structured ASAP codes are propagated through **`@asap-protocol/client`**).
 
 ## Agent helper
 
@@ -82,7 +90,7 @@ import { createAsapMastraAgent } from "@asap-protocol/mastra";
 
 declare const client: import("@asap-protocol/client/adapters/shared").AsapExecuteClient;
 
-const agent = createAsapMastraAgent({
+const agent = await createAsapMastraAgent({
   client,
   capabilities: ["urn:asap:cap:demo_echo"],
   model: "openai/gpt-4o-mini",
