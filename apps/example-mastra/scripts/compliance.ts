@@ -20,6 +20,13 @@ if (!url) {
   process.exit(1);
 }
 
+try {
+  void new URL(url);
+} catch {
+  console.error(`Invalid ASAP_PROVIDER_URL — not a valid absolute URL: ${url}`);
+  process.exit(1);
+}
+
 const result = spawnSync("uv", ["run", "asap", "compliance-check", "--url", url, "--exit-on-fail"], {
   cwd: repoRoot,
   stdio: "inherit",
