@@ -1,3 +1,4 @@
 packages:
   - "packages/typescript/*"
   - "apps/example-nextjs"
+  - "apps/example-mastra"
