@@ -152,6 +152,11 @@ export default function DeveloperExperiencePage() {
                             { name: 'SmolAgents', icon: 'huggingface', desc: 'Minimalist, high-performance agentic logic integration.' },
                             { name: 'OpenClaw', icon: 'openclaw', desc: 'Interoperable chat-based agent patterns.' },
                             { name: 'Vercel AI SDK', icon: 'vercel', desc: 'Bridge ASAP agents into Next.js/React apps with native tool-calling support.' },
+                            {
+                                name: 'Mastra',
+                                icon: 'mastra',
+                                desc: 'Mount ASAP capabilities as Mastra Agent tools (@asap-protocol/mastra + @mastra/core).',
+                            },
                         ].map((fw) => (
                             <div key={fw.name} className="p-5 rounded-lg border border-zinc-800 bg-zinc-900/20 hover:bg-zinc-900/40 transition-all group">
                                 <div className="flex items-center gap-3 mb-3">
