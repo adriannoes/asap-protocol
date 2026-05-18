@@ -52,4 +52,59 @@ describe("zodFromJsonSchema", () => {
     const s = zodFromJsonSchema({ type: "object", properties: {} });
     expect(s.safeParse({ any: "thing" }).success).toBe(true);
   });
+
+  it("maps string enum schemas to literal unions and rejects invalid values", () => {
+    const s = zodFromJsonSchema({ type: "string", enum: ["read", "write"] });
+    expect(s.safeParse("read").success).toBe(true);
+    expect(s.safeParse("write").success).toBe(true);
+    expect(s.safeParse("delete").success).toBe(false);
+  });
+
+  it("maps enum constraints inside object properties", () => {
+    const s = zodFromJsonSchema({
+      type: "object",
+      properties: {
+        mode: { type: "string", enum: ["delegated", "autonomous"] },
+      },
+      required: ["mode"],
+    });
+    expect(s.safeParse({ mode: "delegated" }).success).toBe(true);
+    expect(s.safeParse({ mode: "invalid" }).success).toBe(false);
+  });
+
+  it("maps number and boolean enum literals", () => {
+    expect(zodFromJsonSchema({ enum: [1, 2] }).safeParse(1).success).toBe(true);
+    expect(zodFromJsonSchema({ enum: [1, 2] }).safeParse(3).success).toBe(false);
+    expect(zodFromJsonSchema({ enum: [true, false] }).safeParse(false).success).toBe(true);
+  });
+
+  it("maps null in enum literals alongside a single primitive type", () => {
+    const s = zodFromJsonSchema({ enum: ["none", null] });
+    expect(s.safeParse("none").success).toBe(true);
+    expect(s.safeParse(null).success).toBe(true);
+    expect(s.safeParse("other").success).toBe(false);
+  });
+
+  it("throws for mixed enum primitive types", () => {
+    expect(() => zodFromJsonSchema({ enum: ["read", 1] })).toThrow(/mixed primitive types/u);
+  });
+
+  it("throws for unsupported enum value types", () => {
+    expect(() => zodFromJsonSchema({ enum: [{ nested: true }] })).toThrow(
+      /supports only string, number, boolean, and null/u,
+    );
+  });
+
+  it("maps array items when items schema is an object", () => {
+    const s = zodFromJsonSchema({
+      type: "array",
+      items: {
+        type: "object",
+        properties: { name: { type: "string" } },
+        required: ["name"],
+      },
+    });
+    expect(s.safeParse([{ name: "a" }]).success).toBe(true);
+    expect(s.safeParse([{}]).success).toBe(false);
+  });
 });

@@ -1,5 +1,56 @@
 import { z, type ZodType } from "zod";
 
+type EnumLiteralKind = "string" | "number" | "boolean" | "null" | "unsupported";
+
+function enumLiteralKind(value: unknown): EnumLiteralKind {
+  if (value === null) {
+    return "null";
+  }
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return typeof value as "string" | "number" | "boolean";
+  }
+  return "unsupported";
+}
+
+function zodFromJsonSchemaEnum(enumValues: unknown[]): ZodType<unknown> {
+  if (enumValues.length === 0) {
+    throw new Error("JSON Schema enum must contain at least one value");
+  }
+
+  const kinds = new Set<EnumLiteralKind>();
+  for (const value of enumValues) {
+    kinds.add(enumLiteralKind(value));
+  }
+
+  if (kinds.has("unsupported")) {
+    throw new Error("JSON Schema enum supports only string, number, boolean, and null literals");
+  }
+
+  const nonNullKinds = [...kinds].filter((kind) => kind !== "null");
+  if (nonNullKinds.length > 1) {
+    throw new Error(
+      `JSON Schema enum with mixed primitive types is unsupported (found: ${[...kinds].join(", ")})`,
+    );
+  }
+
+  const literals = enumValues.map((value) => {
+    if (value === null) {
+      return z.null();
+    }
+    if (typeof value === "string") {
+      return z.literal(value);
+    }
+    if (typeof value === "number") {
+      return z.literal(value);
+    }
+    return z.literal(value as boolean);
+  });
+
+  return literals.length === 1
+    ? literals[0]!
+    : z.union(literals as unknown as [ZodType<unknown>, ZodType<unknown>, ...ZodType<unknown>[]]);
+}
+
 /**
  * Minimal JSON Schema → Zod bridge for adapter tool schemas (subset only).
  *
@@ -18,6 +69,9 @@ export function zodFromJsonSchema(schema: Record<string, unknown>): ZodType<unkn
       : branches.length === 1
         ? branches[0]!
         : z.union(branches as [ZodType<unknown>, ZodType<unknown>, ...ZodType<unknown>[]]);
+  }
+  if ("enum" in schema && Array.isArray(schema.enum) && schema.enum.length > 0) {
+    return zodFromJsonSchemaEnum(schema.enum);
   }
   switch (schema.type) {
     case "object": {
@@ -52,8 +106,13 @@ export function zodFromJsonSchema(schema: Record<string, unknown>): ZodType<unkn
       return z.number();
     case "boolean":
       return z.boolean();
-    case "array":
+    case "array": {
+      const items = schema.items;
+      if (typeof items === "object" && items !== null && !Array.isArray(items)) {
+        return z.array(zodFromJsonSchema(items as Record<string, unknown>));
+      }
       return z.array(z.unknown());
+    }
     default:
       return z.record(z.string(), z.unknown());
   }
