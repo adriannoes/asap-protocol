@@ -16,9 +16,13 @@ Maps ASAP **capabilities** to OpenAI Agents **`tool()`** definitions (using **`e
 |---------|-------|
 | `@asap-protocol/client` | `^2.3.0` |
 | `@openai/agents` | `^0.11.0` (patch drift tolerated; CI pins **`0.11.4`** + **`latest`**) |
-| `zod` | `^3.25.76` **or** `^4.1.8` |
+| `zod` | `^4.1.8` (aligned with `@openai/agents`; Zod 3 is not supported) |
 
 Node **≥ 18**.
+
+!!! warning "Pre-1.0 `@openai/agents` API drift"
+
+    **`@openai/agents` is pre-1.0.** Minor/patch releases may change `Agent` constructor options, `tool()` parameter shapes, or default tool error handling. Pin your dependency and re-run tests after upgrades; CI exercises **`latest`** and **`0.11.4`**.
 
 ## Usage
 

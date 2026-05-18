@@ -15,7 +15,7 @@ Expose ASAP **capabilities** as [**OpenAI Agents SDK**](https://openai.github.io
 | Node.js | **≥ 18** |
 | `@openai/agents` | **`^0.11.0`** (CI exercises **`latest`** + pinned **`0.11.4`**) |
 | `@asap-protocol/client` | **`^2.3.0`** |
-| `zod` | **`^3.25.76`** or **`^4.1.x`** (`@openai/agents` currently peers on **`zod ^4`** — prefer **v4** locally if npm warns) |
+| `zod` | **`^4.1.8`** (matches `@openai/agents` peer; Zod 3 is not supported by this package) |
 
 ## Installation
 
@@ -46,12 +46,17 @@ Configure **`AsapExecuteClient`** (`provider`, **`capabilities[]`**, optional JW
 |--------|------|
 | `asapToolsForOpenAIAgents(client)` | `async` — build **`tool()`** instances (calls **`describeCapability`** unless **`inputSchemas`** are pre-supplied) |
 | `asapToolsForOpenAIAgentsSync(client)` | Same tools **without** describe round-trips when **`inputSchemas`** are provided |
-| `asapAsRemoteAgent(client, providerUrl, options?)` | Returns an OpenAI **`Agent`** wired with ASAP tools; captures draft **`task.request`** metadata on **`agent_start`** (handoffs included) |
+| `asapAsRemoteAgent(client, providerUrl, options?)` | Returns an OpenAI **`Agent`** wired with ASAP tools; on **`agent_start`** POSTs a real **`task.request`** via JSON-RPC **`asap.send`** and stores the draft on **`RunContext.context.lastAsapHandoffEnvelope`** |
+| `sendAsapEnvelope(provider, envelope, options?)` | Lower-level **`POST /asap`** helper used by handoffs (JSON-RPC **`asap.send`**) |
 | `draftTaskRequestEnvelopeForRemoteAgent({ mode, providerUrl, turnInput })` | Stable envelope-shaped draft carrying **`extensions.asap_agent_mode`** (`delegated` \| `autonomous`) |
 | `zodFromJsonSchema(schema)` | Shared JSON Schema → Zod helper for offline validation / tooling |
 | `asapStreamToOpenAIAgentsTextStream(source)` | Map ASAP **`task_stream`** envelopes → UTF-8 chunks |
 | `asapStreamToOpenAIAgentsRunStreamChunks(source)` | Same chunks wrapped as **`{ type: "text_delta", text }`** |
 | ASAP RPC error re-exports + **`ApprovalRequiredError`**, **`CapabilityNotGrantedError`** | Approval / escalation symmetry with Mastra adapter |
+
+!!! warning "Pre-1.0 `@openai/agents` API drift"
+
+    **`@openai/agents` is pre-1.0.** Minor/patch releases may change `Agent` constructor options, `tool()` parameter shapes, or default tool error handling. CI exercises **`latest`** and pinned **`0.11.4`**; pin your app dependency and re-run compliance after upgrades.
 
 ## Basic capability tools
 
@@ -102,7 +107,12 @@ const specialist = await asapAsRemoteAgent(client, client.provider, {
 // Pass `specialist` via Agent `handoffs: [...]` from your orchestrator agent.
 ```
 
-On **`agent_start`**, **`RunContext.context.lastAsapHandoffEnvelope`** receives **`draftTaskRequestEnvelopeForRemoteAgent`** output (`extensions.asap_agent_mode`, serialized turn input payload).
+On **`agent_start`**, the adapter:
+
+1. Sets **`RunContext.context.lastAsapHandoffEnvelope`** from **`draftTaskRequestEnvelopeForRemoteAgent`** (`extensions.asap_agent_mode`, serialized turn input).
+2. **POSTs** that envelope to **`providerUrl`** via JSON-RPC **`asap.send`** at **`/asap`** (same wire shape as the Python **`ASAPClient.send`**).
+
+**Agent JWT scope:** **`client.agentJwt`** is only forwarded when **`providerUrl`** matches **`client.provider`** (same origin **and** pathname). For cross-provider handoffs, pass **`remoteAgentJwt`** in options — otherwise **`asapAsRemoteAgent`** throws before any HTTP call.
 
 ## Capability escalation (`capability_not_granted`)
 
@@ -111,10 +121,17 @@ Provide **`requestCapability`** identical to Mastra:
 ```typescript
 await asapToolsForOpenAIAgents(client, {
   async requestCapability(required) {
-    await fetch(`/approval/${required}`, { method: "POST" });
+    await fetch(`/approval/${encodeURIComponent(required)}`, {
+      method: "POST",
+      // Protect approval endpoints with session auth and CSRF tokens as required by your service.
+    });
   },
 });
 ```
+
+!!! note "Approval endpoint security"
+
+    **`requestCapability`** runs in your host process — encode capability IDs in URLs (`encodeURIComponent`) and ensure approval routes require authenticated sessions and CSRF protection where applicable.
 
 Thrown **`CapabilityNotGrantedError`** exposes **`.requestCapability()`** so orchestrators can retry after grants.
 
@@ -138,6 +155,7 @@ This mirrors Mastra **`asapStreamToMastraTextStream`** but emits **`OpenAIAgents
 |---------|-----|
 | **`Strict mode is required for Zod parameters`** | Upgrade **`@openai/agents`** ≥ **0.11** — older helpers assumed looser typing. Empty capability schemas automatically downgrade to JSON-schema tools. |
 | Tool calls succeed but HTTP hits wrong host | **`asapAsRemoteAgent`** merges **`providerUrl`** into **`client.provider`** — verify trailing slashes / TLS. |
+| **`client.agentJwt is scoped to …`** on handoff | **`providerUrl`** differs from **`client.provider`** — supply **`remoteAgentJwt`** scoped to the remote gateway. |
 | Streaming stalls | Confirm SSE **`Accept: text/event-stream`** gateway compatibility (`streamTaskStreamEnvelopes`). |
 
 Runnable CLI demo: [`apps/example-openai-agents/README.md`](https://github.com/adriannoes/asap-protocol/tree/main/apps/example-openai-agents).
