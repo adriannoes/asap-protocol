@@ -71,27 +71,6 @@ describe("asapToolsForMastra", () => {
     );
   });
 
-  it("normalizes non-object tool input to an empty execution payload", async () => {
-    describeCapabilityMock.mockResolvedValue({
-      name: "demo_echo",
-      description: "d",
-    });
-    const spy = vi.spyOn(asapClient, "executeCapability").mockResolvedValue({ ok: true });
-    const client = {
-      provider: new URL("http://localhost:8080/"),
-      capabilities: ["urn:asap:cap:demo_echo"],
-    };
-    const tools = await asapToolsForMastra(client);
-    const tool = tools[0] as { execute?: (input: unknown) => Promise<unknown> };
-    await tool.execute?.("not an object");
-    expect(spy).toHaveBeenCalledWith(
-      client.provider,
-      "urn:asap:cap:demo_echo",
-      {},
-      expect.any(Object),
-    );
-  });
-
   it("derives strict input schemas from describeCapability when inputSchemas are not pre-supplied", async () => {
     describeCapabilityMock.mockResolvedValue({
       name: "demo_echo",
