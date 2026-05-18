@@ -12,10 +12,16 @@ export {
 export {
   asapAsRemoteAgent,
   draftTaskRequestEnvelopeForRemoteAgent,
+  sameProviderOrigin,
   type AsapAsRemoteAgentOptions,
   type AsapRemoteAgentMode,
   type AsapRemoteRunContext,
 } from "./asap-as-remote-agent.js";
+export {
+  sendAsapEnvelope,
+  type SendAsapEnvelopeOptions,
+  type SendAsapFetch,
+} from "./send-asap-envelope.js";
 export { zodFromJsonSchema } from "./schema-bridge.js";
 export {
   asapStreamToOpenAIAgentsRunStreamChunks,

@@ -6,6 +6,7 @@ import {
   type AsapToolsForOpenAIAgentsOptions,
   asapToolsForOpenAIAgents,
 } from "./asap-to-openai-tool.js";
+import { sendAsapEnvelope } from "./send-asap-envelope.js";
 
 export type AsapRemoteAgentMode = "delegated" | "autonomous";
 
@@ -22,6 +23,11 @@ export interface AsapAsRemoteAgentOptions {
   readonly handoffDescription?: string;
   readonly model?: string;
   readonly toolsOptions?: AsapToolsForOpenAIAgentsOptions;
+  /**
+   * Agent JWT scoped to `providerUrl` when it differs from `client.provider`.
+   * Required for cross-provider handoffs when `client.agentJwt` is set.
+   */
+  readonly remoteAgentJwt?: string;
 }
 
 function serializeTurnInput(turnInput: string | AgentInputItem[] | undefined): string {
@@ -36,6 +42,13 @@ function serializeTurnInput(turnInput: string | AgentInputItem[] | undefined): s
   } catch {
     return "";
   }
+}
+
+/**
+ * Returns whether two provider URLs refer to the same ASAP host path (origin + pathname).
+ */
+export function sameProviderOrigin(a: URL, b: URL): boolean {
+  return a.origin === b.origin && a.pathname === b.pathname;
 }
 
 /**
@@ -82,11 +95,43 @@ function resolveProvider(providerUrl: string | URL): URL {
   return typeof providerUrl === "string" ? new URL(providerUrl) : providerUrl;
 }
 
+function resolveHandoffJwt(
+  client: AsapExecuteClient,
+  providerUrl: URL,
+  options?: AsapAsRemoteAgentOptions,
+): string | undefined {
+  if (options?.remoteAgentJwt !== undefined) {
+    return options.remoteAgentJwt;
+  }
+  if (client.agentJwt !== undefined && !sameProviderOrigin(client.provider, providerUrl)) {
+    throw new Error(
+      `client.agentJwt is scoped to ${client.provider.href}; pass remoteAgentJwt when providerUrl (${providerUrl.href}) differs`,
+    );
+  }
+  return client.agentJwt;
+}
+
+function buildMergedClient(
+  client: AsapExecuteClient,
+  resolvedProvider: URL,
+  handoffJwt: string | undefined,
+): AsapExecuteClient {
+  const merged: AsapExecuteClient = {
+    ...client,
+    provider: resolvedProvider,
+  };
+  if (handoffJwt !== undefined) {
+    return { ...merged, agentJwt: handoffJwt };
+  }
+  const { agentJwt: _omit, ...withoutJwt } = merged;
+  return withoutJwt;
+}
+
 /**
  * Returns an OpenAI Agents {@link Agent} backed by ASAP capability tools on `providerUrl`.
  *
  * Subscribes to `agent_start` so {@link AsapRemoteRunContext.lastAsapHandoffEnvelope} captures draft envelope metadata
- * (including {@link AsapAsRemoteAgentOptions.mode}) whenever this agent begins a turn—including after an SDK handoff.
+ * and POSTs a real `task.request` via JSON-RPC `asap.send` whenever this agent begins a turn—including after an SDK handoff.
  */
 export async function asapAsRemoteAgent(
   client: AsapExecuteClient,
@@ -95,10 +140,8 @@ export async function asapAsRemoteAgent(
 ): Promise<Agent<AsapRemoteRunContext>> {
   const mode = options?.mode ?? "delegated";
   const resolvedProvider = resolveProvider(providerUrl);
-  const mergedClient: AsapExecuteClient = {
-    ...client,
-    provider: resolvedProvider,
-  };
+  const handoffJwt = resolveHandoffJwt(client, resolvedProvider, options);
+  const mergedClient = buildMergedClient(client, resolvedProvider, handoffJwt);
 
   const tools = await asapToolsForOpenAIAgents(mergedClient, options?.toolsOptions);
 
@@ -113,10 +156,15 @@ export async function asapAsRemoteAgent(
   });
 
   agent.on("agent_start", (runContext, _self, turnInput) => {
-    runContext.context.lastAsapHandoffEnvelope = draftTaskRequestEnvelopeForRemoteAgent({
+    const draft = draftTaskRequestEnvelopeForRemoteAgent({
       mode,
       providerUrl: resolvedProvider,
       turnInput,
+    });
+    runContext.context.lastAsapHandoffEnvelope = draft;
+    void sendAsapEnvelope(resolvedProvider, draft, {
+      fetch: mergedClient.fetch,
+      agentJwt: mergedClient.agentJwt,
     });
   });
 

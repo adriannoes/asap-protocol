@@ -6,6 +6,7 @@ import { RunContext, invokeFunctionTool, type AgentInputItem, type FunctionTool 
 import {
   asapAsRemoteAgent,
   draftTaskRequestEnvelopeForRemoteAgent,
+  sameProviderOrigin,
   type AsapRemoteRunContext,
 } from "../src/asap-as-remote-agent.js";
 
@@ -53,6 +54,16 @@ describe("draftTaskRequestEnvelopeForRemoteAgent", () => {
   });
 });
 
+describe("sameProviderOrigin", () => {
+  it("matches origin and pathname", () => {
+    expect(sameProviderOrigin(new URL("https://a.example/"), new URL("https://a.example/"))).toBe(true);
+    expect(sameProviderOrigin(new URL("https://a.example/"), new URL("https://b.example/"))).toBe(false);
+    expect(
+      sameProviderOrigin(new URL("https://a.example/v1/"), new URL("https://a.example/v2/")),
+    ).toBe(false);
+  });
+});
+
 describe("asapAsRemoteAgent", () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -64,14 +75,63 @@ describe("asapAsRemoteAgent", () => {
     describeCapabilityMock.mockRejectedValue(new Error("describe not configured in this test"));
   });
 
+  it("rejects client.agentJwt when providerUrl differs before any fetch", async () => {
+    const fetchMock = vi.fn();
+    const client = {
+      provider: new URL("https://a.example/"),
+      capabilities: [],
+      agentJwt: "token",
+      fetch: fetchMock,
+    };
+
+    await expect(asapAsRemoteAgent(client, "https://b.example/")).rejects.toThrow(/remoteAgentJwt/);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(describeCapabilityMock).not.toHaveBeenCalled();
+  });
+
+  it("POSTs task.request via asap.send on agent_start", async () => {
+    describeCapabilityMock.mockResolvedValue({
+      name: "demo_echo",
+      description: "d",
+    });
+    const fetchMock = vi.fn(async () =>
+      Response.json({ jsonrpc: "2.0", result: { envelope: { id: "resp-1" } }, id: "rpc-1" }),
+    );
+    const client = {
+      provider: new URL("http://localhost:8080/"),
+      capabilities: ["urn:asap:cap:demo_echo"],
+      fetch: fetchMock as typeof fetch,
+    };
+    const agent = await asapAsRemoteAgent(client, client.provider, { mode: "delegated" });
+
+    const bag: AsapRemoteRunContext = {};
+    const rc = new RunContext(bag);
+    agent.emit("agent_start", rc, agent, []);
+
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+
+    const firstCall = fetchMock.mock.calls[0];
+    expect(firstCall).toBeDefined();
+    const [url, init] = firstCall as unknown as [string | URL, RequestInit];
+    expect(String(url)).toContain("/asap");
+    const body = typeof init.body === "string" ? JSON.parse(init.body) : {};
+    expect(body.method).toBe("asap.send");
+    expect(body.params?.envelope?.payload_type).toBe("task.request");
+    expect(bag.lastAsapHandoffEnvelope?.payload_type).toBe("task.request");
+  });
+
   it("captures envelope draft with configured mode on agent_start", async () => {
     describeCapabilityMock.mockResolvedValue({
       name: "demo_echo",
       description: "d",
     });
+    const fetchMock = vi.fn(async () =>
+      Response.json({ jsonrpc: "2.0", result: {}, id: "rpc-1" }),
+    );
     const client = {
       provider: new URL("http://localhost:9999/"),
       capabilities: ["urn:asap:cap:demo_echo"],
+      fetch: fetchMock as typeof fetch,
     };
     const agent = await asapAsRemoteAgent(client, "http://localhost:8080/", { mode: "delegated" });
 
