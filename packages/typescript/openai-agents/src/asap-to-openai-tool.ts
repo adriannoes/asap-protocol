@@ -44,6 +44,34 @@ export interface AsapToolsForOpenAIAgentsOptions {
   readonly requestCapability?: (requiredCapability: string) => void | Promise<void>;
   readonly inputSchemas?: Readonly<Record<string, unknown>>;
   readonly outputSchemas?: Readonly<Record<string, unknown>>;
+  /**
+   * Called when {@link describeCapability} fails for a capability. The error is rethrown unless
+   * {@link allowPermissiveDescribeFallback} is `true`.
+   */
+  readonly onDescribeError?: (capabilityId: string, error: unknown) => void;
+  /**
+   * When `true`, failed describe calls fall back to generic tool metadata instead of failing
+   * tool construction. Defaults to `false`.
+   */
+  readonly allowPermissiveDescribeFallback?: boolean;
+  /** Passed to {@link describeCapability} and {@link executeCapability} fetch calls. */
+  readonly signal?: AbortSignal;
+}
+
+const DESCRIBE_CONCURRENCY = 5;
+
+async function mapInBatches<T, R>(
+  items: readonly T[],
+  batchSize: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(batch.map(fn));
+    results.push(...batchResults);
+  }
+  return results;
 }
 
 function isRecord(x: unknown): x is Record<string, unknown> {
@@ -109,8 +137,17 @@ function buildTools(
   options: AsapToolsForOpenAIAgentsOptions | undefined,
 ): ReturnType<typeof tool>[] {
   const tools: ReturnType<typeof tool>[] = [];
+  const seenToolNames = new Map<string, string>();
   for (const capabilityId of client.capabilities) {
     const id = capabilityToolKey(capabilityId);
+    const existingCapabilityId = seenToolNames.get(id);
+    if (existingCapabilityId !== undefined && existingCapabilityId !== capabilityId) {
+      throw new Error(
+        `OpenAI Agents tool name collision: "${id}" maps to both "${existingCapabilityId}" and "${capabilityId}". ` +
+          "Use distinct capability identifiers or provide inputSchemas to skip describe.",
+      );
+    }
+    seenToolNames.set(id, capabilityId);
     const described = describedByCapability.get(capabilityId);
     const inputJson = jsonSchemaForCapabilityInput(
       options?.inputSchemas?.[capabilityId] ?? described?.input_schema,
@@ -123,6 +160,7 @@ function buildTools(
       return executeCapability(client.provider, capabilityId, ctx, {
         agentJwt: client.agentJwt,
         fetch: fetchFn,
+        signal: options?.signal,
       });
     };
 
@@ -173,26 +211,36 @@ export async function asapToolsForOpenAIAgents(
     | undefined
   >();
 
+  const toDescribe = client.capabilities.filter(
+    (capabilityId) => options?.inputSchemas?.[capabilityId] === undefined,
+  );
   for (const capabilityId of client.capabilities) {
     if (options?.inputSchemas?.[capabilityId] !== undefined) {
       describedByCapability.set(capabilityId, undefined);
-      continue;
     }
-    const described = await describeCapability(client.provider, capabilityId, {
-      fetch: fetchFn,
-      agentJwt: client.agentJwt,
-    }).catch(() => undefined);
+  }
 
-    if (described === undefined) {
-      describedByCapability.set(capabilityId, undefined);
-    } else {
+  await mapInBatches(toDescribe, DESCRIBE_CONCURRENCY, async (capabilityId) => {
+    try {
+      const described = await describeCapability(client.provider, capabilityId, {
+        fetch: fetchFn,
+        agentJwt: client.agentJwt,
+        signal: options?.signal,
+      });
       describedByCapability.set(capabilityId, {
         description: described.description,
         input_schema: described.input_schema,
         output_schema: described.output_schema,
       });
+    } catch (error: unknown) {
+      options?.onDescribeError?.(capabilityId, error);
+      if (options?.allowPermissiveDescribeFallback === true) {
+        describedByCapability.set(capabilityId, undefined);
+        return;
+      }
+      throw error;
     }
-  }
+  });
 
   return buildTools(client, fetchFn, describedByCapability, options);
 }

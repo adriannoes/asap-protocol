@@ -253,14 +253,23 @@ describe("asapToolsForOpenAIAgents", () => {
     expect(describeCapabilityMock).not.toHaveBeenCalled();
   });
 
-  it("builds tools when describeCapability fails", async () => {
+  it("rejects when describeCapability fails by default", async () => {
+    describeCapabilityMock.mockRejectedValue(new Error("describe unavailable"));
+    const client = {
+      provider: new URL("http://localhost:8080/"),
+      capabilities: ["urn:asap:cap:demo_echo"],
+    };
+    await expect(asapToolsForOpenAIAgents(client)).rejects.toThrow("describe unavailable");
+  });
+
+  it("builds tools when describeCapability fails with allowPermissiveDescribeFallback", async () => {
     describeCapabilityMock.mockRejectedValue(new Error("describe unavailable"));
     const spy = vi.spyOn(asapClient, "executeCapability").mockResolvedValue({ ok: true });
     const client = {
       provider: new URL("http://localhost:8080/"),
       capabilities: ["urn:asap:cap:demo_echo"],
     };
-    const tools = await asapToolsForOpenAIAgents(client);
+    const tools = await asapToolsForOpenAIAgents(client, { allowPermissiveDescribeFallback: true });
     expect(tools).toHaveLength(1);
     await invokeFunctionTool({
       tool: tools[0]!,
@@ -268,6 +277,44 @@ describe("asapToolsForOpenAIAgents", () => {
       input: JSON.stringify({}),
     });
     expect(spy).toHaveBeenCalled();
+  });
+
+  it("invokes onDescribeError when describeCapability fails", async () => {
+    const describeError = new Error("describe unavailable");
+    describeCapabilityMock.mockRejectedValue(describeError);
+    const onDescribeError = vi.fn();
+    const client = {
+      provider: new URL("http://localhost:8080/"),
+      capabilities: ["urn:asap:cap:demo_echo"],
+    };
+    await expect(
+      asapToolsForOpenAIAgents(client, { onDescribeError }),
+    ).rejects.toThrow("describe unavailable");
+    expect(onDescribeError).toHaveBeenCalledWith("urn:asap:cap:demo_echo", describeError);
+  });
+
+  it("throws on tool name collision between capabilities", async () => {
+    describeCapabilityMock.mockResolvedValue({ name: "file", description: "d" });
+    const client = {
+      provider: new URL("http://localhost:8080/"),
+      capabilities: ["urn:asap:cap:file/read", "urn:asap:cap:file_read"],
+    };
+    await expect(asapToolsForOpenAIAgents(client)).rejects.toThrow(/tool name collision/u);
+  });
+
+  it("passes signal to describeCapability", async () => {
+    describeCapabilityMock.mockResolvedValue({ name: "demo_echo", description: "d" });
+    const signal = AbortSignal.timeout(30_000);
+    const client = {
+      provider: new URL("http://localhost:8080/"),
+      capabilities: ["urn:asap:cap:demo_echo"],
+    };
+    await asapToolsForOpenAIAgents(client, { signal });
+    expect(describeCapabilityMock).toHaveBeenCalledWith(
+      client.provider,
+      "urn:asap:cap:demo_echo",
+      expect.objectContaining({ signal }),
+    );
   });
 
   it("supports asapToolsForOpenAIAgentsSync with inputSchemas", async () => {
