@@ -68,6 +68,9 @@ jobs:
           fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
           NODE
 
+      # Matrix jobs rewrite devDependencies["@openai/agents"] to `latest` or a pin, so this
+      # install uses --no-frozen-lockfile only for the adapter slice. The committed pnpm-lock.yaml
+      # at repo root remains authoritative for normal local/CI installs outside this matrix.
       - name: Install dependencies (openai-agents slice)
         run: pnpm install --no-frozen-lockfile --filter "@asap-protocol/openai-agents..." --filter example-openai-agents
 
