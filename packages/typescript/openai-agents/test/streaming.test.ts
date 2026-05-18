@@ -20,6 +20,20 @@ describe("asapStreamToOpenAIAgentsTextStream", () => {
     expect(parts.join("")).toBe("hello world");
   });
 
+  it("skips provider error events and continues with valid task_stream chunks", async () => {
+    async function* mockSource(): AsyncIterable<unknown> {
+      yield { type: "error", payload: { message: "provider failed" } };
+      yield { type: "task_stream", payload: { chunk: "recovered" } };
+    }
+
+    const parts: string[] = [];
+    for await (const chunk of asapStreamToOpenAIAgentsTextStream(mockSource())) {
+      parts.push(chunk);
+    }
+
+    expect(parts).toEqual(["recovered"]);
+  });
+
   it("skips malformed task_stream payloads", async () => {
     async function* mockSource(): AsyncIterable<unknown> {
       yield { type: "other" };
