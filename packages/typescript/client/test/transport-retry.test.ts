@@ -85,6 +85,22 @@ describe("transport retry (TS-011)", () => {
     expect(op).toHaveBeenCalledTimes(1);
   });
 
+  it("does not retry RemoteRecoverableRPCError without retryAfterMs when no fallback backoff", async () => {
+    const err = new RemoteRecoverableRPCError({
+      wireJsonRpcCode: RPC_THREAD_POOL_EXHAUSTED,
+      message: "no hint",
+    });
+    const op = vi.fn().mockRejectedValue(err);
+    await expect(
+      callWithRecoverableRetry(op, {
+        sleep: vi.fn(async () => {
+          /* noop */
+        }),
+      }),
+    ).rejects.toBe(err);
+    expect(op).toHaveBeenCalledTimes(1);
+  });
+
   it("retries RecoverableError without retryAfterMs when fallbackBackoffMs is set", async () => {
     let calls = 0;
     const op = vi.fn().mockImplementation(async () => {
@@ -121,5 +137,43 @@ describe("transport retry (TS-011)", () => {
       sleep,
     });
     expect(sleep).toHaveBeenLastCalledWith(60_000);
+  });
+
+  it("retries RemoteRecoverableRPCError without retryAfterMs when fallbackBackoffMs is set", async () => {
+    let calls = 0;
+    const op = vi.fn().mockImplementation(async () => {
+      calls += 1;
+      if (calls === 1) {
+        throw new RemoteRecoverableRPCError({
+          wireJsonRpcCode: RPC_THREAD_POOL_EXHAUSTED,
+          message: "no hint",
+        });
+      }
+      return { ok: true as const };
+    });
+    const sleep = vi.fn(async () => {
+      /* noop */
+    });
+    const result = await callWithRecoverableRetry(op, { fallbackBackoffMs: 200, sleep });
+    expect(result).toEqual({ ok: true });
+    expect(op).toHaveBeenCalledTimes(2);
+    expect(sleep).toHaveBeenCalledWith(200);
+  });
+
+  it("uses default sleep when sleep is not injected", async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    const op = vi.fn().mockImplementation(async () => {
+      calls += 1;
+      if (calls === 1) {
+        throw new RecoverableError({ code: "HINTED", retryAfterMs: 0 });
+      }
+      return { ok: true as const };
+    });
+    const p = callWithRecoverableRetry(op, { maxRetries: 5 });
+    await vi.runAllTimersAsync();
+    await expect(p).resolves.toEqual({ ok: true });
+    expect(op).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
   });
 });

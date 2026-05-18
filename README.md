@@ -58,6 +58,8 @@ pip install asap-protocol
 
 **npm** Mastra (**[`@asap-protocol/mastra`](https://www.npmjs.com/package/@asap-protocol/mastra)** when published — today also via monorepo `workspace:*`) bridges ASAP capabilities onto **`@mastra/core`** tools alongside the TypeScript SDK; docs live under [`docs/integrations/mastra.md`](docs/integrations/mastra.md) and runnable UI under [`apps/example-mastra/README.md`](apps/example-mastra/README.md).
 
+**npm** OpenAI Agents SDK (**[`@asap-protocol/openai-agents`](https://www.npmjs.com/package/@asap-protocol/openai-agents)** when published — workspace **`packages/typescript/openai-agents`**) exposes ASAP capabilities as **`@openai/agents`** `tool()` definitions — **not** the legacy Chat Completions helper [`adapters/openai`](packages/typescript/client/src/adapters/openai.ts); see [`docs/integrations/openai-agents.md`](docs/integrations/openai-agents.md) and CLI demo [`apps/example-openai-agents/README.md`](apps/example-openai-agents/README.md).
+
 ```bash
 npm install @asap-protocol/client
 # reproducible pin (same as latest today):

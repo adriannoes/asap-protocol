@@ -54,7 +54,7 @@ pnpm --filter example-mastra dev -- --port 3001
 
 **Purpose:** avoids `EADDRINUSE` when both dev servers run on the same machine.
 
-## Compliance (LAB1-004)
+## Compliance
 
 With **`uv`** installed and **`ASAP_PROVIDER_URL`** set (**HTTPS** recommended for staged endpoints):
 

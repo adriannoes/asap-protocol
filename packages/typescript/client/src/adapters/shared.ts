@@ -1,6 +1,4 @@
-/**
- * Shared helpers for ASAP → LLM SDK adapters (tasks 6.1–6.3).
- */
+/** Shared helpers for wiring ASAP capabilities into LLM/agent SDK tool surfaces. */
 
 import type { CapabilityFetch } from "../capabilities.js";
 

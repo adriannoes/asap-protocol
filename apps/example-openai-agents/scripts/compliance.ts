@@ -1,9 +1,6 @@
 #!/usr/bin/env node
 /**
  * Runs `asap compliance-check` against `ASAP_PROVIDER_URL` (repo root, `--exit-on-fail`).
- *
- * Expects `uv` on PATH and ASAP checked out locally (Compliance Harness bundled with asap-protocol).
- * Configure `ASAP_PROVIDER_URL` in `.env` or the environment — see `.env.example`.
  */
 
 import { spawnSync } from "node:child_process";

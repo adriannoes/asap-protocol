@@ -185,6 +185,41 @@ describe("asapToolsForMastra", () => {
     await expect(tool.execute?.({})).rejects.toThrow(/constraint violated/i);
   });
 
+  it("skips describeCapability when inputSchemas already defines the capability", async () => {
+    vi.spyOn(asapClient, "executeCapability").mockResolvedValue({ ok: true });
+    describeCapabilityMock.mockResolvedValue({ name: "demo_echo", description: "unused" });
+    const client = {
+      provider: new URL("http://localhost:8080/"),
+      capabilities: ["urn:asap:cap:demo_echo"],
+    };
+    await asapToolsForMastra(client, {
+      inputSchemas: {
+        "urn:asap:cap:demo_echo": {
+          type: "object",
+          properties: { message: { type: "string" } },
+        },
+      },
+      outputSchemas: {
+        "urn:asap:cap:demo_echo": { type: "object", additionalProperties: true },
+      },
+    });
+    expect(describeCapabilityMock).not.toHaveBeenCalled();
+  });
+
+  it("builds tools when describeCapability fails", async () => {
+    describeCapabilityMock.mockRejectedValue(new Error("describe unavailable"));
+    const spy = vi.spyOn(asapClient, "executeCapability").mockResolvedValue({ ok: true });
+    const client = {
+      provider: new URL("http://localhost:8080/"),
+      capabilities: ["urn:asap:cap:demo_echo"],
+    };
+    const tools = await asapToolsForMastra(client);
+    expect(tools).toHaveLength(1);
+    const tool = tools[0] as { execute?: (input: unknown) => Promise<unknown> };
+    await tool.execute?.({});
+    expect(spy).toHaveBeenCalled();
+  });
+
   it("exposes asapToolsForMastraSync for pre-supplied schemas", () => {
     const client = {
       provider: new URL("http://localhost:8080/"),

@@ -1,6 +1,6 @@
 import { decodeProtectedHeader, importJWK, jwtVerify } from "jose";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resetEd25519KeygenProbeForTests } from "../src/ed25519-keypair.js";
+import { generateEd25519KeyPair, resetEd25519KeygenProbeForTests } from "../src/ed25519-keypair.js";
 import { createAgent, createHost } from "../src/identity.js";
 import { MemoryStorage } from "../src/storage-local.js";
 
@@ -71,5 +71,18 @@ describe("Ed25519 keygen (task 2.2)", () => {
     await createHost({ storage: new MemoryStorage() });
     await createHost({ storage: new MemoryStorage() });
     expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it("when subtle path was cached as working but generateKey later fails, uses noble fallback", async () => {
+    const realPair = await crypto.subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]);
+    const spy = vi
+      .spyOn(crypto.subtle, "generateKey")
+      .mockResolvedValueOnce(realPair as CryptoKeyPair)
+      .mockRejectedValueOnce(new Error("transient subtle failure"));
+    const first = await generateEd25519KeyPair();
+    const second = await generateEd25519KeyPair();
+    expect(first.privateKey.algorithm.name).toBe("Ed25519");
+    expect(second.privateKey.algorithm.name).toBe("Ed25519");
+    expect(spy).toHaveBeenCalledTimes(2);
   });
 });

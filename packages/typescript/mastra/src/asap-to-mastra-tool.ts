@@ -27,9 +27,9 @@ function isRecord(x: unknown): x is Record<string, unknown> {
 }
 
 /**
- * Wraps a {@link CapabilityFetch} to map select provider **403** JSON error payloads into typed errors.
+ * Wraps a {@link CapabilityFetch} to map select provider HTTP 403 JSON error payloads into typed errors.
  *
- * **Unary JSON only:** non-403 responses are returned as-is so bodies are not buffered. Do not use this
+ * Unary JSON only: non-403 responses are returned as-is so bodies are not buffered. Do not use this
  * wrapper for SSE or other streaming responses; the contract assumes small JSON payloads suitable for
  * `describeCapability` / `executeCapability`.
  */
