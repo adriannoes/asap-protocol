@@ -1,6 +1,6 @@
 {
   "name": "@asap-protocol/openai-agents",
-  "version": "0.0.0",
+  "version": "2.3.1",
   "description": "ASAP Protocol capabilities as OpenAI Agents SDK tools (@openai/agents)",
   "type": "module",
   "license": "Apache-2.0",

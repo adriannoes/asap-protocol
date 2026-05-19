@@ -9,6 +9,8 @@ on:
     branches: [main]
     paths:
       - "packages/typescript/client/**"
+      - "packages/typescript/mastra/**"
+      - "packages/typescript/openai-agents/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - ".github/workflows/publish-typescript.yml"
@@ -49,8 +51,22 @@ jobs:
       - name: Build @asap-protocol/client (tshy)
         run: pnpm --filter @asap-protocol/client run build
 
-      - name: npm publish --dry-run
+      - name: Build @asap-protocol/mastra (tshy)
+        run: pnpm --filter @asap-protocol/mastra run build
+
+      - name: Build @asap-protocol/openai-agents (tshy)
+        run: pnpm --filter @asap-protocol/openai-agents run build
+
+      - name: npm publish --dry-run (@asap-protocol/client)
         working-directory: packages/typescript/client
+        run: npm publish --dry-run --access public
+
+      - name: npm publish --dry-run (@asap-protocol/mastra)
+        working-directory: packages/typescript/mastra
+        run: npm publish --dry-run --access public
+
+      - name: npm publish --dry-run (@asap-protocol/openai-agents)
+        working-directory: packages/typescript/openai-agents
         run: npm publish --dry-run --access public
 
   publish:
@@ -85,6 +101,8 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           npm pkg set "version=${VERSION}" --prefix packages/typescript/client
+          npm pkg set "version=${VERSION}" --prefix packages/typescript/mastra
+          npm pkg set "version=${VERSION}" --prefix packages/typescript/openai-agents
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -92,8 +110,34 @@ jobs:
       - name: Build @asap-protocol/client (tshy)
         run: pnpm --filter @asap-protocol/client run build
 
-      - name: Publish to npm with provenance
+      - name: Build @asap-protocol/mastra (tshy)
+        run: pnpm --filter @asap-protocol/mastra run build
+
+      - name: Build @asap-protocol/openai-agents (tshy)
+        run: pnpm --filter @asap-protocol/openai-agents run build
+
+      - name: Publish @asap-protocol/client to npm with provenance
         working-directory: packages/typescript/client
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [[ "${VERSION}" == *-* ]]; then
+            npm publish --access public --provenance --tag rc
+          else
+            npm publish --access public --provenance
+          fi
+
+      - name: Publish @asap-protocol/mastra to npm with provenance
+        working-directory: packages/typescript/mastra
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [[ "${VERSION}" == *-* ]]; then
+            npm publish --access public --provenance --tag rc
+          else
+            npm publish --access public --provenance
+          fi
+
+      - name: Publish @asap-protocol/openai-agents to npm with provenance
+        working-directory: packages/typescript/openai-agents
         run: |
           VERSION=$(node -p "require('./package.json').version")
           if [[ "${VERSION}" == *-* ]]; then

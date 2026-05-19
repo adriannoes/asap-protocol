@@ -13,6 +13,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.3.1] - 2026-05-18
+
+**Adapter Lab I** — TypeScript-only patch: two new framework adapters on npm and
+additive exports on `@asap-protocol/client`. Python `asap-protocol` core is
+unchanged; no wire-protocol or migration work required for existing deployments.
+
+### Added
+
+- **`@asap-protocol/mastra@2.3.1`**: Expose ASAP capabilities as Mastra
+  `createTool` definitions, optional `createAsapMastraAgent` wrapper, and
+  streaming bridge. See [docs/integrations/mastra.md](docs/integrations/mastra.md).
+  ```bash
+  npm install @asap-protocol/mastra @asap-protocol/client @mastra/core zod
+  ```
+- **`@asap-protocol/openai-agents@2.3.1`**: Expose ASAP capabilities as OpenAI
+  Agents SDK `tool()` definitions, remote-agent handoff helpers, and streaming
+  bridge. See [docs/integrations/openai-agents.md](docs/integrations/openai-agents.md).
+  ```bash
+  npm install @asap-protocol/openai-agents @asap-protocol/client @openai/agents zod
+  ```
+- **Examples**: `apps/example-mastra` and `apps/example-openai-agents` (Compliance
+  Harness v2 score 1.0 against the loopback provider).
+
+### Changed
+
+- **`@asap-protocol/client@2.3.1`**: Additive exports for adapter authors —
+  public `@asap-protocol/client/adapters/shared`, `jsonSchemaForCapabilityOutput`,
+  execution types, and envelope helpers. Non-breaking; existing `@2.3.0` consumers
+  remain compatible.
+
+### Known limitations
+
+- Adapter packages peer on pre-1.0 framework releases (`@mastra/core@^1.5.0`,
+  `@openai/agents@^0.11.0`). Pin peers in production until those ecosystems
+  stabilize semver.
+
+### Migration
+
+- **v2.3.0 → v2.3.1**: Additive release — install new packages only if you adopt
+  Mastra or OpenAI Agents SDK integrations. See
+  [migration guide](docs/migration.md#upgrading-from-v230-to-v231).
+
+### Skipped (TS-only patch)
+
+- **Python PyPI / Docker**: No changes to `asap-protocol` Python core (`2.3.0`
+  remains current on PyPI). Tag `v2.3.1` ships npm adapters only; any Docker
+  image retagged by CI is unchanged bytecode — do not treat it as a Python upgrade.
+
+---
+
 ## [2.3.0] - 2026-05-04
 
 **Adoption Multiplier** — OpenAPI-derived agents, first-class TypeScript, lean

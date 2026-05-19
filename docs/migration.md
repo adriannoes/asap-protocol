@@ -761,6 +761,42 @@ For deployments that enforce self-authorization prevention with real passkeys:
 See [Self-authorization prevention](security/self-authorization-prevention.md)
 (**Real WebAuthn**) for the threat model and ceremony flow.
 
+### Upgrading from v2.3.0 to v2.3.1
+
+v2.3.1 is an **additive, TypeScript-only** patch. The Python `asap-protocol`
+package, JSON-RPC wire format, and envelope schemas are **unchanged**. Existing
+v2.3.0 Python and TypeScript deployments continue to work without code changes.
+
+#### What is new
+
+- **`@asap-protocol/mastra@2.3.1`**: Mastra `createTool` integration. See
+  [Mastra integration](integrations/mastra.md).
+- **`@asap-protocol/openai-agents@2.3.1`**: OpenAI Agents SDK `tool()` integration.
+  See [OpenAI Agents integration](integrations/openai-agents.md).
+- **`@asap-protocol/client@2.3.1`**: Optional patch bump with additive adapter
+  exports (`adapters/shared`, output-schema helpers). Stay on `@2.3.0` if you do
+  not use the new packages.
+
+#### Upgrade steps
+
+1. **No action required** for Python-only or existing `@asap-protocol/client@2.3.0`
+   consumers.
+2. **To adopt a new adapter**, install the package and its peers:
+   ```bash
+   npm install @asap-protocol/mastra @asap-protocol/client @mastra/core zod
+   # or
+   npm install @asap-protocol/openai-agents @asap-protocol/client @openai/agents zod
+   ```
+3. **Re-run Compliance Harness v2** if you add a new adapter-backed agent to
+   production (`asap compliance-check --exit-on-fail`).
+
+#### Backward compatibility
+
+- **Wire protocol**: Unchanged from v2.3.0.
+- **Breaking changes**: None.
+
+---
+
 ### Upgrading from v2.2.x to v2.3.0
 
 v2.3.0 is an **Adoption Multiplier** release. JSON-RPC envelopes, batching, and
