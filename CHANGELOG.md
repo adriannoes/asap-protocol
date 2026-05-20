@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [2.3.1] - 2026-05-18
+## [2.3.1] - 2026-05-20
 
 **Adapter Lab I** — TypeScript-only patch: two new framework adapters on npm and
 additive exports on `@asap-protocol/client`. Python `asap-protocol` core is

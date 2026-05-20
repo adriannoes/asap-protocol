@@ -40,7 +40,7 @@ product/
 | **v2.2.0** | **✅ Released (2026-04-15)** | `prd-v2.2-protocol-hardening.md` | Identity, capabilities, streaming, batch, audit |
 | **v2.2.1** | **✅ Released (2026-04-21)** | `prd-v2.2.1-patch.md` | WebAuthn real, CLI compliance/audit |
 | v2.3.0 — Adoption Core | ✅ Released (2026-05-04, tag `v2.3.0` pending maintainer push) | `prd-v2.3-scale.md` | OpenAPI Adapter, TypeScript SDK, Auto-Registration, escalation, ASAP challenge |
-| v2.3.1 — Adapter Lab I | 🔒 Private planning | `prd/private/prd-v2.3.1-adapter-lab.md` | OpenAI Agents SDK, Google ADK, Mastra, LangGraph validation |
+| v2.3.1 — Framework adapters (npm) | 🚀 Releasing (TS patch) | — (private PRD) | `@asap-protocol/mastra`, `@asap-protocol/openai-agents` @ 2.3.1; Python core stays 2.3.0 |
 | v2.3.2 — Adapter Lab II | 🔒 Private planning | `prd/private/prd-v2.3.2-enterprise-workflow-adapters.md` | Microsoft Agent Framework, Haystack, Letta, workflow automation |
 | v2.3.3 — Distribution Loop | 🔒 Private planning | `prd/private/prd-v2.3.3-distribution-loop.md` | Templates, docs, homepage, metrics, developer activation |
 | v2.4.0 — Spec & Interop | 🚧 VISION DRAFT (rescoped) | `prd-v2.4-adoption.md` | MCP Auth Bridge, Formal Spec, Introspection, Privacy |
