@@ -153,6 +153,11 @@ export default function DeveloperExperiencePage() {
                             { name: 'OpenClaw', icon: 'openclaw', desc: 'Interoperable chat-based agent patterns.' },
                             { name: 'Vercel AI SDK', icon: 'vercel', desc: 'Bridge ASAP agents into Next.js/React apps with native tool-calling support.' },
                             {
+                                name: 'Mastra',
+                                icon: 'mastra',
+                                desc: 'ASAP capabilities as Mastra createTool definitions (`@asap-protocol/mastra` + `@mastra/core`).',
+                            },
+                            {
                                 name: 'OpenAI Agents',
                                 icon: 'openai-agents',
                                 desc: 'ASAP capability tools for the OpenAI Agents SDK (`@asap-protocol/openai-agents`; separate from the Chat Completions adapter in `@asap-protocol/client`).',

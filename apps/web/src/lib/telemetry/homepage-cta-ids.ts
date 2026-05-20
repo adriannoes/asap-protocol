@@ -13,6 +13,8 @@ export const HOMEPAGE_HERO_CTA_IDS = {
 export const WHATS_NEW_RIBBON_CTA_IDS = {
   docsOpenapi: 'docs-openapi',
   docsTypescript: 'docs-typescript',
+  docsMastraIntegration: 'docs-mastra-integration',
+  docsOpenaiAgentsIntegration: 'docs-openai-agents-integration',
   docsAutoRegistration: 'docs-auto-registration',
   featurePerAgentIdentity: 'feature-per-agent-identity',
   featureScopedCapabilities: 'feature-scoped-capabilities',
@@ -24,6 +26,8 @@ export const WHATS_NEW_RIBBON_CTA_IDS = {
 export const LANDING_FEATURE_SLUGS = [
   'openapi-adapter',
   'typescript-sdk',
+  'mastra-adapter',
+  'openai-agents-adapter',
   'auto-registration',
   'lite-registry',
   'verified-trust',
@@ -41,6 +45,8 @@ export const HOMEPAGE_CTA_IDS = [
   HOMEPAGE_HERO_CTA_IDS.registerAgent,
   WHATS_NEW_RIBBON_CTA_IDS.docsOpenapi,
   WHATS_NEW_RIBBON_CTA_IDS.docsTypescript,
+  WHATS_NEW_RIBBON_CTA_IDS.docsMastraIntegration,
+  WHATS_NEW_RIBBON_CTA_IDS.docsOpenaiAgentsIntegration,
   WHATS_NEW_RIBBON_CTA_IDS.docsAutoRegistration,
   WHATS_NEW_RIBBON_CTA_IDS.docsCapabilitiesEscalation,
   ...LANDING_FEATURE_SLUGS.map((slug) => `feature-${slug}` as const),

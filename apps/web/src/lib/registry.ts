@@ -72,6 +72,37 @@ function normalizeRegistryAgent(agent: RegistryAgentValidated): RegistryAgent {
   return normalized as unknown as RegistryAgent;
 }
 
+const DEFAULT_REGISTRY_URL =
+  'https://raw.githubusercontent.com/adriannoes/asap-protocol/main/registry.json';
+
+/**
+ * In development, `.env` often pins REGISTRY_URL to `http://127.0.0.1:3000/registry.json`
+ * while `next dev --port N` listens elsewhere. Rewrite local registry URLs to `process.env.PORT`.
+ */
+export function resolveRegistryFetchUrl(explicitUrl?: string): string {
+  const url = explicitUrl ?? process.env.REGISTRY_URL ?? DEFAULT_REGISTRY_URL;
+
+  if (process.env.NODE_ENV !== 'development') {
+    return url;
+  }
+
+  try {
+    const parsed = new URL(url);
+    const isLocalHost =
+      parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost';
+    const isRegistryJson = parsed.pathname.endsWith('/registry.json');
+
+    if (!isLocalHost || !isRegistryJson) {
+      return url;
+    }
+
+    const port = process.env.PORT ?? parsed.port ?? '3000';
+    return `http://127.0.0.1:${port}${parsed.pathname}`;
+  } catch {
+    return url;
+  }
+}
+
 /**
  * Fetch the ASAP Lite Registry.
  * We fetch from REGISTRY_URL (GitHub Pages or raw URL). Next.js ISR uses REGISTRY_REVALIDATE_SECONDS.
@@ -80,9 +111,7 @@ function normalizeRegistryAgent(agent: RegistryAgentValidated): RegistryAgent {
  */
 export async function fetchRegistry(): Promise<RegistryAgent[]> {
   // Server-side only: use REGISTRY_URL (not NEXT_PUBLIC_) to avoid leaking in client bundle.
-  const REGISTRY_URL =
-    process.env.REGISTRY_URL ||
-    'https://raw.githubusercontent.com/adriannoes/asap-protocol/main/registry.json';
+  const REGISTRY_URL = resolveRegistryFetchUrl();
 
   try {
     const res = await fetch(REGISTRY_URL, {

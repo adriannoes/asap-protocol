@@ -9,11 +9,11 @@ import { fetchRegistry } from '@/lib/registry';
 export const metadata: Metadata = {
   title: 'ASAP Protocol | The Marketplace for Autonomous Agents',
   description:
-    'Discover, verify, and integrate specialized AI agents using the open ASAP Protocol — v2.3.0 adds OpenAPI onboarding, the TypeScript client, auto-registration, capability escalation, and ASAP discovery challenges.',
+    'Discover, verify, and integrate specialized AI agents using the open ASAP Protocol — v2.3.1 adds Mastra and OpenAI Agents SDK adapters plus additive TypeScript client exports.',
   openGraph: {
     title: 'ASAP Protocol | The Marketplace for Autonomous Agents',
     description:
-      'Discover, verify, and integrate specialized AI agents using the open ASAP Protocol — v2.3.0 adds OpenAPI onboarding, the TypeScript client, auto-registration, capability escalation, and ASAP discovery challenges.',
+      'Discover, verify, and integrate specialized AI agents using the open ASAP Protocol — v2.3.1 adds Mastra and OpenAI Agents SDK adapters plus additive TypeScript client exports.',
     type: 'website',
   },
 };

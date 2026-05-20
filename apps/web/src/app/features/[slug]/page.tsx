@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import type { LucideIcon } from 'lucide-react';
-import { ArrowLeft, Database, ShieldCheck, Zap, Activity, Globe, Lock, Code, Fingerprint, KeySquare, Radio, Clock, GaugeCircle, Layers, Waypoints, FileCode, Braces, CloudUpload } from 'lucide-react';
+import { ArrowLeft, Database, ShieldCheck, Zap, Activity, Globe, Lock, Code, Fingerprint, KeySquare, Radio, Clock, GaugeCircle, Layers, Waypoints, FileCode, Braces, CloudUpload, Bot, Sparkles } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid';
 
@@ -9,6 +9,8 @@ export function generateStaticParams() {
     return [
         { slug: 'openapi-adapter' },
         { slug: 'typescript-sdk' },
+        { slug: 'mastra-adapter' },
+        { slug: 'openai-agents-adapter' },
         { slug: 'auto-registration' },
         { slug: 'lite-registry' },
         { slug: 'verified-trust' },
@@ -245,6 +247,59 @@ const FEATURE_CONTENT: Record<
                 <p className="mb-6">
                     The monorepo ships <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">apps/example-nextjs</code> as a runnable integration sample alongside the package sources under{' '}
                     <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">packages/typescript/client/</code>.
+                </p>
+            </>
+        ),
+    },
+    'mastra-adapter': {
+        title: 'Mastra Adapter',
+        description: 'ASAP capabilities as Mastra createTool definitions.',
+        icon: Bot,
+        capabilities: [
+            { title: 'Tool bridge', description: 'Maps manifest capabilities to Mastra inputSchema/outputSchema via Zod.', icon: Code },
+            { title: 'Agent wrapper', description: 'Optional createAsapMastraAgent helper with sane defaults for ASAP-backed agents.', icon: Bot },
+            { title: 'Streaming', description: 'asapStreamToMastraTextStream bridges TaskStream chunks to Mastra-style text.', icon: Radio },
+        ],
+        content: (
+            <>
+                <p className="mb-6">
+                    Install{' '}
+                    <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">@asap-protocol/mastra</code>{' '}
+                    alongside{' '}
+                    <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">@mastra/core</code>{' '}
+                    to call remote ASAP capabilities from Mastra agents without hand-writing tool schemas.
+                </p>
+                <p className="mb-6">
+                    Runnable UI sample:{' '}
+                    <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">apps/example-mastra</code>{' '}
+                    (Compliance Harness v2 score 1.0). Docs:{' '}
+                    <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">docs/integrations/mastra.md</code>.
+                </p>
+            </>
+        ),
+    },
+    'openai-agents-adapter': {
+        title: 'OpenAI Agents Adapter',
+        description: 'ASAP capabilities as OpenAI Agents SDK tool() definitions.',
+        icon: Sparkles,
+        capabilities: [
+            { title: 'tool() bridge', description: 'asapToolsForOpenAIAgents builds @openai/agents tool definitions from a manifest.', icon: Sparkles },
+            { title: 'Remote handoffs', description: 'asapAsRemoteAgent wraps an ASAP gateway as a handoff target for multi-agent runs.', icon: Waypoints },
+            { title: 'Not Chat Completions', description: 'Distinct from @asap-protocol/client/adapters/openai static ChatCompletionTool[] helper.', icon: ShieldCheck },
+        ],
+        content: (
+            <>
+                <p className="mb-6">
+                    Install{' '}
+                    <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">@asap-protocol/openai-agents</code>{' '}
+                    with{' '}
+                    <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">@openai/agents</code>{' '}
+                    and Zod 4 to run OpenAI Agents SDK loops against ASAP-backed capabilities.
+                </p>
+                <p className="mb-6">
+                    CLI demo:{' '}
+                    <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">apps/example-openai-agents</code>. Docs:{' '}
+                    <code className="rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300">docs/integrations/openai-agents.md</code>.
                 </p>
             </>
         ),
