@@ -5,6 +5,7 @@ Maintainer guide for scoped package bootstrap, Trusted Publishing (OIDC), and re
 ## Maintainer cross-links
 
 - **Release checklist (npm gate)**: [engineering/tasks/v2.3.0/release-checklist.md](../../engineering/tasks/v2.3.0/release-checklist.md) — §**4.3** (verify install after publish).
+- **Hotfix runbook**: [hotfix.md](./hotfix.md) — adapter-only `2.3.1-hotfix.N` vs protocol patch `2.3.2`, branching, cherry-pick, emergency publish.
 - **Sprint notes (historical)**: [engineering/tasks/private/v2.3.1/sprint-S0-unblock-npm.md](../../engineering/tasks/private/v2.3.1/sprint-S0-unblock-npm.md) — first-publish / OIDC troubleshooting narrative.
 
 ## Normal path (after bootstrap)
@@ -87,5 +88,6 @@ When Trusted Publishing or GitHub OIDC fails but you must ship a fix:
 
 ## References
 
+- [hotfix.md](./hotfix.md) — post-release hotfix decision tree, tags, and `.github/workflows/hotfix-release.yml`
 - [npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers)
 - [GitHub: npm provenance](https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages#publishing-packages-to-the-npmjs-registry)
