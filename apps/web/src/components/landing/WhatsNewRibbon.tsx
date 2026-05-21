@@ -22,7 +22,7 @@ type Pill = {
 };
 
 const CHANGELOG_URL =
-  'https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#231---2026-05-18';
+  'https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#231---2026-05-20';
 const DOCS_OPENAPI =
   'https://github.com/adriannoes/asap-protocol/blob/main/docs/adapters/openapi.md';
 const DOCS_TS_SDK =

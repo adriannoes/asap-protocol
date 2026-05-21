@@ -18,7 +18,7 @@ export function HeroSection() {
           >
             <div className="space-y-4">
               <Link
-                href="https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#231---2026-05-18"
+                href="https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#231---2026-05-20"
                 target="_blank"
                 rel="noopener noreferrer"
                 data-cta={HOMEPAGE_HERO_CTA_IDS.releaseBadge}
