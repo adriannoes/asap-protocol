@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [2.3.1] - 2026-05-18
+## [2.3.1] - 2026-05-20
 
 **Adapter Lab I** — TypeScript-only patch: two new framework adapters on npm and
 additive exports on `@asap-protocol/client`. Python `asap-protocol` core is
@@ -42,6 +42,10 @@ unchanged; no wire-protocol or migration work required for existing deployments.
   public `@asap-protocol/client/adapters/shared`, `jsonSchemaForCapabilityOutput`,
   execution types, and envelope helpers. Non-breaking; existing `@2.3.0` consumers
   remain compatible.
+- **CI security (`pip-audit`)**: Bumped transitive pins (`idna>=3.15`,
+  `markdown>=3.10.2`, `pymdown-extensions>=10.21.3`) and documented `--ignore-vuln`
+  flags for advisories with no PyPI fix yet (`PYSEC-2026-89`, `PYSEC-2025-183`,
+  `PYSEC-2024-271`). See [SECURITY.md](SECURITY.md).
 
 ### Known limitations
 

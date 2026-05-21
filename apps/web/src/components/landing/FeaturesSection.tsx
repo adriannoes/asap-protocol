@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LANDING_FEATURE_SLUGS } from '@/lib/telemetry/homepage-cta-ids';
-import { Database, ShieldCheck, Zap, Activity, ArrowRight, Fingerprint, KeySquare, Radio, FileCode, Braces, CloudUpload } from 'lucide-react';
+import { Database, ShieldCheck, Zap, Activity, ArrowRight, Fingerprint, KeySquare, Radio, FileCode, Braces, CloudUpload, Bot, Sparkles } from 'lucide-react';
 
 const INLINE_CODE = 'rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300';
 
@@ -33,6 +33,28 @@ const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
       </>
     ),
     icon: Braces,
+    className: 'md:col-span-1',
+  },
+  'mastra-adapter': {
+    title: 'Mastra Adapter',
+    description: (
+      <>
+        <code className={INLINE_CODE}>@asap-protocol/mastra</code> exposes ASAP capabilities as Mastra{' '}
+        <code className={INLINE_CODE}>createTool</code> definitions with streaming bridge support.
+      </>
+    ),
+    icon: Bot,
+    className: 'md:col-span-1',
+  },
+  'openai-agents-adapter': {
+    title: 'OpenAI Agents Adapter',
+    description: (
+      <>
+        <code className={INLINE_CODE}>@asap-protocol/openai-agents</code> maps capabilities to OpenAI Agents SDK{' '}
+        <code className={INLINE_CODE}>tool()</code> definitions and remote-agent handoffs.
+      </>
+    ),
+    icon: Sparkles,
     className: 'md:col-span-1',
   },
   'auto-registration': {
@@ -111,7 +133,7 @@ export function FeaturesSection() {
             Protocol Features
           </h2>
           <p className="mx-auto max-w-[600px] text-zinc-400">
-            Everything you need to orchestrate complex multi-agent systems reliably — identity, capabilities, streaming, and v2.3 adoption tools (OpenAPI, TypeScript SDK, auto-registration).
+            Everything you need to orchestrate complex multi-agent systems reliably — identity, capabilities, streaming, and v2.3.1 framework adapters (Mastra, OpenAI Agents SDK).
           </p>
         </div>
 

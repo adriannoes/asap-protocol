@@ -2,7 +2,7 @@
 
 **ASAP (Async Simple Agent Protocol)** is a streamlined protocol for agent-to-agent communication, designed to be simpler than existing alternatives while maintaining modern standards functionality.
 
-**Latest reference implementation:** **v2.3.0** ([CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md), [PyPI](https://pypi.org/project/asap-protocol/), npm [`@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client)) — **Adoption Multiplier** on top of v2.2.x: **OpenAPI Adapter** (`create_from_openapi`, optional `[openapi]` extra), **TypeScript client** with framework adapters, **Auto-Registration** (`POST /registry/agents`), **capability escalation** (`POST /asap/agent/request-capability`), and **ASAP `WWW-Authenticate` challenges** for discovery. v2.2.1 WebAuthn, compliance/audit CLIs, and dependency policy remain as documented. Upgrade notes: [Migration (v2.2.x → v2.3.0)](migration.md#upgrading-from-v22x-to-v230).
+**Latest reference implementation:** **v2.3.0** on PyPI ([CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md), [PyPI](https://pypi.org/project/asap-protocol/)). **TypeScript npm line: v2.3.1** — [`@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client), [`@asap-protocol/mastra`](integrations/mastra.md), [`@asap-protocol/openai-agents`](integrations/openai-agents.md) (TS-only patch; wire protocol unchanged). v2.3.0 **Adoption Multiplier**: OpenAPI Adapter, TypeScript client, Auto-Registration, capability escalation, ASAP challenges. Upgrade: [v2.2.x → v2.3.0](migration.md#upgrading-from-v22x-to-v230) · [v2.3.0 → v2.3.1](migration.md#upgrading-from-v230-to-v231).
 
 ## Features
 
@@ -12,7 +12,7 @@
 - **Transport Agnostic**: Clean separation between protocol logic and transport capability (HTTP JSON-RPC, WebSocket, SSE)
 - **Observability**: First-class tracking with correlation IDs and trace IDs
 - **Security & authorization (v2.2+, WebAuthn real in v2.2.1)**: Per-runtime Host/Agent JWTs, capability grants with constraints, approval flows, opt-in WebAuthn (`asap-protocol[webauthn]`) for browser-controlled and high-risk capability registration — see [Security](security.md) and [Migration](migration.md)
-- **Adoption tools (v2.3.0)**: [OpenAPI adapter](adapters/openapi.md), TypeScript client ([`packages/typescript/client`](https://github.com/adriannoes/asap-protocol/tree/main/packages/typescript/client)), Mastra adapter ([`integrations/mastra.md`](integrations/mastra.md) · `@asap-protocol/mastra`), OpenAI Agents SDK adapter ([`integrations/openai-agents.md`](integrations/openai-agents.md) · `@asap-protocol/openai-agents`), [Auto-registration](registry/auto-registration.md), [Capability escalation](capabilities/escalation.md), [ASAP HTTP challenge](transport/asap-challenge.md)
+- **Adoption tools (v2.3.0+)**: [OpenAPI adapter](adapters/openapi.md), [TypeScript client](sdks/typescript.md) (`@asap-protocol/client@2.3.1`), [Mastra adapter](integrations/mastra.md) (`@asap-protocol/mastra@2.3.1`), [OpenAI Agents SDK adapter](integrations/openai-agents.md) (`@asap-protocol/openai-agents@2.3.1`), [Auto-registration](registry/auto-registration.md), [Capability escalation](capabilities/escalation.md), [ASAP HTTP challenge](transport/asap-challenge.md)
 
 ## Installation
 
@@ -92,8 +92,9 @@ See [CLI reference](cli.md) (all commands, exit codes, `compliance-check`, `audi
 ## Documentation
 
 - [OpenAPI adapter](adapters/openapi.md) — derive ASAP skills and an upstream proxy from OpenAPI 3.x (`asap.adapters.openapi`)
-- [TypeScript client SDK](sdks/typescript.md) — `@asap-protocol/client` on npm (browser + Node; optional LLM adapters)
-- [OpenAI Agents SDK adapter](integrations/openai-agents.md) — `@asap-protocol/openai-agents`: ASAP capabilities as `@openai/agents` tools + handoff-oriented remote agent helper (`@openai/agents`, distinct from `@asap-protocol/client/adapters/openai`)
+- [TypeScript client SDK](sdks/typescript.md) — `@asap-protocol/client@2.3.1` on npm (browser + Node; optional LLM adapters)
+- [Mastra adapter](integrations/mastra.md) — `@asap-protocol/mastra@2.3.1`: ASAP capabilities as `@mastra/core` tools + streaming bridge
+- [OpenAI Agents SDK adapter](integrations/openai-agents.md) — `@asap-protocol/openai-agents@2.3.1`: ASAP capabilities as `@openai/agents` tools + handoff-oriented remote agent helper (`@openai/agents`, distinct from `@asap-protocol/client/adapters/openai`)
 - [CLI reference](cli.md) — all `asap` commands, including `compliance-check`, `audit export`, and exit codes
 - [Audit log](audit.md) — hash chain model, export formats, tamper checks
 - [API Reference](api-reference.md)
