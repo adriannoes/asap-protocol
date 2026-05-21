@@ -78,6 +78,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "aiosqlite", specifier = ">=0.20" },
+    { name = "asgi-lifespan", marker = "extra == 'dev'", specifier = ">=2.1.0" },
     { name = "authlib", specifier = ">=1.6.11,<2" },
     { name = "brotli", specifier = ">=1.2.0" },
     { name = "brotli", marker = "extra == 'dev'", specifier = ">=1.1.0" },
@@ -107,7 +108,7 @@ requires-dist = [
     { name = "pip-audit", marker = "extra == 'dev'", specifier = ">=2.7" },
     { name = "pydantic", specifier = ">=2.12.5,<3" },
     { name = "pydantic-ai", marker = "extra == 'pydanticai'", specifier = ">=0.2" },
-    { name = "pymdown-extensions", marker = "extra == 'docs'", specifier = ">=10.21" },
+    { name = "pymdown-extensions", marker = "extra == 'docs'", specifier = ">=10.21.3" },
     { name = "pypistats", marker = "extra == 'telemetry'", specifier = ">=1.11.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.3" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24" },
