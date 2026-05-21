@@ -187,6 +187,33 @@ def test_llamaindex_tool_raises_value_error_when_resolve_fails() -> None:
             )
 
 
+def test_llamaindex_tool_requires_llamaindex_package(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asap.integrations.llamaindex as llama_mod
+
+    monkeypatch.setattr(llama_mod, "FunctionTool", None)
+    with pytest.raises(RuntimeError, match="llama"):
+        llama_mod.LlamaIndexAsapTool(
+            TEST_URN,
+            client=MarketClient(registry_url="https://reg.example/registry.json"),
+        )
+
+
+@pytest.mark.asyncio
+async def test_llamaindex_acall_no_skills_returns_error_string() -> None:
+    p_get, p_verify, p_revoked, p_http = _resolve_patches()
+    with p_get as mock_get, p_verify as mock_verify, p_revoked as mock_revoked, p_http:
+        mock_get.return_value = _lite_registry()
+        mock_verify.return_value = True
+        mock_revoked.return_value = False
+        tool = LlamaIndexAsapTool(
+            TEST_URN,
+            client=MarketClient(registry_url="https://reg.example/registry.json"),
+        )
+        output = await tool.acall(input={"q": "x"})
+        content = getattr(output, "content", None) or getattr(output, "raw_output", str(output))
+        assert "no skills" in str(content).lower()
+
+
 def test_llamaindex_tool_raises_on_signature_error() -> None:
     """When verify_agent_trust raises SignatureVerificationError, constructor raises ValueError."""
     p_get, p_verify, p_revoked, p_http = _resolve_patches()
