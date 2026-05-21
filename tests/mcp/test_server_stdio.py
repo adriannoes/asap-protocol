@@ -127,3 +127,45 @@ async def test_run_stdio_stdin_eof_exits_without_crash() -> None:
     stdout = io.StringIO()
     await server.run_stdio(stdin=stdin, stdout=stdout)
     assert stdout.getvalue() == ""
+
+
+@pytest.mark.asyncio
+async def test_run_stdio_initialize_tools_round_trip() -> None:
+    server = MCPServer(name="demo", version="1.0.0")
+    server.register_tool("echo", lambda message="": message, {"type": "object"}, description="echo")
+
+    lines = [
+        '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"t","version":"0"}}}\n',
+        '{"jsonrpc":"2.0","method":"notifications/initialized"}\n',
+        '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}\n',
+        '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"echo","arguments":{"message":"hi"}}}\n',
+        "\n",
+    ]
+    stdin = io.StringIO("".join(lines))
+    stdout = io.StringIO()
+    await server.run_stdio(stdin=stdin, stdout=stdout)
+    out_lines = [json.loads(ln) for ln in stdout.getvalue().strip().split("\n") if ln.strip()]
+    assert out_lines[0]["result"]["serverInfo"]["name"] == "demo"
+    assert any(t["name"] == "echo" for t in out_lines[1]["result"]["tools"])
+    assert out_lines[2]["result"]["content"][0]["text"] == "hi"
+
+
+@pytest.mark.asyncio
+async def test_run_stdio_method_not_found_via_stdio() -> None:
+    server = MCPServer(name="t", version="0.1.0")
+    stdin = io.StringIO('{"jsonrpc":"2.0","id":9,"method":"nope"}\n\n')
+    stdout = io.StringIO()
+    await server.run_stdio(stdin=stdin, stdout=stdout)
+    data = json.loads(stdout.getvalue().strip())
+    assert data["error"]["code"] == -32601
+
+
+@pytest.mark.asyncio
+async def test_run_stdio_invalid_tools_call_params() -> None:
+    server = MCPServer(name="t", version="0.1.0")
+    server.register_tool("echo", lambda: "ok", {"type": "object"}, description="echo")
+    stdin = io.StringIO('{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{}}\n\n')
+    stdout = io.StringIO()
+    await server.run_stdio(stdin=stdin, stdout=stdout)
+    data = json.loads(stdout.getvalue().strip())
+    assert data["error"]["code"] == -32602

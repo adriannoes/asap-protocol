@@ -328,3 +328,57 @@ class TestMain:
             main()
             mock_create.assert_called_once()
             mock_mcp.run.assert_called_once_with(transport="stdio")
+
+    def test_parse_args_auth_token_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import sys
+
+        monkeypatch.setenv("ASAP_AUTH_TOKEN", "secret-token")
+        old_argv = sys.argv
+        try:
+            sys.argv = ["asap-mcp-server"]
+            args = _parse_args()
+            assert args.auth_token == "secret-token"
+        finally:
+            sys.argv = old_argv
+
+    @pytest.mark.asyncio
+    async def test_asap_invoke_success_with_mock_resolve(self) -> None:
+        mock_agent = AsyncMock()
+        mock_agent.run = AsyncMock(return_value={"status": "ok"})
+        with patch("asap.mcp.serve.MarketClient") as mock_client_cls:
+            mock_client = mock_client_cls.return_value
+            mock_client.resolve = AsyncMock(return_value=mock_agent)
+            mcp = _create_mcp_server()
+            result = await mcp.call_tool(
+                "asap_invoke",
+                {"urn": "urn:asap:agent:test", "payload": {"skill_id": "echo"}},
+            )
+        content, _ = result
+        text = content[0].text if hasattr(content[0], "text") else str(content[0])
+        assert json.loads(text) == {"status": "ok"}
+
+    @pytest.mark.asyncio
+    async def test_asap_discover_success_with_mock_registry(self) -> None:
+        registry = LiteRegistry(
+            version="1.0",
+            updated_at=datetime.now(timezone.utc),
+            agents=[
+                RegistryEntry(
+                    id="urn:asap:agent:disc",
+                    name="Disc",
+                    description="D",
+                    endpoints={"http": "https://d.example.com"},
+                    skills=[],
+                    asap_version="1.0",
+                ),
+            ],
+        )
+        with patch("asap.mcp.serve.get_registry", new_callable=AsyncMock) as mock_gr:
+            mock_gr.return_value = registry
+            mcp = _create_mcp_server()
+            result = await mcp.call_tool("asap_discover", {"query": "disc"})
+        content, _ = result
+        text = content[0].text if hasattr(content[0], "text") else str(content[0])
+        parsed = json.loads(text)
+        assert len(parsed) == 1
+        assert parsed[0]["id"] == "urn:asap:agent:disc"
