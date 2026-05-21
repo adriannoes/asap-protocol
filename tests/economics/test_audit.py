@@ -336,6 +336,61 @@ class TestSQLiteAuditStore:
         assert await sqlite_audit_store.count() == 20
         assert await sqlite_audit_store.verify_chain() is True
 
+    async def test_sqlite_tamper_detection(self, sqlite_audit_store: SQLiteAuditStore) -> None:
+        for i in range(3):
+            await sqlite_audit_store.append(
+                AuditEntry(
+                    timestamp=datetime.now(timezone.utc),
+                    operation=f"op.{i}",
+                    agent_urn="urn:asap:agent:test",
+                    details={"index": i},
+                )
+            )
+        assert await sqlite_audit_store.verify_chain() is True
+
+        conn = await sqlite_audit_store._get_connection()
+        try:
+            await conn.execute(
+                "UPDATE audit_log SET details = ? WHERE rowid = 2",
+                ('{"tampered": true}',),
+            )
+            await conn.commit()
+        finally:
+            await sqlite_audit_store._release_connection(conn)
+
+        assert await sqlite_audit_store.verify_chain() is False
+
+    async def test_sqlite_verify_chain_breaks_on_corrupted_prev_hash(
+        self, sqlite_audit_store: SQLiteAuditStore
+    ) -> None:
+        await sqlite_audit_store.append(
+            AuditEntry(
+                timestamp=datetime.now(timezone.utc),
+                operation="op.0",
+                agent_urn="urn:asap:agent:test",
+            )
+        )
+        await sqlite_audit_store.append(
+            AuditEntry(
+                timestamp=datetime.now(timezone.utc),
+                operation="op.1",
+                agent_urn="urn:asap:agent:test",
+            )
+        )
+        assert await sqlite_audit_store.verify_chain() is True
+
+        conn = await sqlite_audit_store._get_connection()
+        try:
+            await conn.execute(
+                "UPDATE audit_log SET prev_hash = ? WHERE rowid = 2",
+                ("deadbeef",),
+            )
+            await conn.commit()
+        finally:
+            await sqlite_audit_store._release_connection(conn)
+
+        assert await sqlite_audit_store.verify_chain() is False
+
 
 class TestSQLiteAuditStoreMemoryDefault:
     """Tests that the default :memory: constructor works correctly."""
