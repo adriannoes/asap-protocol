@@ -10,6 +10,18 @@ export default defineConfig({
         globals: true,
         include: ['src/**/*.test.ts?(x)'],
         exclude: ['tests/example.spec.ts', 'tests/browse.spec.ts'], // Playwright tests
+        coverage: {
+            provider: 'v8',
+            reporter: ['text', 'text-summary'],
+            include: ['src/**/*.{ts,tsx}'],
+            exclude: ['src/**/*.d.ts'],
+            thresholds: {
+                lines: 45,
+                branches: 38,
+                functions: 30,
+                statements: 44,
+            },
+        },
     },
     resolve: {
         alias: {
