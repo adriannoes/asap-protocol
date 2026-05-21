@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from asgi_lifespan import LifespanManager
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
@@ -1335,6 +1336,43 @@ class TestWebSocketGracefulShutdown(NoRateLimitTestBase):
         assert isinstance(app.state.websocket_connections, set)
         assert len(app.state.websocket_connections) == 0
 
+    @pytest.mark.asyncio
+    async def test_lifespan_closes_active_websockets_on_shutdown(
+        self,
+        sample_manifest: Manifest,
+    ) -> None:
+        """App lifespan shutdown closes tracked WebSockets with code 1001."""
+        from asap.transport.handlers import create_default_registry
+        from asap.transport.server import create_app
+
+        app = create_app(sample_manifest, create_default_registry())
+        mock_ws = AsyncMock()
+        app.state.websocket_connections.add(mock_ws)
+
+        async with LifespanManager(app):
+            assert mock_ws in app.state.websocket_connections
+
+        mock_ws.close.assert_awaited_once_with(
+            code=WS_CLOSE_GOING_AWAY,
+            reason=WS_CLOSE_REASON_SHUTDOWN,
+        )
+
+    @pytest.mark.asyncio
+    async def test_websocket_connection_tracked_in_app_state_set(self) -> None:
+        """``handle_websocket_connection`` adds then removes the socket from the active set."""
+        ws = AsyncMock()
+        ws.accept = AsyncMock()
+        ws.close = AsyncMock()
+        ws.client = ("127.0.0.1", 9000)
+        ws.receive_text = AsyncMock(side_effect=RuntimeError("disconnect"))
+
+        handler = MagicMock()
+        active: set[WebSocket] = set()
+        await handle_websocket_connection(ws, handler, active)
+
+        assert ws not in active
+        ws.accept.assert_awaited_once()
+
 
 # --- Chaos tests ---
 
@@ -2475,7 +2513,7 @@ class TestPoolCoverage:
 
     @pytest.mark.asyncio
     async def test_pool_acquire_skips_stale_in_queue(self) -> None:
-        """acquire() skips stale connections from the available queue (lines 648-654)."""
+        """acquire() skips stale connections from the available queue."""
         pool = WebSocketConnectionPool(url="ws://localhost:8080", idle_timeout=0.0)
 
         stale_transport = WebSocketTransport()
@@ -2485,31 +2523,26 @@ class TestPoolCoverage:
         pool._available.put_nowait((stale_transport, time.monotonic() - 100))
         pool._total_count = 1
 
-        # Pool should skip stale and try to create new one, but we mock connect
-        fresh_transport = WebSocketTransport()
-        fresh_ws = _mock_ws()
-        fresh_transport._ws = fresh_ws
+        stale_transport.close = AsyncMock()
 
-        with patch.object(WebSocketTransport, "connect", new_callable=AsyncMock) as mock_connect:
+        async def fake_connect(self: WebSocketTransport, url: str) -> None:
+            self._ws = _mock_ws()
 
-            async def set_ws(url: str) -> None:
-                pool._available.task_done()  # no-op
-                # Simulate that the transport is now connected
-                WebSocketTransport.__init__(fresh_transport)
-                fresh_transport._ws = fresh_ws
+        pool._max_size = 5
+        with patch.object(WebSocketTransport, "connect", fake_connect):
+            transport = await pool.acquire()
 
-            mock_connect.side_effect = set_ws
+        stale_transport.close.assert_awaited_once()
+        assert transport._ws is not None
+        assert pool._total_count == 1
+        assert pool._in_use_count == 1
 
-            pool._max_size = 5
-            try:
-                t = await pool.acquire()
-                await pool.release(t)
-            except Exception:
-                pass
+        await pool.release(transport)
+        assert pool._in_use_count == 0
 
     @pytest.mark.asyncio
     async def test_pool_acquire_skips_ws_none_in_queue(self) -> None:
-        """acquire() skips connections with ws=None (lines 652-654)."""
+        """acquire() skips connections with ws=None."""
         pool = WebSocketConnectionPool(url="ws://localhost:8080")
 
         dead_transport = WebSocketTransport()
@@ -2518,13 +2551,17 @@ class TestPoolCoverage:
         pool._available.put_nowait((dead_transport, time.monotonic()))
         pool._total_count = 1
 
-        with patch.object(WebSocketTransport, "connect", new_callable=AsyncMock):
-            pool._max_size = 5
-            try:
-                t = await pool.acquire()
-                await pool.release(t)
-            except Exception:
-                pass
+        async def fake_connect(self: WebSocketTransport, url: str) -> None:
+            self._ws = _mock_ws()
+
+        pool._max_size = 5
+        with patch.object(WebSocketTransport, "connect", fake_connect):
+            transport = await pool.acquire()
+            assert transport._ws is not None
+            assert pool._total_count == 1
+            assert pool._in_use_count == 1
+            await pool.release(transport)
+            assert pool._in_use_count == 0
 
 
 # ---------------------------------------------------------------------------
@@ -2618,6 +2655,158 @@ class TestConnectReconnect:
 
         await transport.connect("ws://localhost:8080")
         # No exception, no change
+
+
+class TestSendAndReceiveStream:
+    _REQ_ID = "ws-req-stream-test"
+
+    @staticmethod
+    def _transport() -> WebSocketTransport:
+        transport = WebSocketTransport()
+        transport._receive_timeout = 0.05
+        return transport
+
+    @staticmethod
+    def _stream_result_frame(
+        request_id: str,
+        *,
+        chunk: str = "part",
+        final: bool = False,
+        frame_id: str | None = None,
+    ) -> str:
+        env = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:server",
+            recipient="urn:asap:agent:client",
+            payload_type="TaskStream",
+            payload={"chunk": chunk, "final": final, "progress": 0.5},
+            correlation_id="c1",
+        )
+        return json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "result": {"envelope": env.model_dump(mode="json")},
+                "id": frame_id if frame_id is not None else request_id,
+            }
+        )
+
+    @pytest.mark.asyncio
+    async def test_raises_when_not_connected(self) -> None:
+        transport = self._transport()
+        with pytest.raises(RuntimeError, match="not connected"):
+            async for _ in transport.send_and_receive_stream(_sample_envelope_cov()):
+                pass
+
+    @pytest.mark.asyncio
+    async def test_yields_until_final_true(self) -> None:
+        transport = self._transport()
+        ws = _mock_ws()
+        transport._ws = ws
+        req_id = self._REQ_ID
+        ws.recv = AsyncMock(
+            side_effect=[
+                self._stream_result_frame(req_id, chunk="a", final=False),
+                self._stream_result_frame(req_id, chunk="b", final=True),
+            ]
+        )
+        chunks: list[str] = []
+        with patch.object(transport, "_next_request_id", return_value=req_id):
+            async for env in transport.send_and_receive_stream(_sample_envelope_cov()):
+                chunks.append(str(env.payload_dict.get("chunk")))
+        assert chunks == ["a", "b"]
+
+    @pytest.mark.asyncio
+    async def test_skips_heartbeat_pong_and_ack(self) -> None:
+        transport = self._transport()
+        ws = _mock_ws()
+        transport._ws = ws
+        req_id = self._REQ_ID
+        ack = json.dumps({"jsonrpc": "2.0", "method": ASAP_ACK_METHOD, "params": {}})
+        pong = json.dumps({"type": HEARTBEAT_FRAME_TYPE_PONG})
+        ws.recv = AsyncMock(
+            side_effect=[
+                pong,
+                ack,
+                self._stream_result_frame(req_id, final=True),
+            ]
+        )
+        count = 0
+        with patch.object(transport, "_next_request_id", return_value=req_id):
+            async for _ in transport.send_and_receive_stream(_sample_envelope_cov()):
+                count += 1
+        assert count == 1
+
+    @pytest.mark.asyncio
+    async def test_json_rpc_error_raises_remote_error(self) -> None:
+        transport = self._transport()
+        ws = _mock_ws()
+        transport._ws = ws
+        ws.recv = AsyncMock(
+            return_value=json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "error": {"code": -32000, "message": "stream failed"},
+                    "id": self._REQ_ID,
+                }
+            )
+        )
+        with (
+            patch.object(transport, "_next_request_id", return_value=self._REQ_ID),
+            pytest.raises(WebSocketRemoteError, match="stream failed"),
+        ):
+            async for _ in transport.send_and_receive_stream(_sample_envelope_cov()):
+                pass
+
+    @pytest.mark.asyncio
+    async def test_skips_frames_with_different_id(self) -> None:
+        transport = self._transport()
+        ws = _mock_ws()
+        transport._ws = ws
+        req_id = self._REQ_ID
+        ws.recv = AsyncMock(
+            side_effect=[
+                self._stream_result_frame(req_id, frame_id="other"),
+                self._stream_result_frame(req_id, final=True),
+            ]
+        )
+        count = 0
+        with patch.object(transport, "_next_request_id", return_value=req_id):
+            async for _ in transport.send_and_receive_stream(_sample_envelope_cov()):
+                count += 1
+        assert count == 1
+
+    @pytest.mark.asyncio
+    async def test_missing_result_envelope_raises(self) -> None:
+        transport = self._transport()
+        ws = _mock_ws()
+        transport._ws = ws
+        req_id = self._REQ_ID
+        ws.recv = AsyncMock(return_value=json.dumps({"jsonrpc": "2.0", "result": {}, "id": req_id}))
+        with (
+            patch.object(transport, "_next_request_id", return_value=req_id),
+            pytest.raises(WebSocketRemoteError, match="Missing result.envelope"),
+        ):
+            async for _ in transport.send_and_receive_stream(_sample_envelope_cov()):
+                pass
+
+    @pytest.mark.asyncio
+    async def test_mid_stream_disconnect_propagates(self) -> None:
+        transport = self._transport()
+        ws = _mock_ws()
+        transport._ws = ws
+        req_id = self._REQ_ID
+        ws.recv = AsyncMock(
+            side_effect=[
+                self._stream_result_frame(req_id, chunk="ok", final=False),
+                OSError("connection lost"),
+            ]
+        )
+        with (
+            patch.object(transport, "_next_request_id", return_value=req_id),
+            pytest.raises(OSError, match="connection lost"),
+        ):
+            async for _ in transport.send_and_receive_stream(_sample_envelope_cov()):
+                pass
 
 
 # ---------------------------------------------------------------------------
