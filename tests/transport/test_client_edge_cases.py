@@ -375,3 +375,82 @@ class TestAsapChallengePrefetchAndEscalationPoll:
                     poll_interval_seconds=0.01,
                     status_timeout_seconds=3.0,
                 )
+
+
+class TestAsapChallenge401HappyPath:
+    """Happy-path tests for ASAP 401 challenge prefetch."""
+
+    @pytest.mark.asyncio
+    async def test_challenge_prefetch_success_calls_get_manifest(self) -> None:
+        """Successful prefetch after 401 calls ``get_manifest`` with discovery URL."""
+        from asap.transport.challenge import format_www_authenticate_asap
+
+        disc = "https://agent.example/.well-known/asap/manifest.json"
+        resp401 = httpx.Response(
+            401,
+            headers={"www-authenticate": format_www_authenticate_asap(disc)},
+        )
+        async with ASAPClient(
+            "http://localhost:8000",
+            auto_register_on_asap_challenge=True,
+        ) as client:
+            with patch.object(client, "get_manifest", new_callable=AsyncMock) as mock_gm:
+                await client._ingest_asap_challenge_401(resp401)
+            mock_gm.assert_awaited_once_with(disc)
+
+    @pytest.mark.asyncio
+    async def test_challenge_401_sets_last_discovery_url_without_auto_register(self) -> None:
+        """401 challenge records discovery URL even when auto-register is disabled."""
+        from asap.transport.challenge import format_www_authenticate_asap
+
+        disc = "https://agent.example/.well-known/asap/manifest.json"
+        resp401 = httpx.Response(
+            401,
+            headers={"www-authenticate": format_www_authenticate_asap(disc)},
+        )
+        async with ASAPClient(
+            "http://localhost:8000",
+            auto_register_on_asap_challenge=False,
+        ) as client:
+            with patch.object(client, "get_manifest", new_callable=AsyncMock) as mock_gm:
+                await client._ingest_asap_challenge_401(resp401)
+            mock_gm.assert_not_called()
+        assert client.last_asap_challenge_discovery_url == disc
+
+    @pytest.mark.asyncio
+    async def test_send_on_401_prefetches_then_raises_connection_error(
+        self,
+        sample_request_envelope: Envelope,
+    ) -> None:
+        """``send()`` on HTTP 401 prefetches manifest then raises ``ASAPConnectionError``."""
+        from asap.transport.challenge import format_www_authenticate_asap
+
+        disc = "https://agent.example/.well-known/asap/manifest.json"
+        resp401 = httpx.Response(
+            401,
+            headers={"www-authenticate": format_www_authenticate_asap(disc)},
+            request=httpx.Request("POST", "http://localhost:8000/asap"),
+        )
+
+        async with ASAPClient(
+            "http://localhost:8000",
+            auto_register_on_asap_challenge=True,
+            max_retries=1,
+        ) as client:
+            mock_transport = AsyncMock()
+            mock_transport.handle_async_request = AsyncMock(return_value=resp401)
+            client._client = httpx.AsyncClient(transport=mock_transport)
+            with (
+                patch.object(client, "get_manifest", new_callable=AsyncMock) as mock_gm,
+                pytest.raises(ASAPConnectionError, match="401"),
+            ):
+                await client.send(sample_request_envelope)
+            mock_gm.assert_awaited_once_with(disc)
+
+    @pytest.mark.asyncio
+    async def test_ingest_asap_challenge_401_no_discovery_url_is_noop(self) -> None:
+        """Missing ``WWW-Authenticate`` header leaves discovery URL unset."""
+        resp401 = httpx.Response(401, headers={})
+        async with ASAPClient("http://localhost:8000") as client:
+            await client._ingest_asap_challenge_401(resp401)
+        assert client.last_asap_challenge_discovery_url is None
