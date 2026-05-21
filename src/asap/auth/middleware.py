@@ -331,9 +331,7 @@ class OAuth2Middleware(BaseHTTPMiddleware):
                 content={"detail": ERROR_INSUFFICIENT_SCOPE},
             )
 
-        success, err_detail, _, use_allowlist = self._validate_identity_binding(
-            claims, sub
-        )
+        success, err_detail, _, use_allowlist = self._validate_identity_binding(claims, sub)
         if not success:
             logger.warning(
                 "asap.oauth2.identity_mismatch",
