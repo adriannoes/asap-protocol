@@ -93,11 +93,21 @@ We continuously monitor dependencies using:
 
 CI runs `pip-audit` after a sync that **excludes** the optional extras `crewai` and `llamaindex`, because those graphs currently pull transitive packages (`diskcache`, `nltk`) that OSV still lists with no fixed release on PyPI. To match the security job locally:
 
-`uv sync --frozen --all-extras --dev --no-extra crewai --no-extra llamaindex` then `uv run pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-4963 --ignore-vuln CVE-2026-2654` (matches CI).
+`uv sync --frozen --all-extras --dev --no-extra crewai --no-extra llamaindex` then `uv run pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-4963 --ignore-vuln CVE-2026-2654 --ignore-vuln PYSEC-2024-271 --ignore-vuln PYSEC-2026-89 --ignore-vuln PYSEC-2025-183` (matches CI).
 
 **CVE-2026-4539 (Pygments)**: CI uses `--ignore-vuln CVE-2026-4539` until a patched `pygments` release on PyPI resolves the advisory (`tool.uv.override-dependencies` prefers `pygments>=2.20.0` when resolvable).
 
 **CVE-2026-4963 / CVE-2026-2654 (smolagents, optional `[smolagents]` extra)**: OSV reports these against current PyPI releases with **no `fix_versions`/`fixed` range** yet. CI ignores them until Hugging Face publishes patched `smolagents` wheels; remove the flags when `pip-audit` is clean without them. The reference package does not import smolagents unless that extra is installed.
+
+**CVE-2026-45409 (idna)**: Resolved via `tool.uv.override-dependencies` (`idna>=3.15`) — DoS in `idna.encode()` on oversized inputs.
+
+**CVE-2026-46338 (pymdown-extensions)**: Resolved via override (`pymdown-extensions>=10.21.3`) and `[docs]` extra floor — snippets `restrict_base_path` prefix bypass in mkdocs stack.
+
+**PYSEC-2026-89 (markdown, mkdocs stack)**: CI uses `--ignore-vuln PYSEC-2026-89` while OSV still lists **3.10.2** (latest on PyPI as of 2026-05) with no fixed release; override pins `markdown>=3.10.2`. Remove the flag when `pip-audit` passes without it.
+
+**PYSEC-2025-183 (pyjwt, transitive via `[mcp]`)**: CI uses `--ignore-vuln PYSEC-2025-183` — advisory is **disputed by the supplier** (minimum key length is application-defined); override already pins `pyjwt>=2.12.0,<3` for CVE-2026-32597.
+
+**PYSEC-2024-271 (flask-cors, transitive via `locust` in dev/benchmarks)**: CI uses `--ignore-vuln PYSEC-2024-271` — log-injection when debug logging is enabled; **6.0.2 is latest on PyPI** with no fixed release listed. Not on the runtime agent-server path.
 
 **pip**: `tool.uv.override-dependencies` requires `pip>=26.1` so **CVE-2026-3219** (GHSA affecting pip ≤26.0.1) no longer requires a `pip-audit` ignore.
 
