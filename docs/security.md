@@ -618,22 +618,13 @@ The response includes:
    - Interactive agents: `50-100/minute`
    - Resource-intensive agents: `10-50/minute`
 
-2. **Use Distributed Storage**: For multi-instance deployments, configure slowapi to use Redis:
-   ```python
-   from slowapi import Limiter
-   from slowapi.util import get_remote_address
-   import redis
-   
-   redis_client = redis.Redis(host='localhost', port=6379, db=0)
-   limiter = Limiter(
-       key_func=_get_sender_from_envelope,
-       storage_uri="redis://localhost:6379"
-   )
+2. **Use Distributed Storage**: For multi-instance deployments, set the Redis backend (requires `pip install 'asap-protocol[redis]'`):
+   ```bash
+   export ASAP_RATE_LIMIT_BACKEND=redis://localhost:6379/0
    ```
+   The transport layer uses the `limits` library (`create_limiter()` in `asap.transport.rate_limit`).
 
-3. **Monitor Rate Limit Hits**: Track `asap_rate_limit_exceeded_total` metric to identify potential attacks or legitimate traffic spikes.
-
-4. **Implement Graduated Responses**: Consider implementing different limits for different sender types (trusted vs. untrusted).
+3. **Implement Graduated Responses**: Consider implementing different limits for different sender types (trusted vs. untrusted).
 
 ### Example: Custom Rate Limit Configuration
 

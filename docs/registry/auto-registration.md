@@ -39,8 +39,8 @@ The registry-bot validates **Bearer** JWTs the same way as other ASAP HTTP surfa
 | Variable | Purpose |
 |----------|---------|
 | `ASAP_AUTH_JWKS_URI` | JWKS URL for signature validation on `/registry/*` |
-| `ASAP_AUTH_ISSUER` | Issuer; used with OIDC discovery when JWKS URI is derived |
-| `ASAP_AUTH_AUDIENCE` | Optional expected audience |
+| `ASAP_AUTH_ISSUER` | Issuer; used with OIDC discovery when JWKS URI is derived; when set, OAuth2 middleware validates JWT `iss` |
+| `ASAP_AUTH_AUDIENCE` | Optional expected JWT `aud` (comma-separated for multiple values); enforced by OAuth2 middleware when set |
 
 Tokens must include the **`asap:registry`** scope (see `REGISTRY_REGISTER_SCOPE` in `asap.registry.auto_registration`).
 

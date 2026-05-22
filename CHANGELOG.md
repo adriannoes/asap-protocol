@@ -7,9 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **OAuth2 middleware**: Validate JWT `iss` and `aud` when `ASAP_AUTH_ISSUER` / `ASAP_AUTH_AUDIENCE` (or `OAuth2Config.expected_issuer` / `expected_audience`) are set; refactored validation through `validate_jwt()` in `asap.auth.jwks`.
+- **Identity binding**: Fail-closed when `manifest_id` is configured but neither custom claim nor `ASAP_AUTH_SUBJECT_MAP` allowlist matches (403 instead of warn-and-pass).
+- **Web app (`apps/web`)**: Block open redirects on E2E fixture login routes via `resolveRedirectUrl`; harden SSRF on `/api/health-check` (127.0.0.0/8, DNS resolve4/6); Zod validation on API query params; rate-limit unit tests.
+
 ### Fixed
 
 - **CI security (`pip-audit`)**: Bumped transitive pins (`langchain-core`, `langsmith`, `python-multipart`, `urllib3`, `pip`, `smolagents`) and adjusted documented `--ignore-vuln` flags (pygments + **smolagents** CVEs with no PyPI fix yet; pip ≥26.1 clears prior pip ignore). See [SECURITY.md](SECURITY.md).
+
+### Follow-up (not in this release)
+
+- `extra="forbid"` on ingress payload models (`TaskRequestConfig`, `CommonMetadata`)
+- Opt-in protection for operator APIs (`/usage`, `/sla`, `/audit`)
+- Redis-backed `JtiReplayCache` and distributed Next.js rate limits
+- Bump optional `pydantic-ai` extra (CVE-2026-46678)
 
 ---
 
