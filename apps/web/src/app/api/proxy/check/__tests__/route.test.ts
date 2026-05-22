@@ -2,8 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET } from '../route';
 import { isAllowedProxyUrlAsync } from '@/lib/url-validator-server';
+import { checkProxyRateLimit } from '@/lib/rate-limit';
 
 vi.mock('@/lib/url-validator-server');
+vi.mock('@/lib/rate-limit', () => ({
+  checkProxyRateLimit: vi.fn(),
+}));
 
 function createRequest(targetUrl: string, headers?: Record<string, string>): NextRequest {
     return new NextRequest(
@@ -15,6 +19,7 @@ function createRequest(targetUrl: string, headers?: Record<string, string>): Nex
 describe('GET /api/proxy/check', () => {
     beforeEach(() => {
         vi.mocked(isAllowedProxyUrlAsync).mockResolvedValue({ valid: true });
+        vi.mocked(checkProxyRateLimit).mockReturnValue({ allowed: true });
     });
 
     it('returns 400 when url parameter is missing', async () => {
@@ -22,7 +27,24 @@ describe('GET /api/proxy/check', () => {
         const res = await GET(req);
         expect(res.status).toBe(400);
         const json = await res.json();
-        expect(json.error).toContain('Missing url');
+        expect(json.error).toBe('Invalid input');
+    });
+
+    it('returns 429 and Retry-After when rate limit blocks request', async () => {
+        vi.mocked(checkProxyRateLimit).mockReturnValue({ allowed: false, retryAfter: 9 });
+        const req = createRequest('https://example.com/health', { 'x-forwarded-for': '198.51.100.20' });
+        const res = await GET(req);
+        expect(res.status).toBe(429);
+        expect(res.headers.get('Retry-After')).toBe('9');
+        expect(await res.json()).toEqual({ error: 'Too many requests', retryAfter: 9 });
+        expect(checkProxyRateLimit).toHaveBeenCalledWith('198.51.100.20');
+    });
+
+    it('uses x-real-ip when x-forwarded-for is absent', async () => {
+        vi.mocked(checkProxyRateLimit).mockReturnValue({ allowed: true });
+        const req = createRequest('https://example.com/health', { 'x-real-ip': '203.0.113.5' });
+        await GET(req);
+        expect(checkProxyRateLimit).toHaveBeenCalledWith('203.0.113.5');
     });
 
     it('returns 400 for HTTP URL (HTTPS only)', async () => {
