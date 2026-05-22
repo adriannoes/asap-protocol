@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { FixtureRegistryQuerySchema, parseSearchParams } from '@/lib/api-schemas';
 import { asapVersionForFixtureIndex } from '@/lib/protocol-versions';
-
-const MAX_FIXTURE_AGENTS = 2000;
 
 function buildFixtureAgents(count: number): Record<string, unknown>[] {
   const agents: Record<string, unknown>[] = [];
@@ -31,13 +30,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Not available' }, { status: 404 });
   }
 
-  const countParam = request.nextUrl.searchParams.get('count');
-  const count = Math.min(
-    Math.max(1, parseInt(countParam ?? '500', 10) || 500),
-    MAX_FIXTURE_AGENTS
-  );
+  const parsed = parseSearchParams(FixtureRegistryQuerySchema, request.nextUrl.searchParams);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error }, { status: 400 });
+  }
 
-  const agents = buildFixtureAgents(count);
+  const agents = buildFixtureAgents(parsed.data.count);
   return NextResponse.json(agents, {
     headers: { 'Cache-Control': 'no-store' },
   });

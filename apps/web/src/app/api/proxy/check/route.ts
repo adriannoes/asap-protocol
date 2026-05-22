@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAllowedProxyUrlAsync } from '@/lib/url-validator-server';
 import { checkProxyRateLimit } from '@/lib/rate-limit';
+import { ProxyCheckQuerySchema, parseSearchParams } from '@/lib/api-schemas';
 
 const FETCH_TIMEOUT_MS = 3000;
 
@@ -13,10 +14,11 @@ function getClientIp(request: NextRequest): string {
 }
 
 export async function GET(request: NextRequest) {
-    const url = request.nextUrl.searchParams.get('url');
-    if (!url || typeof url !== 'string') {
-        return NextResponse.json({ error: 'Missing url parameter' }, { status: 400 });
+    const parsed = parseSearchParams(ProxyCheckQuerySchema, request.nextUrl.searchParams);
+    if (!parsed.success) {
+        return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
+    const { url } = parsed.data;
 
     const ip = getClientIp(request);
     const rateCheck = checkProxyRateLimit(ip);
