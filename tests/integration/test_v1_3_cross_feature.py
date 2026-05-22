@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 from joserfc import jwk, jwt as jose_jwt
 
 from asap.auth import OAuth2Config
+from asap.auth.middleware import DEFAULT_CUSTOM_CLAIM
 from asap.crypto.keys import generate_keypair
 from asap.economics import (
     InMemoryMeteringStorage,
@@ -398,5 +399,6 @@ def _make_bearer_token(oauth2_key: jwk.RSAKey, sub: str = "urn:asap:agent:delega
         "sub": sub,
         "scope": "asap:execute",
         "exp": now + 3600,
+        DEFAULT_CUSTOM_CLAIM: "urn:asap:agent:test-server",
     }
     return jose_jwt.encode(header, claims, oauth2_key)

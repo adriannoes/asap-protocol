@@ -14,6 +14,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from asap.auth import OAuth2Config
 from asap.auth.agent_jwt import create_host_jwt
+from asap.auth.middleware import DEFAULT_CUSTOM_CLAIM
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest
@@ -120,7 +121,12 @@ def test_server_with_oauth2_config_accepts_asap_with_valid_jwt() -> None:
     now = int(time.time())
     token = jose_jwt.encode(
         {"alg": "RS256", "typ": "JWT"},
-        {"sub": "urn:asap:agent:client", "scope": "asap:execute", "exp": now + 3600},
+        {
+            "sub": "urn:asap:agent:client",
+            "scope": "asap:execute",
+            "exp": now + 3600,
+            DEFAULT_CUSTOM_CLAIM: "urn:asap:agent:test-server",
+        },
         key,
     )
 
@@ -178,3 +184,48 @@ def test_oauth2_middleware_skips_agent_register_host_jwt() -> None:
     assert body.get("status") == "pending"
     assert "agent_id" in body
     assert "approval" in body
+
+
+def test_server_with_oauth2_rejects_token_with_wrong_issuer() -> None:
+    """create_app with expected_issuer rejects JWT with mismatched iss."""
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    key_set = jwk.KeySet.import_key_set({"keys": [key.as_dict(private=False)]})
+
+    async def mock_jwks(_uri: str) -> jwk.KeySet:
+        return key_set
+
+    app = create_app(
+        _minimal_manifest(),
+        registry=create_default_registry(),
+        oauth2_config=OAuth2Config(
+            jwks_uri="https://auth.example.com/jwks.json",
+            path_prefix="/asap",
+            jwks_fetcher=mock_jwks,
+            expected_issuer="https://auth.example.com",
+            expected_audience="urn:asap:agent:test-server",
+        ),
+        rate_limit="100000/minute",
+    )
+
+    now = int(time.time())
+    token = jose_jwt.encode(
+        {"alg": "RS256", "typ": "JWT"},
+        {
+            "sub": "urn:asap:agent:client",
+            "scope": "asap:execute",
+            "exp": now + 3600,
+            "iss": "https://evil.example.com",
+            "aud": "urn:asap:agent:test-server",
+            DEFAULT_CUSTOM_CLAIM: "urn:asap:agent:test-server",
+        },
+        key,
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/asap",
+            json=_minimal_asap_request(),
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert response.status_code == 401

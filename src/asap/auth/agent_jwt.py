@@ -20,6 +20,7 @@ from joserfc.errors import JoseError
 from joserfc.jwk import OKPKey
 from joserfc.jws import extract_compact as _jws_extract_compact
 
+from asap.auth.claims import audience_matches_expected as _audience_matches_expected
 from asap.auth.identity import (
     AgentSession,
     AgentStore,
@@ -152,24 +153,6 @@ def _exp_valid(claims: dict[str, Any], *, now_ts: float) -> bool:
 def _jti_present(claims: dict[str, Any]) -> bool:
     jti = claims.get("jti")
     return isinstance(jti, str) and bool(jti.strip())
-
-
-def _audience_matches_expected(
-    claims: dict[str, Any],
-    expected_audience: str | list[str],
-) -> bool:
-    """Return True if ``aud`` intersects ``expected_audience`` (RFC 7519 §4.1.3)."""
-    aud = claims.get("aud")
-    expected = (
-        [expected_audience] if isinstance(expected_audience, str) else list(expected_audience)
-    )
-    if isinstance(aud, str):
-        token_auds = [aud]
-    elif isinstance(aud, list):
-        token_auds = [a for a in aud if isinstance(a, str)]
-    else:
-        return False
-    return any(a in expected for a in token_auds)
 
 
 async def verify_host_jwt(

@@ -118,6 +118,84 @@ async def test_validate_jwt_raises_on_malformed_token() -> None:
         validate_jwt("not.a.valid.jwt", key_set)
 
 
+async def test_validate_jwt_accepts_matching_issuer_and_audience() -> None:
+    """Verify validate_jwt accepts token when iss/aud match configured expectations."""
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    key_set = jwk.KeySet.import_key_set(_make_jwks_response(key))
+
+    now = int(time.time())
+    token = jose_jwt.encode(
+        {"alg": "RS256", "typ": "JWT"},
+        {
+            "sub": "urn:asap:agent:test",
+            "scope": "asap:execute",
+            "exp": now + 3600,
+            "iss": "https://auth.example.com/",
+            "aud": ["urn:asap:agent:server", "other"],
+        },
+        key,
+    )
+
+    claims = validate_jwt(
+        token,
+        key_set,
+        expected_issuer="https://auth.example.com",
+        expected_audience="urn:asap:agent:server",
+    )
+
+    assert claims["sub"] == "urn:asap:agent:test"
+
+
+async def test_validate_jwt_raises_on_invalid_issuer() -> None:
+    """Verify validate_jwt raises when iss does not match expected_issuer."""
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    key_set = jwk.KeySet.import_key_set(_make_jwks_response(key))
+
+    now = int(time.time())
+    token = jose_jwt.encode(
+        {"alg": "RS256", "typ": "JWT"},
+        {
+            "sub": "urn:asap:agent:test",
+            "exp": now + 3600,
+            "iss": "https://evil.example.com",
+        },
+        key,
+    )
+
+    with pytest.raises(JoseError):
+        validate_jwt(
+            token,
+            key_set,
+            expected_issuer="https://auth.example.com",
+        )
+
+
+async def test_validate_jwt_raises_on_invalid_audience() -> None:
+    """Verify validate_jwt raises when aud does not match expected_audience."""
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    key_set = jwk.KeySet.import_key_set(_make_jwks_response(key))
+
+    now = int(time.time())
+    token = jose_jwt.encode(
+        {"alg": "RS256", "typ": "JWT"},
+        {
+            "sub": "urn:asap:agent:test",
+            "exp": now + 3600,
+            "iss": "https://auth.example.com",
+            "aud": "wrong-audience",
+        },
+        key,
+    )
+
+    with pytest.raises(JoseError):
+        validate_jwt(
+            token,
+            key_set,
+            expected_issuer="https://auth.example.com",
+            expected_audience="urn:asap:agent:server",
+        )
+
+
 def _base64url_encode(data: bytes) -> str:
     """Encode bytes to base64url without padding (JWT format)."""
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
