@@ -9,6 +9,10 @@ export function resolveRedirectUrl(
     agentBuilderUrl?: string
 ): string {
     try {
+        if (url.startsWith('//')) {
+            return baseUrl;
+        }
+
         // 1. Handle relative URLs (essential for local app UX)
         if (url.startsWith('/')) {
             return new URL(url, baseUrl).toString();

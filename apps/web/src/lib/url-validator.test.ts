@@ -2,14 +2,38 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as nodeDns from 'node:dns';
 import { isAllowedExternalUrl, isAllowedProxyUrl } from './url-validator';
 import { isAllowedProxyUrlAsync } from './url-validator-server';
+import { isBlockedHostOrIp } from './url-validator-ip';
+
+describe('isBlockedHostOrIp', () => {
+    it('blocks full 127.0.0.0/8 loopback range', () => {
+        expect(isBlockedHostOrIp('127.0.0.1')).toBe(true);
+        expect(isBlockedHostOrIp('127.0.0.2')).toBe(true);
+        expect(isBlockedHostOrIp('127.1.0.1')).toBe(true);
+    });
+});
 
 describe('isAllowedExternalUrl', () => {
-    it('allows valid external URLs', async () => {
+    let resolve4Spy: ReturnType<typeof vi.spyOn>;
+    let resolve6Spy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+        resolve4Spy = vi.spyOn(nodeDns.promises, 'resolve4').mockRejectedValue(new Error('ENOTFOUND'));
+        resolve6Spy = vi.spyOn(nodeDns.promises, 'resolve6').mockRejectedValue(new Error('ENOTFOUND'));
+    });
+
+    afterEach(() => {
+        resolve4Spy?.mockRestore();
+        resolve6Spy?.mockRestore();
+    });
+
+    it('allows valid external URLs when DNS resolves to public IP', async () => {
+        resolve4Spy.mockResolvedValue(['93.184.216.34']);
         expect(await isAllowedExternalUrl('https://example.com/manifest')).toEqual({ valid: true });
         expect(await isAllowedExternalUrl('https://api.myagent.io')).toEqual({ valid: true });
     });
 
-    it('allows http scheme', async () => {
+    it('allows http scheme when DNS resolves to public IP', async () => {
+        resolve4Spy.mockResolvedValue(['93.184.216.34']);
         expect(await isAllowedExternalUrl('http://example.com')).toEqual({ valid: true });
     });
 
@@ -20,6 +44,8 @@ describe('isAllowedExternalUrl', () => {
 
     it('blocks IPv4 loopback', async () => {
         expect((await isAllowedExternalUrl('http://127.0.0.1:3000')).valid).toBe(false);
+        expect((await isAllowedExternalUrl('http://127.0.0.2:3000')).valid).toBe(false);
+        expect((await isAllowedExternalUrl('http://127.1.0.1')).valid).toBe(false);
     });
 
     it('blocks IPv4 unspecified', async () => {
@@ -62,6 +88,13 @@ describe('isAllowedExternalUrl', () => {
         const result = await isAllowedExternalUrl('http://localhost');
         expect(result.valid).toBe(false);
         expect(result.error).toContain('Internal/Private');
+    });
+
+    it('rejects hostname that resolves to loopback', async () => {
+        resolve4Spy.mockResolvedValue(['127.0.0.2']);
+        const result = await isAllowedExternalUrl('http://rebind.example.com');
+        expect(result.valid).toBe(false);
+        expect(result.error).toContain('127.0.0.2');
     });
 });
 
