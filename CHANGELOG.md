@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **CI security (`pip-audit`)**: Bumped transitive pins (`langchain-core`, `langsmith`, `python-multipart`, `urllib3`, `pip`, `smolagents`) and adjusted documented `--ignore-vuln` flags (pygments + **smolagents** CVEs with no PyPI fix yet; pip ≥26.1 clears prior pip ignore). See [SECURITY.md](SECURITY.md).
+- **FastAPI / Starlette**: Raised `fastapi` floor to `>=0.136.1` so `starlette>=1.0.1` resolves **PYSEC-2026-161** (Host header path injection) without a `pip-audit` ignore.
 
 ### Follow-up (not in this release)
 

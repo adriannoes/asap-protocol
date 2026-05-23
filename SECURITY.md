@@ -97,6 +97,8 @@ CI runs `pip-audit` after a sync that **excludes** the optional extras `crewai` 
 
 **CVE-2026-4539 (Pygments)**: CI uses `--ignore-vuln CVE-2026-4539` until a patched `pygments` release on PyPI resolves the advisory (`tool.uv.override-dependencies` prefers `pygments>=2.20.0` when resolvable).
 
+**PYSEC-2026-161 (starlette, FastAPI stack)**: Resolved by requiring `fastapi>=0.136.1`, which pulls `starlette>=1.0.1` (Host header path validation). Do not add a `pip-audit` ignore for this advisory.
+
 **CVE-2026-46678 (pydantic-ai, optional `[pydanticai]` extra)**: CI uses `--ignore-vuln CVE-2026-46678` until the extra pins `pydantic-ai>=1.99.0` (fix published on PyPI; see CHANGELOG follow-up). Runtime does not import pydantic-ai unless that extra is installed.
 
 **CVE-2026-4963 / CVE-2026-2654 (smolagents, optional `[smolagents]` extra)**: OSV reports these against current PyPI releases with **no `fix_versions`/`fixed` range** yet. CI ignores them until Hugging Face publishes patched `smolagents` wheels; remove the flags when `pip-audit` is clean without them. The reference package does not import smolagents unless that extra is installed.
