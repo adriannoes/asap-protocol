@@ -289,16 +289,7 @@ def test_crewai_tool_no_skills_at_runtime_returns_error() -> None:
 
 
 def test_crewai_invoke_wraps_non_dict_input_payload_with_value() -> None:
-    task_response = TaskResponse(
-        task_id="task-1",
-        status="completed",
-        result={"ok": True},
-        final_state=None,
-        metrics=None,
-    )
-    response_envelope = AsyncMock()
-    response_envelope.payload = task_response
-    mock_send = AsyncMock(return_value=response_envelope)
+    mock_send = AsyncMock(return_value={"ok": True})
     mock_agent = AsyncMock()
     mock_agent.run = mock_send
     mock_agent.manifest = _manifest()
@@ -311,7 +302,7 @@ def test_crewai_invoke_wraps_non_dict_input_payload_with_value() -> None:
         tool = CrewAIAsapTool(
             TEST_URN, client=MarketClient(registry_url="https://reg.example/registry.json")
         )
-        tool._resolved = mock_agent
+        object.__setattr__(tool, "_resolved", mock_agent)
         object.__setattr__(tool, "_skill_id", "echo")
         out = tool._run(input=123)
 
@@ -324,6 +315,11 @@ def test_crewai_tool_requires_crewai_package(monkeypatch: pytest.MonkeyPatch) ->
     import asap.integrations.crewai as crewai_mod
 
     monkeypatch.setattr(crewai_mod, "CrewAIBaseTool", None)
+    monkeypatch.setattr(
+        crewai_mod,
+        "_import_error_crewai",
+        ImportError("crewai is not installed"),
+    )
     with pytest.raises(RuntimeError, match="crewai"):
         CrewAIAsapTool(
             TEST_URN,

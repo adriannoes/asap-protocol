@@ -103,27 +103,34 @@ class LlamaIndexAsapTool:
         description: str | None = None,
     ) -> None:
         if FunctionTool is None or ToolMetadata is None:
-            assert _import_error_llamaindex is not None
+            import_err = _import_error_llamaindex or ImportError(
+                "llama-index-core is not installed"
+            )
             raise RuntimeError(
                 "llama-index-core is required for LlamaIndexAsapTool. "
                 "Install with: pip install asap-protocol[llamaindex]"
-            ) from _import_error_llamaindex
+            ) from import_err
 
         client_instance = client or MarketClient()
         resolved: ResolvedAgent | None = None
-        try:
-            resolved = asyncio.run(client_instance.resolve(urn))
-        except Exception as e:
-            raise ValueError(f"Failed to resolve agent {urn}: {e}") from e
-
         skill_id = ""
-        if resolved.manifest.capabilities.skills:
-            skill_id = resolved.manifest.capabilities.skills[0].id
-        tool_name = name or resolved.manifest.name or urn
-        tool_description = (
-            description or resolved.manifest.description or f"Invoke ASAP agent {urn}."
-        )
-        fn_schema = _build_fn_schema_from_manifest(resolved.manifest)
+        tool_name = name or urn
+        tool_description = description or f"Invoke ASAP agent {urn}."
+        fn_schema = _default_input_schema()
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            try:
+                resolved = asyncio.run(client_instance.resolve(urn))
+            except Exception as e:
+                raise ValueError(f"Failed to resolve agent {urn}: {e}") from e
+            if resolved.manifest.capabilities.skills:
+                skill_id = resolved.manifest.capabilities.skills[0].id
+            tool_name = name or resolved.manifest.name or urn
+            tool_description = (
+                description or resolved.manifest.description or f"Invoke ASAP agent {urn}."
+            )
+            fn_schema = _build_fn_schema_from_manifest(resolved.manifest)
         agent = resolved
 
         async def _invoke(**kwargs: Any) -> str:

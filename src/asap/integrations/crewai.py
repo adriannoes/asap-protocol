@@ -116,11 +116,11 @@ class CrewAIAsapTool(CrewAIBaseTool if CrewAIBaseTool is not None else object): 
         **kwargs: Any,
     ) -> None:
         if CrewAIBaseTool is None:
-            assert _import_error_crewai is not None
+            import_err = _import_error_crewai or ImportError("crewai is not installed")
             raise RuntimeError(
                 "crewai is required for CrewAIAsapTool. "
                 "Install with: pip install asap-protocol[crewai]"
-            ) from _import_error_crewai
+            ) from import_err
         client_instance = client or MarketClient()
         tool_name = name or urn or "asap_agent"
         tool_description = description or f"Invoke ASAP agent {urn} (input: skill payload dict)."

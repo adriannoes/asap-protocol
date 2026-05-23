@@ -191,6 +191,12 @@ def test_llamaindex_tool_requires_llamaindex_package(monkeypatch: pytest.MonkeyP
     import asap.integrations.llamaindex as llama_mod
 
     monkeypatch.setattr(llama_mod, "FunctionTool", None)
+    monkeypatch.setattr(llama_mod, "ToolMetadata", None)
+    monkeypatch.setattr(
+        llama_mod,
+        "_import_error_llamaindex",
+        ImportError("llama-index-core is not installed"),
+    )
     with pytest.raises(RuntimeError, match="llama"):
         llama_mod.LlamaIndexAsapTool(
             TEST_URN,
