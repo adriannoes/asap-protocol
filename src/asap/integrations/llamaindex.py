@@ -134,18 +134,29 @@ class LlamaIndexAsapTool:
         agent = resolved
 
         async def _invoke(**kwargs: Any) -> str:
+            nonlocal agent, skill_id
+            if agent is None:
+                try:
+                    agent = await client_instance.resolve(urn)
+                except Exception as e:
+                    return f"Error: Failed to resolve agent {urn}: {e}"
+                if agent.manifest.capabilities.skills:
+                    skill_id = agent.manifest.capabilities.skills[0].id
             input_payload = kwargs.get("input", kwargs)
             if not isinstance(input_payload, dict):
                 input_payload = {"value": input_payload}
             if not skill_id:
                 return "Error: Agent has no skills; cannot build task request."
+            resolved_agent = agent
+            if resolved_agent is None:
+                return "Error: Agent not resolved."
             payload = {
                 "conversation_id": generate_id(),
                 "skill_id": skill_id,
                 "input": input_payload,
             }
             try:
-                result = await agent.run(payload)
+                result = await resolved_agent.run(payload)
                 return json.dumps(result) if isinstance(result, dict) else str(result)
             except AgentRevokedException as e:
                 return f"Error: Agent revoked or invalid input: {e!s}"
