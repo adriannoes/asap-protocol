@@ -275,4 +275,4 @@ Do **not** require registrants to duplicate these in IssueOps body when manifest
 - [x] All acceptance criteria checked
 - [x] Pre-push CI green (ruff, mypy, pytest, web build) — full pre-push run 2026-05-24 (3439 pytest, ~92.8% cov; apps/web lint/tsc/vitest/build; TS client 105 tests)
 - [x] Discussion or issue linked in CHANGELOG (community feedback tracked) — [#176](https://github.com/adriannoes/asap-protocol/issues/176)
-- [x] ShellClaw informed for optional migration off `tags` (handoff doc; external notify when tag ships)
+- [x] ShellClaw informed for optional migration off `tags` (handoff doc; tag **v2.4.0** shipped 2026-05-24 — external paste to shellclaw repo pending per [release-checklist.md](./release-checklist.md) §4.0)

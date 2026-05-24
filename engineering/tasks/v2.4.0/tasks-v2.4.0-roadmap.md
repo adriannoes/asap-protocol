@@ -75,4 +75,4 @@ Notify `adriannoes/shellclaw` when:
 - [x] S1 acceptance checklist green; Jetson + RPi in `docs/examples/registry-shellclaw.md` and `tests/fixtures/manifests/shellclaw-jetson-v1.0.json` / `shellclaw-rpi-v1.1.json` (PR [#177](https://github.com/adriannoes/asap-protocol/pull/177) → `shellclaw-integration`)
 - [x] `pyproject.toml` minor version bump **2.4.0**; CHANGELOG `[2.4.0]`; `@asap-protocol/client@2.4.0` (community feedback [#176](https://github.com/adriannoes/asap-protocol/issues/176))
 - [x] Pre-push CI suite per `.cursor/rules/git-commits.mdc` — ruff, mypy, pytest (3439), apps/web lint/tsc/vitest/build, TS client tests (2026-05-24; see S1 DoD)
-- [ ] Maintainer release: tag `v2.4.0`, PyPI/npm publish, docs/landing sync — [release-checklist.md](./release-checklist.md)
+- [x] Maintainer release: tag `v2.4.0`, PyPI/npm publish, docs/landing sync — [release-checklist.md](./release-checklist.md) (2026-05-24; ShellClaw handoff + registry IssueOps tracked in checklist §4.0)

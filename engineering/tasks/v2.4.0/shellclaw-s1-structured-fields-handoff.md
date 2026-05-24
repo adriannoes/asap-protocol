@@ -1,6 +1,7 @@
 # ShellClaw handoff — v2.4.0 structured capabilities (S1)
 
-> **When:** After `asap-protocol` **2.4.0** is tagged and published (PyPI + npm `@asap-protocol/client`).
+> **When:** After `asap-protocol` **2.4.0** is tagged and published (PyPI + npm `@asap-protocol/client`).  
+> **Status:** Tag **v2.4.0** shipped 2026-05-24 — paste block below into ShellClaw when ready ([release-checklist](./release-checklist.md) §4.0).
 > **Audience:** ShellClaw maintainers (`adriannoes/shellclaw` planning / Wave 6.2).
 > **No external email** — paste this block into the shellclaw issue or PR.
 
