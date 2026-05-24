@@ -267,3 +267,80 @@ async def test_capability_specs_round_trip_on_store() -> None:
     st = await store.get("cs-1")
     assert st is not None
     assert st.capability_specs == specs
+
+
+@pytest.mark.asyncio
+async def test_approve_raises_key_error_when_missing() -> None:
+    store = InMemoryApprovalStore()
+    with pytest.raises(KeyError, match="No approval request for agent_id=missing"):
+        await store.approve("missing", "user-1")
+
+
+@pytest.mark.asyncio
+async def test_deny_raises_key_error_when_missing() -> None:
+    store = InMemoryApprovalStore()
+    with pytest.raises(KeyError, match="No approval request for agent_id=missing"):
+        await store.deny("missing", "not trusted")
+
+
+@pytest.mark.asyncio
+async def test_approve_raises_when_expired(monkeypatch: pytest.MonkeyPatch) -> None:
+    store = InMemoryApprovalStore()
+    frozen = datetime(2022, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr("asap.auth.approval._utcnow", lambda: frozen)
+    await create_device_authorization(store, "exp-approve", ["read"], expires_in=30)
+    monkeypatch.setattr(
+        "asap.auth.approval._utcnow",
+        lambda: frozen + timedelta(seconds=60),
+    )
+    with pytest.raises(ValueError, match="Approval request expired"):
+        await store.approve("exp-approve", "user-1")
+
+
+@pytest.mark.asyncio
+async def test_deny_raises_when_expired(monkeypatch: pytest.MonkeyPatch) -> None:
+    store = InMemoryApprovalStore()
+    frozen = datetime(2022, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr("asap.auth.approval._utcnow", lambda: frozen)
+    await create_device_authorization(store, "exp-deny", ["read"], expires_in=30)
+    monkeypatch.setattr(
+        "asap.auth.approval._utcnow",
+        lambda: frozen + timedelta(seconds=60),
+    )
+    with pytest.raises(ValueError, match="Approval request expired"):
+        await store.deny("exp-deny", "too late")
+
+
+@pytest.mark.asyncio
+async def test_approve_raises_when_not_pending() -> None:
+    store = InMemoryApprovalStore()
+    await create_device_authorization(store, "done-1", ["read"])
+    await store.approve("done-1", "user-1")
+    with pytest.raises(ValueError, match="Cannot approve request in status 'approved'"):
+        await store.approve("done-1", "user-2")
+
+
+@pytest.mark.asyncio
+async def test_deny_raises_when_not_pending() -> None:
+    store = InMemoryApprovalStore()
+    await create_device_authorization(store, "done-2", ["read"])
+    await store.deny("done-2", "no")
+    with pytest.raises(ValueError, match="Cannot deny request in status 'denied'"):
+        await store.deny("done-2", "again")
+
+
+class _GetAlwaysNoneApprovalStore:
+    """Broken store: create succeeds but get always returns None (internal error path)."""
+
+    async def create(self, *args: object, **kwargs: object) -> None:
+        _ = (args, kwargs)
+
+    async def get(self, agent_id: str) -> None:
+        _ = agent_id
+
+
+@pytest.mark.asyncio
+async def test_create_device_authorization_raises_when_get_missing_after_create() -> None:
+    store = _GetAlwaysNoneApprovalStore()
+    with pytest.raises(RuntimeError, match="missing after create"):
+        await create_device_authorization(store, "broken-1", ["read"])
