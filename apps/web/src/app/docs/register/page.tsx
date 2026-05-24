@@ -113,6 +113,40 @@ app = create_app(manifest, registry)`}</code>
                             <h2 className="text-2xl font-bold text-white">Publish via IssueOps</h2>
                         </div>
 
+                        <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6 space-y-3">
+                            <h3 className="text-lg font-semibold text-white">Built with (framework)</h3>
+                            <p className="text-zinc-400 text-sm leading-relaxed">
+                                Optional on registration. Use the same values in the{' '}
+                                <a
+                                    href="https://github.com/adriannoes/asap-protocol/blob/main/.github/ISSUE_TEMPLATE/register_agent.yml"
+                                    className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    GitHub issue template
+                                </a>{' '}
+                                and the web dashboard:
+                            </p>
+                            <p className="text-sm font-mono text-zinc-300">
+                                CrewAI · OpenClaw · ShellClaw · LangChain · AutoGen · Other
+                            </p>
+                            <p className="text-zinc-500 text-xs leading-relaxed">
+                                C-native or static-manifest agents (GitHub Pages only, no live ASAP endpoint in v1.0)
+                                may set{' '}
+                                <code className="text-indigo-400 bg-indigo-500/10 px-1 rounded">online_check: false</code>
+                                . See{' '}
+                                <a
+                                    href="https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/shellclaw-registry.md"
+                                    className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    ShellClaw static registry guide
+                                </a>
+                                .
+                            </p>
+                        </div>
+
                         <div className="grid md:grid-cols-2 gap-6">
                             <div className="p-6 rounded-xl border border-indigo-500/30 bg-indigo-500/5 relative group hover:bg-indigo-500/10 transition-colors">
                                 <ShieldCheck className="w-6 h-6 text-indigo-400 mb-4" />
