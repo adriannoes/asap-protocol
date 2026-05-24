@@ -49,7 +49,7 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Set @openai/agents devDependency for matrix
+      - name: Set @openai/agents version for matrix (adapter + example)
         shell: bash
         env:
           OPENAI_AGENTS_SPEC: ${{ matrix.openai-agents }}
@@ -57,15 +57,27 @@ jobs:
           set -euo pipefail
           node <<'NODE'
           const fs = require("fs");
-          const pkgPath = "packages/typescript/openai-agents/package.json";
-          const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
           const version = process.env.OPENAI_AGENTS_SPEC.trim();
           if (!version) {
             throw new Error("OPENAI_AGENTS_SPEC missing");
           }
-          pkg.devDependencies = pkg.devDependencies ?? {};
-          pkg.devDependencies["@openai/agents"] = version === "latest" ? "latest" : version;
-          fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+          const spec = version === "latest" ? "latest" : version;
+          const targets = [
+            {
+              path: "packages/typescript/openai-agents/package.json",
+              field: "devDependencies",
+            },
+            {
+              path: "apps/example-openai-agents/package.json",
+              field: "dependencies",
+            },
+          ];
+          for (const { path: pkgPath, field } of targets) {
+            const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+            pkg[field] = pkg[field] ?? {};
+            pkg[field]["@openai/agents"] = spec;
+            fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+          }
           NODE
 
       # Matrix jobs rewrite devDependencies["@openai/agents"] to `latest` or a pin, so this

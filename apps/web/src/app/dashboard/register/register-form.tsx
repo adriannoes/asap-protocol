@@ -33,7 +33,15 @@ import { ManifestSchema, type ManifestFormValues } from "@/lib/register-schema";
 import { submitAgentRegistration } from "./actions";
 import { generateAndStoreAgentKeys } from "@/lib/webcrypto";
 
-const BUILT_WITH_OPTIONS = ['', 'CrewAI', 'OpenClaw', 'LangChain', 'AutoGen', 'Other'] as const;
+const BUILT_WITH_OPTIONS = [
+    '',
+    'CrewAI',
+    'OpenClaw',
+    'ShellClaw',
+    'LangChain',
+    'AutoGen',
+    'Other',
+] as const;
 const EMPTY_VALUE = '__none__'; // Radix Select disallows value=""
 
 export function RegisterAgentForm() {

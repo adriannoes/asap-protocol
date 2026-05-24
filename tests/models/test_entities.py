@@ -1,5 +1,8 @@
 """Tests for Agent and Manifest entity models."""
 
+import json
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
@@ -8,10 +11,14 @@ from asap.models.entities import (
     AuthScheme,
     Capability,
     Endpoint,
+    HardwareCapability,
+    InferenceCapability,
+    LocalModelInfo,
     Manifest,
     Skill,
     SLADefinition,
 )
+from asap.models.enums import HardwareClass, HardwareIoType, InferenceMode
 from asap.models.ids import generate_id
 
 
@@ -197,6 +204,131 @@ class TestCapability:
         assert capability.state_persistence is False
         assert capability.streaming is False
         assert capability.mcp_tools == []
+        assert capability.hardware is None
+        assert capability.inference is None
+
+    def test_capability_backward_compat_without_hardware_inference(self) -> None:
+        """Capability without hardware/inference validates (pre-v2.4 manifests)."""
+        data = {
+            "asap_version": "0.1",
+            "skills": [{"id": "research", "description": "Research skill"}],
+            "state_persistence": True,
+            "streaming": False,
+            "mcp_tools": [],
+        }
+        capability = Capability.model_validate(data)
+        assert capability.hardware is None
+        assert capability.inference is None
+
+    def test_capability_shellclaw_jetson_example_roundtrip(self) -> None:
+        """ShellClaw Jetson capabilities example round-trips through Capability."""
+        example_path = (
+            Path(__file__).resolve().parents[2]
+            / "schemas"
+            / "examples"
+            / "shellclaw-jetson-capabilities.json"
+        )
+        raw = json.loads(example_path.read_text(encoding="utf-8"))
+        capability = Capability.model_validate(raw)
+        assert capability.hardware is not None
+        assert capability.hardware.class_ == HardwareClass.EDGE_ACCELERATOR
+        assert capability.hardware.model == "jetson_orin_nano_super_8gb"
+        assert capability.hardware.io == [HardwareIoType.GPIO, HardwareIoType.I2C]
+        assert capability.inference is not None
+        assert capability.inference.modes == [InferenceMode.CLOUD, InferenceMode.LOCAL_CUDA]
+        assert len(capability.inference.local_models) == 1
+        model_info = capability.inference.local_models[0]
+        assert model_info.id == "Phi-3-mini-4k-instruct-Q4_K_M"
+        assert model_info.quantization == "Q4_K_M"
+        assert model_info.throughput_tokens_per_second is None
+        restored = Capability.model_validate(capability.model_dump(mode="json"))
+        assert restored == capability
+
+    def test_capability_shellclaw_rpi_roundtrip(self) -> None:
+        """ShellClaw RPi structured capabilities validate and round-trip."""
+        data = {
+            "asap_version": "2.1.0",
+            "skills": [{"id": "assistant", "description": "Assistant"}],
+            "hardware": {
+                "class": "sbc",
+                "model": "raspberry_pi_zero_2w",
+                "io": ["gpio", "i2c"],
+            },
+            "inference": {
+                "modes": ["cloud", "local_cpu"],
+                "local_models": [
+                    {
+                        "id": "tinyllama-1.1b-chat-Q4_K_M",
+                        "quantization": "Q4_K_M",
+                    }
+                ],
+            },
+        }
+        capability = Capability.model_validate(data)
+        assert capability.hardware is not None
+        assert capability.hardware.class_ == HardwareClass.SBC
+        assert capability.inference is not None
+        assert capability.inference.modes == [InferenceMode.CLOUD, InferenceMode.LOCAL_CPU]
+
+    def test_capability_rejects_unknown_hardware_field(self) -> None:
+        """HardwareCapability forbids extra properties."""
+        with pytest.raises(ValidationError):
+            Capability.model_validate(
+                {
+                    "asap_version": "0.1",
+                    "skills": [],
+                    "hardware": {"class": "sbc", "unknown": True},
+                }
+            )
+
+    def test_capability_rejects_invalid_hardware_class(self) -> None:
+        """Closed hardware class enum rejects unknown values."""
+        with pytest.raises(ValidationError):
+            Capability.model_validate(
+                {
+                    "asap_version": "0.1",
+                    "skills": [],
+                    "hardware": {"class": "not_a_real_class"},
+                }
+            )
+
+
+class TestHardwareCapability:
+    """Tests for HardwareCapability nested model."""
+
+    def test_all_fields_optional(self) -> None:
+        """Empty hardware object validates."""
+        hw = HardwareCapability.model_validate({})
+        assert hw.class_ is None
+        assert hw.model is None
+        assert hw.io == []
+
+
+class TestInferenceCapability:
+    """Tests for InferenceCapability and LocalModelInfo."""
+
+    def test_local_model_throughput_optional(self) -> None:
+        """Throughput is optional; when set must be non-negative."""
+        info = LocalModelInfo(
+            id="model-a",
+            quantization="Q4_K_M",
+            throughput_tokens_per_second=12.5,
+        )
+        assert info.throughput_tokens_per_second == 12.5
+
+    def test_local_model_negative_throughput_rejected(self) -> None:
+        """Negative throughput_tokens_per_second is rejected."""
+        with pytest.raises(ValidationError):
+            LocalModelInfo(
+                id="model-a",
+                throughput_tokens_per_second=-1.0,
+            )
+
+    def test_inference_defaults_empty_lists(self) -> None:
+        """InferenceCapability defaults modes and local_models to empty lists."""
+        inference = InferenceCapability.model_validate({})
+        assert inference.modes == []
+        assert inference.local_models == []
 
 
 class TestEndpoint:
@@ -549,6 +681,37 @@ class TestManifest:
         schema = Manifest.model_json_schema()
         assert "sla" in schema["properties"]
         assert "sla" not in schema.get("required", [])
+
+
+class TestShellClawManifestFixtures:
+    """ShellClaw Jetson/RPi manifest fixtures (Sprint S1 Task 1.6)."""
+
+    def test_shellclaw_jetson_v1_fixture_loads(self) -> None:
+        """shellclaw-jetson-v1.0.json parses as Manifest with hardware + inference."""
+        fixtures_dir = Path(__file__).resolve().parent.parent / "fixtures" / "manifests"
+        path = fixtures_dir / "shellclaw-jetson-v1.0.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        manifest = Manifest.model_validate(data)
+        assert manifest.id == "urn:asap:agent:shellclaw"
+        assert manifest.capabilities.hardware is not None
+        assert manifest.capabilities.hardware.class_ == HardwareClass.EDGE_ACCELERATOR
+        assert manifest.capabilities.inference is not None
+        assert manifest.capabilities.inference.modes == [
+            InferenceMode.CLOUD,
+            InferenceMode.LOCAL_CUDA,
+        ]
+
+    def test_shellclaw_rpi_v1_1_fixture_loads(self) -> None:
+        """shellclaw-rpi-v1.1.json parses as Manifest with SBC + local_cpu."""
+        fixtures_dir = Path(__file__).resolve().parent.parent / "fixtures" / "manifests"
+        path = fixtures_dir / "shellclaw-rpi-v1.1.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        manifest = Manifest.model_validate(data)
+        assert manifest.id == "urn:asap:agent:shellclaw-rpi-v1-1"
+        assert manifest.capabilities.hardware is not None
+        assert manifest.capabilities.hardware.class_ == HardwareClass.SBC
+        assert manifest.capabilities.inference is not None
+        assert InferenceMode.LOCAL_CPU in manifest.capabilities.inference.modes
 
 
 class TestManifestSLAFixture:

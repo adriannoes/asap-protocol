@@ -30,7 +30,11 @@ body:
     id: manifest_url
     attributes:
       label: Manifest URL
-      description: Public URL of your agent's ASAP manifest (JSON). Must be reachable via HTTPS.
+      description: >-
+        Public URL of your agent's ASAP manifest (JSON). Must be reachable via HTTPS.
+        Optional capabilities.hardware and capabilities.inference (v2.4+) are read from this
+        manifest; the registry entry gets hardware_class, inference_modes, and hardware_io
+        automatically — do not duplicate those in this issue form.
       placeholder: https://api.example.com/.well-known/asap-manifest.json
     validations:
       required: true
@@ -69,6 +73,7 @@ body:
         - ""
         - CrewAI
         - OpenClaw
+        - ShellClaw
         - LangChain
         - AutoGen
         - Other

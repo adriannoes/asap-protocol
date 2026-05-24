@@ -5,8 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, ExternalLink, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Cpu, ExternalLink, ShieldAlert, ShieldCheck, Zap } from 'lucide-react';
 import Link from 'next/link';
+import { formatRegistryEnumLabel } from '@/lib/hardware-labels';
 import { AgentConnectActions } from './agent-connect-actions';
 import { UsageSnippets } from './usage-snippets';
 
@@ -25,6 +26,11 @@ function safeAuthHref(url: unknown): string {
 export function AgentDetailClient({ agent, isRevoked }: AgentDetailClientProps) {
     const agentEndpoint = agent.endpoints?.asap ?? (agent.endpoints as { http?: string })?.http;
     const protocolVersion = agent.capabilities?.asap_version ?? agent.version;
+    const hasHardwareProfile =
+        Boolean(agent.hardware_class) ||
+        (Array.isArray(agent.hardware_io) && agent.hardware_io.length > 0);
+    const hasInferenceProfile =
+        Array.isArray(agent.inference_modes) && agent.inference_modes.length > 0;
 
     const renderBooleanBadge = (value: boolean | undefined | null, label: string) => {
         if (value === undefined || value === null) return null;
@@ -139,6 +145,59 @@ export function AgentDetailClient({ agent, isRevoked }: AgentDetailClientProps) 
                                 {renderBooleanBadge(agent.capabilities?.state_persistence, 'State Persistence')}
                                 {renderBooleanBadge(agent.capabilities?.streaming, 'Streaming')}
                             </div>
+
+                            {(hasHardwareProfile || hasInferenceProfile) && (
+                                <>
+                                    <Separator />
+                                    <div className="grid gap-4 sm:grid-cols-2 pt-2">
+                                        {hasHardwareProfile && (
+                                            <div className="p-4 border rounded-lg bg-card/50 space-y-3">
+                                                <div className="flex items-center gap-2">
+                                                    <Cpu className="h-4 w-4 text-indigo-400" />
+                                                    <h3 className="font-semibold text-sm">Hardware</h3>
+                                                </div>
+                                                {agent.hardware_class && (
+                                                    <div className="flex justify-between items-center text-sm py-1 border-b border-border/50">
+                                                        <span className="text-muted-foreground">Class</span>
+                                                        <span className="font-medium font-mono text-xs">
+                                                            {formatRegistryEnumLabel(agent.hardware_class)}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {Array.isArray(agent.hardware_io) && agent.hardware_io.length > 0 && (
+                                                    <div className="space-y-2">
+                                                        <span className="text-xs text-muted-foreground uppercase tracking-wide">
+                                                            I/O interfaces
+                                                        </span>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {agent.hardware_io.map((io) => (
+                                                                <Badge key={io} variant="secondary" className="text-xs">
+                                                                    {formatRegistryEnumLabel(io)}
+                                                                </Badge>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        {hasInferenceProfile && (
+                                            <div className="p-4 border rounded-lg bg-card/50 space-y-3">
+                                                <div className="flex items-center gap-2">
+                                                    <Zap className="h-4 w-4 text-indigo-400" />
+                                                    <h3 className="font-semibold text-sm">Inference</h3>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {agent.inference_modes?.map((mode) => (
+                                                        <Badge key={mode} variant="outline" className="text-xs font-mono">
+                                                            {formatRegistryEnumLabel(mode)}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
 
                             <Separator />
 

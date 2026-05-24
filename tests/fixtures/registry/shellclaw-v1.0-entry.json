@@ -1,0 +1,21 @@
+{
+  "id": "urn:asap:agent:shellclaw",
+  "name": "ShellClaw",
+  "description": "The first C-native edge-AI-capable ASAP agent. Runs Phi-3-mini locally on NVIDIA Jetson Orin Nano Super via CUDA, exposes GPIO and I2C primitives on the 40-pin header as LLM-callable tools, and participates in the ASAP ecosystem with Ed25519-signed manifests.",
+  "endpoints": {
+    "http": "https://shellclaw.example.com/asap",
+    "manifest": "https://adriannoes.github.io/shellclaw/manifest.json"
+  },
+  "skills": ["assistant", "edge_briefing", "server_admin", "gpio_control"],
+  "category": "Infrastructure",
+  "tags": ["cuda", "edge-ai", "hardware", "jetson", "local-inference"],
+  "hardware_class": "edge_accelerator",
+  "inference_modes": ["cloud", "local_cuda"],
+  "hardware_io": ["gpio", "i2c"],
+  "asap_version": "2.1.0",
+  "repository_url": "https://github.com/adriannoes/shellclaw",
+  "documentation_url": "https://github.com/adriannoes/shellclaw#readme",
+  "built_with": "Other",
+  "verification": null,
+  "online_check": false
+}

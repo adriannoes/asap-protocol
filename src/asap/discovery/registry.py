@@ -56,6 +56,9 @@ class RegistryEntry(ASAPBaseModel):
         endpoints: Map of endpoint type to URL (e.g. "http", "ws", "manifest").
         skills: List of skill identifiers the agent supports.
         asap_version: ASAP protocol version (e.g. "1.1.0").
+        hardware_class: Optional hardware class mirrored from manifest (v2.4+).
+        inference_modes: Inference modes mirrored from manifest (v2.4+).
+        hardware_io: Physical I/O types mirrored from manifest (v2.4+).
     """
 
     id: AgentURN = Field(..., description="Unique agent identifier (URN format)")
@@ -97,6 +100,18 @@ class RegistryEntry(ASAPBaseModel):
     online_check: bool | None = Field(
         default=None,
         description="If False, UI skips reachability check (e.g. seeded/demo agents).",
+    )
+    hardware_class: str | None = Field(
+        default=None,
+        description="Hardware class derived from manifest capabilities.hardware.class",
+    )
+    inference_modes: list[str] = Field(
+        default_factory=list,
+        description="Inference modes derived from manifest capabilities.inference.modes",
+    )
+    hardware_io: list[str] = Field(
+        default_factory=list,
+        description="Physical I/O types derived from manifest capabilities.hardware.io",
     )
 
     @field_validator("id")
@@ -206,6 +221,73 @@ def find_by_skill(registry: LiteRegistry, skill: str) -> list[RegistryEntry]:
     return [e for e in registry.agents if skill in e.skills]
 
 
+def find_by_hardware_class(registry: LiteRegistry, cls: str) -> list[RegistryEntry]:
+    """Return agents with the given hardware class.
+
+    Args:
+        registry: Parsed LiteRegistry from discover_from_registry().
+        cls: Hardware class identifier (e.g. "edge_accelerator").
+
+    Returns:
+        List of RegistryEntry whose hardware_class equals cls (case-sensitive).
+    """
+    return [e for e in registry.agents if e.hardware_class == cls]
+
+
+def find_by_inference_mode(registry: LiteRegistry, mode: str) -> list[RegistryEntry]:
+    """Return agents that support the given inference mode.
+
+    Args:
+        registry: Parsed LiteRegistry from discover_from_registry().
+        mode: Inference mode identifier (e.g. "local_cuda").
+
+    Returns:
+        List of RegistryEntry whose inference_modes list contains mode (case-sensitive).
+    """
+    return [e for e in registry.agents if mode in e.inference_modes]
+
+
+def find_by_io(registry: LiteRegistry, io_type: str) -> list[RegistryEntry]:
+    """Return agents that expose the given hardware I/O type.
+
+    Args:
+        registry: Parsed LiteRegistry from discover_from_registry().
+        io_type: I/O type identifier (e.g. "gpio").
+
+    Returns:
+        List of RegistryEntry whose hardware_io list contains io_type (case-sensitive).
+    """
+    return [e for e in registry.agents if io_type in e.hardware_io]
+
+
+def derive_registry_hardware_fields(manifest: Manifest) -> dict[str, Any]:
+    """Build RegistryEntry kwargs from manifest hardware and inference capabilities.
+
+    Mirrors optional ``capabilities.hardware`` and ``capabilities.inference`` into
+    ``hardware_class``, ``inference_modes``, and ``hardware_io`` for Lite Registry
+    discovery filters (v2.4+).
+
+    Args:
+        manifest: Validated agent manifest (may omit hardware/inference).
+
+    Returns:
+        Dict suitable for ``RegistryEntry(**kwargs)`` or ``model_copy(update=...)``.
+        Omitted keys when the manifest has no structured hardware/inference data.
+    """
+    caps = manifest.capabilities
+    derived: dict[str, Any] = {}
+    hardware = caps.hardware
+    if hardware is not None:
+        if hardware.class_ is not None:
+            derived["hardware_class"] = hardware.class_.value
+        if hardware.io:
+            derived["hardware_io"] = [io.value for io in hardware.io]
+    inference = caps.inference
+    if inference is not None and inference.modes:
+        derived["inference_modes"] = [mode.value for mode in inference.modes]
+    return derived
+
+
 def find_by_id(registry: LiteRegistry, agent_id: str) -> RegistryEntry | None:
     """Return the registry entry for the given agent ID, or None if not found.
 
@@ -249,6 +331,7 @@ def generate_registry_entry(
         pydantic.ValidationError: If the generated entry fails schema validation.
     """
     skills = [s.id for s in manifest.capabilities.skills]
+    derived_hardware = derive_registry_hardware_fields(manifest)
     return RegistryEntry(
         id=manifest.id,
         name=manifest.name,
@@ -261,4 +344,5 @@ def generate_registry_entry(
         repository_url=(repository_url.strip() or None) if repository_url else None,
         documentation_url=(documentation_url.strip() or None) if documentation_url else None,
         built_with=(built_with.strip() or None) if built_with else None,
+        **derived_hardware,
     )

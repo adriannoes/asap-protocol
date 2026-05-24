@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **ShellClaw static registry onboarding**: Guide
+  [docs/guides/shellclaw-registry.md](docs/guides/shellclaw-registry.md) documents
+  `online_check: false`, GitHub Pages `endpoints.manifest` URLs, and IssueOps vs
+  auto-registration for agents without a live ASAP endpoint in v1.0. Regression
+  fixture `tests/fixtures/registry/shellclaw-v1.0-entry.json` with
+  `test_shellclaw_v1_fixture_validates`.
+- **Marketplace — ShellClaw v1.0** (listing PR pending): ShellClaw v1.0 (C,
+  ~5500 lines) is the first non-Python ASAP agent in the marketplace. It
+  implements ASAP `2.1.0` features: discovery, envelopes, auth, rate limits,
+  Ed25519-signed manifest (TweetNaCl vendored). It targets the NVIDIA Jetson
+  Orin Nano Super with CUDA-accelerated local inference. Static manifest hosting
+  only in v1.0 (no live endpoint until v1.0.1).
+
 ### Security
 
 - **OAuth2 middleware**: Validate JWT `iss` and `aud` when `ASAP_AUTH_ISSUER` / `ASAP_AUTH_AUDIENCE` (or `OAuth2Config.expected_issuer` / `expected_audience`) are set; refactored validation through `validate_jwt()` in `asap.auth.jwks`.
@@ -24,6 +39,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Opt-in protection for operator APIs (`/usage`, `/sla`, `/audit`)
 - Redis-backed `JtiReplayCache` and distributed Next.js rate limits
 - Bump optional `pydantic-ai` extra (CVE-2026-46678)
+
+---
+
+## [2.4.0] - 2026-05-24
+
+**Edge-AI discovery** — Optional structured hardware and inference capability
+advertising on manifests, mirrored to the Lite Registry, marketplace filters, and
+TypeScript discovery types. Wire protocol and existing manifests remain
+backward compatible.
+
+### Added
+
+- **feat(discovery): hardware and inference capability advertising**
+  - **Manifest schema** (`schemas/entities/manifest.schema.json`): optional
+    `capabilities.hardware` (`class`, `model`, `io`) and `capabilities.inference`
+    (`modes`, `local_models` with optional self-reported throughput); closed enums;
+    `additionalProperties: false` on nested objects. Example:
+    `schemas/examples/shellclaw-jetson-capabilities.json`.
+  - **Pydantic models** (`HardwareCapability`, `InferenceCapability`,
+    `LocalModelInfo`; enums `HardwareClass`, `HardwareIoType`, `InferenceMode`).
+  - **Registry mirror**: `RegistryEntry.hardware_class`, `inference_modes`,
+    `hardware_io`; `derive_registry_hardware_fields()` applied in
+    `auto_registration` and `process_registration` when a signed manifest is
+    loaded.
+  - **Discovery helpers**: `find_by_hardware_class`, `find_by_inference_mode`,
+    `find_by_io` in `asap.discovery.registry`.
+  - **Marketplace (web)**: Browse sidebar filters and agent detail blocks for
+    hardware class, inference mode, and I/O; register docs and IssueOps template
+    note manifest-derived fields.
+  - **TypeScript SDK** (`@asap-protocol/client@2.4.0`): optional hardware fields
+    on `RegistryEntry` with parsers in `discovery.ts`.
+  - **Docs**: `docs/transport.md`, `docs/registry/auto-registration.md`,
+    `docs/examples/registry-shellclaw.md`; fixtures under `tests/fixtures/`.
+
+### Changed
+
+- **Tags vs structured fields**: `tags` (e.g. `cuda`, `jetson`) remain valid;
+  registrants may migrate to structured `hardware` / `inference` when ready.
+
+### Community feedback
+
+- Track enum and field feedback on GitHub: [#176](https://github.com/adriannoes/asap-protocol/issues/176).
 
 ---
 

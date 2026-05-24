@@ -38,6 +38,7 @@ from jsonschema import Draft7Validator
 
 # Path to schemas directory
 SCHEMAS_DIR = Path(__file__).parent.parent.parent / "schemas"
+FIXTURES_MANIFESTS_DIR = Path(__file__).parent.parent / "fixtures" / "manifests"
 
 
 def load_schema(schema_path: str) -> dict[str, Any]:
@@ -232,6 +233,65 @@ V100_MANIFEST_DATA = {
     "auth": {"schemes": ["bearer"], "oauth2": {"token_url": "https://auth.example.com/token"}},
 }
 
+SHELLCLAW_JETSON_MANIFEST_DATA: dict[str, Any] = {
+    "id": "urn:asap:agent:shellclaw-jetson-v1",
+    "name": "ShellClaw Jetson",
+    "version": "1.0.0",
+    "description": "Edge agent on Jetson Orin Nano Super",
+    "capabilities": {
+        "asap_version": "2.1.0",
+        "skills": [
+            {"id": "assistant", "description": "General assistant"},
+            {"id": "edge_briefing", "description": "Edge briefing"},
+            {"id": "server_admin", "description": "Server admin"},
+            {"id": "gpio_control", "description": "GPIO control"},
+        ],
+        "state_persistence": True,
+        "streaming": True,
+        "hardware": {
+            "class": "edge_accelerator",
+            "model": "jetson_orin_nano_super_8gb",
+            "io": ["gpio", "i2c"],
+        },
+        "inference": {
+            "modes": ["cloud", "local_cuda"],
+            "local_models": [
+                {
+                    "id": "Phi-3-mini-4k-instruct-Q4_K_M",
+                    "quantization": "Q4_K_M",
+                }
+            ],
+        },
+    },
+    "endpoints": {"asap": "https://shellclaw.example/asap"},
+}
+
+SHELLCLAW_RPI_MANIFEST_DATA = {
+    "id": "urn:asap:agent:shellclaw-rpi-v1.1",
+    "name": "ShellClaw RPi",
+    "version": "1.1.0",
+    "description": "ShellClaw on Raspberry Pi Zero 2 W",
+    "capabilities": {
+        "asap_version": "2.1.0",
+        "skills": [{"id": "assistant", "description": "Assistant"}],
+        "hardware": {
+            "class": "sbc",
+            "model": "raspberry_pi_zero_2w",
+            "io": ["gpio", "i2c"],
+        },
+        "inference": {
+            "modes": ["cloud", "local_cpu"],
+            "local_models": [
+                {
+                    "id": "tinyllama-1.1b-chat-Q4_K_M",
+                    "quantization": "Q4_K_M",
+                }
+            ],
+        },
+    },
+    "endpoints": {"asap": "https://shellclaw-rpi.example/asap"},
+}
+
 
 class TestEnvelopeSchemaBackwardCompatibility:
     """Tests for envelope schema backward compatibility."""
@@ -351,6 +411,78 @@ class TestManifestSchemaBackwardCompatibility:
             "endpoints": {"asap": "http://localhost:8000/asap"},
         }
         assert validate_data(minimal_manifest, schema)
+
+
+class TestManifestEdgeAiCapabilities:
+    """Tests for optional hardware and inference capability fields (v2.4)."""
+
+    def test_shellclaw_jetson_manifest_validates(self) -> None:
+        """Structured Jetson capabilities validate against manifest schema."""
+        schema = load_schema("entities/manifest.schema.json")
+        assert validate_data(SHELLCLAW_JETSON_MANIFEST_DATA, schema)
+
+    def test_shellclaw_rpi_manifest_validates(self) -> None:
+        """Structured RPi capabilities validate against manifest schema."""
+        schema = load_schema("entities/manifest.schema.json")
+        assert validate_data(SHELLCLAW_RPI_MANIFEST_DATA, schema)
+
+    def test_shellclaw_jetson_fixture_file_validates(self) -> None:
+        """tests/fixtures/manifests/shellclaw-jetson-v1.0.json validates against schema."""
+        path = FIXTURES_MANIFESTS_DIR / "shellclaw-jetson-v1.0.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        schema = load_schema("entities/manifest.schema.json")
+        assert validate_data(data, schema)
+        assert data["id"] == "urn:asap:agent:shellclaw"
+
+    def test_shellclaw_rpi_fixture_file_validates(self) -> None:
+        """tests/fixtures/manifests/shellclaw-rpi-v1.1.json validates against schema."""
+        path = FIXTURES_MANIFESTS_DIR / "shellclaw-rpi-v1.1.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        schema = load_schema("entities/manifest.schema.json")
+        assert validate_data(data, schema)
+        assert data["capabilities"]["hardware"]["class"] == "sbc"
+
+    def test_jetson_capabilities_example_file_validates(self) -> None:
+        """schemas/examples/shellclaw-jetson-capabilities.json validates as Capability."""
+        example_path = SCHEMAS_DIR / "examples" / "shellclaw-jetson-capabilities.json"
+        capabilities = json.loads(example_path.read_text())
+        manifest = {
+            "id": "urn:asap:agent:example-jetson",
+            "name": "Example Jetson",
+            "version": "1.0.0",
+            "description": "Example from schemas/examples",
+            "capabilities": capabilities,
+            "endpoints": {"asap": "https://example.com/asap"},
+        }
+        schema = load_schema("entities/manifest.schema.json")
+        assert validate_data(manifest, schema)
+
+    def test_invalid_hardware_class_rejected(self) -> None:
+        """Unknown hardware.class enum values are rejected."""
+        schema = load_schema("entities/manifest.schema.json")
+        invalid = {
+            **SHELLCLAW_JETSON_MANIFEST_DATA,
+            "capabilities": {
+                **SHELLCLAW_JETSON_MANIFEST_DATA["capabilities"],
+                "hardware": {"class": "not_a_real_class"},
+            },
+        }
+        assert not is_valid(invalid, schema)
+
+    def test_extra_hardware_property_rejected(self) -> None:
+        """hardware object rejects unknown properties (closed object)."""
+        schema = load_schema("entities/manifest.schema.json")
+        invalid = {
+            **SHELLCLAW_JETSON_MANIFEST_DATA,
+            "capabilities": {
+                **SHELLCLAW_JETSON_MANIFEST_DATA["capabilities"],
+                "hardware": {
+                    "class": "edge_accelerator",
+                    "unknown_field": True,
+                },
+            },
+        }
+        assert not is_valid(invalid, schema)
 
 
 class TestSchemaForwardCompatibility:

@@ -10,6 +10,9 @@ This module defines the fundamental entities used in agent-to-agent communicatio
 - StateSnapshot: First-class state persistence mechanism
 - Skill: A specific capability that an agent can perform
 - Capability: Collection of an agent's features and supported operations
+- HardwareCapability: Optional edge hardware profile (class, model, I/O)
+- InferenceCapability: Optional local/cloud inference modes and models
+- LocalModelInfo: Self-reported on-device model metadata
 - Endpoint: Network endpoints for agent communication
 - AuthScheme: Authentication configuration for agent access
 - SLADefinition: Service level agreement guarantees (availability, latency, error rate)
@@ -33,7 +36,14 @@ from asap.models.constants import (
     SUPPORTED_AUTH_SCHEMES,
 )
 from asap.models.validators import validate_agent_urn
-from asap.models.enums import MessageRole, TaskStatus, VerificationState
+from asap.models.enums import (
+    HardwareClass,
+    HardwareIoType,
+    InferenceMode,
+    MessageRole,
+    TaskStatus,
+    VerificationState,
+)
 from asap.models.types import (
     AgentURN,
     ArtifactID,
@@ -79,6 +89,59 @@ def _validate_auth_scheme(auth: "AuthScheme") -> None:
             )
 
 
+class LocalModelInfo(ASAPBaseModel):
+    """Self-reported metadata for a model running on-device (v2.4+).
+
+    Attributes:
+        id: Model identifier (e.g. Hugging Face repo or GGUF name)
+        quantization: Quantization label (e.g. Q4_K_M)
+        throughput_tokens_per_second: Optional self-reported throughput
+    """
+
+    id: str | None = Field(default=None, description="Model identifier")
+    quantization: str | None = Field(default=None, description="Quantization label")
+    throughput_tokens_per_second: float | None = Field(
+        default=None,
+        ge=0,
+        description="Self-reported throughput (tokens per second)",
+    )
+
+
+class HardwareCapability(ASAPBaseModel):
+    """Optional hardware hosting profile for edge and physical agents (v2.4+).
+
+    All fields are optional; registrants may omit the object entirely.
+    """
+
+    class_: HardwareClass | None = Field(
+        default=None,
+        alias="class",
+        description="Hardware class hosting the agent",
+    )
+    model: str | None = Field(
+        default=None,
+        max_length=100,
+        description="Specific board or SoC (e.g. jetson_orin_nano_super_8gb)",
+    )
+    io: list[HardwareIoType] = Field(
+        default_factory=list,
+        description="Physical I/O interfaces available to the agent",
+    )
+
+
+class InferenceCapability(ASAPBaseModel):
+    """Optional local and cloud inference modes advertised by the agent (v2.4+)."""
+
+    modes: list[InferenceMode] = Field(
+        default_factory=list,
+        description="Supported inference execution modes",
+    )
+    local_models: list[LocalModelInfo] = Field(
+        default_factory=list,
+        description="Self-reported local models (optional throughput)",
+    )
+
+
 class Skill(ASAPBaseModel):
     """A specific capability that an agent can perform.
 
@@ -122,6 +185,8 @@ class Capability(ASAPBaseModel):
         state_persistence: Whether the agent supports state snapshots
         streaming: Whether the agent supports streaming responses
         mcp_tools: List of MCP tool names the agent can execute
+        hardware: Optional hardware class, model, and I/O (v2.4+)
+        inference: Optional inference modes and local models (v2.4+)
 
     Example:
         >>> capability = Capability(
@@ -138,6 +203,14 @@ class Capability(ASAPBaseModel):
     state_persistence: bool = Field(default=False, description="Supports state snapshots")
     streaming: bool = Field(default=False, description="Supports streaming responses")
     mcp_tools: list[str] = Field(default_factory=list, description="Available MCP tools")
+    hardware: HardwareCapability | None = Field(
+        default=None,
+        description="Optional hardware hosting profile (edge / physical agents)",
+    )
+    inference: InferenceCapability | None = Field(
+        default=None,
+        description="Optional inference modes and local model metadata",
+    )
 
 
 class Endpoint(ASAPBaseModel):
