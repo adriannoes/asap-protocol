@@ -8,9 +8,9 @@
 **ASAP Protocol** (Async Simple Agent Protocol) is a production-ready standard for agent-to-agent communication.
 - **Stack**: Python 3.13+, FastAPI, Pydantic v2.
 - **Transport**: JSON-RPC 2.0 over HTTP/WebSocket.
-- **Status**: v2.3.0 (released in tree; **PyPI** `asap-protocol` and **npm** `@asap-protocol/client` ship from maintainer tags + publish workflows).
+- **Status**: v2.4.0 (released in tree; **PyPI** `asap-protocol` and **npm** `@asap-protocol/client` ship from maintainer tags + publish workflows).
 - **Framework Integrations**: LangChain, CrewAI, PydanticAI, LlamaIndex, SmolAgents, Vercel AI SDK, MCP, OpenClaw, A2H.
-- **npm (TypeScript)**: The official client is **`@asap-protocol/client`** (scoped, **public** on npm for v2.3.x). Maintainer workflow: `.github/workflows/publish-typescript.yml`; context: `docs/maintainers/npm-publishing.md`.
+- **npm (TypeScript)**: The official client is **`@asap-protocol/client`** (scoped, **public** on npm for v2.4.x). Maintainer workflow: `.github/workflows/publish-typescript.yml`; context: `docs/maintainers/npm-publishing.md`.
 - **General contact** (humans coordinating on the protocol; not security): [info@asap-protocol.com](mailto:info@asap-protocol.com) — vulnerabilities: [SECURITY.md](SECURITY.md).
 
 ## Quick Start
@@ -33,7 +33,7 @@ uv run mypy src/ scripts/ tests/ && uv run ruff check src/  # Verify quality
 
 ### 2. Development Status
 - **Active Sprint**: `engineering/tasks/`
-- **Adoption Roadmap**: v2.3.0 OpenAPI + TypeScript SDK foundations, followed by private v2.3.x adapter/distribution planning.
+- **Adoption Roadmap**: v2.4.0 edge-AI discovery + ShellClaw onboarding shipped; v2.3.x OpenAPI + TypeScript SDK foundations; private v2.3.x adapter/distribution planning continues.
 - **Code Reviews**: `engineering/code-review/`
 
 ## Organization

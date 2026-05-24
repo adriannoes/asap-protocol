@@ -9,6 +9,7 @@ import {
   Sparkles,
   ArrowUpRight,
   Code,
+  Cpu,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -22,15 +23,15 @@ type Pill = {
 };
 
 const CHANGELOG_URL =
-  'https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#231---2026-05-20';
-const DOCS_OPENAPI =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/adapters/openapi.md';
+  'https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#240---2026-05-24';
+const DOCS_EDGE_AI =
+  'https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md#hardware-and-inference-capabilities-v24';
+const DOCS_SHELLCLAW =
+  'https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/shellclaw-registry.md';
 const DOCS_TS_SDK =
   'https://github.com/adriannoes/asap-protocol/blob/main/docs/sdks/typescript.md';
-const DOCS_MASTRA =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/integrations/mastra.md';
-const DOCS_OPENAI_AGENTS =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/integrations/openai-agents.md';
+const DOCS_OPENAPI =
+  'https://github.com/adriannoes/asap-protocol/blob/main/docs/adapters/openapi.md';
 const DOCS_AUTO_REG =
   'https://github.com/adriannoes/asap-protocol/blob/main/docs/registry/auto-registration.md';
 const DOCS_ESCALATION =
@@ -38,18 +39,24 @@ const DOCS_ESCALATION =
 
 const PILLS: Pill[] = [
   {
-    label: 'Mastra',
-    href: DOCS_MASTRA,
-    icon: Sparkles,
+    label: 'Edge-AI fields',
+    href: DOCS_EDGE_AI,
+    icon: Cpu,
     external: true,
-    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsMastraIntegration,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsOpenapi,
   },
   {
-    label: 'OpenAI Agents',
-    href: DOCS_OPENAI_AGENTS,
-    icon: Code,
+    label: 'ShellClaw guide',
+    href: DOCS_SHELLCLAW,
+    icon: Sparkles,
     external: true,
-    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsOpenaiAgentsIntegration,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsAutoRegistration,
+  },
+  {
+    label: 'Browse filters',
+    href: '/browse',
+    icon: Layers,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.featureScopedCapabilities,
   },
   {
     label: 'TypeScript SDK',
@@ -103,7 +110,7 @@ const PILLS: Pill[] = [
 export function WhatsNewRibbon() {
   return (
     <aside
-      aria-label="What's new in ASAP Protocol v2.3.1"
+      aria-label="What's new in ASAP Protocol v2.4.0"
       className="w-full border-y border-zinc-900 bg-zinc-950"
     >
       <div className="container mx-auto flex max-w-5xl flex-col gap-4 px-4 py-8 md:flex-row md:items-center md:gap-4 md:px-6 md:py-10">
@@ -111,10 +118,10 @@ export function WhatsNewRibbon() {
           <Sparkles className="h-4 w-4 shrink-0 text-indigo-400" aria-hidden />
           <div className="flex flex-col">
             <span className="font-mono text-xs uppercase tracking-wider text-indigo-400">
-              What&apos;s new in v2.3.1
+              What&apos;s new in v2.4.0
             </span>
             <span className="text-xs text-zinc-500">
-              Mastra &amp; OpenAI Agents adapters on npm — May 2026
+              Edge-AI discovery &amp; marketplace filters — May 2026
             </span>
           </div>
         </div>

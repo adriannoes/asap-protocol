@@ -18,15 +18,15 @@ export function HeroSection() {
           >
             <div className="space-y-4">
               <Link
-                href="https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#231---2026-05-20"
+                href="https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#240---2026-05-24"
                 target="_blank"
                 rel="noopener noreferrer"
                 data-cta={HOMEPAGE_HERO_CTA_IDS.releaseBadge}
-                aria-label="View ASAP Protocol v2.3.1 changelog on GitHub"
+                aria-label="View ASAP Protocol v2.4.0 changelog on GitHub"
               >
                 <div className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-sm font-medium text-indigo-300 backdrop-blur-sm transition-colors hover:border-indigo-500/60 hover:bg-indigo-500/15">
                   <span className="mr-2 flex h-2 w-2 animate-pulse rounded-full bg-indigo-500"></span>
-                  v2.3.1 — New Adapters
+                  v2.4.0 — Edge-AI Discovery
                 </div>
               </Link>
               <AnimatedText

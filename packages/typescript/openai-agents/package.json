@@ -1,6 +1,6 @@
 {
   "name": "@asap-protocol/openai-agents",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "description": "ASAP Protocol capabilities as OpenAI Agents SDK tools (@openai/agents)",
   "type": "module",
   "license": "Apache-2.0",
@@ -15,7 +15,7 @@
     "node": ">=18"
   },
   "peerDependencies": {
-    "@asap-protocol/client": "^2.3.0",
+    "@asap-protocol/client": "^2.4.0",
     "@openai/agents": "^0.11.0",
     "zod": "^4.1.8"
   },

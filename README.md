@@ -7,7 +7,7 @@
 
 > A production-ready protocol for agent-to-agent communication and task coordination.
 
-**Quick Info**: `v2.3.0` (PyPI) · **npm TS [`2.3.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.3.1)** | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | **[PyPI `asap-protocol`](https://pypi.org/project/asap-protocol/)** | **[npm `@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client)** | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
+**Quick Info**: `v2.4.0` (PyPI) · **npm TS [`2.4.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.4.0)** | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | **[PyPI `asap-protocol`](https://pypi.org/project/asap-protocol/)** | **[npm `@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client)** | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
 
 > 📦 Install the ASAP **Python SDK / protocol** from **`https://pypi.org/project/asap-protocol/`** — package name **`asap-protocol`** on [PyPI](https://pypi.org/project/asap-protocol/).
 
@@ -35,7 +35,8 @@ For simple point-to-point communication, a basic HTTP API might suffice; ASAP sh
 - **Identity & capabilities (v2.2, WebAuthn real in v2.2.1)** — Per-runtime Host/Agent JWTs, capability grants with constraints (`max`, `min`, `in`, `not_in`), approval flows (device authorization / CIBA-style), real WebAuthn attestation/assertion for high-risk registration (opt-in via `asap-protocol[webauthn]`).
 - **Streaming & wire protocol (v2.2)** — `POST /asap/stream` (SSE / `TaskStream`), JSON-RPC 2.0 batch on `POST /asap`, `ASAP-Version` negotiation, tamper-evident audit logging, Compliance Harness v2.
 - **Adoption Multiplier (v2.3.0)** — OpenAPI → ASAP via `create_from_openapi` (`[openapi]` extra), official **`@asap-protocol/client`** on npm (Vercel AI / OpenAI / Anthropic adapters), optional **Auto-Registration** (`POST /registry/agents`), **capability escalation**, and **ASAP `WWW-Authenticate`** discovery challenges. All opt-in; wire protocol unchanged. See [docs/index.md](docs/index.md) and [docs/migration.md](docs/migration.md).
-- **Framework adapters (v2.3.1, npm TS-only patch)** — **`@asap-protocol/mastra`** and **`@asap-protocol/openai-agents`** expose ASAP capabilities as Mastra tools and OpenAI Agents SDK `tool()` definitions. Python core unchanged. See [Migration (v2.3.0 → v2.3.1)](docs/migration.md#upgrading-from-v230-to-v231).
+- **Edge-AI discovery (v2.4.0)** — Optional `manifest.capabilities.hardware` + `inference`, Lite Registry mirror, marketplace browse filters, and `@asap-protocol/client@2.4.0` discovery types. Wire protocol unchanged. See [Migration (v2.3.x → v2.4.0)](docs/migration.md#upgrading-from-v23x-to-v240) and [ShellClaw registry guide](docs/guides/shellclaw-registry.md).
+- **Framework adapters (v2.3.1+, npm)** — **`@asap-protocol/mastra`** and **`@asap-protocol/openai-agents`** expose ASAP capabilities as Mastra tools and OpenAI Agents SDK `tool()` definitions. See [Migration (v2.3.0 → v2.3.1)](docs/migration.md#upgrading-from-v230-to-v231).
 - **Economics** — Usage metering, delegation tokens, SLA framework with breach alerts.
 
 ### 🆕 Framework Ecosystem
@@ -55,16 +56,16 @@ Or with pip:
 pip install asap-protocol
 ```
 
-**npm** (TypeScript / JavaScript — [`@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client), **`2.3.1`** with v2.3.1 adapter packages). The `latest` dist-tag matches **`npm view @asap-protocol/client version`**.
+**npm** (TypeScript / JavaScript — [`@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client), **`2.4.0`**). The `latest` dist-tag matches **`npm view @asap-protocol/client version`**.
 
-**npm** Mastra [**`@asap-protocol/mastra@2.3.1`**](https://www.npmjs.com/package/@asap-protocol/mastra) bridges ASAP capabilities onto **`@mastra/core`** tools; docs: [`docs/integrations/mastra.md`](docs/integrations/mastra.md), demo: [`apps/example-mastra/README.md`](apps/example-mastra/README.md).
+**npm** Mastra [**`@asap-protocol/mastra@2.4.0`**](https://www.npmjs.com/package/@asap-protocol/mastra) bridges ASAP capabilities onto **`@mastra/core`** tools; docs: [`docs/integrations/mastra.md`](docs/integrations/mastra.md), demo: [`apps/example-mastra/README.md`](apps/example-mastra/README.md).
 
-**npm** OpenAI Agents SDK [**`@asap-protocol/openai-agents@2.3.1`**](https://www.npmjs.com/package/@asap-protocol/openai-agents) exposes ASAP capabilities as **`@openai/agents`** `tool()` definitions — **not** the Chat Completions helper [`adapters/openai`](packages/typescript/client/src/adapters/openai.ts); docs: [`docs/integrations/openai-agents.md`](docs/integrations/openai-agents.md), demo: [`apps/example-openai-agents/README.md`](apps/example-openai-agents/README.md).
+**npm** OpenAI Agents SDK [**`@asap-protocol/openai-agents@2.4.0`**](https://www.npmjs.com/package/@asap-protocol/openai-agents) exposes ASAP capabilities as **`@openai/agents`** `tool()` definitions — **not** the Chat Completions helper [`adapters/openai`](packages/typescript/client/src/adapters/openai.ts); docs: [`docs/integrations/openai-agents.md`](docs/integrations/openai-agents.md), demo: [`apps/example-openai-agents/README.md`](apps/example-openai-agents/README.md).
 
 ```bash
-npm install @asap-protocol/client@2.3.1
-npm install @asap-protocol/mastra@2.3.1 @asap-protocol/client @mastra/core zod
-npm install @asap-protocol/openai-agents@2.3.1 @asap-protocol/client @openai/agents zod
+npm install @asap-protocol/client@2.4.0
+npm install @asap-protocol/mastra@2.4.0 @asap-protocol/client @mastra/core zod
+npm install @asap-protocol/openai-agents@2.4.0 @asap-protocol/client @openai/agents zod
 ```
 
 📦 **Canonical listing:** **[https://pypi.org/project/asap-protocol/](https://pypi.org/project/asap-protocol/)** — package **`asap-protocol`** (`pip install asap-protocol`). Prefer `uv` for reproducible environments when possible.
@@ -151,6 +152,7 @@ High-level only — see **[Changelog](https://github.com/adriannoes/asap-protoco
 
 | Version | What shipped |
 | :-- | :-- |
+| **v2.4.0** | **Edge-AI discovery** — **[GitHub Release `v2.4.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.4.0)** · optional `hardware` / `inference` manifest fields, registry mirror, marketplace filters, **`@asap-protocol/client@2.4.0`**, ShellClaw onboarding docs. See [CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#240---2026-05-24) and [Migration (v2.3.x → v2.4.0)](https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md#upgrading-from-v23x-to-v240) |
 | **v2.3.1** | **npm TS patch** — **[GitHub Release `v2.3.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.3.1)** · **`@asap-protocol/mastra`**, **`@asap-protocol/openai-agents`**, **`@asap-protocol/client@2.3.1`** (additive adapter exports). Python **2.3.0** unchanged. See [CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#231---2026-05-20) and [Migration (v2.3.0 → v2.3.1)](https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md#upgrading-from-v230-to-v231) |
 | **v2.3.0** | **OpenAPI Adapter** (`[openapi]`) · **TypeScript client** (`@asap-protocol/client`) · **Auto-Registration** · **Capability escalation** · **ASAP HTTP challenge** — see [CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#230---2026-05-04) and [Migration](https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md#upgrading-from-v22x-to-v230) |
 | **v2.2.1** | Opt-in **WebAuthn** (`asap-protocol[webauthn]`) · `asap compliance-check` & `asap audit export` · stricter `ResolvedAgent.run()` · `AuditChainBroken` · [pinned security deps](https://github.com/adriannoes/asap-protocol/blob/main/SECURITY.md#dependency-policy) |

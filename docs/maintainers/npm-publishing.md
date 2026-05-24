@@ -10,7 +10,7 @@ Maintainer guide for scoped package bootstrap, Trusted Publishing (OIDC), and re
 
 ## Normal path (after bootstrap)
 
-- **Tags**: `v2.3.*` trigger [.github/workflows/publish-typescript.yml](../../.github/workflows/publish-typescript.yml).
+- **Tags**: `v2.3.*` and `v2.4.*` trigger [.github/workflows/publish-typescript.yml](../../.github/workflows/publish-typescript.yml).
 - **Toolchain (GitHub-hosted)**: Trusted Publishing needs **npm CLI ≥ 11.5.1** and **Node.js ≥ 22.14** (see [npm: Trusted publishers](https://docs.npmjs.com/trusted-publishers/)). The workflow pins Node **22** and runs `npm install -g npm@11.5.1` before publish.
 - **Auth**: The `publish` job uses `permissions: id-token: write` and `npm publish --provenance`. **Do not** set `actions/setup-node` `registry-url` for the publish job unless you also supply a valid npm token only where needed — the default `NODE_AUTH_TOKEN` is `GITHUB_TOKEN`, which is **not** a valid npm credential and causes misleading **404** errors during publish.
 - **PRs**: Same workflow runs `npm publish --dry-run` only (no `id-token` required for that job path).

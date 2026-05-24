@@ -7,21 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- **ShellClaw static registry onboarding**: Guide
-  [docs/guides/shellclaw-registry.md](docs/guides/shellclaw-registry.md) documents
-  `online_check: false`, GitHub Pages `endpoints.manifest` URLs, and IssueOps vs
-  auto-registration for agents without a live ASAP endpoint in v1.0. Regression
-  fixture `tests/fixtures/registry/shellclaw-v1.0-entry.json` with
-  `test_shellclaw_v1_fixture_validates`.
-- **Marketplace — ShellClaw v1.0** (listing PR pending): ShellClaw v1.0 (C,
-  ~5500 lines) is the first non-Python ASAP agent in the marketplace. It
-  implements ASAP `2.1.0` features: discovery, envelopes, auth, rate limits,
-  Ed25519-signed manifest (TweetNaCl vendored). It targets the NVIDIA Jetson
-  Orin Nano Super with CUDA-accelerated local inference. Static manifest hosting
-  only in v1.0 (no live endpoint until v1.0.1).
-
 ### Security
 
 - **OAuth2 middleware**: Validate JWT `iss` and `aud` when `ASAP_AUTH_ISSUER` / `ASAP_AUTH_AUDIENCE` (or `OAuth2Config.expected_issuer` / `expected_audience`) are set; refactored validation through `validate_jwt()` in `asap.auth.jwks`.
@@ -72,6 +57,10 @@ backward compatible.
     on `RegistryEntry` with parsers in `discovery.ts`.
   - **Docs**: `docs/transport.md`, `docs/registry/auto-registration.md`,
     `docs/examples/registry-shellclaw.md`; fixtures under `tests/fixtures/`.
+  - **ShellClaw marketplace onboarding (S0)**: Guide
+    [docs/guides/shellclaw-registry.md](docs/guides/shellclaw-registry.md)
+    (`online_check: false`, static manifest URLs, IssueOps path); validation
+    fixtures `tests/fixtures/registry/shellclaw-v1.0-entry.json`.
 
 ### Changed
 

@@ -133,7 +133,7 @@ export function FeaturesSection() {
             Protocol Features
           </h2>
           <p className="mx-auto max-w-[600px] text-zinc-400">
-            Everything you need to orchestrate complex multi-agent systems reliably — identity, capabilities, streaming, and v2.3.1 framework adapters (Mastra, OpenAI Agents SDK).
+            Everything you need to orchestrate complex multi-agent systems reliably — identity, capabilities, streaming, v2.4.0 edge-AI discovery filters, and framework adapters (Mastra, OpenAI Agents SDK).
           </p>
         </div>
 

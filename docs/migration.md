@@ -761,6 +761,46 @@ For deployments that enforce self-authorization prevention with real passkeys:
 See [Self-authorization prevention](security/self-authorization-prevention.md)
 (**Real WebAuthn**) for the threat model and ceremony flow.
 
+### Upgrading from v2.3.x to v2.4.0
+
+v2.4.0 is an **additive, backward-compatible** minor release. JSON-RPC envelopes,
+OAuth2, capability grants, and existing manifests **without** `capabilities.hardware`
+or `capabilities.inference` remain valid.
+
+#### What is new
+
+- **Optional manifest fields**: `capabilities.hardware` (`class`, `model`, `io`)
+  and `capabilities.inference` (`modes`, `local_models`) with closed enums.
+  See [Transport — hardware and inference](transport.md#hardware-and-inference-capabilities-v24).
+- **Lite Registry mirror**: `hardware_class`, `inference_modes`, `hardware_io`
+  on `RegistryEntry`, derived at auto-registration or IssueOps when a manifest
+  URL is loaded — do not duplicate these in the registration JSON body.
+- **Discovery helpers** (Python): `find_by_hardware_class`, `find_by_inference_mode`,
+  `find_by_io` in `asap.discovery.registry`.
+- **Marketplace (web)**: Browse filters and agent detail blocks for edge-AI fields.
+- **TypeScript SDK**: `@asap-protocol/client@2.4.0` — optional hardware fields on
+  `RegistryEntry` in `discovery.ts`.
+- **ShellClaw onboarding**: [ShellClaw registry guide](guides/shellclaw-registry.md)
+  for static manifest URLs and `online_check: false`.
+
+#### Upgrade steps
+
+1. **No action required** if you do not advertise edge hardware or inference modes.
+2. **Python**: `pip install --upgrade asap-protocol==2.4.0` (or `uv add asap-protocol`).
+3. **TypeScript**: `npm install @asap-protocol/client@2.4.0` when using registry
+   discovery types with hardware fields.
+4. **Registrants (optional)**: Add structured `hardware` / `inference` to your manifest;
+   keep existing `tags` (e.g. `jetson`, `cuda`) as supplements until you migrate.
+5. **Re-run Compliance Harness v2** after changing manifest or registry-facing fields.
+
+#### Backward compatibility
+
+- **Wire protocol**: Unchanged from v2.3.x.
+- **Breaking changes**: None.
+- **Community feedback**: Enum extensions tracked on [#176](https://github.com/adriannoes/asap-protocol/issues/176).
+
+---
+
 ### Upgrading from v2.3.0 to v2.3.1
 
 v2.3.1 is an **additive, TypeScript-only** patch. The Python `asap-protocol`

@@ -1,10 +1,11 @@
-# Tags v2.3.* → npm publish --provenance (OIDC). PRs → npm publish --dry-run.
+# Tags v2.3.* / v2.4.* → npm publish --provenance (OIDC). PRs → npm publish --dry-run.
 name: Publish TypeScript SDK
 
 on:
   push:
     tags:
       - "v2.3.*"
+      - "v2.4.*"
   pull_request:
     branches: [main]
     paths:

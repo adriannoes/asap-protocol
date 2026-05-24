@@ -39,11 +39,12 @@ product/
 | v2.1.0 / v2.1.1 | ✅ Released | `prd-v2.1-ecosystem.md` | Consumer SDK + ecosystem |
 | **v2.2.0** | **✅ Released (2026-04-15)** | `prd-v2.2-protocol-hardening.md` | Identity, capabilities, streaming, batch, audit |
 | **v2.2.1** | **✅ Released (2026-04-21)** | `prd-v2.2.1-patch.md` | WebAuthn real, CLI compliance/audit |
-| v2.3.0 — Adoption Core | ✅ Released (2026-05-04, tag `v2.3.0` pending maintainer push) | `prd-v2.3-scale.md` | OpenAPI Adapter, TypeScript SDK, Auto-Registration, escalation, ASAP challenge |
-| v2.3.1 — Framework adapters (npm) | 🚀 Releasing (TS patch) | — (private PRD) | `@asap-protocol/mastra`, `@asap-protocol/openai-agents` @ 2.3.1; Python core stays 2.3.0 |
+| v2.3.0 — Adoption Core | ✅ Released (2026-05-04) | `prd-v2.3-scale.md` | OpenAPI Adapter, TypeScript SDK, Auto-Registration, escalation, ASAP challenge |
+| v2.3.1 — Framework adapters (npm) | ✅ Released (2026-05-21) | — (private PRD) | `@asap-protocol/mastra`, `@asap-protocol/openai-agents` @ 2.3.1; Python core stays 2.3.0 |
 | v2.3.2 — Adapter Lab II | 🔒 Private planning | `prd/private/prd-v2.3.2-enterprise-workflow-adapters.md` | Microsoft Agent Framework, Haystack, Letta, workflow automation |
 | v2.3.3 — Distribution Loop | 🔒 Private planning | `prd/private/prd-v2.3.3-distribution-loop.md` | Templates, docs, homepage, metrics, developer activation |
-| v2.4.0 — Spec & Interop | 🚧 VISION DRAFT (rescoped) | `prd-v2.4-adoption.md` | MCP Auth Bridge, Formal Spec, Introspection, Privacy |
+| **v2.4.0 — Edge-AI discovery** | **✅ Released (2026-05-24)** | `engineering/tasks/v2.4.0/` | Hardware/inference manifest fields, registry mirror, marketplace filters, ShellClaw onboarding |
+| v2.4.x — Spec & Interop (deferred PRD) | 🔭 Vision draft | `prd-v2.4-adoption.md` | MCP Auth Bridge, Formal Spec, Introspection, Privacy (not in shipped 2.4.0 scope) |
 | v3.0 — Economy | 🔭 Long-term | `prd-v3.0-economy.md` | Settlement, billing |
 
 > **Strategic note**: Registry API Backend (PostgreSQL), Intent-Based Search, Orchestration Primitives, Delegated/Autonomous Mode formalization, and DeepEval remain deferred until their triggers materialize. The v2.3.x train now treats adoption as the primary product: make existing APIs, SDKs, CLIs, and agent frameworks usable by agents with minimal human coordination.
