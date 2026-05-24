@@ -30,6 +30,7 @@ import sys
 import httpx
 
 from asap.auth import OAuth2Config
+from asap.auth.claims import parse_expected_audience_from_env
 from asap.auth.oauth2 import OAuth2ClientCredentials
 from asap.auth.oidc import OIDCDiscovery
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
@@ -110,10 +111,15 @@ def run_server(host: str, port: int) -> None:
     )
 
     custom_claim = os.environ.get(ENV_CUSTOM_CLAIM)
+    expected_issuer = os.environ.get(ENV_ISSUER)
+    expected_audience_raw = os.environ.get(ENV_AUDIENCE)
+
     oauth2_config = OAuth2Config(
         jwks_uri=jwks_uri,
         manifest_id=manifest.id,
         custom_claim=custom_claim or None,
+        expected_issuer=expected_issuer or None,
+        expected_audience=parse_expected_audience_from_env(expected_audience_raw),
     )
 
     registry = HandlerRegistry()

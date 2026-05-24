@@ -1993,6 +1993,8 @@ def create_app(
             "path_prefix": oauth2_config.path_prefix,
             "manifest_id": manifest.id,
             "custom_claim": oauth2_config.custom_claim,
+            "expected_issuer": oauth2_config.expected_issuer,
+            "expected_audience": oauth2_config.expected_audience,
         }
         if oauth2_config.jwks_fetcher is not None:
             middleware_kwargs["jwks_fetcher"] = oauth2_config.jwks_fetcher

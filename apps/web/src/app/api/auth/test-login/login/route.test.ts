@@ -105,4 +105,28 @@ describe('GET /api/auth/test-login/login', () => {
     expect(res.status).toBe(307);
     expect(res.headers.get('location')).toBe('http://localhost/dashboard');
   });
+
+  it('blocks open redirect to external origin', async () => {
+    vi.stubEnv('ENABLE_FIXTURE_ROUTES', 'true');
+    vi.stubEnv('NODE_ENV', 'test');
+
+    const res = await GET(
+      new Request('http://localhost/api/auth/test-login/login?redirect=https://evil.com/phishing')
+    );
+
+    expect(res.status).toBe(307);
+    expect(res.headers.get('location')).toBe('http://localhost/');
+  });
+
+  it('blocks protocol-relative redirect', async () => {
+    vi.stubEnv('ENABLE_FIXTURE_ROUTES', 'true');
+    vi.stubEnv('NODE_ENV', 'test');
+
+    const res = await GET(
+      new Request('http://localhost/api/auth/test-login/login?redirect=%2F%2Fevil.com')
+    );
+
+    expect(res.status).toBe(307);
+    expect(res.headers.get('location')).toBe('http://localhost/');
+  });
 });

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, AsyncIterator
 
 import httpx
@@ -13,9 +14,10 @@ from asap.models.constants import ASAP_DEFAULT_TRANSPORT_VERSION, ASAP_VERSION_H
 from asap.models.entities import Manifest
 from asap.models.envelope import Envelope
 from asap.models.enums import TaskStatus
+from asap.errors import RPC_HANDLER_NOT_FOUND, RPC_INVALID_NONCE, RPC_INVALID_TIMESTAMP
 from asap.models.payloads import TaskRequest, TaskStream
 from asap.transport.handlers import HandlerRegistry, create_echo_handler
-from asap.transport.jsonrpc import ASAP_METHOD, VERSION_INCOMPATIBLE
+from asap.transport.jsonrpc import ASAP_METHOD, JsonRpcErrorResponse, VERSION_INCOMPATIBLE
 from asap.transport.server import create_app
 
 if TYPE_CHECKING:
@@ -230,3 +232,132 @@ async def test_asap_stream_rejects_incompatible_wire_version(
     payload = response.json()
     assert payload.get("error", {}).get("code") == VERSION_INCOMPATIBLE
     assert payload.get("error", {}).get("data", {}).get("requested") == "9.9"
+
+
+@pytest.mark.anyio
+async def test_stream_invalid_timestamp_returns_rpc_invalid_timestamp(
+    sample_manifest: Manifest,
+    isolated_rate_limiter: ASAPRateLimiter | None,
+) -> None:
+    """``POST /asap/stream`` rejects stale timestamps before streaming."""
+    registry = HandlerRegistry()
+    registry.register("task.request", create_echo_handler())
+    registry.register_streaming_handler("task.request", _word_stream_handler)
+    app = create_app(sample_manifest, registry, rate_limit="999999/minute")
+    if isolated_rate_limiter is not None:
+        app.state.limiter = isolated_rate_limiter
+
+    old_ts = datetime.now(timezone.utc) - timedelta(minutes=10)
+    env = Envelope(
+        asap_version="0.1",
+        sender="urn:asap:agent:client",
+        recipient=sample_manifest.id,
+        payload_type="task.request",
+        payload=TaskRequest(
+            conversation_id="conv-ts",
+            skill_id="echo",
+            input={"text": "hi"},
+        ).model_dump(),
+        timestamp=old_ts,
+        correlation_id="corr-ts",
+    )
+    rpc = {
+        "jsonrpc": "2.0",
+        "method": ASAP_METHOD,
+        "params": {"envelope": env.model_dump(mode="json")},
+        "id": "stream-ts",
+    }
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post("/asap/stream", json=rpc)
+
+    assert response.status_code == 200
+    err = JsonRpcErrorResponse.model_validate(response.json())
+    assert err.error.code == RPC_INVALID_TIMESTAMP
+
+
+@pytest.mark.anyio
+async def test_stream_duplicate_nonce_returns_rpc_invalid_nonce(
+    sample_manifest: Manifest,
+    isolated_rate_limiter: ASAPRateLimiter | None,
+) -> None:
+    """``POST /asap/stream`` rejects duplicate nonces during prep."""
+    registry = HandlerRegistry()
+    registry.register("task.request", create_echo_handler())
+    registry.register_streaming_handler("task.request", _word_stream_handler)
+    app = create_app(
+        sample_manifest,
+        registry,
+        rate_limit="999999/minute",
+        require_nonce=True,
+    )
+    if isolated_rate_limiter is not None:
+        app.state.limiter = isolated_rate_limiter
+
+    def _env(nonce: str) -> dict[str, object]:
+        env = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient=sample_manifest.id,
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv-nonce",
+                skill_id="echo",
+                input={"text": "hi"},
+            ).model_dump(),
+            timestamp=datetime.now(timezone.utc),
+            extensions={"nonce": nonce},
+            correlation_id=f"corr-{nonce}",
+        )
+        return {
+            "jsonrpc": "2.0",
+            "method": ASAP_METHOD,
+            "params": {"envelope": env.model_dump(mode="json")},
+            "id": f"id-{nonce}",
+        }
+
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        await client.post("/asap/stream", json=_env("dup-nonce-stream"))
+        response = await client.post("/asap/stream", json=_env("dup-nonce-stream"))
+
+    err = JsonRpcErrorResponse.model_validate(response.json())
+    assert err.error.code == RPC_INVALID_NONCE
+
+
+@pytest.mark.anyio
+async def test_stream_missing_streaming_handler_returns_handler_not_found(
+    sample_manifest: Manifest,
+    isolated_rate_limiter: ASAPRateLimiter | None,
+) -> None:
+    """``POST /asap/stream`` returns handler-not-found when no streaming handler registered."""
+    registry = HandlerRegistry()
+    registry.register("task.request", create_echo_handler())
+    app = create_app(sample_manifest, registry, rate_limit="999999/minute")
+    if isolated_rate_limiter is not None:
+        app.state.limiter = isolated_rate_limiter
+
+    env = Envelope(
+        asap_version="0.1",
+        sender="urn:asap:agent:client",
+        recipient=sample_manifest.id,
+        payload_type="task.request",
+        payload=TaskRequest(
+            conversation_id="conv-no-stream",
+            skill_id="echo",
+            input={"text": "hi"},
+        ).model_dump(),
+        correlation_id="corr-no-stream",
+    )
+    rpc = {
+        "jsonrpc": "2.0",
+        "method": ASAP_METHOD,
+        "params": {"envelope": env.model_dump(mode="json")},
+        "id": "no-stream",
+    }
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post("/asap/stream", json=rpc)
+
+    err = JsonRpcErrorResponse.model_validate(response.json())
+    assert err.error.code == RPC_HANDLER_NOT_FOUND

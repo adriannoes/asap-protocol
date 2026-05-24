@@ -33,17 +33,18 @@ describe('GET /api/health-check', () => {
     const res = await GET(createRequest());
     expect(res.status).toBe(400);
     const json = await res.json();
-    expect(json.error).toContain('Missing url parameter');
+    expect(json.error).toBe('Invalid input');
   });
 
   it('returns 429 and Retry-After when rate limit blocks request', async () => {
     vi.mocked(checkProxyRateLimit).mockReturnValue({ allowed: false, retryAfter: 12 });
-    const res = await GET(createRequest('https://example.com/health', { 'x-forwarded-for': '203.0.113.10' }));
+    const res = await GET(createRequest('https://example.com/health', { 'x-forwarded-for': '203.0.113.10, 198.51.100.1' }));
     expect(res.status).toBe(429);
     expect(res.headers.get('Retry-After')).toBe('12');
     const json = await res.json();
     expect(json.error).toBe('Too many requests');
     expect(json.retryAfter).toBe(12);
+    expect(checkProxyRateLimit).toHaveBeenCalledWith('203.0.113.10');
   });
 
   it('returns 400 when URL fails allowlist validation', async () => {

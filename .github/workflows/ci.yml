@@ -133,6 +133,9 @@ jobs:
       - name: Vitest
         run: npm test
         working-directory: apps/web
+      - name: Vitest coverage
+        run: npm run test:coverage
+        working-directory: apps/web
 
   coverage:
     name: coverage
@@ -179,8 +182,8 @@ jobs:
           sync-flags: --no-extra crewai --no-extra llamaindex
       # CVE-2026-4539: pygments advisory with no patched PyPI release yet (override pins >=2.20 when available).
       # CVE-2026-4963 / CVE-2026-2654: smolagents optional extra; OSV lists no fix version on PyPI as of 2026-05 (see SECURITY.md).
-      # PYSEC-2026-89 / PYSEC-2025-183 / PYSEC-2024-271: mkdocs/mcp/locust transitive; see SECURITY.md.
+      # CVE-2026-46678 / PYSEC-2026-89 / PYSEC-2025-183 / PYSEC-2024-271: optional/transitive; see SECURITY.md.
       - name: Scan for vulnerabilities (pip-audit)
-        run: uv run pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-4963 --ignore-vuln CVE-2026-2654 --ignore-vuln PYSEC-2024-271 --ignore-vuln PYSEC-2026-89 --ignore-vuln PYSEC-2025-183
+        run: uv run pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-46678 --ignore-vuln CVE-2026-4963 --ignore-vuln CVE-2026-2654 --ignore-vuln PYSEC-2024-271 --ignore-vuln PYSEC-2026-89 --ignore-vuln PYSEC-2025-183
       - name: Scan for security issues (bandit)
         run: uv run bandit -r src/ -ll

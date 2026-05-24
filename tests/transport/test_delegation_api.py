@@ -11,11 +11,28 @@ from fastapi.testclient import TestClient
 from joserfc import jwk, jwt as jose_jwt
 
 from asap.auth import OAuth2Config
+from asap.auth.middleware import DEFAULT_CUSTOM_CLAIM
 from asap.crypto.keys import generate_keypair
 from asap.economics.delegation import get_jti_from_jwt
 from asap.economics.delegation_storage import InMemoryDelegationStorage
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.transport.server import create_app
+
+_DELEGATION_MANIFEST_ID = "urn:asap:agent:test-server"
+
+
+def _oauth2_bearer_token(oauth2_key: jwk.RSAKey, sub: str) -> str:
+    now = int(time.time())
+    return jose_jwt.encode(
+        {"alg": "RS256", "typ": "JWT"},
+        {
+            "sub": sub,
+            "scope": "asap:execute",
+            "exp": now + 3600,
+            DEFAULT_CUSTOM_CLAIM: _DELEGATION_MANIFEST_ID,
+        },
+        oauth2_key,
+    )
 
 
 @pytest.fixture
@@ -76,14 +93,7 @@ def test_post_delegations_returns_201_and_token(
         rate_limit="999999/minute",
     )
 
-    now = int(time.time())
-    header = {"alg": "RS256", "typ": "JWT"}
-    claims = {
-        "sub": "urn:asap:agent:delegator",
-        "scope": "asap:execute",
-        "exp": now + 3600,
-    }
-    bearer_token = jose_jwt.encode(header, claims, oauth2_key)
+    bearer_token = _oauth2_bearer_token(oauth2_key, "urn:asap:agent:delegator")
 
     with TestClient(app) as client:
         response = client.post(
@@ -177,14 +187,7 @@ def test_delete_delegation_revokes_and_returns_204(
         rate_limit="999999/minute",
     )
 
-    now = int(time.time())
-    header = {"alg": "RS256", "typ": "JWT"}
-    claims = {
-        "sub": "urn:asap:agent:delegator",
-        "scope": "asap:execute",
-        "exp": now + 3600,
-    }
-    bearer_token = jose_jwt.encode(header, claims, oauth2_key)
+    bearer_token = _oauth2_bearer_token(oauth2_key, "urn:asap:agent:delegator")
 
     with TestClient(app) as client:
         create_resp = client.post(
@@ -234,20 +237,8 @@ def test_delete_delegation_by_other_returns_403(
         rate_limit="999999/minute",
     )
 
-    now = int(time.time())
-    header = {"alg": "RS256", "typ": "JWT"}
-    delegator_claims = {
-        "sub": "urn:asap:agent:delegator",
-        "scope": "asap:execute",
-        "exp": now + 3600,
-    }
-    other_claims = {
-        "sub": "urn:asap:agent:other",
-        "scope": "asap:execute",
-        "exp": now + 3600,
-    }
-    delegator_token = jose_jwt.encode(header, delegator_claims, oauth2_key)
-    other_token = jose_jwt.encode(header, other_claims, oauth2_key)
+    delegator_token = _oauth2_bearer_token(oauth2_key, "urn:asap:agent:delegator")
+    other_token = _oauth2_bearer_token(oauth2_key, "urn:asap:agent:other")
 
     with TestClient(app) as client:
         create_resp = client.post(
@@ -292,10 +283,7 @@ def test_delete_delegation_unknown_id_returns_404(
         rate_limit="999999/minute",
     )
 
-    now = int(time.time())
-    header = {"alg": "RS256", "typ": "JWT"}
-    claims = {"sub": "urn:asap:agent:delegator", "scope": "asap:execute", "exp": now + 3600}
-    bearer_token = jose_jwt.encode(header, claims, oauth2_key)
+    bearer_token = _oauth2_bearer_token(oauth2_key, "urn:asap:agent:delegator")
 
     with TestClient(app) as client:
         response = client.delete(
@@ -326,10 +314,7 @@ def test_delete_delegation_without_storage_returns_503(
         delegation_key_store=delegation_key_store,
         rate_limit="999999/minute",
     )
-    now = int(time.time())
-    header = {"alg": "RS256", "typ": "JWT"}
-    claims = {"sub": "urn:asap:agent:delegator", "scope": "asap:execute", "exp": now + 3600}
-    bearer_token = jose_jwt.encode(header, claims, oauth2_key)
+    bearer_token = _oauth2_bearer_token(oauth2_key, "urn:asap:agent:delegator")
 
     with TestClient(app) as client:
         response = client.delete(
@@ -363,14 +348,7 @@ def test_get_delegations_lists_issued_tokens(
         rate_limit="999999/minute",
     )
 
-    now = int(time.time())
-    header = {"alg": "RS256", "typ": "JWT"}
-    claims = {
-        "sub": "urn:asap:agent:delegator",
-        "scope": "asap:execute",
-        "exp": now + 3600,
-    }
-    bearer_token = jose_jwt.encode(header, claims, oauth2_key)
+    bearer_token = _oauth2_bearer_token(oauth2_key, "urn:asap:agent:delegator")
 
     with TestClient(app) as client:
         create_resp = client.post(
@@ -422,10 +400,7 @@ def test_get_delegations_active_filters_revoked(
         rate_limit="999999/minute",
     )
 
-    now = int(time.time())
-    header = {"alg": "RS256", "typ": "JWT"}
-    claims = {"sub": "urn:asap:agent:delegator", "scope": "asap:execute", "exp": now + 3600}
-    bearer_token = jose_jwt.encode(header, claims, oauth2_key)
+    bearer_token = _oauth2_bearer_token(oauth2_key, "urn:asap:agent:delegator")
 
     with TestClient(app) as client:
         create_resp = client.post(
@@ -472,10 +447,7 @@ def test_get_delegation_by_id_issuer_can_view(
         rate_limit="999999/minute",
     )
 
-    now = int(time.time())
-    header = {"alg": "RS256", "typ": "JWT"}
-    claims = {"sub": "urn:asap:agent:issuer", "scope": "asap:execute", "exp": now + 3600}
-    bearer_token = jose_jwt.encode(header, claims, oauth2_key)
+    bearer_token = _oauth2_bearer_token(oauth2_key, "urn:asap:agent:issuer")
 
     with TestClient(app) as client:
         create_resp = client.post(
@@ -524,12 +496,8 @@ def test_get_delegation_by_id_holder_can_view(
         rate_limit="999999/minute",
     )
 
-    now = int(time.time())
-    header = {"alg": "RS256", "typ": "JWT"}
-    issuer_claims = {"sub": "urn:asap:agent:issuer", "scope": "asap:execute", "exp": now + 3600}
-    holder_claims = {"sub": "urn:asap:agent:holder", "scope": "asap:execute", "exp": now + 3600}
-    issuer_token = jose_jwt.encode(header, issuer_claims, oauth2_key)
-    holder_token = jose_jwt.encode(header, holder_claims, oauth2_key)
+    issuer_token = _oauth2_bearer_token(oauth2_key, "urn:asap:agent:issuer")
+    holder_token = _oauth2_bearer_token(oauth2_key, "urn:asap:agent:holder")
 
     with TestClient(app) as client:
         create_resp = client.post(
@@ -574,12 +542,8 @@ def test_get_delegation_by_id_other_returns_403(
         rate_limit="999999/minute",
     )
 
-    now = int(time.time())
-    header = {"alg": "RS256", "typ": "JWT"}
-    issuer_claims = {"sub": "urn:asap:agent:issuer", "scope": "asap:execute", "exp": now + 3600}
-    other_claims = {"sub": "urn:asap:agent:other", "scope": "asap:execute", "exp": now + 3600}
-    issuer_token = jose_jwt.encode(header, issuer_claims, oauth2_key)
-    other_token = jose_jwt.encode(header, other_claims, oauth2_key)
+    issuer_token = _oauth2_bearer_token(oauth2_key, "urn:asap:agent:issuer")
+    other_token = _oauth2_bearer_token(oauth2_key, "urn:asap:agent:other")
 
     with TestClient(app) as client:
         create_resp = client.post(
@@ -623,10 +587,7 @@ def test_get_delegation_unknown_id_returns_404(
         rate_limit="999999/minute",
     )
 
-    now = int(time.time())
-    header = {"alg": "RS256", "typ": "JWT"}
-    claims = {"sub": "urn:asap:agent:any", "scope": "asap:execute", "exp": now + 3600}
-    bearer_token = jose_jwt.encode(header, claims, oauth2_key)
+    bearer_token = _oauth2_bearer_token(oauth2_key, "urn:asap:agent:any")
 
     with TestClient(app) as client:
         get_resp = client.get(

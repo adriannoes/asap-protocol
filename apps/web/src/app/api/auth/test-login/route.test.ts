@@ -38,7 +38,7 @@ describe('GET /api/auth/test-login', () => {
 
     expect(signIn).toHaveBeenCalledWith('test-login', {
       username: 'alice',
-      redirectTo: '/dashboard/register',
+      redirectTo: 'http://localhost/dashboard/register',
     });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ success: true });
@@ -52,7 +52,7 @@ describe('GET /api/auth/test-login', () => {
 
     expect(signIn).toHaveBeenCalledWith('test-login', {
       username: 'test-e2e-user',
-      redirectTo: '/dashboard',
+      redirectTo: 'http://localhost/dashboard',
     });
     expect(res.status).toBe(200);
   });

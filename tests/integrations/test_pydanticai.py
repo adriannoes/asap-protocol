@@ -11,7 +11,7 @@ import pytest
 
 from asap.client.market import MarketClient
 from asap.discovery.registry import LiteRegistry, RegistryEntry
-from asap.errors import SignatureVerificationError
+from asap.errors import AgentRevokedException, SignatureVerificationError
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.payloads import TaskResponse
 
@@ -185,3 +185,171 @@ def test_asap_tool_for_urn_raises_on_signature_error() -> None:
                 TEST_URN,
                 client=MarketClient(registry_url="https://reg.example/registry.json"),
             )
+
+
+def _manifest_no_skills() -> Manifest:
+    return Manifest(
+        id=TEST_URN,
+        name="No Skills Agent",
+        version="1.0.0",
+        description="Agent without skills",
+        capabilities=Capability(
+            asap_version="0.1",
+            skills=[],
+            state_persistence=False,
+        ),
+        endpoints=Endpoint(asap=TEST_HTTP),
+    )
+
+
+def _signed_manifest_json_no_skills() -> str:
+    from asap.crypto.models import SignatureBlock, SignedManifest
+    from asap.crypto.trust_levels import TrustLevel
+
+    sig = SignatureBlock(
+        alg="ed25519",
+        signature="B" * 88,
+        trust_level=TrustLevel.SELF_SIGNED,
+    )
+    signed = SignedManifest(manifest=_manifest_no_skills(), signature=sig, public_key=None)
+    return signed.model_dump_json()
+
+
+def _resolve_patches_no_skills() -> tuple:
+    _resp = httpx.Response(
+        200,
+        text=_signed_manifest_json_no_skills(),
+        request=httpx.Request("GET", TEST_MANIFEST_URL),
+    )
+    mock_http = AsyncMock()
+    mock_http.get = AsyncMock(return_value=_resp)
+    mock_http.aclose = AsyncMock()
+    mock_http.__aenter__ = AsyncMock(return_value=mock_http)
+    mock_http.__aexit__ = AsyncMock(return_value=None)
+    return (
+        patch("asap.client.market.get_registry", new_callable=AsyncMock),
+        patch("asap.client.market.verify_agent_trust"),
+        patch("asap.client.market.is_revoked", new_callable=AsyncMock),
+        patch("asap.client.market.httpx.AsyncClient", return_value=mock_http),
+    )
+
+
+def test_asap_tool_for_urn_requires_pydantic_ai_package() -> None:
+    """When pydantic-ai is not available, asap_tool_for_urn raises RuntimeError."""
+    import asap.integrations.pydanticai as pydanticai_mod
+
+    missing = ImportError("No module named 'pydantic_ai'")
+    with (
+        patch.object(pydanticai_mod, "PydanticAITool", None),
+        patch.object(
+            pydanticai_mod,
+            "_import_error_pydantic_ai",
+            missing,
+            create=True,
+        ),
+        pytest.raises(RuntimeError, match="pydantic-ai is required") as exc_info,
+    ):
+        pydanticai_mod.asap_tool_for_urn(TEST_URN)
+    assert exc_info.value.__cause__ is missing
+
+
+def test_asap_tool_for_urn_invoke_without_skills_returns_error_string() -> None:
+    """Agent manifest with no skills returns a descriptive error string from the tool."""
+    p_get, p_verify, p_revoked, p_http = _resolve_patches_no_skills()
+    with p_get as mock_get, p_verify as mock_verify, p_revoked as mock_revoked, p_http:
+        mock_get.return_value = _lite_registry()
+        mock_verify.return_value = True
+        mock_revoked.return_value = False
+        tool = asap_tool_for_urn(
+            TEST_URN,
+            client=MarketClient(registry_url="https://reg.example/registry.json"),
+        )
+        result = asyncio.run(tool.function(input={"message": "hello"}))
+
+    assert isinstance(result, str)
+    assert "no skills" in result.lower()
+
+
+def test_pydantic_tool_invocation_agent_revoked_returns_error_string() -> None:
+    """When agent.run raises AgentRevokedException, tool function returns error text."""
+    mock_send = AsyncMock(side_effect=AgentRevokedException(TEST_URN))
+    mock_transport = AsyncMock()
+    mock_transport.send = mock_send
+    mock_transport.__aenter__ = AsyncMock(return_value=mock_transport)
+    mock_transport.__aexit__ = AsyncMock(return_value=None)
+
+    p_get, p_verify, p_revoked, p_http = _resolve_patches()
+    with p_get as mock_get, p_verify as mock_verify, p_revoked as mock_revoked, p_http:
+        mock_get.return_value = _lite_registry()
+        mock_verify.return_value = True
+        mock_revoked.return_value = False
+        with patch("asap.client.market.ASAPClient", return_value=mock_transport):
+            tool = asap_tool_for_urn(
+                TEST_URN,
+                client=MarketClient(registry_url="https://reg.example/registry.json"),
+            )
+            result = asyncio.run(tool.function(input={"message": "hello"}))
+
+    assert isinstance(result, str)
+    assert TEST_URN in result
+    assert "revoked" in result.lower()
+
+
+def test_pydantic_tool_invocation_coerces_non_dict_input() -> None:
+    """Scalar ``input`` is wrapped as ``{\"value\": ...}`` before task.request."""
+    task_response = TaskResponse(
+        task_id="task-scalar",
+        status="completed",
+        result={"echo": "ok"},
+        final_state=None,
+        metrics=None,
+    )
+    response_envelope = AsyncMock()
+    response_envelope.payload = task_response
+    mock_send = AsyncMock(return_value=response_envelope)
+    mock_transport = AsyncMock()
+    mock_transport.send = mock_send
+    mock_transport.__aenter__ = AsyncMock(return_value=mock_transport)
+    mock_transport.__aexit__ = AsyncMock(return_value=None)
+
+    p_get, p_verify, p_revoked, p_http = _resolve_patches()
+    with p_get as mock_get, p_verify as mock_verify, p_revoked as mock_revoked, p_http:
+        mock_get.return_value = _lite_registry()
+        mock_verify.return_value = True
+        mock_revoked.return_value = False
+        with patch("asap.client.market.ASAPClient", return_value=mock_transport):
+            tool = asap_tool_for_urn(
+                TEST_URN,
+                client=MarketClient(registry_url="https://reg.example/registry.json"),
+            )
+            result = asyncio.run(tool.function(input="plain-text"))
+
+    assert json.loads(result) == {"echo": "ok"}
+    sent_envelope = mock_send.await_args.args[0]
+    assert sent_envelope.payload.input == {"value": "plain-text"}
+
+
+def test_pydantic_tool_invocation_signature_error_returns_error_string() -> None:
+    """When agent.run raises SignatureVerificationError, tool function returns error text."""
+    mock_send = AsyncMock(
+        side_effect=SignatureVerificationError("bad signature", {"urn": TEST_URN}),
+    )
+    mock_transport = AsyncMock()
+    mock_transport.send = mock_send
+    mock_transport.__aenter__ = AsyncMock(return_value=mock_transport)
+    mock_transport.__aexit__ = AsyncMock(return_value=None)
+
+    p_get, p_verify, p_revoked, p_http = _resolve_patches()
+    with p_get as mock_get, p_verify as mock_verify, p_revoked as mock_revoked, p_http:
+        mock_get.return_value = _lite_registry()
+        mock_verify.return_value = True
+        mock_revoked.return_value = False
+        with patch("asap.client.market.ASAPClient", return_value=mock_transport):
+            tool = asap_tool_for_urn(
+                TEST_URN,
+                client=MarketClient(registry_url="https://reg.example/registry.json"),
+            )
+            result = asyncio.run(tool.function(input={"message": "hello"}))
+
+    assert isinstance(result, str)
+    assert "bad signature" in result

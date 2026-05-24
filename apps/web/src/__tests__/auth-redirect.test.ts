@@ -45,4 +45,19 @@ describe('resolveRedirectUrl (auth redirect callback)', () => {
         const result = resolveRedirectUrl('/dashboard', BASE_URL, AGENT_BUILDER_URL);
         expect(result).toBe(new URL('/dashboard', BASE_URL).toString());
     });
+
+    it('blocks protocol-relative URLs', () => {
+        const result = resolveRedirectUrl('//evil.com/phishing', BASE_URL, AGENT_BUILDER_URL);
+        expect(result).toBe(BASE_URL);
+    });
+
+    it('falls back to baseUrl for javascript URLs', () => {
+        const result = resolveRedirectUrl('javascript:alert(1)', BASE_URL, AGENT_BUILDER_URL);
+        expect(result).toBe(BASE_URL);
+    });
+
+    it('falls back to baseUrl for malformed URLs', () => {
+        const result = resolveRedirectUrl('http://[invalid', BASE_URL, AGENT_BUILDER_URL);
+        expect(result).toBe(BASE_URL);
+    });
 });

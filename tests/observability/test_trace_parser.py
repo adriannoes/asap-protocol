@@ -1,7 +1,10 @@
 """Tests for ASAP trace parser (log parsing and ASCII diagram)."""
 
+from __future__ import annotations
+
 import json
 
+import pytest
 
 from asap.observability.trace_parser import (
     EVENT_PROCESSED,
@@ -439,3 +442,82 @@ class TestTraceParserEdgeCases:
         ]
         result = extract_trace_ids(lines)
         assert result == ["t1"]
+
+
+class TestTraceParserStructuredLogIntegration:
+    @pytest.mark.asyncio
+    async def test_asgi_request_produces_parseable_trace_hops(self) -> None:
+        import io
+        import logging
+
+        from asap.models.entities import Capability, Endpoint, Manifest, Skill
+        from asap.models.envelope import Envelope
+        from asap.models.payloads import TaskRequest
+        from asap.observability.logging import configure_logging
+        from asap.transport.handlers import HandlerRegistry, create_echo_handler
+        from asap.transport.jsonrpc import ASAP_METHOD
+        from asap.transport.rate_limit import create_test_limiter
+        from asap.transport.server import create_app
+        from httpx import ASGITransport, AsyncClient
+
+        manifest = Manifest(
+            id="urn:asap:agent:trace-log-test",
+            name="Trace Log Test",
+            version="1.0.0",
+            description="trace integration",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="echo", description="Echo")],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="http://test/asap"),
+        )
+        reg = HandlerRegistry()
+        reg.register("task.request", create_echo_handler())
+        app = create_app(manifest, reg)
+        app.state.limiter = create_test_limiter()
+
+        log_buffer = io.StringIO()
+        configure_logging(log_format="json", log_level="INFO", force=True)
+        handler = logging.StreamHandler(log_buffer)
+        handler.setLevel(logging.INFO)
+        root_logger = logging.getLogger()
+        if root_logger.handlers:
+            handler.setFormatter(root_logger.handlers[0].formatter)
+        root_logger.addHandler(handler)
+
+        trace_id = "trace-integration-001"
+        env = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient=manifest.id,
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="c1",
+                skill_id="echo",
+                input={"message": "trace"},
+            ).model_dump(),
+            trace_id=trace_id,
+            correlation_id="corr-trace-1",
+        )
+        rpc = {
+            "jsonrpc": "2.0",
+            "method": ASAP_METHOD,
+            "params": {"envelope": env.model_dump(mode="json")},
+            "id": "trace-req-1",
+        }
+
+        try:
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.post("/asap", json=rpc)
+            assert response.status_code == 200
+
+            lines = log_buffer.getvalue().splitlines()
+            hops, _diagram = parse_trace_from_lines(lines, trace_id)
+            assert len(hops) >= 1
+            assert hops[0].sender == env.sender
+            assert hops[0].recipient == env.recipient
+        finally:
+            root_logger.removeHandler(handler)

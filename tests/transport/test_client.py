@@ -5,19 +5,31 @@ communication between ASAP agents.
 """
 
 import json
+from collections.abc import Iterator
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
 
+from asap.crypto.keys import generate_keypair, public_key_to_base64
+from asap.crypto.signing import sign_manifest
+from asap.errors import CircuitOpenError, SignatureVerificationError
+from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest, TaskResponse
 from asap.testing import assert_envelope_valid, assert_response_correlates
+from asap.transport.circuit_breaker import CircuitState, get_registry
+from asap.transport.client import (
+    ASAPClient,
+    ASAPConnectionError,
+    ASAPTimeoutError,
+    RetryConfig,
+)
 
 if TYPE_CHECKING:
-    from asap.models.entities import Manifest
     from asap.transport.rate_limit import ASAPRateLimiter
 
 
@@ -81,6 +93,14 @@ def create_mock_error_response(
         status_code=200,
         json=json_rpc_error,
     )
+
+
+class _CircuitBreakerRegistryCleanup:
+    @pytest.fixture(autouse=True)
+    def _cleanup_circuit_breaker_registry(self) -> Iterator[None]:
+        get_registry().clear()
+        yield
+        get_registry().clear()
 
 
 class TestASAPClientContextManager:
@@ -496,7 +516,7 @@ class TestASAPClientErrorHandling:
                 await client.send(sample_request_envelope)
 
 
-class TestASAPClientRetry:
+class TestASAPClientRetry(_CircuitBreakerRegistryCleanup):
     """Tests for ASAPClient retry logic."""
 
     async def test_send_includes_idempotency_key(
@@ -613,7 +633,7 @@ class TestASAPClientRetry:
             assert "502" in str(exc_info.value)
 
 
-class TestASAPClientRetryEdgeCases:
+class TestASAPClientRetryEdgeCases(_CircuitBreakerRegistryCleanup):
     """Tests for ASAPClient retry edge cases and error scenarios."""
 
     async def test_send_raises_when_not_connected(self, sample_request_envelope: Envelope) -> None:
@@ -1444,3 +1464,656 @@ class TestASAPClientSendBatch:
         for response in responses:
             assert isinstance(response, Envelope)
             assert response.payload_type == "task.response"
+
+
+class TestRetryBehavior(_CircuitBreakerRegistryCleanup):
+    def test_init_with_retry_config(self) -> None:
+        config = RetryConfig(
+            max_retries=10,
+            base_delay=2.0,
+            max_delay=100.0,
+            jitter=False,
+            circuit_breaker_enabled=True,
+            circuit_breaker_threshold=3,
+            circuit_breaker_timeout=30.0,
+        )
+        client = ASAPClient("https://example.com", retry_config=config)
+
+        assert client.max_retries == 10
+        assert client.base_delay == 2.0
+        assert client.max_delay == 100.0
+        assert client.jitter is False
+        assert client.circuit_breaker_enabled is True
+        assert client._circuit_breaker is not None
+        assert client._circuit_breaker.threshold == 3
+        assert client._circuit_breaker.timeout == 30.0
+
+    @pytest.mark.asyncio
+    async def test_retry_after_future_date(self, sample_request_envelope: Envelope) -> None:
+        frozen_now = datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        frozen_timestamp = frozen_now.timestamp()
+        future_date = frozen_now + timedelta(seconds=10)
+        future_date_str = future_date.strftime("%a, %d %b %Y %H:%M:%S GMT")
+
+        call_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return httpx.Response(
+                    status_code=429,
+                    content=b"Rate Limited",
+                    headers={"Retry-After": future_date_str},
+                )
+            return create_mock_response(
+                Envelope(
+                    asap_version="0.1",
+                    sender="urn:asap:agent:server",
+                    recipient="urn:asap:agent:client",
+                    payload_type="task.response",
+                    payload=TaskResponse(
+                        task_id="t", status=TaskStatus.COMPLETED, result={}
+                    ).model_dump(),
+                    correlation_id=sample_request_envelope.id,
+                )
+            )
+
+        with (
+            patch("asap.transport.client.asyncio.sleep") as mock_sleep,
+            patch("asap.transport.client.time.time", return_value=frozen_timestamp),
+        ):
+
+            async def mock_sleep_fn(delay: float) -> None:
+                pass
+
+            mock_sleep.side_effect = mock_sleep_fn
+
+            async with ASAPClient(
+                "https://example.com",
+                transport=httpx.MockTransport(mock_transport),
+                max_retries=2,
+                jitter=False,
+            ) as client:
+                await client.send(sample_request_envelope)
+
+            sleep_args = [c[0][0] for c in mock_sleep.call_args_list]
+            found = any(9.0 <= a <= 11.0 for a in sleep_args)
+            assert found, f"No sleep(~10s) found in calls: {sleep_args}"
+
+    @pytest.mark.asyncio
+    async def test_validate_connection_raises_when_not_connected(self) -> None:
+        client = ASAPClient("https://example.com")
+        with pytest.raises(ASAPConnectionError, match="not connected"):
+            await client._validate_connection()
+
+    @pytest.mark.asyncio
+    async def test_validate_connection_raises_when_client_is_none(self) -> None:
+        client = ASAPClient("https://example.com")
+        client._client = None
+        with pytest.raises(ASAPConnectionError, match="not connected"):
+            await client._validate_connection()
+
+    @pytest.mark.asyncio
+    async def test_validate_connection_success(self) -> None:
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            if "/asap/manifest" in str(request.url):
+                return httpx.Response(status_code=200, json={"name": "test-agent"})
+            return httpx.Response(status_code=404)
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            result = await client._validate_connection()
+            assert result is True
+
+    @pytest.mark.asyncio
+    async def test_validate_connection_failure(self) -> None:
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=503)
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            result = await client._validate_connection()
+            assert result is False
+
+    @pytest.mark.asyncio
+    async def test_validate_connection_connect_error_returns_false(self) -> None:
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            raise httpx.ConnectError("Connection refused")
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            result = await client._validate_connection()
+            assert result is False
+
+    @pytest.mark.asyncio
+    async def test_validate_connection_timeout_returns_false(self) -> None:
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            raise httpx.TimeoutException("Timeout")
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            result = await client._validate_connection()
+            assert result is False
+
+    @pytest.mark.asyncio
+    async def test_validate_connection_generic_exception_returns_false(self) -> None:
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            raise RuntimeError("Unexpected error")
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            result = await client._validate_connection()
+            assert result is False
+
+    @pytest.mark.asyncio
+    async def test_send_5xx_retry_then_circuit_opens(self) -> None:
+        call_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            return httpx.Response(status_code=503, content=b"Service Unavailable")
+
+        large_envelope = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="conv_123",
+                skill_id="echo",
+                input={"message": "x" * 200},
+            ).model_dump(),
+        )
+
+        async with ASAPClient(
+            "https://example.com",
+            transport=httpx.MockTransport(mock_transport),
+            compression=True,
+            compression_threshold=50,
+            circuit_breaker_enabled=True,
+            circuit_breaker_threshold=2,
+            max_retries=2,
+        ) as client:
+            with pytest.raises(ASAPConnectionError, match="503"):
+                await client.send(large_envelope)
+            assert call_count == 2
+
+            with pytest.raises(ASAPConnectionError, match="503"):
+                await client.send(large_envelope)
+            assert call_count == 4
+            assert client._circuit_breaker is not None
+            assert client._circuit_breaker.get_state() == CircuitState.OPEN
+
+            with pytest.raises(CircuitOpenError):
+                await client.send(large_envelope)
+            assert call_count == 4
+
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_records_failure_on_exhausted_5xx(
+        self, sample_request_envelope: Envelope
+    ) -> None:
+        """Test that circuit breaker records failure when retries are exhausted for 5xx."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=503, content=b"Unavailable")
+
+        async with ASAPClient(
+            "https://example.com",
+            transport=httpx.MockTransport(mock_transport),
+            max_retries=2,
+            circuit_breaker_enabled=True,
+            circuit_breaker_threshold=5,
+        ) as client:
+            with pytest.raises(ASAPConnectionError):
+                await client.send(sample_request_envelope)
+
+            assert client._circuit_breaker.get_consecutive_failures() == 1
+
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_records_failure_on_exhausted_connect_error(
+        self, sample_request_envelope: Envelope
+    ) -> None:
+        """Test that circuit breaker records failure when retries are exhausted for connection error."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            raise httpx.ConnectError("Failed")
+
+        async with ASAPClient(
+            "https://example.com",
+            transport=httpx.MockTransport(mock_transport),
+            max_retries=2,
+            circuit_breaker_enabled=True,
+        ) as client:
+            with pytest.raises(ASAPConnectionError):
+                await client.send(sample_request_envelope)
+
+            assert client._circuit_breaker.get_consecutive_failures() == 1
+
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_records_failure_on_exhausted_429(
+        self, sample_request_envelope: Envelope
+    ) -> None:
+        """Test that circuit breaker records failure when retries are exhausted for 429."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=429, content=b"Rate Limited")
+
+        async with ASAPClient(
+            "https://example.com",
+            transport=httpx.MockTransport(mock_transport),
+            max_retries=2,
+            circuit_breaker_enabled=True,
+            base_delay=0.01,
+            jitter=False,
+        ) as client:
+            with pytest.raises(ASAPConnectionError, match="rate limit"):
+                await client.send(sample_request_envelope)
+
+            assert client._circuit_breaker.get_consecutive_failures() == 1
+
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_records_failure_on_exhausted_timeout(
+        self, sample_request_envelope: Envelope
+    ) -> None:
+        """Test that circuit breaker records failure when retries are exhausted for timeouts."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            raise httpx.TimeoutException("Timed out")
+
+        async with ASAPClient(
+            "https://example.com",
+            transport=httpx.MockTransport(mock_transport),
+            max_retries=2,
+            circuit_breaker_enabled=True,
+            base_delay=0.01,
+            jitter=False,
+        ) as client:
+            with pytest.raises(ASAPTimeoutError):
+                await client.send(sample_request_envelope)
+
+            assert client._circuit_breaker.get_consecutive_failures() == 1
+
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_records_failure_on_400_error(
+        self, sample_request_envelope: Envelope
+    ) -> None:
+        """Test that circuit breaker records failure on non-retriable 4xx errors."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=400, content=b"Bad Request")
+
+        async with ASAPClient(
+            "https://example.com",
+            transport=httpx.MockTransport(mock_transport),
+            circuit_breaker_enabled=True,
+        ) as client:
+            with pytest.raises(ASAPConnectionError, match="400"):
+                await client.send(sample_request_envelope)
+
+            assert client._circuit_breaker.get_consecutive_failures() == 1
+
+    def test_url_validation_missing_netloc(self) -> None:
+        with pytest.raises(ValueError, match="Invalid base_url format"):
+            ASAPClient("http:///path")
+
+    def test_is_localhost_helper(self) -> None:
+        client = ASAPClient("https://example.com")
+        from urllib.parse import urlparse
+
+        assert client._is_localhost(urlparse("http://localhost:8000")) is True
+        assert client._is_localhost(urlparse("http://127.0.0.1:8000")) is True
+        assert client._is_localhost(urlparse("http://[::1]")) is True
+        assert client._is_localhost(urlparse("http://example.com")) is False
+        assert client._is_localhost(urlparse("http://192.168.1.1")) is False
+
+    def test_is_localhost_no_hostname_returns_false(self) -> None:
+        client = ASAPClient("https://example.com")
+        from urllib.parse import urlparse
+
+        assert client._is_localhost(urlparse("file:///tmp/foo")) is False
+
+    @pytest.mark.asyncio
+    async def test_retry_after_invalid_date_format(self, sample_request_envelope: Envelope) -> None:
+        call_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return httpx.Response(
+                    status_code=429,
+                    content=b"Rate Limited",
+                    headers={"Retry-After": "Invalid Date Format"},
+                )
+            return create_mock_response(sample_request_envelope)
+
+        with patch("asap.transport.client.asyncio.sleep") as mock_sleep:
+
+            async def mock_sleep_fn(delay: float) -> None:
+                pass
+
+            mock_sleep.side_effect = mock_sleep_fn
+
+            async with ASAPClient(
+                "https://example.com",
+                transport=httpx.MockTransport(mock_transport),
+                max_retries=2,
+                base_delay=0.1,
+                jitter=False,
+            ) as client:
+                await client.send(sample_request_envelope)
+
+            assert call_count == 2
+            call_args_list = [c[0] for c in mock_sleep.call_args_list]
+            assert (0.1,) in call_args_list, (
+                f"Expected sleep(0.1) among calls, got {call_args_list[:5]}..."
+            )
+
+
+class TestManifestCache:
+    @pytest.mark.asyncio
+    async def test_get_manifest_cache_hit(self) -> None:
+        from asap.models.entities import Manifest
+
+        manifest_data = {
+            "id": "urn:asap:agent:testagent",
+            "name": "Test Agent",
+            "version": "1.0.0",
+            "description": "Test agent",
+            "capabilities": {
+                "asap_version": "0.1",
+                "skills": [{"id": "test", "description": "Test skill"}],
+                "state_persistence": False,
+            },
+            "endpoints": {"asap": "http://localhost:8000/asap"},
+        }
+        expected_manifest = Manifest(**manifest_data)
+
+        call_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            return httpx.Response(status_code=200, json=manifest_data)
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            client._manifest_cache.set(
+                "https://example.com/.well-known/asap/manifest.json", expected_manifest
+            )
+            result = await client.get_manifest()
+
+        assert call_count == 0
+        assert result.id == expected_manifest.id
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_cache_miss_then_set(self) -> None:
+        manifest_data = {
+            "id": "urn:asap:agent:testagent",
+            "name": "Test Agent",
+            "version": "1.0.0",
+            "description": "Test agent",
+            "capabilities": {
+                "asap_version": "0.1",
+                "skills": [{"id": "test", "description": "Test skill"}],
+                "state_persistence": False,
+            },
+            "endpoints": {"asap": "http://localhost:8000/asap"},
+        }
+
+        call_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            return httpx.Response(status_code=200, json=manifest_data)
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            assert client._manifest_cache.size() == 0
+            result = await client.get_manifest()
+            assert call_count == 1
+            assert result.id == "urn:asap:agent:testagent"
+            assert client._manifest_cache.size() == 1
+            cached = client._manifest_cache.get(
+                "https://example.com/.well-known/asap/manifest.json"
+            )
+            assert cached is not None
+            assert cached.id == "urn:asap:agent:testagent"
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_cache_invalidate_on_http_error(self) -> None:
+        from asap.models.entities import Manifest
+
+        manifest_data = {
+            "id": "urn:asap:agent:testagent",
+            "name": "Test Agent",
+            "version": "1.0.0",
+            "description": "Test agent",
+            "capabilities": {
+                "asap_version": "0.1",
+                "skills": [{"id": "test", "description": "Test skill"}],
+                "state_persistence": False,
+            },
+            "endpoints": {"asap": "http://localhost:8000/asap"},
+        }
+        stale_manifest = Manifest(**manifest_data)
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=500, content=b"Internal Server Error")
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            url = "https://example.com/.well-known/asap/manifest.json"
+            client._manifest_cache.set(url, stale_manifest)
+            assert client._manifest_cache.size() == 1
+            client._manifest_cache.invalidate(url)
+            assert client._manifest_cache.size() == 0
+
+            with pytest.raises(ASAPConnectionError, match="500"):
+                await client.get_manifest()
+
+            assert client._manifest_cache.size() == 0
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_cache_invalidate_on_invalid_json(self) -> None:
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, content=b"not valid json")
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            with pytest.raises(ValueError, match="Invalid JSON"):
+                await client.get_manifest()
+
+            assert client._manifest_cache.size() == 0
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_cache_invalidate_on_invalid_manifest(self) -> None:
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, json={"foo": "bar"})
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            with pytest.raises(ValueError, match="Invalid manifest"):
+                await client.get_manifest()
+
+            assert client._manifest_cache.size() == 0
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_cache_invalidate_on_timeout(self) -> None:
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            raise httpx.TimeoutException("Timeout fetching manifest")
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            with pytest.raises(ASAPTimeoutError):
+                await client.get_manifest()
+
+            assert client._manifest_cache.size() == 0
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_cache_invalidate_on_connect_error(self) -> None:
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            raise httpx.ConnectError("Connection refused")
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            with pytest.raises(ASAPConnectionError):
+                await client.get_manifest()
+
+            assert client._manifest_cache.size() == 0
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_concurrent_same_url_single_http_request(self) -> None:
+        import asyncio
+
+        manifest_data = {
+            "id": "urn:asap:agent:testagent",
+            "name": "Test Agent",
+            "version": "1.0.0",
+            "description": "Test agent",
+            "capabilities": {
+                "asap_version": "0.1",
+                "skills": [{"id": "test", "description": "Test skill"}],
+                "state_persistence": False,
+            },
+            "endpoints": {"asap": "http://localhost:8000/asap"},
+        }
+
+        manifest_get_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal manifest_get_count
+            manifest_get_count += 1
+            return httpx.Response(status_code=200, json=manifest_data)
+
+        async with ASAPClient(
+            "https://example.com", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            results = await asyncio.gather(
+                *[client.get_manifest() for _ in range(10)],
+                return_exceptions=True,
+            )
+
+        assert manifest_get_count == 1
+        for r in results:
+            assert not isinstance(r, BaseException), r
+            assert r.id == "urn:asap:agent:testagent"
+
+
+class TestManifestSignatureVerification:
+    """Tests for get_manifest with verify_signatures and trusted_manifest_keys."""
+
+    @staticmethod
+    def _signed_manifest_payload() -> tuple[dict, str]:
+        manifest = Manifest(
+            id="urn:asap:agent:signed-test",
+            name="Signed Agent",
+            version="1.0.0",
+            description="Agent with signed manifest",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="echo", description="Echo")],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="https://example.com/asap"),
+        )
+        private_key, public_key = generate_keypair()
+        signed = sign_manifest(manifest, private_key)
+        return signed.model_dump(mode="json"), public_key_to_base64(public_key)
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_signed_with_trusted_key_succeeds(self) -> None:
+        payload, pub_b64 = self._signed_manifest_payload()
+        manifest_url = "https://example.com/.well-known/asap/manifest.json"
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, json=payload)
+
+        trusted = {manifest_url: pub_b64}
+        async with ASAPClient(
+            "https://example.com",
+            transport=httpx.MockTransport(mock_transport),
+            verify_signatures=True,
+            trusted_manifest_keys=trusted,
+        ) as client:
+            result = await client.get_manifest()
+        assert result.id == "urn:asap:agent:signed-test"
+        assert result.name == "Signed Agent"
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_signed_without_trusted_key_raises(self) -> None:
+        payload, _ = self._signed_manifest_payload()
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, json=payload)
+
+        async with ASAPClient(
+            "https://example.com",
+            transport=httpx.MockTransport(mock_transport),
+            verify_signatures=True,
+            trusted_manifest_keys={},
+        ) as client:
+            with pytest.raises(SignatureVerificationError, match="no trusted public key"):
+                await client.get_manifest()
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_signed_with_wrong_trusted_key_raises(self) -> None:
+        payload, _ = self._signed_manifest_payload()
+        _, other_public_key = generate_keypair()
+        wrong_pub_b64 = public_key_to_base64(other_public_key)
+        manifest_url = "https://example.com/.well-known/asap/manifest.json"
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, json=payload)
+
+        trusted = {manifest_url: wrong_pub_b64}
+        async with ASAPClient(
+            "https://example.com",
+            transport=httpx.MockTransport(mock_transport),
+            verify_signatures=True,
+            trusted_manifest_keys=trusted,
+        ) as client:
+            with pytest.raises(SignatureVerificationError, match="tamper|invalid"):
+                await client.get_manifest()
+
+    @pytest.mark.asyncio
+    async def test_get_manifest_plain_json_when_verify_signatures_ignored(self) -> None:
+        plain_data = {
+            "id": "urn:asap:agent:plain",
+            "name": "Plain Agent",
+            "version": "1.0.0",
+            "description": "No signature",
+            "capabilities": {
+                "asap_version": "0.1",
+                "skills": [{"id": "echo", "description": "Echo"}],
+                "state_persistence": False,
+            },
+            "endpoints": {"asap": "http://localhost:8000/asap"},
+        }
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, json=plain_data)
+
+        async with ASAPClient(
+            "https://example.com",
+            transport=httpx.MockTransport(mock_transport),
+            verify_signatures=True,
+            trusted_manifest_keys={},
+        ) as client:
+            result = await client.get_manifest()
+        assert result.id == "urn:asap:agent:plain"

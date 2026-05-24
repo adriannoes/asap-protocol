@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
@@ -256,3 +257,71 @@ def test_crewai_tool_run_wraps_non_dict_positional_input() -> None:
     sent_envelope = mock_send.await_args.args[0]
     inner = TaskRequest.model_validate(sent_envelope.payload)
     assert inner.input == {"raw": "literal"}
+
+
+def test_crewai_tool_no_skills_at_runtime_returns_error() -> None:
+    manifest_no_skills = _manifest().model_copy(
+        update={
+            "capabilities": Capability(
+                asap_version="0.1",
+                skills=[],
+                state_persistence=False,
+            )
+        }
+    )
+
+    p_get, p_verify, p_revoked, p_http = _resolve_patches()
+    with p_get as mock_get, p_verify as mock_verify, p_revoked as mock_revoked, p_http:
+        mock_get.return_value = _lite_registry()
+        mock_verify.return_value = True
+        mock_revoked.return_value = False
+        tool = CrewAIAsapTool(
+            TEST_URN, client=MarketClient(registry_url="https://reg.example/registry.json")
+        )
+        resolved = MagicMock()
+        resolved.manifest = manifest_no_skills
+        object.__setattr__(tool, "_resolved", resolved)
+        object.__setattr__(tool, "_skill_id", "")
+        out = asyncio.run(tool._invoke_async({"input": {}}))
+
+    assert isinstance(out, str)
+    assert "no skills" in out.lower()
+
+
+def test_crewai_invoke_wraps_non_dict_input_payload_with_value() -> None:
+    mock_send = AsyncMock(return_value={"ok": True})
+    mock_agent = AsyncMock()
+    mock_agent.run = mock_send
+    mock_agent.manifest = _manifest()
+
+    p_get, p_verify, p_revoked, p_http = _resolve_patches()
+    with p_get as mock_get, p_verify as mock_verify, p_revoked as mock_revoked, p_http:
+        mock_get.return_value = _lite_registry()
+        mock_verify.return_value = True
+        mock_revoked.return_value = False
+        tool = CrewAIAsapTool(
+            TEST_URN, client=MarketClient(registry_url="https://reg.example/registry.json")
+        )
+        object.__setattr__(tool, "_resolved", mock_agent)
+        object.__setattr__(tool, "_skill_id", "echo")
+        out = tool._run(input=123)
+
+    assert json.loads(out) == {"ok": True}
+    sent_payload = mock_send.await_args.args[0]
+    assert sent_payload["input"] == {"value": 123}
+
+
+def test_crewai_tool_requires_crewai_package(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asap.integrations.crewai as crewai_mod
+
+    monkeypatch.setattr(crewai_mod, "CrewAIBaseTool", None)
+    monkeypatch.setattr(
+        crewai_mod,
+        "_import_error_crewai",
+        ImportError("crewai is not installed"),
+    )
+    with pytest.raises(RuntimeError, match="crewai"):
+        CrewAIAsapTool(
+            TEST_URN,
+            client=MarketClient(registry_url="https://reg.example/registry.json"),
+        )

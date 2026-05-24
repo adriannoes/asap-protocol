@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import json
 
+import httpx
 import pytest
 from httpx import ASGITransport, AsyncClient
 from pydantic import ValidationError
+from unittest.mock import AsyncMock, MagicMock
 
 from asap.economics.audit import InMemoryAuditStore
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
@@ -26,6 +28,13 @@ from asap.transport.rate_limit import create_test_limiter
 from fastapi import FastAPI
 
 from asap.transport.server import create_app
+
+
+def _mock_http_response(json_payload: dict, headers: dict[str, str] | None = None) -> MagicMock:
+    response = MagicMock(spec=httpx.Response)
+    response.json.return_value = json_payload
+    response.headers = headers or {}
+    return response
 
 
 def _test_manifest() -> Manifest:
@@ -145,3 +154,45 @@ class TestCheckResultModel:
         )
         assert report.score == 0.5
         assert len(report.checks) == 2
+
+
+class TestComplianceFailureBranches:
+    async def test_check_streaming_failure_on_exception(self) -> None:
+        client = AsyncMock()
+        client.post = AsyncMock(side_effect=RuntimeError("stream down"))
+        results = await check_streaming(client)
+        assert any(r.name == "streaming_sse_endpoint" and not r.passed for r in results)
+        assert "stream down" in results[0].message
+
+    async def test_check_audit_failure_on_exception(self) -> None:
+        client = AsyncMock()
+        client.get = AsyncMock(side_effect=RuntimeError("audit unreachable"))
+        results = await check_audit(client)
+        assert results[0].passed is False
+        assert "audit unreachable" in results[0].message
+
+    async def test_check_batch_failure_on_exception(self) -> None:
+        client = AsyncMock()
+        client.post = AsyncMock(side_effect=RuntimeError("batch failed"))
+        results = await check_batch(client)
+        assert any(r.name == "batch_array_response" and not r.passed for r in results)
+
+    async def test_check_errors_method_not_found_failure(self) -> None:
+        client = AsyncMock()
+        client.post = AsyncMock(return_value=_mock_http_response({"error": {"code": -1}}))
+        results = await check_errors(client)
+        mn = next(r for r in results if r.name == "error_method_not_found")
+        assert mn.passed is False
+
+    async def test_check_versioning_incompatible_not_rejected(self) -> None:
+        client = AsyncMock()
+
+        async def _post(url: str, **kwargs: object) -> object:
+            if kwargs.get("headers", {}).get("ASAP-Version") == "99.0":
+                return _mock_http_response({"error": {"code": 0}})
+            return _mock_http_response({}, headers={"asap-version": "2.2"})
+
+        client.post = _post
+        results = await check_versioning(client)
+        bad = next(r for r in results if r.name == "versioning_incompatible_rejected")
+        assert bad.passed is False

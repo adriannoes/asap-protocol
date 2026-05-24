@@ -147,11 +147,10 @@ def test_custom_claim_missing_allowlist_hit_succeeds(
     assert "identity_via_allowlist" in caplog.text or "allowlist" in caplog.text.lower()
 
 
-def test_custom_claim_missing_allowlist_miss_succeeds_identity_unverified(
+def test_custom_claim_missing_allowlist_miss_returns_403(
     monkeypatch: pytest.MonkeyPatch,
-    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Custom claim missing, sub not in allowlist → 200, identity unverified warning."""
+    """Custom claim missing, sub not in allowlist → 403."""
     monkeypatch.setenv(
         "ASAP_AUTH_SUBJECT_MAP",
         '{"urn:asap:agent:bot": "auth0|other"}',
@@ -166,14 +165,34 @@ def test_custom_claim_missing_allowlist_miss_succeeds_identity_unverified(
     app = _minimal_app(manifest_id="urn:asap:agent:bot", jwks_fetcher=jwks)
     token = _make_token(key, sub="auth0|abc123")
 
-    with caplog.at_level("WARNING"), TestClient(app) as client:
+    with TestClient(app) as client:
         response = client.get(
             "/asap",
             headers={"Authorization": f"Bearer {token}"},
         )
 
-    assert response.status_code == 200
-    assert "identity_unverified" in caplog.text or "identity not verified" in caplog.text
+    assert response.status_code == 403
+    assert "Identity mismatch" in response.json()["detail"]
+
+
+def test_custom_claim_missing_no_allowlist_returns_403() -> None:
+    """Custom claim missing and no allowlist entry → 403."""
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    key_set = jwk.KeySet.import_key_set({"keys": [key.as_dict(private=False)]})
+
+    async def jwks(_: str) -> jwk.KeySet:
+        return key_set
+
+    app = _minimal_app(manifest_id="urn:asap:agent:bot", jwks_fetcher=jwks)
+    token = _make_token(key, sub="auth0|abc123")
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/asap",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert response.status_code == 403
 
 
 def test_custom_claim_missing_allowlist_list_value_succeeds(
@@ -224,13 +243,13 @@ def test_asap_auth_subject_map_non_dict_json_treated_as_empty(
             headers={"Authorization": f"Bearer {token}"},
         )
 
-    assert response.status_code == 200
+    assert response.status_code == 403
 
 
 def test_asap_auth_subject_map_invalid_value_type_filtered(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """ASAP_AUTH_SUBJECT_MAP with non-str/list value → filtered out, identity unverified."""
+    """ASAP_AUTH_SUBJECT_MAP with non-str/list value → filtered out → 403."""
     monkeypatch.setenv("ASAP_AUTH_SUBJECT_MAP", '{"urn:asap:agent:bot": 123}')
 
     key = jwk.RSAKey.generate_key(2048, private=True)
@@ -248,13 +267,13 @@ def test_asap_auth_subject_map_invalid_value_type_filtered(
             headers={"Authorization": f"Bearer {token}"},
         )
 
-    assert response.status_code == 200
+    assert response.status_code == 403
 
 
 def test_malformed_asap_auth_subject_map_does_not_crash(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Malformed ASAP_AUTH_SUBJECT_MAP → request still works (identity unverified)."""
+    """Malformed ASAP_AUTH_SUBJECT_MAP → 403."""
     monkeypatch.setenv("ASAP_AUTH_SUBJECT_MAP", "not valid json {")
 
     key = jwk.RSAKey.generate_key(2048, private=True)
@@ -272,7 +291,7 @@ def test_malformed_asap_auth_subject_map_does_not_crash(
             headers={"Authorization": f"Bearer {token}"},
         )
 
-    assert response.status_code == 200
+    assert response.status_code == 403
 
 
 def test_identity_binding_disabled_when_manifest_id_none() -> None:

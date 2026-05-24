@@ -17,12 +17,12 @@ from typing import Any, Awaitable, Callable
 import httpx
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
-from joserfc import jwt as jose_jwt
 from joserfc import jwk
 from joserfc.errors import JoseError
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from asap.auth.jwks import _ALLOWED_JWT_ALGORITHMS
+from asap.auth.claims import parse_expected_audience_from_env
+from asap.auth.jwks import validate_jwt
 from asap.auth.utils import parse_scope
 from asap.observability import get_logger
 
@@ -37,6 +37,8 @@ ERROR_IDENTITY_MISMATCH = "Identity mismatch: custom claim does not match agent 
 
 DEFAULT_CUSTOM_CLAIM = "https://github.com/adriannoes/asap-protocol/agent_id"
 ENV_SUBJECT_MAP = "ASAP_AUTH_SUBJECT_MAP"
+ENV_ISSUER = "ASAP_AUTH_ISSUER"
+ENV_AUDIENCE = "ASAP_AUTH_AUDIENCE"
 
 
 def _parse_subject_map() -> dict[str, str | list[str]]:
@@ -75,6 +77,8 @@ class OAuth2Config:
             is disabled.
         custom_claim: Optional JWT claim key for agent_id; when None, uses
             ASAP_AUTH_CUSTOM_CLAIM env var (default: DEFAULT_CUSTOM_CLAIM).
+        expected_issuer: Optional expected JWT ``iss`` claim; uses ``ASAP_AUTH_ISSUER`` when unset.
+        expected_audience: Optional expected JWT ``aud`` claim; uses ``ASAP_AUTH_AUDIENCE`` when unset.
     """
 
     jwks_uri: str
@@ -83,6 +87,8 @@ class OAuth2Config:
     jwks_fetcher: Callable[[str], Awaitable[jwk.KeySet]] | None = None
     manifest_id: str | None = None
     custom_claim: str | None = None
+    expected_issuer: str | None = None
+    expected_audience: str | list[str] | None = None
 
 
 @dataclass
@@ -147,6 +153,8 @@ class OAuth2Middleware(BaseHTTPMiddleware):
         jwks_fetcher: Callable[[str], Awaitable[jwk.KeySet]] | None = None,
         manifest_id: str | None = None,
         custom_claim: str | None = None,
+        expected_issuer: str | None = None,
+        expected_audience: str | list[str] | None = None,
     ) -> None:
         super().__init__(app)
         self._jwks_uri = jwks_uri
@@ -157,6 +165,10 @@ class OAuth2Middleware(BaseHTTPMiddleware):
         self._custom_claim = custom_claim
         self._custom_claim_key = self._custom_claim or os.environ.get(
             "ASAP_AUTH_CUSTOM_CLAIM", DEFAULT_CUSTOM_CLAIM
+        )
+        self._expected_issuer = expected_issuer or os.environ.get(ENV_ISSUER)
+        self._expected_audience = expected_audience or parse_expected_audience_from_env(
+            os.environ.get(ENV_AUDIENCE)
         )
         self._subject_map = _parse_subject_map()
         self._jwks_cache: jwk.KeySet | None = None
@@ -224,7 +236,27 @@ class OAuth2Middleware(BaseHTTPMiddleware):
             if isinstance(allowed, list) and sub in allowed:
                 return True, None, False, True
 
-        return True, None, True, False
+        return False, "Missing required identity claim", True, False
+
+    async def _validate_token_claims(self, token: str, key_set: jwk.KeySet) -> dict[str, Any]:
+        try:
+            return validate_jwt(
+                token,
+                key_set,
+                expected_issuer=self._expected_issuer,
+                expected_audience=self._expected_audience,
+                require_exp=False,
+            )
+        except JoseError:
+            await self._invalidate_jwks_cache()
+            key_set = await self._get_key_set()
+            return validate_jwt(
+                token,
+                key_set,
+                expected_issuer=self._expected_issuer,
+                expected_audience=self._expected_audience,
+                require_exp=False,
+            )
 
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
@@ -244,7 +276,7 @@ class OAuth2Middleware(BaseHTTPMiddleware):
 
         try:
             key_set = await self._get_key_set()
-            token_obj = jose_jwt.decode(token, key_set, algorithms=_ALLOWED_JWT_ALGORITHMS)
+            claims = await self._validate_token_claims(token, key_set)
         except httpx.HTTPError as e:
             logger.error(
                 "asap.oauth2.jwks_fetch_failed",
@@ -256,31 +288,14 @@ class OAuth2Middleware(BaseHTTPMiddleware):
                 status_code=503,
                 content={"detail": "Authentication service unavailable"},
             )
-        except JoseError:
-            await self._invalidate_jwks_cache()
-            try:
-                key_set = await self._get_key_set()
-                token_obj = jose_jwt.decode(token, key_set, algorithms=_ALLOWED_JWT_ALGORITHMS)
-            except httpx.HTTPError as e2:
-                logger.error(
-                    "asap.oauth2.jwks_fetch_failed",
-                    path=request.url.path,
-                    jwks_uri=self._jwks_uri,
-                    error=str(e2),
-                )
-                return JSONResponse(
-                    status_code=503,
-                    content={"detail": "Authentication service unavailable"},
-                )
-            except JoseError as e2:
-                logger.warning("asap.oauth2.invalid_token", path=request.url.path, error=str(e2))
-                return JSONResponse(
-                    status_code=HTTP_UNAUTHORIZED,
-                    content={"detail": ERROR_INVALID_TOKEN},
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
+        except JoseError as e:
+            logger.warning("asap.oauth2.invalid_token", path=request.url.path, error=str(e))
+            return JSONResponse(
+                status_code=HTTP_UNAUTHORIZED,
+                content={"detail": ERROR_INVALID_TOKEN},
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
-        claims = token_obj.claims
         exp = claims.get("exp")
         try:
             exp_ts = int(exp) if isinstance(exp, (int, float)) else 0
@@ -316,9 +331,7 @@ class OAuth2Middleware(BaseHTTPMiddleware):
                 content={"detail": ERROR_INSUFFICIENT_SCOPE},
             )
 
-        success, err_detail, claim_missing, use_allowlist = self._validate_identity_binding(
-            claims, sub
-        )
+        success, err_detail, _, use_allowlist = self._validate_identity_binding(claims, sub)
         if not success:
             logger.warning(
                 "asap.oauth2.identity_mismatch",
@@ -340,12 +353,6 @@ class OAuth2Middleware(BaseHTTPMiddleware):
                 path=request.url.path,
                 manifest_id=self._manifest_id,
                 sub=sub,
-            )
-        elif claim_missing:
-            logger.warning(
-                "asap.oauth2.identity_unverified",
-                path=request.url.path,
-                manifest_id=self._manifest_id,
             )
 
         request.state.oauth2_claims = OAuth2Claims(sub=sub, scope=scope_list, exp=exp_ts)

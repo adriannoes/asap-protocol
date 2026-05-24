@@ -1,26 +1,7 @@
+import { promises as dns } from 'node:dns';
+import { isBlockedHostOrIp } from './url-validator-ip';
+
 /** SSRF validation: blocks private IPs, loopback, cloud metadata. */
-
-const BLOCKED_HOSTNAMES = new Set([
-    'localhost',
-    '127.0.0.1',
-    '::1',
-    '0.0.0.0',
-    'metadata.google.internal',
-    'metadata.aws.internal',
-    '169.254.169.254',
-]);
-
-function isBlockedHostname(hostname: string): boolean {
-    const lower = hostname.toLowerCase().replace(/^\[|\]$/g, '');
-    if (BLOCKED_HOSTNAMES.has(lower)) return true;
-    if (/^::1$/.test(lower) || /^::ffff:/.test(lower)) return true;
-    if (/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|0\.)/.test(lower)) return true;
-    return false;
-}
-
-
-
-import dns from 'dns/promises';
 
 export interface AllowedUrlResult {
     valid: boolean;
@@ -34,21 +15,30 @@ export async function isAllowedExternalUrl(url: string): Promise<AllowedUrlResul
             return { valid: false, error: 'URL must use HTTP or HTTPS.' };
         }
         const hostname = parsed.hostname.toLowerCase();
-        if (isBlockedHostname(hostname)) {
+        if (isBlockedHostOrIp(hostname)) {
             return { valid: false, error: 'Internal/Private network addresses are not allowed.' };
         }
 
-        // DNS Rebinding / SSRF Protection
-        // Resolve the hostname and check if the returned IP is private/loopback
-        try {
-            const addresses = await dns.resolve(hostname);
-            for (const ip of addresses) {
-                if (isBlockedHostname(ip)) {
-                    return { valid: false, error: `Resolved IP (${ip}) is an internal/private address.` };
-                }
-            }
-        } catch {
+        const bareHostname = hostname.replace(/^\[|\]$/g, '');
+        const [v4, v6] = await Promise.allSettled([
+            dns.resolve4(bareHostname),
+            dns.resolve6(bareHostname),
+        ]);
+
+        const ips: string[] = [];
+        if (v4.status === 'fulfilled' && Array.isArray(v4.value)) ips.push(...v4.value);
+        if (v6.status === 'fulfilled' && Array.isArray(v6.value)) ips.push(...v6.value);
+        if (ips.length === 0) {
             return { valid: false, error: 'Could not resolve hostname.' };
+        }
+
+        for (const ip of ips) {
+            if (isBlockedHostOrIp(ip)) {
+                return {
+                    valid: false,
+                    error: `Resolved IP (${ip}) is an internal/private address.`,
+                };
+            }
         }
 
         return { valid: true };
@@ -57,10 +47,7 @@ export async function isAllowedExternalUrl(url: string): Promise<AllowedUrlResul
     }
 }
 
-/**
- * Stricter validation for proxy/check: HTTPS only, blocks private IPs (RFC 1918).
- * Sync check: hostname literal only (no DNS). Use isAllowedProxyUrlAsync for SSRF-safe validation.
- */
+/** Sync check: hostname literal only (no DNS). */
 export function isAllowedProxyUrl(url: string): AllowedUrlResult {
     try {
         const parsed = new URL(url);
@@ -68,7 +55,7 @@ export function isAllowedProxyUrl(url: string): AllowedUrlResult {
             return { valid: false, error: 'URL must use HTTPS only.' };
         }
         const hostname = parsed.hostname.toLowerCase();
-        if (isBlockedHostname(hostname)) {
+        if (isBlockedHostOrIp(hostname)) {
             return { valid: false, error: 'Internal/Private network addresses are not allowed.' };
         }
         return { valid: true };
@@ -76,4 +63,3 @@ export function isAllowedProxyUrl(url: string): AllowedUrlResult {
         return { valid: false, error: 'Invalid URL.' };
     }
 }
-

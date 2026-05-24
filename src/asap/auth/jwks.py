@@ -14,8 +14,9 @@ from typing import Any, Optional
 import httpx
 from joserfc import jwk
 from joserfc import jwt as jose_jwt
-from joserfc.errors import JoseError, MissingClaimError
+from joserfc.errors import InvalidClaimError, JoseError, MissingClaimError
 
+from asap.auth.claims import audience_matches_expected, issuer_matches_expected
 from asap.observability import get_logger
 
 logger = get_logger(__name__)
@@ -72,15 +73,26 @@ async def fetch_keys(
     return key_set
 
 
-def validate_jwt(token: str, key_set: jwk.KeySet) -> Claims:
+def validate_jwt(
+    token: str,
+    key_set: jwk.KeySet,
+    *,
+    expected_issuer: str | None = None,
+    expected_audience: str | list[str] | None = None,
+    require_exp: bool = True,
+) -> Claims:
     """Validate JWT signature and return claims.
 
     Decodes the JWT, verifies the signature using the provided KeySet,
-    and enforces exp (expiration) validation. Tokens without exp are rejected.
+    and enforces exp (expiration) validation when ``require_exp`` is True.
+    Tokens without exp are rejected when ``require_exp`` is True.
 
     Args:
         token: Raw JWT string (e.g. from Authorization: Bearer <token>).
         key_set: JWKS KeySet from fetch_keys().
+        expected_issuer: Optional expected ``iss`` claim.
+        expected_audience: Optional expected ``aud`` claim(s).
+        require_exp: When True (default), tokens without ``exp`` are rejected.
 
     Returns:
         Decoded claims dict (sub, scope, exp, etc.).
@@ -93,11 +105,18 @@ def validate_jwt(token: str, key_set: jwk.KeySet) -> Claims:
     token_obj = jose_jwt.decode(token, key_set, algorithms=_ALLOWED_JWT_ALGORITHMS)
     claims = dict(token_obj.claims)
 
-    if "exp" not in claims:
+    if require_exp and "exp" not in claims:
         raise MissingClaimError("exp")
 
-    registry = jose_jwt.JWTClaimsRegistry()
-    registry.validate(claims)
+    if require_exp:
+        registry = jose_jwt.JWTClaimsRegistry()
+        registry.validate(claims)
+
+    if expected_issuer is not None and not issuer_matches_expected(claims, expected_issuer):
+        raise InvalidClaimError("iss")
+
+    if expected_audience is not None and not audience_matches_expected(claims, expected_audience):
+        raise InvalidClaimError("aud")
 
     return claims
 

@@ -191,6 +191,42 @@ async def test_verify_host_jwt_list_aud_round_trip() -> None:
 
 
 @pytest.mark.filterwarnings("ignore:EdDSA is deprecated:UserWarning")
+def test_host_jwt_round_trip_list_audience() -> None:
+    sk = Ed25519PrivateKey.generate()
+    token = create_host_jwt(sk, aud=["a", "b"])
+    pub = _public_okp(sk)
+    decoded = jose_jwt.decode(token, pub, algorithms=JWT_ALGS_VERIFY)
+    claims = dict(decoded.claims)
+    assert claims["aud"] == ["a", "b"]
+
+
+@pytest.mark.filterwarnings("ignore:EdDSA is deprecated:UserWarning")
+async def test_verify_host_jwt_list_aud_no_overlap() -> None:
+    sk = Ed25519PrivateKey.generate()
+    hosts = InMemoryHostStore()
+    token = create_host_jwt(sk, aud=["aud1", "aud2"])
+    res = await verify_host_jwt(token, hosts, expected_audience=["aud3", "aud4"])
+    assert not res.ok
+    assert res.error == "audience mismatch"
+
+
+@pytest.mark.filterwarnings("ignore:EdDSA is deprecated:UserWarning")
+def test_agent_jwt_round_trip_list_audience() -> None:
+    agent_sk = Ed25519PrivateKey.generate()
+    host_tp = "BeHE0RFM9jC46s0RCLfWvd-yfBVwRzIYZ_fp_IpsoUs"
+    token = create_agent_jwt(
+        agent_sk,
+        host_thumbprint=host_tp,
+        agent_id="agent-urn-1",
+        aud=["aud-a", "aud-b"],
+        capabilities=["asap:read"],
+    )
+    pub = _public_okp(agent_sk)
+    decoded = jose_jwt.decode(token, pub, algorithms=JWT_ALGS_VERIFY)
+    assert dict(decoded.claims)["aud"] == ["aud-a", "aud-b"]
+
+
+@pytest.mark.filterwarnings("ignore:EdDSA is deprecated:UserWarning")
 async def test_verify_host_jwt_dynamic_registration() -> None:
     """Unknown thumbprint in store still verifies signature; host is None."""
     sk = Ed25519PrivateKey.generate()

@@ -518,3 +518,176 @@ def test_expand_refs_depth_returns_early_without_error_on_deep_trees() -> None:
     result = resolver.expand_refs(root, frozenset())
     assert result["top"] == 1
     assert isinstance(result["child"], dict)
+
+
+def test_expand_refs_cyclic_schema_keeps_ref() -> None:
+    raw = {
+        "A": {"properties": {"b": {"$ref": "#/components/schemas/B"}}},
+        "B": {"properties": {"a": {"$ref": "#/components/schemas/A"}}},
+    }
+    resolver = _SchemaResolver(raw)
+    expanded = resolver.expand_refs({"$ref": "#/components/schemas/A"}, frozenset())
+    assert expanded["properties"]["b"]["properties"]["a"] == {"$ref": "#/components/schemas/A"}
+
+
+def test_expand_refs_expands_nested_lists() -> None:
+    resolver = _SchemaResolver({"Item": {"type": "string"}})
+    node = {"items": [{"$ref": "#/components/schemas/Item"}]}
+    expanded = resolver.expand_refs(node, frozenset())
+    assert expanded["items"][0]["type"] == "string"
+
+
+def test_fallback_capability_name_root_path() -> None:
+    from asap.adapters.openapi.capability_mapper import _fallback_capability_name
+
+    assert _fallback_capability_name("GET", "/") == "get_rootpath"
+
+
+def test_detect_openapi_execution_kind_sync_default() -> None:
+    from asap.adapters.openapi.capability_mapper import detect_openapi_execution_kind
+
+    class _Op:
+        responses = {"200": object()}
+
+    assert detect_openapi_execution_kind(_Op(), None).value == "sync"
+
+
+@pytest.mark.asyncio
+async def test_operation_id_whitespace_only_uses_fallback_name(tmp_path: Path) -> None:
+    raw = {
+        "openapi": "3.0.3",
+        "info": {"title": "T", "version": "1"},
+        "paths": {
+            "/items": {
+                "get": {
+                    "operationId": "   ",
+                    "responses": {"200": {"description": "ok"}},
+                },
+            },
+        },
+    }
+    with tmp_openapi_spec(tmp_path, raw, "ws_op_id") as path:
+        doc = await load_spec(path)
+        caps = map_openapi_to_capabilities(doc)
+        assert len(caps) == 1
+        assert caps[0].skill.id == "get_items"
+
+
+@pytest.mark.asyncio
+async def test_merge_parameters_operation_overrides_path_item(tmp_path: Path) -> None:
+    raw = {
+        "openapi": "3.0.3",
+        "info": {"title": "T", "version": "1"},
+        "paths": {
+            "/items/{id}": {
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": True,
+                        "schema": {"type": "string", "description": "path-level"},
+                    }
+                ],
+                "get": {
+                    "operationId": "getItem",
+                    "parameters": [
+                        {
+                            "name": "id",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "integer", "description": "op-level"},
+                        }
+                    ],
+                    "responses": {"200": {"description": "ok"}},
+                },
+            },
+        },
+    }
+    with tmp_openapi_spec(tmp_path, raw, "param_override") as path:
+        doc = await load_spec(path)
+        caps = map_openapi_to_capabilities(doc)
+        props = caps[0].skill.input_schema["properties"]
+        assert props["id"]["type"] == "integer"
+
+
+@pytest.mark.asyncio
+async def test_parameter_schema_via_content_application_json(tmp_path: Path) -> None:
+    raw = {
+        "openapi": "3.0.3",
+        "info": {"title": "T", "version": "1"},
+        "paths": {
+            "/search": {
+                "get": {
+                    "operationId": "search",
+                    "parameters": [
+                        {
+                            "name": "q",
+                            "in": "query",
+                            "required": True,
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {"term": {"type": "string"}},
+                                    },
+                                }
+                            },
+                        }
+                    ],
+                    "responses": {"200": {"description": "ok"}},
+                },
+            },
+        },
+    }
+    with tmp_openapi_spec(tmp_path, raw, "param_content_json") as path:
+        doc = await load_spec(path)
+        caps = map_openapi_to_capabilities(doc)
+        q_schema = caps[0].skill.input_schema["properties"]["q"]
+        assert q_schema["type"] == "object"
+
+
+@pytest.mark.asyncio
+async def test_request_body_and_response_via_components_ref(tmp_path: Path) -> None:
+    raw = {
+        "openapi": "3.0.3",
+        "info": {"title": "T", "version": "1"},
+        "components": {
+            "schemas": {"Widget": {"type": "object", "properties": {"id": {"type": "string"}}}},
+            "requestBodies": {
+                "WidgetBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {"$ref": "#/components/schemas/Widget"},
+                        }
+                    }
+                }
+            },
+            "responses": {
+                "WidgetResp": {
+                    "description": "ok",
+                    "content": {
+                        "application/json": {
+                            "schema": {"$ref": "#/components/schemas/Widget"},
+                        }
+                    },
+                }
+            },
+        },
+        "paths": {
+            "/widgets": {
+                "post": {
+                    "operationId": "createWidget",
+                    "requestBody": {"$ref": "#/components/requestBodies/WidgetBody"},
+                    "responses": {"200": {"$ref": "#/components/responses/WidgetResp"}},
+                },
+            },
+        },
+    }
+    with tmp_openapi_spec(tmp_path, raw, "components_ref") as path:
+        doc = await load_spec(path)
+        caps = map_openapi_to_capabilities(doc)
+        assert len(caps) == 1
+        inp = caps[0].skill.input_schema
+        assert inp is not None
+        out = caps[0].skill.output_schema
+        assert out is not None

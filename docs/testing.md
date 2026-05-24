@@ -81,7 +81,7 @@ End-to-end tests validate the full agent flow using real agent implementations. 
 
 **Example**: `test_full_agent_flow.py` tests complete round-trip agent interactions.
 
-**Linking unit and integration:** E2E tests can reuse the same app (e.g. `create_app(manifest)`) with `httpx.ASGITransport(app=app)` so that `ASAPClient` talks to the real server over HTTP. For example, `TestManifestDiscovery::test_asap_client_get_manifest_against_app_and_cache` asserts that `get_manifest()` fetches from `/.well-known/asap/manifest.json` and that the manifest cache is used on the second call, connecting the unit tests in `test_client_coverage_gaps.py` (cache hit/miss) with the real endpoint.
+**Linking unit and integration:** E2E tests can reuse the same app (e.g. `create_app(manifest)`) with `httpx.ASGITransport(app=app)` so that `ASAPClient` talks to the real server over HTTP. For example, `TestManifestDiscovery::test_asap_client_get_manifest_against_app_and_cache` asserts that `get_manifest()` fetches from `/.well-known/asap/manifest.json` and that the manifest cache is used on the second call, connecting the unit tests in `tests/transport/test_client.py` (cache hit/miss) with the real endpoint.
 
 **Future integration opportunities:**
 - **MCP:** An integration test that runs the MCP server (e.g. in-process `run_stdio` or subprocess) and the MCP client, then calls `list_tools` and `call_tool`, would bridge the unit tests in `tests/mcp/` with a full round-trip.

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { encode } from 'next-auth/jwt';
 import { cookies } from 'next/headers';
+import { resolveRedirectUrl } from '@/auth-redirect';
+import { TestLoginQuerySchema, parseSearchParams } from '@/lib/api-schemas';
 
 export async function GET(request: Request) {
     if (process.env.ENABLE_FIXTURE_ROUTES !== 'true' || process.env.NODE_ENV === 'production') {
@@ -8,9 +10,19 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('id') || 'test-user-123';
-    const username = searchParams.get('username') || 'test-e2e-user';
-    const redirectUrl = searchParams.get('redirect') || '/dashboard';
+    const parsed = parseSearchParams(TestLoginQuerySchema, searchParams);
+    if (!parsed.success) {
+        return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+
+    const userId = parsed.data.id ?? 'test-user-123';
+    const username = parsed.data.username ?? 'test-e2e-user';
+    const requestUrl = new URL(request.url);
+    const safeRedirect = resolveRedirectUrl(
+        parsed.data.redirect,
+        requestUrl.origin,
+        process.env.AGENT_BUILDER_URL
+    );
 
     const isSecure = request.url.startsWith('https://');
     const cookieName = isSecure ? '__Secure-authjs.session-token' : 'authjs.session-token';
@@ -36,5 +48,5 @@ export async function GET(request: Request) {
         secure: isSecure,
     });
 
-    return NextResponse.redirect(new URL(redirectUrl, request.url));
+    return NextResponse.redirect(safeRedirect);
 }
