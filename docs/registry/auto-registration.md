@@ -54,6 +54,8 @@ Expected JSON body (contract aligns with Sprint S3 / PRD v2.3):
 |-------|------|----------|-------------|
 | `manifest_url` | string (URL) | Yes | HTTPS URL to the agent’s signed manifest or discovery document |
 
+When the manifest includes optional `capabilities.hardware` and `capabilities.inference` (v2.4+), the bot derives `hardware_class`, `inference_modes`, and `hardware_io` on the `RegistryEntry` from that URL. You do **not** send duplicate hardware fields in the registration JSON body. See [Transport — hardware and inference](../transport.md#hardware-and-inference-capabilities-v24).
+
 Example:
 
 ```json

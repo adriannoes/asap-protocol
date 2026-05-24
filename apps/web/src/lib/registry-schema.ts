@@ -26,6 +26,9 @@ export const RegistryAgentSchema = z.object({
     built_with: z.string().optional().nullable(),
     category: z.string().optional().nullable(),
     tags: z.array(z.string()).default([]),
+    hardware_class: z.string().optional().nullable(),
+    inference_modes: z.array(z.string()).default([]),
+    hardware_io: z.array(z.string()).default([]),
     verification: VerificationStatusSchema,
     online_check: z.boolean().optional().nullable(),
 }).strip();

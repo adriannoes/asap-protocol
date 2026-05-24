@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { formatRegistryEnumLabel } from '@/lib/hardware-labels';
 import { AgentCard } from '@/components/agents/agent-card';
 import { Input } from '@/components/ui/input';
 
@@ -37,6 +38,9 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
     const [selectedCategory, setSelectedCategory] = useState<string>('');
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+    const [selectedHardwareClass, setSelectedHardwareClass] = useState<string>('');
+    const [selectedInferenceMode, setSelectedInferenceMode] = useState<string>('');
+    const [selectedHardwareIo, setSelectedHardwareIo] = useState<string[]>([]);
     const [requireSla, setRequireSla] = useState(false);
     const [requireAuth, setRequireAuth] = useState(false);
 
@@ -73,6 +77,38 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
         return Array.from(skillsSet).sort();
     }, [initialAgents]);
 
+    const availableHardwareClasses = useMemo(() => {
+        const classesSet = new Set<string>();
+        initialAgents.forEach((agent) => {
+            if (agent.hardware_class) classesSet.add(agent.hardware_class);
+        });
+        return Array.from(classesSet).sort();
+    }, [initialAgents]);
+
+    const availableInferenceModes = useMemo(() => {
+        const modesSet = new Set<string>();
+        initialAgents.forEach((agent) => {
+            if (Array.isArray(agent.inference_modes)) {
+                agent.inference_modes.forEach((mode) => {
+                    if (mode) modesSet.add(mode);
+                });
+            }
+        });
+        return Array.from(modesSet).sort();
+    }, [initialAgents]);
+
+    const availableHardwareIo = useMemo(() => {
+        const ioSet = new Set<string>();
+        initialAgents.forEach((agent) => {
+            if (Array.isArray(agent.hardware_io)) {
+                agent.hardware_io.forEach((io) => {
+                    if (io) ioSet.add(io);
+                });
+            }
+        });
+        return Array.from(ioSet).sort();
+    }, [initialAgents]);
+
     const toggleSkill = (skill: string) => {
         setSelectedSkills((prev) =>
             prev.includes(skill)
@@ -86,6 +122,12 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
             prev.includes(tag)
                 ? prev.filter((t) => t !== tag)
                 : [...prev, tag]
+        );
+    };
+
+    const toggleHardwareIo = (io: string) => {
+        setSelectedHardwareIo((prev) =>
+            prev.includes(io) ? prev.filter((item) => item !== io) : [...prev, io]
         );
     };
 
@@ -131,8 +173,37 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
             });
         }
 
+        if (selectedHardwareClass) {
+            result = result.filter((agent) => agent.hardware_class === selectedHardwareClass);
+        }
+
+        if (selectedInferenceMode) {
+            result = result.filter((agent) => {
+                const modes = Array.isArray(agent.inference_modes) ? agent.inference_modes : [];
+                return modes.includes(selectedInferenceMode);
+            });
+        }
+
+        if (selectedHardwareIo.length > 0) {
+            result = result.filter((agent) => {
+                const agentIo = Array.isArray(agent.hardware_io) ? agent.hardware_io : [];
+                return selectedHardwareIo.every((io) => agentIo.includes(io));
+            });
+        }
+
         return result;
-    }, [initialAgents, searchQuery, selectedSkills, selectedCategory, selectedTags, requireSla, requireAuth]);
+    }, [
+        initialAgents,
+        searchQuery,
+        selectedSkills,
+        selectedCategory,
+        selectedTags,
+        selectedHardwareClass,
+        selectedInferenceMode,
+        selectedHardwareIo,
+        requireSla,
+        requireAuth,
+    ]);
 
     return (
         <div className="flex flex-col md:flex-row gap-6">
@@ -160,6 +231,86 @@ export function BrowseContent({ initialAgents }: BrowseContentProps) {
                                 </SelectContent>
                             </Select>
                         </div>
+
+                        {(availableHardwareClasses.length > 0 || availableInferenceModes.length > 0 || availableHardwareIo.length > 0) && (
+                            <div className="pt-4 border-t space-y-4">
+                                <h3 className="text-sm font-medium">Edge & Hardware</h3>
+
+                                {availableHardwareClasses.length > 0 && (
+                                    <div>
+                                        <p className="text-xs text-muted-foreground mb-2">Hardware class</p>
+                                        <Select
+                                            value={selectedHardwareClass || '__all__'}
+                                            onValueChange={(v) =>
+                                                setSelectedHardwareClass(v === '__all__' ? '' : v)
+                                            }
+                                        >
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="All hardware classes" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="__all__">All hardware classes</SelectItem>
+                                                {availableHardwareClasses.map((hwClass) => (
+                                                    <SelectItem key={hwClass} value={hwClass}>
+                                                        {formatRegistryEnumLabel(hwClass)}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
+
+                                {availableInferenceModes.length > 0 && (
+                                    <div>
+                                        <p className="text-xs text-muted-foreground mb-2">Inference mode</p>
+                                        <Select
+                                            value={selectedInferenceMode || '__all__'}
+                                            onValueChange={(v) =>
+                                                setSelectedInferenceMode(v === '__all__' ? '' : v)
+                                            }
+                                        >
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Any inference mode" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="__all__">Any inference mode</SelectItem>
+                                                {availableInferenceModes.map((mode) => (
+                                                    <SelectItem key={mode} value={mode}>
+                                                        {formatRegistryEnumLabel(mode)}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
+
+                                {availableHardwareIo.length > 0 && (
+                                    <div>
+                                        <p className="text-xs text-muted-foreground mb-2">I/O interfaces</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {availableHardwareIo.map((io) => {
+                                                const isSelected = selectedHardwareIo.includes(io);
+                                                return (
+                                                    <Badge
+                                                        key={io}
+                                                        variant={isSelected ? 'default' : 'outline'}
+                                                        className={cn(
+                                                            'cursor-pointer transition-colors',
+                                                            isSelected
+                                                                ? 'hover:bg-primary/80'
+                                                                : 'hover:bg-muted'
+                                                        )}
+                                                        onClick={() => toggleHardwareIo(io)}
+                                                    >
+                                                        {formatRegistryEnumLabel(io)}
+                                                    </Badge>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         <div className="pt-4 border-t">
                             <h3 className="text-sm font-medium mb-3">Tags</h3>

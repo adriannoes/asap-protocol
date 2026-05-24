@@ -75,6 +75,100 @@ manifest = Manifest(
 )`}</code>
                             </pre>
                         </div>
+
+                        <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6 space-y-4">
+                            <h3 className="text-lg font-semibold text-white">Edge hardware &amp; inference (optional, v2.4+)</h3>
+                            <p className="text-zinc-400 text-sm leading-relaxed">
+                                Edge and physical agents may advertise structured hosting and inference under{' '}
+                                <code className="text-indigo-400 bg-indigo-500/10 px-1 rounded font-mono text-xs">
+                                    capabilities.hardware
+                                </code>{' '}
+                                and{' '}
+                                <code className="text-indigo-400 bg-indigo-500/10 px-1 rounded font-mono text-xs">
+                                    capabilities.inference
+                                </code>
+                                . All sub-fields are optional; omit the objects entirely if not applicable. The Lite
+                                Registry mirrors these into{' '}
+                                <code className="text-indigo-400 bg-indigo-500/10 px-1 rounded font-mono text-xs">
+                                    hardware_class
+                                </code>
+                                ,{' '}
+                                <code className="text-indigo-400 bg-indigo-500/10 px-1 rounded font-mono text-xs">
+                                    inference_modes
+                                </code>
+                                , and{' '}
+                                <code className="text-indigo-400 bg-indigo-500/10 px-1 rounded font-mono text-xs">
+                                    hardware_io
+                                </code>{' '}
+                                when you register — you do not duplicate them in the IssueOps form when a manifest URL is
+                                provided.
+                            </p>
+                            <p className="text-zinc-500 text-xs leading-relaxed">
+                                Canonical JSON Schema:{' '}
+                                <a
+                                    href="https://github.com/adriannoes/asap-protocol/blob/main/schemas/entities/manifest.schema.json"
+                                    className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    manifest.schema.json
+                                </a>
+                                . Example snippet:{' '}
+                                <a
+                                    href="https://github.com/adriannoes/asap-protocol/blob/main/schemas/examples/shellclaw-jetson-capabilities.json"
+                                    className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    shellclaw-jetson-capabilities.json
+                                </a>
+                                . Closed enums and migration from free-form{' '}
+                                <code className="text-indigo-400 bg-indigo-500/10 px-1 rounded font-mono text-xs">
+                                    tags
+                                </code>{' '}
+                                (e.g. <code className="font-mono text-zinc-400">cuda</code>,{' '}
+                                <code className="font-mono text-zinc-400">jetson</code>):{' '}
+                                <a
+                                    href="https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md#hardware-and-inference-capabilities-v24"
+                                    className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    Transport docs — hardware &amp; inference
+                                </a>
+                                .
+                            </p>
+                            <p className="text-zinc-500 text-xs leading-relaxed">
+                                Registry <code className="font-mono text-zinc-400">tags</code> remain a valid supplement
+                                for human-readable discovery (frameworks, themes, trust labels added by CI). Prefer
+                                structured fields for machine filtering (marketplace sidebar,{' '}
+                                <code className="font-mono text-zinc-400">find_by_hardware_class</code>, etc.).
+                            </p>
+                            <div className="rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950">
+                                <pre className="p-4 text-xs font-mono text-zinc-300 overflow-x-auto leading-relaxed">
+                                    <code>{`capabilities=Capability(
+    asap_version="2.1.0",
+    skills=[Skill(id="gpio_control", description="GPIO pin control")],
+    state_persistence=True,
+    streaming=True,
+    hardware=HardwareCapability(
+        class_="edge_accelerator",
+        model="jetson_orin_nano_super_8gb",
+        io=["gpio", "i2c"],
+    ),
+    inference=InferenceCapability(
+        modes=["cloud", "local_cuda"],
+        local_models=[
+            LocalModelInfo(
+                id="Phi-3-mini-4k-instruct-Q4_K_M",
+                quantization="Q4_K_M",
+            ),
+        ],
+    ),
+)`}</code>
+                                </pre>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="space-y-6">

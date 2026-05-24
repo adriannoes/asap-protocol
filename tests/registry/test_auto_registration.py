@@ -14,7 +14,15 @@ from starlette.testclient import TestClient
 from asap.auth.middleware import OAuth2Claims
 from asap.discovery.registry import RegistryEntry
 from asap.errors import WebhookURLValidationError
-from asap.models.entities import Capability, Endpoint, Manifest, Skill
+from asap.models.entities import (
+    Capability,
+    Endpoint,
+    HardwareCapability,
+    InferenceCapability,
+    Manifest,
+    Skill,
+)
+from asap.models.enums import HardwareClass, HardwareIoType, InferenceMode
 from asap.registry.auto_registration import (
     AutoRegistrationConfig,
     create_auto_registration_router,
@@ -135,6 +143,67 @@ def test_register_agent_success_returns_receipt(
     assert entry.verification is not None
     assert entry.verification.status.value == "pending"
     assert "self-signed" in entry.tags
+
+
+def test_register_agent_derives_hardware_fields_in_pr_entry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Auto-registration PR entry mirrors manifest hardware/inference (S1 Task 1.2)."""
+    jetson_manifest = Manifest(
+        id="urn:asap:agent:ci:jetson",
+        name="Jetson Auto Reg",
+        version="1.0.0",
+        description="Edge fixture",
+        capabilities=Capability(
+            asap_version="2.1.0",
+            skills=[Skill(id="gpio_control", description="GPIO")],
+            hardware=HardwareCapability(
+                class_=HardwareClass.EDGE_ACCELERATOR,
+                io=[HardwareIoType.GPIO, HardwareIoType.I2C],
+            ),
+            inference=InferenceCapability(
+                modes=[InferenceMode.CLOUD, InferenceMode.LOCAL_CUDA],
+            ),
+        ),
+        endpoints=Endpoint(asap="https://example.com/asap"),
+    )
+    pr_calls: list[tuple[RegistryEntry, str]] = []
+
+    async def _fake_fetch(_client: object, _url: str) -> Manifest:
+        return jetson_manifest
+
+    async def _fake_pr(entry: RegistryEntry, url: str) -> BotPRResult:
+        pr_calls.append((entry, url))
+        return BotPRResult(pr_url="https://github.com/o/r/pull/2", branch_name="auto-reg/y")
+
+    monkeypatch.setattr(
+        "asap.registry.auto_registration.fetch_manifest_at_url",
+        _fake_fetch,
+    )
+    cfg = AutoRegistrationConfig(
+        oauth_claims_dependency=_oauth_bypass,
+        run_compliance=lambda _base: _passing_report(),
+        open_pull_request=_fake_pr,
+    )
+    app = FastAPI()
+    app.state.registration_limiter = create_test_limiter(
+        ["100000/hour"],
+        key_func=registration_token_key,
+    )
+    app.state.registration_receipt_cache = {}
+    app.include_router(create_auto_registration_router(cfg))
+    client = TestClient(app)
+    resp = client.post(
+        "/registry/agents",
+        json={"manifest_url": "https://example.com/.well-known/asap/manifest.json"},
+        headers={"Authorization": "Bearer test-token-jetson"},
+    )
+    assert resp.status_code == 200
+    assert len(pr_calls) == 1
+    entry, _ = pr_calls[0]
+    assert entry.hardware_class == "edge_accelerator"
+    assert entry.inference_modes == ["cloud", "local_cuda"]
+    assert entry.hardware_io == ["gpio", "i2c"]
 
 
 async def _noop_pr(_entry: RegistryEntry, _url: str) -> BotPRResult:

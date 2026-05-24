@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { BrowseContent } from '../browse-content';
-import { Manifest } from '@/types/protocol';
+import type { RegistryAgent } from '@/types/registry';
 
 const mockSearchParams = new URLSearchParams();
 vi.mock('next/navigation', () => ({
@@ -11,7 +11,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock test data
-const mockAgents: Manifest[] = [
+const mockAgents: RegistryAgent[] = [
     {
         id: 'urn:asap:agent:user1:search-bot',
         name: 'Search Bot',
@@ -46,7 +46,21 @@ const mockAgents: Manifest[] = [
                 { id: 'analysis', description: 'Code analysis' }
             ]
         }
-    }
+    },
+    {
+        id: 'urn:asap:agent:edge:jetson-demo',
+        name: 'Jetson Edge Demo',
+        description: 'Edge accelerator with GPIO',
+        version: 1,
+        endpoints: { asap: 'https://api.example.com/edge' },
+        hardware_class: 'edge_accelerator',
+        inference_modes: ['cloud', 'local_cuda'],
+        hardware_io: ['gpio', 'i2c'],
+        capabilities: {
+            asap_version: '2.1',
+            skills: [{ id: 'gpio_control', description: 'GPIO control' }],
+        },
+    },
 ];
 
 describe('BrowseContent', () => {
@@ -99,6 +113,28 @@ describe('BrowseContent', () => {
 
         expect(screen.queryByText('Search Bot')).not.toBeInTheDocument();
         expect(screen.getByText('Secure Writer')).toBeInTheDocument();
+    });
+
+    it('shows Edge & Hardware filters when registry entries include hardware fields', () => {
+        render(<BrowseContent initialAgents={mockAgents} />);
+
+        expect(screen.getByText('Edge & Hardware')).toBeInTheDocument();
+        expect(screen.getByText('Hardware class')).toBeInTheDocument();
+        expect(screen.getByText('Inference mode')).toBeInTheDocument();
+        expect(screen.getByText('I/O interfaces')).toBeInTheDocument();
+    });
+
+    it('filters agents by I/O multi-select', () => {
+        render(<BrowseContent initialAgents={mockAgents} />);
+
+        fireEvent.click(screen.getByText('Gpio'));
+
+        expect(screen.getByText('Jetson Edge Demo')).toBeInTheDocument();
+        expect(screen.queryByText('Search Bot')).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByText('I2c'));
+
+        expect(screen.getByText('Jetson Edge Demo')).toBeInTheDocument();
     });
 
     it('shows "No results" when search yields no matches', async () => {

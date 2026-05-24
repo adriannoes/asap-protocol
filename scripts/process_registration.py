@@ -28,7 +28,10 @@ if str(_REPO_ROOT / "src") not in sys.path:
 if str(_REPO_ROOT / "scripts") not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT / "scripts"))
 
-from asap.discovery.registry import generate_registry_entry  # noqa: E402
+from asap.discovery.registry import (  # noqa: E402
+    derive_registry_hardware_fields,
+    generate_registry_entry,
+)
 from asap.models.entities import Manifest  # noqa: E402
 from lib.debug_id import generate_debug_id  # noqa: E402
 from lib.registry_io import (  # noqa: E402
@@ -218,7 +221,7 @@ def run(
             built_with=built_with,
             category=category,
             tags=tags,
-        )
+        ).model_copy(update=derive_registry_hardware_fields(manifest))
     except ValidationError as e:
         error_count = e.error_count()
         errors.append(

@@ -56,6 +56,7 @@ Notify `adriannoes/shellclaw` when:
 
 - **S0 complete** — §5 answers published in `docs/guides/shellclaw-registry.md` (or release notes); Wave 6.2 can open IssueOps PR.
 - **S1 merged** — Wave 6.2 may use structured fields instead of `tags` (see literals in S1 Task 1.7).
+- **S1 release (v2.4.0)** — Handoff: [shellclaw-s1-structured-fields-handoff.md](./shellclaw-s1-structured-fields-handoff.md) (Wave 6.2 branch B per Q-ASAP).
 
 ---
 
@@ -70,7 +71,7 @@ Notify `adriannoes/shellclaw` when:
 
 ## Definition of Done (release)
 
-- [ ] S0 acceptance checklist green; ShellClaw registry entry in §4 of context doc validates via `validate_registry.py`
-- [ ] S1 acceptance checklist green; example Jetson + RPi entries in docs
-- [ ] `pyproject.toml` minor version bump; CHANGELOG entry
-- [ ] Pre-push CI suite per `.cursor/rules/git-commits.mdc`
+- [x] S0 acceptance checklist green; ShellClaw registry entry validates via `validate_registry.py` on `tests/fixtures/registry/shellclaw-v1.0-agents-array.json` (S0 DoD + `pytest -k shellclaw`, 2026-05-24)
+- [x] S1 acceptance checklist green; Jetson + RPi in `docs/examples/registry-shellclaw.md` and `tests/fixtures/manifests/shellclaw-jetson-v1.0.json` / `shellclaw-rpi-v1.1.json` (PR [#177](https://github.com/adriannoes/asap-protocol/pull/177) → `shellclaw-integration`)
+- [x] `pyproject.toml` minor version bump **2.4.0**; CHANGELOG `[2.4.0]`; `@asap-protocol/client@2.4.0` (community feedback [#176](https://github.com/adriannoes/asap-protocol/issues/176))
+- [x] Pre-push CI suite per `.cursor/rules/git-commits.mdc` — ruff, mypy, pytest (3439), apps/web lint/tsc/vitest/build, TS client tests (2026-05-24; see S1 DoD)
