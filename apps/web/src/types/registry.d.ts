@@ -17,6 +17,12 @@ export type RegistryAgent = Manifest & {
     category?: string | null;
     /** Tags for better discovery. From Lite Registry. */
     tags?: string[];
+    /** Hardware class mirrored from manifest capabilities (v2.4+). */
+    hardware_class?: string | null;
+    /** Inference modes mirrored from manifest capabilities (v2.4+). */
+    inference_modes?: string[];
+    /** Physical I/O types mirrored from manifest capabilities (v2.4+). */
+    hardware_io?: string[];
     /** If false, UI skips reachability check (e.g. seeded/demo agents). */
     online_check?: boolean | null;
 };

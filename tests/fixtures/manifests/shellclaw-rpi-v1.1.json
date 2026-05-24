@@ -1,0 +1,35 @@
+{
+  "id": "urn:asap:agent:shellclaw-rpi-v1-1",
+  "name": "ShellClaw RPi",
+  "version": "1.1.0",
+  "description": "ShellClaw on Raspberry Pi Zero 2 W (cloud + local CPU inference).",
+  "capabilities": {
+    "asap_version": "2.1.0",
+    "skills": [
+      {
+        "id": "assistant",
+        "description": "General assistant on edge hardware"
+      }
+    ],
+    "state_persistence": true,
+    "streaming": true,
+    "mcp_tools": [],
+    "hardware": {
+      "class": "sbc",
+      "model": "raspberry_pi_zero_2w",
+      "io": ["gpio", "i2c"]
+    },
+    "inference": {
+      "modes": ["cloud", "local_cpu"],
+      "local_models": [
+        {
+          "id": "tinyllama-1.1b-chat-Q4_K_M",
+          "quantization": "Q4_K_M"
+        }
+      ]
+    }
+  },
+  "endpoints": {
+    "asap": "https://shellclaw-rpi.example.com/asap"
+  }
+}

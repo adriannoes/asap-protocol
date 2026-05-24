@@ -582,6 +582,47 @@ async def send_with_retry(envelope):
 | `state_persistence` | boolean | Yes | Supports snapshots |
 | `streaming` | boolean | Yes | Supports streaming |
 | `mcp_tools` | string[] | Yes | Available MCP tools |
+| `hardware` | HardwareCapability | No | Optional hosting profile (edge / physical agents, v2.4+) |
+| `inference` | InferenceCapability | No | Optional inference modes and local models (v2.4+) |
+
+### Hardware and inference capabilities (v2.4+)
+
+Optional structured advertising for edge-AI and physical agents. Source of truth: [`schemas/entities/manifest.schema.json`](../schemas/entities/manifest.schema.json) (`HardwareCapability`, `InferenceCapability`, `LocalModelInfo`). Example: [`schemas/examples/shellclaw-jetson-capabilities.json`](../schemas/examples/shellclaw-jetson-capabilities.json).
+
+When an agent registers in the Lite Registry, `hardware_class`, `inference_modes`, and `hardware_io` on `RegistryEntry` are **derived** from the signed manifest (IssueOps and [auto-registration](registry/auto-registration.md)); registrants should not duplicate these in the GitHub issue body.
+
+#### Closed enums
+
+| Field | Allowed values |
+|-------|----------------|
+| `capabilities.hardware.class` | `cloud`, `sbc`, `edge_accelerator`, `microcontroller`, `desktop` |
+| `capabilities.hardware.io[]` | `gpio`, `i2c`, `spi`, `uart`, `csi_camera`, `usb_camera`, `audio_in`, `audio_out`, `bluetooth`, `lora`, `ble` |
+| `capabilities.inference.modes[]` | `cloud`, `local_cpu`, `local_cuda`, `local_metal`, `local_npu` |
+
+`capabilities.hardware.model` is a free-form string (max 100 characters), e.g. `jetson_orin_nano_super_8gb`. `capabilities.inference.local_models[]` entries use `id`, optional `quantization`, and optional self-reported `throughput_tokens_per_second`.
+
+#### Registry mirror
+
+| Manifest source | `RegistryEntry` field |
+|-----------------|----------------------|
+| `capabilities.hardware.class` | `hardware_class` |
+| `capabilities.inference.modes` | `inference_modes` |
+| `capabilities.hardware.io` | `hardware_io` |
+
+Python helpers: `derive_registry_hardware_fields(manifest)`, `find_by_hardware_class`, `find_by_inference_mode`, `find_by_io` in `asap.discovery.registry`.
+
+#### Migration from free-form `tags`
+
+Before v2.4, edge agents often used registry `tags` such as `cuda`, `jetson`, `edge-ai`, or `local-inference`. Those remain valid **supplements** for browse search and human-readable themes; they are not removed by adding structured fields.
+
+| Legacy tag (examples) | Structured replacement |
+|-------------------------|-------------------------|
+| `jetson`, `edge-ai`, `hardware` | `hardware.class`: `edge_accelerator`, `hardware.model`: board id |
+| `cuda`, `local-inference` | `inference.modes`: includes `local_cuda` (and `cloud` when fallback exists) |
+| `raspberry`, `rpi` | `hardware.class`: `sbc`, `hardware.model`: e.g. `raspberry_pi_zero_2w` |
+| `gpio`, `i2c` (when meaning physical I/O) | `hardware.io`: `["gpio", "i2c"]` |
+
+Keep non-capability tags (e.g. `assistant`, product names) in `tags`. Do not put trust labels like `self-signed` in `tags` — CI adds those per [ShellClaw registry guide](guides/shellclaw-registry.md).
 
 ### Skill Object
 

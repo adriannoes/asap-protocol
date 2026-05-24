@@ -46,6 +46,12 @@ export interface RegistryEntry {
   readonly built_with?: string | null;
   readonly verification?: { readonly status: string; readonly verified_at?: string | null } | null;
   readonly online_check?: boolean | null;
+  /** Derived from manifest `capabilities.hardware.class` (v2.4+). */
+  readonly hardware_class?: string | null;
+  /** Derived from manifest `capabilities.inference.modes` (v2.4+). */
+  readonly inference_modes: string[];
+  /** Derived from manifest `capabilities.hardware.io` (v2.4+). */
+  readonly hardware_io: string[];
 }
 
 export interface LiteRegistry {
@@ -82,6 +88,21 @@ export interface AsapManifest {
   readonly sla?: unknown;
   readonly verification?: unknown;
   readonly ttl_seconds?: number;
+}
+
+function parseStringListField(raw: unknown, field: string, index: number): string[] {
+  if (raw === undefined) {
+    return [];
+  }
+  if (!Array.isArray(raw)) {
+    throw new Error(`registry.agents[${index}]: ${field} must be an array`);
+  }
+  return raw.map((item, j) => {
+    if (typeof item !== "string") {
+      throw new Error(`registry.agents[${index}]: ${field}[${j}] must be a string`);
+    }
+    return item;
+  });
 }
 
 function parseRegistryEntry(raw: unknown, index: number): RegistryEntry {
@@ -140,6 +161,10 @@ function parseRegistryEntry(raw: unknown, index: number): RegistryEntry {
     built_with: typeof raw.built_with === "string" || raw.built_with === null ? raw.built_with : undefined,
     verification: raw.verification as RegistryEntry["verification"],
     online_check: typeof raw.online_check === "boolean" || raw.online_check === null ? raw.online_check : undefined,
+    hardware_class:
+      typeof raw.hardware_class === "string" || raw.hardware_class === null ? raw.hardware_class : undefined,
+    inference_modes: parseStringListField(raw.inference_modes, "inference_modes", index),
+    hardware_io: parseStringListField(raw.hardware_io, "hardware_io", index),
   };
 }
 

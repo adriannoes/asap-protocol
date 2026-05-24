@@ -26,6 +26,8 @@ const sampleRegistry: LiteRegistry = {
       category: "Coding",
       tags: ["review"],
       asap_version: "2.0.0",
+      inference_modes: [],
+      hardware_io: [],
     },
     {
       id: "urn:asap:agent:b",
@@ -35,6 +37,8 @@ const sampleRegistry: LiteRegistry = {
       skills: ["summarize"],
       tags: [],
       asap_version: "2.0.0",
+      inference_modes: [],
+      hardware_io: [],
     },
   ],
 };
@@ -57,6 +61,72 @@ const sampleManifest = {
 };
 
 describe("discovery (TS-002)", () => {
+  it("listProviders parses optional hardware_class, inference_modes, hardware_io", async () => {
+    const registryWithHardware: LiteRegistry = {
+      version: "1.0",
+      updated_at: "2026-01-01T00:00:00Z",
+      agents: [
+        {
+          id: "urn:asap:agent:shellclaw",
+          name: "ShellClaw",
+          description: "Edge agent",
+          endpoints: { http: "https://shellclaw.example/asap" },
+          skills: ["gpio_control"],
+          tags: [],
+          asap_version: "2.1.0",
+          hardware_class: "edge_accelerator",
+          inference_modes: ["cloud", "local_cuda"],
+          hardware_io: ["gpio", "i2c"],
+        },
+      ],
+    };
+    const fetchMock = vi.fn(async () => {
+      return new Response(JSON.stringify(registryWithHardware), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    const reg = await listProviders("https://registry.example/registry.json", { fetch: fetchMock });
+    const agent = reg.agents[0]!;
+    expect(agent.hardware_class).toBe("edge_accelerator");
+    expect(agent.inference_modes).toEqual(["cloud", "local_cuda"]);
+    expect(agent.hardware_io).toEqual(["gpio", "i2c"]);
+  });
+
+  it("listProviders defaults inference_modes and hardware_io to empty arrays", async () => {
+    const fetchMock = vi.fn(async () => {
+      return new Response(JSON.stringify(sampleRegistry), { status: 200 });
+    });
+    const reg = await listProviders("https://registry.example/registry.json", { fetch: fetchMock });
+    for (const agent of reg.agents) {
+      expect(agent.inference_modes).toEqual([]);
+      expect(agent.hardware_io).toEqual([]);
+      expect(agent.hardware_class).toBeUndefined();
+    }
+  });
+
+  it("listProviders rejects invalid inference_modes shape", async () => {
+    const bad = {
+      version: "1",
+      updated_at: "2026-01-01T00:00:00Z",
+      agents: [
+        {
+          id: "urn:asap:agent:x",
+          name: "X",
+          description: "Y",
+          endpoints: { http: "https://x.example/asap" },
+          skills: [],
+          asap_version: "2.0.0",
+          inference_modes: "cloud",
+        },
+      ],
+    };
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(bad), { status: 200 }));
+    await expect(listProviders("https://registry.example/registry.json", { fetch: fetchMock })).rejects.toThrow(
+      /inference_modes must be an array/u,
+    );
+  });
+
   it("listProviders parses registry JSON from fetch", async () => {
     const fetchMock = vi.fn(async () => {
       return new Response(JSON.stringify(sampleRegistry), { status: 200, headers: { "Content-Type": "application/json" } });

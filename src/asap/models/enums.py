@@ -77,3 +77,39 @@ class VerificationState(str, Enum):
     VERIFIED = "verified"
     PENDING = "pending"
     REJECTED = "rejected"
+
+
+class HardwareClass(str, Enum):
+    """Hardware class for edge and physical agents (manifest v2.4+)."""
+
+    CLOUD = "cloud"
+    SBC = "sbc"
+    EDGE_ACCELERATOR = "edge_accelerator"
+    MICROCONTROLLER = "microcontroller"
+    DESKTOP = "desktop"
+
+
+class HardwareIoType(str, Enum):
+    """Physical I/O interfaces advertised on a manifest (v2.4+)."""
+
+    GPIO = "gpio"
+    I2C = "i2c"
+    SPI = "spi"
+    UART = "uart"
+    CSI_CAMERA = "csi_camera"
+    USB_CAMERA = "usb_camera"
+    AUDIO_IN = "audio_in"
+    AUDIO_OUT = "audio_out"
+    BLUETOOTH = "bluetooth"
+    LORA = "lora"
+    BLE = "ble"
+
+
+class InferenceMode(str, Enum):
+    """Inference execution modes (manifest v2.4+)."""
+
+    CLOUD = "cloud"
+    LOCAL_CPU = "local_cpu"
+    LOCAL_CUDA = "local_cuda"
+    LOCAL_METAL = "local_metal"
+    LOCAL_NPU = "local_npu"

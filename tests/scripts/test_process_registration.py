@@ -292,6 +292,45 @@ class TestProcessRegistrationRun:
         assert entry.get("category") == "Coding"
         assert entry.get("tags") == ["ai", "code_review"]
 
+    def test_valid_issue_derives_hardware_fields_from_manifest(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Manifest with hardware/inference writes derived registry fields (S1 Task 1.2)."""
+        manifest = dict(VALID_MANIFEST_JSON)
+        manifest["capabilities"] = dict(manifest["capabilities"])
+        manifest["capabilities"]["hardware"] = {
+            "class": "edge_accelerator",
+            "model": "jetson_orin_nano_super_8gb",
+            "io": ["gpio", "i2c"],
+        }
+        manifest["capabilities"]["inference"] = {
+            "modes": ["cloud", "local_cuda"],
+            "local_models": [
+                {"id": "Phi-3-mini-4k-instruct-Q4_K_M", "quantization": "Q4_K_M"},
+            ],
+        }
+        with patch(
+            "scripts.process_registration.httpx.Client",
+            return_value=_mock_httpx_client(manifest),
+        ):
+            registry_path = tmp_path / "registry.json"
+            registry_path.write_text("[]")
+            output_path = tmp_path / "result.json"
+            run(
+                body=VALID_BODY_MINIMAL,
+                issue_number="9",
+                author="testuser",
+                output_path=str(output_path),
+                registry_path=str(registry_path),
+            )
+        result = json.loads(output_path.read_text())
+        assert result["valid"] is True
+        entry = json.loads(registry_path.read_text())[0]
+        assert entry.get("hardware_class") == "edge_accelerator"
+        assert entry.get("inference_modes") == ["cloud", "local_cuda"]
+        assert entry.get("hardware_io") == ["gpio", "i2c"]
+
     def test_invalid_missing_required_fields(self, tmp_path: Path) -> None:
         output_path = tmp_path / "result.json"
         run(

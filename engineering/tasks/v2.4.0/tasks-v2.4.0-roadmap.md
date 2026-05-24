@@ -56,6 +56,7 @@ Notify `adriannoes/shellclaw` when:
 
 - **S0 complete** — §5 answers published in `docs/guides/shellclaw-registry.md` (or release notes); Wave 6.2 can open IssueOps PR.
 - **S1 merged** — Wave 6.2 may use structured fields instead of `tags` (see literals in S1 Task 1.7).
+- **S1 release (v2.4.0)** — Handoff: [shellclaw-s1-structured-fields-handoff.md](./shellclaw-s1-structured-fields-handoff.md) (Wave 6.2 branch B per Q-ASAP).
 
 ---
 

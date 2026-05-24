@@ -1,0 +1,47 @@
+{
+  "id": "urn:asap:agent:shellclaw",
+  "name": "ShellClaw",
+  "version": "1.0.0",
+  "description": "C-native edge-AI ASAP agent on NVIDIA Jetson Orin Nano Super (CUDA, GPIO, I2C).",
+  "capabilities": {
+    "asap_version": "2.1.0",
+    "skills": [
+      {
+        "id": "assistant",
+        "description": "General assistant on edge hardware"
+      },
+      {
+        "id": "edge_briefing",
+        "description": "Local briefing with optional cloud fallback"
+      },
+      {
+        "id": "server_admin",
+        "description": "Host administration tasks"
+      },
+      {
+        "id": "gpio_control",
+        "description": "GPIO pin control"
+      }
+    ],
+    "state_persistence": true,
+    "streaming": true,
+    "mcp_tools": [],
+    "hardware": {
+      "class": "edge_accelerator",
+      "model": "jetson_orin_nano_super_8gb",
+      "io": ["gpio", "i2c"]
+    },
+    "inference": {
+      "modes": ["cloud", "local_cuda"],
+      "local_models": [
+        {
+          "id": "Phi-3-mini-4k-instruct-Q4_K_M",
+          "quantization": "Q4_K_M"
+        }
+      ]
+    }
+  },
+  "endpoints": {
+    "asap": "https://shellclaw.example.com/asap"
+  }
+}
