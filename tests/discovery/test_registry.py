@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import json
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -20,6 +22,9 @@ from asap.discovery.registry import (
 )
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 
+SHELLCLAW_V1_REGISTRY_FIXTURE = (
+    Path(__file__).resolve().parent.parent / "fixtures" / "registry" / "shellclaw-v1.0-entry.json"
+)
 
 VALID_REGISTRY_JSON = """{
   "version": "1.0",
@@ -115,6 +120,20 @@ class TestRegistrySchemaValidation:
         }
         entry = RegistryEntry.model_validate(data)
         assert entry.online_check is False
+
+    def test_shellclaw_v1_fixture_validates(self) -> None:
+        """ShellClaw v1.0 IssueOps registry entry (context doc §4) passes RegistryEntry."""
+        data = json.loads(SHELLCLAW_V1_REGISTRY_FIXTURE.read_text(encoding="utf-8"))
+        entry = RegistryEntry.model_validate(data)
+        assert entry.id == "urn:asap:agent:shellclaw"
+        assert entry.category == "Infrastructure"
+        assert entry.built_with == "Other"
+        assert entry.online_check is False
+        assert entry.verification is None
+        assert entry.endpoints["manifest"] == (
+            "https://adriannoes.github.io/shellclaw/manifest.json"
+        )
+        assert "self-signed" not in entry.tags
 
     def test_registry_entry_with_category_tags(self) -> None:
         """RegistryEntry parses category and tags from dict (Sprint E4)."""
