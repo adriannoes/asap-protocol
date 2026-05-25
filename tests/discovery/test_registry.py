@@ -29,6 +29,7 @@ from asap.models.entities import (
     Endpoint,
     HardwareCapability,
     InferenceCapability,
+    LocalModelInfo,
     Manifest,
     Skill,
 )
@@ -304,6 +305,80 @@ class TestDeriveRegistryHardwareFields:
             "inference_modes": ["cloud", "local_cuda"],
             "hardware_io": ["gpio", "i2c"],
         }
+
+    def test_rpi_manifest_derives_shellclaw_values(self) -> None:
+        """ShellClaw RPi capabilities → sbc, cloud/local_cpu, gpio/i2c."""
+        manifest = Manifest(
+            id="urn:asap:agent:shellclaw-rpi-v1-1",
+            name="ShellClaw RPi",
+            version="1.1.0",
+            description="Edge agent on Raspberry Pi Zero 2 W",
+            capabilities=Capability(
+                asap_version="2.1.0",
+                skills=[Skill(id="assistant", description="Assistant")],
+                hardware=HardwareCapability(
+                    class_=HardwareClass.SBC,
+                    model="raspberry_pi_zero_2w",
+                    io=[HardwareIoType.GPIO, HardwareIoType.I2C],
+                ),
+                inference=InferenceCapability(
+                    modes=[InferenceMode.CLOUD, InferenceMode.LOCAL_CPU],
+                ),
+            ),
+            endpoints=Endpoint(asap="https://shellclaw-rpi.example/asap"),
+        )
+        derived = derive_registry_hardware_fields(manifest)
+        assert derived == {
+            "hardware_class": "sbc",
+            "inference_modes": ["cloud", "local_cpu"],
+            "hardware_io": ["gpio", "i2c"],
+        }
+
+    @pytest.mark.parametrize(
+        ("capabilities", "expected"),
+        [
+            (
+                Capability(
+                    asap_version="2.1.0",
+                    skills=[Skill(id="gpio_control", description="GPIO")],
+                    hardware=HardwareCapability(io=[HardwareIoType.GPIO]),
+                ),
+                {"hardware_io": ["gpio"]},
+            ),
+            (
+                Capability(
+                    asap_version="2.1.0",
+                    skills=[Skill(id="assistant", description="Assistant")],
+                    hardware=HardwareCapability(class_=HardwareClass.SBC),
+                    inference=InferenceCapability(modes=[]),
+                ),
+                {"hardware_class": "sbc"},
+            ),
+            (
+                Capability(
+                    asap_version="2.1.0",
+                    skills=[Skill(id="assistant", description="Assistant")],
+                    inference=InferenceCapability(local_models=[LocalModelInfo(id="tinyllama")]),
+                ),
+                {},
+            ),
+        ],
+    )
+    def test_partial_profiles_derive_only_filterable_fields(
+        self,
+        capabilities: Capability,
+        expected: dict[str, object],
+    ) -> None:
+        """Partial hardware/inference profiles only mirror filterable populated fields."""
+        manifest = Manifest(
+            id="urn:asap:agent:partial-edge",
+            name="Partial Edge",
+            version="1.0.0",
+            description="Partial hardware profile",
+            capabilities=capabilities,
+            endpoints=Endpoint(asap="https://partial.example/asap"),
+        )
+        assert derive_registry_hardware_fields(manifest) == expected
 
     def test_manifest_without_hardware_returns_empty(self) -> None:
         """Manifests without hardware/inference omit derived keys."""
@@ -730,7 +805,12 @@ class TestGenerateRegistryEntry:
             ),
             endpoints=Endpoint(asap="https://edge.example/asap"),
         )
-        entry = generate_registry_entry(manifest, {"http": "https://edge.example/asap"})
+        entry = generate_registry_entry(
+            manifest,
+            {"http": "https://edge.example/asap"},
+            built_with="  Other  ",
+        )
         assert entry.hardware_class == "edge_accelerator"
         assert entry.inference_modes == ["cloud", "local_cuda"]
         assert entry.hardware_io == ["gpio", "i2c"]
+        assert entry.built_with == "Other"
