@@ -244,6 +244,14 @@ def test_api_key_value_accepts_matching_value() -> None:
     assert "tools" in data
 
 
+def test_search_registry_empty_query_returns_all_agents() -> None:
+    """Blank discover query lists every registry entry (Vercel /discover default)."""
+    reg = _lite_registry()
+    hits = _search_registry(reg, "   ")
+    assert len(hits) == 1
+    assert hits[0]["id"] == TEST_URN
+
+
 def test_search_registry_matches_skill_string() -> None:
     reg = LiteRegistry(
         version="1.0",
@@ -341,6 +349,28 @@ def test_parameters_schema_from_manifest_branches() -> None:
     )
     params = _parameters_schema_from_manifest(rich)
     assert params["properties"]["msg"]["type"] == "string"
+
+    invalid_schema = Manifest(
+        id=TEST_URN,
+        name="N",
+        version="1",
+        description="D",
+        capabilities=Capability(
+            asap_version="0.1",
+            skills=[
+                Skill(
+                    id="echo",
+                    description="E",
+                    input_schema={"type": "string"},
+                ),
+            ],
+            state_persistence=False,
+        ),
+        endpoints=Endpoint(asap=TEST_HTTP),
+    )
+    fallback_invalid = _parameters_schema_from_manifest(invalid_schema)
+    assert fallback_invalid["type"] == "object"
+    assert "input" in fallback_invalid["properties"]
 
 
 def test_get_tools_whitelist_appends_resolved_tools() -> None:
