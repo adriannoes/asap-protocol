@@ -458,6 +458,103 @@ class TestProcessRegistrationRun:
         assert result["valid"] is False
         assert "Blocked" in result["errors"] or "private" in result["errors"].lower()
 
+    def _run_with_manifest(
+        self,
+        tmp_path: Path,
+        manifest: dict,
+        *,
+        body: str = VALID_BODY_MINIMAL,
+        author: str = "testuser",
+        issue_number: str = "10",
+    ) -> tuple[dict, Path]:
+        registry_path = tmp_path / "registry.json"
+        registry_path.write_text("[]")
+        output_path = tmp_path / "result.json"
+        with patch(
+            "scripts.process_registration.httpx.Client",
+            return_value=_mock_httpx_client(manifest),
+        ):
+            run(
+                body=body,
+                issue_number=issue_number,
+                author=author,
+                output_path=str(output_path),
+                registry_path=str(registry_path),
+            )
+        return json.loads(output_path.read_text()), registry_path
+
+    def test_invalid_manifest_name_mismatch(self, tmp_path: Path) -> None:
+        """Manifest name must match issue slug."""
+        manifest = dict(VALID_MANIFEST_JSON)
+        manifest["name"] = "wrong-slug"
+        result, registry_path = self._run_with_manifest(tmp_path, manifest)
+        assert result["valid"] is False
+        assert "Manifest name must match" in result["errors"]
+        assert json.loads(registry_path.read_text()) == []
+
+    def test_invalid_undeclared_skill(self, tmp_path: Path) -> None:
+        """Issue skills must be declared in manifest capabilities."""
+        manifest = dict(VALID_MANIFEST_JSON)
+        manifest["capabilities"] = dict(manifest["capabilities"])
+        manifest["capabilities"]["skills"] = [
+            {"id": "web_research", "description": "Research"},
+        ]
+        result, registry_path = self._run_with_manifest(tmp_path, manifest)
+        assert result["valid"] is False
+        assert "summarization" in result["errors"]
+        assert "not declared in manifest" in result["errors"]
+        assert json.loads(registry_path.read_text()) == []
+
+    def test_invalid_http_endpoint_mismatch(self, tmp_path: Path) -> None:
+        """Issue HTTP endpoint must match manifest endpoints.asap."""
+        manifest = dict(VALID_MANIFEST_JSON)
+        manifest["endpoints"] = dict(manifest["endpoints"])
+        manifest["endpoints"]["asap"] = "https://other.example/asap"
+        result, registry_path = self._run_with_manifest(tmp_path, manifest)
+        assert result["valid"] is False
+        assert "HTTP endpoint must match manifest" in result["errors"]
+        assert json.loads(registry_path.read_text()) == []
+
+    def test_invalid_websocket_endpoint_mismatch(self, tmp_path: Path) -> None:
+        """Optional issue WebSocket endpoint must match manifest endpoints.events."""
+        manifest = dict(VALID_MANIFEST_JSON)
+        manifest["id"] = "urn:asap:agent:testuser:other-agent"
+        manifest["name"] = "other-agent"
+        manifest["capabilities"] = dict(manifest["capabilities"])
+        manifest["capabilities"]["skills"] = [{"id": "code_review", "description": "Review"}]
+        manifest["endpoints"] = {
+            "asap": "https://api.example.com/asap",
+            "events": "wss://api.example.com/wrong/events",
+        }
+        result, registry_path = self._run_with_manifest(
+            tmp_path,
+            manifest,
+            body=VALID_BODY_WITH_OPTIONALS,
+        )
+        assert result["valid"] is False
+        assert "WebSocket endpoint must match manifest" in result["errors"]
+        assert json.loads(registry_path.read_text()) == []
+
+    def test_author_case_normalized_for_expected_id(self, tmp_path: Path) -> None:
+        """GitHub author is lowercased when building expected manifest URN."""
+        manifest = dict(VALID_MANIFEST_JSON)
+        manifest["id"] = "urn:asap:agent:testuser:my-agent"
+        result, registry_path = self._run_with_manifest(
+            tmp_path,
+            manifest,
+            author="TestUser",
+        )
+        assert result["valid"] is True
+        assert json.loads(registry_path.read_text())[0]["id"] == "urn:asap:agent:testuser:my-agent"
+
+    def test_invalid_manifest_schema_validation(self, tmp_path: Path) -> None:
+        """Malformed manifest JSON fails closed before registry write."""
+        incomplete_manifest = {"id": "urn:asap:agent:testuser:my-agent"}
+        result, registry_path = self._run_with_manifest(tmp_path, incomplete_manifest)
+        assert result["valid"] is False
+        assert "Manifest failed schema validation" in result["errors"]
+        assert json.loads(registry_path.read_text()) == []
+
 
 class TestLoadRegistry:
     """Tests for load_registry."""
