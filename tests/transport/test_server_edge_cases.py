@@ -20,6 +20,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from asap.errors import InvalidTransitionError, RPC_INVALID_STATE
 from asap.models.entities import AuthScheme, Capability, Endpoint, Manifest, Skill
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest
@@ -327,6 +328,37 @@ class TestAuthFailure(NoRateLimitTestBase):
         data = response.json()
         assert "error" in data
         assert data["error"]["code"] in (INVALID_REQUEST, INVALID_PARAMS)
+
+
+class TestHandlerAsapErrorPreservation(NoRateLimitTestBase):
+    """Handlers raising ASAPError must map to protocol JSON-RPC codes, not -32603."""
+
+    def test_handler_asap_error_preserves_rpc_code(
+        self, sample_manifest: Manifest, disable_rate_limiting: "ASAPRateLimiter"
+    ) -> None:
+        """InvalidTransitionError from dispatch returns RPC_INVALID_STATE (-32000)."""
+        app_instance = create_app(
+            sample_manifest,
+            rate_limit=TEST_RATE_LIMIT_DEFAULT,
+        )
+        app_instance.state.limiter = disable_rate_limiting
+        client = TestClient(app_instance)
+        request_body = _make_valid_jsonrpc_envelope()
+        protocol_error = InvalidTransitionError(from_state="working", to_state="completed")
+
+        with patch(
+            "asap.transport.handlers.HandlerRegistry.dispatch_async",
+            new_callable=AsyncMock,
+            side_effect=protocol_error,
+        ):
+            response = client.post("/asap", json=request_body)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == RPC_INVALID_STATE
+        assert data["error"]["code"] != INTERNAL_ERROR
+        assert data["error"]["data"].get("asap_taxonomy_code") == "asap:protocol/invalid_state"
 
 
 class TestInternalError(NoRateLimitTestBase):
