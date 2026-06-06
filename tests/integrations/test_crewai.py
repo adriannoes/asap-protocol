@@ -225,6 +225,45 @@ async def test_crewai_tool_arun_value_error_returns_error_string() -> None:
     assert "upstream rejected" in out
 
 
+@pytest.mark.asyncio
+async def test_crewai_tool_init_inside_running_loop_defers_resolve() -> None:
+    """Inside a running event loop, __init__ must not asyncio.run(resolve); _arun resolves lazily."""
+    task_response = TaskResponse(
+        task_id="task-1",
+        status="completed",
+        result={"deferred": True},
+        final_state=None,
+        metrics=None,
+    )
+    response_envelope = AsyncMock()
+    response_envelope.payload = task_response
+    mock_send = AsyncMock(return_value=response_envelope)
+    mock_transport = AsyncMock()
+    mock_transport.send = mock_send
+    mock_transport.__aenter__ = AsyncMock(return_value=mock_transport)
+    mock_transport.__aexit__ = AsyncMock(return_value=None)
+
+    p_get, p_verify, p_revoked, p_http = _resolve_patches()
+    with p_get as mock_get, p_verify as mock_verify, p_revoked as mock_revoked, p_http:
+        mock_get.return_value = _lite_registry()
+        mock_verify.return_value = True
+        mock_revoked.return_value = False
+        with patch("asap.client.market.ASAPClient", return_value=mock_transport):
+            client = MarketClient(registry_url="https://reg.example/registry.json")
+            mock_agent = AsyncMock()
+            mock_agent.manifest = _manifest()
+            mock_agent.run = AsyncMock(return_value={"deferred": True})
+            mock_resolve = AsyncMock(return_value=mock_agent)
+            with patch.object(client, "resolve", mock_resolve):
+                tool = CrewAIAsapTool(TEST_URN, client=client)
+                assert tool._resolved is None
+                mock_resolve.assert_not_awaited()
+                out = await tool._arun(input={"q": "async-host"})
+                mock_resolve.assert_awaited_once()
+
+    assert json.loads(out) == {"deferred": True}
+
+
 def test_crewai_tool_run_wraps_non_dict_positional_input() -> None:
     """_run string input is wrapped; result is JSON string for CrewAI."""
     task_response = TaskResponse(
