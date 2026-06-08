@@ -9,9 +9,10 @@ and jwks_fetcher for JWKS mocking.
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, Literal
 
 import httpx
+import pytest
 from fastapi import FastAPI, Request
 from joserfc import jwk, jwt as jose_jwt
 from starlette.testclient import TestClient
@@ -388,74 +389,70 @@ def test_oauth2_middleware_accepts_token_without_iss_aud_when_not_configured() -
     assert response.status_code == 200
 
 
-def test_oauth2_middleware_rejects_wrong_issuer_when_configured() -> None:
-    """When expected_issuer is set, mismatched iss returns 401."""
+_EXPECTED_ISSUER = "https://auth.example.com"
+_EXPECTED_AUDIENCE = "urn:asap:agent:test-server"
+
+
+def _oauth2_app_with_iss_aud_config(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    via_env: bool,
+) -> tuple[FastAPI, jwk.RSAKey]:
+    if via_env:
+        monkeypatch.setenv("ASAP_AUTH_ISSUER", _EXPECTED_ISSUER)
+        monkeypatch.setenv("ASAP_AUTH_AUDIENCE", _EXPECTED_AUDIENCE)
+
     key = jwk.RSAKey.generate_key(2048, private=True)
     key_set = jwk.KeySet.import_key_set({"keys": [key.as_dict(private=False)]})
 
     async def jwks_fetcher(_uri: str) -> jwk.KeySet:
         return key_set
 
-    app = _minimal_app()
-    app.add_middleware(
-        OAuth2Middleware,
-        jwks_uri="https://auth.example.com/jwks.json",
-        path_prefix="/asap",
-        jwks_fetcher=jwks_fetcher,
-        expected_issuer="https://auth.example.com",
-        expected_audience="urn:asap:agent:test-server",
-    )
-
-    now = int(time.time())
-    token = jose_jwt.encode(
-        {"alg": "RS256", "typ": "JWT"},
-        {
-            "sub": "urn:asap:agent:client",
-            "scope": "asap:execute",
-            "exp": now + 3600,
-            "iss": "https://evil.example.com",
-            "aud": "urn:asap:agent:test-server",
-        },
-        key,
-    )
-
-    with TestClient(app) as client:
-        response = client.get("/asap", headers={"Authorization": f"Bearer {token}"})
-
-    assert response.status_code == 401
-    assert response.json() == {"detail": "Invalid authentication token"}
-
-
-def test_oauth2_middleware_rejects_wrong_audience_when_configured() -> None:
-    """When expected_audience is set, mismatched aud returns 401."""
-    key = jwk.RSAKey.generate_key(2048, private=True)
-    key_set = jwk.KeySet.import_key_set({"keys": [key.as_dict(private=False)]})
-
-    async def jwks_fetcher(_uri: str) -> jwk.KeySet:
-        return key_set
+    middleware_kwargs: dict[str, Any] = {
+        "jwks_uri": f"{_EXPECTED_ISSUER}/jwks.json",
+        "path_prefix": "/asap",
+        "jwks_fetcher": jwks_fetcher,
+    }
+    if not via_env:
+        middleware_kwargs["expected_issuer"] = _EXPECTED_ISSUER
+        middleware_kwargs["expected_audience"] = _EXPECTED_AUDIENCE
 
     app = _minimal_app()
-    app.add_middleware(
-        OAuth2Middleware,
-        jwks_uri="https://auth.example.com/jwks.json",
-        path_prefix="/asap",
-        jwks_fetcher=jwks_fetcher,
-        expected_issuer="https://auth.example.com",
-        expected_audience="urn:asap:agent:test-server",
-    )
+    app.add_middleware(OAuth2Middleware, **middleware_kwargs)
+    return app, key
 
+
+@pytest.mark.parametrize(
+    ("via_env", "claim_field"),
+    [
+        (False, "iss"),
+        (False, "aud"),
+        (True, "iss"),
+        (True, "aud"),
+    ],
+    ids=["constructor-wrong-iss", "constructor-wrong-aud", "env-wrong-iss", "env-wrong-aud"],
+)
+def test_oauth2_middleware_rejects_mismatched_iss_or_aud_when_configured(
+    monkeypatch: pytest.MonkeyPatch,
+    via_env: bool,
+    claim_field: Literal["iss", "aud"],
+) -> None:
+    """When iss/aud is configured, mismatched claims return 401."""
+    app, key = _oauth2_app_with_iss_aud_config(monkeypatch, via_env=via_env)
     now = int(time.time())
-    token = jose_jwt.encode(
-        {"alg": "RS256", "typ": "JWT"},
-        {
-            "sub": "urn:asap:agent:client",
-            "scope": "asap:execute",
-            "exp": now + 3600,
-            "iss": "https://auth.example.com",
-            "aud": "wrong-audience",
-        },
-        key,
-    )
+    claims: dict[str, Any] = {
+        "sub": "urn:asap:agent:client",
+        "scope": "asap:execute",
+        "exp": now + 3600,
+        "iss": _EXPECTED_ISSUER,
+        "aud": _EXPECTED_AUDIENCE,
+    }
+    if claim_field == "iss":
+        claims["iss"] = "https://evil.example.com"
+    else:
+        claims["aud"] = "wrong-audience"
+
+    token = jose_jwt.encode({"alg": "RS256", "typ": "JWT"}, claims, key)
 
     with TestClient(app) as client:
         response = client.get("/asap", headers={"Authorization": f"Bearer {token}"})
