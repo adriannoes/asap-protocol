@@ -9,8 +9,10 @@
 name: Telemetry (weekly)
 
 on:
-  schedule:
-    - cron: "0 9 * * 1"
+  # Scheduled runs disabled until TELEMETRY_GITHUB_TOKEN (and optional site vars) are
+  # configured in repo Settings → Secrets and variables → Actions. Re-enable with:
+  #   schedule:
+  #     - cron: "0 9 * * 1"
   workflow_dispatch:
 
 permissions:
