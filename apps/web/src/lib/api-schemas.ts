@@ -1,22 +1,27 @@
 import { z } from 'zod';
 
-export const HealthCheckQuerySchema = z.object({
-    url: z.string().min(1).max(2048),
-});
+const UrlQuerySchema = z
+    .object({
+        url: z.string().min(1).max(2048),
+    })
+    .strict();
 
-export const ProxyCheckQuerySchema = z.object({
-    url: z.string().min(1).max(2048),
-});
+export const HealthCheckQuerySchema = UrlQuerySchema;
+export const ProxyCheckQuerySchema = UrlQuerySchema;
 
-export const FixtureRegistryQuerySchema = z.object({
-    count: z.coerce.number().int().min(1).max(2000).default(500),
-});
+export const FixtureRegistryQuerySchema = z
+    .object({
+        count: z.coerce.number().int().min(1).max(2000).default(500),
+    })
+    .strict();
 
-export const TestLoginQuerySchema = z.object({
-    username: z.string().max(64).optional(),
-    redirect: z.string().max(512).default('/dashboard'),
-    id: z.string().max(128).optional(),
-});
+export const TestLoginQuerySchema = z
+    .object({
+        username: z.string().max(64).optional(),
+        redirect: z.string().max(512).default('/dashboard'),
+        id: z.string().max(128).optional(),
+    })
+    .strict();
 
 export function parseSearchParams<T>(
     schema: z.ZodType<T>,

@@ -229,3 +229,44 @@ def test_server_with_oauth2_rejects_token_with_wrong_issuer() -> None:
         )
 
     assert response.status_code == 401
+
+
+def test_server_with_oauth2_rejects_unmapped_jwt_subject() -> None:
+    """create_app with OAuth2Config returns 403 when JWT subject is not mapped."""
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    key_set = jwk.KeySet.import_key_set({"keys": [key.as_dict(private=False)]})
+
+    async def mock_jwks(_uri: str) -> jwk.KeySet:
+        return key_set
+
+    app = create_app(
+        _minimal_manifest(),
+        registry=create_default_registry(),
+        oauth2_config=OAuth2Config(
+            jwks_uri="https://auth.example.com/jwks.json",
+            path_prefix="/asap",
+            jwks_fetcher=mock_jwks,
+        ),
+        rate_limit="100000/minute",
+    )
+
+    now = int(time.time())
+    token = jose_jwt.encode(
+        {"alg": "RS256", "typ": "JWT"},
+        {
+            "sub": "auth0|unmapped-subject",
+            "scope": "asap:execute",
+            "exp": now + 3600,
+        },
+        key,
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/asap",
+            json=_minimal_asap_request(),
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert response.status_code == 403
+    assert "Identity mismatch" in response.json()["detail"]

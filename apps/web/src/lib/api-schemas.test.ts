@@ -7,6 +7,29 @@ import {
     parseSearchParams,
 } from './api-schemas';
 
+const STRICT_UNKNOWN_FIELD_CASES = [
+    {
+        schema: HealthCheckQuerySchema,
+        valid: { url: 'https://example.com' },
+        extra: { extra: 'x' },
+    },
+    {
+        schema: ProxyCheckQuerySchema,
+        valid: { url: 'https://example.com' },
+        extra: { foo: 'bar' },
+    },
+    {
+        schema: FixtureRegistryQuerySchema,
+        valid: { count: '10' },
+        extra: { unknown: '1' },
+    },
+    {
+        schema: TestLoginQuerySchema,
+        valid: { redirect: '/dashboard' },
+        extra: { evil: '1' },
+    },
+] as const;
+
 describe('api-schemas', () => {
     it('HealthCheckQuerySchema requires url', () => {
         expect(HealthCheckQuerySchema.safeParse({}).success).toBe(false);
@@ -38,5 +61,14 @@ describe('api-schemas', () => {
         if (!result.success) {
             expect(result.error).toBe('Invalid input');
         }
+    });
+
+    it.each(STRICT_UNKNOWN_FIELD_CASES)('rejects unknown query fields', ({ schema, valid, extra }) => {
+        const parsed = schema.safeParse({ ...valid, ...extra });
+        expect(parsed.success).toBe(false);
+        if (parsed.success) {
+            return;
+        }
+        expect(parsed.error.issues[0]?.code).toBe('unrecognized_keys');
     });
 });

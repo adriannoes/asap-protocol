@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **OAuth2 middleware**: Validate JWT `iss` and `aud` when `ASAP_AUTH_ISSUER` / `ASAP_AUTH_AUDIENCE` (or `OAuth2Config.expected_issuer` / `expected_audience`) are set; refactored validation through `validate_jwt()` in `asap.auth.jwks`.
 - **Identity binding**: Fail-closed when `manifest_id` is configured but neither custom claim nor `ASAP_AUTH_SUBJECT_MAP` allowlist matches (403 instead of warn-and-pass).
-- **Web app (`apps/web`)**: Block open redirects on E2E fixture login routes via `resolveRedirectUrl`; harden SSRF on `/api/health-check` (127.0.0.0/8, DNS resolve4/6); Zod validation on API query params; rate-limit unit tests.
+- **Web app (`apps/web`)**: Block open redirects on E2E fixture login routes via `resolveRedirectUrl`; harden SSRF on `/api/health-check` (127.0.0.0/8, DNS resolve4/6); Zod strict validation on public API query params (unknown keys return 400); rate-limit unit tests.
 
 ### Fixed
 

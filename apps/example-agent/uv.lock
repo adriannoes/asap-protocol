@@ -79,7 +79,7 @@ dependencies = [
 requires-dist = [
     { name = "aiosqlite", specifier = ">=0.20" },
     { name = "asgi-lifespan", marker = "extra == 'dev'", specifier = ">=2.1.0" },
-    { name = "authlib", specifier = ">=1.6.11,<2" },
+    { name = "authlib", specifier = ">=1.6.12,<2" },
     { name = "brotli", specifier = ">=1.2.0" },
     { name = "brotli", marker = "extra == 'dev'", specifier = ">=1.1.0" },
     { name = "crewai", marker = "extra == 'crewai'", specifier = ">=0.80" },
@@ -126,7 +126,7 @@ requires-dist = [
     { name = "watchfiles", specifier = ">=0.21.0" },
     { name = "webauthn", marker = "extra == 'webauthn'", specifier = ">=2.6,<3" },
     { name = "websockets", specifier = ">=12.0" },
-    { name = "zeroconf", marker = "extra == 'dns-sd'", specifier = ">=0.80" },
+    { name = "zeroconf", marker = "extra == 'dns-sd'", specifier = ">=0.149.5" },
 ]
 provides-extras = ["dev", "docs", "dns-sd", "redis", "webauthn", "mcp", "langchain", "crewai", "llamaindex", "smolagents", "pydanticai", "openclaw", "openapi", "telemetry"]
 
@@ -137,7 +137,7 @@ dev = [
     { name = "jsonschema", specifier = ">=4.20" },
     { name = "locust", specifier = ">=2.20" },
     { name = "memory-profiler", specifier = ">=0.61" },
-    { name = "pip", specifier = ">=26.0.1" },
+    { name = "pip", specifier = ">=26.1.2" },
     { name = "pytest-asyncio", specifier = ">=0.24" },
     { name = "pytest-cov", specifier = ">=6.0" },
 ]
