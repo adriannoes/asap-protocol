@@ -41,7 +41,7 @@ jobs:
         run: uv run python scripts/telemetry/aggregate.py
 
       - name: Upload snapshot and dashboard
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: telemetry-${{ github.run_id }}
           path: |
