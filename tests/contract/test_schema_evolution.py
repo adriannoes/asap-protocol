@@ -469,6 +469,33 @@ class TestManifestEdgeAiCapabilities:
         }
         assert not is_valid(invalid, schema)
 
+    def test_invalid_hardware_io_rejected(self) -> None:
+        """Unknown hardware.io enum values are rejected."""
+        schema = load_schema("entities/manifest.schema.json")
+        invalid = {
+            **SHELLCLAW_JETSON_MANIFEST_DATA,
+            "capabilities": {
+                **SHELLCLAW_JETSON_MANIFEST_DATA["capabilities"],
+                "hardware": {
+                    "class": "edge_accelerator",
+                    "io": ["spi_fake"],
+                },
+            },
+        }
+        assert not is_valid(invalid, schema)
+
+    def test_invalid_inference_mode_rejected(self) -> None:
+        """Unknown inference.modes enum values are rejected."""
+        schema = load_schema("entities/manifest.schema.json")
+        invalid = {
+            **SHELLCLAW_JETSON_MANIFEST_DATA,
+            "capabilities": {
+                **SHELLCLAW_JETSON_MANIFEST_DATA["capabilities"],
+                "inference": {"modes": ["local_tensorrt"]},
+            },
+        }
+        assert not is_valid(invalid, schema)
+
     def test_extra_hardware_property_rejected(self) -> None:
         """hardware object rejects unknown properties (closed object)."""
         schema = load_schema("entities/manifest.schema.json")
@@ -478,6 +505,21 @@ class TestManifestEdgeAiCapabilities:
                 **SHELLCLAW_JETSON_MANIFEST_DATA["capabilities"],
                 "hardware": {
                     "class": "edge_accelerator",
+                    "unknown_field": True,
+                },
+            },
+        }
+        assert not is_valid(invalid, schema)
+
+    def test_extra_inference_property_rejected(self) -> None:
+        """inference object rejects unknown properties (closed object)."""
+        schema = load_schema("entities/manifest.schema.json")
+        invalid = {
+            **SHELLCLAW_JETSON_MANIFEST_DATA,
+            "capabilities": {
+                **SHELLCLAW_JETSON_MANIFEST_DATA["capabilities"],
+                "inference": {
+                    "modes": ["cloud"],
                     "unknown_field": True,
                 },
             },

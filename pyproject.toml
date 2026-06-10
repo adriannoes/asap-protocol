@@ -95,7 +95,7 @@ smolagents = [
     "smolagents>=1.24.0",
 ]
 pydanticai = [
-    "pydantic-ai>=0.2",
+    "pydantic-ai>=1.99.0",
 ]
 openclaw = [
     "openclaw-sdk>=2.0",

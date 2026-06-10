@@ -292,6 +292,28 @@ class TestCapability:
                 }
             )
 
+    def test_capability_rejects_invalid_hardware_io(self) -> None:
+        """Closed hardware I/O enum rejects unknown values."""
+        with pytest.raises(ValidationError):
+            Capability.model_validate(
+                {
+                    "asap_version": "0.1",
+                    "skills": [],
+                    "hardware": {"io": ["spi_fake"]},
+                }
+            )
+
+    def test_capability_rejects_invalid_inference_mode(self) -> None:
+        """Closed inference mode enum rejects unknown values."""
+        with pytest.raises(ValidationError):
+            Capability.model_validate(
+                {
+                    "asap_version": "0.1",
+                    "skills": [],
+                    "inference": {"modes": ["local_tensorrt"]},
+                }
+            )
+
 
 class TestHardwareCapability:
     """Tests for HardwareCapability nested model."""
@@ -302,6 +324,11 @@ class TestHardwareCapability:
         assert hw.class_ is None
         assert hw.model is None
         assert hw.io == []
+
+    def test_model_length_limited_to_100_characters(self) -> None:
+        """Hardware model names longer than 100 characters are rejected."""
+        with pytest.raises(ValidationError):
+            HardwareCapability.model_validate({"model": "x" * 101})
 
 
 class TestInferenceCapability:
@@ -329,6 +356,17 @@ class TestInferenceCapability:
         inference = InferenceCapability.model_validate({})
         assert inference.modes == []
         assert inference.local_models == []
+
+    def test_local_model_rejects_extra_properties(self) -> None:
+        """LocalModelInfo forbids unknown fields in nested inference metadata."""
+        with pytest.raises(ValidationError):
+            LocalModelInfo.model_validate(
+                {
+                    "id": "model-a",
+                    "quantization": "Q4_K_M",
+                    "unknown": True,
+                }
+            )
 
 
 class TestEndpoint:
