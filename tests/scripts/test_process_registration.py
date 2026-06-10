@@ -555,6 +555,16 @@ class TestProcessRegistrationRun:
         assert "Manifest failed schema validation" in result["errors"]
         assert json.loads(registry_path.read_text()) == []
 
+    def test_invalid_manifest_hardware_io_enum(self, tmp_path: Path) -> None:
+        """Invalid v2.4 hardware.io enum fails before registry write."""
+        manifest = dict(VALID_MANIFEST_JSON)
+        manifest["capabilities"] = dict(manifest["capabilities"])
+        manifest["capabilities"]["hardware"] = {"class": "edge_accelerator", "io": ["wifi"]}
+        result, registry_path = self._run_with_manifest(tmp_path, manifest)
+        assert result["valid"] is False
+        assert "Manifest failed schema validation" in result["errors"]
+        assert json.loads(registry_path.read_text()) == []
+
 
 class TestLoadRegistry:
     """Tests for load_registry."""
