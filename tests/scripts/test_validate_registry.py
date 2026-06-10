@@ -47,3 +47,43 @@ def test_agents_array_rejects_string_hardware_io(tmp_path: Path) -> None:
     errors = validate_registry(registry_path)
 
     assert any("agents[0].hardware_io" in error for error in errors)
+
+
+def test_malformed_root_shape_reports_error(tmp_path: Path) -> None:
+    """Root must be array or LiteRegistry object with agents key."""
+    path = tmp_path / "bad-root.json"
+    path.write_text('{"version": "1.0"}', encoding="utf-8")
+    errors = validate_registry(path)
+    assert len(errors) == 1
+    assert "Root must be either" in errors[0]
+
+
+def test_missing_required_field_in_entry(tmp_path: Path) -> None:
+    """RegistryEntry missing description is reported with agents[i] path."""
+    entry_path = REGISTRY_FIXTURES_DIR / "shellclaw-v1.0-agents-array.json"
+    entry = json.loads(entry_path.read_text(encoding="utf-8"))[0]
+    del entry["description"]
+    path = tmp_path / "bad-entry.json"
+    path.write_text(json.dumps([entry]), encoding="utf-8")
+    errors = validate_registry(path)
+    assert errors
+    assert any("agents[0]" in err and "description" in err for err in errors)
+
+
+def test_agents_list_invalid_urn(tmp_path: Path) -> None:
+    """Malformed agent id in array format reports agents[i].id."""
+    bad = [
+        {
+            "id": "not-a-urn",
+            "name": "Bad",
+            "description": "x",
+            "endpoints": {"http": "https://example.com/asap"},
+            "skills": ["echo"],
+            "asap_version": "2.1.0",
+        }
+    ]
+    path = tmp_path / "bad-id.json"
+    path.write_text(json.dumps(bad), encoding="utf-8")
+    errors = validate_registry(path)
+    assert errors
+    assert any("agents[0]" in err and "id" in err for err in errors)
