@@ -7,7 +7,9 @@ from unittest.mock import AsyncMock, patch
 import httpx
 import pytest
 
-from asap.client.market import MarketClient, ResolvedAgent
+from pydantic import ValidationError
+
+from asap.client.market import AgentSummary, MarketClient, ResolvedAgent
 from asap.discovery.registry import LiteRegistry, RegistryEntry
 from asap.errors import AgentRevokedException, SignatureVerificationError
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
@@ -67,6 +69,55 @@ def _signed_manifest_json() -> str:
     )
     signed = SignedManifest(manifest=_manifest(), signature=sig, public_key=None)
     return signed.model_dump_json()
+
+
+@pytest.mark.asyncio
+async def test_list_agents_maps_registry_entries_to_agent_summary() -> None:
+    entry_a = RegistryEntry(
+        id="urn:asap:agent:a",
+        name="Agent A",
+        description="A",
+        endpoints={"http": "https://a.example/asap"},
+        skills=["skill_a", "skill_b"],
+        asap_version="0.1",
+    )
+    entry_b = RegistryEntry(
+        id="urn:asap:agent:b",
+        name="Agent B",
+        description="B",
+        endpoints={"http": "https://b.example/asap"},
+        skills=[],
+        asap_version="0.1",
+    )
+    from datetime import datetime, timezone
+
+    registry = LiteRegistry(
+        version="1.0",
+        updated_at=datetime.now(timezone.utc),
+        agents=[entry_a, entry_b],
+    )
+    with patch("asap.client.market.get_registry", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = registry
+        client = MarketClient(registry_url="https://reg.example/registry.json")
+        agents = await client.list_agents()
+
+    assert agents == [
+        AgentSummary(urn="urn:asap:agent:a", name="Agent A", skill_ids=["skill_a", "skill_b"]),
+        AgentSummary(urn="urn:asap:agent:b", name="Agent B", skill_ids=[]),
+    ]
+    mock_get.assert_awaited_once_with("https://reg.example/registry.json", ttl_seconds=None)
+
+
+@pytest.mark.asyncio
+async def test_list_agents_passes_registry_cache_ttl() -> None:
+    with patch("asap.client.market.get_registry", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = _lite_registry()
+        client = MarketClient(
+            registry_url="https://reg.example/registry.json",
+            registry_cache_ttl_seconds=120,
+        )
+        await client.list_agents()
+    mock_get.assert_awaited_once_with("https://reg.example/registry.json", ttl_seconds=120)
 
 
 @pytest.mark.asyncio
@@ -146,6 +197,85 @@ async def test_resolve_invalid_signature_raises() -> None:
 
 
 @pytest.mark.asyncio
+async def test_resolve_manifest_http_404_raises() -> None:
+    resp_404 = httpx.Response(
+        404,
+        text="not found",
+        request=httpx.Request("GET", TEST_MANIFEST_URL),
+    )
+    mock_http = AsyncMock()
+    mock_http.get = AsyncMock(return_value=resp_404)
+    mock_http.aclose = AsyncMock()
+    mock_http.__aenter__ = AsyncMock(return_value=mock_http)
+    mock_http.__aexit__ = AsyncMock(return_value=None)
+
+    with (
+        patch("asap.client.market.get_registry", new_callable=AsyncMock) as mock_get,
+        patch("asap.client.market.httpx.AsyncClient", return_value=mock_http),
+    ):
+        mock_get.return_value = _lite_registry()
+        client = MarketClient(registry_url="https://reg.example/registry.json")
+        with pytest.raises(httpx.HTTPStatusError, match="404"):
+            await client.resolve(TEST_URN)
+
+
+@pytest.mark.asyncio
+async def test_resolve_unsigned_manifest_raises_validation_error() -> None:
+    unsigned_json = _manifest().model_dump_json()
+    resp_200 = httpx.Response(
+        200,
+        text=unsigned_json,
+        request=httpx.Request("GET", TEST_MANIFEST_URL),
+    )
+    mock_http = AsyncMock()
+    mock_http.get = AsyncMock(return_value=resp_200)
+    mock_http.aclose = AsyncMock()
+    mock_http.__aenter__ = AsyncMock(return_value=mock_http)
+    mock_http.__aexit__ = AsyncMock(return_value=None)
+
+    with (
+        patch("asap.client.market.get_registry", new_callable=AsyncMock) as mock_get,
+        patch("asap.client.market.httpx.AsyncClient", return_value=mock_http),
+    ):
+        mock_get.return_value = _lite_registry()
+        client = MarketClient(registry_url="https://reg.example/registry.json")
+        with pytest.raises(ValidationError):
+            await client.resolve(TEST_URN)
+
+
+@pytest.mark.asyncio
+async def test_resolve_forwards_revoked_url() -> None:
+    revoked_url = "https://revoked.example/list.json"
+    with (
+        patch("asap.client.market.get_registry", new_callable=AsyncMock) as mock_get,
+        patch("asap.client.market.verify_agent_trust") as mock_verify,
+        patch("asap.client.market.is_revoked", new_callable=AsyncMock) as mock_revoked,
+    ):
+        mock_get.return_value = _lite_registry()
+        mock_verify.return_value = True
+        mock_revoked.return_value = False
+
+        _resp = httpx.Response(
+            200,
+            text=_signed_manifest_json(),
+            request=httpx.Request("GET", TEST_MANIFEST_URL),
+        )
+        mock_http = AsyncMock()
+        mock_http.get = AsyncMock(return_value=_resp)
+        mock_http.aclose = AsyncMock()
+        mock_http.__aenter__ = AsyncMock(return_value=mock_http)
+        mock_http.__aexit__ = AsyncMock(return_value=None)
+        with patch("asap.client.market.httpx.AsyncClient", return_value=mock_http):
+            client = MarketClient(
+                registry_url="https://reg.example/registry.json",
+                revoked_url=revoked_url,
+            )
+            await client.resolve(TEST_URN)
+
+    mock_revoked.assert_awaited_once_with(TEST_URN, revoked_url=revoked_url)
+
+
+@pytest.mark.asyncio
 async def test_resolve_revoked_raises() -> None:
     with (
         patch("asap.client.market.get_registry", new_callable=AsyncMock) as mock_get,
@@ -171,6 +301,34 @@ async def test_resolve_revoked_raises() -> None:
             with pytest.raises(AgentRevokedException, match=TEST_URN):
                 await client.resolve(TEST_URN)
     mock_revoked.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_run_returns_empty_dict_when_result_is_none() -> None:
+    task_response = TaskResponse(
+        task_id="task-1",
+        status="completed",
+        result=None,
+        final_state=None,
+        metrics=None,
+    )
+    response_envelope = AsyncMock()
+    response_envelope.payload = task_response
+
+    mock_send = AsyncMock(return_value=response_envelope)
+    mock_transport = AsyncMock()
+    mock_transport.send = mock_send
+    mock_transport.__aenter__ = AsyncMock(return_value=mock_transport)
+    mock_transport.__aexit__ = AsyncMock(return_value=None)
+
+    with patch("asap.client.market.ASAPClient", return_value=mock_transport):
+        client = MarketClient()
+        agent = ResolvedAgent(manifest=_manifest(), entry=_registry_entry(), client=client)
+        result = await agent.run(
+            {"conversation_id": "conv-1", "skill_id": "echo", "input": {}},
+        )
+
+    assert result == {}
 
 
 @pytest.mark.asyncio

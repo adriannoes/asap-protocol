@@ -166,6 +166,20 @@ class TestWellKnownEndpointViaApp:
         assert response.status_code == 200
         assert response.json() is not None
 
+    def test_etag_conditional_304_with_comma_separated_if_none_match(
+        self, client: TestClient
+    ) -> None:
+        """RFC 7232 comma-separated If-None-Match lists still match the current ETag."""
+        first = client.get(wellknown.WELLKNOWN_MANIFEST_PATH)
+        assert first.status_code == 200
+        etag = first.headers.get("etag")
+        assert etag is not None
+        second = client.get(
+            wellknown.WELLKNOWN_MANIFEST_PATH,
+            headers={"If-None-Match": f'"stale-etag", {etag}, "other"'},
+        )
+        assert second.status_code == 304
+
     def test_edge_ai_manifest_served_over_http(self) -> None:
         """GET well-known manifest includes structured hardware/inference for edge agents."""
         manifest = Manifest(
