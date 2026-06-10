@@ -243,6 +243,19 @@ class TestRegistrySchemaValidation:
         entry = RegistryEntry.model_validate(data)
         assert entry.category == "Robotics"
 
+    def test_registry_entry_blank_category_becomes_none(self) -> None:
+        """Whitespace-only category values normalize to None (same as omitted)."""
+        data = {
+            "id": "urn:asap:agent:test:bot",
+            "name": "Test",
+            "description": "x",
+            "endpoints": {"http": "https://example.com"},
+            "asap_version": "2.0",
+            "category": "   ",
+        }
+        entry = RegistryEntry.model_validate(data)
+        assert entry.category is None
+
     def test_registry_entry_with_derived_hardware_fields(self) -> None:
         """RegistryEntry accepts hardware_class, inference_modes, hardware_io (S1 Task 1.2)."""
         data = {
@@ -473,6 +486,22 @@ class TestDeriveRegistryHardwareFields:
         assert len(matches) == 1
         assert matches[0].id == "urn:asap:agent:partial-io"
         assert matches[0].hardware_class is None
+
+    def test_hardware_model_without_class_omits_hardware_class(self) -> None:
+        """Model-only hardware profiles do not invent a hardware_class value."""
+        manifest = Manifest(
+            id="urn:asap:agent:model-only",
+            name="Model only",
+            version="1.0.0",
+            description="Self-reported model without class enum",
+            capabilities=Capability(
+                asap_version="2.1.0",
+                skills=[Skill(id="assistant", description="Assistant")],
+                hardware=HardwareCapability(model="custom_board_rev_a"),
+            ),
+            endpoints=Endpoint(asap="https://edge.example/asap"),
+        )
+        assert derive_registry_hardware_fields(manifest) == {}
 
 
 class TestDiscoverFromRegistry:

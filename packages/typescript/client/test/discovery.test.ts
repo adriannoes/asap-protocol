@@ -127,6 +127,28 @@ describe("discovery (TS-002)", () => {
     );
   });
 
+  it("listProviders rejects invalid hardware_io shape", async () => {
+    const bad = {
+      version: "1",
+      updated_at: "2026-01-01T00:00:00Z",
+      agents: [
+        {
+          id: "urn:asap:agent:x",
+          name: "X",
+          description: "Y",
+          endpoints: { http: "https://x.example/asap" },
+          skills: [],
+          asap_version: "2.0.0",
+          hardware_io: { kind: "gpio" },
+        },
+      ],
+    };
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(bad), { status: 200 }));
+    await expect(listProviders("https://registry.example/registry.json", { fetch: fetchMock })).rejects.toThrow(
+      /hardware_io must be an array/u,
+    );
+  });
+
   it("listProviders parses registry JSON from fetch", async () => {
     const fetchMock = vi.fn(async () => {
       return new Response(JSON.stringify(sampleRegistry), { status: 200, headers: { "Content-Type": "application/json" } });
