@@ -270,3 +270,52 @@ def test_server_with_oauth2_rejects_unmapped_jwt_subject() -> None:
 
     assert response.status_code == 403
     assert "Identity mismatch" in response.json()["detail"]
+
+
+def test_server_with_oauth2_accepts_token_with_matching_iss_aud() -> None:
+    """create_app with expected_issuer/audience accepts JWT when iss and aud match."""
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    key_set = jwk.KeySet.import_key_set({"keys": [key.as_dict(private=False)]})
+    expected_issuer = "https://auth.example.com"
+    expected_audience = "urn:asap:agent:test-server"
+
+    async def mock_jwks(_uri: str) -> jwk.KeySet:
+        return key_set
+
+    app = create_app(
+        _minimal_manifest(),
+        registry=create_default_registry(),
+        oauth2_config=OAuth2Config(
+            jwks_uri=f"{expected_issuer}/jwks.json",
+            path_prefix="/asap",
+            jwks_fetcher=mock_jwks,
+            expected_issuer=expected_issuer,
+            expected_audience=expected_audience,
+        ),
+        rate_limit="100000/minute",
+    )
+
+    now = int(time.time())
+    token = jose_jwt.encode(
+        {"alg": "RS256", "typ": "JWT"},
+        {
+            "sub": "urn:asap:agent:client",
+            "scope": "asap:execute",
+            "exp": now + 3600,
+            "iss": expected_issuer,
+            "aud": expected_audience,
+            DEFAULT_CUSTOM_CLAIM: "urn:asap:agent:test-server",
+        },
+        key,
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/asap",
+            json=_minimal_asap_request(),
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data.get("jsonrpc") == "2.0"

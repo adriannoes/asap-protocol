@@ -459,3 +459,91 @@ def test_oauth2_middleware_rejects_mismatched_iss_or_aud_when_configured(
 
     assert response.status_code == 401
     assert response.json() == {"detail": "Invalid authentication token"}
+
+
+def test_oauth2_middleware_accepts_token_without_exp_claim() -> None:
+    """Middleware uses require_exp=False; tokens lacking exp still pass when otherwise valid."""
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    key_set = jwk.KeySet.import_key_set({"keys": [key.as_dict(private=False)]})
+
+    async def jwks_fetcher(_uri: str) -> jwk.KeySet:
+        return key_set
+
+    app = _minimal_app()
+    app.add_middleware(
+        OAuth2Middleware,
+        jwks_uri="https://auth.example.com/jwks.json",
+        path_prefix="/asap",
+        jwks_fetcher=jwks_fetcher,
+    )
+
+    token = jose_jwt.encode(
+        {"alg": "RS256", "typ": "JWT"},
+        {"sub": "urn:asap:agent:client", "scope": "asap:execute"},
+        key,
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/asap", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+
+
+async def test_oauth2_middleware_refetches_jwks_on_key_rotation_success() -> None:
+    """Stale cached key triggers refetch; token signed with rotated key succeeds."""
+    correct_key = jwk.RSAKey.generate_key(2048, private=True)
+    wrong_key = jwk.RSAKey.generate_key(2048, private=True)
+    correct_key_set = jwk.KeySet.import_key_set({"keys": [correct_key.as_dict(private=False)]})
+    wrong_key_set = jwk.KeySet.import_key_set({"keys": [wrong_key.as_dict(private=False)]})
+    call_count = 0
+
+    async def jwks_fetcher_rotation(_uri: str) -> jwk.KeySet:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return wrong_key_set
+        return correct_key_set
+
+    app = _minimal_app()
+    app.add_middleware(
+        OAuth2Middleware,
+        jwks_uri="https://auth.example.com/jwks.json",
+        path_prefix="/asap",
+        jwks_fetcher=jwks_fetcher_rotation,
+    )
+
+    now = int(time.time())
+    token = jose_jwt.encode(
+        {"alg": "RS256", "typ": "JWT"},
+        {"sub": "urn:asap:agent:client", "scope": "asap:execute", "exp": now + 3600},
+        correct_key,
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/asap", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+    assert call_count == 2
+
+
+@pytest.mark.parametrize("via_env", [False, True], ids=["constructor", "env"])
+def test_oauth2_middleware_accepts_matching_iss_aud_when_configured(
+    monkeypatch: pytest.MonkeyPatch,
+    via_env: bool,
+) -> None:
+    """When iss/aud is configured, matching claims return 200."""
+    app, key = _oauth2_app_with_iss_aud_config(monkeypatch, via_env=via_env)
+    now = int(time.time())
+    claims: dict[str, Any] = {
+        "sub": "urn:asap:agent:client",
+        "scope": "asap:execute",
+        "exp": now + 3600,
+        "iss": _EXPECTED_ISSUER,
+        "aud": _EXPECTED_AUDIENCE,
+    }
+    token = jose_jwt.encode({"alg": "RS256", "typ": "JWT"}, claims, key)
+
+    with TestClient(app) as client:
+        response = client.get("/asap", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
