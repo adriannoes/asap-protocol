@@ -91,6 +91,51 @@ class TestDiscoverCache:
         assert manifest1.name == manifest2.name
 
 
+class TestDiscoverSignedManifest:
+    """discover() must reject or unwrap signed manifest wrappers (regression guard)."""
+
+    @staticmethod
+    def _signed_manifest_json() -> dict:
+        from asap.crypto.keys import generate_keypair
+        from asap.crypto.signing import sign_manifest
+        from asap.models.entities import Capability, Endpoint, Manifest, Skill
+
+        manifest = Manifest(
+            id="urn:asap:agent:signed-discovery",
+            name="Signed Discovery Agent",
+            version="1.0.0",
+            description="Signed well-known manifest",
+            capabilities=Capability(
+                asap_version="2.1.0",
+                skills=[Skill(id="assistant", description="Assistant")],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="https://signed.example/asap"),
+        )
+        private_key, _public_key = generate_keypair()
+        signed = sign_manifest(manifest, private_key)
+        return signed.model_dump(mode="json")
+
+    @pytest.mark.asyncio
+    async def test_discover_signed_manifest_wrapper_raises_validation_error(self) -> None:
+        """Signed {manifest, signature} wrapper fails discover() schema validation today."""
+        from asap.discovery.validation import ManifestValidationError
+
+        payload = self._signed_manifest_json()
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            if request.method == "GET" and request.url.path.endswith(WELLKNOWN_MANIFEST_PATH):
+                return httpx.Response(status_code=200, json=payload)
+            return httpx.Response(status_code=404, content=b"Not Found")
+
+        async with ASAPClient(
+            "https://gateway.example.com",
+            transport=httpx.MockTransport(mock_transport),
+        ) as client:
+            with pytest.raises(ManifestValidationError):
+                await client.discover("https://signed.example.com")
+
+
 class TestInvalidManifest:
     """Invalid manifest raises clear, descriptive error."""
 
