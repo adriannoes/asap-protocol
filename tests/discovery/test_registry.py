@@ -427,6 +427,22 @@ class TestDeriveRegistryHardwareFields:
         )
         assert derive_registry_hardware_fields(manifest) == {"hardware_io": ["gpio"]}
 
+    def test_derives_class_without_io_list(self) -> None:
+        """hardware.class without io[] still derives hardware_class."""
+        manifest = Manifest(
+            id="urn:asap:agent:sbc-only",
+            name="SBC",
+            version="1.0.0",
+            description="SBC class only",
+            capabilities=Capability(
+                asap_version="2.1.0",
+                skills=[Skill(id="assistant", description="Assistant")],
+                hardware=HardwareCapability(class_=HardwareClass.SBC),
+            ),
+            endpoints=Endpoint(asap="https://example.com/asap"),
+        )
+        assert derive_registry_hardware_fields(manifest) == {"hardware_class": "sbc"}
+
     def test_empty_inference_modes_omits_key(self) -> None:
         """Inference capability with empty modes list does not emit inference_modes."""
         manifest = Manifest(

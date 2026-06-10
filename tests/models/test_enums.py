@@ -8,7 +8,14 @@ This module tests the enum classes defined in asap.models.enums:
 
 import pytest
 
-from asap.models.enums import MessageRole, TaskStatus, UpdateType
+from asap.models.enums import (
+    HardwareClass,
+    HardwareIoType,
+    InferenceMode,
+    MessageRole,
+    TaskStatus,
+    UpdateType,
+)
 
 
 class TestTaskStatus:
@@ -245,3 +252,28 @@ class TestEnumIntegration:
         assert "status" in schema["properties"]
         status_schema = schema["properties"]["status"]
         assert "$ref" in status_schema or "enum" in status_schema or "allOf" in status_schema
+
+
+class TestEdgeAiEnums:
+    """v2.4 edge-AI enums used by ShellClaw manifests and registry filters."""
+
+    def test_hardware_class_values(self) -> None:
+        """Sprint S1 hardware classes are defined with stable string values."""
+        assert HardwareClass.EDGE_ACCELERATOR.value == "edge_accelerator"
+        assert HardwareClass.SBC.value == "sbc"
+        with pytest.raises(ValueError):
+            HardwareClass("unknown_class")
+
+    def test_hardware_io_type_values(self) -> None:
+        """Common GPIO/I2C bus types are valid enum members."""
+        assert HardwareIoType.GPIO.value == "gpio"
+        assert HardwareIoType.I2C.value == "i2c"
+        with pytest.raises(ValueError):
+            HardwareIoType("spi_fake")
+
+    def test_inference_mode_values(self) -> None:
+        """Edge inference modes include cloud and local CUDA."""
+        assert InferenceMode.CLOUD.value == "cloud"
+        assert InferenceMode.LOCAL_CUDA.value == "local_cuda"
+        with pytest.raises(ValueError):
+            InferenceMode("local_tensorrt")

@@ -155,20 +155,20 @@ def run(
 
     try:
         manifest = fetch_manifest(manifest_url)
-    except ValueError:
-        errors.append(f"Blocked URL (private/metadata): {manifest_url}")
-        _fail_registration(output_path, errors, issue_number)
-        return
-    except httpx.HTTPError:
-        errors.append(f"Manifest URL unreachable: {manifest_url}")
-        _fail_registration(output_path, errors, issue_number)
-        return
     except ValidationError as e:
         error_count = e.error_count()
         errors.append(
             f"Manifest failed schema validation ({error_count} error(s)). "
             "Ensure it follows the ASAP Manifest format."
         )
+        _fail_registration(output_path, errors, issue_number)
+        return
+    except ValueError:
+        errors.append(f"Blocked URL (private/metadata): {manifest_url}")
+        _fail_registration(output_path, errors, issue_number)
+        return
+    except httpx.HTTPError:
+        errors.append(f"Manifest URL unreachable: {manifest_url}")
         _fail_registration(output_path, errors, issue_number)
         return
 
