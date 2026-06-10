@@ -90,6 +90,67 @@ describe("asapToolsForMastra", () => {
     expect(tool.inputSchema?.safeParse({}).success).toBe(false);
   });
 
+  it("keeps building tools with fallback descriptions when capability discovery fails", async () => {
+    describeCapabilityMock.mockRejectedValue(new Error("provider unavailable"));
+    const client = {
+      provider: new URL("http://localhost:8080/"),
+      capabilities: ["urn:asap:cap:demo_echo"],
+    };
+    const tools = await asapToolsForMastra(client);
+    const tool = tools[0] as { description?: string };
+    expect(tool.description).toBe("ASAP capability: urn:asap:cap:demo_echo");
+  });
+
+  it("skips async capability discovery for pre-supplied input schemas only", async () => {
+    describeCapabilityMock.mockImplementation(async (_provider: URL, capability: string) => ({
+      name: capability,
+      description: "discovered",
+    }));
+    const client = {
+      provider: new URL("http://localhost:8080/"),
+      capabilities: ["urn:asap:cap:cached", "urn:asap:cap:discovered"],
+    };
+    const tools = await asapToolsForMastra(client, {
+      inputSchemas: {
+        "urn:asap:cap:cached": {
+          type: "object",
+          properties: { message: { type: "string" } },
+          required: ["message"],
+        },
+      },
+    });
+    expect(tools).toHaveLength(2);
+    expect(describeCapabilityMock).toHaveBeenCalledTimes(1);
+    expect(describeCapabilityMock).toHaveBeenCalledWith(
+      client.provider,
+      "urn:asap:cap:discovered",
+      expect.any(Object),
+    );
+  });
+
+  it("applies pre-supplied output schemas to generated tools", async () => {
+    describeCapabilityMock.mockResolvedValue({
+      name: "demo_echo",
+      description: "d",
+    });
+    const client = {
+      provider: new URL("http://localhost:8080/"),
+      capabilities: ["urn:asap:cap:demo_echo"],
+    };
+    const tools = await asapToolsForMastra(client, {
+      outputSchemas: {
+        "urn:asap:cap:demo_echo": {
+          type: "object",
+          properties: { answer: { type: "string" } },
+          required: ["answer"],
+        },
+      },
+    });
+    const tool = tools[0] as { outputSchema?: { safeParse: (v: unknown) => { success: boolean } } };
+    expect(tool.outputSchema?.safeParse({ answer: "pong" }).success).toBe(true);
+    expect(tool.outputSchema?.safeParse({}).success).toBe(false);
+  });
+
   it("throws ApprovalRequiredError when the provider returns approval_required (403)", async () => {
     const fetchMock = mockProvider403("approval_required", {
       message: "human approval pending",
@@ -137,6 +198,31 @@ describe("asapToolsForMastra", () => {
     expect(err).toBeInstanceOf(CapabilityNotGrantedError);
     await (err as CapabilityNotGrantedError).requestCapability();
     expect(requestCapability).toHaveBeenCalledWith("file:read");
+  });
+
+  it("preserves an empty required capability when capability_not_granted omits data", async () => {
+    const requestCapability = vi.fn();
+    const fetchMock = mockProvider403("capability_not_granted", {
+      message: "no grant metadata",
+    });
+    describeCapabilityMock.mockResolvedValue({ name: "file:read", description: "d" });
+    const client = {
+      provider: new URL("http://localhost:8080/"),
+      capabilities: ["file:read"],
+      fetch: fetchMock,
+    };
+    const tools = await asapToolsForMastra(client, { requestCapability });
+    const tool = tools[0] as { execute?: (input: unknown) => Promise<unknown> };
+    let err: unknown;
+    try {
+      await tool.execute?.({});
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(CapabilityNotGrantedError);
+    expect((err as CapabilityNotGrantedError).requiredCapability).toBe("");
+    await (err as CapabilityNotGrantedError).requestCapability();
+    expect(requestCapability).toHaveBeenCalledWith("");
   });
 
   it("does not call Response.clone for non-403 execute responses", async () => {

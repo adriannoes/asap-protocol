@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { capabilityToolKey } from "@asap-protocol/client/adapters/shared";
 import { createAsapMastraAgent } from "../src/asap-mastra-agent.js";
@@ -14,6 +14,10 @@ vi.mock("@asap-protocol/client", async (importOriginal) => {
 });
 
 describe("createAsapMastraAgent", () => {
+  beforeEach(() => {
+    describeCapabilityMock.mockReset();
+  });
+
   it("exposes ASAP capabilities under deterministic Mastra tool keys", async () => {
     describeCapabilityMock.mockResolvedValue({ name: "demo_echo", description: "d" });
     const client = {
@@ -64,6 +68,49 @@ describe("createAsapMastraAgent", () => {
     const instructions = await agent.getInstructions();
     expect(String(instructions)).toContain("urn:asap:cap:alpha");
     expect(String(instructions).toLowerCase()).toContain("asap");
+  });
+
+  it("uses default instructions that identify an empty capability list", async () => {
+    const client = {
+      provider: new URL("http://localhost:8080/"),
+      capabilities: [],
+    };
+    const agent = await createAsapMastraAgent({
+      client,
+      capabilities: [],
+      model: "openai/gpt-4o-mini",
+    });
+    const instructions = String(await agent.getInstructions());
+    expect(instructions).toContain("(none configured)");
+    expect(describeCapabilityMock).not.toHaveBeenCalled();
+  });
+
+  it("forwards toolsOptions so pre-supplied schemas avoid capability discovery", async () => {
+    const client = {
+      provider: new URL("http://localhost:8080/"),
+      capabilities: ["urn:asap:cap:alpha"],
+    };
+    const agent = await createAsapMastraAgent({
+      client,
+      capabilities: client.capabilities,
+      model: "openai/gpt-4o-mini",
+      toolsOptions: {
+        inputSchemas: {
+          "urn:asap:cap:alpha": {
+            type: "object",
+            properties: { prompt: { type: "string" } },
+            required: ["prompt"],
+          },
+        },
+      },
+    });
+    const tools = await agent.listTools();
+    const tool = tools[capabilityToolKey("urn:asap:cap:alpha")] as {
+      inputSchema?: { safeParse: (v: unknown) => { success: boolean } };
+    };
+    expect(describeCapabilityMock).not.toHaveBeenCalled();
+    expect(tool.inputSchema?.safeParse({}).success).toBe(false);
+    expect(tool.inputSchema?.safeParse({ prompt: "hello" }).success).toBe(true);
   });
 
   it("honors custom instructions when provided", async () => {
