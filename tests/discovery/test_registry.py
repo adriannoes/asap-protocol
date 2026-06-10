@@ -395,6 +395,85 @@ class TestDeriveRegistryHardwareFields:
         )
         assert derive_registry_hardware_fields(manifest) == {}
 
+    def test_io_only_without_hardware_class(self) -> None:
+        """Hardware I/O without class still mirrors hardware_io for registry filters."""
+        manifest = Manifest(
+            id="urn:asap:agent:gpio-only",
+            name="GPIO Board",
+            version="1.0.0",
+            description="GPIO without class",
+            capabilities=Capability(
+                asap_version="2.1.0",
+                skills=[Skill(id="gpio_control", description="GPIO")],
+                hardware=HardwareCapability(
+                    class_=None,
+                    io=[HardwareIoType.GPIO],
+                ),
+            ),
+            endpoints=Endpoint(asap="https://gpio.example/asap"),
+        )
+        assert derive_registry_hardware_fields(manifest) == {"hardware_io": ["gpio"]}
+
+    def test_empty_inference_modes_omits_key(self) -> None:
+        """Inference capability with empty modes list does not emit inference_modes."""
+        manifest = Manifest(
+            id="urn:asap:agent:no-modes",
+            name="No Modes",
+            version="1.0.0",
+            description="Inference block without modes",
+            capabilities=Capability(
+                asap_version="2.1.0",
+                skills=[Skill(id="assistant", description="Assistant")],
+                inference=InferenceCapability(modes=[]),
+            ),
+            endpoints=Endpoint(asap="https://example.com/asap"),
+        )
+        assert derive_registry_hardware_fields(manifest) == {}
+
+    def test_inference_only_manifest(self) -> None:
+        """Inference-only manifests mirror inference_modes without hardware_class."""
+        manifest = Manifest(
+            id="urn:asap:agent:cpu-only",
+            name="CPU Inference",
+            version="1.0.0",
+            description="Local CPU only",
+            capabilities=Capability(
+                asap_version="2.1.0",
+                skills=[Skill(id="assistant", description="Assistant")],
+                inference=InferenceCapability(modes=[InferenceMode.LOCAL_CPU]),
+            ),
+            endpoints=Endpoint(asap="https://cpu.example/asap"),
+        )
+        assert derive_registry_hardware_fields(manifest) == {"inference_modes": ["local_cpu"]}
+
+    def test_partial_manifest_round_trip_registry_filters(self) -> None:
+        """Partial hardware manifest generates registry entry discoverable by I/O filter."""
+        manifest = Manifest(
+            id="urn:asap:agent:partial-io",
+            name="Partial IO",
+            version="1.0.0",
+            description="GPIO without class",
+            capabilities=Capability(
+                asap_version="2.1.0",
+                skills=[Skill(id="gpio_control", description="GPIO")],
+                hardware=HardwareCapability(
+                    class_=None,
+                    io=[HardwareIoType.GPIO],
+                ),
+            ),
+            endpoints=Endpoint(asap="https://partial.example/asap"),
+        )
+        entry = generate_registry_entry(manifest, {"http": "https://partial.example/asap"})
+        reg = LiteRegistry(
+            version="1.0",
+            updated_at="2026-05-28T00:00:00Z",
+            agents=[entry],
+        )
+        matches = find_by_io(reg, "gpio")
+        assert len(matches) == 1
+        assert matches[0].id == "urn:asap:agent:partial-io"
+        assert matches[0].hardware_class is None
+
 
 class TestDiscoverFromRegistry:
     """discover_from_registry fetches and parses from URL."""

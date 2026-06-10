@@ -17,6 +17,7 @@ from asap.integrations.vercel_ai import (
     create_asap_tools_router,
 )
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
+from asap.models.enums import HardwareClass, InferenceMode
 
 TEST_URN = "urn:asap:agent:test-agent"
 TEST_HTTP = "https://agent.example.com/asap"
@@ -261,6 +262,47 @@ def test_search_registry_matches_skill_string() -> None:
     hits = _search_registry(reg, "research")
     assert len(hits) == 1
     assert hits[0]["id"] == "urn:asap:agent:x"
+
+
+def test_search_registry_does_not_match_edge_hardware_fields() -> None:
+    """Edge mirror fields are not searched today — guards future discover UX changes."""
+    reg = LiteRegistry(
+        version="1.0",
+        updated_at=datetime.now(timezone.utc),
+        agents=[
+            RegistryEntry(
+                id="urn:asap:agent:jetson",
+                name="Jetson Agent",
+                description="Generic edge agent",
+                endpoints={"http": "https://jetson.example.com"},
+                skills=["assistant"],
+                asap_version="2.1.0",
+                hardware_class=HardwareClass.EDGE_ACCELERATOR.value,
+                inference_modes=[InferenceMode.LOCAL_CUDA.value],
+                hardware_io=["gpio"],
+            ),
+        ],
+    )
+    assert _search_registry(reg, "local_cuda") == []
+    assert _search_registry(reg, "edge_accelerator") == []
+    assert _search_registry(reg, "gpio") == []
+
+
+def test_list_tools_whitelist_skips_unresolvable_urn() -> None:
+    """Whitelist resolve failures are skipped; asap_invoke remains available."""
+    with patch("asap.integrations.vercel_ai.MarketClient") as mc_class:
+        mc_class.return_value.resolve = AsyncMock(side_effect=ValueError("registry offline"))
+        app = FastAPI()
+        app.include_router(
+            create_asap_tools_router(whitelist_urns=[TEST_URN]),
+            prefix="/api/asap",
+        )
+        client = TestClient(app)
+        response = client.get("/api/asap/tools")
+
+    assert response.status_code == 200
+    tool_names = [tool["name"] for tool in response.json()["tools"]]
+    assert tool_names == ["asap_invoke"]
 
 
 def test_parameters_schema_from_manifest_branches() -> None:
