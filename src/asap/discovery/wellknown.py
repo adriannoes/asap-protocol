@@ -40,7 +40,7 @@ def get_manifest_json(manifest: Manifest) -> dict[str, object]:
     Returns:
         Dictionary suitable for JSON response (model_dump).
     """
-    return manifest.model_dump()
+    return manifest.model_dump(mode="json", by_alias=True)
 
 
 def compute_manifest_etag(manifest: Manifest) -> str:
