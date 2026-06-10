@@ -8,7 +8,15 @@ import pytest
 from fastapi.testclient import TestClient
 
 from asap.discovery import wellknown
-from asap.models.entities import Manifest
+from asap.models.entities import (
+    Capability,
+    Endpoint,
+    HardwareCapability,
+    InferenceCapability,
+    Manifest,
+    Skill,
+)
+from asap.models.enums import HardwareClass, HardwareIoType, InferenceMode
 from asap.transport.server import create_app
 
 if TYPE_CHECKING:
@@ -31,9 +39,9 @@ class TestGetManifestJson:
     """Tests for get_manifest_json()."""
 
     def test_returns_dict_equal_to_model_dump(self, sample_manifest: Manifest) -> None:
-        """Endpoint payload equals manifest.model_dump()."""
+        """Endpoint payload equals schema wire-format model_dump (aliases + JSON mode)."""
         result = wellknown.get_manifest_json(sample_manifest)
-        assert result == sample_manifest.model_dump()
+        assert result == sample_manifest.model_dump(mode="json", by_alias=True)
         assert isinstance(result, dict)
         assert "id" in result
         assert result["id"] == sample_manifest.id
@@ -44,6 +52,33 @@ class TestGetManifestJson:
 
         result = wellknown.get_manifest_json(sample_manifest)
         json.dumps(result)
+
+    def test_edge_ai_capabilities_serialized_in_payload(self) -> None:
+        """v2.4 hardware/inference blocks appear on the well-known manifest wire format."""
+        manifest = Manifest(
+            id="urn:asap:agent:shellclaw-jetson-v1",
+            name="ShellClaw Jetson",
+            version="1.0.0",
+            description="Edge agent on Jetson",
+            capabilities=Capability(
+                asap_version="2.1.0",
+                skills=[Skill(id="assistant", description="Assistant")],
+                hardware=HardwareCapability(
+                    class_=HardwareClass.EDGE_ACCELERATOR,
+                    model="jetson_orin_nano_super_8gb",
+                    io=[HardwareIoType.GPIO, HardwareIoType.I2C],
+                ),
+                inference=InferenceCapability(
+                    modes=[InferenceMode.CLOUD, InferenceMode.LOCAL_CUDA],
+                ),
+            ),
+            endpoints=Endpoint(asap="https://shellclaw.example/asap"),
+        )
+        result = wellknown.get_manifest_json(manifest)
+        caps = result["capabilities"]
+        assert caps["hardware"]["class"] == "edge_accelerator"
+        assert caps["hardware"]["io"] == ["gpio", "i2c"]
+        assert caps["inference"]["modes"] == ["cloud", "local_cuda"]
 
 
 class TestComputeManifestEtag:
@@ -130,3 +165,29 @@ class TestWellKnownEndpointViaApp:
         )
         assert response.status_code == 200
         assert response.json() is not None
+
+    def test_edge_ai_manifest_served_over_http(self) -> None:
+        """GET well-known manifest includes structured hardware/inference for edge agents."""
+        manifest = Manifest(
+            id="urn:asap:agent:edge-http-test",
+            name="Edge HTTP",
+            version="1.0.0",
+            description="Edge discovery test agent",
+            capabilities=Capability(
+                asap_version="2.1.0",
+                skills=[Skill(id="assistant", description="Assistant")],
+                hardware=HardwareCapability(
+                    class_=HardwareClass.EDGE_ACCELERATOR,
+                    io=[HardwareIoType.GPIO],
+                ),
+                inference=InferenceCapability(modes=[InferenceMode.LOCAL_NPU]),
+            ),
+            endpoints=Endpoint(asap="https://edge.example/asap"),
+        )
+        app = create_app(manifest, rate_limit="999999/minute")
+        client = TestClient(app)
+        response = client.get(wellknown.WELLKNOWN_MANIFEST_PATH)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["capabilities"]["hardware"]["class"] == "edge_accelerator"
+        assert data["capabilities"]["inference"]["modes"] == ["local_npu"]
