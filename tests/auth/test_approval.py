@@ -213,6 +213,58 @@ def test_select_preferred_ciba_falls_back_when_unlinked() -> None:
     )
 
 
+def test_select_preferred_ciba_when_linked_and_supported() -> None:
+    h = _sample_host(user_id="u1", status="active")
+    assert (
+        select_approval_method(
+            h,
+            _sample_agent(),
+            host_supports_ciba=True,
+            preferred_method="ciba",
+        )
+        == "ciba"
+    )
+
+
+@pytest.mark.asyncio
+async def test_ciba_idempotent_pending_reregistration() -> None:
+    store = InMemoryApprovalStore()
+    first = await create_ciba_approval(store, "ciba-r1", ["read"])
+    second = await create_ciba_approval(store, "ciba-r1", ["read"])
+    assert first.method == "ciba"
+    assert second.method == "ciba"
+    assert first.binding_message == second.binding_message
+
+
+@pytest.mark.asyncio
+async def test_escalation_does_not_reuse_registration_pending() -> None:
+    store = InMemoryApprovalStore()
+    reg = await create_device_authorization(store, "esc-1", ["read"])
+    esc = await create_device_authorization(
+        store,
+        "esc-1",
+        ["read"],
+        approval_kind="escalation",
+    )
+    assert reg.user_code != esc.user_code
+    assert await check_approval_status(store, "esc-1") == "pending"
+
+
+@pytest.mark.asyncio
+async def test_in_memory_approval_store_remove_clears_record() -> None:
+    store = InMemoryApprovalStore()
+    await create_device_authorization(store, "rm-1", ["read"])
+    await store.remove("rm-1")
+    assert await store.get("rm-1") is None
+
+
+@pytest.mark.asyncio
+async def test_check_approval_status_raises_when_missing() -> None:
+    store = InMemoryApprovalStore()
+    with pytest.raises(KeyError, match="No approval request"):
+        await check_approval_status(store, "missing-agent")
+
+
 @pytest.mark.asyncio
 async def test_pending_expired_after_deadline(monkeypatch: pytest.MonkeyPatch) -> None:
     store = InMemoryApprovalStore()
