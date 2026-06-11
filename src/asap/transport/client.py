@@ -1287,6 +1287,39 @@ class ASAPClient:
                         data = json.loads(json_str)
                         yield Envelope.model_validate(data)
 
+    async def _coerce_manifest_payload(
+        self,
+        manifest_data: dict[str, Any],
+        url: str,
+        *,
+        use_schema_validator: bool,
+    ) -> tuple[Manifest, str | None]:
+        """Parse plain or signed manifest JSON from an HTTP response body."""
+        try:
+            if "manifest" in manifest_data and "signature" in manifest_data:
+                signed = SignedManifest.model_validate(manifest_data)
+                if self._verify_signatures:
+                    trusted_b64 = self._trusted_manifest_keys.get(url)
+                    if not trusted_b64:
+                        raise SignatureVerificationError(
+                            f"Cannot verify signed manifest from {sanitize_url(url)}: "
+                            "no trusted public key provided. Pass trusted_manifest_keys "
+                            "to ASAPClient (or disable verify_signatures).",
+                            details={"url": sanitize_url(url)},
+                        )
+                    trusted_key = load_public_key_from_base64(trusted_b64)
+                    await asyncio.to_thread(verify_manifest, signed, trusted_key)
+                return signed.manifest, signed.signature.trust_level.value
+            if use_schema_validator:
+                return validate_manifest_schema(manifest_data), None
+            return Manifest.model_validate(manifest_data), None
+        except SignatureVerificationError:
+            raise
+        except ManifestValidationError:
+            raise
+        except Exception as e:
+            raise ValueError(f"Invalid manifest format: {e}") from e
+
     async def get_manifest(self, url: str | None = None) -> Manifest:
         """Get agent manifest from cache or HTTP endpoint.
 
@@ -1361,24 +1394,11 @@ class ASAPClient:
                     raise ValueError(f"Invalid JSON in manifest response: {e}") from e
 
                 try:
-                    if "manifest" in manifest_data and "signature" in manifest_data:
-                        signed = SignedManifest.model_validate(manifest_data)
-                        if self._verify_signatures:
-                            trusted_b64 = self._trusted_manifest_keys.get(url)
-                            if not trusted_b64:
-                                raise SignatureVerificationError(
-                                    f"Cannot verify signed manifest from {sanitize_url(url)}: "
-                                    "no trusted public key provided. Pass trusted_manifest_keys "
-                                    "to ASAPClient (or disable verify_signatures).",
-                                    details={"url": sanitize_url(url)},
-                                )
-                            trusted_key = load_public_key_from_base64(trusted_b64)
-                            await asyncio.to_thread(verify_manifest, signed, trusted_key)
-                        manifest = signed.manifest
-                        trust_level = signed.signature.trust_level.value
-                    else:
-                        manifest = Manifest.model_validate(manifest_data)
-                        trust_level = None
+                    manifest, trust_level = await self._coerce_manifest_payload(
+                        manifest_data,
+                        url,
+                        use_schema_validator=False,
+                    )
                 except SignatureVerificationError:
                     self._manifest_cache.invalidate(url)
                     raise
@@ -1605,7 +1625,14 @@ class ASAPClient:
                     raise ValueError(f"Invalid JSON in manifest response: {e}") from e
 
                 try:
-                    manifest = validate_manifest_schema(manifest_data)
+                    manifest, _trust_level = await self._coerce_manifest_payload(
+                        manifest_data,
+                        manifest_url,
+                        use_schema_validator=True,
+                    )
+                except SignatureVerificationError:
+                    self._manifest_cache.invalidate(manifest_url)
+                    raise
                 except ManifestValidationError:
                     self._manifest_cache.invalidate(manifest_url)
                     raise
@@ -1633,7 +1660,13 @@ class ASAPClient:
                     cause=e,
                     url=sanitize_url(manifest_url),
                 ) from e
-            except (ASAPConnectionError, ASAPTimeoutError, ValueError, ManifestValidationError):
+            except (
+                ASAPConnectionError,
+                ASAPTimeoutError,
+                ValueError,
+                ManifestValidationError,
+                SignatureVerificationError,
+            ):
                 raise
             except Exception as e:
                 self._manifest_cache.invalidate(manifest_url)

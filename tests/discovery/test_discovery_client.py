@@ -8,6 +8,10 @@ import httpx
 import pytest
 
 from asap.discovery.wellknown import WELLKNOWN_MANIFEST_PATH
+from asap.crypto.keys import generate_keypair, public_key_to_base64
+from asap.crypto.signing import sign_manifest
+from asap.errors import SignatureVerificationError
+from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.transport.client import ASAPClient, ASAPConnectionError, ASAPTimeoutError
 from asap.transport.server import create_app
 
@@ -89,51 +93,6 @@ class TestDiscoverCache:
         assert call_count == 1
         assert manifest1.id == manifest2.id
         assert manifest1.name == manifest2.name
-
-
-class TestDiscoverSignedManifest:
-    """discover() must reject or unwrap signed manifest wrappers (regression guard)."""
-
-    @staticmethod
-    def _signed_manifest_json() -> dict:
-        from asap.crypto.keys import generate_keypair
-        from asap.crypto.signing import sign_manifest
-        from asap.models.entities import Capability, Endpoint, Manifest, Skill
-
-        manifest = Manifest(
-            id="urn:asap:agent:signed-discovery",
-            name="Signed Discovery Agent",
-            version="1.0.0",
-            description="Signed well-known manifest",
-            capabilities=Capability(
-                asap_version="2.1.0",
-                skills=[Skill(id="assistant", description="Assistant")],
-                state_persistence=False,
-            ),
-            endpoints=Endpoint(asap="https://signed.example/asap"),
-        )
-        private_key, _public_key = generate_keypair()
-        signed = sign_manifest(manifest, private_key)
-        return signed.model_dump(mode="json")
-
-    @pytest.mark.asyncio
-    async def test_discover_signed_manifest_wrapper_raises_validation_error(self) -> None:
-        """Signed {manifest, signature} wrapper fails discover() schema validation today."""
-        from asap.discovery.validation import ManifestValidationError
-
-        payload = self._signed_manifest_json()
-
-        def mock_transport(request: httpx.Request) -> httpx.Response:
-            if request.method == "GET" and request.url.path.endswith(WELLKNOWN_MANIFEST_PATH):
-                return httpx.Response(status_code=200, json=payload)
-            return httpx.Response(status_code=404, content=b"Not Found")
-
-        async with ASAPClient(
-            "https://gateway.example.com",
-            transport=httpx.MockTransport(mock_transport),
-        ) as client:
-            with pytest.raises(ManifestValidationError):
-                await client.discover("https://signed.example.com")
 
 
 class TestInvalidManifest:
@@ -239,3 +198,91 @@ class TestDiscoverAgainstRealApp:
         assert manifest.name == sample_manifest.name
         assert manifest.capabilities.asap_version == sample_manifest.capabilities.asap_version
         assert len(manifest.capabilities.skills) == len(sample_manifest.capabilities.skills)
+
+
+class TestDiscoverSignedManifestVerification:
+    """discover() must verify signed manifests the same way as get_manifest()."""
+
+    @staticmethod
+    def _signed_manifest_payload() -> tuple[dict[str, object], str]:
+        manifest = Manifest(
+            id="urn:asap:agent:discover-signed",
+            name="Discover Signed Agent",
+            version="1.0.0",
+            description="Signed manifest for discover() tests",
+            capabilities=Capability(
+                asap_version="0.1",
+                skills=[Skill(id="echo", description="Echo")],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="https://example.com/asap"),
+        )
+        private_key, public_key = generate_keypair()
+        signed = sign_manifest(manifest, private_key)
+        return signed.model_dump(mode="json"), public_key_to_base64(public_key)
+
+    @pytest.mark.asyncio
+    async def test_discover_signed_with_trusted_key_succeeds(self) -> None:
+        """discover() accepts a signed envelope when verify_signatures and trusted key match."""
+        payload, pub_b64 = self._signed_manifest_payload()
+        base_url = "https://agent.example.com"
+        manifest_url = base_url.rstrip("/") + WELLKNOWN_MANIFEST_PATH
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            if request.url.path.endswith(WELLKNOWN_MANIFEST_PATH):
+                return httpx.Response(status_code=200, json=payload)
+            return httpx.Response(status_code=404)
+
+        trusted = {manifest_url: pub_b64}
+        async with ASAPClient(
+            "https://other.example.com",
+            transport=httpx.MockTransport(mock_transport),
+            verify_signatures=True,
+            trusted_manifest_keys=trusted,
+        ) as client:
+            manifest = await client.discover(base_url)
+
+        assert manifest.id == "urn:asap:agent:discover-signed"
+        assert manifest.name == "Discover Signed Agent"
+
+    @pytest.mark.asyncio
+    async def test_discover_signed_without_trusted_key_raises(self) -> None:
+        """discover() rejects signed manifests when no trusted public key is configured."""
+        payload, _ = self._signed_manifest_payload()
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, json=payload)
+
+        async with ASAPClient(
+            "https://example.com",
+            transport=httpx.MockTransport(mock_transport),
+            verify_signatures=True,
+            trusted_manifest_keys={},
+        ) as client:
+            with pytest.raises(SignatureVerificationError, match="no trusted public key"):
+                await client.discover("https://agent.example.com")
+
+    @pytest.mark.asyncio
+    async def test_discover_plain_json_when_verify_signatures_only_checks_signed_envelope(
+        self,
+    ) -> None:
+        """Plain manifests parse without signature verification (parity with get_manifest)."""
+        payload, pub_b64 = self._signed_manifest_payload()
+        unsigned_inner = payload["manifest"]
+        assert isinstance(unsigned_inner, dict)
+        base_url = "https://agent.example.com"
+        manifest_url = base_url.rstrip("/") + WELLKNOWN_MANIFEST_PATH
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, json=unsigned_inner)
+
+        trusted = {manifest_url: pub_b64}
+        async with ASAPClient(
+            "https://example.com",
+            transport=httpx.MockTransport(mock_transport),
+            verify_signatures=True,
+            trusted_manifest_keys=trusted,
+        ) as client:
+            result = await client.discover(base_url)
+
+        assert result.id == "urn:asap:agent:discover-signed"
