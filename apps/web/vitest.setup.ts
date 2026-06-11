@@ -12,6 +12,9 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 // Mock window.scrollTo to prevent "Not implemented" warnings in JSDOM
 Object.defineProperty(window, 'scrollTo', { value: () => { }, writable: true });
 
+// Radix UI Select scrolls focused options into view (not implemented in jsdom)
+Element.prototype.scrollIntoView = function scrollIntoView() { };
+
 // Mock IndexedDB for idb-keyval to prevent ReferenceError in tests
 if (typeof globalThis.indexedDB === 'undefined') {
     globalThis.indexedDB = {} as IDBFactory;

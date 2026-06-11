@@ -61,6 +61,20 @@ const mockAgents: RegistryAgent[] = [
             skills: [{ id: 'gpio_control', description: 'GPIO control' }],
         },
     },
+    {
+        id: 'urn:asap:agent:edge:rpi-demo',
+        name: 'RPi Edge Demo',
+        description: 'SBC with local CPU inference',
+        version: 1,
+        endpoints: { asap: 'https://api.example.com/rpi' },
+        hardware_class: 'sbc',
+        inference_modes: ['cloud', 'local_cpu'],
+        hardware_io: ['gpio'],
+        capabilities: {
+            asap_version: '2.1',
+            skills: [{ id: 'assistant', description: 'Assistant' }],
+        },
+    },
 ];
 
 describe('BrowseContent', () => {
@@ -135,6 +149,38 @@ describe('BrowseContent', () => {
         fireEvent.click(screen.getByText('I2c'));
 
         expect(screen.getByText('Jetson Edge Demo')).toBeInTheDocument();
+    });
+
+    it('filters agents by hardware class select', () => {
+        render(<BrowseContent initialAgents={mockAgents} />);
+
+        const hardwareSelects = screen.getAllByRole('combobox');
+        const hardwareClassSelect = hardwareSelects.find(
+            (el) => el.closest('div')?.textContent?.includes('Hardware class')
+        );
+        expect(hardwareClassSelect).toBeDefined();
+        fireEvent.click(hardwareClassSelect!);
+        fireEvent.click(screen.getByRole('option', { name: 'Edge Accelerator' }));
+
+        expect(screen.getByText('Jetson Edge Demo')).toBeInTheDocument();
+        expect(screen.queryByText('RPi Edge Demo')).not.toBeInTheDocument();
+        expect(screen.queryByText('Search Bot')).not.toBeInTheDocument();
+    });
+
+    it('filters agents by inference mode select', () => {
+        render(<BrowseContent initialAgents={mockAgents} />);
+
+        const selects = screen.getAllByRole('combobox');
+        const inferenceSelect = selects.find(
+            (el) => el.closest('div')?.textContent?.includes('Inference mode')
+        );
+        expect(inferenceSelect).toBeDefined();
+        fireEvent.click(inferenceSelect!);
+        fireEvent.click(screen.getByRole('option', { name: 'Local Cpu' }));
+
+        expect(screen.getByText('RPi Edge Demo')).toBeInTheDocument();
+        expect(screen.queryByText('Jetson Edge Demo')).not.toBeInTheDocument();
+        expect(screen.queryByText('Search Bot')).not.toBeInTheDocument();
     });
 
     it('shows "No results" when search yields no matches', async () => {
