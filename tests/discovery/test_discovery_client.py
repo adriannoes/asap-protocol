@@ -286,3 +286,49 @@ class TestDiscoverSignedManifestVerification:
             result = await client.discover(base_url)
 
         assert result.id == "urn:asap:agent:discover-signed"
+
+    @pytest.mark.asyncio
+    async def test_discover_signed_with_wrong_trusted_key_raises(self) -> None:
+        """discover() rejects signed manifests when the trusted key does not match."""
+        payload, _ = self._signed_manifest_payload()
+        _, other_public_key = generate_keypair()
+        wrong_pub_b64 = public_key_to_base64(other_public_key)
+        base_url = "https://agent.example.com"
+        manifest_url = base_url.rstrip("/") + WELLKNOWN_MANIFEST_PATH
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, json=payload)
+
+        trusted = {manifest_url: wrong_pub_b64}
+        async with ASAPClient(
+            "https://example.com",
+            transport=httpx.MockTransport(mock_transport),
+            verify_signatures=True,
+            trusted_manifest_keys=trusted,
+        ) as client:
+            with pytest.raises(SignatureVerificationError, match="tamper|invalid"):
+                await client.discover(base_url)
+
+    @pytest.mark.asyncio
+    async def test_discover_signed_tampered_manifest_raises(self) -> None:
+        """discover() rejects signed envelopes whose inner manifest was tampered."""
+        payload, pub_b64 = self._signed_manifest_payload()
+        inner = payload["manifest"]
+        assert isinstance(inner, dict)
+        tampered_inner = {**inner, "name": "Tampered Agent Name"}
+        tampered_payload = {**payload, "manifest": tampered_inner}
+        base_url = "https://agent.example.com"
+        manifest_url = base_url.rstrip("/") + WELLKNOWN_MANIFEST_PATH
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, json=tampered_payload)
+
+        trusted = {manifest_url: pub_b64}
+        async with ASAPClient(
+            "https://example.com",
+            transport=httpx.MockTransport(mock_transport),
+            verify_signatures=True,
+            trusted_manifest_keys=trusted,
+        ) as client:
+            with pytest.raises(SignatureVerificationError, match="tamper|invalid"):
+                await client.discover(base_url)
