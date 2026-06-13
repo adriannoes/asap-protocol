@@ -20,7 +20,12 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from asap.errors import InvalidTransitionError, RPC_INVALID_STATE
+from asap.errors import (
+    InvalidTransitionError,
+    RPC_INVALID_STATE,
+    RPC_TASK_NOT_FOUND,
+    TaskNotFoundError,
+)
 from asap.models.entities import AuthScheme, Capability, Endpoint, Manifest, Skill
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest
@@ -359,6 +364,33 @@ class TestHandlerAsapErrorPreservation(NoRateLimitTestBase):
         assert data["error"]["code"] == RPC_INVALID_STATE
         assert data["error"]["code"] != INTERNAL_ERROR
         assert data["error"]["data"].get("asap_taxonomy_code") == "asap:protocol/invalid_state"
+
+    def test_handler_task_not_found_preserves_rpc_code(
+        self, sample_manifest: Manifest, disable_rate_limiting: "ASAPRateLimiter"
+    ) -> None:
+        """TaskNotFoundError from dispatch returns RPC_TASK_NOT_FOUND (-32010)."""
+        app_instance = create_app(
+            sample_manifest,
+            rate_limit=TEST_RATE_LIMIT_DEFAULT,
+        )
+        app_instance.state.limiter = disable_rate_limiting
+        client = TestClient(app_instance)
+        request_body = _make_valid_jsonrpc_envelope()
+        protocol_error = TaskNotFoundError(task_id="task-missing-xyz")
+
+        with patch(
+            "asap.transport.handlers.HandlerRegistry.dispatch_async",
+            new_callable=AsyncMock,
+            side_effect=protocol_error,
+        ):
+            response = client.post("/asap", json=request_body)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == RPC_TASK_NOT_FOUND
+        assert data["error"]["code"] != INTERNAL_ERROR
+        assert data["error"]["data"].get("asap_taxonomy_code") == "asap:task/not_found"
 
 
 class TestInternalError(NoRateLimitTestBase):
