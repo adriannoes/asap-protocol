@@ -332,3 +332,23 @@ class TestDiscoverSignedManifestVerification:
         ) as client:
             with pytest.raises(SignatureVerificationError, match="tamper|invalid"):
                 await client.discover(base_url)
+
+    @pytest.mark.asyncio
+    async def test_discover_signed_manifest_extracted_when_verify_signatures_disabled(
+        self,
+    ) -> None:
+        """With verify_signatures=False, signed envelope is unwrapped without checking signature."""
+        payload, _ = self._signed_manifest_payload()
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(status_code=200, json=payload)
+
+        async with ASAPClient(
+            "https://other.example.com",
+            transport=httpx.MockTransport(mock_transport),
+            verify_signatures=False,
+        ) as client:
+            result = await client.discover("https://agent.example.com")
+
+        assert result.id == "urn:asap:agent:discover-signed"
+        assert result.name == "Discover Signed Agent"
