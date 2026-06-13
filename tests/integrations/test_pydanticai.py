@@ -353,3 +353,41 @@ def test_pydantic_tool_invocation_signature_error_returns_error_string() -> None
 
     assert isinstance(result, str)
     assert "bad signature" in result
+
+
+@pytest.mark.asyncio
+async def test_pydantic_tool_init_inside_running_loop_defers_resolve() -> None:
+    """Inside a running event loop, asap_tool_for_urn must not asyncio.run(resolve)."""
+    task_response = TaskResponse(
+        task_id="task-1",
+        status="completed",
+        result={"deferred": True},
+        final_state=None,
+        metrics=None,
+    )
+    response_envelope = AsyncMock()
+    response_envelope.payload = task_response
+    mock_send = AsyncMock(return_value=response_envelope)
+    mock_transport = AsyncMock()
+    mock_transport.send = mock_send
+    mock_transport.__aenter__ = AsyncMock(return_value=mock_transport)
+    mock_transport.__aexit__ = AsyncMock(return_value=None)
+
+    p_get, p_verify, p_revoked, p_http = _resolve_patches()
+    with p_get as mock_get, p_verify as mock_verify, p_revoked as mock_revoked, p_http:
+        mock_get.return_value = _lite_registry()
+        mock_verify.return_value = True
+        mock_revoked.return_value = False
+        with patch("asap.client.market.ASAPClient", return_value=mock_transport):
+            client = MarketClient(registry_url="https://reg.example/registry.json")
+            mock_agent = AsyncMock()
+            mock_agent.manifest = _manifest()
+            mock_agent.run = AsyncMock(return_value={"deferred": True})
+            mock_resolve = AsyncMock(return_value=mock_agent)
+            with patch.object(client, "resolve", mock_resolve):
+                tool = asap_tool_for_urn(TEST_URN, client=client)
+                mock_resolve.assert_not_awaited()
+                result = await tool.function(input={"q": "async-host"})
+                mock_resolve.assert_awaited_once()
+
+    assert json.loads(result) == {"deferred": True}

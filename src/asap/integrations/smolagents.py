@@ -101,24 +101,27 @@ class SmolAgentsAsapTool(Tool if Tool is not None else object):  # type: ignore[
         self._skill_id = ""
 
         try:
-            resolved = asyncio.run(self._client.resolve(urn))
-            self._resolved = resolved
-            self._skill_id = (
-                resolved.manifest.capabilities.skills[0].id
-                if resolved.manifest.capabilities.skills
-                else ""
-            )
-            raw_name = name or resolved.manifest.name or urn
-            self.name = _sanitize_tool_name(raw_name)
-            self.description = (
-                description or resolved.manifest.description or f"Invoke ASAP agent {urn}."
-            )
-            self.inputs = _build_inputs_from_manifest(resolved.manifest)
-        except (OSError, ValueError, AgentRevokedException, SignatureVerificationError):
-            raw_name = name or urn or "asap_agent"
-            self.name = _sanitize_tool_name(raw_name)
-            self.description = description or f"Invoke ASAP agent {urn}."
-            self.inputs = _DEFAULT_INPUTS.copy()
+            asyncio.get_running_loop()
+        except RuntimeError:
+            try:
+                resolved = asyncio.run(self._client.resolve(urn))
+                self._resolved = resolved
+                self._skill_id = (
+                    resolved.manifest.capabilities.skills[0].id
+                    if resolved.manifest.capabilities.skills
+                    else ""
+                )
+                raw_name = name or resolved.manifest.name or urn
+                self.name = _sanitize_tool_name(raw_name)
+                self.description = (
+                    description or resolved.manifest.description or f"Invoke ASAP agent {urn}."
+                )
+                self.inputs = _build_inputs_from_manifest(resolved.manifest)
+            except (OSError, ValueError, AgentRevokedException, SignatureVerificationError):
+                raw_name = name or urn or "asap_agent"
+                self.name = _sanitize_tool_name(raw_name)
+                self.description = description or f"Invoke ASAP agent {urn}."
+                self.inputs = _DEFAULT_INPUTS.copy()
 
         super().__init__()
 

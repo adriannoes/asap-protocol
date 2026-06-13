@@ -64,20 +64,37 @@ def asap_tool_for_urn(
 
     client_instance = client or MarketClient()
     resolved: ResolvedAgent | None = None
-    try:
-        resolved = asyncio.run(client_instance.resolve(urn))
-    except Exception as e:
-        raise ValueError(f"Failed to resolve agent {urn}: {e}") from e
-
     skill_id = ""
-    if resolved.manifest.capabilities.skills:
-        skill_id = resolved.manifest.capabilities.skills[0].id
-    tool_name = name or resolved.manifest.name or urn
-    tool_description = description or resolved.manifest.description or f"Invoke ASAP agent {urn}."
-    parameters_schema = _parameters_schema_from_manifest(resolved.manifest)
-    agent = resolved
+    tool_name = name or urn
+    tool_description = description or f"Invoke ASAP agent {urn}."
+    parameters_schema = DEFAULT_PARAMETERS_JSON_SCHEMA
+
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        try:
+            resolved = asyncio.run(client_instance.resolve(urn))
+            if resolved.manifest.capabilities.skills:
+                skill_id = resolved.manifest.capabilities.skills[0].id
+            tool_name = name or resolved.manifest.name or urn
+            tool_description = (
+                description or resolved.manifest.description or f"Invoke ASAP agent {urn}."
+            )
+            parameters_schema = _parameters_schema_from_manifest(resolved.manifest)
+        except Exception as e:
+            raise ValueError(f"Failed to resolve agent {urn}: {e}") from e
 
     async def _invoke(**kwargs: Any) -> str:
+        nonlocal resolved, skill_id
+        agent = resolved
+        if agent is None:
+            try:
+                agent = await client_instance.resolve(urn)
+                resolved = agent
+                if agent.manifest.capabilities.skills:
+                    skill_id = agent.manifest.capabilities.skills[0].id
+            except Exception as e:
+                return _to_str_result(f"Error: Failed to resolve agent {urn}: {e!s}")
         input_payload = kwargs.get("input", kwargs)
         if not isinstance(input_payload, dict):
             input_payload = {"value": input_payload}
