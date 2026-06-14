@@ -489,6 +489,76 @@ def test_oauth2_middleware_accepts_token_without_exp_claim() -> None:
     assert response.status_code == 200
 
 
+def test_oauth2_middleware_rejects_non_numeric_exp_claim() -> None:
+    """Non-numeric exp must be rejected (parity with Host JWT expiry validation)."""
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    key_set = jwk.KeySet.import_key_set({"keys": [key.as_dict(private=False)]})
+
+    async def jwks_fetcher(_uri: str) -> jwk.KeySet:
+        return key_set
+
+    app = _minimal_app()
+    app.add_middleware(
+        OAuth2Middleware,
+        jwks_uri="https://auth.example.com/jwks.json",
+        path_prefix="/asap",
+        jwks_fetcher=jwks_fetcher,
+    )
+
+    now = int(time.time())
+    token = jose_jwt.encode(
+        {"alg": "RS256", "typ": "JWT"},
+        {
+            "sub": "urn:asap:agent:client",
+            "scope": "asap:execute",
+            "exp": "not-a-number",
+            "iat": now,
+        },
+        key,
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/asap", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Invalid authentication token"}
+
+
+def test_oauth2_middleware_rejects_string_numeric_past_exp() -> None:
+    """String-typed NumericDate exp in the past must not bypass expiry checks."""
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    key_set = jwk.KeySet.import_key_set({"keys": [key.as_dict(private=False)]})
+
+    async def jwks_fetcher(_uri: str) -> jwk.KeySet:
+        return key_set
+
+    app = _minimal_app()
+    app.add_middleware(
+        OAuth2Middleware,
+        jwks_uri="https://auth.example.com/jwks.json",
+        path_prefix="/asap",
+        jwks_fetcher=jwks_fetcher,
+    )
+
+    past = str(int(time.time()) - 3600)
+    token = jose_jwt.encode(
+        {"alg": "RS256", "typ": "JWT"},
+        {
+            "sub": "urn:asap:agent:expired",
+            "scope": "asap:execute",
+            "exp": past,
+            "iat": int(time.time()) - 7200,
+        },
+        key,
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/asap", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Invalid authentication token"}
+
+
 async def test_oauth2_middleware_refetches_jwks_on_key_rotation_success() -> None:
     """Stale cached key triggers refetch; token signed with rotated key succeeds."""
     correct_key = jwk.RSAKey.generate_key(2048, private=True)

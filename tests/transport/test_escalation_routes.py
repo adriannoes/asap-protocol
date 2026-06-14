@@ -471,6 +471,46 @@ class TestEscalationRoutesErrorsAndBranches:
         assert _call is not None
         assert _call.kwargs["principal_id"] == sess.host_id
 
+    async def test_a2h_uses_linked_user_id_as_principal(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: ASAPRateLimiter | None,
+    ) -> None:
+        """When host.user_id is set, A2H escalation uses user_id as principal_id."""
+        caps = [
+            CapabilityDefinition(name="file:read", description="r"),
+            CapabilityDefinition(name="admin:config", description="a"),
+        ]
+        app, agent_store, host_store, registry = _setup(
+            sample_manifest, isolated_rate_limiter, capabilities=caps
+        )
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        client = TestClient(app)
+        aid = await _register_and_activate(client, app, agent_store, host_sk, agent_sk)
+        ch = AsyncMock()
+        app.state.identity_approval_a2h_channel = ch
+        await _activate_host_with_defaults(
+            host_store, agent_store, aid, default_capabilities=["file:read"]
+        )
+        sess = await agent_store.get(aid)
+        assert sess is not None
+        host = await host_store.get(sess.host_id)
+        assert host is not None
+        await host_store.save(host.model_copy(update={"user_id": "linked-user-42"}))
+        registry.grant(aid, "file:read", granted_by=sess.host_id)
+        tok = _agent_token(agent_sk, host_sk, aid)
+        r = client.post(
+            "/asap/agent/request-capability",
+            headers={"Authorization": f"Bearer {tok}"},
+            json={"capabilities": [{"name": "admin:config"}]},
+        )
+        assert r.status_code == 200
+        ch.resolve_via_a2h.assert_awaited_once()
+        _call = ch.resolve_via_a2h.await_args
+        assert _call is not None
+        assert _call.kwargs["principal_id"] == "linked-user-42"
+
     async def test_verify_returns_incomplete_identity_returns_401(
         self,
         sample_manifest: Manifest,
