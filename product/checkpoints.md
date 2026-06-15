@@ -3,7 +3,7 @@
 > **Purpose**: Formal review points to update documentation with learnings (product follow-up after releases).
 > **Location**: Lives under **`product/`** because it drives PRD updates and retros, not day-to-day engineering execution.
 > **Created**: 2026-02-06
-> **Updated**: 2026-05-02 — Status roll-up verified against Git + `pyproject.toml`; CP-1–CP-6 archive checklists marked `[x]`.
+> **Updated**: 2026-06-14 — Status roll-up refreshed for **v2.4.1** security patch ship; `pyproject.toml` **2.4.1**; CP-7 partial closure (landing/docs aligned; full retro still open).
 
 ---
 
@@ -12,18 +12,21 @@
 Use this section first; the checkpoint sections below add detail or archive.
 
 **Evidence snapshot** (refresh with `git log` and [`pyproject.toml`](../pyproject.toml)):
-- **`pyproject.toml`** sets **`version = "2.2.1"`** — local packaging is **not** at **2.3.0** yet; **S5** (bump + PyPI/npm) remains open.
-- **S1 OpenAPI adapter**: first package commit **`cedb3f9`** — `2026-05-01` 19:16 -0300 (`feat(openapi): add OpenAPI 3.x adapter package`). Merge to `main`: **`04c56be`** — `2026-05-02` 01:03 -0300 (`feat(openapi): OpenAPI 3.x adapter (#132)`). Review notes: [`engineering/code-review/v2.3.0/pr-132-openapi-adapter.md`](../engineering/code-review/v2.3.0/pr-132-openapi-adapter.md) (**2026-05-01**).
+- **`pyproject.toml`** sets **`version = "2.4.1"`** — **v2.4.1** security hardening patch shipped **2026-06-14** (tag [`v2.4.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.4.1), commit **`66282080`**). PyPI, npm (`@asap-protocol/*`), Docker, and production landing verified per [sprint-S2-release.md](../engineering/tasks/private/v2.4.1/sprint-S2-release.md).
+- **v2.4.0** edge-AI discovery shipped **2026-05-24** ([`CHANGELOG.md`](../CHANGELOG.md#240---2026-05-24)).
+- **S1 OpenAPI adapter** (v2.3.0): first package commit **`cedb3f9`** — `2026-05-01` 19:16 -0300; merge **`04c56be`** — `2026-05-02` 01:03 -0300 (`#132`). Review: [`engineering/code-review/v2.3.0/pr-132-openapi-adapter.md`](../engineering/code-review/v2.3.0/pr-132-openapi-adapter.md).
 
 | Track | Done (shipped / decided) | Still open (ahead) |
 |-------|--------------------------|-------------------|
 | **v1.1.0 → v1.4.0** | Releases on the v1.x train shipped per PRDs; Lean Marketplace pivot absorbed into planning (2026-02). CP-1–CP-4 checklists below marked **`[x]`** (milestone closed). | Standalone retros (`v1.1.0-retro` …) may still be missing on disk — only [`v1.0.0-retro.md`](../engineering/lessons-learned/v1.0.0-retro.md) exists **today**; add files if you want them archived. |
 | **v2.0.0** | Web app + marketplace usage foundation delivered (M1–M4 era per task docs); protocol moved on through v2.1+. | CP-5/CP-6 “two weeks after launch” metrics + `vision-v2.1.md`-style follow-ups were **not** finalized here; treat as **optional** unless you revisit launch analytics. |
 | **v2.1.x / v2.2.x / v2.2.1** | **Released** per [tasks-v2.3.0-adoption-multiplier.md](../engineering/tasks/v2.3.0/tasks-v2.3.0-adoption-multiplier.md) prerequisites (v2.2.0 **2026-04-15**, v2.2.1 **2026-04-21**). No dedicated checkpoint section existed in this doc — learnings live in PRDs, ADRs, and [`engineering/code-review/`](../engineering/code-review/). | Optional: one consolidated retro doc if you want a single narrative for the v2.2 cycle. |
-| **v2.3.0 Adoption Multiplier** | **S1** merged (**#132**, commit `04c56be`). Code, docs, and PR-132 review in repo. | **S2–S5**, **`version`** bump to **2.3.0**, PyPI/npm/Docker per [tasks-v2.3.0-adoption-multiplier.md](../engineering/tasks/v2.3.0/tasks-v2.3.0-adoption-multiplier.md). |
-| **After v2.3.0** | — | **CP-7** below: doc refresh, PRD / patch-train updates, adoption metrics. |
+| **v2.3.0 Adoption Multiplier** | **S1** merged (**#132**, commit `04c56be`). Subsequent v2.3.x / v2.4.0 trains shipped on the timeline below. | Optional: consolidated v2.3 retro if you want a single narrative. |
+| **v2.4.0 — Edge-AI discovery** | **Released** **2026-05-24** — hardware/inference manifest fields, registry mirror, marketplace filters, ShellClaw onboarding ([`CHANGELOG.md`](../CHANGELOG.md#240---2026-05-24)). | Community enum feedback: [#176](https://github.com/adriannoes/asap-protocol/issues/176). |
+| **v2.4.1 — Security hardening** | **Released** **2026-06-14** — OAuth2 `iss`/`aud` validation, fail-closed identity binding, web SSRF/redirect hardening, dependency bumps ([`CHANGELOG.md`](../CHANGELOG.md#241---2026-06-14), [migration](../docs/migration.md#upgrading-from-v240-to-v241)). Tag **v2.4.1**; PyPI/npm/Docker/GitHub Release per [sprint-S2-release.md](../engineering/tasks/private/v2.4.1/sprint-S2-release.md). | **v2.5.0** follow-ups: [#209](https://github.com/adriannoes/asap-protocol/issues/209). |
+| **After v2.4.1** | **CP-7** partial: landing/WhatsNew + CHANGELOG aligned with **2.4.1**. | Full CP-7 retro, PRD refresh, adoption metrics; ship **v2.5.0** scope from `[Unreleased]` follow-ups. |
 
-**Sources of truth for current execution**: [tasks-v2.3.0-adoption-multiplier.md](../engineering/tasks/v2.3.0/tasks-v2.3.0-adoption-multiplier.md), [prd-v2.3-scale.md](./prd/prd-v2.3-scale.md), [AGENTS.md](../AGENTS.md).
+**Sources of truth for current execution**: [sprint-S2-release.md](../engineering/tasks/private/v2.4.1/sprint-S2-release.md), [prd-v2.4.1-security-hardening.md](./prd/private/prd-v2.4.1-security-hardening.md), [AGENTS.md](../AGENTS.md).
 
 ---
 
@@ -173,7 +176,7 @@ Pre-release: Release materials (CHANGELOG, README, AGENTS.md, secure_agent examp
 
 ### CP-7: Post v2.3.x Adoption train (documentation & learning)
 
-**When**: After **v2.3.0** ships (S5 complete), or mid-flight if you run a **beta** period before tagging.
+**When**: After **v2.3.0** ships (S5 complete), or mid-flight if you run a **beta** period before tagging. **Partial closure (2026-06-14)**: **v2.4.1** security patch shipped; homepage/WhatsNew and CHANGELOG reflect current version.
 
 **Why**: v2.3.0 rescoped to adoption (OpenAPI, TS SDK, auto-registration, escalation/challenge). This checkpoint captures whether docs and PRDs reflect reality—not registry scale gates.
 
@@ -187,7 +190,7 @@ Pre-release: Release materials (CHANGELOG, README, AGENTS.md, secure_agent examp
 
 **Update**:
 - [ ] `prd-v2.3-scale.md` — ship checklist vs actual scope; note deferred v2.3.1–v2.3.3 tracks
-- [ ] `CHANGELOG.md` + public docs — homepage / apps/web announcement aligned with shipped surface?
+- [x] `CHANGELOG.md` + public docs — homepage / apps/web announcement aligned with shipped surface (**v2.4.1**, 2026-06-14)
 - [ ] Optional: `engineering/lessons-learned/v2.3.0-retro.md` — short retrospective (hypothesis: adoption flywheel vs 500-agent trigger)
 - [ ] Feed learnings into [prd-v2.4-adoption.md](./prd/prd-v2.4-adoption.md) or patch PRDs as needed
 
@@ -220,6 +223,8 @@ Track actual vs estimated to improve future planning:
 | v2.0.0 | 23-33 | — | — |
 | v2.1.x | — | — | — |
 | v2.2.x / v2.2.1 | — | — | Shipped 2026-04-15 / 2026-04-21 |
+| v2.4.0 | — | — | Shipped 2026-05-24 |
+| v2.4.1 | — | ~0.5 day (S2) | Shipped 2026-06-14 (security patch) |
 
 > [!NOTE]
 > Estimates updated after Lean Marketplace pivot: v1.2 reduced (6→4 sprints), v1.3 reduced (4→3 sprints), v2.0 reduced (6→4 sprints). Fill **Actual** when you reconcile from sprint notes.
@@ -249,3 +254,4 @@ Track actual vs estimated to improve future planning:
 | 2026-04-28 | **Status roll-up**: Table for shipped vs ahead; CP-1–CP-6 folded under `<details>` as archive; **CP-7** added for v2.3.x adoption; honesty note on missing retros; velocity rows for v2.2.x. |
 | 2026-05-02 | **Repo-verified evidence**: `pyproject.toml` still **2.2.1**; S1 merge **`04c56be`** (2026-05-02 01:03 -0300), first adapter commit **`cedb3f9`** (2026-05-01); linked PR-132 review date. |
 | 2026-05-02 | **Archive checklists**: All CP-1–CP-6 items set to **`[x]`** (milestone closed); CP-7 remains **`[ ]`** until post–v2.3.0 review. |
+| 2026-06-14 | **v2.4.1 post-release**: Evidence snapshot → **`pyproject.toml` 2.4.1**; roll-up adds v2.4.0/v2.4.1 rows; CP-7 partial closure (public docs aligned); v2.5.0 follow-ups [#209](https://github.com/adriannoes/asap-protocol/issues/209). |
