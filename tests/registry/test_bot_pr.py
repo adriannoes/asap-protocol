@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from datetime import datetime, timezone
 from typing import Any
 
@@ -15,6 +16,7 @@ from asap.registry.bot_pr import (
     AUTO_REGISTRATION_PR_LABEL,
     BotPRSettings,
     _github_create_pull_request,
+    _run_git,
     _sanitize_urn_for_branch,
     conventional_commit_message,
     merge_lite_registry,
@@ -116,6 +118,46 @@ def test_is_reserved_destination() -> None:
 
 def test_is_reserved_destination_private_ipv4() -> None:
     assert bot_pr.is_reserved_destination("https://10.0.0.1/path")
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("https://localhost/m", True),
+        ("https://[::1]/m", True),
+        ("https://0.0.0.0/m", True),
+        ("https://169.254.1.1/m", True),
+        ("https://example.com/m", False),
+    ],
+)
+def test_is_reserved_destination_ssrf_matrix(url: str, expected: bool) -> None:
+    assert bot_pr.is_reserved_destination(url) is expected
+
+
+def test_run_git_uses_fixed_argv_without_shell(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_run(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        captured["argv"] = argv
+        captured["kwargs"] = kwargs
+        return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(bot_pr.subprocess, "run", fake_run)
+    _run_git(["git", "version"])
+    assert captured["argv"] == ["git", "version"]
+    assert captured["kwargs"]["check"] is True
+    assert captured["kwargs"]["capture_output"] is True
+    assert captured["kwargs"]["text"] is True
+    assert captured["kwargs"]["timeout"] == 120
+
+
+def test_run_git_propagates_called_process_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_run(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        raise subprocess.CalledProcessError(1, argv)
+
+    monkeypatch.setattr(bot_pr.subprocess, "run", fake_run)
+    with pytest.raises(subprocess.CalledProcessError):
+        _run_git(["git", "status"])
 
 
 @pytest.mark.asyncio
