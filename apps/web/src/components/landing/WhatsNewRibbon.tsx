@@ -26,8 +26,6 @@ const CHANGELOG_URL =
   'https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#241---2026-06-14';
 const DOCS_EDGE_AI =
   'https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md#hardware-and-inference-capabilities-v24';
-const DOCS_SHELLCLAW =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/shellclaw-registry.md';
 const DOCS_TS_SDK =
   'https://github.com/adriannoes/asap-protocol/blob/main/docs/sdks/typescript.md';
 const DOCS_OPENAPI =
@@ -46,10 +44,9 @@ const PILLS: Pill[] = [
     dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsOpenapi,
   },
   {
-    label: 'ShellClaw guide',
-    href: DOCS_SHELLCLAW,
+    label: 'ShellClaw',
+    href: '/shellclaw',
     icon: Sparkles,
-    external: true,
     dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsAutoRegistration,
   },
   {

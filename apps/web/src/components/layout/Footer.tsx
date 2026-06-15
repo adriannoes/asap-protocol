@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Github, Book, Terminal } from 'lucide-react';
+import { Github, Book, Terminal, Cpu } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -35,6 +35,13 @@ export function Footer() {
               >
                 <Terminal className="h-4 w-4" />
                 <span>Developer Experience</span>
+              </Link>
+              <Link
+                href="/shellclaw"
+                className="flex items-center gap-2 text-sm transition-colors hover:text-white"
+              >
+                <Cpu className="h-4 w-4" />
+                <span>ShellClaw</span>
               </Link>
             </div>
           </div>
