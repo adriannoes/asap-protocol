@@ -761,6 +761,67 @@ For deployments that enforce self-authorization prevention with real passkeys:
 See [Self-authorization prevention](security/self-authorization-prevention.md)
 (**Real WebAuthn**) for the threat model and ceremony flow.
 
+### Upgrading from v2.4.0 to v2.4.1
+
+v2.4.1 is a **security-hardening patch**. JSON-RPC envelopes, capability grants,
+and manifest schemas are unchanged from v2.4.0. Most deployments upgrade without
+code changes.
+
+#### What changed
+
+- **OAuth2 JWT validation (opt-in)**: When `ASAP_AUTH_ISSUER` and/or
+  `ASAP_AUTH_AUDIENCE` are set (or `OAuth2Config.expected_issuer` /
+  `expected_audience`), the OAuth2 middleware validates JWT `iss` and `aud` via
+  `validate_jwt()` in `asap.auth.jwks`. Tokens with a mismatched issuer or
+  audience are rejected.
+- **Identity binding (fail-closed)**: When `manifest_id` is configured on
+  `OAuth2Config`, requests whose JWT subject does not match the custom claim
+  (`ASAP_AUTH_CUSTOM_CLAIM`) or `ASAP_AUTH_SUBJECT_MAP` allowlist now receive
+  **403** instead of warn-and-pass.
+- **Web app (`apps/web`)**: Hardened against open redirects on E2E fixture login
+  routes (`resolveRedirectUrl`), SSRF on `/api/health-check` (127.0.0.0/8, DNS
+  resolve4/6), and strict Zod validation on public API query params (unknown keys
+  return 400). Default marketplace deployments pick up these fixes on rebuild —
+  **no operator configuration required**.
+- **Dependencies**: Raised `fastapi` floor to `>=0.136.1` (pulls
+  `starlette>=1.0.1`, resolves **PYSEC-2026-161**); bumped transitive pins for
+  `langchain-core`, `langsmith`, `python-multipart`, `urllib3`, `pip`, and
+  `smolagents`. See [SECURITY.md](../SECURITY.md).
+
+#### Upgrade steps
+
+1. **Bump dependencies**:
+   ```bash
+   pip install --upgrade asap-protocol==2.4.1
+   # or
+   uv add asap-protocol==2.4.1
+   ```
+   TypeScript consumers: `npm install @asap-protocol/client@2.4.1`.
+
+2. **OAuth2 operators**: If you already set `ASAP_AUTH_ISSUER` /
+   `ASAP_AUTH_AUDIENCE`, ensure your IdP issues tokens with matching `iss` and
+   `aud`. If unset, behavior is unchanged from v2.4.0.
+
+3. **Identity binding**: If `manifest_id` is set, verify
+   `ASAP_AUTH_CUSTOM_CLAIM` or `ASAP_AUTH_SUBJECT_MAP` covers every legitimate
+   caller — otherwise those callers will now receive 403.
+
+4. **Web app**: Rebuild/redeploy `apps/web` if you self-host the marketplace
+   (fixes ship in the image; no new env vars).
+
+5. **Re-run Compliance Harness v2** after upgrading production agents
+   (`asap compliance-check --exit-on-fail`).
+
+#### Backward compatibility
+
+- **Wire protocol**: Unchanged from v2.4.0.
+- **Breaking changes**: None when `ASAP_AUTH_ISSUER`, `ASAP_AUTH_AUDIENCE`, and
+  `manifest_id` identity binding were already configured correctly. Fail-closed
+  identity binding is a behavior change only for misconfigured deployments that
+  previously passed with warnings.
+
+---
+
 ### Upgrading from v2.3.x to v2.4.0
 
 v2.4.0 is an **additive, backward-compatible** minor release. JSON-RPC envelopes,

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Follow-up (not in this release)
+
+- `extra="forbid"` on ingress payload models (`TaskRequestConfig`, `CommonMetadata`)
+- Opt-in protection for operator APIs (`/usage`, `/sla`, `/audit`)
+- Redis-backed `JtiReplayCache` and distributed Next.js rate limits
+- Bump optional `pydantic-ai` extra (CVE-2026-46678)
+
+---
+
+## [2.4.1] - 2026-06-14
+
+**Security hardening patch** — OAuth2 `iss`/`aud` validation, fail-closed identity
+binding, web app SSRF/redirect fixes, and dependency bumps. Wire protocol and
+manifest schemas are unchanged from v2.4.0.
+
 ### Security
 
 - **OAuth2 middleware**: Validate JWT `iss` and `aud` when `ASAP_AUTH_ISSUER` / `ASAP_AUTH_AUDIENCE` (or `OAuth2Config.expected_issuer` / `expected_audience`) are set; refactored validation through `validate_jwt()` in `asap.auth.jwks`.
@@ -18,12 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CI security (`pip-audit`)**: Bumped transitive pins (`langchain-core`, `langsmith`, `python-multipart`, `urllib3`, `pip`, `smolagents`) and adjusted documented `--ignore-vuln` flags (pygments + **smolagents** CVEs with no PyPI fix yet; pip ≥26.1 clears prior pip ignore). See [SECURITY.md](SECURITY.md).
 - **FastAPI / Starlette**: Raised `fastapi` floor to `>=0.136.1` so `starlette>=1.0.1` resolves **PYSEC-2026-161** (Host header path injection) without a `pip-audit` ignore.
 
-### Follow-up (not in this release)
+### Migration
 
-- `extra="forbid"` on ingress payload models (`TaskRequestConfig`, `CommonMetadata`)
-- Opt-in protection for operator APIs (`/usage`, `/sla`, `/audit`)
-- Redis-backed `JtiReplayCache` and distributed Next.js rate limits
-- Bump optional `pydantic-ai` extra (CVE-2026-46678)
+- **v2.4.0 → v2.4.1**: Security patch — bump dependencies; verify OAuth2 issuer/audience and identity binding if already configured. See
+  [migration guide](docs/migration.md#upgrading-from-v240-to-v241).
 
 ---
 

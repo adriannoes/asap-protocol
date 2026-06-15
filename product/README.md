@@ -43,6 +43,7 @@ product/
 | v2.3.1 — Framework adapters (npm) | ✅ Released (2026-05-21) | — (private PRD) | `@asap-protocol/mastra`, `@asap-protocol/openai-agents` @ 2.3.1; Python core stays 2.3.0 |
 | v2.3.2 — Adapter Lab II | 🔒 Private planning | `prd/private/prd-v2.3.2-enterprise-workflow-adapters.md` | Microsoft Agent Framework, Haystack, Letta, workflow automation |
 | v2.3.3 — Distribution Loop | 🔒 Private planning | `prd/private/prd-v2.3.3-distribution-loop.md` | Templates, docs, homepage, metrics, developer activation |
+| **v2.4.1 — Security hardening** | **✅ Released (2026-06-14)** | `engineering/tasks/private/v2.4.1/` | OAuth2 iss/aud validation, fail-closed identity binding, web SSRF/redirect hardening, dependency bumps |
 | **v2.4.0 — Edge-AI discovery** | **✅ Released (2026-05-24)** | `engineering/tasks/v2.4.0/` | Hardware/inference manifest fields, registry mirror, marketplace filters, ShellClaw onboarding |
 | v2.4.x — Spec & Interop (deferred PRD) | 🔭 Vision draft | `prd-v2.4-adoption.md` | MCP Auth Bridge, Formal Spec, Introspection, Privacy (not in shipped 2.4.0 scope) |
 | v3.0 — Economy | 🔭 Long-term | `prd-v3.0-economy.md` | Settlement, billing |
