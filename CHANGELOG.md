@@ -12,7 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `extra="forbid"` on ingress payload models (`TaskRequestConfig`, `CommonMetadata`)
 - Opt-in protection for operator APIs (`/usage`, `/sla`, `/audit`)
 - Redis-backed `JtiReplayCache` and distributed Next.js rate limits
-- Bump optional `pydantic-ai` extra (CVE-2026-46678)
+
+### Fixed
+
+- **pydantic-ai (CVE-2026-46678)**: Optional `[pydanticai]` extra pins `pydantic-ai>=1.99.0`; removed obsolete `pip-audit` ignore from CI.
 
 ---
 
