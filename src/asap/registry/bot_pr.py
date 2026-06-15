@@ -12,12 +12,12 @@ import logging
 import os
 import re
 import shutil
-import subprocess
+import subprocess  # nosec B404
 import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 from urllib.parse import urlparse
 
 import httpx
@@ -104,6 +104,25 @@ class BotPRSettings:
         )
 
 
+def _run_git(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
+    """Run a fixed ``git`` argv list (no shell).
+
+    Args:
+        argv: Full argv starting with ``git`` (e.g. ``["git", "-C", path, "add", ...]``).
+
+    Git paths and branch names come from maintainer-controlled ``BotPRSettings`` and
+    sanitized URNs—not arbitrary user shell input.
+    """
+    # nosec B603, B607: fixed git argv; no shell; paths from trusted settings
+    return subprocess.run(
+        argv,
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=_GIT_SUBPROCESS_TIMEOUT_SEC,
+    )  # nosec B603, B607
+
+
 def _default_branch_prep(
     worktree: Path, entry: RegistryEntry, manifest_url: str, settings: BotPRSettings
 ) -> None:
@@ -113,14 +132,8 @@ def _default_branch_prep(
     text = reg_file.read_text(encoding="utf-8")
     new_json = merge_lite_registry_json_text(text, entry)
     reg_file.write_text(new_json + "\n", encoding="utf-8")
-    subprocess.run(
-        ["git", "-C", str(worktree), "add", str(reg_file.relative_to(worktree))],
-        check=True,
-        capture_output=True,
-        text=True,
-        timeout=_GIT_SUBPROCESS_TIMEOUT_SEC,
-    )
-    subprocess.run(
+    _run_git(["git", "-C", str(worktree), "add", str(reg_file.relative_to(worktree))])
+    _run_git(
         [
             "git",
             "-C",
@@ -128,16 +141,12 @@ def _default_branch_prep(
             "commit",
             "-m",
             conventional_commit_message(entry),
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-        timeout=_GIT_SUBPROCESS_TIMEOUT_SEC,
+        ]
     )
 
 
 def _default_git_push(worktree: Path, branch: str, settings: BotPRSettings) -> None:
-    subprocess.run(
+    _run_git(
         [
             "git",
             "-C",
@@ -146,11 +155,7 @@ def _default_git_push(worktree: Path, branch: str, settings: BotPRSettings) -> N
             "-u",
             settings.remote_name,
             branch,
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-        timeout=_GIT_SUBPROCESS_TIMEOUT_SEC,
+        ]
     )
 
 
@@ -167,20 +172,8 @@ def _run_local_git_flow(
     push_fn: PushFn,
 ) -> None:
     """Blocking git clone → branch → registry edit → push (runs in a thread pool)."""
-    subprocess.run(
-        ["git", "clone", "--depth", "1", "--branch", base_branch, clone_target, str(worktree)],
-        check=True,
-        capture_output=True,
-        text=True,
-        timeout=_GIT_SUBPROCESS_TIMEOUT_SEC,
-    )
-    subprocess.run(
-        ["git", "-C", str(worktree), "checkout", "-b", branch_name],
-        check=True,
-        capture_output=True,
-        text=True,
-        timeout=_GIT_SUBPROCESS_TIMEOUT_SEC,
-    )
+    _run_git(["git", "clone", "--depth", "1", "--branch", base_branch, clone_target, str(worktree)])
+    _run_git(["git", "-C", str(worktree), "checkout", "-b", branch_name])
     branch_prep(worktree, entry, manifest_url, settings)
     push_fn(worktree, branch_name, settings)
 

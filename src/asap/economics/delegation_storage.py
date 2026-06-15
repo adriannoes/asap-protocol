@@ -408,7 +408,8 @@ class SQLiteDelegationStorage(DelegationStorageBase):
             # ``,``; every value comes through the tuple passed to ``execute``. SQLite does
             # not support binding a list to a single parameter, so dynamic SQL is required.
             placeholders = ",".join("?" for _ in token_ids)
-            assert set(placeholders) <= {"?", ","}, "placeholders must be `?,?,…` only"
+            if set(placeholders) - {"?", ","}:
+                raise ValueError("placeholders must be `?,?,…` only")
             cursor = await conn.execute(
                 f"SELECT id FROM revocations WHERE id IN ({placeholders})",  # nosec B608 - placeholders asserted to be `?,?,…`; values parameterized
                 token_ids,

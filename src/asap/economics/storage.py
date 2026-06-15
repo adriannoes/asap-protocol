@@ -567,9 +567,8 @@ class SQLiteMeteringStorage(MeteringStorageBase):
             if filters.end is not None:
                 conditions.append("timestamp <= ?")
                 params.append(filters.end.isoformat())
-            assert all(c in self._ALLOWED_QUERY_FRAGMENTS for c in conditions), (
-                "unexpected WHERE fragment"
-            )
+            if not all(c in self._ALLOWED_QUERY_FRAGMENTS for c in conditions):
+                raise ValueError("unexpected WHERE fragment")
             where = " AND ".join(conditions) if conditions else "1=1"
             sql = f"""
                 SELECT id, task_id, agent_id, consumer_id, metrics, timestamp
