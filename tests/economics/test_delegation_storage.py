@@ -121,6 +121,26 @@ class TestInMemoryDelegationStorage:
         assert await memory_storage.is_revoked("t1") is True
         assert await memory_storage.is_revoked("t2") is True
 
+    @pytest.mark.asyncio
+    async def test_revoke_cascade_stops_at_max_depth(
+        self,
+        memory_storage: InMemoryDelegationStorage,
+    ) -> None:
+        """Tokens beyond _MAX_CASCADE_DEPTH are not revoked (DoS guard)."""
+        chain_len = 52
+        for i in range(chain_len):
+            delegator = f"urn:asap:agent:A{i}"
+            delegate = f"urn:asap:agent:A{i + 1}"
+            await memory_storage.register_issued(
+                f"del_depth_{i}",
+                delegator,
+                delegate_urn=delegate,
+            )
+        await memory_storage.revoke_cascade("del_depth_0", reason="depth limit")
+        for i in range(51):
+            assert await memory_storage.is_revoked(f"del_depth_{i}") is True
+        assert await memory_storage.is_revoked("del_depth_51") is False
+
 
 # ---------------------------------------------------------------------------
 # SQLiteDelegationStorage
