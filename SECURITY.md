@@ -97,7 +97,11 @@ CI runs `pip-audit` after a sync that **excludes** the optional extras `crewai` 
 
 **CVE-2026-4539 (Pygments)**: CI uses `--ignore-vuln CVE-2026-4539` until a patched `pygments` release on PyPI resolves the advisory (`tool.uv.override-dependencies` prefers `pygments>=2.20.0` when resolvable).
 
-**PYSEC-2026-161 (starlette, FastAPI stack)**: Resolved by requiring `fastapi>=0.136.1`, which pulls `starlette>=1.0.1` (Host header path validation). Do not add a `pip-audit` ignore for this advisory.
+**PYSEC-2026-161 (starlette, FastAPI stack)**: Resolved by requiring `fastapi>=0.136.1`, which pulls `starlette>=1.0.1` (Host header path validation). **CVE-2026-54282 / CVE-2026-54283** require `starlette>=1.3.1` via `tool.uv.override-dependencies`. Do not add a `pip-audit` ignore for these advisories.
+
+**CVE-2026-53538–53540 (python-multipart, FastAPI stack)**: Resolved via override (`python-multipart>=0.0.31`).
+
+**GHSA-537c-gmf6-5ccf (cryptography)**: Resolved by raising the pin to `cryptography>=48.0.1,<49` (direct dependency and override).
 
 **CVE-2026-46678 (pydantic-ai, optional `[pydanticai]` extra)**: Resolved via `[pydanticai]` extra floor `pydantic-ai>=1.99.0` (1.102.0 in lock as of 2026-06).
 
@@ -134,7 +138,7 @@ We pin **upper bounds** on the security- and protocol-sensitive libraries listed
 
 | Package | Pin | Why |
 |---------|-----|-----|
-| `cryptography` | `>=46.0.7,<47` | CVE-2026-39892 / CVE-2026-34073 baseline; v47 changes serialization API (Rust backend migration) |
+| `cryptography` | `>=48.0.1,<49` | GHSA-537c-gmf6-5ccf baseline; v47+ serialization API (Rust backend migration) |
 | `authlib` | `>=1.6.11,<2` | GHSA-jj8c-mmj3-mmgv baseline; v2 reworks JWS header policy |
 | `joserfc` | `>=1.6.3,<2` | JWT / JWS / JWE primitives powering Host JWT verification |
 | `pyjwt` (override) | `>=2.12.0,<3` | CVE-2026-32597 baseline; v3 changes default `options` behavior for token introspection |

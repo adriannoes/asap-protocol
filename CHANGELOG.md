@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **CI security (`pip-audit`)**: Raised `cryptography` to `>=48.0.1,<49` (GHSA-537c-gmf6-5ccf), `python-multipart>=0.0.31` (CVE-2026-53538–53540), and `starlette>=1.3.1` (CVE-2026-54282 / CVE-2026-54283) via `pyproject.toml` floors and `tool.uv.override-dependencies`.
 - **pydantic-ai (CVE-2026-46678)**: Optional `[pydanticai]` extra pins `pydantic-ai>=1.99.0`; removed obsolete `pip-audit` ignore from CI.
 
 ---
