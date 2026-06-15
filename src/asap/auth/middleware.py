@@ -297,10 +297,24 @@ class OAuth2Middleware(BaseHTTPMiddleware):
             )
 
         exp = claims.get("exp")
-        try:
-            exp_ts = int(exp) if isinstance(exp, (int, float)) else 0
-        except (TypeError, ValueError):
-            exp_ts = 0
+        exp_ts = 0
+        if exp is not None:
+            if not isinstance(exp, (int, float)):
+                logger.warning("asap.oauth2.invalid_exp_type", path=request.url.path)
+                return JSONResponse(
+                    status_code=HTTP_UNAUTHORIZED,
+                    content={"detail": ERROR_INVALID_TOKEN},
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            try:
+                exp_ts = int(exp)
+            except (TypeError, ValueError):
+                logger.warning("asap.oauth2.invalid_exp_type", path=request.url.path)
+                return JSONResponse(
+                    status_code=HTTP_UNAUTHORIZED,
+                    content={"detail": ERROR_INVALID_TOKEN},
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
         if exp is not None and exp_ts > 0 and exp_ts < time.time():
             logger.warning("asap.oauth2.expired_token", path=request.url.path)
             return JSONResponse(
