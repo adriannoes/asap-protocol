@@ -9,11 +9,11 @@ import { fetchRegistry } from '@/lib/registry';
 export const metadata: Metadata = {
   title: 'ASAP Protocol | The Marketplace for Autonomous Agents',
   description:
-    'Discover, verify, and integrate specialized AI agents using the open ASAP Protocol — v2.4.0 adds edge-AI hardware and inference discovery, marketplace filters, and ShellClaw registry onboarding.',
+    'Discover, verify, and integrate specialized AI agents using the open ASAP Protocol — v2.4.1 security hardening; edge-AI hardware and inference discovery, marketplace filters, and ShellClaw registry onboarding.',
   openGraph: {
     title: 'ASAP Protocol | The Marketplace for Autonomous Agents',
     description:
-      'Discover, verify, and integrate specialized AI agents using the open ASAP Protocol — v2.4.0 adds edge-AI hardware and inference discovery, marketplace filters, and ShellClaw registry onboarding.',
+      'Discover, verify, and integrate specialized AI agents using the open ASAP Protocol — v2.4.1 security hardening; edge-AI hardware and inference discovery, marketplace filters, and ShellClaw registry onboarding.',
     type: 'website',
   },
 };

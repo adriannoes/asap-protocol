@@ -23,7 +23,7 @@ type Pill = {
 };
 
 const CHANGELOG_URL =
-  'https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#240---2026-05-24';
+  'https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#241---2026-06-14';
 const DOCS_EDGE_AI =
   'https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md#hardware-and-inference-capabilities-v24';
 const DOCS_SHELLCLAW =
@@ -110,7 +110,7 @@ const PILLS: Pill[] = [
 export function WhatsNewRibbon() {
   return (
     <aside
-      aria-label="What's new in ASAP Protocol v2.4.0"
+      aria-label="What's new in ASAP Protocol v2.4.1"
       className="w-full border-y border-zinc-900 bg-zinc-950"
     >
       <div className="container mx-auto flex max-w-5xl flex-col gap-4 px-4 py-8 md:flex-row md:items-center md:gap-4 md:px-6 md:py-10">
@@ -118,10 +118,10 @@ export function WhatsNewRibbon() {
           <Sparkles className="h-4 w-4 shrink-0 text-indigo-400" aria-hidden />
           <div className="flex flex-col">
             <span className="font-mono text-xs uppercase tracking-wider text-indigo-400">
-              What&apos;s new in v2.4.0
+              What&apos;s new in v2.4.1
             </span>
             <span className="text-xs text-zinc-500">
-              Edge-AI discovery &amp; marketplace filters — May 2026
+              Security hardening patch — June 2026
             </span>
           </div>
         </div>

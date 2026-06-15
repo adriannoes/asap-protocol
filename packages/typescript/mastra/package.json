@@ -1,6 +1,6 @@
 {
   "name": "@asap-protocol/mastra",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "description": "ASAP Protocol capabilities as Mastra tools (@mastra/core)",
   "type": "module",
   "license": "Apache-2.0",
