@@ -294,6 +294,20 @@ async def test_github_create_pull_request_spawns_client_when_none(
 
 
 @pytest.mark.asyncio
+async def test_open_registry_pull_request_rejects_reserved_clone_url() -> None:
+    """Reserved clone URLs must not reach git clone (SSRF guard)."""
+    entry = _dummy_entry()
+    settings = BotPRSettings(owner="org", repo="repo", github_token="tok")
+    with pytest.raises(ValueError, match="reserved destination"):
+        await open_registry_pull_request(
+            entry,
+            manifest_url="https://cdn.example/m.json",
+            settings=settings,
+            clone_url="https://127.0.0.1/malicious.git",
+        )
+
+
+@pytest.mark.asyncio
 async def test_open_registry_pull_request_threads_then_github_api(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

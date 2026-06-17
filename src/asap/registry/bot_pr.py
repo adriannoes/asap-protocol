@@ -202,6 +202,8 @@ async def open_registry_pull_request(
     branch_name = f"auto-reg/{branch_slug}"
 
     clone = clone_url or f"https://github.com/{settings.owner}/{settings.repo}.git"
+    if is_reserved_destination(clone):
+        raise ValueError(f"Refusing to clone from reserved destination: {clone}")
     clone_target = settings._authenticated_clone_url(clone)
 
     branch_prep = settings.branch_prep_callback or _default_branch_prep
