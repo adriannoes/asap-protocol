@@ -315,7 +315,7 @@ class OAuth2Middleware(BaseHTTPMiddleware):
                     content={"detail": ERROR_INVALID_TOKEN},
                     headers={"WWW-Authenticate": "Bearer"},
                 )
-        if exp is not None and exp_ts > 0 and exp_ts < time.time():
+        if exp is not None and exp_ts < time.time():
             logger.warning("asap.oauth2.expired_token", path=request.url.path)
             return JSONResponse(
                 status_code=HTTP_UNAUTHORIZED,
