@@ -19,7 +19,7 @@ import json
 import time
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -1207,6 +1207,91 @@ class TestAgentRegisterEndpoint:
         assert jwk_thumbprint_sha256(stored.public_key) == thumb
         assert stored.agent_id == data["agent_id"]
         assert stored.host_id == data["host_id"]
+
+    async def test_register_a2h_uses_host_id_as_principal(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: "ASAPRateLimiter | None",
+    ) -> None:
+        """When host.user_id is unset, A2H registration approval uses host_id as principal."""
+        app, _agent_store, _host_store = _app_with_identity_stores(
+            sample_manifest, isolated_rate_limiter
+        )
+        ch = AsyncMock()
+        app.state.identity_approval_a2h_channel = ch
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        agent_jwk = ed25519_public_jwk(agent_sk)
+        token = create_host_jwt(
+            host_sk,
+            aud=_HOST_JWT_AUDIENCE,
+            agent_public_key=agent_jwk,
+            ttl_seconds=120,
+        )
+        client = TestClient(app)
+        r = client.post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert data["status"] == "pending"
+        ch.resolve_via_a2h.assert_awaited_once()
+        call = ch.resolve_via_a2h.await_args
+        assert call is not None
+        assert call.kwargs["principal_id"] == data["host_id"]
+
+    async def test_register_a2h_uses_linked_user_id_as_principal(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: "ASAPRateLimiter | None",
+    ) -> None:
+        """When host.user_id is set, A2H registration approval uses user_id as principal."""
+        app, agent_store, host_store = _app_with_identity_stores(
+            sample_manifest, isolated_rate_limiter
+        )
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk_first = Ed25519PrivateKey.generate()
+        first_jwk = ed25519_public_jwk(agent_sk_first)
+        first_token = create_host_jwt(
+            host_sk,
+            aud=_HOST_JWT_AUDIENCE,
+            agent_public_key=first_jwk,
+            ttl_seconds=120,
+        )
+        client = TestClient(app)
+        r0 = client.post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {first_token}"},
+        )
+        assert r0.status_code == 200
+        host_id = r0.json()["host_id"]
+        host = await host_store.get(host_id)
+        assert host is not None
+        await host_store.save(host.model_copy(update={"user_id": "linked-user-42"}))
+
+        ch = AsyncMock()
+        app.state.identity_approval_a2h_channel = ch
+        agent_sk_second = Ed25519PrivateKey.generate()
+        second_jwk = ed25519_public_jwk(agent_sk_second)
+        second_token = create_host_jwt(
+            host_sk,
+            aud=_HOST_JWT_AUDIENCE,
+            agent_public_key=second_jwk,
+            ttl_seconds=120,
+        )
+        r = client.post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {second_token}"},
+        )
+        assert r.status_code == 200
+        assert r.json()["status"] == "pending"
+        ch.resolve_via_a2h.assert_awaited_once()
+        call = ch.resolve_via_a2h.await_args
+        assert call is not None
+        assert call.kwargs["principal_id"] == "linked-user-42"
+        stored_list = await agent_store.list_by_host(host_id)
+        assert len(stored_list) == 2
 
     def test_register_browser_agent_returns_403_webauthn_when_real_verifier_configured(
         self,
