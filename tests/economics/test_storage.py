@@ -688,6 +688,14 @@ class TestPeriodToMeteringQuery:
         assert q.start is None
         assert q.end is None
 
+    @pytest.mark.parametrize("period", ["h", "d", "w", "today"])
+    def test_period_shorthand_aliases(self, period: str) -> None:
+        q = _period_to_metering_query("agent-1", period)
+        assert q is not None
+        assert q.agent_id == "agent-1"
+        assert q.start is not None
+        assert q.end is not None
+
 
 # ---------------------------------------------------------------------------
 # Helper for coverage tests

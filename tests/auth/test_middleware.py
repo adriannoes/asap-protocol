@@ -652,3 +652,20 @@ def test_oauth2_middleware_accepts_matching_iss_aud_when_configured(
         response = client.get("/asap", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 200
+
+
+def test_oauth2_middleware_rejects_empty_bearer_token() -> None:
+    """Authorization: Bearer with no token value must return 401."""
+    app = _minimal_app()
+    app.add_middleware(
+        OAuth2Middleware,
+        jwks_uri="https://auth.example.com/jwks.json",
+        path_prefix="/asap",
+        jwks_fetcher=lambda uri: _mock_jwks_fetcher(uri),
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/asap", headers={"Authorization": "Bearer "})
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Authentication required"}

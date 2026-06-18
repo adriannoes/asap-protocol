@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import subprocess
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -15,6 +16,7 @@ from asap.registry import bot_pr
 from asap.registry.bot_pr import (
     AUTO_REGISTRATION_PR_LABEL,
     BotPRSettings,
+    _default_branch_prep,
     _github_create_pull_request,
     _run_git,
     _sanitize_urn_for_branch,
@@ -127,6 +129,10 @@ def test_is_reserved_destination_private_ipv4() -> None:
         ("https://[::1]/m", True),
         ("https://0.0.0.0/m", True),
         ("https://169.254.1.1/m", True),
+        ("https://172.16.0.1/m", True),
+        ("https://192.168.1.1/m", True),
+        ("https://[fc00::1]/m", True),
+        ("https://[::ffff:127.0.0.1]/m", True),
         ("https://example.com/m", False),
     ],
 )
@@ -187,7 +193,74 @@ async def test_github_create_pull_request_success() -> None:
             http_client=client,
         )
     assert url == "https://github.com/o/r/pull/42"
-    assert any("/issues/42/labels" in u for u in requests_log)
+    assert any("/issues/42/labels" in r for r in requests_log)
+
+
+@pytest.mark.asyncio
+async def test_github_create_pull_request_label_failure_propagates() -> None:
+    """Label POST failure must abort PR flow (auto-merge gating depends on label)."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST" and "/repos/o/r/pulls" in str(request.url):
+            return httpx.Response(
+                201,
+                json={"html_url": "https://github.com/o/r/pull/7", "number": 7},
+            )
+        if request.method == "POST" and "/repos/o/r/issues/7/labels" in str(request.url):
+            return httpx.Response(403, json={"message": "Resource not accessible"})
+        return httpx.Response(404, json={"message": "unexpected"})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        settings = BotPRSettings(owner="o", repo="r", github_token="tok")
+        with pytest.raises(httpx.HTTPStatusError):
+            await _github_create_pull_request(
+                settings=settings,
+                head_branch="auto-reg/x",
+                title="t",
+                body="b",
+                http_client=client,
+            )
+
+
+def test_default_branch_prep_missing_registry_raises(tmp_path: Path) -> None:
+    """Missing registry.json in worktree must fail before git subprocesses run."""
+    settings = BotPRSettings(
+        owner="o", repo="r", github_token="tok", registry_path_in_repo="registry.json"
+    )
+    with pytest.raises(FileNotFoundError, match="Missing"):
+        _default_branch_prep(tmp_path, _dummy_entry(), "https://cdn.example/m.json", settings)
+
+
+def test_default_branch_prep_writes_merged_registry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Valid worktree must merge entry into registry.json and stage a commit."""
+    reg_file = tmp_path / "registry.json"
+    reg_file.write_text(
+        '{"version":"1.0","updated_at":"2026-01-01T00:00:00Z","agents":[]}',
+        encoding="utf-8",
+    )
+    captured_argv: list[list[str]] = []
+
+    def fake_run(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        captured_argv.append(argv)
+        return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(bot_pr.subprocess, "run", fake_run)
+    settings = BotPRSettings(
+        owner="o", repo="r", github_token="tok", registry_path_in_repo="registry.json"
+    )
+    entry = _dummy_entry()
+    _default_branch_prep(tmp_path, entry, "https://cdn.example/m.json", settings)
+
+    merged = LiteRegistry.model_validate_json(reg_file.read_text(encoding="utf-8"))
+    assert len(merged.agents) == 1
+    assert merged.agents[0].id == entry.id
+    assert any(argv[:3] == ["git", "-C", str(tmp_path)] and "add" in argv for argv in captured_argv)
+    assert any(
+        argv[:3] == ["git", "-C", str(tmp_path)] and "commit" in argv for argv in captured_argv
+    )
 
 
 @pytest.mark.asyncio
