@@ -140,9 +140,13 @@ class JWKSValidator:
         jwks_uri: str,
         *,
         transport: Optional[httpx.AsyncBaseTransport] = None,
+        expected_issuer: str | None = None,
+        expected_audience: str | list[str] | None = None,
     ) -> None:
         self._jwks_uri = jwks_uri
         self._transport = transport
+        self._expected_issuer = expected_issuer
+        self._expected_audience = expected_audience
         self._key_set: Optional[jwk.KeySet] = None
         self._keys_cache: Optional[_JWKSCacheEntry] = None
         self._lock = asyncio.Lock()
@@ -185,7 +189,12 @@ class JWKSValidator:
         Raises:
             JoseError: If signature is invalid or token malformed.
         """
-        return validate_jwt(token, key_set)
+        return validate_jwt(
+            token,
+            key_set,
+            expected_issuer=self._expected_issuer,
+            expected_audience=self._expected_audience,
+        )
 
     async def validate_token(self, token: str) -> Claims:
         """Validate JWT using cached keys; refetch on failure (key rotation).
