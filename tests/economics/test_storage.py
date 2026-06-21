@@ -903,3 +903,14 @@ class TestSQLiteMeteringStorageCoverage:
         await sqlite_storage.record(_metric())
         removed = await sqlite_storage.purge_expired()
         assert removed == 0
+
+    @pytest.mark.asyncio
+    async def test_query_rejects_non_allowlisted_where_fragments(
+        self,
+        sqlite_storage: SQLiteMeteringStorage,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Fail-closed guard rejects dynamic SQL fragments outside the allowlist."""
+        monkeypatch.setattr(SQLiteMeteringStorage, "_ALLOWED_QUERY_FRAGMENTS", frozenset())
+        with pytest.raises(ValueError, match="unexpected WHERE fragment"):
+            await sqlite_storage.query(MeteringQuery(agent_id="agent_01"))

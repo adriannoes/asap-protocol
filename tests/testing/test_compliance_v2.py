@@ -22,6 +22,7 @@ from asap.testing.compliance import (
     check_streaming,
     check_versioning,
     run_compliance_harness_v2,
+    run_compliance_harness_v2_from_url,
 )
 from asap.transport.handlers import HandlerRegistry, create_echo_handler
 from asap.transport.rate_limit import create_test_limiter
@@ -154,6 +155,79 @@ class TestCheckResultModel:
         )
         assert report.score == 0.5
         assert len(report.checks) == 2
+
+
+class TestComplianceHarnessFromUrl:
+    @pytest.mark.asyncio
+    async def test_run_compliance_harness_v2_from_url_enables_follow_redirects(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Document redirect-following on remote harness preflight (SSRF-sensitive)."""
+        captured: dict[str, object] = {}
+        original_init = httpx.AsyncClient.__init__
+
+        def capturing_init(self: httpx.AsyncClient, *args: object, **kwargs: object) -> None:
+            captured.update(kwargs)
+            original_init(self, *args, **kwargs)
+
+        monkeypatch.setattr(httpx.AsyncClient, "__init__", capturing_init)
+        monkeypatch.setattr(
+            httpx.AsyncClient,
+            "get",
+            AsyncMock(return_value=MagicMock(status_code=200)),
+        )
+        monkeypatch.setattr(
+            "asap.testing.compliance.run_compliance_harness_with_client",
+            AsyncMock(return_value=_empty_report()),
+        )
+
+        await run_compliance_harness_v2_from_url("https://agent.example.com")
+
+        assert captured.get("follow_redirects") is True
+
+    @pytest.mark.asyncio
+    async def test_run_compliance_harness_v2_from_url_follows_redirect_on_preflight(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Preflight GET / follows redirects (registration harness SSRF surface)."""
+        requested: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            requested.append(str(request.url))
+            if str(request.url).rstrip("/") == "https://agent.example.com":
+                return httpx.Response(
+                    302,
+                    headers={"Location": "http://169.254.169.254/latest/meta-data/"},
+                )
+            return httpx.Response(200, text="ok")
+
+        original_init = httpx.AsyncClient.__init__
+
+        def transport_init(self: httpx.AsyncClient, *args: object, **kwargs: object) -> None:
+            kwargs["transport"] = httpx.MockTransport(handler)
+            original_init(self, *args, **kwargs)
+
+        monkeypatch.setattr(httpx.AsyncClient, "__init__", transport_init)
+        monkeypatch.setattr(
+            "asap.testing.compliance.run_compliance_harness_with_client",
+            AsyncMock(return_value=_empty_report()),
+        )
+
+        await run_compliance_harness_v2_from_url("https://agent.example.com")
+
+        assert any("169.254.169.254" in url for url in requested)
+
+
+def _empty_report() -> ComplianceReport:
+    return ComplianceReport(
+        timestamp=__import__("datetime").datetime.now(__import__("datetime").timezone.utc),
+        categories_run=[],
+        checks=[],
+        score=1.0,
+        summary="0/0 checks passed (100%)",
+    )
 
 
 class TestComplianceFailureBranches:
