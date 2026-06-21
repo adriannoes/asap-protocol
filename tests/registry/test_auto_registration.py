@@ -510,6 +510,33 @@ async def test_fetch_manifest_request_error(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 @pytest.mark.asyncio
+async def test_fetch_manifest_rejects_redirect_without_following(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Redirect responses must not be followed (SSRF guard for manifest fetch)."""
+    monkeypatch.setattr(
+        "asap.registry.auto_registration.validate_callback_url",
+        AsyncMock(return_value=None),
+    )
+    requested: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requested.append(str(request.url))
+        return httpx.Response(
+            302,
+            headers={"Location": "http://169.254.169.254/latest/meta-data/"},
+            request=request,
+        )
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        with pytest.raises(httpx.HTTPStatusError):
+            await fetch_manifest_at_url(client, "https://example.com/m.json")
+    assert requested == ["https://example.com/m.json"]
+    assert not any("169.254.169.254" in url for url in requested)
+
+
+@pytest.mark.asyncio
 async def test_fetch_manifest_webhook_validation_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     async def deny(url: str, require_https: bool = True) -> None:
         raise WebhookURLValidationError(url, "blocked")

@@ -7,6 +7,8 @@ import pytest
 from asap.economics.delegation_storage import (
     InMemoryDelegationStorage,
     SQLiteDelegationStorage,
+    _assert_sql_in_placeholders,
+    _build_sql_in_placeholders,
 )
 
 
@@ -502,3 +504,11 @@ class TestSQLiteDelegationStorageCoverage:
         # Z suffix handled
         result = sqlite_storage._parse_iso_datetime("2026-01-01T00:00:00Z")
         assert result is not None
+
+    def test_build_sql_in_placeholders_formats_question_marks(self) -> None:
+        assert _build_sql_in_placeholders(3) == "?,?,?"
+        assert _build_sql_in_placeholders(0) == ""
+
+    def test_assert_sql_in_placeholders_rejects_malformed(self) -> None:
+        with pytest.raises(ValueError, match="placeholders must be"):
+            _assert_sql_in_placeholders("id=1; DROP TABLE revocations; --")

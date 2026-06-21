@@ -41,6 +41,18 @@ _DEFAULT_DB_PATH = "asap_state.db"
 _MAX_CASCADE_DEPTH = 50
 
 
+def _assert_sql_in_placeholders(placeholders: str) -> str:
+    """Fail closed when dynamic IN-clause placeholders are not ``?,?,…`` only."""
+    if set(placeholders) - {"?", ","}:
+        raise ValueError("placeholders must be `?,?,…` only")
+    return placeholders
+
+
+def _build_sql_in_placeholders(count: int) -> str:
+    """Build ``?,?,…`` placeholders for SQLite ``IN`` clauses."""
+    return _assert_sql_in_placeholders(",".join("?" for _ in range(count)))
+
+
 @runtime_checkable
 class DelegationStorage(Protocol):
     async def revoke(
@@ -407,9 +419,7 @@ class SQLiteDelegationStorage(DelegationStorageBase):
             # ``placeholders`` is built from ``len(token_ids)`` and can only contain ``?`` and
             # ``,``; every value comes through the tuple passed to ``execute``. SQLite does
             # not support binding a list to a single parameter, so dynamic SQL is required.
-            placeholders = ",".join("?" for _ in token_ids)
-            if set(placeholders) - {"?", ","}:
-                raise ValueError("placeholders must be `?,?,…` only")
+            placeholders = _build_sql_in_placeholders(len(token_ids))
             cursor = await conn.execute(
                 f"SELECT id FROM revocations WHERE id IN ({placeholders})",  # nosec B608 - placeholders asserted to be `?,?,…`; values parameterized
                 token_ids,
