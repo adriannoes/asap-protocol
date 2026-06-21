@@ -800,6 +800,39 @@ class TestMeteringStorageAdapter:
         assert agg.agent_id == "a1"
         assert agg.total_tokens == 30
 
+    @pytest.mark.asyncio
+    async def test_sqlite_adapter_aggregate_period_h_excludes_old_events(
+        self, sqlite_storage: SQLiteMeteringStorage
+    ) -> None:
+        """Adapter aggregate(period='h') on SQLite excludes events older than one hour."""
+        adapter = metering_storage_adapter(sqlite_storage)
+        now = datetime.now(timezone.utc)
+
+        await sqlite_storage.record(
+            _metric(
+                task_id="old",
+                agent_id="a1",
+                tokens_in=100,
+                tokens_out=100,
+                timestamp=now - timedelta(hours=2),
+            )
+        )
+        await sqlite_storage.record(
+            _metric(
+                task_id="recent",
+                agent_id="a1",
+                tokens_in=5,
+                tokens_out=10,
+                timestamp=now - timedelta(minutes=30),
+            )
+        )
+
+        agg = await adapter.aggregate(agent_id="a1", period="h")
+
+        assert agg.agent_id == "a1"
+        assert agg.total_tokens == 15
+        assert agg.total_api_calls == 1
+
 
 # ---------------------------------------------------------------------------
 # SQLiteMeteringStorage — additional coverage
