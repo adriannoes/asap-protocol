@@ -21,8 +21,7 @@ from asap.discovery.validation import (
     ManifestValidationError,
     validate_signed_manifest_response,
 )
-from asap.errors import SignatureVerificationError
-from asap.errors import WebhookURLValidationError
+from asap.errors import SignatureVerificationError, WebhookURLValidationError
 from asap.models.entities import Manifest
 from asap.registry.anti_spam import TRUST_LEVEL_SELF_SIGNED, auto_register_verification
 from asap.registry.bot_pr import BotPRResult, BotPRSettings, open_registry_pull_request
@@ -232,6 +231,8 @@ def create_auto_registration_router(config: AutoRegistrationConfig | None = None
                 raise HTTPException(
                     status_code=502, detail=f"Manifest fetch failed: {exc}"
                 ) from exc
+            except ManifestValidationError as exc:
+                raise HTTPException(status_code=400, detail=exc.message) from exc
 
         harness_url = harness_base_url_from_manifest(manifest)
         try:
