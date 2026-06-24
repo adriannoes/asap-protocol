@@ -197,3 +197,35 @@ def test_mcp_server_get_tool_capability() -> None:
     )
     assert server.get_tool_capability("echo") == "echo_cap"
     assert server.get_tool_capability("missing") is None
+
+
+def test_register_tool_validates_incrementally_not_full_rescan(
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+    register_capability: Callable[..., CapabilityDefinition],
+) -> None:
+    """Each ``register_tool`` validates only the new tool (O(1) per registration)."""
+    register_capability("cap_a", description="Capability A")
+    register_capability("cap_b", description="Capability B")
+    config = _mapping_auth_config(
+        host_store,
+        agent_store,
+        capability_registry,
+        validate_tools_at_startup=True,
+    )
+    protected = protect_server(MCPServer(name="incremental", version="0.1.0"), config)
+    protected.register_tool(
+        "tool_a",
+        lambda: "a",
+        {"type": "object", "additionalProperties": False},
+        capability="cap_a",
+    )
+    protected.register_tool(
+        "tool_b",
+        lambda: "b",
+        {"type": "object", "additionalProperties": False},
+        capability="cap_b",
+    )
+    assert protected.get_tool_capability("tool_a") == "cap_a"
+    assert protected.get_tool_capability("tool_b") == "cap_b"

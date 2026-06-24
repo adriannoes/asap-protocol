@@ -225,6 +225,16 @@ class TestMcpAuthSyncWrapper:
         assert result.passed
 
 
+def test_mcp_auth_manifest_fixture_matches_pydantic_model() -> None:
+    """Default manifest fixture documents the required ``capabilities`` shape for MCP-DISC-003."""
+    from asap_compliance.models import McpAuthManifest
+
+    fixture = default_mcp_auth_manifest_fixture()
+    manifest = McpAuthManifest.model_validate_json(fixture.read_text(encoding="utf-8"))
+    assert manifest.capabilities.mcp_tools == ["echo", "secure_action"]
+    assert {skill.id for skill in manifest.capabilities.skills} == {"echo", "secure_action"}
+
+
 @pytest.mark.asap_compliance
 class TestMcpAuthSubprocessIntegration:
     """Subprocess integration against examples/mcp_auth_bridge/server.py."""

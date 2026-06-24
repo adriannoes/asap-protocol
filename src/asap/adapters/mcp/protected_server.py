@@ -67,7 +67,7 @@ class ProtectedMCPServer(MCPServer):
             capability=capability,
         )
         if self._auth_config.validate_tools_at_startup:
-            _validate_tools_at_startup(self)
+            _validate_tool_at_startup(self, name)
 
     async def _handle_tools_call(self, params: dict[str, Any]) -> dict[str, Any]:
         """Intercept ``tools/call`` for JWT extraction, verification, and grant checks."""
@@ -149,19 +149,24 @@ class ProtectedMCPServer(MCPServer):
         )
 
 
-def _validate_tools_at_startup(protected: ProtectedMCPServer) -> None:
-    """Ensure every registered tool resolves to a known capability (MCP-MAP-003)."""
+def _validate_tool_at_startup(protected: ProtectedMCPServer, tool_name: str) -> None:
+    """Ensure one tool resolves to a known capability (MCP-MAP-003)."""
     config = protected._auth_config
     registry = config.capability_registry
+    capability = resolve_capability(tool_name, config, server=protected)
+    if not capability or not capability.strip():
+        raise ValueError(
+            f"Tool {tool_name!r} resolves to empty capability name; "
+            "set tool_capability_map or register-time capability metadata"
+        )
+    if registry.describe(capability) is None:
+        raise ValueError(
+            f"Tool {tool_name!r} resolves to unknown capability {capability!r} "
+            f"(not registered; describe returned None)"
+        )
+
+
+def _validate_tools_at_startup(protected: ProtectedMCPServer) -> None:
+    """Ensure every registered tool resolves to a known capability (MCP-MAP-003)."""
     for tool_name in protected._tools:
-        capability = resolve_capability(tool_name, config, server=protected)
-        if not capability or not capability.strip():
-            raise ValueError(
-                f"Tool {tool_name!r} resolves to empty capability name; "
-                "set tool_capability_map or register-time capability metadata"
-            )
-        if registry.describe(capability) is None:
-            raise ValueError(
-                f"Tool {tool_name!r} resolves to unknown capability {capability!r} "
-                f"(not registered; describe returned None)"
-            )
+        _validate_tool_at_startup(protected, tool_name)
