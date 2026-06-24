@@ -2,7 +2,7 @@
 
 **PRD**: [MCP-AUTH-001..004, 006 and auth portions of MCP-AUTH-007](../../../product/prd/prd-v2.5.0-mcp-auth-bridge.md)
 **Branch**: `feat/v2.5.0-s1-middleware` → merge into **`release/2.5.0`**
-**Depends on**: [S0 design lock](./sprint-S0-design-lock.md) complete
+**Depends on**: [S0 design lock](./sprint-S0-design-lock.md) complete — [ADR](./design-lock-mcp-auth-bridge.md)
 
 **Trigger:** MCP client sends `tools/call` to a protected server.
 **Enables:** S2 capability mapping; authenticated tool execution path.
