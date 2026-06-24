@@ -101,4 +101,5 @@
 - [x] Tag `v2.5.0` created
 - [x] CHANGELOG and checkpoints updated
 - [x] TypeScript middleware is shipped or explicitly deferred with linked backlog
-- [ ] PyPI `asap-protocol` 2.5.0 published (maintainer workflow — verify after `release.yml` green)
+- [x] PyPI `asap-protocol` 2.5.0 published (maintainer workflow — verify after `release.yml` green)
+- [x] PyPI `asap-compliance` 1.3.0 published (`v2.5.0.1` tag — `mcp-auth-bridge` profile)

@@ -35,6 +35,7 @@ ASAP_AGENT_URL=https://your-agent.example.com pytest -m asap_compliance
 - **schema** (implemented): Pydantic model compliance (Envelope, TaskRequest,
   TaskResponse, McpToolResult, MessageAck, extensions, extra='forbid')
 - **state**: Task state machine transitions
+- **mcp-auth-bridge** (v1.3.0+, requires `asap-protocol>=2.5.0`): Stdio MCP Auth Bridge release gate — JWT paths, grants, constraints, manifest ⊆ registered tools. See [MCP Auth Bridge](../docs/adapters/mcp-auth-bridge.md) and `examples/mcp_auth_bridge/README.md`.
 
 ### Protocol v2.2 and Compliance Harness v2
 
