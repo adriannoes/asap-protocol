@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pytest import MonkeyPatch
 
-from asap.adapters.mcp.auth_middleware import MCPAuthConfig, resolve_jwt_extractor
+from asap.adapters.mcp.config import MCPAuthConfig, resolve_jwt_extractor
 from asap.adapters.mcp.jwt_extractor import default_jwt_extractor
 from asap.auth.capabilities import CapabilityRegistry
 from asap.auth.identity import InMemoryAgentStore, InMemoryHostStore

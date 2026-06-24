@@ -2,37 +2,38 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-
-from asap.adapters.mcp.auth_middleware import MCPAuthConfig
+from asap.adapters.mcp.config import MCPAuthConfig
 from asap.auth.capabilities import ConstraintViolation
+from asap.mcp.server import MCPServer
 
 
 def resolve_capability(
     tool_name: str,
     config: MCPAuthConfig,
     *,
-    bridge_tool_capability_map: Mapping[str, str] | None = None,
+    server: MCPServer | None = None,
 ) -> str:
     """Resolve an MCP tool name to an ASAP capability name.
 
     Resolution order (MCP-MAP-001, MCP-MAP-002):
 
     1. ``config.tool_capability_map`` (explicit runtime override)
-    2. ``bridge_tool_capability_map`` argument, else ``config.bridge_tool_capability_map``
+    2. ``server.get_tool_capability(tool_name)`` when register-time metadata is set
     3. Identity default: ``tool_name`` unchanged
 
     Args:
         tool_name: Registered MCP tool name from ``tools/call``.
         config: MCP auth configuration including capability maps.
+        server: MCP server providing register-time capability metadata.
 
     Returns:
         ASAP capability name used for grant checks.
 
     Example:
-        >>> from asap.adapters.mcp.auth_middleware import MCPAuthConfig
+        >>> from asap.adapters.mcp.config import MCPAuthConfig
         >>> from asap.auth.capabilities import CapabilityRegistry
         >>> from asap.auth.identity import InMemoryAgentStore, InMemoryHostStore
+        >>> from asap.mcp.server import MCPServer
         >>> agents = InMemoryAgentStore()
         >>> config = MCPAuthConfig(
         ...     host_store=InMemoryHostStore(agent_store=agents),
@@ -47,13 +48,10 @@ def resolve_capability(
     """
     if tool_name in config.tool_capability_map:
         return config.tool_capability_map[tool_name]
-    bridge_map = (
-        bridge_tool_capability_map
-        if bridge_tool_capability_map is not None
-        else config.bridge_tool_capability_map
-    )
-    if tool_name in bridge_map:
-        return bridge_map[tool_name]
+    if server is not None:
+        registered = server.get_tool_capability(tool_name)
+        if registered is not None:
+            return registered
     return tool_name
 
 

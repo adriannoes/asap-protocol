@@ -3,24 +3,25 @@
 from __future__ import annotations
 
 import asyncio
-import json
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any, cast
 
 import httpx
+from pydantic import ValidationError
 
 from asap.adapters.mcp.errors import (
     AUTH_REQUIRED,
     CAPABILITY_DENIED,
     CONSTRAINT_VIOLATION,
 )
-from asap.mcp.protocol import CallToolResult
+from asap.mcp.protocol import CallToolResult, TextContent
 
 from asap_compliance.config import (
     COMPLIANCE_ENV_VAR,
     MCP_AUTH_BRIDGE_PROFILE,
     McpAuthComplianceConfig,
 )
+from asap_compliance.models.mcp_manifest import McpAuthManifest
 from asap_compliance.validators.handshake import CheckResult
 from asap_compliance.validators.mcp_auth_transport import (
     McpAuthProbeTokens,
@@ -68,8 +69,11 @@ class McpAuthResult:
 def _tool_error_text(result: CallToolResult) -> str:
     parts: list[str] = []
     for block in result.content:
-        if isinstance(block, dict) and block.get("type") == "text":
-            parts.append(str(block.get("text", "")))
+        if isinstance(block, dict):
+            if block.get("type") == "text":
+                parts.append(str(block.get("text", "")))
+        elif isinstance(block, TextContent):
+            parts.append(block.text)
         else:
             text = getattr(block, "text", None)
             if text is not None:
@@ -77,17 +81,17 @@ def _tool_error_text(result: CallToolResult) -> str:
     return "".join(parts)
 
 
-def _load_manifest_data(config: McpAuthComplianceConfig) -> dict[str, Any]:
+def _load_manifest(config: McpAuthComplianceConfig) -> McpAuthManifest:
     if config.manifest_url:
         response = httpx.get(config.manifest_url, timeout=config.timeout_seconds)
-        return cast(dict[str, Any], response.json())
+        return McpAuthManifest.model_validate(response.json())
 
     fixture = config.manifest_fixture_path
     if fixture is None or not fixture.is_file():
         raise FileNotFoundError(
             f"Manifest fixture not found: {fixture}; set manifest_fixture_path or manifest_url"
         )
-    return cast(dict[str, Any], json.loads(fixture.read_text(encoding="utf-8")))
+    return McpAuthManifest.model_validate_json(fixture.read_text(encoding="utf-8"))
 
 
 def _check_manifest_alignment(
@@ -99,8 +103,8 @@ def _check_manifest_alignment(
         return results
 
     try:
-        manifest = _load_manifest_data(config)
-    except (httpx.HTTPError, OSError, json.JSONDecodeError, FileNotFoundError) as exc:
+        manifest = _load_manifest(config)
+    except (httpx.HTTPError, OSError, ValidationError, FileNotFoundError) as exc:
         results.append(
             CheckResult(
                 name="manifest_alignment_load",
@@ -110,32 +114,13 @@ def _check_manifest_alignment(
         )
         return results
 
-    capabilities = manifest.get("capabilities", {})
-    if not isinstance(capabilities, dict):
-        results.append(
-            CheckResult(
-                name="manifest_alignment_schema",
-                passed=False,
-                message="Manifest capabilities must be an object",
-            )
-        )
-        return results
-
-    mcp_tools = capabilities.get("mcp_tools", [])
-    skills = capabilities.get("skills", [])
-    skill_ids: list[str] = []
-    if isinstance(skills, list):
-        for skill in skills:
-            if isinstance(skill, dict) and isinstance(skill.get("id"), str):
-                skill_ids.append(skill["id"])
-
     registered = set(registered_tools)
-    unknown_tools: list[str] = []
-    if isinstance(mcp_tools, list):
-        for tool_name in mcp_tools:
-            if isinstance(tool_name, str) and tool_name not in registered:
-                unknown_tools.append(tool_name)
+    capabilities = manifest.capabilities
+    skill_ids = [skill.id for skill in capabilities.skills]
 
+    unknown_tools = [
+        tool_name for tool_name in capabilities.mcp_tools if tool_name not in registered
+    ]
     if unknown_tools:
         results.append(
             CheckResult(
@@ -309,6 +294,20 @@ async def _check_constraint_violation(
     )
 
 
+_CheckRunner = Callable[
+    [McpAuthComplianceConfig, McpAuthTransport, McpAuthProbeTokens],
+    Awaitable[CheckResult],
+]
+
+_PROFILE_CHECKS: list[tuple[str, _CheckRunner]] = [
+    ("public_tool", lambda c, t, _tok: _check_public_tool(c, t)),
+    ("auth_required", lambda c, t, _tok: _check_unauthenticated_protected_tool(c, t)),
+    ("valid_jwt", lambda c, t, tok: _check_valid_jwt(c, t, tok)),
+    ("wrong_capability", lambda c, t, tok: _check_wrong_capability(c, t, tok)),
+    ("constraint_violation", lambda c, t, tok: _check_constraint_violation(c, t, tok)),
+]
+
+
 async def validate_mcp_auth_async(
     config: McpAuthComplianceConfig,
     *,
@@ -329,40 +328,19 @@ async def validate_mcp_auth_async(
     owns_transport = transport is None
     session: McpAuthTransport = transport or SubprocessMcpTransport(config)
     checks: list[CheckResult] = []
+    check_results: dict[str, bool] = {}
 
     try:
         tokens = await session.connect()
         tool_names = await session.list_tool_names()
 
-        if "public_tool" not in config.skip_checks:
-            public_check = await _check_public_tool(config, session)
-            checks.append(public_check)
-        else:
-            public_check = CheckResult("public_tool", True, "skipped")
-
-        if "auth_required" not in config.skip_checks:
-            auth_check = await _check_unauthenticated_protected_tool(config, session)
-            checks.append(auth_check)
-        else:
-            auth_check = CheckResult("auth_required", True, "skipped")
-
-        if "valid_jwt" not in config.skip_checks:
-            valid_check = await _check_valid_jwt(config, session, tokens)
-            checks.append(valid_check)
-        else:
-            valid_check = CheckResult("valid_jwt", True, "skipped")
-
-        if "wrong_capability" not in config.skip_checks:
-            wrong_check = await _check_wrong_capability(config, session, tokens)
-            checks.append(wrong_check)
-        else:
-            wrong_check = CheckResult("wrong_capability", True, "skipped")
-
-        if "constraint_violation" not in config.skip_checks:
-            constraint_check = await _check_constraint_violation(config, session, tokens)
-            checks.append(constraint_check)
-        else:
-            constraint_check = CheckResult("constraint_violation", True, "skipped")
+        for name, runner in _PROFILE_CHECKS:
+            if name in config.skip_checks:
+                check = CheckResult(name, True, "skipped")
+            else:
+                check = await runner(config, session, tokens)
+            checks.append(check)
+            check_results[name] = check.passed
 
         manifest_checks = _check_manifest_alignment(config, tool_names)
         checks.extend(manifest_checks)
@@ -374,12 +352,12 @@ async def validate_mcp_auth_async(
 
     return McpAuthResult(
         profile=config.profile,
-        auth_required_ok=auth_check.passed,
-        valid_jwt_ok=valid_check.passed,
-        wrong_capability_ok=wrong_check.passed,
-        constraint_violation_ok=constraint_check.passed,
+        auth_required_ok=check_results.get("auth_required", True),
+        valid_jwt_ok=check_results.get("valid_jwt", True),
+        wrong_capability_ok=check_results.get("wrong_capability", True),
+        constraint_violation_ok=check_results.get("constraint_violation", True),
         manifest_alignment_ok=manifest_alignment_ok,
-        public_tool_ok=public_check.passed,
+        public_tool_ok=check_results.get("public_tool", True),
         checks=checks,
     )
 

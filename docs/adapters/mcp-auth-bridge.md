@@ -34,7 +34,7 @@ stdio MCP client
         │
         ▼
   resolve_capability(tool_name, config)
-        │  tool_capability_map → bridge metadata → identity (tool name)
+        │  tool_capability_map → register-time metadata → identity (tool name)
         ▼
   capability_registry.check_grant(agent_id, capability, arguments)
         │
@@ -121,7 +121,6 @@ async def main() -> None:
         agent_store=agent_store,
         capability_registry=registry,
         public_tools=frozenset({"echo"}),
-        tool_capability_map={"secure_action": "secure_action"},
     )
     protected = protect_server(server, config)
     await protected.run_stdio()
@@ -159,7 +158,6 @@ For single-agent local testing, set `allow_env_jwt_fallback=True` on `MCPAuthCon
 | `agent_store` | `AgentStore` | *(required)* | Agent session store for `verify_agent_jwt`. |
 | `capability_registry` | `CapabilityRegistry` | *(required)* | Shared capability definitions and grants; used by `check_grant`. |
 | `tool_capability_map` | `dict[str, str]` | `{}` | Runtime override: MCP tool name → ASAP capability name (MCP-MAP-001). Checked first. |
-| `bridge_tool_capability_map` | `dict[str, str]` | `{}` | Fallback map copied from bridge registration metadata. |
 | `public_tools` | `frozenset[str]` | `frozenset()` | Tool names that skip JWT verification entirely. |
 | `enforce_grants` | `bool` | `True` | When `False`, JWT is verified but grant/constraint checks are skipped. |
 | `hide_unauthorized_tools` | `bool` | `False` | **Deferred (MAY).** Does not filter `tools/list` in v2.5.0. |
@@ -175,37 +173,38 @@ For single-agent local testing, set `allow_env_jwt_fallback=True` on `MCPAuthCon
 | Function | Module | Description |
 |:---------|:-------|:------------|
 | `protect_server(server, config)` | `asap.adapters.mcp` | Return a `ProtectedMCPServer` that enforces auth on `tools/call`. Input server is not mutated. |
-| `resolve_jwt_extractor(config)` | `asap.adapters.mcp.auth_middleware` | Return the effective JWT extractor (custom `config.jwt_extractor` or `default_jwt_extractor` with `allow_env_jwt_fallback`). **Middleware must use this** — do not call a `None` extractor. |
-| `resolve_capability(tool_name, config, *, bridge_tool_capability_map=None)` | `asap.adapters.mcp.capability_map` | Resolve MCP tool name → ASAP capability. Order: `tool_capability_map` → bridge map → identity (`tool_name`). |
+| `resolve_jwt_extractor(config)` | `asap.adapters.mcp.config` | Return the effective JWT extractor (custom `config.jwt_extractor` or `default_jwt_extractor` with `allow_env_jwt_fallback`). **Middleware must use this** — do not call a `None` extractor. |
+| `resolve_capability(tool_name, config, *, server=None)` | `asap.adapters.mcp.capability_map` | Resolve MCP tool name → ASAP capability. Order: `tool_capability_map` → register-time metadata on `server` → identity (`tool_name`). |
 | `default_jwt_extractor(params, *, allow_env_fallback=False)` | `asap.adapters.mcp.jwt_extractor` | Read `params.meta["asap_agent_jwt"]`; optional `ASAP_AGENT_JWT` env when `allow_env_fallback=True`. |
 
 ### Register-time capability metadata
 
-When registering tools on a `ProtectedMCPServer`, pass `capability=` to set per-tool mapping without editing `tool_capability_map`:
+Pass `capability=` when registering tools on `MCPServer` **before** `protect_server`, or on `ProtectedMCPServer` after wrapping:
 
 ```python
-protected.register_tool(
+server.register_tool(
     "search",
     search_handler,
     input_schema,
     capability="web_search",
 )
+protected = protect_server(server, config)
 ```
 
 Resolution still honors `tool_capability_map` overrides first.
 
 ### Public exports
 
-Package root (`asap.adapters.mcp`) intentionally exposes only the primary integration surface:
+Package root (`asap.adapters.mcp`) exposes the primary integration surface:
 
 ```python
-from asap.adapters.mcp import MCPAuthConfig, protect_server
+from asap.adapters.mcp import MCPAuthConfig, ProtectedMCPServer, protect_server, resolve_jwt_extractor
 ```
 
 Advanced helpers and error constants live in submodules:
 
 ```python
-from asap.adapters.mcp.auth_middleware import resolve_jwt_extractor
+from asap.adapters.mcp.config import resolve_jwt_extractor
 from asap.adapters.mcp.capability_map import resolve_capability
 from asap.adapters.mcp.errors import (
     AUTH_REQUIRED,

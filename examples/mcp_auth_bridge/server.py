@@ -34,11 +34,11 @@ from asap.auth.identity import (
     jwk_thumbprint_sha256,
 )
 from asap.mcp.server import MCPServer
+from asap.adapters.mcp.config import MCP_COMPLIANCE_ENV_VAR as COMPLIANCE_ENV_VAR
 
 DEMO_HOST_ID = "mcp-auth-bridge-host"
 DEMO_AGENT_ID = "urn:asap:agent:mcp-auth-bridge-demo"
 DEMO_AUDIENCE = "urn:asap:agent:mcp-auth-bridge"
-COMPLIANCE_ENV_VAR = "ASAP_MCP_COMPLIANCE"
 _COMPLIANCE_FORBIDDEN_ACTION = "forbidden-action"
 
 _ECHO_INPUT_SCHEMA: dict[str, Any] = {
@@ -162,6 +162,7 @@ async def build_protected_server() -> tuple[MCPServer, DemoIdentity]:
         lambda action="": f"executed: {action}",
         _SECURE_ACTION_INPUT_SCHEMA,
         description="Protected action (requires Agent JWT + grant)",
+        capability="secure_action",
     )
 
     config = MCPAuthConfig(
