@@ -14,7 +14,12 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from asap.auth.agent_jwt import create_agent_jwt
-from asap.auth.capabilities import CapabilityRegistry
+from asap.auth.capabilities import (
+    CapabilityDefinition,
+    CapabilityGrant,
+    CapabilityRegistry,
+    GrantStatus,
+)
 from asap.auth.identity import (
     AgentSession,
     HostIdentity,
@@ -31,7 +36,16 @@ MCP_TEST_AUDIENCE = "urn:asap:agent:mcp-test"
 
 _ECHO_INPUT_SCHEMA: dict[str, Any] = {
     "type": "object",
-    "properties": {"message": {"type": "string"}},
+    "properties": {
+        "message": {"type": "string"},
+        "tokens": {"type": "integer"},
+    },
+    "additionalProperties": False,
+}
+
+_SEARCH_INPUT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {"query": {"type": "string"}},
     "additionalProperties": False,
 }
 
@@ -106,6 +120,96 @@ def capability_registry() -> CapabilityRegistry:
 
 
 @pytest.fixture
+def seed_capability_definition() -> Callable[..., CapabilityDefinition]:
+    """Register a capability definition on a registry (S2 startup validation).
+
+    Example:
+        >>> cap = seed_capability_definition(registry, "echo", "Echo tool capability")
+    """
+
+    def _seed(
+        registry: CapabilityRegistry,
+        name: str,
+        description: str | None = None,
+    ) -> CapabilityDefinition:
+        definition = CapabilityDefinition(
+            name=name,
+            description=description or f"Test capability {name}",
+        )
+        registry.register(definition)
+        return definition
+
+    return _seed
+
+
+@pytest.fixture
+def register_capability(
+    capability_registry: CapabilityRegistry,
+) -> Callable[..., CapabilityDefinition]:
+    """Register a capability definition (``describe`` / startup validation).
+
+    Example:
+        >>> register_capability("echo", description="Echo tool capability")
+    """
+
+    def _register(
+        name: str,
+        *,
+        description: str = "Test capability",
+        input_schema: dict[str, Any] | None = None,
+        output_schema: dict[str, Any] | None = None,
+        location: str | None = None,
+    ) -> CapabilityDefinition:
+        definition = CapabilityDefinition(
+            name=name,
+            description=description,
+            input_schema=input_schema,
+            output_schema=output_schema,
+            location=location,
+        )
+        capability_registry.register(definition)
+        return definition
+
+    return _register
+
+
+@pytest.fixture
+def grant_capability(
+    capability_registry: CapabilityRegistry,
+) -> Callable[..., CapabilityGrant]:
+    """Seed an active grant for tests with ``enforce_grants=True``.
+
+    Example:
+        >>> grant_capability(agent_session.agent_id, "echo")
+        >>> grant_capability(
+        ...     agent_session.agent_id,
+        ...     "echo",
+        ...     constraints={"tokens": {"max": 100}},
+        ... )
+    """
+
+    def _grant(
+        agent_id: str,
+        capability: str,
+        *,
+        constraints: dict[str, Any] | None = None,
+        status: GrantStatus = "active",
+        reason: str | None = None,
+        granted_by: str | None = None,
+    ) -> CapabilityGrant:
+        return capability_registry.grant(
+            agent_id,
+            capability,
+            constraints=constraints,
+            status=status,
+            reason=reason,
+            granted_by=granted_by,
+        )
+
+    return _grant
+
+
+@pytest.fixture
 def mint_agent_jwt(
     host_sk: Ed25519PrivateKey,
     agent_sk: Ed25519PrivateKey,
@@ -143,8 +247,21 @@ def echo_mcp_server() -> MCPServer:
     server = MCPServer(name="mcp-auth-test", version="0.1.0")
     server.register_tool(
         "echo",
-        lambda message="": message,
+        lambda message="", tokens=0: message,
         _ECHO_INPUT_SCHEMA,
         description="Echo input message",
+    )
+    return server
+
+
+@pytest.fixture
+def search_mcp_server() -> MCPServer:
+    """Minimal MCP server with a ``search`` tool for capability-map tests."""
+    server = MCPServer(name="mcp-auth-test", version="0.1.0")
+    server.register_tool(
+        "search",
+        lambda query="": query,
+        _SEARCH_INPUT_SCHEMA,
+        description="Search the web",
     )
     return server
