@@ -18,7 +18,7 @@ Based on [PRD v2.5.0 MCP Auth Bridge](../../../product/prd/prd-v2.5.0-mcp-auth-b
 |--------|-------|--------------|----------|--------|
 | **S0** | [Design lock & scaffold](./sprint-S0-design-lock.md) | §6 API, MCP-AUTH-005 | P0 | ✅ Done |
 | **S1** | [Core auth middleware](./sprint-S1-core-middleware.md) | MCP-AUTH-001..004, 006 and auth portions of 007 | P0 | ✅ Done (`feat/v2.5.0-s1-middleware`) |
-| **S2** | [Capability mapping & errors](./sprint-S2-capability-mapping.md) | MCP-MAP-*, §4.5–4.6 | P0 | 🔵 Planned |
+| **S2** | [Capability mapping & errors](./sprint-S2-capability-mapping.md) | MCP-MAP-*, §4.5–4.6 | P0 | 🟢 Impl done; 3.1 MAY deferred to Agent E |
 | **S3** | [Docs, examples & discovery](./sprint-S3-docs-examples.md) | MCP-DISC-*, MCP-DOC-* | P0/P1 | 🔵 Planned |
 | **S4** | [Compliance & integration tests](./sprint-S4-compliance.md) | MCP-DISC-003, harness | P1 | 🔵 Planned |
 | **S5** | [Release v2.5.0](./sprint-S5-release.md) | DoD, metrics | P0 | 🔵 Planned |
@@ -72,10 +72,10 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
   - **Enables:** S3 example server with real grants; S4 compliance cases.
   - **Depends on:** Task 2.0; `CapabilityRegistry.check_grant` / `auth/capabilities.validate_constraints`.
   - **Acceptance criteria:**
-    - [ ] `tool_capability_map` + default identity mapping (tool name == capability)
-    - [ ] Denied grants, JWT capability-claim mismatches, and constraint violations return the correct `asap:*` codes
-    - [ ] Optional startup validation: every registered tool resolves to a capability (MCP-MAP-003)
-    - [ ] Test coverage ≥90% on `asap.adapters.mcp`
+    - [x] `tool_capability_map` + default identity mapping (tool name == capability)
+    - [x] Denied grants, JWT capability-claim mismatches, and constraint violations return the correct `asap:*` codes
+    - [x] Optional startup validation: every registered tool resolves to a capability (MCP-MAP-003)
+    - [x] Test coverage ≥90% on `asap.adapters.mcp`
 
 - [ ] **4.0 Documentation, examples & discovery (S3)**
   - **Trigger:** Protected server runnable locally.
@@ -105,7 +105,8 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
 
 - `src/asap/adapters/mcp/__init__.py` — public exports (`protect_server`, `MCPAuthConfig`)
 - `src/asap/adapters/mcp/auth_middleware.py` — JWT extraction, `protect_server`, error mapping
-- `src/asap/adapters/mcp/capability_map.py` — tool → capability resolution
+- `src/asap/adapters/mcp/capability_map.py` — tool → capability resolution; constraint violation formatting
+- `src/asap/adapters/mcp/protected_server.py` — bridge registry, startup validation, grant gate
 - `src/asap/adapters/mcp/errors.py` — ASAP MCP error code constants
 - `tests/adapters/mcp/test_auth_middleware.py` — auth path tests
 - `tests/adapters/mcp/test_capability_map.py` — mapping + constraint tests
@@ -169,3 +170,4 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
 | 2026-06-22 | Phase 2: sprint S0–S5 sub-tasks; `release/2.5.0` integration branch |
 | 2026-06-24 | Reconciled task plan with PRD paths, repo APIs, compliance scope, and TypeScript spike/defer gate |
 | 2026-06-24 | S0 complete on `release/2.5.0`; S1 branch `feat/v2.5.0-s1-middleware` opened with parallel agent workstreams |
+| 2026-06-24 | S2 branch `feat/v2.5.0-s2-capability-map` opened; parallel workstreams documented in sprint-S2 |
