@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from asap.adapters.mcp.jwt_extractor import default_jwt_extractor
 from asap.auth.agent_jwt import JtiReplayCache
 from asap.auth.capabilities import CapabilityRegistry
 from asap.auth.identity import AgentStore, HostStore
@@ -15,6 +16,11 @@ from asap.mcp.server import MCPServer
 @dataclass
 class MCPAuthConfig:
     """Configuration for ASAP auth on a native MCP server.
+
+    JWT extraction: S1 middleware MUST call :func:`resolve_jwt_extractor` (or
+    equivalent ``config.jwt_extractor or`` closure over
+    :func:`default_jwt_extractor` with ``allow_env_fallback=config.allow_env_jwt_fallback``).
+    Do not invoke a ``None`` extractor.
 
     Example:
         >>> config = MCPAuthConfig(
@@ -33,9 +39,30 @@ class MCPAuthConfig:
     hide_unauthorized_tools: bool = False
     validate_tools_at_startup: bool = False
     jwt_extractor: Callable[[CallToolRequestParams], str | None] | None = None
+    allow_env_jwt_fallback: bool = False
     jti_replay_cache: JtiReplayCache | None = None
     expected_audience: str | list[str] | None = None
     manifest_url: str | None = None
+
+
+def resolve_jwt_extractor(config: MCPAuthConfig) -> Callable[[CallToolRequestParams], str | None]:
+    """Return the JWT extractor for middleware (custom or default with config flags).
+
+    Args:
+        config: MCP auth configuration.
+
+    Returns:
+        Callable that extracts an Agent JWT from ``tools/call`` params.
+    """
+    if config.jwt_extractor is not None:
+        return config.jwt_extractor
+
+    allow_env = config.allow_env_jwt_fallback
+
+    def extract(params: CallToolRequestParams) -> str | None:
+        return default_jwt_extractor(params, allow_env_fallback=allow_env)
+
+    return extract
 
 
 def protect_server(server: MCPServer, config: MCPAuthConfig) -> MCPServer:

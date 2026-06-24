@@ -5,7 +5,7 @@ Opt-in protection for native ``MCPServer`` via ``protect_server``.
 
 from __future__ import annotations
 
-from asap.adapters.mcp.auth_middleware import MCPAuthConfig, protect_server
+from asap.adapters.mcp.auth_middleware import MCPAuthConfig, protect_server, resolve_jwt_extractor
 from asap.adapters.mcp.errors import (
     AUTH_REQUIRED,
     CAPABILITY_DENIED,
@@ -23,5 +23,6 @@ __all__ = [
     "MCPAuthConfig",
     "default_jwt_extractor",
     "protect_server",
+    "resolve_jwt_extractor",
     "tool_error_result",
 ]

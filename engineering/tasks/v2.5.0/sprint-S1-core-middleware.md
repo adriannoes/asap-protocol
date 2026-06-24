@@ -46,7 +46,7 @@
 
 - [ ] 2.1 Implement wrapper per design lock
   - **File**: `src/asap/adapters/mcp/auth_middleware.py` + optional `protected_server.py`
-  - **What**: Intercept `tools/call` before `_handle_tools_call` executes user handler. Use `config.jwt_extractor` or `default_jwt_extractor`
+  - **What**: Intercept `tools/call` before `_handle_tools_call` executes user handler. Use `resolve_jwt_extractor(config)` (or `config.jwt_extractor` when set)
   - **Why**: MCP-AUTH-001, MCP-AUTH-006
   - **Pattern**: Minimal diff to `MCPServer`; prefer composition over editing `server.py` core loop
   - **Verify**: Green on 1.2 tests

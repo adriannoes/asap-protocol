@@ -64,7 +64,9 @@ meta: dict[str, Any] | None = Field(default=None, alias="_meta")
 
 Middleware and `default_jwt_extractor` **MUST** read `params.meta`, not raw `dict` access on RPC params. Key: `asap_agent_jwt` (PRD §4.3, §6.3).
 
-Dev-only fallback: `os.environ.get("ASAP_AGENT_JWT")` inside `default_jwt_extractor` only — documented as non-production (PRD §8).
+Dev-only fallback: ``ASAP_AGENT_JWT`` is read only when
+``MCPAuthConfig.allow_env_jwt_fallback=True`` (default ``False``). S1 middleware
+MUST use :func:`resolve_jwt_extractor` so env reads cannot bypass auth in production.
 
 ### Deferred: `initialize` session-token handshake
 
@@ -129,7 +131,7 @@ Do not block S1 on list filtering.
 ```text
 tools/call params
     → CallToolRequestParams (incl. meta / _meta)
-    → jwt_extractor (default: meta.asap_agent_jwt, else env dev fallback)
+    → jwt_extractor via resolve_jwt_extractor(config)
     → missing token? → CallToolResult isError + asap:auth_required (unless public_tools)
     → verify_agent_jwt(host_store, agent_store, jti_cache, audience)
     → invalid? → asap:invalid_token
