@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 from collections.abc import Callable
@@ -19,6 +20,7 @@ from asap.auth.identity import (
     InMemoryHostStore,
 )
 from asap.mcp.server import MCPServer
+from asap.mcp.protocol import JSONRPCRequest
 from tests.adapters.mcp.conftest import MCP_TEST_AUDIENCE
 
 if TYPE_CHECKING:
@@ -136,6 +138,26 @@ async def test_tampered_jwt_returns_invalid_token(
     assert INVALID_TOKEN in _error_text(result)
 
 
+@pytest.mark.asyncio
+async def test_audience_mismatch_returns_invalid_token(
+    echo_mcp_server: MCPServer,
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+    host_identity: HostIdentity,
+    agent_session: AgentSession,
+    mint_agent_jwt: Callable[..., str],
+) -> None:
+    """Valid signature with wrong ``aud`` returns ``asap:invalid_token``."""
+    token = mint_agent_jwt(aud="urn:asap:agent:wrong-audience")
+    config = _build_auth_config(host_store, agent_store, capability_registry)
+    protected = protect_server(echo_mcp_server, config)
+    result = await protected._handle_tools_call(
+        _tool_call_params("echo", arguments={"message": "hi"}, jwt=token)
+    )
+    assert INVALID_TOKEN in _error_text(result)
+
+
 # --- Success paths (1.2b) ---
 
 
@@ -171,6 +193,32 @@ async def test_public_tool_succeeds_without_jwt(
     )
     assert result["isError"] is False
     assert result["content"][0]["text"] == "public"
+
+
+@pytest.mark.asyncio
+async def test_public_tool_ignores_invalid_jwt(
+    echo_mcp_server: MCPServer,
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+    host_identity: HostIdentity,
+    agent_session: AgentSession,
+    mint_agent_jwt: Callable[..., str],
+) -> None:
+    """Public tools do not validate JWT; tampered token still succeeds."""
+    token = _tamper_jwt(mint_agent_jwt())
+    config = _build_auth_config(
+        host_store,
+        agent_store,
+        capability_registry,
+        public_tools=frozenset({"echo"}),
+    )
+    protected = protect_server(echo_mcp_server, config)
+    result = await protected._handle_tools_call(
+        _tool_call_params("echo", arguments={"message": "ignored-jwt"}, jwt=token)
+    )
+    assert result["isError"] is False
+    assert result["content"][0]["text"] == "ignored-jwt"
 
 
 @pytest.mark.asyncio
@@ -220,3 +268,28 @@ async def test_successful_auth_logs_agent_id_not_jwt(
     assert agent_session.agent_id in caplog.text
     assert "echo" in caplog.text
     assert token not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_dispatch_tools_call_enforces_auth(
+    echo_mcp_server: MCPServer,
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+    host_identity: HostIdentity,
+    agent_session: AgentSession,
+) -> None:
+    """JSON-RPC ``tools/call`` dispatch path enforces JWT on protected tools."""
+    config = _build_auth_config(host_store, agent_store, capability_registry)
+    protected = protect_server(echo_mcp_server, config)
+    req = JSONRPCRequest(
+        id=1,
+        method="tools/call",
+        params=_tool_call_params("echo", arguments={"message": "hi"}),
+    )
+    response_line = await protected._dispatch_request(req)
+    assert response_line is not None
+    data = json.loads(response_line)
+    assert "result" in data
+    assert data["result"]["isError"] is True
+    assert AUTH_REQUIRED in data["result"]["content"][0]["text"]

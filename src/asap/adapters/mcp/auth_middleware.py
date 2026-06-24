@@ -66,7 +66,10 @@ def resolve_jwt_extractor(config: MCPAuthConfig) -> Callable[[CallToolRequestPar
 
 
 def protect_server(server: MCPServer, config: MCPAuthConfig) -> MCPServer:
-    """Return an MCP server with ``tools/call`` wrapped by ASAP auth and grant checks.
+    """Return an MCP server with JWT verification on ``tools/call`` (S1).
+
+    S1 enforces Agent JWT extraction/verification and the ``public_tools``
+    allowlist. Capability grant checks via ``enforce_grants`` land in S2.
 
     See PRD v2.5.0 MCP Auth Bridge (``product/prd/prd-v2.5.0-mcp-auth-bridge.md``)
     and design lock ADR (``engineering/tasks/v2.5.0/design-lock-mcp-auth-bridge.md``).
@@ -79,6 +82,7 @@ def protect_server(server: MCPServer, config: MCPAuthConfig) -> MCPServer:
         Protected server instance; unprotected ``MCPServer`` usage remains valid when
         this function is not called.
     """
+    # Lazy import: protected_server imports MCPAuthConfig from this module.
     from asap.adapters.mcp.protected_server import ProtectedMCPServer
 
     return ProtectedMCPServer.from_server(server, config)

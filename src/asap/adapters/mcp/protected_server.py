@@ -39,6 +39,7 @@ class ProtectedMCPServer(MCPServer):
             raise ValueError(f"Invalid params: {e}") from e
 
         if parsed.name in self._auth_config.public_tools:
+            # Public tools skip JWT entirely; a present _meta.asap_agent_jwt is not verified.
             return await super()._handle_tools_call(params)
 
         token = self._jwt_extractor(parsed)
