@@ -4,7 +4,7 @@
 **Branch**: `feat/v2.5.0-s5-release` → merge into **`release/2.5.0`**, then **`release/2.5.0` → `main`**
 **Depends on**: S0–S4 complete on `release/2.5.0`
 
-> **Status:** Branch `feat/v2.5.0-s5-release`. **1.0** ✅ · **2.0** ✅ — next sub-task: **3.1** PR `release/2.5.0` → `main`.
+> **Status:** PR [#235](https://github.com/adriannoes/asap-protocol/pull/235) open (`feat/v2.5.0-s5-release` → `release/2.5.0`). **1.0** ✅ · **2.0** ✅ — awaiting review; then **3.1** PR `release/2.5.0` → `main` + tag on `main`.
 
 **Trigger:** All sprint acceptance criteria met on integration branch.
 **Enables:** v2.5.1 Adapter Lab II.
