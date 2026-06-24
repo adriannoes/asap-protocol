@@ -355,3 +355,66 @@ async def test_jwks_validator_second_fetch_keys_uses_cache() -> None:
 
     assert key_set_1 is key_set_2
     assert call_count == 1
+
+
+async def test_jwks_validator_validate_token_rejects_wrong_issuer() -> None:
+    """Verify JWKSValidator enforces expected_issuer like module validate_jwt."""
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    jwks_json = _make_jwks_response(key)
+
+    def mock_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=jwks_json)
+
+    validator = JWKSValidator(
+        "https://auth.example.com/jwks.json",
+        transport=httpx.MockTransport(mock_handler),
+        expected_issuer="https://auth.example.com",
+        expected_audience="urn:asap:agent:server",
+    )
+
+    now = int(time.time())
+    token = jose_jwt.encode(
+        {"alg": "RS256"},
+        {
+            "sub": "urn:asap:agent:test",
+            "exp": now + 3600,
+            "iss": "https://evil.example.com",
+            "aud": "urn:asap:agent:server",
+        },
+        key,
+    )
+
+    with pytest.raises(JoseError):
+        await validator.validate_token(token)
+
+
+async def test_jwks_validator_validate_token_accepts_matching_iss_aud() -> None:
+    """Verify JWKSValidator accepts token when iss/aud match configured expectations."""
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    jwks_json = _make_jwks_response(key)
+
+    def mock_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=jwks_json)
+
+    validator = JWKSValidator(
+        "https://auth.example.com/jwks.json",
+        transport=httpx.MockTransport(mock_handler),
+        expected_issuer="https://auth.example.com",
+        expected_audience="urn:asap:agent:server",
+    )
+
+    now = int(time.time())
+    token = jose_jwt.encode(
+        {"alg": "RS256"},
+        {
+            "sub": "urn:asap:agent:test",
+            "exp": now + 3600,
+            "iss": "https://auth.example.com",
+            "aud": ["urn:asap:agent:server", "other"],
+        },
+        key,
+    )
+
+    claims = await validator.validate_token(token)
+
+    assert claims["sub"] == "urn:asap:agent:test"
