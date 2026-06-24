@@ -1,6 +1,11 @@
 ---
 description: See the dedicated SlowAPI testing skill for transport/server rate-limiter isolation patterns and 429 flake prevention.
 alwaysApply: false
+layer: bridge
+seeAlso:
+  - .cursor/skills/testing-rate-limiting/SKILL.md
+  - .cursor/rules/testing-standards.mdc
+  - engineering/architecture/rate-limiting.md
 ---
 
 # Rate Limiting Testing Pattern

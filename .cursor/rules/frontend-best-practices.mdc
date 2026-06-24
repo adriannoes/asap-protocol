@@ -5,6 +5,11 @@ globs:
   - "apps/web/**/*.tsx"
   - "packages/ui/**/*.tsx"
 alwaysApply: false
+layer: standards
+seeAlso:
+  - .cursor/rules/security-standards.mdc
+  - .cursor/rules/agent-clean-code.mdc
+  - product/design/design-system.md
 ---
 
 # Frontend Best Practices (Next.js 16 + Tailwind)

@@ -400,10 +400,9 @@ After applying fixes, verify with:
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy src/
-PYTHONPATH=src uv run pytest tests/ --cov=src --cov-report=term-missing -v
-
+uv run pytest --tb=short tests/ --cov=asap --cov-report=term-missing -v --cov-fail-under=85
 # Script-specific tests
-PYTHONPATH=src uv run pytest tests/scripts/test_process_registration.py -v
+uv run pytest tests/scripts/test_process_registration.py -v
 
 # Web quality
 cd apps/web

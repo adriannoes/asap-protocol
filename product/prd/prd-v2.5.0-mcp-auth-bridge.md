@@ -3,9 +3,9 @@
 > **Product Requirements Document**
 >
 > **Version**: 2.5.0
-> **Status**: TASK BREAKDOWN (Phase 1 — parent tasks)
+> **Status**: READY FOR IMPLEMENTATION
 > **Created**: 2026-03-20 (origin); **rescoped to v2.5.0**: 2026-06-22
-> **Last Updated**: 2026-06-22
+> **Last Updated**: 2026-06-24
 >
 > **Parent train**: [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md)
 > **Predecessor**: [prd-v2.4.1-security-hardening.md](./prd-v2.4.1-security-hardening.md) (✅ shipped)
@@ -36,10 +36,10 @@ Today MCP has no standard auth story for per-agent, scoped tool access. ASAP alr
 |---|-------------|-------------------|
 | 1 | Python auth middleware for `MCPServer` | `asap.adapters.mcp.auth_middleware` |
 | 2 | Tool → capability mapping + grant enforcement | `asap.adapters.mcp.capability_map` |
-| 3 | Discovery: well-known manifest alongside MCP | docs + optional `MCPAuthConfig.manifest_path` |
+| 3 | Discovery: well-known manifest alongside MCP | docs + optional `MCPAuthConfig.manifest_url` |
 | 4 | TypeScript middleware (SHOULD) | `@asap-protocol/mcp-auth` |
-| 5 | Reference server + compliance tests | `examples/mcp_auth_server.py`, harness cases |
-| 6 | Integration guide | `docs/mcp-auth-bridge.md` |
+| 5 | Reference server + compliance tests | `examples/mcp_auth_bridge/server.py`, harness cases |
+| 6 | Integration guide | `docs/adapters/mcp-auth-bridge.md` |
 
 ### 1.4 Out of scope (v2.5.0)
 
@@ -165,7 +165,8 @@ Manifest alignment:
 
 ### 4.5 Constraint enforcement
 
-Before handler execution, bridge calls existing `validate_capability_constraints(capability, arguments, grant)` from `auth/capabilities.py`:
+Before handler execution, bridge calls existing `CapabilityRegistry.check_grant(agent_id, capability, arguments)` from `auth/capabilities.py`.
+That registry validates grant status, expiry, and constraints with `validate_constraints(grant.constraints, arguments)`:
 
 - Operators define constraints on grants (`max`, `min`, `in`, `not_in`).
 - Tool `arguments` dict is the validation input.
@@ -179,7 +180,7 @@ Before handler execution, bridge calls existing `validate_capability_constraints
 | Invalid/expired JWT | `isError: true`, `asap:invalid_token` |
 | No grant / denied grant | `asap:capability_denied` |
 | Constraint violation | `asap:constraint_violation` + field detail |
-| Unknown tool | Native MCP `METHOD_NOT_FOUND` (unchanged) |
+| Unknown tool | Existing `MCPServer` `CallToolResult` with `isError: true` (unchanged) |
 
 ---
 
@@ -191,7 +192,7 @@ Before handler execution, bridge calls existing `validate_capability_constraints
 |----|-------------|----------|
 | MCP-AUTH-001 | Every `tools/call` on a protected server MUST require a valid Agent JWT unless tool is in `public_tools` allowlist | MUST |
 | MCP-AUTH-002 | JWT verification MUST use `verify_agent_jwt()` with replay cache (`JtiReplayCache`) | MUST |
-| MCP-AUTH-003 | `capabilities` claim MUST be cross-checked against server-side grant store when `enforce_grants=True` | MUST |
+| MCP-AUTH-003 | Resolved capability MUST be present in the Agent JWT `capabilities` claim and cross-checked against the server-side `CapabilityRegistry` grant store when `enforce_grants=True` | MUST |
 | MCP-AUTH-004 | Per-agent identity: JWT `sub` / agent URN MUST appear in audit logs for each tool call | MUST |
 | MCP-AUTH-005 | Python package `asap.adapters.mcp` with `MCPAuthConfig` and `protect_server(server, config)` | MUST |
 | MCP-AUTH-006 | `protect_server` MUST wrap `tools/call` dispatch without forking `MCPServer` protocol loop | MUST |
@@ -226,8 +227,8 @@ Before handler execution, bridge calls existing `validate_capability_constraints
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| MCP-DOC-001 | `docs/mcp-auth-bridge.md` — architecture, token carriage, config reference | MUST |
-| MCP-DOC-002 | `examples/mcp_auth_server.py` — runnable protected server | MUST |
+| MCP-DOC-001 | `docs/adapters/mcp-auth-bridge.md` — architecture, token carriage, config reference | MUST |
+| MCP-DOC-002 | `examples/mcp_auth_bridge/server.py` — runnable protected server | MUST |
 | MCP-DOC-003 | Update `docs/mcp-integration.md` — distinguish Mode A vs Mode B | MUST |
 | MCP-DOC-004 | Migration note: unprotected MCP servers remain valid; protection is opt-in | MUST |
 
@@ -244,11 +245,15 @@ Before handler execution, bridge calls existing `validate_capability_constraints
 class MCPAuthConfig:
     host_store: HostStore
     agent_store: AgentStore
+    capability_registry: CapabilityRegistry
     tool_capability_map: dict[str, str] = field(default_factory=dict)
     public_tools: frozenset[str] = frozenset()  # no JWT required
     enforce_grants: bool = True
     hide_unauthorized_tools: bool = False
+    validate_tools_at_startup: bool = False
     jwt_extractor: Callable[[CallToolRequestParams], str | None] | None = None
+    jti_replay_cache: JtiReplayCache | None = None
+    expected_audience: str | list[str] | None = None
     manifest_url: str | None = None  # for instructions / discovery docs
 ```
 
@@ -263,7 +268,7 @@ def protect_server(server: MCPServer, config: MCPAuthConfig) -> MCPServer:
 
 ```python
 def default_jwt_extractor(params: CallToolRequestParams) -> str | None:
-    meta = params.get("_meta") or {}
+    meta = params.meta or {}
     token = meta.get("asap_agent_jwt")
     if isinstance(token, str) and token.strip():
         return token.strip()
@@ -275,10 +280,10 @@ def default_jwt_extractor(params: CallToolRequestParams) -> str | None:
 ## 7. Engineering tasks
 
 > **Sprint index:** [tasks-v2.5.0-roadmap.md](../../engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md)  
-> Parent tasks **1.0–5.0** defined; detailed sub-tasks per sprint file after **LGTM**.
+> Parent tasks **1.0–5.0** and sprint sub-tasks **S0–S5** are defined.
 
-| Sprint | Goal | Task file (after LGTM) |
-|--------|------|------------------------|
+| Sprint | Goal | Task file |
+|--------|------|-----------|
 | **S0** | Design lock + scaffold | `sprint-S0-design-lock.md` |
 | **S1** | Core middleware | `sprint-S1-core-middleware.md` |
 | **S2** | Capability mapping | `sprint-S2-capability-mapping.md` |
@@ -289,8 +294,8 @@ def default_jwt_extractor(params: CallToolRequestParams) -> str | None:
 **Definition of Done (v2.5.0):**
 
 - [ ] `protect_server` passes unit + integration tests with mock Agent JWT
-- [ ] Example server runs: `uv run python -m asap.examples.mcp_auth_server`
-- [ ] Compliance harness includes MCP auth handshake case
+- [ ] Example server runs: `uv run python examples/mcp_auth_bridge/server.py`
+- [ ] Compliance harness includes `mcp_auth` profile cases for auth, grants, constraints, and manifest alignment
 - [ ] Docs published; `AGENTS.md` knowledge map updated
 - [ ] No breaking change to unprotected `MCPServer` usage
 
@@ -326,8 +331,8 @@ def default_jwt_extractor(params: CallToolRequestParams) -> str | None:
 |-------------|--------|
 | v2.4.1 shipped | ✅ |
 | `verify_agent_jwt` stable | ✅ |
-| `auth/capabilities.py` constraint validation | ✅ |
-| `MCPServer` tools/call hook point | ✅ verify during S0 — may need thin refactor |
+| `CapabilityRegistry.check_grant` + `validate_constraints` | ✅ |
+| `MCPServer` tools/call hook point | ✅ `_handle_tools_call` exists; S0 locks wrapper strategy |
 | v2.5.1+ adapter work | ❌ blocked until v2.5.0 ships |
 
 ---
@@ -351,3 +356,4 @@ def default_jwt_extractor(params: CallToolRequestParams) -> str | None:
 | 2026-04-17 | 0.2.0 | Promoted to P1 in Spec & Interop rescope |
 | 2026-06-22 | 1.0.0 | **Rescoped to v2.5.0**; full architecture, API, task breakdown; split from formal spec (→ v2.5.3) |
 | 2026-06-22 | 1.1.0 | Parent tasks 1.0–5.0 in [tasks-v2.5.0-roadmap.md](../../engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md) |
+| 2026-06-24 | 1.2.0 | Aligned task plan with repo APIs, canonical docs/example paths, grant registry config, and compliance/doc gaps |

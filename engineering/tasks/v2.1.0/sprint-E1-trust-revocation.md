@@ -147,4 +147,4 @@
 - [x] `verify_agent_trust` validates manifests; invalid raises `SignatureVerificationError`
 - [x] `is_revoked` fetches revoked_agents.json (no cache); returns True when URN in list
 - [x] IssueOps revoke flow creates PR updating revoked_agents.json
-- [x] All tests pass: `PYTHONPATH=src uv run pytest tests/client/ tests/scripts/test_process_revocation.py -v`
+- [x] All tests pass: `uv run pytest tests/client/ tests/scripts/test_process_revocation.py -v`

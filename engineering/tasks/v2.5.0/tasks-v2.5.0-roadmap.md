@@ -1,29 +1,29 @@
 # Tasks: v2.5.0 MCP Auth Bridge — Sprint Index
 
-**Status: 🟢 READY** — parent tasks + per-sprint sub-tasks defined; integration branch **`release/2.5.0`**.
+**Status: 🟢 READY** — parent tasks + per-sprint sub-tasks defined and reconciled with PRD/API details; integration branch **`release/2.5.0`**.
 
 Based on [PRD v2.5.0 MCP Auth Bridge](../../../product/prd/prd-v2.5.0-mcp-auth-bridge.md). Each sprint maps to a PR into **`release/2.5.0`** (see [BRANCHING.md](./BRANCHING.md)); merge to `main` only after S5.
 
 ## Prerequisites
 
-- [x] v2.4.1 Security Hardening shipped (2026-06-14) — [tasks-v2.4.1-security-hardening.md](../private/v2.4.1/tasks-v2.4.1-security-hardening.md)
+- [x] v2.4.1 Security Hardening shipped (2026-06-14) — [prd-v2.4.1-security-hardening.md](../../../product/prd/prd-v2.4.1-security-hardening.md)
 - [x] Agent JWT + Host JWT stable (`auth/agent_jwt.py`, v2.2+)
-- [x] Capability grants + constraint validation (`auth/capabilities.py`, v2.2+)
+- [x] Capability grants + constraint validation (`CapabilityRegistry.check_grant`, `validate_constraints`, v2.2+)
 - [x] `MCPServer` stdio + `tools/call` (`mcp/server.py`, MCP 2025-11-25)
-- [ ] S0 design lock: confirm `tools/call` interception point in `MCPServer` (may need thin refactor)
+- [ ] S0 design lock: confirm wrapper strategy, `CapabilityRegistry` injection, and `_meta` parser changes before S1
 
 ## Sprint Plan
 
 | Sprint | Focus | PRD sections | Priority | Status |
 |--------|-------|--------------|----------|--------|
 | **S0** | [Design lock & scaffold](./sprint-S0-design-lock.md) | §6 API, MCP-AUTH-005 | P0 | 🔵 Planned |
-| **S1** | [Core auth middleware](./sprint-S1-core-middleware.md) | MCP-AUTH-001..004, 006..007 | P0 | 🔵 Planned |
+| **S1** | [Core auth middleware](./sprint-S1-core-middleware.md) | MCP-AUTH-001..004, 006 and auth portions of 007 | P0 | 🔵 Planned |
 | **S2** | [Capability mapping & errors](./sprint-S2-capability-mapping.md) | MCP-MAP-*, §4.5–4.6 | P0 | 🔵 Planned |
 | **S3** | [Docs, examples & discovery](./sprint-S3-docs-examples.md) | MCP-DISC-*, MCP-DOC-* | P0/P1 | 🔵 Planned |
 | **S4** | [Compliance & integration tests](./sprint-S4-compliance.md) | MCP-DISC-003, harness | P1 | 🔵 Planned |
 | **S5** | [Release v2.5.0](./sprint-S5-release.md) | DoD, metrics | P0 | 🔵 Planned |
 
-> **Note:** `@asap-protocol/mcp-auth` (TypeScript, MCP-TS-*) is SHOULD — spike in S4 or defer to v2.5.0.1 with documented gap in CHANGELOG.
+> **Note:** `@asap-protocol/mcp-auth` (TypeScript, MCP-TS-*) is SHOULD. S4 runs a scoped feasibility spike; S5 either ships it or records an explicit v2.5.0.1 defer in CHANGELOG/backlog.
 
 ## Dependency Graph
 
@@ -53,7 +53,8 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
   - **Depends on:** Stable `verify_agent_jwt`, `MCPServer` in tree.
   - **Acceptance criteria:**
     - [ ] Package `src/asap/adapters/mcp/` exists with `MCPAuthConfig` dataclass and public exports
-    - [ ] Design note documents `tools/call` hook strategy (wrap vs refactor)
+    - [ ] `MCPAuthConfig` includes `host_store`, `agent_store`, `capability_registry`, `jti_replay_cache`, and `expected_audience`
+    - [ ] Design note documents `tools/call` hook strategy (wrap vs refactor) and grant-check flow
     - [ ] Default `jwt_extractor` interface defined ( `_meta.asap_agent_jwt` + dev env fallback)
 
 - [ ] **2.0 Core auth middleware (S1)**
@@ -64,15 +65,15 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
     - [ ] `protect_server(server, config)` wraps `tools/call` without breaking unprotected servers
     - [ ] Missing/invalid JWT returns MCP `CallToolResult` with `isError: true` and `asap:*` codes
     - [ ] `public_tools` allowlist skips JWT for named tools only
-    - [ ] Unit tests: missing token, expired token, success path
+    - [ ] Unit tests: missing token, expired token, tampered token, success path
 
 - [ ] **3.0 Capability mapping & constraint enforcement (S2)**
   - **Trigger:** S1 `protect_server` dispatches authenticated calls.
   - **Enables:** S3 example server with real grants; S4 compliance cases.
-  - **Depends on:** Task 2.0; `auth/capabilities.validate_constraints`.
+  - **Depends on:** Task 2.0; `CapabilityRegistry.check_grant` / `auth/capabilities.validate_constraints`.
   - **Acceptance criteria:**
     - [ ] `tool_capability_map` + default identity mapping (tool name == capability)
-    - [ ] Denied grant and constraint violation return `asap:capability_denied` / `asap:constraint_violation`
+    - [ ] Denied grants, JWT capability-claim mismatches, and constraint violations return the correct `asap:*` codes
     - [ ] Optional startup validation: every registered tool resolves to a capability (MCP-MAP-003)
     - [ ] Test coverage ≥90% on `asap.adapters.mcp`
 
@@ -84,14 +85,15 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
     - [ ] `docs/adapters/mcp-auth-bridge.md` published (architecture, token carriage, config reference)
     - [ ] `examples/mcp_auth_bridge/` runs: `uv run python examples/mcp_auth_bridge/server.py`
     - [ ] `docs/mcp-integration.md` distinguishes Mode A (native MCP) vs Mode B (ASAP envelope)
-    - [ ] Manifest ↔ tool alignment pattern documented (MCP-DISC-001/002)
+    - [ ] Manifest ↔ tool alignment pattern documented, including `skills[].id` ↔ MCP tool snippets (MCP-DISC-001/002)
+    - [ ] Migration note states unprotected MCP servers remain valid and protection is opt-in (MCP-DOC-004)
 
 - [ ] **5.0 Compliance, quality & release (S4–S5)**
   - **Trigger:** Example server + docs merged.
   - **Enables:** v2.5.1 Adapter Lab II (blocked until tag).
   - **Depends on:** Tasks 2.0–4.0.
   - **Acceptance criteria:**
-    - [ ] Compliance harness includes `mcp_auth` module case (green in CI)
+    - [ ] `asap-compliance` includes `mcp_auth` profile cases for stdio MCP, including manifest tools ⊆ registered tools (green in CI)
     - [ ] `pyproject.toml` / npm → **2.5.0**; tag `v2.5.0` published
     - [ ] `AGENTS.md` knowledge map updated; CHANGELOG `[2.5.0]`
     - [ ] Pre-push CI suite green (ruff, mypy, pytest, TS if touched)
@@ -115,25 +117,27 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
 - `src/asap/mcp/server.py` — hook point for `tools/call` interception (if refactor needed)
 - `src/asap/mcp/protocol.py` — `_meta` on `CallToolRequestParams` if types need extension
 - `docs/mcp-integration.md` — Mode A vs Mode B
-- `asap-compliance/` + `tests/testing/compliance.py` — harness case
+- `asap-compliance/` — release-gate `mcp_auth` profile for stdio MCP
+- `src/asap/testing/compliance.py` — unchanged unless shared HTTP harness support is explicitly needed
 - `AGENTS.md`, `CHANGELOG.md`, `pyproject.toml`
 
 ### Reference (read-only patterns)
 
 - `src/asap/auth/agent_jwt.py` — `verify_agent_jwt`, `JtiReplayCache`
-- `src/asap/auth/capabilities.py` — grants, `validate_capability_constraints`
+- `src/asap/auth/capabilities.py` — grants, `CapabilityRegistry.check_grant`, `validate_constraints`
 - `src/asap/adapters/openapi/` — adapter package layout precedent
 - `src/asap/mcp/server.py` — existing `MCPServer.register_tool`
 
 ### Notes
 
 - Unit tests mirror `src/asap/adapters/mcp/` under `tests/adapters/mcp/`.
-- Run: `PYTHONPATH=src uv run pytest tests/adapters/mcp/ -v`
+- Run: `uv run pytest tests/adapters/mcp/ -v`
 
 ## Definition of Done (v2.5.0)
 
 - [ ] All parent tasks 1.0–5.0 complete
 - [ ] PRD requirements MCP-AUTH-001..007, MCP-MAP-001..003, MCP-DOC-001..004 satisfied
+- [ ] PRD discovery requirements MCP-DISC-001..003 satisfied or explicitly deferred with rationale
 - [ ] Unprotected `MCPServer` usage unchanged (opt-in via `protect_server`)
 - [ ] No wire-protocol breaking changes
 
@@ -163,3 +167,4 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
 | 2026-06-22 | Draft roadmap from PRD §7 |
 | 2026-06-22 | Parent tasks 1.0–5.0 added (Phase 1) |
 | 2026-06-22 | Phase 2: sprint S0–S5 sub-tasks; `release/2.5.0` integration branch |
+| 2026-06-24 | Reconciled task plan with PRD paths, repo APIs, compliance scope, and TypeScript spike/defer gate |

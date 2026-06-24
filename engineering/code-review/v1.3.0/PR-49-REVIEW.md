@@ -151,7 +151,7 @@
 Run the new delegation tests in isolation:
 
 ```bash
-PYTHONPATH=src uv run pytest tests/economics/test_delegation.py tests/economics/test_delegation_storage.py tests/transport/test_delegation_api.py tests/test_cli.py::TestCliDelegationRevoke -v --tb=short
+uv run pytest tests/economics/test_delegation.py tests/economics/test_delegation_storage.py tests/transport/test_delegation_api.py tests/test_cli.py::TestCliDelegationRevoke -v --tb=short
 ```
 
 After fixing RF-1 (cascade recursion), add a test for circular chains:
@@ -170,6 +170,6 @@ async def test_revoke_cascade_circular_chain_terminates(memory_storage):
 Full CI check:
 
 ```bash
-PYTHONPATH=src uv run pytest -n auto --tb=short
+uv run pytest -n auto --tb=short
 uv run ruff check . && ruff format --check . && mypy src/
 ```

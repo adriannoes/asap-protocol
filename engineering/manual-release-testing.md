@@ -54,26 +54,26 @@ Simulates a real user validating the ASAP Protocol before release (aligned with 
 
 Runs automated checks for streaming, errors, versioning, batch, audit, identity hooks (see `asap.testing.compliance`).
 
-- [ ] `PYTHONPATH=src uv run pytest tests/testing/test_compliance_v2.py -q` — all pass
+- [ ] `uv run pytest tests/testing/test_compliance_v2.py -q` — all pass
 
 ## 8. v2.2 Protocol Hardening — Focused pytest (optional but recommended)
 
 Repeat the same scenarios covered by CI without running the full suite:
 
-- [ ] Streaming / SSE + client: `PYTHONPATH=src uv run pytest tests/e2e/test_streaming.py tests/transport/test_streaming.py -q`
-- [ ] JSON-RPC batch + `ASAPClient.batch`: `PYTHONPATH=src uv run pytest tests/transport/test_batch.py -q`
+- [ ] Streaming / SSE + client: `uv run pytest tests/e2e/test_streaming.py tests/transport/test_streaming.py -q`
+- [ ] JSON-RPC batch + `ASAPClient.batch`: `uv run pytest tests/transport/test_batch.py -q`
 - [ ] Identity routes (register / status / revoke / rotate-key):  
-  `PYTHONPATH=src uv run pytest tests/transport/test_server.py -k "TestAgentRegisterEndpoint or TestAgentStatusEndpoint or TestAgentRevokeEndpoint or TestAgentRotateKeyEndpoint" -q`
-- [ ] Capability routes: `PYTHONPATH=src uv run pytest tests/transport/test_capability_routes.py -q`
-- [ ] Audit chain: `PYTHONPATH=src uv run pytest tests/economics/test_audit.py -q`
+  `uv run pytest tests/transport/test_server.py -k "TestAgentRegisterEndpoint or TestAgentStatusEndpoint or TestAgentRevokeEndpoint or TestAgentRotateKeyEndpoint" -q`
+- [ ] Capability routes: `uv run pytest tests/transport/test_capability_routes.py -q`
+- [ ] Audit chain: `uv run pytest tests/economics/test_audit.py -q`
 
 ## 9. Full Test Suite
 
-- [ ] `PYTHONPATH=src uv run pytest -n auto --tb=short` — expect **all passed**, a small number **skipped** (rate-limit isolation / optional markers); update counts below when you run.
+- [ ] `uv run pytest -n auto --tb=short` — expect **all passed**, a small number **skipped** (rate-limit isolation / optional markers); update counts below when you run.
 
 **Reference run (local, 2026-04-16)**: `2953 passed`, `7 skipped` in ~130s without `-n auto`.
 
-- [ ] Optional coverage (CI-parity, no xdist): `PYTHONPATH=src uv run pytest --cov=src --cov-report=term-missing` _(see project CI for fail-under)_
+- [ ] Optional coverage (CI-parity, no xdist): `uv run pytest --tb=short --cov=asap --cov-report=term-missing --cov-fail-under=85`
 
 ## 10. Lint & Type Check
 

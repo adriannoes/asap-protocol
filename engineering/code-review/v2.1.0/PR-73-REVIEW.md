@@ -113,15 +113,15 @@
 
 > 1. **Run SDK client tests:**
 >    ```bash
->    PYTHONPATH=src uv run pytest tests/client/ -v
+>    uv run pytest tests/client/ -v
 >    ```
 > 2. **Run transport auth_token test:**
 >    ```bash
->    PYTHONPATH=src uv run pytest tests/transport/test_client.py -k "auth_token" -v
+>    uv run pytest tests/transport/test_client.py -k "auth_token" -v
 >    ```
 > 3. **Verify resource cleanup (manual / asyncio debug):**
 >    ```bash
->    PYTHONASYNCIODEBUG=1 PYTHONPATH=src uv run pytest tests/client/test_market.py -v
+>    PYTHONASYNCIODEBUG=1 uv run pytest tests/client/test_market.py -v
 >    ```
 >    Check for `ResourceWarning: unclosed` messages.
 > 4. **Verify assert removal is safe:**

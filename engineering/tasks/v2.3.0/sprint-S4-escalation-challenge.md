@@ -91,7 +91,7 @@
 ## Acceptance Criteria
 
 - [x] All tests pass (TDD red → green) — targeted pytest + Vitest `connection-errors.test.ts`
-- [ ] Coverage ≥90% on new modules — use full `pytest --cov=src` in CI; **narrow** `--cov=asap.transport.escalation_routes` triggers a pytest-cov + `joserfc` `OKPKey`/`isinstance` interaction that breaks Host JWT signing in tests (do not use module-scoped cov for JWT-heavy tests alone)
+- [ ] Coverage ≥90% on new modules — use full `pytest --cov=asap` in CI; **narrow** `--cov=asap.transport.escalation_routes` triggers a pytest-cov + `joserfc` `OKPKey`/`isinstance` interaction that breaks Host JWT signing in tests (do not use module-scoped cov for JWT-heavy tests alone)
 - [x] `uv run mypy` and `ruff check` clean on touched transport/OpenAPI/client paths
 - [x] TS Vitest green for escalation flow (`npx vitest run test/connection-errors.test.ts`)
 - [x] OpenAPI adapter emits ASAP challenge metadata on upstream 401 (factory default discovery URL; handler unit test)

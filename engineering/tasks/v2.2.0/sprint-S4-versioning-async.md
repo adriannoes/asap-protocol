@@ -89,4 +89,4 @@
 - [x] AsyncSnapshotStore and AsyncMeteringStore Protocols defined
 - [x] Sync protocols deprecated with warnings
 - [x] SQLiteSnapshotStore implements AsyncSnapshotStore (via shared backend + `SQLiteAsyncSnapshotStore`)
-- [x] Test coverage >= 90% for new code (full `pytest tests/ --cov=src`; regenerate signed fixtures after Manifest changes)
+- [x] Test coverage >= 90% for new code (full `pytest tests/ --cov=asap --cov-fail-under=85`; regenerate signed fixtures after Manifest changes)

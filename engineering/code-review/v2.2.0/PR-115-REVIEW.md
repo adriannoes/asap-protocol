@@ -77,8 +77,7 @@
 
 ```bash
 # 1. Full test suite (should already pass)
-PYTHONPATH=src uv run pytest tests/ -v --cov=src --cov-report=term-missing
-
+uv run pytest --tb=short tests/ -v --cov=asap --cov-report=term-missing --cov-fail-under=85
 # 2. Specific: version negotiation contract tests
 uv run pytest tests/contract/test_version_negotiation.py -v
 

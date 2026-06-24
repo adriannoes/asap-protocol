@@ -197,10 +197,10 @@ After applying fixes, verify with:
 
 ```bash
 # 1. Full test suite (existing + new)
-PYTHONPATH=src uv run pytest tests/economics/test_audit.py tests/transport/test_batch.py tests/testing/test_compliance_v2.py -v
+uv run pytest tests/economics/test_audit.py tests/transport/test_batch.py tests/testing/test_compliance_v2.py -v
 
 # 2. Specific regression for double-body-read (RF-1)
-PYTHONPATH=src uv run pytest tests/transport/integration/test_server_core.py -v -k "batch or compressed"
+uv run pytest tests/transport/integration/test_server_core.py -v -k "batch or compressed"
 
 # 3. Linting and type check
 uv run ruff check src/asap/economics/audit.py src/asap/transport/server.py src/asap/testing/compliance.py
@@ -208,8 +208,7 @@ uv run mypy src/asap/economics/audit.py src/asap/transport/server.py src/asap/te
 
 # 4. Full CI verification
 uv run ruff check . && uv run ruff format --check . && uv run mypy src/ scripts/ tests/
-PYTHONPATH=src uv run pytest --cov=src --cov-report=xml
-
+uv run pytest --tb=short --cov=asap --cov-report=xml --cov-fail-under=85
 # 5. Security scan
 uv run pip-audit
 ```
