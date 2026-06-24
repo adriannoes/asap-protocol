@@ -36,7 +36,7 @@ Between **v2.4.1** (security patch) and **v3.0** (economy), the project needs a 
 
 | Version | Codename | Primary outcome | PRD | Status |
 |---------|----------|-----------------|-----|--------|
-| **v2.5.0** | MCP Auth Bridge | ASAP Agent JWT + capabilities em MCP `tools/call` | [prd-v2.5.0-mcp-auth-bridge.md](./prd-v2.5.0-mcp-auth-bridge.md) | **S5 RELEASE PENDING** — S0–S4 on `release/2.5.0` (`a60c1e9`); [tasks roadmap](../../engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md) · [S5 sprint](../../engineering/tasks/v2.5.0/sprint-S5-release.md) |
+| **v2.5.0** | MCP Auth Bridge | ASAP Agent JWT + capabilities em MCP `tools/call` | [prd-v2.5.0-mcp-auth-bridge.md](./prd-v2.5.0-mcp-auth-bridge.md) | **✅ Shipped** 2026-06-24 — tag [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0) |
 | **v2.5.1** | Adapter Lab II | Enterprise/workflow adapters (ex v2.3.2) | [prd-v2.5.1-adapter-lab-ii.md](./prd-v2.5.1-adapter-lab-ii.md) | Planned (after 2.5.0) |
 | **v2.5.2** | Distribution Loop | Homepage, templates, métricas (ex v2.3.3) | [prd-v2.5.2-distribution-loop.md](./prd-v2.5.2-distribution-loop.md) | Planned (after 2.5.1) |
 | **v2.5.3** | Formal Spec & Interop | RFC spec, introspection, privacy, cross-protocol | [prd-v2.5.3-formal-spec-interop.md](./prd-v2.5.3-formal-spec-interop.md) | Planned |

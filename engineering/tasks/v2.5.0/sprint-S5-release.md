@@ -4,7 +4,7 @@
 **Branch**: `feat/v2.5.0-s5-release` → merge into **`release/2.5.0`**, then **`release/2.5.0` → `main`**
 **Depends on**: S0–S4 complete on `release/2.5.0`
 
-> **Status:** **3.1** — [PR #236](https://github.com/adriannoes/asap-protocol/pull/236) (`release/2.5.0` → `main`). **1.0** ✅ · **2.0** ✅ · S5 prep merged ([#235](https://github.com/adriannoes/asap-protocol/pull/235)). Pós-merge: **3.2** tag `v2.5.0` na `main` · **3.3** checkpoints.
+> **Status:** **SHIPPED** — `main` @ tag [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0) (2026-06-24). Merge [#236](https://github.com/adriannoes/asap-protocol/pull/236); prep [#235](https://github.com/adriannoes/asap-protocol/pull/235).
 
 **Trigger:** All sprint acceptance criteria met on integration branch.
 **Enables:** v2.5.1 Adapter Lab II.
@@ -70,33 +70,35 @@
   - **Verify**: Links to `docs/adapters/mcp-auth-bridge.md`
   - **Result (2026-06-24)**: `## [2.5.0] - 2026-06-24` — Added (bridge, compliance, tests), Deferred (MAP-004, initialize), TypeScript defer v2.5.0.1, Migration (no breaking); links to adapter guide + spike
 
-### 3.0 Merge to main & tag
+### 3.0 Merge to main & tag ✅
 
-- [ ] 3.1 Open PR `release/2.5.0` → `main`
+- [x] 3.1 Open PR `release/2.5.0` → `main`
   - **What**: Squash or merge commit per repo convention; include all sprint summaries in PR body
   - **Verify**: CI green on PR
-  - **Status**: [PR #236](https://github.com/adriannoes/asap-protocol/pull/236) open (2026-06-24)
+  - **Status**: Merged [PR #236](https://github.com/adriannoes/asap-protocol/pull/236) (2026-06-24)
 
-- [ ] 3.2 Tag `v2.5.0`
+- [x] 3.2 Tag `v2.5.0`
   - **Command**: `git tag -a v2.5.0 -m "v2.5.0: MCP Auth Bridge"`
   - **Verify**: Publish workflow triggers (maintainer)
+  - **Result**: Tag pushed 2026-06-24; `release.yml` run [28122899827](https://github.com/adriannoes/asap-protocol/actions/runs/28122899827)
 
-- [ ] 3.3 Update checkpoints
+- [x] 3.3 Update checkpoints
   - **File**: `product/checkpoints.md`
   - **What**: Mark v2.5.0 shipped; link PRD and release notes
 
 ### 4.0 Post-release (optional)
 
-- [ ] 4.1 TypeScript `@asap-protocol/mcp-auth` follow-up issue
+- [x] 4.1 TypeScript `@asap-protocol/mcp-auth` follow-up issue
   - **What**: Track v2.5.0.1 if npm package is deferred after the S4 spike. Link the spike note and record MCP-TS-001..003 as deferred, not dropped.
   - **Verify**: Issue or task file in `engineering/tasks/v2.5.0/` backlog; CHANGELOG mentions the defer.
+  - **Result**: [backlog-mcp-auth-typescript.md](./backlog-mcp-auth-typescript.md)
 
 ---
 
 ## Acceptance Criteria (S5)
 
-- [ ] `release/2.5.0` merged to `main`
-- [ ] Tag `v2.5.0` created
-- [ ] CHANGELOG and checkpoints updated
-- [ ] TypeScript middleware is shipped or explicitly deferred with linked backlog
-- [ ] PyPI `asap-protocol` 2.5.0 published (maintainer workflow)
+- [x] `release/2.5.0` merged to `main`
+- [x] Tag `v2.5.0` created
+- [x] CHANGELOG and checkpoints updated
+- [x] TypeScript middleware is shipped or explicitly deferred with linked backlog
+- [ ] PyPI `asap-protocol` 2.5.0 published (maintainer workflow — verify after `release.yml` green)

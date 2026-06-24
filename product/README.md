@@ -43,7 +43,7 @@ product/
 | v2.3.1 — Framework adapters (npm) | ✅ Released (2026-05-21) | `private/prd-v2.3.1-adapter-lab.md` | `@asap-protocol/mastra`, `@asap-protocol/openai-agents` @ 2.3.1; Python core stays 2.3.0 |
 | **v2.4.0 — Edge-AI discovery** | **✅ Released (2026-05-24)** | `prd-v2.4.0-edge-ai-discovery.md` | Hardware/inference manifest fields, registry mirror, marketplace filters, ShellClaw onboarding |
 | **v2.4.1 — Security hardening** | **✅ Released (2026-06-14)** | `prd-v2.4.1-security-hardening.md` | OAuth2 iss/aud validation, fail-closed identity binding, web SSRF/redirect hardening |
-| **v2.5.0 — MCP Auth Bridge** | 🔵 **In progress** | `prd-v2.5.0-mcp-auth-bridge.md` + [tasks-v2.5.0-roadmap.md](../engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md) | Parent tasks defined; sub-tasks after LGTM |
+| **v2.5.0 — MCP Auth Bridge** | **✅ Released (2026-06-24)** | `prd-v2.5.0-mcp-auth-bridge.md` + [tasks-v2.5.0-roadmap.md](../engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md) | `asap.adapters.mcp`, compliance `mcp-auth-bridge`; tag [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0) |
 | v2.5.1 — Adapter Lab II | 🔭 Planned (after 2.5.0) | `prd-v2.5.1-adapter-lab-ii.md` | Enterprise/workflow adapters (ex v2.3.2) |
 | v2.5.2 — Distribution Loop | 🔭 Planned (after 2.5.1) | `prd-v2.5.2-distribution-loop.md` | Homepage, templates, metrics (ex v2.3.3) |
 | v2.5.3 — Formal Spec & Interop | 🔭 Planned | `prd-v2.5.3-formal-spec-interop.md` | RFC spec, introspection, privacy, cross-protocol |

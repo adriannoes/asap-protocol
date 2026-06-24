@@ -3,7 +3,7 @@
 > **Product Requirements Document**
 >
 > **Version**: 2.5.0
-> **Status**: IMPLEMENTATION COMPLETE — **S5 RELEASE PENDING**
+> **Status**: SHIPPED — tag [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0) (2026-06-24)
 > **Created**: 2026-03-20 (origin); **rescoped to v2.5.0**: 2026-06-22
 > **Last Updated**: 2026-06-24
 >

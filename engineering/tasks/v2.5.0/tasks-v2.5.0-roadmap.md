@@ -1,6 +1,6 @@
 # Tasks: v2.5.0 MCP Auth Bridge — Sprint Index
 
-**Status: 🟡 IN PROGRESS** — S0–S4 merged on **`release/2.5.0`** (`a60c1e9`, incl. post-S4 refactor [PR #234](https://github.com/adriannoes/asap-protocol/pull/234)); **S5 release** next ([sprint-S5-release.md](./sprint-S5-release.md)).
+**Status: ✅ SHIPPED** — tag [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0) on `main` (2026-06-24); merge [PR #236](https://github.com/adriannoes/asap-protocol/pull/236).
 
 Based on [PRD v2.5.0 MCP Auth Bridge](../../../product/prd/prd-v2.5.0-mcp-auth-bridge.md). Each sprint maps to a PR into **`release/2.5.0`** (see [BRANCHING.md](./BRANCHING.md)); merge to `main` only after S5.
 
@@ -21,7 +21,7 @@ Based on [PRD v2.5.0 MCP Auth Bridge](../../../product/prd/prd-v2.5.0-mcp-auth-b
 | **S2** | [Capability mapping & errors](./sprint-S2-capability-mapping.md) | MCP-MAP-*, §4.5–4.6 | P0 | ✅ Done (merged `8352936`, PR #231; MCP-MAP-004 deferred) |
 | **S3** | [Docs, examples & discovery](./sprint-S3-docs-examples.md) | MCP-DISC-*, MCP-DOC-* | P0/P1 | ✅ Done (merged `175ae02`, PR #232) |
 | **S4** | [Compliance & integration tests](./sprint-S4-compliance.md) | MCP-DISC-003, harness | P1 | ✅ Done (merged `4b67b50`, [PR #233](https://github.com/adriannoes/asap-protocol/pull/233)) |
-| **S5** | [Release v2.5.0](./sprint-S5-release.md) | DoD, metrics | P0 | 🔵 **Active** — branch `feat/v2.5.0-s5-release` |
+| **S5** | [Release v2.5.0](./sprint-S5-release.md) | DoD, metrics | P0 | ✅ Shipped — tag `v2.5.0` (2026-06-24) |
 
 > **Note:** `@asap-protocol/mcp-auth` (TypeScript, MCP-TS-*) is SHOULD. S4 spike **decided DEFER to v2.5.0.1** ([typescript-mcp-auth-spike.md](./typescript-mcp-auth-spike.md)); S5 records defer in CHANGELOG/backlog — does not block Python tag.
 

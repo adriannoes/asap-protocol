@@ -7,40 +7,57 @@
 
 > A production-ready protocol for agent-to-agent communication and task coordination.
 
-**Quick Info**: `v2.5.0` (release branch; PyPI/npm publish on `v2.5.0` tag) · **npm TS [`2.4.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.4.1)** (latest published) | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | **[PyPI `asap-protocol`](https://pypi.org/project/asap-protocol/)** | **[npm `@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client)** | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
+**Quick Info**: [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0) | `Apache 2.0` | `Python 3.13+` | [Documentation](docs/index.md) | [Changelog](CHANGELOG.md)
 
-> 📦 Install the ASAP **Python SDK / protocol** from **`https://pypi.org/project/asap-protocol/`** — package name **`asap-protocol`** on [PyPI](https://pypi.org/project/asap-protocol/).
+> 📦 **Install** the Python SDK ([`asap-protocol` on PyPI](https://pypi.org/project/asap-protocol/)) or the TypeScript client ([`@asap-protocol/client` on npm](https://www.npmjs.com/package/@asap-protocol/client) — **2.4.1** until the v2.5.0.1 npm line).
 
-> 🚀 **Live now** our [**agentic marketplace**](https://asap-protocol.com/) — browse agents, register yours, request verification.
+🚀 **Live now** our [**agentic marketplace**](https://asap-protocol.com/) — browse agents, register yours, request verification.
 
 ## Why ASAP?
 
-Building multi-agent systems today suffers from three core technical challenges that existing protocols like A2A don't fully address:
-1. **$N^2$ Connection Complexity**: Most protocols assume static point-to-point HTTP connections that don't scale.
-2. **State Drift**: Lack of native persistence makes it impossible to reliably resume long-running agentic workflows.
-3. **Fragmentation**: No unified way to handle task delegation, artifact exchange and tool execution (MCP) in a single envelope.
+Multi-agent systems hit three walls that point-to-point agent protocols often leave open:
 
-**ASAP** provides a production-ready communication layer that simplifies these complexities. It's ideal for **multi-agent orchestration**, **stateful workflows** (persistence, resumability), **MCP support** and **production systems** requiring high-performance, type-safe agent communication. 
+1. **Connection sprawl** — pairwise HTTP does not scale as orchestrators fan out.
+2. **State drift** — long workflows stall without durable task state and resumability.
+3. **Fragmentation** — delegation, artifacts, and MCP tool calls end up in incompatible layers.
 
-For simple point-to-point communication, a basic HTTP API might suffice; ASAP shines when you need orchestration, state management and multi-agent coordination. See the [documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) for the current protocol overview and features.
+**ASAP** answers with a schema-first protocol and reference SDKs in **Python** and **TypeScript**:
+
+- **Resumable orchestration** — task state machine, snapshot store, SSE streaming, and built-in `trace_id` / `correlation_id`.
+- **One typed envelope** — tasks, MCP tool execution, and artifact exchange on the same JSON Schema contract.
+- **Production trust** — Ed25519 signed manifests, Host/Agent JWTs, constrained capabilities, OAuth2, opt-in WebAuthn — plus the **MCP Auth Bridge** (v2.5.0) for scoped native `tools/call`.
+- **Ecosystem-ready** — [agentic marketplace](https://asap-protocol.com/), Lite Registry, edge-AI discovery, OpenAPI import, and framework adapters ([Python & npm](#framework-ecosystem)).
+
+Plain HTTP between two agents is enough for the simplest cases. ASAP is built for **multi-agent orchestration**, **stateful workflows**, and **governed capability access** in production — see [documentation](docs/index.md) and the feature table below.
 
 ### Key Features
 
-- **Stateful orchestration** — Task state machine with snapshotting for resumable workflows.
-- **Schema-first** — Pydantic v2 + JSON Schema for cross-agent interoperability.
-- **Async-native** — `asyncio` + `httpx`; sync and async handlers supported.
-- **MCP integration** — Tool execution and coordination in a single envelope.
-- **Observable** — `trace_id` and `correlation_id` for debugging.
-- **Security** — Bearer auth, OAuth2/JWT, Ed25519 signed manifests, optional mTLS, replay prevention, HTTPS, rate limiting. [Security Model](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/v1.1-security-model.md) (trust limits, Custom Claims).
-- **Identity & capabilities (v2.2, WebAuthn real in v2.2.1)** — Per-runtime Host/Agent JWTs, capability grants with constraints (`max`, `min`, `in`, `not_in`), approval flows (device authorization / CIBA-style), real WebAuthn attestation/assertion for high-risk registration (opt-in via `asap-protocol[webauthn]`).
-- **Streaming & wire protocol (v2.2)** — `POST /asap/stream` (SSE / `TaskStream`), JSON-RPC 2.0 batch on `POST /asap`, `ASAP-Version` negotiation, tamper-evident audit logging, Compliance Harness v2.
-- **Adoption Multiplier (v2.3.0)** — OpenAPI → ASAP via `create_from_openapi` (`[openapi]` extra), official **`@asap-protocol/client`** on npm (Vercel AI / OpenAI / Anthropic adapters), optional **Auto-Registration** (`POST /registry/agents`), **capability escalation**, and **ASAP `WWW-Authenticate`** discovery challenges. All opt-in; wire protocol unchanged. See [docs/index.md](docs/index.md) and [docs/migration.md](docs/migration.md).
-- **Edge-AI discovery (v2.4.0)** — Optional `manifest.capabilities.hardware` + `inference`, Lite Registry mirror, marketplace browse filters, and `@asap-protocol/client@2.4.1` discovery types. Wire protocol unchanged. See [Migration (v2.3.x → v2.4.0)](docs/migration.md#upgrading-from-v23x-to-v240) and [ShellClaw registry guide](docs/guides/shellclaw-registry.md).
-- **Framework adapters (v2.3.1+, npm)** — **`@asap-protocol/mastra`** and **`@asap-protocol/openai-agents`** expose ASAP capabilities as Mastra tools and OpenAI Agents SDK `tool()` definitions. See [Migration (v2.3.0 → v2.3.1)](docs/migration.md#upgrading-from-v230-to-v231).
-- **Economics** — Usage metering, delegation tokens, SLA framework with breach alerts.
+| Area | Highlights | Docs |
+| --- | --- | --- |
+| Stateful orchestration | Task state machine, snapshotting, resumable workflows | [State management](docs/state-management.md) |
+| Schema-first | Pydantic v2 + JSON Schema for cross-agent interchange | [API reference](docs/api-reference.md) |
+| Async-native | `asyncio` + `httpx`; sync and async handlers | [Transport](docs/transport.md) |
+| MCP integration | Tool execution and coordination in one envelope (Mode B) | [MCP integration](docs/mcp-integration.md) |
+| MCP Auth Bridge (v2.5.0+) | Opt-in Agent JWT + capability grants on native stdio MCP `tools/call` (Mode A) | [MCP Auth Bridge](docs/adapters/mcp-auth-bridge.md) |
+| Observability | `trace_id` and `correlation_id` for debugging | [Observability](docs/observability.md) |
+| Security | OAuth2/JWT, Ed25519 manifests, mTLS, rate limiting | [Security](docs/security.md) |
+| Identity & capabilities (v2.2+) | Host/Agent JWTs, constrained grants, approval flows, opt-in WebAuthn | [Capabilities](docs/capabilities/index.md) |
+| Streaming & wire protocol (v2.2+) | SSE `/asap/stream`, JSON-RPC batch, `ASAP-Version` negotiation | [Transport](docs/transport.md) |
+| Adoption tools (v2.3.0+) | OpenAPI adapter, `@asap-protocol/client`, auto-registration, escalation | [Migration (v2.2 → v2.3)](docs/migration.md#upgrading-from-v22x-to-v230) |
+| Edge-AI discovery (v2.4.0+) | Hardware/inference manifests, registry mirror, marketplace filters | [ShellClaw guide](docs/guides/shellclaw-registry.md) |
+| Framework adapters (npm) | `@asap-protocol/mastra` and `@asap-protocol/openai-agents` tool bridges | [Mastra](docs/integrations/mastra.md) · [OpenAI Agents](docs/integrations/openai-agents.md) |
+| Economics | Usage metering, delegation tokens, SLA breach alerts | [Audit log](docs/audit.md) |
 
-### 🆕 Framework Ecosystem
-ASAP is built for interoperability. Seamlessly integrate your agents into **OpenClaw**, **LangChain**, **CrewAI** and **LlamaIndex** workflows using our growing library of native adapters and standardized tool-calling schemas.
+Full overview and upgrade paths: [docs/index.md](docs/index.md).
+
+### Framework Ecosystem
+
+ASAP meets agents where they run — optional Python extras, npm tool bridges, and protocol-native MCP.
+
+| Runtime | Integrations | Docs |
+| --- | --- | --- |
+| **Python** | LangChain, CrewAI, LlamaIndex, PydanticAI, SmolAgents, OpenClaw (`pip install "asap-protocol[extra]"`); Vercel AI SDK router; MCP; MCP Auth Bridge; A2H | [OpenClaw](docs/guides/openclaw-integration.md) · [Vercel AI SDK](docs/guides/vercel-ai-sdk.md) · [MCP](docs/mcp-integration.md) · [MCP Auth Bridge](docs/adapters/mcp-auth-bridge.md) |
+| **TypeScript** (npm) | `@asap-protocol/client` (Vercel AI / OpenAI / Anthropic adapters), `@asap-protocol/mastra`, `@asap-protocol/openai-agents` | [TypeScript SDK](docs/sdks/typescript.md) · [Mastra](docs/integrations/mastra.md) · [OpenAI Agents](docs/integrations/openai-agents.md) |
 
 ## Installation
 
@@ -56,11 +73,11 @@ Or with pip:
 pip install asap-protocol
 ```
 
-**npm** (TypeScript / JavaScript — [`@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client), **`2.4.1`**). The `latest` dist-tag matches **`npm view @asap-protocol/client version`**.
+**TypeScript** (npm, **`2.4.1`** — unchanged for v2.5.0; `@asap-protocol/mcp-auth` HTTP middleware targets **v2.5.0.1**):
 
-**npm** Mastra [**`@asap-protocol/mastra@2.4.1`**](https://www.npmjs.com/package/@asap-protocol/mastra) bridges ASAP capabilities onto **`@mastra/core`** tools; docs: [`docs/integrations/mastra.md`](docs/integrations/mastra.md), demo: [`apps/example-mastra/README.md`](apps/example-mastra/README.md).
-
-**npm** OpenAI Agents SDK [**`@asap-protocol/openai-agents@2.4.1`**](https://www.npmjs.com/package/@asap-protocol/openai-agents) exposes ASAP capabilities as **`@openai/agents`** `tool()` definitions — **not** the Chat Completions helper [`adapters/openai`](packages/typescript/client/src/adapters/openai.ts); docs: [`docs/integrations/openai-agents.md`](docs/integrations/openai-agents.md), demo: [`apps/example-openai-agents/README.md`](apps/example-openai-agents/README.md).
+- [`@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client) — [SDK docs](docs/sdks/typescript.md)
+- [`@asap-protocol/mastra`](https://www.npmjs.com/package/@asap-protocol/mastra) — [docs](docs/integrations/mastra.md) · [demo](apps/example-mastra/README.md)
+- [`@asap-protocol/openai-agents`](https://www.npmjs.com/package/@asap-protocol/openai-agents) — [docs](docs/integrations/openai-agents.md) · [demo](apps/example-openai-agents/README.md)
 
 ```bash
 npm install @asap-protocol/client@2.4.1
@@ -68,7 +85,7 @@ npm install @asap-protocol/mastra@2.4.1 @asap-protocol/client @mastra/core zod
 npm install @asap-protocol/openai-agents@2.4.1 @asap-protocol/client @openai/agents zod
 ```
 
-📦 **Canonical listing:** **[https://pypi.org/project/asap-protocol/](https://pypi.org/project/asap-protocol/)** — package **`asap-protocol`** (`pip install asap-protocol`). Prefer `uv` for reproducible environments when possible.
+**Python v2.5.0** (MCP Auth Bridge): `uv add asap-protocol` or `pip install asap-protocol==2.5.0` — see [Migration (v2.4.1 → v2.5.0)](docs/migration.md#upgrading-from-v241-to-v250).
 
 ## Quick Start
 
@@ -110,8 +127,9 @@ See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/
 ## Documentation
 
 **Learn**
-- [Docs](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | [API Reference](https://github.com/adriannoes/asap-protocol/blob/main/docs/api-reference.md)
-- [TypeScript client SDK](https://github.com/adriannoes/asap-protocol/blob/main/docs/sdks/typescript.md) — `@asap-protocol/client` (identity, capabilities, streaming, adapters)
+- [Docs](docs/index.md) | [API Reference](docs/api-reference.md)
+- [MCP Auth Bridge](docs/adapters/mcp-auth-bridge.md) — v2.5.0 opt-in JWT + capability grants for native stdio MCP
+- [TypeScript client SDK](docs/sdks/typescript.md) — `@asap-protocol/client` (identity, capabilities, streaming, adapters)
 - [Tutorials](https://github.com/adriannoes/asap-protocol/tree/main/docs/tutorials) — First agent to production checklist
 - [Migration from A2A/MCP](https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md)
 - [Raw Fetch (non-Python)](https://github.com/adriannoes/asap-protocol/blob/main/docs/raw-fetch.md) — Fetch registry.json and revoked_agents.json with curl/fetch; implement your own client.
@@ -152,7 +170,9 @@ High-level only — see **[Changelog](https://github.com/adriannoes/asap-protoco
 
 | Version | What shipped |
 | :-- | :-- |
-| **v2.4.0** | **Edge-AI discovery** — **[GitHub Release `v2.4.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.4.0)** · optional `hardware` / `inference` manifest fields, registry mirror, marketplace filters, **`@asap-protocol/client@2.4.0`**, ShellClaw onboarding docs. See [CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#240---2026-05-24) and [Migration (v2.3.x → v2.4.0)](https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md#upgrading-from-v23x-to-v240) |
+| **v2.5.0** | **MCP Auth Bridge** — **[GitHub Release `v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0)** · opt-in `protect_server` for stdio MCP; Agent JWT + capability grants; `mcp-auth-bridge` compliance profile; reference example `examples/mcp_auth_bridge/`. `@asap-protocol/mcp-auth` (HTTP/SSE) deferred to **v2.5.0.1**. See [CHANGELOG](CHANGELOG.md#250---2026-06-24) and [Migration (v2.4.1 → v2.5.0)](docs/migration.md#upgrading-from-v241-to-v250) |
+| **v2.4.1** | **Security hardening** — OAuth2 `iss`/`aud`, fail-closed identity binding, web SSRF/redirect fixes, dependency bumps. See [CHANGELOG](CHANGELOG.md#241---2026-06-14) and [Migration (v2.4.0 → v2.4.1)](docs/migration.md#upgrading-from-v240-to-v241) |
+| **v2.4.0** | **Edge-AI discovery** — optional `hardware` / `inference` manifest fields, registry mirror, marketplace filters, **`@asap-protocol/client@2.4.0`**, ShellClaw onboarding docs. See [CHANGELOG](CHANGELOG.md#240---2026-05-24) and [Migration (v2.3.x → v2.4.0)](docs/migration.md#upgrading-from-v23x-to-v240) |
 | **v2.3.1** | **npm TS patch** — **[GitHub Release `v2.3.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.3.1)** · **`@asap-protocol/mastra`**, **`@asap-protocol/openai-agents`**, **`@asap-protocol/client@2.3.1`** (additive adapter exports). Python **2.3.0** unchanged. See [CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#231---2026-05-20) and [Migration (v2.3.0 → v2.3.1)](https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md#upgrading-from-v230-to-v231) |
 | **v2.3.0** | **OpenAPI Adapter** (`[openapi]`) · **TypeScript client** (`@asap-protocol/client`) · **Auto-Registration** · **Capability escalation** · **ASAP HTTP challenge** — see [CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#230---2026-05-04) and [Migration](https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md#upgrading-from-v22x-to-v230) |
 | **v2.2.1** | Opt-in **WebAuthn** (`asap-protocol[webauthn]`) · `asap compliance-check` & `asap audit export` · stricter `ResolvedAgent.run()` · `AuditChainBroken` · [pinned security deps](https://github.com/adriannoes/asap-protocol/blob/main/SECURITY.md#dependency-policy) |
@@ -178,11 +198,11 @@ Check out our [contributing guidelines](https://github.com/adriannoes/asap-proto
 
 ## Contact
 
-For **general questions** about the protocol, the marketplace, partnerships, or press (not security vulnerabilities — use [SECURITY.md](https://github.com/adriannoes/asap-protocol/blob/main/SECURITY.md) for those):
-
-- **Email:** [info@asap-protocol.com](mailto:info@asap-protocol.com)
-
-You can also use [GitHub Discussions](https://github.com/adriannoes/asap-protocol/discussions) or [Issues](https://github.com/adriannoes/asap-protocol/issues) for public project topics.
+| Channel | Use for |
+| --- | --- |
+| [GitHub Discussions](https://github.com/adriannoes/asap-protocol/discussions) or [Issues](https://github.com/adriannoes/asap-protocol/issues) | Public questions, bugs, and feature ideas |
+| [info@asap-protocol.com](mailto:info@asap-protocol.com) | Private coordination — protocol, marketplace, partnerships, press |
+| [SECURITY.md](SECURITY.md) | Security vulnerabilities only — **do not** use email or public issues |
 
 ## Privacy
 

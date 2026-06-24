@@ -72,7 +72,8 @@ changes.
   release gate. Rationale and implementation checklist:
   [typescript-mcp-auth-spike.md](engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md);
   carry-over tracked in
-  [PRD v2.5.1 §3](product/prd/prd-v2.5.1-adapter-lab-ii.md#3-carry-over-from-v250-asap-protocolmcp-auth).
+  [PRD v2.5.1 §3](product/prd/prd-v2.5.1-adapter-lab-ii.md#3-carry-over-from-v250-asap-protocolmcp-auth) and
+  [backlog](engineering/tasks/v2.5.0/backlog-mcp-auth-typescript.md).
   Existing `@asap-protocol/*` npm packages remain at **2.4.1** until a separate
   publish.
 
