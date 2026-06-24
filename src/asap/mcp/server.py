@@ -66,8 +66,17 @@ class MCPServer:
             description=description,
         )
         self._instructions = instructions
-        self._tools: dict[str, tuple[Callable[..., Any], dict[str, Any], str, str | None]] = {}
+        self._tools: dict[
+            str, tuple[Callable[..., Any], dict[str, Any], str, str | None, str | None]
+        ] = {}
         self._request_id_counter = 0
+
+    def get_tool_capability(self, name: str) -> str | None:
+        """Return optional ASAP capability metadata registered with the tool."""
+        entry = self._tools.get(name)
+        if entry is None:
+            return None
+        return entry[4]
 
     def register_tool(
         self,
@@ -77,6 +86,7 @@ class MCPServer:
         *,
         description: str = "",
         title: str | None = None,
+        capability: str | None = None,
     ) -> None:
         """Register a tool that can be invoked via tools/call.
 
@@ -90,6 +100,7 @@ class MCPServer:
                     Use EMPTY_INPUT_SCHEMA for no parameters.
             description: Human-readable description (required by spec).
             title: Optional display title.
+            capability: Optional ASAP capability name for MCP Auth Bridge (MCP-MAP-002).
         """
         input_schema = schema if schema else EMPTY_INPUT_SCHEMA
         self._tools[name] = (
@@ -97,6 +108,7 @@ class MCPServer:
             input_schema,
             description or f"Tool {name}",
             title,
+            capability,
         )
 
     def _get_capabilities(self) -> dict[str, Any]:
@@ -123,7 +135,7 @@ class MCPServer:
                 inputSchema=input_schema,
                 title=title,
             )
-            for name, (_, input_schema, description, title) in self._tools.items()
+            for name, (_, input_schema, description, title, _cap) in self._tools.items()
         ]
         result = ListToolsResult(tools=tools)
         return result.model_dump(by_alias=True, exclude_none=True)
@@ -148,7 +160,7 @@ class MCPServer:
                 isError=True,
             ).model_dump(by_alias=True, exclude_none=True)
 
-        func, input_schema, _desc, _title = self._tools[parsed.name]
+        func, input_schema, _desc, _title, _cap = self._tools[parsed.name]
         try:
             jsonschema.validate(instance=parsed.arguments, schema=input_schema)
         except jsonschema.ValidationError as e:

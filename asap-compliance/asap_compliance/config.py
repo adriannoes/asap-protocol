@@ -8,8 +8,10 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from asap.adapters.mcp.config import MCP_COMPLIANCE_ENV_VAR
+
 MCP_AUTH_BRIDGE_PROFILE = "mcp-auth-bridge"
-COMPLIANCE_ENV_VAR = "ASAP_MCP_COMPLIANCE"
+COMPLIANCE_ENV_VAR = MCP_COMPLIANCE_ENV_VAR
 
 
 def find_repo_root() -> Path:

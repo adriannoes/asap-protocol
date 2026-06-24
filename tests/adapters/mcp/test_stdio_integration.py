@@ -16,8 +16,8 @@ from typing import Any
 
 import pytest
 
-from asap.adapters.mcp.auth_middleware import MCPAuthConfig, protect_server
 from asap.adapters.mcp.errors import AUTH_REQUIRED, CAPABILITY_DENIED
+from asap.adapters.mcp import MCPAuthConfig, protect_server
 from asap.auth.capabilities import CapabilityDefinition, CapabilityGrant, CapabilityRegistry
 from asap.auth.identity import (
     AgentSession,
@@ -28,6 +28,7 @@ from asap.auth.identity import (
 from asap.mcp.client import MCPClient
 from asap.mcp.server import MCPServer
 from tests.adapters.mcp.conftest import MCP_TEST_AUDIENCE
+from tests.adapters.mcp.helpers import tool_call_params
 
 pytestmark = pytest.mark.filterwarnings("ignore:EdDSA is deprecated:UserWarning")
 
@@ -77,19 +78,6 @@ def _build_protected_secure_action_server(
         expected_audience=MCP_TEST_AUDIENCE,
     )
     return protect_server(base, config)
-
-
-def _tool_call_params(
-    name: str,
-    *,
-    arguments: dict[str, Any] | None = None,
-    jwt: str | None = None,
-) -> dict[str, Any]:
-    """Build ``tools/call`` params with optional Agent JWT in ``_meta``."""
-    params: dict[str, Any] = {"name": name, "arguments": arguments or {}}
-    if jwt is not None:
-        params["_meta"] = {"asap_agent_jwt": jwt}
-    return params
 
 
 async def _stdio_tools_call(
@@ -155,7 +143,7 @@ async def test_stdio_secure_action_succeeds_with_jwt_and_grant(
 
     response = await _stdio_tools_call(
         server,
-        _tool_call_params("secure_action", arguments={"action": "stdio-ok"}, jwt=token),
+        tool_call_params("secure_action", arguments={"action": "stdio-ok"}, jwt=token),
     )
 
     assert "result" in response
@@ -182,7 +170,7 @@ async def test_stdio_secure_action_denied_without_jwt(
 
     response = await _stdio_tools_call(
         server,
-        _tool_call_params("secure_action", arguments={"action": "denied"}),
+        tool_call_params("secure_action", arguments={"action": "denied"}),
     )
 
     assert "result" in response
@@ -213,7 +201,7 @@ async def test_stdio_secure_action_denied_wrong_capability_in_jwt(
 
     response = await _stdio_tools_call(
         server,
-        _tool_call_params("secure_action", arguments={"action": "nope"}, jwt=token),
+        tool_call_params("secure_action", arguments={"action": "nope"}, jwt=token),
     )
 
     assert "result" in response

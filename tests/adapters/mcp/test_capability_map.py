@@ -1,11 +1,12 @@
-"""Unit tests for resolve_capability (MCP-MAP-001)."""
+"""Unit tests for MCP Auth Bridge capability resolution (MCP-MAP-001/002)."""
 
 from __future__ import annotations
 
-from asap.adapters.mcp.auth_middleware import MCPAuthConfig
 from asap.adapters.mcp.capability_map import resolve_capability
+from asap.adapters.mcp.config import MCPAuthConfig
 from asap.auth.capabilities import CapabilityRegistry
 from asap.auth.identity import InMemoryAgentStore, InMemoryHostStore
+from asap.mcp.server import MCPServer
 
 
 def _minimal_config(**kwargs: object) -> MCPAuthConfig:
@@ -37,30 +38,27 @@ def test_resolve_capability_empty_map_uses_identity() -> None:
     assert resolve_capability("read_file", config) == "read_file"
 
 
-# --- S2 bridge registry precedence (MCP-MAP-002); Agent D: green when 1.2 impl lands ---
-
-
-def test_resolve_capability_uses_bridge_registry_when_config_map_empty() -> None:
-    """Register-time bridge metadata resolves when config map has no entry."""
+def test_resolve_capability_uses_register_time_metadata() -> None:
+    """Register-time capability metadata resolves when config map has no entry."""
     config = _minimal_config()
-    assert (
-        resolve_capability(
-            "search",
-            config,
-            bridge_tool_capability_map={"search": "web_search"},
-        )
-        == "web_search"
+    server = MCPServer(name="cap-map-test", version="0.1.0")
+    server.register_tool(
+        "search",
+        lambda query="": query,
+        {"type": "object", "properties": {"query": {"type": "string"}}},
+        capability="web_search",
     )
+    assert resolve_capability("search", config, server=server) == "web_search"
 
 
-def test_resolve_capability_config_map_overrides_bridge_registry() -> None:
-    """Explicit ``tool_capability_map`` wins over register-time bridge metadata."""
+def test_resolve_capability_config_map_overrides_register_metadata() -> None:
+    """Runtime tool_capability_map overrides register-time metadata."""
     config = _minimal_config(tool_capability_map={"search": "custom_search"})
-    assert (
-        resolve_capability(
-            "search",
-            config,
-            bridge_tool_capability_map={"search": "web_search"},
-        )
-        == "custom_search"
+    server = MCPServer(name="cap-map-test", version="0.1.0")
+    server.register_tool(
+        "search",
+        lambda query="": query,
+        {"type": "object", "properties": {"query": {"type": "string"}}},
+        capability="web_search",
     )
+    assert resolve_capability("search", config, server=server) == "custom_search"
