@@ -19,7 +19,7 @@ Based on [PRD v2.5.0 MCP Auth Bridge](../../../product/prd/prd-v2.5.0-mcp-auth-b
 | **S0** | [Design lock & scaffold](./sprint-S0-design-lock.md) | §6 API, MCP-AUTH-005 | P0 | ✅ Done |
 | **S1** | [Core auth middleware](./sprint-S1-core-middleware.md) | MCP-AUTH-001..004, 006 and auth portions of 007 | P0 | ✅ Done (`feat/v2.5.0-s1-middleware`) |
 | **S2** | [Capability mapping & errors](./sprint-S2-capability-mapping.md) | MCP-MAP-*, §4.5–4.6 | P0 | 🟢 Impl done; 3.1 MAY deferred to Agent E |
-| **S3** | [Docs, examples & discovery](./sprint-S3-docs-examples.md) | MCP-DISC-*, MCP-DOC-* | P0/P1 | 🔵 Planned |
+| **S3** | [Docs, examples & discovery](./sprint-S3-docs-examples.md) | MCP-DISC-*, MCP-DOC-* | P0/P1 | ✅ Done on `feat/v2.5.0-s3-docs-examples` (awaiting commit/PR) |
 | **S4** | [Compliance & integration tests](./sprint-S4-compliance.md) | MCP-DISC-003, harness | P1 | 🔵 Planned |
 | **S5** | [Release v2.5.0](./sprint-S5-release.md) | DoD, metrics | P0 | 🔵 Planned |
 
@@ -77,16 +77,16 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
     - [x] Optional startup validation: every registered tool resolves to a capability (MCP-MAP-003)
     - [x] Test coverage ≥90% on `asap.adapters.mcp`
 
-- [ ] **4.0 Documentation, examples & discovery (S3)**
+- [x] **4.0 Documentation, examples & discovery (S3)**
   - **Trigger:** Protected server runnable locally.
   - **Enables:** External adopters; S4 harness documentation paths.
   - **Depends on:** Task 3.0.
   - **Acceptance criteria:**
-    - [ ] `docs/adapters/mcp-auth-bridge.md` published (architecture, token carriage, config reference)
-    - [ ] `examples/mcp_auth_bridge/` runs: `uv run python examples/mcp_auth_bridge/server.py`
-    - [ ] `docs/mcp-integration.md` distinguishes Mode A (native MCP) vs Mode B (ASAP envelope)
-    - [ ] Manifest ↔ tool alignment pattern documented, including `skills[].id` ↔ MCP tool snippets (MCP-DISC-001/002)
-    - [ ] Migration note states unprotected MCP servers remain valid and protection is opt-in (MCP-DOC-004)
+    - [x] `docs/adapters/mcp-auth-bridge.md` published (architecture, token carriage, config reference)
+    - [x] `examples/mcp_auth_bridge/` runs: `uv run python examples/mcp_auth_bridge/server.py`
+    - [x] `docs/mcp-integration.md` distinguishes Mode A (native MCP) vs Mode B (ASAP envelope)
+    - [x] Manifest ↔ tool alignment pattern documented, including `skills[].id` ↔ MCP tool snippets (MCP-DISC-001/002)
+    - [x] Migration note states unprotected MCP servers remain valid and protection is opt-in (MCP-DOC-004)
 
 - [ ] **5.0 Compliance, quality & release (S4–S5)**
   - **Trigger:** Example server + docs merged.
@@ -171,3 +171,4 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
 | 2026-06-24 | Reconciled task plan with PRD paths, repo APIs, compliance scope, and TypeScript spike/defer gate |
 | 2026-06-24 | S0 complete on `release/2.5.0`; S1 branch `feat/v2.5.0-s1-middleware` opened with parallel agent workstreams |
 | 2026-06-24 | S2 branch `feat/v2.5.0-s2-capability-map` opened; parallel workstreams documented in sprint-S2 |
+| 2026-06-24 | S2 merged on `release/2.5.0` (`8352936`); S3 branch `feat/v2.5.0-s3-docs-examples` opened with parallel workstreams |
