@@ -10,6 +10,7 @@ on:
       - 'scripts/**'
       - 'tests/**'
       - 'asap-compliance/**'
+      - 'examples/**'
       - 'docs/**'
       - 'apps/web/**'
       - 'apps/example-agent/**'
@@ -25,6 +26,7 @@ on:
       - 'scripts/**'
       - 'tests/**'
       - 'asap-compliance/**'
+      - 'examples/**'
       - 'docs/**'
       - 'apps/web/**'
       - 'apps/example-agent/**'
@@ -102,7 +104,7 @@ jobs:
       - name: Run tests
         env:
           PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}
-        run: uv run pytest -n auto --tb=short
+        run: uv run pytest -n auto --tb=short --ignore=tests/adapters/mcp/
         timeout-minutes: 12
       - name: Run MCP adapter tests
         env:

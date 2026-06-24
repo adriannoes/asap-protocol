@@ -68,6 +68,13 @@ class MCPClient:
         self._request_id += 1
         return str(self._request_id) if self._use_str_ids else self._request_id
 
+    @property
+    def stderr(self) -> asyncio.StreamReader | None:
+        """Server subprocess stderr stream (``None`` when disconnected)."""
+        if self._process is None:
+            return None
+        return self._process.stderr
+
     async def _send(self, payload: dict[str, Any]) -> None:
         """Send one JSON-RPC message (request or notification) to server stdin."""
         if self._process is None or self._process.stdin is None:

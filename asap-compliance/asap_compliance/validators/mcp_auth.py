@@ -4,11 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
-import re
-from contextlib import suppress
 from dataclasses import dataclass, field
-from typing import Any, Protocol, cast
+from typing import Any, cast
 
 import httpx
 
@@ -17,7 +14,6 @@ from asap.adapters.mcp.errors import (
     CAPABILITY_DENIED,
     CONSTRAINT_VIOLATION,
 )
-from asap.mcp.client import MCPClient
 from asap.mcp.protocol import CallToolResult
 
 from asap_compliance.config import (
@@ -26,21 +22,22 @@ from asap_compliance.config import (
     McpAuthComplianceConfig,
 )
 from asap_compliance.validators.handshake import CheckResult
-
-_COMPLIANCE_JSON_PREFIX = "ASAP_COMPLIANCE_JSON:"
-_STDERR_JWT_PATTERN = re.compile(
-    r"Minted demo Agent JWT.*?:\s*(\S+)",
-    re.DOTALL,
+from asap_compliance.validators.mcp_auth_transport import (
+    McpAuthProbeTokens,
+    McpAuthTransport,
+    MockMcpTransport,
+    SubprocessMcpTransport,
 )
 
-
-@dataclass
-class McpAuthProbeTokens:
-    """JWT probe tokens parsed from a compliance-enabled MCP server."""
-
-    valid_jwt: str
-    wrong_capability_jwt: str
-    constraint_violation_action: str = "forbidden-action"
+__all__ = [
+    "McpAuthProbeTokens",
+    "McpAuthResult",
+    "McpAuthTransport",
+    "MockMcpTransport",
+    "SubprocessMcpTransport",
+    "validate_mcp_auth",
+    "validate_mcp_auth_async",
+]
 
 
 @dataclass
@@ -53,6 +50,7 @@ class McpAuthResult:
     wrong_capability_ok: bool
     constraint_violation_ok: bool
     manifest_alignment_ok: bool
+    public_tool_ok: bool
     checks: list[CheckResult] = field(default_factory=list)
 
     @property
@@ -63,25 +61,8 @@ class McpAuthResult:
             and self.wrong_capability_ok
             and self.constraint_violation_ok
             and self.manifest_alignment_ok
+            and self.public_tool_ok
         )
-
-
-class McpAuthTransport(Protocol):
-    """Black-box MCP transport for compliance checks."""
-
-    async def connect(self) -> McpAuthProbeTokens: ...
-
-    async def list_tool_names(self) -> list[str]: ...
-
-    async def call_tool(
-        self,
-        name: str,
-        arguments: dict[str, Any] | None = None,
-        *,
-        jwt: str | None = None,
-    ) -> CallToolResult: ...
-
-    async def disconnect(self) -> None: ...
 
 
 def _tool_error_text(result: CallToolResult) -> str:
@@ -94,154 +75,6 @@ def _tool_error_text(result: CallToolResult) -> str:
             if text is not None:
                 parts.append(str(text))
     return "".join(parts)
-
-
-def _parse_probe_tokens(stderr_text: str, fallback_jwt: str | None) -> McpAuthProbeTokens:
-    """Parse compliance probe JWTs emitted on server stderr."""
-    for line in stderr_text.splitlines():
-        if line.startswith(_COMPLIANCE_JSON_PREFIX):
-            payload = json.loads(line.removeprefix(_COMPLIANCE_JSON_PREFIX))
-            return McpAuthProbeTokens(
-                valid_jwt=str(payload["valid_jwt"]),
-                wrong_capability_jwt=str(payload["wrong_capability_jwt"]),
-                constraint_violation_action=str(
-                    payload.get("constraint_violation_action", "forbidden-action")
-                ),
-            )
-
-    if fallback_jwt:
-        return McpAuthProbeTokens(
-            valid_jwt=fallback_jwt,
-            wrong_capability_jwt="",
-            constraint_violation_action="forbidden-action",
-        )
-
-    raise RuntimeError(
-        "MCP server stderr did not include compliance probe tokens; "
-        f"set {COMPLIANCE_ENV_VAR}=1 on the server subprocess"
-    )
-
-
-def _extract_demo_jwt(stderr_text: str) -> str | None:
-    match = _STDERR_JWT_PATTERN.search(stderr_text)
-    return match.group(1) if match else None
-
-
-class SubprocessMcpTransport:
-    """Drive an MCP server subprocess over stdio (JSON-RPC one line per message)."""
-
-    def __init__(self, config: McpAuthComplianceConfig) -> None:
-        self._config = config
-        self._client: MCPClient | None = None
-        self._stderr_chunks: list[bytes] = []
-        self._stderr_task: asyncio.Task[None] | None = None
-        self._tokens: McpAuthProbeTokens | None = None
-
-    async def _drain_stderr(self) -> None:
-        assert self._client is not None
-        process = self._client._process
-        if process is None or process.stderr is None:
-            return
-        while True:
-            chunk = await process.stderr.readline()
-            if not chunk:
-                break
-            self._stderr_chunks.append(chunk)
-
-    async def connect(self) -> McpAuthProbeTokens:
-        env = os.environ.copy()
-        if self._config.compliance_env:
-            env[COMPLIANCE_ENV_VAR] = "1"
-        # Stdio MCP uses stdout for JSON-RPC; suppress INFO logs that would corrupt the stream.
-        env.setdefault("ASAP_LOG_LEVEL", "CRITICAL")
-
-        self._client = MCPClient(
-            list(self._config.server_command),
-            receive_timeout=self._config.timeout_seconds,
-            allowed_binaries=self._config.allowed_binaries,
-            subprocess_env=env,
-        )
-        connect_task = asyncio.create_task(self._client.connect())
-        while self._client._process is None:
-            await asyncio.sleep(0.01)
-            if connect_task.done():
-                break
-        self._stderr_task = asyncio.create_task(self._drain_stderr())
-        await connect_task
-
-        await asyncio.sleep(0.3)
-        stderr_text = b"".join(self._stderr_chunks).decode("utf-8", errors="replace")
-        fallback = _extract_demo_jwt(stderr_text)
-        self._tokens = _parse_probe_tokens(stderr_text, fallback)
-        return self._tokens
-
-    async def list_tool_names(self) -> list[str]:
-        assert self._client is not None
-        tools = await self._client.list_tools()
-        return [tool.name for tool in tools]
-
-    async def call_tool(
-        self,
-        name: str,
-        arguments: dict[str, Any] | None = None,
-        *,
-        jwt: str | None = None,
-    ) -> CallToolResult:
-        assert self._client is not None
-        meta = {"asap_agent_jwt": jwt} if jwt is not None else None
-        return await self._client.call_tool(name, arguments, meta=meta)
-
-    async def disconnect(self) -> None:
-        if self._stderr_task is not None:
-            self._stderr_task.cancel()
-            with suppress(asyncio.CancelledError):
-                await self._stderr_task
-            self._stderr_task = None
-        if self._client is not None:
-            await self._client.disconnect()
-            self._client = None
-
-
-class MockMcpTransport:
-    """In-memory MCP transport for unit tests (predetermined responses)."""
-
-    def __init__(
-        self,
-        *,
-        tool_names: list[str],
-        responses: dict[tuple[str, str | None], CallToolResult],
-        tokens: McpAuthProbeTokens,
-    ) -> None:
-        self._tool_names = tool_names
-        self._responses = responses
-        self._tokens = tokens
-        self._connected = False
-
-    async def connect(self) -> McpAuthProbeTokens:
-        self._connected = True
-        return self._tokens
-
-    async def list_tool_names(self) -> list[str]:
-        if not self._connected:
-            raise RuntimeError("Not connected")
-        return list(self._tool_names)
-
-    async def call_tool(
-        self,
-        name: str,
-        arguments: dict[str, Any] | None = None,
-        *,
-        jwt: str | None = None,
-    ) -> CallToolResult:
-        if not self._connected:
-            raise RuntimeError("Not connected")
-        key = (name, jwt)
-        if key not in self._responses:
-            raise KeyError(f"No mock response for tool={name!r} jwt={jwt!r}")
-        return self._responses[key]
-
-    async def disconnect(self) -> None:
-        self._connected = False
 
 
 def _load_manifest_data(config: McpAuthComplianceConfig) -> dict[str, Any]:
@@ -355,6 +188,24 @@ def _check_manifest_alignment(
         )
     )
     return results
+
+
+async def _check_public_tool(
+    config: McpAuthComplianceConfig,
+    transport: McpAuthTransport,
+) -> CheckResult:
+    result = await transport.call_tool(config.public_tool, {}, jwt=None)
+    text = _tool_error_text(result)
+    passed = result.is_error is not True
+    return CheckResult(
+        name="public_tool",
+        passed=passed,
+        message=(
+            f"Public tool {config.public_tool!r} succeeded without JWT"
+            if passed
+            else f"Public tool call failed: {text!r}"
+        ),
+    )
 
 
 async def _check_unauthenticated_protected_tool(
@@ -483,6 +334,12 @@ async def validate_mcp_auth_async(
         tokens = await session.connect()
         tool_names = await session.list_tool_names()
 
+        if "public_tool" not in config.skip_checks:
+            public_check = await _check_public_tool(config, session)
+            checks.append(public_check)
+        else:
+            public_check = CheckResult("public_tool", True, "skipped")
+
         if "auth_required" not in config.skip_checks:
             auth_check = await _check_unauthenticated_protected_tool(config, session)
             checks.append(auth_check)
@@ -522,6 +379,7 @@ async def validate_mcp_auth_async(
         wrong_capability_ok=wrong_check.passed,
         constraint_violation_ok=constraint_check.passed,
         manifest_alignment_ok=manifest_alignment_ok,
+        public_tool_ok=public_check.passed,
         checks=checks,
     )
 

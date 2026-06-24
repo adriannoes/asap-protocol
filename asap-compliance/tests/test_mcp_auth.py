@@ -50,9 +50,10 @@ def _build_mock_transport(
         wrong_capability_jwt=_WRONG_JWT,
         constraint_violation_action="forbidden-action",
     )
+    all_responses = {("echo", None): _success_result("echo"), **responses}
     return MockMcpTransport(
         tool_names=["echo", "secure_action"],
-        responses=responses,
+        responses=all_responses,
         tokens=tokens,
     )
 
@@ -68,7 +69,7 @@ class _ArgumentAwareMockTransport(MockMcpTransport):
     ) -> None:
         super().__init__(
             tool_names=["echo", "secure_action"],
-            responses=responses,
+            responses={("echo", None): _success_result("echo"), **responses},
             tokens=McpAuthProbeTokens(
                 valid_jwt=_VALID_JWT,
                 wrong_capability_jwt=_WRONG_JWT,
@@ -188,6 +189,7 @@ class TestMcpAuthResult:
             wrong_capability_ok=True,
             constraint_violation_ok=True,
             manifest_alignment_ok=True,
+            public_tool_ok=True,
         )
         assert ok.passed
 
@@ -198,6 +200,7 @@ class TestMcpAuthResult:
             wrong_capability_ok=True,
             constraint_violation_ok=True,
             manifest_alignment_ok=True,
+            public_tool_ok=True,
         )
         assert not bad.passed
 

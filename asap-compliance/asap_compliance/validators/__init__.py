@@ -11,7 +11,9 @@ from asap_compliance.validators.handshake import (
 from asap_compliance.validators.mcp_auth import (
     McpAuthProbeTokens,
     McpAuthResult,
+    McpAuthTransport,
     MockMcpTransport,
+    SubprocessMcpTransport,
     validate_mcp_auth,
     validate_mcp_auth_async,
 )
@@ -37,7 +39,9 @@ __all__ = [
     "HandshakeResult",
     "McpAuthProbeTokens",
     "McpAuthResult",
+    "McpAuthTransport",
     "MockMcpTransport",
+    "SubprocessMcpTransport",
     "SchemaResult",
     "StateResult",
     "validate_envelope",

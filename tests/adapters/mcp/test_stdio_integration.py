@@ -227,7 +227,7 @@ async def test_subprocess_example_server_secure_action_denied_without_jwt() -> N
     server_command = ["uv", "run", "python", str(_EXAMPLE_SERVER)]
     client = MCPClient(
         server_command,
-        allowed_binaries=frozenset({"uv", "python", sys.executable}),
+        allowed_binaries=frozenset({"uv", "python", Path(sys.executable).name}),
     )
 
     async with client:
