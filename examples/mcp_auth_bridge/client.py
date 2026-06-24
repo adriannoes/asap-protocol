@@ -2,7 +2,7 @@
 
 Calls ``echo`` (no JWT) and ``secure_action`` (JWT via ``_meta.asap_agent_jwt``).
 
-Run (server prints JWT on stderr; or set ASAP_AGENT_JWT):
+Run from any directory (server path is resolved relative to this file):
     uv run python examples/mcp_auth_bridge/client.py --jwt '<token>'
 """
 
@@ -12,46 +12,12 @@ import argparse
 import asyncio
 import os
 import sys
+from pathlib import Path
 from typing import Any
 
 from asap.mcp.client import MCPClient
 
-
-async def _call_tool_with_meta(
-    client: MCPClient,
-    name: str,
-    arguments: dict[str, Any],
-    *,
-    jwt: str | None = None,
-) -> dict[str, Any]:
-    """Invoke ``tools/call`` with optional ``_meta.asap_agent_jwt``."""
-    if not client._initialized:
-        raise RuntimeError("Not initialized; call connect() first")
-    params: dict[str, Any] = {"name": name, "arguments": arguments}
-    if jwt:
-        params["_meta"] = {"asap_agent_jwt": jwt}
-    req_id = client._next_id()
-    await client._send(
-        {
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "method": "tools/call",
-            "params": params,
-        }
-    )
-    raw = await client._receive()
-    if raw is None:
-        raise RuntimeError("No response to tools/call")
-    if "error" in raw:
-        err = raw["error"]
-        return {
-            "content": [{"type": "text", "text": err.get("message", str(err))}],
-            "isError": True,
-        }
-    result = raw["result"]
-    if not isinstance(result, dict):
-        raise RuntimeError(f"Unexpected tools/call result: {result!r}")
-    return result
+_SERVER_SCRIPT = Path(__file__).resolve().parent / "server.py"
 
 
 def _text_content(result: dict[str, Any]) -> str:
@@ -64,7 +30,7 @@ def _text_content(result: dict[str, Any]) -> str:
 
 
 async def _run(*, jwt: str | None) -> int:
-    server_command = [sys.executable, "examples/mcp_auth_bridge/server.py"]
+    server_command = [sys.executable, str(_SERVER_SCRIPT)]
     client = MCPClient(
         server_command,
         allowed_binaries=frozenset({os.path.basename(sys.executable)}),
@@ -80,16 +46,15 @@ async def _run(*, jwt: str | None) -> int:
             return 1
         print("echo:", _text_content(echo.model_dump()))
 
-        secure = await _call_tool_with_meta(
-            client,
+        secure = await client.call_tool(
             "secure_action",
             {"action": "demo"},
-            jwt=jwt,
+            meta={"asap_agent_jwt": jwt},
         )
-        if secure.get("isError"):
-            print("secure_action failed:", _text_content(secure), file=sys.stderr)
+        if secure.is_error:
+            print("secure_action failed:", _text_content(secure.model_dump()), file=sys.stderr)
             return 1
-        print("secure_action:", _text_content(secure))
+        print("secure_action:", _text_content(secure.model_dump()))
 
     return 0
 

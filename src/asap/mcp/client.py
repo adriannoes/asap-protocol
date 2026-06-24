@@ -175,12 +175,19 @@ class MCPClient:
         result = ListToolsResult(**raw["result"])
         return result.tools
 
-    async def call_tool(self, name: str, arguments: dict[str, Any] | None = None) -> CallToolResult:
+    async def call_tool(
+        self,
+        name: str,
+        arguments: dict[str, Any] | None = None,
+        *,
+        meta: dict[str, Any] | None = None,
+    ) -> CallToolResult:
         """Invoke a tool by name with the given arguments.
 
         Args:
             name: Tool name (as returned by list_tools).
             arguments: Tool arguments (keyword dict).
+            meta: Optional MCP ``_meta`` dict (e.g. ``{"asap_agent_jwt": "<token>"}``).
 
         Returns:
             CallToolResult with content and is_error.
@@ -188,7 +195,7 @@ class MCPClient:
         if not self._initialized:
             raise RuntimeError("Not initialized; call connect() first")
         req_id = self._next_id()
-        params = CallToolRequestParams(name=name, arguments=arguments or {})
+        params = CallToolRequestParams(name=name, arguments=arguments or {}, meta=meta)
         await self._send(
             {
                 "jsonrpc": "2.0",

@@ -126,3 +126,30 @@ class TestMcpAuthBridgeProtectedTool:
         )
         assert result.get("isError") is not True
         assert "executed: env-demo" in str(result["content"][0]["text"])
+
+
+class TestMcpAuthBridgeClientSubprocess:
+    """Subprocess smoke for the optional example client."""
+
+    def test_client_subprocess_from_example_dir(self) -> None:
+        """``client.py`` resolves ``server.py`` relative to its file (any cwd)."""
+        client_dir = _REPO_ROOT / "examples" / "mcp_auth_bridge"
+        result = subprocess.run(
+            [
+                "uv",
+                "run",
+                "python",
+                "client.py",
+                "--jwt",
+                "invalid-token-for-path-smoke",
+            ],
+            cwd=client_dir,
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+        # echo succeeds before secure_action auth fails — server subprocess was found
+        assert "echo:" in result.stdout
+        assert "secure_action failed" in result.stderr
+        assert result.returncode == 1

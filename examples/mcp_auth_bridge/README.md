@@ -75,17 +75,18 @@ The middleware reads `ASAP_AGENT_JWT` when `_meta.asap_agent_jwt` is absent. **D
 
 ## Optional client
 
-Minimal stdio caller that lists tools, calls `echo`, then `secure_action` with `_meta`:
+Minimal stdio caller that lists tools, calls `echo`, then `secure_action` with `_meta`.
+The client resolves `server.py` relative to its own file, so it works from the repo root
+or from this directory:
 
 ```bash
 export ASAP_AGENT_JWT='<paste-token-from-server-stderr>'
 uv run python examples/mcp_auth_bridge/client.py
 ```
 
-Or pass the token explicitly:
-
 ```bash
-uv run python examples/mcp_auth_bridge/client.py --jwt '<token>'
+cd examples/mcp_auth_bridge
+uv run python client.py --jwt '<token>'
 ```
 
 ## Reviewer checklist
