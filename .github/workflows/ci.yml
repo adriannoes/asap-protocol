@@ -4,7 +4,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, release/2.5.0]
     paths:
       - 'src/**'
       - 'scripts/**'
@@ -19,7 +19,7 @@ on:
       - '.github/workflows/**'
       - '.github/actions/**'
   pull_request:
-    branches: [main]
+    branches: [main, release/2.5.0]
     paths:
       - 'src/**'
       - 'scripts/**'
@@ -104,6 +104,10 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}
         run: uv run pytest -n auto --tb=short
         timeout-minutes: 12
+      - name: Run MCP adapter tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}
+        run: uv run pytest tests/adapters/mcp/ -v --tb=short
       - name: Run compliance tests
         env:
           PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}:${{ github.workspace }}/asap-compliance

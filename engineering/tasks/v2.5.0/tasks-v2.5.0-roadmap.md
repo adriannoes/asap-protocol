@@ -1,6 +1,6 @@
 # Tasks: v2.5.0 MCP Auth Bridge — Sprint Index
 
-**Status: 🟡 IN PROGRESS** — S0–S2 merged on **`release/2.5.0`**; S3 complete on **`feat/v2.5.0-s3-docs-examples`** ([PR #232](https://github.com/adriannoes/asap-protocol/pull/232) open); S4–S5 planned.
+**Status: 🟡 IN PROGRESS** — S0–S3 merged on **`release/2.5.0`** (`175ae02`); S4 gate green on **`feat/v2.5.0-s4-compliance`** (PR pending merge); S5 planned.
 
 Based on [PRD v2.5.0 MCP Auth Bridge](../../../product/prd/prd-v2.5.0-mcp-auth-bridge.md). Each sprint maps to a PR into **`release/2.5.0`** (see [BRANCHING.md](./BRANCHING.md)); merge to `main` only after S5.
 
@@ -19,8 +19,8 @@ Based on [PRD v2.5.0 MCP Auth Bridge](../../../product/prd/prd-v2.5.0-mcp-auth-b
 | **S0** | [Design lock & scaffold](./sprint-S0-design-lock.md) | §6 API, MCP-AUTH-005 | P0 | ✅ Done |
 | **S1** | [Core auth middleware](./sprint-S1-core-middleware.md) | MCP-AUTH-001..004, 006 and auth portions of 007 | P0 | ✅ Done (merged `60e2e85`, PR #229) |
 | **S2** | [Capability mapping & errors](./sprint-S2-capability-mapping.md) | MCP-MAP-*, §4.5–4.6 | P0 | ✅ Done (merged `8352936`, PR #231; MCP-MAP-004 deferred) |
-| **S3** | [Docs, examples & discovery](./sprint-S3-docs-examples.md) | MCP-DISC-*, MCP-DOC-* | P0/P1 | 🟡 PR open ([#232](https://github.com/adriannoes/asap-protocol/pull/232) → `release/2.5.0`) |
-| **S4** | [Compliance & integration tests](./sprint-S4-compliance.md) | MCP-DISC-003, harness | P1 | 🔵 Planned |
+| **S3** | [Docs, examples & discovery](./sprint-S3-docs-examples.md) | MCP-DISC-*, MCP-DOC-* | P0/P1 | ✅ Done (merged `175ae02`, PR #232) |
+| **S4** | [Compliance & integration tests](./sprint-S4-compliance.md) | MCP-DISC-003, harness | P1 | ✅ Ready — `feat/v2.5.0-s4-compliance` (gate green, PR pending merge) |
 | **S5** | [Release v2.5.0](./sprint-S5-release.md) | DoD, metrics | P0 | 🔵 Planned |
 
 > **Note:** `@asap-protocol/mcp-auth` (TypeScript, MCP-TS-*) is SHOULD. S4 runs a scoped feasibility spike; S5 either ships it or records an explicit v2.5.0.1 defer in CHANGELOG/backlog.
@@ -93,7 +93,7 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
   - **Enables:** v2.5.1 Adapter Lab II (blocked until tag).
   - **Depends on:** Tasks 2.0–4.0.
   - **Acceptance criteria:**
-    - [ ] `asap-compliance` includes `mcp_auth` profile cases for stdio MCP, including manifest tools ⊆ registered tools (green in CI)
+    - [x] `asap-compliance` includes `mcp_auth` profile cases for stdio MCP, including manifest tools ⊆ registered tools (green locally; CI on PR merge)
     - [ ] `pyproject.toml` / npm → **2.5.0**; tag `v2.5.0` published
     - [ ] `AGENTS.md` knowledge map updated; CHANGELOG `[2.5.0]`
     - [ ] Pre-push CI suite green (ruff, mypy, pytest, TS if touched)
@@ -141,7 +141,7 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
 
 - [ ] All parent tasks 1.0–5.0 complete (1.0–4.0 ✅; 5.0 pending S4–S5)
 - [x] PRD requirements MCP-AUTH-001..006, MCP-MAP-001..003, MCP-DOC-001..004 satisfied (MCP-MAP-004 / `hide_unauthorized_tools` deferred per design lock §6)
-- [ ] PRD discovery requirements MCP-DISC-001..003 satisfied or explicitly deferred with rationale (MCP-DISC-001/002 ✅ in S3; MCP-DISC-003 → S4 compliance harness)
+- [ ] PRD discovery requirements MCP-DISC-001..003 satisfied or explicitly deferred with rationale (MCP-DISC-001/002 ✅ in S3; MCP-DISC-003 ✅ in S4 compliance harness)
 - [x] Unprotected `MCPServer` usage unchanged (opt-in via `protect_server`)
 - [x] No wire-protocol breaking changes
 
@@ -176,3 +176,4 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
 | 2026-06-24 | S2 branch `feat/v2.5.0-s2-capability-map` opened; parallel workstreams documented in sprint-S2 |
 | 2026-06-24 | S2 merged on `release/2.5.0` (`8352936`); S3 branch `feat/v2.5.0-s3-docs-examples` opened with parallel workstreams |
 | 2026-06-24 | S1/S2 merge refs reconciled; S3 impl complete — [PR #232](https://github.com/adriannoes/asap-protocol/pull/232) open into `release/2.5.0`; parent tasks 1.0–4.0 marked done |
+| 2026-06-24 | S4 acceptance gate green on `feat/v2.5.0-s4-compliance` (pytest + ruff + mypy); PR pending merge into `release/2.5.0` |

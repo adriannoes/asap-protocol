@@ -97,6 +97,44 @@ uv run python client.py --jwt '<token>'
 4. Call `secure_action` without JWT → `asap:auth_required`.
 5. Call `secure_action` with `_meta.asap_agent_jwt` (or `ASAP_AGENT_JWT`) → `executed: ...`.
 
+## Compliance
+
+The **`mcp-auth-bridge`** profile in [`asap-compliance`](../../asap-compliance/) is the **v2.5.0 release gate** for stdio MCP auth. It black-boxes this example server (subprocess `uv run python examples/mcp_auth_bridge/server.py`) and asserts:
+
+| Check | What it verifies |
+|-------|------------------|
+| `auth_required` | Unauthenticated `secure_action` → `asap:auth_required` |
+| `valid_jwt` | Valid Agent JWT on `secure_action` succeeds |
+| `wrong_capability` | JWT without the mapped capability → `asap:capability_denied` |
+| `constraint_violation` | Grant constraint breach → `asap:constraint_violation` |
+| `manifest_alignment` | Manifest-declared tools/capabilities ⊆ registered MCP surface (MCP-DISC-003) |
+
+There is no dedicated `python -m` CLI for this profile yet — use pytest or the programmatic one-liner below.
+
+**Recommended gate** (from the repository root):
+
+```bash
+uv run pytest asap-compliance/tests/test_mcp_auth.py -v
+```
+
+**Programmatic one-liner:**
+
+```bash
+PYTHONPATH=asap-compliance:src uv run python -c "
+from asap_compliance.harness import McpAuthComplianceConfig, validate_mcp_auth
+import sys
+result = validate_mcp_auth(McpAuthComplianceConfig())
+for check in result.checks:
+    if not check.passed:
+        print(f'FAIL: {check.name}: {check.message}')
+sys.exit(0 if result.passed else 1)
+"
+```
+
+The subprocess driver sets `ASAP_MCP_COMPLIANCE=1` on the server automatically so probe JWTs (wrong capability, constraint action) are emitted on stderr — you do not need to export it manually.
+
+Adapter semantics and error codes: [`docs/adapters/mcp-auth-bridge.md`](../../docs/adapters/mcp-auth-bridge.md).
+
 ## Related docs
 
 - Adapter guide: [`docs/adapters/mcp-auth-bridge.md`](../../docs/adapters/mcp-auth-bridge.md)
