@@ -43,21 +43,24 @@ def test_resolve_capability_empty_map_uses_identity() -> None:
 def test_resolve_capability_uses_bridge_registry_when_config_map_empty() -> None:
     """Register-time bridge metadata resolves when config map has no entry."""
     config = _minimal_config()
-    # Agent D: ``from_server`` populates bridge metadata on config after MCP-MAP-002.
-    object.__setattr__(
-        config,
-        "bridge_tool_capability_map",
-        {"search": "web_search"},
+    assert (
+        resolve_capability(
+            "search",
+            config,
+            bridge_tool_capability_map={"search": "web_search"},
+        )
+        == "web_search"
     )
-    assert resolve_capability("search", config) == "web_search"
 
 
 def test_resolve_capability_config_map_overrides_bridge_registry() -> None:
     """Explicit ``tool_capability_map`` wins over register-time bridge metadata."""
     config = _minimal_config(tool_capability_map={"search": "custom_search"})
-    object.__setattr__(
-        config,
-        "bridge_tool_capability_map",
-        {"search": "web_search"},
+    assert (
+        resolve_capability(
+            "search",
+            config,
+            bridge_tool_capability_map={"search": "web_search"},
+        )
+        == "custom_search"
     )
-    assert resolve_capability("search", config) == "custom_search"

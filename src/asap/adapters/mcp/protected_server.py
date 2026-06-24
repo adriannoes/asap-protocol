@@ -47,7 +47,6 @@ class ProtectedMCPServer(MCPServer):
         bridge_caps = getattr(server, "_bridge_tool_capabilities", None)
         if isinstance(bridge_caps, dict) and bridge_caps:
             protected._bridge_tool_capabilities = dict(bridge_caps)
-            config.bridge_tool_capability_map.update(bridge_caps)
 
         if config.validate_tools_at_startup:
             _validate_tools_at_startup(protected)
@@ -75,7 +74,6 @@ class ProtectedMCPServer(MCPServer):
         )
         if capability is not None:
             self._bridge_tool_capabilities[name] = capability
-            self._auth_config.bridge_tool_capability_map[name] = capability
 
     async def _handle_tools_call(self, params: dict[str, Any]) -> dict[str, Any]:
         """Intercept ``tools/call`` for JWT extraction, verification, and grant checks."""
@@ -102,6 +100,11 @@ class ProtectedMCPServer(MCPServer):
         if not verify_result.ok:
             return tool_error_result(INVALID_TOKEN, verify_result.error)
 
+        if self._auth_config.enforce_grants:
+            grant_error = self._check_capability_grant(parsed, verify_result)
+            if grant_error is not None:
+                return grant_error
+
         agent = verify_result.agent
         if agent is not None:
             logger.info(
@@ -109,11 +112,6 @@ class ProtectedMCPServer(MCPServer):
                 agent_id=agent.agent_id,
                 tool_name=parsed.name,
             )
-
-        if self._auth_config.enforce_grants:
-            grant_error = self._check_capability_grant(parsed, verify_result)
-            if grant_error is not None:
-                return grant_error
 
         return await super()._handle_tools_call(params)
 
@@ -123,7 +121,11 @@ class ProtectedMCPServer(MCPServer):
         verify_result: JwtVerifyResult,
     ) -> dict[str, Any] | None:
         """Return a ``tools/call`` error result when grant enforcement fails."""
-        capability = resolve_capability(parsed.name, self._auth_config)
+        capability = resolve_capability(
+            parsed.name,
+            self._auth_config,
+            bridge_tool_capability_map=self._bridge_tool_capabilities,
+        )
         claims = verify_result.claims or {}
         jwt_capabilities = claims.get(CAPABILITIES_CLAIM)
         if not isinstance(jwt_capabilities, list) or capability not in jwt_capabilities:
@@ -161,7 +163,11 @@ def _validate_tools_at_startup(protected: ProtectedMCPServer) -> None:
     config = protected._auth_config
     registry = config.capability_registry
     for tool_name in protected._tools:
-        capability = resolve_capability(tool_name, config)
+        capability = resolve_capability(
+            tool_name,
+            config,
+            bridge_tool_capability_map=protected._bridge_tool_capabilities,
+        )
         if not capability or not capability.strip():
             raise ValueError(
                 f"Tool {tool_name!r} resolves to empty capability name; "

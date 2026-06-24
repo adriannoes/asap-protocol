@@ -2,17 +2,24 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from asap.adapters.mcp.auth_middleware import MCPAuthConfig
 from asap.auth.capabilities import ConstraintViolation
 
 
-def resolve_capability(tool_name: str, config: MCPAuthConfig) -> str:
+def resolve_capability(
+    tool_name: str,
+    config: MCPAuthConfig,
+    *,
+    bridge_tool_capability_map: Mapping[str, str] | None = None,
+) -> str:
     """Resolve an MCP tool name to an ASAP capability name.
 
     Resolution order (MCP-MAP-001, MCP-MAP-002):
 
     1. ``config.tool_capability_map`` (explicit runtime override)
-    2. ``config.bridge_tool_capability_map`` (register-time bridge metadata)
+    2. ``bridge_tool_capability_map`` argument, else ``config.bridge_tool_capability_map``
     3. Identity default: ``tool_name`` unchanged
 
     Args:
@@ -40,8 +47,13 @@ def resolve_capability(tool_name: str, config: MCPAuthConfig) -> str:
     """
     if tool_name in config.tool_capability_map:
         return config.tool_capability_map[tool_name]
-    if tool_name in config.bridge_tool_capability_map:
-        return config.bridge_tool_capability_map[tool_name]
+    bridge_map = (
+        bridge_tool_capability_map
+        if bridge_tool_capability_map is not None
+        else config.bridge_tool_capability_map
+    )
+    if tool_name in bridge_map:
+        return bridge_map[tool_name]
     return tool_name
 
 

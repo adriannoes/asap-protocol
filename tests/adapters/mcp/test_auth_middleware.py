@@ -55,6 +55,7 @@ def _build_auth_config(
     *,
     public_tools: frozenset[str] = frozenset(),
     enforce_grants: bool = False,
+    **kwargs: object,
 ) -> MCPAuthConfig:
     """MCP auth config for middleware tests."""
     return MCPAuthConfig(
@@ -64,6 +65,7 @@ def _build_auth_config(
         public_tools=public_tools,
         enforce_grants=enforce_grants,
         expected_audience=MCP_TEST_AUDIENCE,
+        **kwargs,
     )
 
 
@@ -71,6 +73,7 @@ def _build_grant_auth_config(
     host_store: InMemoryHostStore,
     agent_store: InMemoryAgentStore,
     capability_registry: CapabilityRegistry,
+    **kwargs: object,
 ) -> MCPAuthConfig:
     """MCP auth config with grant enforcement enabled (S2)."""
     return _build_auth_config(
@@ -78,6 +81,7 @@ def _build_grant_auth_config(
         agent_store,
         capability_registry,
         enforce_grants=True,
+        **kwargs,
     )
 
 
@@ -361,7 +365,14 @@ def test_protect_server_honors_register_time_capability_metadata(
     )
     protected = protect_server(search_mcp_server, config)
     assert getattr(protected, "_startup_tools_validated", False) is True
-    assert resolve_capability("search", config) == "web_search"
+    assert (
+        resolve_capability(
+            "search",
+            config,
+            bridge_tool_capability_map=protected._bridge_tool_capabilities,
+        )
+        == "web_search"
+    )
 
 
 def test_config_tool_capability_map_overrides_register_time_metadata(
@@ -389,6 +400,38 @@ def test_config_tool_capability_map_overrides_register_time_metadata(
     protected = protect_server(search_mcp_server, config)
     assert getattr(protected, "_startup_tools_validated", False) is True
     assert resolve_capability("search", config) == "custom_search"
+
+
+def test_protected_register_tool_stores_capability_metadata(
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+    register_capability: Callable[..., CapabilityDefinition],
+) -> None:
+    """``ProtectedMCPServer.register_tool(..., capability=...)`` records bridge metadata."""
+    register_capability("web_search", description="Web search capability")
+    config = _s2_auth_config(
+        host_store,
+        agent_store,
+        capability_registry,
+        validate_tools_at_startup=True,
+    )
+    protected = protect_server(MCPServer(name="register-test", version="0.1.0"), config)
+    protected.register_tool(
+        "search",
+        lambda query="": query,
+        {"type": "object", "properties": {"query": {"type": "string"}}},
+        capability="web_search",
+    )
+    assert protected._bridge_tool_capabilities["search"] == "web_search"
+    assert (
+        resolve_capability(
+            "search",
+            config,
+            bridge_tool_capability_map=protected._bridge_tool_capabilities,
+        )
+        == "web_search"
+    )
 
 
 def test_validate_tools_at_startup_fails_on_empty_resolved_capability(
@@ -579,6 +622,70 @@ async def test_constraint_violation_returns_constraint_violation(
         )
     )
     assert CONSTRAINT_VIOLATION in _error_text(result)
+
+
+@pytest.mark.asyncio
+async def test_tool_capability_map_checks_resolved_capability_in_jwt(
+    search_mcp_server: MCPServer,
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+    host_identity: HostIdentity,
+    agent_session: AgentSession,
+    mint_agent_jwt: Callable[..., str],
+    register_capability: Callable[..., CapabilityDefinition],
+    grant_capability: Callable[..., CapabilityGrant],
+) -> None:
+    """JWT ``capabilities`` claim must include the resolved capability name, not the tool name."""
+    register_capability("web_search", description="Web search capability")
+    grant_capability(agent_session.agent_id, "web_search")
+    config = _build_grant_auth_config(
+        host_store,
+        agent_store,
+        capability_registry,
+        tool_capability_map={"search": "web_search"},
+    )
+    protected = protect_server(search_mcp_server, config)
+
+    wrong_claim = mint_agent_jwt(capabilities=["search"])
+    denied = await protected._handle_tools_call(
+        _tool_call_params("search", arguments={"query": "hi"}, jwt=wrong_claim)
+    )
+    assert CAPABILITY_DENIED in _error_text(denied)
+
+    correct_claim = mint_agent_jwt(capabilities=["web_search"])
+    allowed = await protected._handle_tools_call(
+        _tool_call_params("search", arguments={"query": "ok"}, jwt=correct_claim)
+    )
+    assert allowed["isError"] is False
+    assert allowed["content"][0]["text"] == "ok"
+
+
+@pytest.mark.asyncio
+async def test_denied_grant_does_not_log_authorized(
+    caplog: LogCaptureFixture,
+    echo_mcp_server: MCPServer,
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+    host_identity: HostIdentity,
+    agent_session: AgentSession,
+    mint_agent_jwt: Callable[..., str],
+    register_capability: Callable[..., CapabilityDefinition],
+) -> None:
+    """Failed grant enforcement must not emit ``mcp.tool.authorized``."""
+    register_capability("echo", description="Echo tool capability")
+    token = mint_agent_jwt(capabilities=["echo"])
+    config = _build_grant_auth_config(host_store, agent_store, capability_registry)
+    protected = protect_server(echo_mcp_server, config)
+
+    with caplog.at_level(logging.INFO):
+        result = await protected._handle_tools_call(
+            _tool_call_params("echo", arguments={"message": "hi"}, jwt=token)
+        )
+
+    assert CAPABILITY_DENIED in _error_text(result)
+    assert "mcp.tool.authorized" not in caplog.text
 
 
 # --- S2 optional tools/list filtering (3.1) — MCP-MAP-004 deferred per design-lock §6 ---
