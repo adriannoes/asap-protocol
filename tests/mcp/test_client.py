@@ -312,6 +312,28 @@ async def test_client_call_tool_success() -> None:
 
 
 @pytest.mark.asyncio
+async def test_client_call_tool_with_meta() -> None:
+    """call_tool forwards optional _meta (e.g. asap_agent_jwt) in tools/call params."""
+    client = _make_connected_client()
+    client._send = AsyncMock()
+    client._receive = AsyncMock(
+        return_value={
+            "result": {
+                "content": [{"type": "text", "text": "ok"}],
+                "isError": False,
+            }
+        }
+    )
+    await client.call_tool(
+        "secure_action",
+        {"action": "ping"},
+        meta={"asap_agent_jwt": "test-jwt"},
+    )
+    sent = client._send.await_args_list[-1][0][0]
+    assert sent["params"]["_meta"]["asap_agent_jwt"] == "test-jwt"
+
+
+@pytest.mark.asyncio
 async def test_client_disconnect() -> None:
     """disconnect closes stdin, terminates, and waits."""
     client = MCPClient(["true"], receive_timeout=1.0)

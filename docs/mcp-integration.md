@@ -13,6 +13,48 @@ ASAP provides:
 - `asap.mcp.MCPClient`: Connect to an MCP server (e.g. for tests or automation).
 - Protocol types in `asap.mcp.protocol` (JSON-RPC, Initialize, Tool, CallToolResult, etc.).
 
+## Integration modes (v2.5.0)
+
+ASAP supports two complementary ways to combine MCP with agent communication. Pick the mode that matches your transport and auth surface.
+
+| | **Mode A — Native stdio MCP** | **Mode B — MCP-over-ASAP envelope** |
+|:--|:------------------------------|:------------------------------------|
+| **Wire** | MCP JSON-RPC over stdio (`MCPServer` / `MCPClient`) | ASAP `Envelope` with `payload_type` `mcp_tool_call` / `mcp_tool_result` |
+| **Typical use** | IDE hosts (Claude Desktop, Cursor) launch your server as a subprocess | A2A agents invoke MCP tools on a remote peer via HTTP/WebSocket |
+| **Auth (v2.5.0)** | Opt-in via [`asap.adapters.mcp.protect_server`](adapters/mcp-auth-bridge.md) — Agent JWT + capability grants on each `tools/call` | Existing ASAP transport auth (Host/Agent JWT, capability grants on the HTTP server) |
+| **Reference** | [`examples/mcp_auth_bridge/`](../examples/mcp_auth_bridge/) | [`src/asap/examples/mcp_integration.py`](../src/asap/examples/mcp_integration.py) (`McpToolCall` / `mcp_tool_call`) |
+
+### Mode A: native stdio MCP + Auth Bridge
+
+Use `asap.mcp.MCPServer` when a host application starts your process and speaks MCP over stdin/stdout. To enforce Agent JWT and capability grants on protected tools, wrap the server with `protect_server` from `asap.adapters.mcp` — see the **[MCP Auth Bridge adapter guide](adapters/mcp-auth-bridge.md)** for architecture, `MCPAuthConfig`, error codes, and a runnable example.
+
+**Opt-in migration (MCP-DOC-004):** Unprotected `MCPServer` usage remains fully valid. Protection is explicit: call `protect_server` only when you want JWT + grant checks on `tools/call`. Existing deployments do not need to change until operators opt in.
+
+**Deferred in v2.5.0:** An MCP `initialize` session-token handshake (negotiating a token once at connect instead of per-call `_meta`) is **not shipped** in this release — see [design lock §3](../engineering/tasks/v2.5.0/design-lock-mcp-auth-bridge.md). Clients must pass the Agent JWT on each protected `tools/call` via `_meta.asap_agent_jwt` until a future release adds session tokens.
+
+### Mode B: MCP inside ASAP envelopes
+
+When agents already communicate over ASAP HTTP (or WebSocket), invoke MCP tools by sending envelopes with `payload_type` `mcp_tool_call` and a `McpToolCall` payload (`tool_name`, `arguments`, optional `mcp_context`). The recipient returns `mcp_tool_result`. This path does not use the stdio Auth Bridge; authorization follows your ASAP server's existing middleware.
+
+```python
+from asap.models.envelope import Envelope
+from asap.models.payloads import McpToolCall
+from asap.transport.client import ASAPClient
+
+payload = McpToolCall(request_id="req-1", tool_name="echo", arguments={"message": "hi"})
+envelope = Envelope(
+    asap_version="0.1",
+    sender="urn:asap:agent:caller",
+    recipient="urn:asap:agent:mcp-gateway",
+    payload_type="mcp_tool_call",
+    payload=payload.model_dump(),
+)
+async with ASAPClient("http://127.0.0.1:8000") as client:
+    response = await client.send(envelope)
+```
+
+Full walkthrough: `uv run python -m asap.examples.mcp_integration`.
+
 ## How to Expose ASAP Agents as MCP Servers
 
 You can expose an ASAP agent’s capabilities as MCP tools by running an MCP server that forwards tool calls to your agent (e.g. via ASAP envelopes).

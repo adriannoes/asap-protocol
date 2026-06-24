@@ -1,6 +1,6 @@
 # Tasks: v2.5.0 MCP Auth Bridge — Sprint Index
 
-**Status: 🟢 READY** — parent tasks + per-sprint sub-tasks defined and reconciled with PRD/API details; integration branch **`release/2.5.0`**.
+**Status: 🟡 IN PROGRESS** — S0–S2 merged on **`release/2.5.0`**; S3 complete on **`feat/v2.5.0-s3-docs-examples`** ([PR #232](https://github.com/adriannoes/asap-protocol/pull/232) open); S4–S5 planned.
 
 Based on [PRD v2.5.0 MCP Auth Bridge](../../../product/prd/prd-v2.5.0-mcp-auth-bridge.md). Each sprint maps to a PR into **`release/2.5.0`** (see [BRANCHING.md](./BRANCHING.md)); merge to `main` only after S5.
 
@@ -17,9 +17,9 @@ Based on [PRD v2.5.0 MCP Auth Bridge](../../../product/prd/prd-v2.5.0-mcp-auth-b
 | Sprint | Focus | PRD sections | Priority | Status |
 |--------|-------|--------------|----------|--------|
 | **S0** | [Design lock & scaffold](./sprint-S0-design-lock.md) | §6 API, MCP-AUTH-005 | P0 | ✅ Done |
-| **S1** | [Core auth middleware](./sprint-S1-core-middleware.md) | MCP-AUTH-001..004, 006 and auth portions of 007 | P0 | ✅ Done (`feat/v2.5.0-s1-middleware`) |
-| **S2** | [Capability mapping & errors](./sprint-S2-capability-mapping.md) | MCP-MAP-*, §4.5–4.6 | P0 | 🟢 Impl done; 3.1 MAY deferred to Agent E |
-| **S3** | [Docs, examples & discovery](./sprint-S3-docs-examples.md) | MCP-DISC-*, MCP-DOC-* | P0/P1 | 🔵 Planned |
+| **S1** | [Core auth middleware](./sprint-S1-core-middleware.md) | MCP-AUTH-001..004, 006 and auth portions of 007 | P0 | ✅ Done (merged `60e2e85`, PR #229) |
+| **S2** | [Capability mapping & errors](./sprint-S2-capability-mapping.md) | MCP-MAP-*, §4.5–4.6 | P0 | ✅ Done (merged `8352936`, PR #231; MCP-MAP-004 deferred) |
+| **S3** | [Docs, examples & discovery](./sprint-S3-docs-examples.md) | MCP-DISC-*, MCP-DOC-* | P0/P1 | 🟡 PR open ([#232](https://github.com/adriannoes/asap-protocol/pull/232) → `release/2.5.0`) |
 | **S4** | [Compliance & integration tests](./sprint-S4-compliance.md) | MCP-DISC-003, harness | P1 | 🔵 Planned |
 | **S5** | [Release v2.5.0](./sprint-S5-release.md) | DoD, metrics | P0 | 🔵 Planned |
 
@@ -47,27 +47,27 @@ S1 depends on S0. S2 depends on S1. S3 depends on S2 (example server calls prote
 
 Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
 
-- [ ] **1.0 Design lock & package scaffold (S0)**
+- [x] **1.0 Design lock & package scaffold (S0)**
   - **Trigger:** Kickoff v2.5.0 after v2.4.1 ship.
   - **Enables:** S1 middleware implementation in `asap.adapters.mcp`.
   - **Depends on:** Stable `verify_agent_jwt`, `MCPServer` in tree.
   - **Acceptance criteria:**
-    - [ ] Package `src/asap/adapters/mcp/` exists with `MCPAuthConfig` dataclass and public exports
-    - [ ] `MCPAuthConfig` includes `host_store`, `agent_store`, `capability_registry`, `jti_replay_cache`, and `expected_audience`
-    - [ ] Design note documents `tools/call` hook strategy (wrap vs refactor) and grant-check flow
-    - [ ] Default `jwt_extractor` interface defined ( `_meta.asap_agent_jwt` + dev env fallback)
+    - [x] Package `src/asap/adapters/mcp/` exists with `MCPAuthConfig` dataclass and public exports
+    - [x] `MCPAuthConfig` includes `host_store`, `agent_store`, `capability_registry`, `jti_replay_cache`, and `expected_audience`
+    - [x] Design note documents `tools/call` hook strategy (wrap vs refactor) and grant-check flow
+    - [x] Default `jwt_extractor` interface defined ( `_meta.asap_agent_jwt` + dev env fallback)
 
-- [ ] **2.0 Core auth middleware (S1)**
+- [x] **2.0 Core auth middleware (S1)**
   - **Trigger:** S0 complete.
   - **Enables:** S2 capability checks; protected `tools/call` path.
   - **Depends on:** Task 1.0; `auth/agent_jwt.verify_agent_jwt`.
   - **Acceptance criteria:**
-    - [ ] `protect_server(server, config)` wraps `tools/call` without breaking unprotected servers
-    - [ ] Missing/invalid JWT returns MCP `CallToolResult` with `isError: true` and `asap:*` codes
-    - [ ] `public_tools` allowlist skips JWT for named tools only
-    - [ ] Unit tests: missing token, expired token, tampered token, success path
+    - [x] `protect_server(server, config)` wraps `tools/call` without breaking unprotected servers
+    - [x] Missing/invalid JWT returns MCP `CallToolResult` with `isError: true` and `asap:*` codes
+    - [x] `public_tools` allowlist skips JWT for named tools only
+    - [x] Unit tests: missing token, expired token, tampered token, success path
 
-- [ ] **3.0 Capability mapping & constraint enforcement (S2)**
+- [x] **3.0 Capability mapping & constraint enforcement (S2)**
   - **Trigger:** S1 `protect_server` dispatches authenticated calls.
   - **Enables:** S3 example server with real grants; S4 compliance cases.
   - **Depends on:** Task 2.0; `CapabilityRegistry.check_grant` / `auth/capabilities.validate_constraints`.
@@ -77,16 +77,16 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
     - [x] Optional startup validation: every registered tool resolves to a capability (MCP-MAP-003)
     - [x] Test coverage ≥90% on `asap.adapters.mcp`
 
-- [ ] **4.0 Documentation, examples & discovery (S3)**
+- [x] **4.0 Documentation, examples & discovery (S3)**
   - **Trigger:** Protected server runnable locally.
   - **Enables:** External adopters; S4 harness documentation paths.
   - **Depends on:** Task 3.0.
   - **Acceptance criteria:**
-    - [ ] `docs/adapters/mcp-auth-bridge.md` published (architecture, token carriage, config reference)
-    - [ ] `examples/mcp_auth_bridge/` runs: `uv run python examples/mcp_auth_bridge/server.py`
-    - [ ] `docs/mcp-integration.md` distinguishes Mode A (native MCP) vs Mode B (ASAP envelope)
-    - [ ] Manifest ↔ tool alignment pattern documented, including `skills[].id` ↔ MCP tool snippets (MCP-DISC-001/002)
-    - [ ] Migration note states unprotected MCP servers remain valid and protection is opt-in (MCP-DOC-004)
+    - [x] `docs/adapters/mcp-auth-bridge.md` published (architecture, token carriage, config reference)
+    - [x] `examples/mcp_auth_bridge/` runs: `uv run python examples/mcp_auth_bridge/server.py`
+    - [x] `docs/mcp-integration.md` distinguishes Mode A (native MCP) vs Mode B (ASAP envelope)
+    - [x] Manifest ↔ tool alignment pattern documented, including `skills[].id` ↔ MCP tool snippets (MCP-DISC-001/002)
+    - [x] Migration note states unprotected MCP servers remain valid and protection is opt-in (MCP-DOC-004)
 
 - [ ] **5.0 Compliance, quality & release (S4–S5)**
   - **Trigger:** Example server + docs merged.
@@ -110,14 +110,17 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
 - `src/asap/adapters/mcp/errors.py` — ASAP MCP error code constants
 - `tests/adapters/mcp/test_auth_middleware.py` — auth path tests
 - `tests/adapters/mcp/test_capability_map.py` — mapping + constraint tests
-- `examples/mcp_auth_bridge/` — runnable protected MCP server
-- `docs/adapters/mcp-auth-bridge.md` — integration guide
+- `examples/mcp_auth_bridge/` — runnable protected MCP server (shipped S3)
+- `examples/mcp_auth_bridge/server.py`, `client.py`, `README.md` — reference protected stdio server + JWT flow
+- `docs/adapters/mcp-auth-bridge.md` — integration guide (shipped S3)
+- `tests/examples/test_mcp_auth_bridge_example.py` — example smoke test (shipped S3)
 
 ### Modify (expected)
 
 - `src/asap/mcp/server.py` — hook point for `tools/call` interception (if refactor needed)
 - `src/asap/mcp/protocol.py` — `_meta` on `CallToolRequestParams` if types need extension
-- `docs/mcp-integration.md` — Mode A vs Mode B
+- `docs/mcp-integration.md` — Mode A vs Mode B (updated S3)
+- `docs/index.md` — Adoption tools link to MCP auth bridge guide (updated S3)
 - `asap-compliance/` — release-gate `mcp_auth` profile for stdio MCP
 - `src/asap/testing/compliance.py` — unchanged unless shared HTTP harness support is explicitly needed
 - `AGENTS.md`, `CHANGELOG.md`, `pyproject.toml`
@@ -136,11 +139,11 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
 
 ## Definition of Done (v2.5.0)
 
-- [ ] All parent tasks 1.0–5.0 complete
-- [ ] PRD requirements MCP-AUTH-001..007, MCP-MAP-001..003, MCP-DOC-001..004 satisfied
-- [ ] PRD discovery requirements MCP-DISC-001..003 satisfied or explicitly deferred with rationale
-- [ ] Unprotected `MCPServer` usage unchanged (opt-in via `protect_server`)
-- [ ] No wire-protocol breaking changes
+- [ ] All parent tasks 1.0–5.0 complete (1.0–4.0 ✅; 5.0 pending S4–S5)
+- [x] PRD requirements MCP-AUTH-001..006, MCP-MAP-001..003, MCP-DOC-001..004 satisfied (MCP-MAP-004 / `hide_unauthorized_tools` deferred per design lock §6)
+- [ ] PRD discovery requirements MCP-DISC-001..003 satisfied or explicitly deferred with rationale (MCP-DISC-001/002 ✅ in S3; MCP-DISC-003 → S4 compliance harness)
+- [x] Unprotected `MCPServer` usage unchanged (opt-in via `protect_server`)
+- [x] No wire-protocol breaking changes
 
 ## Estimated Effort
 
@@ -171,3 +174,5 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
 | 2026-06-24 | Reconciled task plan with PRD paths, repo APIs, compliance scope, and TypeScript spike/defer gate |
 | 2026-06-24 | S0 complete on `release/2.5.0`; S1 branch `feat/v2.5.0-s1-middleware` opened with parallel agent workstreams |
 | 2026-06-24 | S2 branch `feat/v2.5.0-s2-capability-map` opened; parallel workstreams documented in sprint-S2 |
+| 2026-06-24 | S2 merged on `release/2.5.0` (`8352936`); S3 branch `feat/v2.5.0-s3-docs-examples` opened with parallel workstreams |
+| 2026-06-24 | S1/S2 merge refs reconciled; S3 impl complete — [PR #232](https://github.com/adriannoes/asap-protocol/pull/232) open into `release/2.5.0`; parent tasks 1.0–4.0 marked done |
