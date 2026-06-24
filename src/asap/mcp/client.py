@@ -45,6 +45,7 @@ class MCPClient:
         receive_timeout: float | None = 60.0,
         request_id_type: Literal["int", "str"] = "str",
         allowed_binaries: frozenset[str] | None = None,
+        subprocess_env: dict[str, str] | None = None,
     ) -> None:
         if allowed_binaries is not None and server_command:
             binary = os.path.basename(server_command[0])
@@ -61,10 +62,18 @@ class MCPClient:
         self._request_id = 0
         self._use_str_ids = request_id_type == "str"
         self._init_result: InitializeResult | None = None
+        self._subprocess_env = subprocess_env
 
     def _next_id(self) -> str | int:
         self._request_id += 1
         return str(self._request_id) if self._use_str_ids else self._request_id
+
+    @property
+    def stderr(self) -> asyncio.StreamReader | None:
+        """Server subprocess stderr stream (``None`` when disconnected)."""
+        if self._process is None:
+            return None
+        return self._process.stderr
 
     async def _send(self, payload: dict[str, Any]) -> None:
         """Send one JSON-RPC message (request or notification) to server stdin."""
@@ -116,6 +125,7 @@ class MCPClient:
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            env=self._subprocess_env,
         )
         if self._process.stdin is None or self._process.stdout is None:
             raise RuntimeError("Failed to get server stdin/stdout")
@@ -195,7 +205,7 @@ class MCPClient:
         if not self._initialized:
             raise RuntimeError("Not initialized; call connect() first")
         req_id = self._next_id()
-        params = CallToolRequestParams(name=name, arguments=arguments or {}, meta=meta)
+        params = CallToolRequestParams(name=name, arguments=arguments or {}, _meta=meta)
         await self._send(
             {
                 "jsonrpc": "2.0",

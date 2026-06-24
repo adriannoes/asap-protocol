@@ -1,0 +1,25 @@
+{
+  "id": "urn:asap:agent:mcp-auth-bridge-demo",
+  "name": "MCP Auth Bridge Demo",
+  "version": "1.0.0",
+  "description": "Native stdio MCP with ASAP capability grants (compliance fixture)",
+  "capabilities": {
+    "asap_version": "2.5",
+    "skills": [
+      {
+        "id": "echo",
+        "description": "Public echo tool (no JWT required)"
+      },
+      {
+        "id": "secure_action",
+        "description": "Protected tool; requires Agent JWT + grant"
+      }
+    ],
+    "state_persistence": false,
+    "streaming": false,
+    "mcp_tools": ["echo", "secure_action"]
+  },
+  "endpoints": {
+    "asap": "https://example.test/asap"
+  }
+}

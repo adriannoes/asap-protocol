@@ -13,6 +13,8 @@ from __future__ import annotations
 import argparse
 import asyncio
 import base64
+import json
+import os
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -36,6 +38,8 @@ from asap.mcp.server import MCPServer
 DEMO_HOST_ID = "mcp-auth-bridge-host"
 DEMO_AGENT_ID = "urn:asap:agent:mcp-auth-bridge-demo"
 DEMO_AUDIENCE = "urn:asap:agent:mcp-auth-bridge"
+COMPLIANCE_ENV_VAR = "ASAP_MCP_COMPLIANCE"
+_COMPLIANCE_FORBIDDEN_ACTION = "forbidden-action"
 
 _ECHO_INPUT_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -107,7 +111,15 @@ async def _seed_identity(
             description="Execute a protected MCP action",
         )
     )
-    capability_registry.grant(DEMO_AGENT_ID, "secure_action")
+    compliance_mode = os.environ.get(COMPLIANCE_ENV_VAR) == "1"
+    if compliance_mode:
+        capability_registry.grant(
+            DEMO_AGENT_ID,
+            "secure_action",
+            constraints={"action": {"not_in": [_COMPLIANCE_FORBIDDEN_ACTION]}},
+        )
+    else:
+        capability_registry.grant(DEMO_AGENT_ID, "secure_action")
 
     host_thumbprint = jwk_thumbprint_sha256(host_identity.public_key)
     demo_jwt = create_agent_jwt(
@@ -189,6 +201,22 @@ def _print_startup_instructions(identity: DemoIdentity) -> None:
         "",
     ]
     print("\n".join(lines), file=sys.stderr, flush=True)
+    if os.environ.get(COMPLIANCE_ENV_VAR) == "1":
+        host_thumbprint = jwk_thumbprint_sha256(identity.host_identity.public_key)
+        wrong_jwt = create_agent_jwt(
+            identity.agent_sk,
+            host_thumbprint=host_thumbprint,
+            agent_id=DEMO_AGENT_ID,
+            aud=DEMO_AUDIENCE,
+            capabilities=["unrelated_capability"],
+        )
+        payload = {
+            "profile": "mcp-auth-bridge",
+            "valid_jwt": identity.demo_jwt,
+            "wrong_capability_jwt": wrong_jwt,
+            "constraint_violation_action": _COMPLIANCE_FORBIDDEN_ACTION,
+        }
+        print(f"ASAP_COMPLIANCE_JSON:{json.dumps(payload)}", file=sys.stderr, flush=True)
 
 
 async def _run_stdio() -> None:
