@@ -298,8 +298,8 @@ def default_jwt_extractor(params: CallToolRequestParams) -> str | None:
 - [x] Compliance harness includes `mcp-auth-bridge` profile cases for auth, grants, constraints, and manifest alignment (S4, [PR #233](https://github.com/adriannoes/asap-protocol/pull/233))
 - [x] Docs published; `AGENTS.md` knowledge map references MCP Auth Bridge (S3)
 - [x] No breaking change to unprotected `MCPServer` usage (opt-in `protect_server`)
-- [ ] Version bump `2.5.0`, CHANGELOG, `release/2.5.0` → `main`, tag `v2.5.0` (S5 — [sprint-S5-release.md](../../engineering/tasks/v2.5.0/sprint-S5-release.md))
-- [ ] CHANGELOG records TypeScript middleware defer to v2.5.0.1 (S5)
+- [x] Version bump `2.5.0` + CHANGELOG `[2.5.0]` with TypeScript defer to v2.5.0.1 (S5 — [PR #235](https://github.com/adriannoes/asap-protocol/pull/235))
+- [ ] `release/2.5.0` → `main`, tag `v2.5.0`, PyPI publish (S5 §3.0 — [sprint-S5-release.md](../../engineering/tasks/v2.5.0/sprint-S5-release.md))
 
 ---
 

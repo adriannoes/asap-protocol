@@ -96,9 +96,10 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
     - [x] `asap-compliance` includes `mcp-auth-bridge` profile cases for stdio MCP, including manifest tools ⊆ registered tools (merged `4b67b50`, [PR #233](https://github.com/adriannoes/asap-protocol/pull/233))
     - [x] Post-S4 refactor: unified capability metadata, `MCPAuthConfig` in `config.py`, split adapter tests (merged `a60c1e9`, [PR #234](https://github.com/adriannoes/asap-protocol/pull/234))
     - [x] TS middleware: **deferred to v2.5.0.1** per [typescript-mcp-auth-spike.md](./typescript-mcp-auth-spike.md) (MCP-TS-001..003; not a release blocker)
-    - [ ] `pyproject.toml` → **2.5.0**; tag `v2.5.0` published (S5)
-    - [ ] `AGENTS.md` knowledge map updated; CHANGELOG `[2.5.0]` with TS defer subsection (S5)
-    - [ ] Pre-push CI suite green on `release/2.5.0` (ruff, mypy, pytest ≥85% cov, pip-audit) (S5)
+    - [x] `pyproject.toml` / `src/asap/__init__.py` / `uv.lock` → **2.5.0** (S5 — [PR #235](https://github.com/adriannoes/asap-protocol/pull/235))
+    - [x] `AGENTS.md` knowledge map updated; CHANGELOG `[2.5.0]` with TS defer subsection (S5 — PR #235)
+    - [x] Pre-push CI suite green on `release/2.5.0` (ruff, mypy, pytest ≥85% cov, pip-audit) — results in [sprint-S5-release.md](./sprint-S5-release.md) §1.0 (2026-06-24)
+    - [ ] Tag `v2.5.0` published (S5 §3.2)
     - [ ] `release/2.5.0` → `main` merge + maintainer PyPI publish (S5)
 
 ## Relevant Files (overview)

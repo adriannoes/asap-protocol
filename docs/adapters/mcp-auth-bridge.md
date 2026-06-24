@@ -6,6 +6,8 @@ The `asap.adapters.mcp` package adds **opt-in** Agent JWT and capability enforce
 
 **Out of scope (v2.5.0):** An `initialize` session-token handshake is **deferred** per the [design lock](../../engineering/tasks/v2.5.0/design-lock-mcp-auth-bridge.md) — not shipped in this release. Clients must pass the Agent JWT on each protected `tools/call` via `_meta.asap_agent_jwt`.
 
+**TypeScript (v2.5.0.1):** This guide covers the **Python stdio** bridge shipped in v2.5.0. HTTP/SSE middleware for `@asap-protocol/mcp-auth` (MCP-TS-001..003) is planned for **v2.5.0.1** — see the [TypeScript spike](../../engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md) for rationale and checklist. Existing `@asap-protocol/*` npm packages remain at 2.4.1 until that follow-up release.
+
 For MCP-over-ASAP envelopes (Mode B), see [MCP integration](../mcp-integration.md).
 
 ## Architecture

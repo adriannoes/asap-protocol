@@ -25,9 +25,8 @@
 - `src/asap/__init__.py` — `__version__` (must match metadata)
 - `uv.lock` — local package version pin
 - `CHANGELOG.md` — v2.5.0 section ✅
-- `CHANGELOG.md` — v2.5.0 section
 - `product/checkpoints.md` — post-release checkpoint
-- `AGENTS.md` — knowledge map and version context
+- `AGENTS.md` — knowledge map and version context ✅
 
 ### Optional (SHOULD defer)
 - `packages/typescript/` — `@asap-protocol/mcp-auth` npm package (v2.5.0.1 if not ready)
