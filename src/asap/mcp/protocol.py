@@ -157,6 +157,7 @@ class CallToolRequestParams(BaseModel):
 
     name: str = Field(description="Tool name")
     arguments: dict[str, Any] = Field(default_factory=dict, description="Tool arguments")
+    meta: dict[str, Any] | None = Field(default=None, alias="_meta")
 
 
 class CallToolResult(BaseModel):

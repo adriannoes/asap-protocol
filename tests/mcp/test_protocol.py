@@ -73,6 +73,20 @@ def test_call_tool_request_params() -> None:
     assert params.arguments == {"message": "hi"}
 
 
+def test_call_tool_request_params_meta_alias() -> None:
+    """CallToolRequestParams accepts optional _meta for JWT carriage."""
+    params = CallToolRequestParams.model_validate(
+        {
+            "name": "echo",
+            "arguments": {},
+            "_meta": {"asap_agent_jwt": "test-agent-jwt-token"},
+        }
+    )
+    assert params.meta == {"asap_agent_jwt": "test-agent-jwt-token"}
+    dumped = params.model_dump(by_alias=True, exclude_none=True)
+    assert dumped["_meta"]["asap_agent_jwt"] == "test-agent-jwt-token"
+
+
 def test_initialize_result() -> None:
     """InitializeResult has protocolVersion, capabilities, serverInfo."""
     impl = Implementation(name="srv", version="1.0.0")
