@@ -163,16 +163,16 @@ After applying fixes, verify with:
 
 ```bash
 # 1. Full test suite (includes new streaming tests)
-PYTHONPATH=src uv run pytest -n auto -v
+uv run pytest -n auto -v
 
 # 2. Specific streaming tests
-PYTHONPATH=src uv run pytest tests/transport/test_streaming.py tests/e2e/test_streaming.py tests/transport/test_websocket.py::TestWebSocketStreamingIntegration -v
+uv run pytest tests/transport/test_streaming.py tests/e2e/test_streaming.py tests/transport/test_websocket.py::TestWebSocketStreamingIntegration -v
 
 # 3. Client retry on recoverable JSON-RPC error
-PYTHONPATH=src uv run pytest tests/transport/test_client.py -k "recoverable_json_rpc" -v
+uv run pytest tests/transport/test_client.py -k "recoverable_json_rpc" -v
 
 # 4. Error taxonomy tests
-PYTHONPATH=src uv run pytest tests/test_errors.py -v
+uv run pytest tests/test_errors.py -v
 
 # 5. Type checking
 uv run mypy src/ scripts/ tests/

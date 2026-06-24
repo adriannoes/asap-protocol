@@ -6,7 +6,7 @@
 
 **Trigger:** Authenticated `tools/call` after S1.
 **Enables:** S3 example with real grants; S4 compliance.
-**Depends on:** `validate_constraints` from `auth/capabilities.py`; S1 auth context.
+**Depends on:** `CapabilityRegistry.check_grant` and `validate_constraints` from `auth/capabilities.py`; S1 auth context.
 
 ---
 
@@ -19,7 +19,7 @@
 - `tests/adapters/mcp/test_auth_middleware.py` — extend with grant/constraint cases
 
 ### Reference
-- `src/asap/auth/capabilities.py` — `CapabilityGrant`, `validate_constraints`
+- `src/asap/auth/capabilities.py` — `CapabilityRegistry`, `CapabilityGrant`, `validate_constraints`
 - `src/asap/auth/agent_jwt.py` — `CAPABILITIES_CLAIM` in JWT
 
 ---
@@ -42,7 +42,7 @@
 
 - [ ] 1.3 Startup validation (SHOULD)
   - **File**: `src/asap/adapters/mcp/auth_middleware.py`
-  - **What**: On `protect_server`, if `config.validate_tools_at_startup`, ensure every registered tool resolves to non-empty capability
+  - **What**: On `protect_server`, if `config.validate_tools_at_startup`, ensure every registered tool resolves to a non-empty capability and `config.capability_registry.describe(capability)` is present unless an explicit defer is recorded in the design lock.
   - **Why**: MCP-MAP-003
   - **Verify**: Test fails fast when map incomplete
 
@@ -50,13 +50,13 @@
 
 - [ ] 2.1 Cross-check JWT capabilities claim vs grant store
   - **File**: `src/asap/adapters/mcp/auth_middleware.py`
-  - **What**: When `enforce_grants=True`, verify grant `status == "active"` for resolved capability; honor JWT `capabilities` claim subset
+  - **What**: When `enforce_grants=True`, call `config.capability_registry.check_grant(agent_id, resolved_capability, parsed.arguments)` and also honor the JWT `capabilities` claim subset.
   - **Why**: MCP-AUTH-003
   - **Verify**: Test denied grant → `asap:capability_denied`
 
 - [ ] 2.2 Constraint validation on arguments
   - **File**: `src/asap/adapters/mcp/auth_middleware.py`
-  - **What**: Call `validate_constraints(grant.constraints, parsed.arguments)`; format violations into `asap:constraint_violation` message
+  - **What**: Use violations returned by `CapabilityRegistry.check_grant`; call `validate_constraints(grant.constraints, parsed.arguments)` directly only in unit tests for formatting helpers. Format violations into `asap:constraint_violation` messages.
   - **Why**: PRD §4.5
   - **Integration**: Uses same constraint dict shape as ASAP task handlers
   - **Verify**: Test `max` constraint exceeded
@@ -74,6 +74,6 @@
 ## Acceptance Criteria (S2)
 
 - [ ] Tool→capability mapping with explicit map + default identity
-- [ ] Denied/inactive grants and constraint violations return correct `asap:*` codes
+- [ ] Denied/inactive grants, JWT capability-claim mismatches, and constraint violations return correct `asap:*` codes
 - [ ] Coverage ≥90% on `src/asap/adapters/mcp/` (run `pytest --cov=asap.adapters.mcp`)
 - [ ] All S1 tests still green

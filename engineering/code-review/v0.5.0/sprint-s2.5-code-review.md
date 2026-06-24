@@ -349,7 +349,7 @@ if TYPE_CHECKING:
 **Nitpick:** Consider documenting the expected parallelism level. The `-n auto` flag will detect CPU count, but it's not obvious to contributors reviewing the CI config. Add a comment:
 ```yaml
 # -n auto: Automatically detect CPU count for parallel execution
-run: uv run pytest -n auto --tb=short --cov=src --cov-report=xml
+run: uv run pytest --tb=short --cov=asap --cov-report=xml --cov-fail-under=85  # coverage job; use `-n auto` separately for fast tests
 ```
 
 ### File: `tests/transport/integration/test_rate_limiting.py` (Line 254)

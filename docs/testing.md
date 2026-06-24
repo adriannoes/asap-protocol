@@ -16,12 +16,14 @@ uv run pytest tests/transport/integration/test_rate_limiting.py -v
 # Run specific test
 uv run pytest tests/transport/integration/test_rate_limiting.py::TestRateLimiting::test_requests_within_limit_succeed -v
 
-# Run with coverage
-uv run pytest --cov=src --cov-report=html
+# Fast parallel run (CI test job — no coverage)
+uv run pytest -n auto --tb=short
 
-# Run in parallel (using pytest-xdist)
-uv run pytest -n auto
+# Coverage (dedicated run — do NOT combine with -n auto; see below)
+uv run pytest --tb=short --cov=asap --cov-report=html
 ```
+
+> **Coverage and xdist:** Do not pass `--cov` together with `-n auto`. pytest-xdist + coverage can cause `INTERNALERROR` (exit code 3). CI uses two jobs: parallel tests without coverage, then a separate coverage run. Canonical commands: [`.cursor/README.md`](../.cursor/README.md#canonical-commands) and `testing-standards.mdc`.
 
 **Why `uv run pytest` instead of `pytest`?**
 
@@ -701,9 +703,9 @@ Run all tests:
 uv run pytest
 ```
 
-Run with coverage:
+Run with coverage (no `-n auto`):
 ```bash
-uv run pytest --cov=src --cov-report=term-missing
+uv run pytest --tb=short --cov=asap --cov-report=term-missing --cov-fail-under=85
 ```
 
 Run specific test file:
@@ -723,17 +725,16 @@ uv run pytest tests/transport/unit/test_bounded_executor.py::TestBoundedExecutor
 
 ### Parallel Execution
 
-Run tests in parallel with pytest-xdist:
+Run tests in parallel with pytest-xdist (fast feedback; **no coverage**):
 ```bash
-# Automatic worker count (recommended)
-uv run pytest -n auto
+# Automatic worker count (recommended — same as CI test job)
+uv run pytest -n auto --tb=short
 
 # Specific number of workers
-uv run pytest -n 4
-
-# With coverage (coverage is aggregated automatically)
-uv run pytest -n auto --cov=src --cov-report=term-missing
+uv run pytest -n 4 --tb=short
 ```
+
+Do **not** add `--cov` to parallel runs. For coverage, use a separate command (see [Running Tests](#running-tests) or [CI Integration](#ci-integration)).
 
 **Benefits**:
 - Faster execution on multi-core systems
@@ -906,9 +907,13 @@ To run all brotli-related tests, install dev dependencies (brotli is in `[projec
 
 ## CI Integration
 
-Tests run automatically in CI with:
-- Parallel execution (`-n auto`)
-- Coverage reporting
-- All checks (linting, formatting, type checking, security)
+CI (`.github/workflows/ci.yml`) runs tests and coverage in **separate jobs**:
 
-See `.github/workflows/ci.yml` for the complete CI configuration.
+| Job | Command |
+|-----|---------|
+| **test** | `uv run pytest -n auto --tb=short` |
+| **coverage** | `uv run pytest --tb=short --cov=asap --cov-report=xml --cov-fail-under=85` |
+
+Local pre-push mirrors the coverage job; use `-n auto` only for the fast test pass.
+
+See `.github/workflows/ci.yml` for linting, formatting, type checking, and security steps.

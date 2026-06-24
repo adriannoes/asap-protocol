@@ -2,6 +2,11 @@
 description: Guidelines for professional Python development, including Pydantic v2, Python 3.13 typing, Ruff and testing.
 globs: **/*.py
 alwaysApply: true
+layer: standards
+seeAlso:
+  - .cursor/rules/agent-clean-code.mdc
+  - .cursor/rules/testing-standards.mdc
+  - .cursor/rules/security-standards.mdc
 ---
 # Python Best Practices
 

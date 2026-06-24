@@ -88,10 +88,10 @@ uv run python -m asap.examples.run_demo
 uv run pytest -n auto --tb=short
 ```
 
-With coverage:
+With coverage (separate run — do not combine with `-n auto`):
 
 ```bash
-uv run pytest --cov=src --cov-report=term-missing
+uv run pytest --tb=short --cov=asap --cov-report=term-missing --cov-fail-under=85
 ```
 
 [Testing Guide](https://github.com/adriannoes/asap-protocol/blob/main/docs/testing.md) (structure, fixtures, property/load/chaos tests). [Contributing](https://github.com/adriannoes/asap-protocol/blob/main/CONTRIBUTING.md) (dev setup, CI).

@@ -88,7 +88,7 @@
 
 - **Test runner**: Use `uv run pytest` for faster execution (uv manages deps + runs pytest)
 - **Specific tests**: `uv run pytest tests/models/` to run module tests
-- **Coverage**: `uv run pytest --cov=src tests/`
+- **Coverage**: `uv run pytest --tb=short --cov=asap tests/ --cov-fail-under=85`
 - **Schema export**: `uv run python -m asap.models --export-schemas`
 
 > **Why uv + pytest?** `uv` is 10-100x faster than pip for dependency management. `pytest` is the de-facto Python testing framework. Combined: `uv run pytest` gives us both speed and power.

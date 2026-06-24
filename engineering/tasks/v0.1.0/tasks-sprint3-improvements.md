@@ -58,7 +58,7 @@
 **Goal**: Increase test coverage for `client.py` from 87% to 95%+ by testing retry edge cases and error scenarios.
 
 - [x] 1.1 Analyze current coverage gaps ✅
-  - Run `uv run pytest tests/transport/test_client.py --cov=src/asap/transport/client --cov-report=html`
+  - Run `uv run pytest tests/transport/test_client.py --cov=asap.transport.client --cov-report=html`
   - Identify uncovered lines (200, 256, 278-285)
   - Document which scenarios are missing
   

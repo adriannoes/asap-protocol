@@ -5,7 +5,7 @@
 > **Version**: 2.5.x
 > **Status**: ACTIVE PLANNING
 > **Created**: 2026-06-22
-> **Last Updated**: 2026-06-22
+> **Last Updated**: 2026-06-24
 >
 > **Predecessor**: [prd-v2.4.1-security-hardening.md](./prd-v2.4.1-security-hardening.md) (✅ shipped 2026-06-14)
 > **Successor (long-term)**: [prd-v3.0-economy.md](./prd-v3.0-economy.md)
@@ -36,7 +36,7 @@ Between **v2.4.1** (security patch) and **v3.0** (economy), the project needs a 
 
 | Version | Codename | Primary outcome | PRD | Status |
 |---------|----------|-----------------|-----|--------|
-| **v2.5.0** | MCP Auth Bridge | ASAP Agent JWT + capabilities em MCP `tools/call` | [prd-v2.5.0-mcp-auth-bridge.md](./prd-v2.5.0-mcp-auth-bridge.md) | **IN PROGRESS** — [tasks roadmap](../../engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md) |
+| **v2.5.0** | MCP Auth Bridge | ASAP Agent JWT + capabilities em MCP `tools/call` | [prd-v2.5.0-mcp-auth-bridge.md](./prd-v2.5.0-mcp-auth-bridge.md) | **READY FOR IMPLEMENTATION** — [tasks roadmap](../../engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md) |
 | **v2.5.1** | Adapter Lab II | Enterprise/workflow adapters (ex v2.3.2) | [prd-v2.5.1-adapter-lab-ii.md](./prd-v2.5.1-adapter-lab-ii.md) | Planned (after 2.5.0) |
 | **v2.5.2** | Distribution Loop | Homepage, templates, métricas (ex v2.3.3) | [prd-v2.5.2-distribution-loop.md](./prd-v2.5.2-distribution-loop.md) | Planned (after 2.5.1) |
 | **v2.5.3** | Formal Spec & Interop | RFC spec, introspection, privacy, cross-protocol | [prd-v2.5.3-formal-spec-interop.md](./prd-v2.5.3-formal-spec-interop.md) | Planned |
@@ -98,4 +98,5 @@ Narrativa pública: **ASAP não substitui MCP** — fornece a camada de identida
 
 | Date | Change |
 |------|--------|
-| 2026-06-22 | Parent tasks 1.0–5.0 added to sprint index; awaiting LGTM for detailed sub-tasks |
+| 2026-06-22 | Parent tasks 1.0–5.0 added to sprint index |
+| 2026-06-24 | Sprint sub-tasks S0–S5 finalized; v2.5.0 marked ready for implementation |

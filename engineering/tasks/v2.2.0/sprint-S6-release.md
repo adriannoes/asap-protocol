@@ -15,7 +15,7 @@
     - [x] `uv run ruff check .` — exit 0
     - [x] `uv run ruff format --check .` — exit 0 (367 files)
     - [x] `uv run mypy src/ scripts/ tests/` — exit 0 (342 source files)
-    - [x] `PYTHONPATH=src uv run pytest --cov=src --cov-report=xml` — exit 0 (2941 passed, 7 skipped)
+    - [x] `uv run pytest --tb=short --cov=asap --cov-report=xml --cov-fail-under=85` — exit 0 (2941 passed, 7 skipped)
     - [x] `uv run pip-audit --ignore-vuln CVE-2026-4539` — exit 0 (0 vulns, 1 ignored/Pygments)
   - **Fix applied**: `uv lock --upgrade-package pillow --upgrade-package pytest --upgrade-package python-multipart --upgrade-package langsmith` → pillow 12.2.0, pytest 9.0.3, python-multipart 0.0.26, langsmith 0.7.32
   - **Verify**: All commands exit 0 ✅
@@ -23,7 +23,7 @@
 - [x] 1.2 Review test coverage
   - **What**: Ensure >= 90% coverage for all new v2.2 code (auth/identity, auth/capabilities, auth/lifecycle, auth/approval, auth/self_auth, auth/agent_jwt, models/payloads TaskStream, transport/server new endpoints, economics/audit).
   - **Verify**: Coverage report confirms
-  - **Result** (aggregate of listed files, `uv run coverage report` after `pytest --cov=src`): **≥ 90%** overall (≈ **90.4%**). Highlights: `approval.py` and `audit.py` at **100%**, `payloads.py` **100%**, `agent_jwt` **~97%**, `identity` **~94%**, `server.py` **~82%** for the full file (large file + legacy routes; per-module new-code criterion is met in the aggregate).
+  - **Result** (aggregate of listed files, `uv run coverage report` after `pytest --tb=short --cov=asap --cov-fail-under=85`): **≥ 90%** overall (≈ **90.4%**). Highlights: `approval.py` and `audit.py` at **100%**, `payloads.py` **100%**, `agent_jwt` **~97%**, `identity` **~94%**, `server.py` **~82%** for the full file (large file + legacy routes; per-module new-code criterion is met in the aggregate).
 
 ### 2.0 Version & Documentation
 

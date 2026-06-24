@@ -56,7 +56,7 @@
 
 
 - [x] 13.1.1 Run full test suite
-  - Command: `PYTHONPATH=src uv run pytest -v --cov=src --cov-report=term-missing`
+  - Command: `uv run pytest --tb=short -v --cov=asap --cov-report=term-missing --cov-fail-under=85`
   - Result: 1379 passed, 5 skipped (~62s)
   - Coverage: 94.84% (raised from 93.98%; target ≥95% — close)
 

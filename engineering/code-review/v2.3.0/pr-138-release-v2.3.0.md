@@ -127,7 +127,7 @@ All verifications are read-only and non-destructive:
 
 > **Test suite (confirm new tests pass):**
 > ```bash
-> PYTHONPATH=src uv run pytest tests/models/test_validators.py tests/registry/test_receipt_cache.py tests/testing/test_assertions.py tests/adapters/openapi/test_handler.py -v
+> uv run pytest tests/models/test_validators.py tests/registry/test_receipt_cache.py tests/testing/test_assertions.py tests/adapters/openapi/test_handler.py -v
 > ```
 
 ---

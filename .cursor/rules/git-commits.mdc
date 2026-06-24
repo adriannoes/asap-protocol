@@ -1,6 +1,11 @@
 ---
 description: "Apply when generating git commit messages, performing commits, pushing to remote, or suggesting commit-related changes. Enforces Conventional Commits format and pre-push CI verification."
 alwaysApply: true
+layer: workflow
+seeAlso:
+  - .cursor/README.md
+  - CONTRIBUTING.md
+canonicalCommands: .cursor/README.md#canonical-commands
 ---
 
 # Git Conventional Commits
@@ -42,7 +47,7 @@ Before pushing to the repository, always run the full CI check suite locally to 
 1. **Linting**: `uv run ruff check .` - Verify code style and catch common errors
 2. **Formatting**: `uv run ruff format --check .` - Ensure consistent code formatting (or `uv run ruff format .` to auto-fix)
 3. **Type Checking**: `uv run mypy src/ scripts/ tests/` - Validate type annotations (strict for src/scripts, relaxed for tests)
-4. **Tests**: `PYTHONPATH=src uv run pytest --cov=src --cov-report=xml` - Run full test suite with coverage
+4. **Tests**: `uv run pytest --tb=short --cov=asap --cov-report=xml --cov-fail-under=85` - Run full test suite with coverage (no `-n auto`; see `.cursor/README.md`)
 5. **Security**: `uv sync --frozen --all-extras --dev --no-extra crewai --no-extra llamaindex && uv run pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-4963 --ignore-vuln CVE-2026-2654 --ignore-vuln PYSEC-2024-271 --ignore-vuln PYSEC-2026-89 --ignore-vuln PYSEC-2025-183` — same as the CI security job (see `SECURITY.md`); use full `uv sync --frozen --all-extras --dev` when auditing optional integration extras separately
 
 ### Pre-Push CI Verification (Web App / TypeScript)

@@ -136,4 +136,4 @@
 - [x] `from asap.client import MarketClient` works
 - [x] resolve + run in &lt;5 lines; tests pass
 - [x] Raw Fetch doc exists
-- [x] `PYTHONPATH=src uv run pytest tests/client/ -v` passes
+- [x] `uv run pytest tests/client/ -v` passes

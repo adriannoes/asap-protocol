@@ -16,7 +16,7 @@ Run from repository root (`/Users/adrianno/GitHub/asap-protocol` or CI clone):
 | Lint | `uv run ruff check .` | |
 | Format | `uv run ruff format --check .` | |
 | Types | `uv run mypy src/ scripts/ tests/` | |
-| Python tests | `PYTHONPATH=src uv run pytest --cov=src --cov-report=xml` | **2026-05-04**: 3213 passed, 11 skipped (requires extras incl. `webauthn` for full collection) |
+| Python tests | `uv run pytest --tb=short --cov=asap --cov-report=xml --cov-fail-under=85` | **2026-05-04**: 3213 passed, 11 skipped (requires extras incl. `webauthn` for full collection) |
 | pip-audit | `uv run pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-4963 --ignore-vuln CVE-2026-2654 --ignore-vuln PYSEC-2024-271 --ignore-vuln PYSEC-2026-89 --ignore-vuln PYSEC-2025-183` | Same ignores as CI |
 | TS client | `pnpm install && pnpm test && pnpm typecheck && pnpm lint` | Root `package.json` delegates to `@asap-protocol/client` + `example-nextjs` lint |
 | Web app (if touched) | `cd apps/web && pnpm test` | Vitest; Playwright E2E optional for release gate |

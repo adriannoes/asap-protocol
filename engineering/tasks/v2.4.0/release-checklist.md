@@ -14,7 +14,7 @@
 | Lint | `uv run ruff check .` | ✅ PR #178 / pre-tag |
 | Format | `uv run ruff format --check .` | ✅ PR #178 / pre-tag |
 | Types | `uv run mypy src/ scripts/ tests/` | ✅ PR #178 / pre-tag |
-| Python tests | `PYTHONPATH=src uv run pytest` | ✅ 3439 passed (PR #178) |
+| Python tests | `uv run pytest` | ✅ 3439 passed (PR #178) |
 | Web | `cd apps/web && pnpm lint && pnpm exec tsc --noEmit && pnpm test` | ✅ PR #178 / pre-tag |
 | TS client | `pnpm --filter @asap-protocol/client test` | ✅ 105 tests (PR #178) |
 

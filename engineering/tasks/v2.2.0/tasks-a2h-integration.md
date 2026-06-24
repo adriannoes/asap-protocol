@@ -32,7 +32,7 @@
 ### Notes
 
 - Unit tests should be placed in `tests/` mirroring the `src/` structure.
-- Use `PYTHONPATH=src uv run pytest tests/[path] -v` to run tests.
+- Use `uv run pytest tests/[path] -v` to run tests.
 - The `handlers/` package is documented in `AGENTS.md` but does not exist yet — must be created with `__init__.py`.
 - A2H integration uses only existing dependencies (`httpx`, `pydantic`) — **no changes** to `pyproject.toml`.
 - Follow existing integration pattern from `src/asap/integrations/langchain.py` for lazy imports and `src/asap/integrations/openclaw.py` for client-style integrations.
@@ -83,7 +83,7 @@
     - `test_non_conforming_class_fails` — Create a class missing the method. Verify `isinstance()` is `False`.
   - **Why**: Validates that the Protocol is runtime-checkable and models serialize correctly. These tests must pass before Task 4.0 builds on top.
   - **Pattern**: Follow `tests/integrations/test_openclaw.py` structure (imports, fixtures, test naming).
-  - **Verify**: `PYTHONPATH=src uv run pytest tests/handlers/test_hitl.py -v` — all tests pass.
+  - **Verify**: `uv run pytest tests/handlers/test_hitl.py -v` — all tests pass.
 
 - [x] 1.4 Commit
   - **Command**: `git add src/asap/handlers/ tests/handlers/ && git commit -m "feat(handlers): add HumanApprovalProvider protocol and ApprovalResult model"`
@@ -316,7 +316,7 @@
     - Use `unittest.mock.AsyncMock` and `patch("httpx.AsyncClient.request")` or `patch("httpx.AsyncClient.send")` to mock HTTP calls. Alternative: use `respx` if available in dev deps.
   - **Why**: Comprehensive test coverage for the A2H client. All network calls mocked — no external dependencies.
   - **Pattern**: Follow `tests/integrations/test_openclaw.py` for mock patterns and test structure.
-  - **Verify**: `PYTHONPATH=src uv run pytest tests/integrations/test_a2h.py -v` — all tests pass.
+  - **Verify**: `uv run pytest tests/integrations/test_a2h.py -v` — all tests pass.
 
 - [x] 4.3 Write A2HApprovalProvider tests
   - **File**: `tests/integrations/test_a2h.py` (modify — append after client tests)
@@ -328,7 +328,7 @@
     - `test_a2h_provider_timeout_propagates` — Mock `authorize()` raising `TimeoutError`. Verify it propagates to caller.
     - `test_a2h_provider_notify` — Mock `A2HClient.inform()`. Call `notify()`. Verify `inform()` was called and returns `interaction_id`.
   - **Why**: Validates the bridge between the generic HITL Protocol and A2H-specific implementation.
-  - **Verify**: `PYTHONPATH=src uv run pytest tests/integrations/test_a2h.py -v -k "provider"` — all provider tests pass.
+  - **Verify**: `uv run pytest tests/integrations/test_a2h.py -v -k "provider"` — all provider tests pass.
 
 - [x] 4.4 Commit
   - **Command**: `git add tests/integrations/test_a2h.py src/asap/integrations/a2h.py && git commit -m "feat(integrations): add A2HApprovalProvider and comprehensive A2H tests"`
@@ -340,7 +340,7 @@
 - [ ] `notify()` wraps `A2HClient.inform()`.
 - [ ] All tests in `tests/integrations/test_a2h.py` pass.
 - [ ] Test coverage ≥ 90% on `src/asap/integrations/a2h.py`.
-- [ ] `PYTHONPATH=src uv run pytest tests/integrations/test_a2h.py tests/handlers/test_hitl.py -v` — all pass.
+- [ ] `uv run pytest tests/integrations/test_a2h.py tests/handlers/test_hitl.py -v` — all pass.
 
 ---
 
@@ -379,7 +379,7 @@
   - **What**: Add test cases verifying `A2HClient` and `A2HApprovalProvider` are importable from `asap.integrations`. Follow the existing test pattern in this file.
   - **Why**: Ensures lazy exports work correctly and don't regress.
   - **Pattern**: Follow existing tests in the same file.
-  - **Verify**: `PYTHONPATH=src uv run pytest tests/integrations/test_integrations_init.py -v` — all pass.
+  - **Verify**: `uv run pytest tests/integrations/test_integrations_init.py -v` — all pass.
 
 - [x] 5.3 Create A2H approval example module
   - **File**: `src/asap/examples/a2h_approval.py` (create new)
@@ -407,7 +407,7 @@
     - In `test_a2h_approval.py`: Create a smoke test that imports the module and verifies `main` and `run_approval_demo` are callable (following `tests/examples/test_echo_agent.py` pattern). Do NOT make real HTTP calls.
   - **Why**: Keeps the examples README complete and ensures the module is importable without errors.
   - **Pattern**: Follow `tests/examples/test_echo_agent.py` for smoke test structure.
-  - **Verify**: `PYTHONPATH=src uv run pytest tests/examples/test_a2h_approval.py -v` passes.
+  - **Verify**: `uv run pytest tests/examples/test_a2h_approval.py -v` passes.
 
 - [x] 5.5 Update `AGENTS.md`
   - **File**: `AGENTS.md` (modify existing)
@@ -416,7 +416,7 @@
   - **Verify**: `grep "A2H" AGENTS.md` returns a match.
 
 - [x] 5.6 Run full CI check suite
-  - **Command**: `uv run ruff check . && uv run ruff format --check . && uv run mypy src/ scripts/ tests/ && PYTHONPATH=src uv run pytest tests/handlers/ tests/integrations/test_a2h.py tests/integrations/test_integrations_init.py tests/examples/test_a2h_approval.py -v`
+  - **Command**: `uv run ruff check . && uv run ruff format --check . && uv run mypy src/ scripts/ tests/ && uv run pytest tests/handlers/ tests/integrations/test_a2h.py tests/integrations/test_integrations_init.py tests/examples/test_a2h_approval.py -v`
   - **What**: Run linting, formatting, type checking, and all A2H-related tests.
   - **Why**: Pre-push CI verification per git-commits.mdc rules.
   - **Verify**: All commands exit 0.
