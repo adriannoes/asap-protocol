@@ -78,8 +78,7 @@ def protect_server(server: MCPServer, config: MCPAuthConfig) -> MCPServer:
     Returns:
         Protected server instance; unprotected ``MCPServer`` usage remains valid when
         this function is not called.
-
-    Raises:
-        NotImplementedError: Until S1 core middleware is implemented.
     """
-    raise NotImplementedError("protect_server is implemented in sprint S1")
+    from asap.adapters.mcp.protected_server import ProtectedMCPServer
+
+    return ProtectedMCPServer.from_server(server, config)
