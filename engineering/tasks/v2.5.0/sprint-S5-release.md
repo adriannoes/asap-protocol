@@ -4,7 +4,7 @@
 **Branch**: `feat/v2.5.0-s5-release` → merge into **`release/2.5.0`**, then **`release/2.5.0` → `main`**
 **Depends on**: S0–S4 complete on `release/2.5.0`
 
-> **Status:** PR [#235](https://github.com/adriannoes/asap-protocol/pull/235) open (`feat/v2.5.0-s5-release` → `release/2.5.0`). **1.0** ✅ · **2.0** ✅ — awaiting review; then **3.1** PR `release/2.5.0` → `main` + tag on `main`.
+> **Status:** **3.1** — [PR #236](https://github.com/adriannoes/asap-protocol/pull/236) (`release/2.5.0` → `main`). **1.0** ✅ · **2.0** ✅ · S5 prep merged ([#235](https://github.com/adriannoes/asap-protocol/pull/235)). Pós-merge: **3.2** tag `v2.5.0` na `main` · **3.3** checkpoints.
 
 **Trigger:** All sprint acceptance criteria met on integration branch.
 **Enables:** v2.5.1 Adapter Lab II.
@@ -75,6 +75,7 @@
 - [ ] 3.1 Open PR `release/2.5.0` → `main`
   - **What**: Squash or merge commit per repo convention; include all sprint summaries in PR body
   - **Verify**: CI green on PR
+  - **Status**: [PR #236](https://github.com/adriannoes/asap-protocol/pull/236) open (2026-06-24)
 
 - [ ] 3.2 Tag `v2.5.0`
   - **Command**: `git tag -a v2.5.0 -m "v2.5.0: MCP Auth Bridge"`

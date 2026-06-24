@@ -184,4 +184,4 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
 | 2026-06-24 | S4 acceptance gate green on `feat/v2.5.0-s4-compliance` (pytest + ruff + mypy); PR pending merge into `release/2.5.0` |
 | 2026-06-24 | S4 merged on `release/2.5.0` (`4b67b50`, [PR #233](https://github.com/adriannoes/asap-protocol/pull/233)); `mcp-auth-bridge` compliance profile, stdio integration tests, CI on `release/2.5.0`, TS `@asap-protocol/mcp-auth` defer to v2.5.0.1; S5 release pending |
 | 2026-06-24 | Post-S4 refactor merged (`a60c1e9`, [PR #234](https://github.com/adriannoes/asap-protocol/pull/234)); `MCPAuthConfig` → `config.py`, adapter tests split; branch synced with `origin/release/2.5.0`; S5 active |
-| 2026-06-24 | S5 release prep — [PR #235](https://github.com/adriannoes/asap-protocol/pull/235) (`feat/v2.5.0-s5-release` → `release/2.5.0`): version 2.5.0, CHANGELOG, docs sync; awaiting review |
+| 2026-06-24 | S5 release prep — [PR #235](https://github.com/adriannoes/asap-protocol/pull/235) merged; [PR #236](https://github.com/adriannoes/asap-protocol/pull/236) `release/2.5.0` → `main` |
