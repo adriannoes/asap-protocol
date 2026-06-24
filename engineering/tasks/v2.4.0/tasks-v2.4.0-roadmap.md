@@ -1,8 +1,9 @@
 # v2.4.0 Roadmap — Edge-AI Discovery & ShellClaw Onboarding
 
+> **PRD:** [prd-v2.4.0-edge-ai-discovery.md](../../../product/prd/prd-v2.4.0-edge-ai-discovery.md) (✅ shipped 2026-05-24)
+> **Next train:** [prd-v2.5-roadmap.md](../../../product/prd/prd-v2.5-roadmap.md)
 > **Context:** [asap-protocol-questions-for-upstream.md](../../../product/prd/private/asap-protocol-questions-for-upstream.md) (ShellClaw v1.0 literals + v2.4 proposal).
 > **Related proposal:** [asap-protocol-edge-ai-capabilities.md](../../../product/prd/private/asap-protocol-edge-ai-capabilities.md)
-> **PyPI target:** Minor bump after v2.3.x — additive, backward-compatible.
 
 ---
 

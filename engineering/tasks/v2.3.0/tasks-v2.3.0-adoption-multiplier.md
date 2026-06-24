@@ -69,7 +69,7 @@ Total target: **6–8 weeks** end-to-end (parallelism reduces wall-clock to ~4 w
 
 ## Strategic Bet
 
-The 500-agent trigger (original v2.3 Registry API gate) is treated as an **outcome metric**, not a prerequisite. The hypothesis: OpenAPI Adapter (zero-code) + TypeScript SDK (dominant AI ecosystem) + Auto-Registration (no PR friction) generates the agent volume. If the hypothesis holds within 90 days, the deferred Registry API Backend returns as a v2.3.x or v2.4.x patch release.
+The 500-agent trigger (original v2.3 Registry API gate) is treated as an **outcome metric**, not a prerequisite. The hypothesis: OpenAPI Adapter (zero-code) + TypeScript SDK (dominant AI ecosystem) + Auto-Registration (no PR friction) generates the agent volume. If the hypothesis holds within 90 days, the deferred Registry API Backend returns as a v2.5.x or v3.x patch release.
 
 ## Deferred (will return only when triggers fire)
 
@@ -77,6 +77,6 @@ The 500-agent trigger (original v2.3 Registry API gate) is treated as an **outco
 - Intent-Based Directory Search — gated by Registry API Backend
 - Orchestration Primitives — gated by 10+ users requesting multi-agent flows
 - Delegated/Autonomous Mode formalization — gated by capability escalation usage data
-- Capability-Aware Introspection (RFC 7662) — moved to v2.4 Spec & Interop
-- Privacy Considerations spec — moved to v2.4 Spec & Interop
+- Capability-Aware Introspection (RFC 7662) — moved to v2.5.3 Formal Spec & Interop
+- Privacy Considerations spec — moved to v2.5.3 Formal Spec & Interop
 - DeepEval Intelligence Layer — gated by 3+ requests

@@ -40,20 +40,23 @@ product/
 | **v2.2.0** | **✅ Released (2026-04-15)** | `prd-v2.2-protocol-hardening.md` | Identity, capabilities, streaming, batch, audit |
 | **v2.2.1** | **✅ Released (2026-04-21)** | `prd-v2.2.1-patch.md` | WebAuthn real, CLI compliance/audit |
 | v2.3.0 — Adoption Core | ✅ Released (2026-05-04) | `prd-v2.3-scale.md` | OpenAPI Adapter, TypeScript SDK, Auto-Registration, escalation, ASAP challenge |
-| v2.3.1 — Framework adapters (npm) | ✅ Released (2026-05-21) | — (private PRD) | `@asap-protocol/mastra`, `@asap-protocol/openai-agents` @ 2.3.1; Python core stays 2.3.0 |
-| v2.3.2 — Adapter Lab II | 🔒 Private planning | `prd/private/prd-v2.3.2-enterprise-workflow-adapters.md` | Microsoft Agent Framework, Haystack, Letta, workflow automation |
-| v2.3.3 — Distribution Loop | 🔒 Private planning | `prd/private/prd-v2.3.3-distribution-loop.md` | Templates, docs, homepage, metrics, developer activation |
-| **v2.4.1 — Security hardening** | **✅ Released (2026-06-14)** | `engineering/tasks/private/v2.4.1/` | OAuth2 iss/aud validation, fail-closed identity binding, web SSRF/redirect hardening, dependency bumps |
-| **v2.4.0 — Edge-AI discovery** | **✅ Released (2026-05-24)** | `engineering/tasks/v2.4.0/` | Hardware/inference manifest fields, registry mirror, marketplace filters, ShellClaw onboarding |
-| v2.4.x — Spec & Interop (deferred PRD) | 🔭 Vision draft | `prd-v2.4-adoption.md` | MCP Auth Bridge, Formal Spec, Introspection, Privacy (not in shipped 2.4.0 scope) |
+| v2.3.1 — Framework adapters (npm) | ✅ Released (2026-05-21) | `private/prd-v2.3.1-adapter-lab.md` | `@asap-protocol/mastra`, `@asap-protocol/openai-agents` @ 2.3.1; Python core stays 2.3.0 |
+| **v2.4.0 — Edge-AI discovery** | **✅ Released (2026-05-24)** | `prd-v2.4.0-edge-ai-discovery.md` | Hardware/inference manifest fields, registry mirror, marketplace filters, ShellClaw onboarding |
+| **v2.4.1 — Security hardening** | **✅ Released (2026-06-14)** | `prd-v2.4.1-security-hardening.md` | OAuth2 iss/aud validation, fail-closed identity binding, web SSRF/redirect hardening |
+| **v2.5.0 — MCP Auth Bridge** | 🔵 **In progress** | `prd-v2.5.0-mcp-auth-bridge.md` + [tasks-v2.5.0-roadmap.md](../engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md) | Parent tasks defined; sub-tasks after LGTM |
+| v2.5.1 — Adapter Lab II | 🔭 Planned (after 2.5.0) | `prd-v2.5.1-adapter-lab-ii.md` | Enterprise/workflow adapters (ex v2.3.2) |
+| v2.5.2 — Distribution Loop | 🔭 Planned (after 2.5.1) | `prd-v2.5.2-distribution-loop.md` | Homepage, templates, metrics (ex v2.3.3) |
+| v2.5.3 — Formal Spec & Interop | 🔭 Planned | `prd-v2.5.3-formal-spec-interop.md` | RFC spec, introspection, privacy, cross-protocol |
+| v2.5.x train index | Active | `prd-v2.5-roadmap.md` | Full schedule + rescope log |
 | v3.0 — Economy | 🔭 Long-term | `prd-v3.0-economy.md` | Settlement, billing |
 
-> **Strategic note**: Registry API Backend (PostgreSQL), Intent-Based Search, Orchestration Primitives, Delegated/Autonomous Mode formalization, and DeepEval remain deferred until their triggers materialize. The v2.3.x train now treats adoption as the primary product: make existing APIs, SDKs, CLIs, and agent frameworks usable by agents with minimal human coordination.
-
-> **Visibility policy**: Public docs should explain the stable protocol, released capabilities, adoption guides, and high-level roadmap. Detailed go-to-market, pricing, private feature timing, fundraising, and near-term tactical PRDs live in ignored private folders.
+> **Strategic note**: Registry API Backend (PostgreSQL), Intent-Based Search, Orchestration Primitives, Delegated/Autonomous Mode formalization, and DeepEval remain deferred until their triggers materialize. **Adoption continuation** (Adapter Lab II, Distribution Loop) lives in the **v2.5.1–v2.5.2** train after MCP Auth Bridge (v2.5.0). See [prd/README.md](./prd/README.md).
 
 ## Key entrypoints
 
+- **[PRD index](./prd/README.md)** — All versioned requirements.
+- **[Tasks index](../engineering/tasks/README.md)** — Sprint folders per release.
 - **[Decision index](./decision-records/README.md)** — ADR catalog.
-- **[Documentation checkpoints](./checkpoints.md)** — When to refresh PRDs and retros after releases.
-- **`prd/`** — Versioned requirements; open files matching shipped releases for authoritative scope.
+- **[Documentation checkpoints](./checkpoints.md)** — Post-release PRD refresh schedule.
+
+> **Visibility policy**: Public docs should explain the stable protocol, released capabilities, adoption guides, and high-level roadmap. Detailed go-to-market, pricing, private feature timing, fundraising, and near-term tactical PRDs live in ignored private folders.

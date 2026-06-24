@@ -8,7 +8,7 @@
 > **Last Updated**: 2026-05-14
 > **Origin**: Items deferred from [prd-v2.2-scale.md](./prd-v2.2-scale.md) per strategic review (2026-03), then **rescoped** in 2026-04 after v2.2.0 audit.
 > **Predecessor**: [prd-v2.2.1-patch.md](./prd-v2.2.1-patch.md) (carry-over patch)
-> **Successor**: [prd-v2.4-adoption.md](./prd-v2.4-adoption.md)
+> **Successor**: [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md)
 
 ### Delivery summary (2026-05-04)
 
@@ -327,16 +327,16 @@ Inherited as a conscious carry-over from the v2.2.1 tech-debt sweep (2026-04-22)
 
 ---
 
-## 7.1 v2.3.x Patch Train
+## 7.1 v2.3.x Patch Train (shipped) + v2.5.x continuation
 
-The v2.3 line should be split into smaller adoption releases so the project shows continuous progress while learning what the market values.
+The v2.3 line shipped **v2.3.0** (public) and **v2.3.1** (private). Further adoption patches were **renumbered to v2.5.1–v2.5.2** after v2.4.0/v2.4.1 — see [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md).
 
-| Version | Codename | Primary Outcome | Public Surface | Private Planning |
-|---------|----------|-----------------|----------------|------------------|
-| v2.3.0 | Adoption Core | OpenAPI onboarding + TypeScript SDK foundation | Public PRD + tasks | This PRD |
-| v2.3.1 | Adapter Lab I | Validate high-signal agent-framework adapters | Release notes, docs, examples | `prd/private/prd-v2.3.1-adapter-lab.md` |
-| v2.3.2 | Adapter Lab II | Expand to enterprise/workflow ecosystems only where demand appears | Release notes, docs, examples | `prd/private/prd-v2.3.2-enterprise-workflow-adapters.md` |
-| v2.3.3 | Distribution Loop | Improve templates, homepage, docs routing, metrics, and examples | Site + docs + telemetry | `prd/private/prd-v2.3.3-distribution-loop.md` |
+| Version | Codename | Status | PRD |
+|---------|----------|--------|-----|
+| v2.3.0 | Adoption Core | ✅ Shipped | This PRD |
+| v2.3.1 | Adapter Lab I | ✅ Shipped | `private/prd-v2.3.1-adapter-lab.md` |
+| ~~v2.3.2~~ → **v2.5.1** | Adapter Lab II | Planned | [prd-v2.5.1-adapter-lab-ii.md](./prd-v2.5.1-adapter-lab-ii.md) |
+| ~~v2.3.3~~ → **v2.5.2** | Distribution Loop | Planned | [prd-v2.5.2-distribution-loop.md](./prd-v2.5.2-distribution-loop.md) |
 
 Patch releases must remain additive: no wire-protocol breaking changes, no new paid feature launch, and no Registry API Backend unless the 500-agent or IssueOps-bottleneck trigger fires.
 
@@ -364,7 +364,9 @@ Patch releases must remain additive: no wire-protocol breaking changes, no new p
 - **Carry-over patch (predecessor)**: [prd-v2.2.1-patch.md](./prd-v2.2.1-patch.md)
 - **Protocol Hardening (v2.2 foundation)**: [prd-v2.2-protocol-hardening.md](./prd-v2.2-protocol-hardening.md)
 - **Previous major release**: [prd-v2.1-ecosystem.md](./prd-v2.1-ecosystem.md)
-- **Next version (Spec & Interop)**: [prd-v2.4-adoption.md](./prd-v2.4-adoption.md) — MCP Auth Bridge, formal spec, introspection, privacy
+- **Shipped v2.4.0**: [prd-v2.4.0-edge-ai-discovery.md](./prd-v2.4.0-edge-ai-discovery.md)
+- **Shipped v2.4.1**: [prd-v2.4.1-security-hardening.md](./prd-v2.4.1-security-hardening.md)
+- **Next train (v2.5.x)**: [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md) — MCP Auth Bridge (v2.5.0), adoption (v2.5.1–2), formal spec (v2.5.3)
 
 ### Engineering execution
 
