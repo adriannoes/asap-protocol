@@ -4,12 +4,11 @@ import {
   Fingerprint,
   KeySquare,
   GitBranch,
-  Layers,
   ShieldCheck,
   Sparkles,
   ArrowUpRight,
   Code,
-  Cpu,
+  BookOpen,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -23,58 +22,39 @@ type Pill = {
 };
 
 const CHANGELOG_URL =
-  'https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#241---2026-06-14';
-const DOCS_EDGE_AI =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md#hardware-and-inference-capabilities-v24';
+  'https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#250---2026-06-24';
+const DOCS_MCP_AUTH_BRIDGE =
+  'https://github.com/adriannoes/asap-protocol/blob/main/docs/adapters/mcp-auth-bridge.md';
+const DOCS_MCP_INTEGRATION =
+  'https://github.com/adriannoes/asap-protocol/blob/main/docs/mcp-integration.md';
+const DOCS_MIGRATION_250 =
+  'https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md#upgrading-from-v241-to-v250';
+const EXAMPLE_MCP_AUTH_BRIDGE =
+  'https://github.com/adriannoes/asap-protocol/tree/main/examples/mcp_auth_bridge';
 const DOCS_TS_SDK =
   'https://github.com/adriannoes/asap-protocol/blob/main/docs/sdks/typescript.md';
-const DOCS_OPENAPI =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/adapters/openapi.md';
-const DOCS_AUTO_REG =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/registry/auto-registration.md';
-const DOCS_ESCALATION =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/capabilities/escalation.md';
 
 const PILLS: Pill[] = [
   {
-    label: 'Edge-AI fields',
-    href: DOCS_EDGE_AI,
-    icon: Cpu,
+    label: 'MCP Auth Bridge',
+    href: DOCS_MCP_AUTH_BRIDGE,
+    icon: ShieldCheck,
     external: true,
-    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsOpenapi,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsMcpAuthBridge,
   },
   {
-    label: 'ShellClaw',
-    href: '/shellclaw',
-    icon: Sparkles,
-    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsAutoRegistration,
-  },
-  {
-    label: 'Browse filters',
-    href: '/browse',
-    icon: Layers,
-    dataCta: WHATS_NEW_RIBBON_CTA_IDS.featureScopedCapabilities,
-  },
-  {
-    label: 'TypeScript SDK',
-    href: DOCS_TS_SDK,
-    icon: Code,
+    label: 'MCP modes',
+    href: DOCS_MCP_INTEGRATION,
+    icon: BookOpen,
     external: true,
-    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsTypescript,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsMcpIntegration,
   },
   {
-    label: 'OpenAPI',
-    href: DOCS_OPENAPI,
-    icon: Layers,
-    external: true,
-    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsOpenapi,
-  },
-  {
-    label: 'Auto-Reg',
-    href: DOCS_AUTO_REG,
+    label: 'Example',
+    href: EXAMPLE_MCP_AUTH_BRIDGE,
     icon: Sparkles,
     external: true,
-    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsAutoRegistration,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsMcpAuthExample,
   },
   {
     label: 'Identity',
@@ -89,11 +69,18 @@ const PILLS: Pill[] = [
     dataCta: WHATS_NEW_RIBBON_CTA_IDS.featureScopedCapabilities,
   },
   {
-    label: 'Escalation',
-    href: DOCS_ESCALATION,
-    icon: ShieldCheck,
+    label: 'TypeScript SDK',
+    href: DOCS_TS_SDK,
+    icon: Code,
     external: true,
-    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsCapabilitiesEscalation,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsTypescript,
+  },
+  {
+    label: 'Migration',
+    href: DOCS_MIGRATION_250,
+    icon: BookOpen,
+    external: true,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsMigration250,
   },
   {
     label: 'Changelog',
@@ -107,7 +94,7 @@ const PILLS: Pill[] = [
 export function WhatsNewRibbon() {
   return (
     <aside
-      aria-label="What's new in ASAP Protocol v2.4.1"
+      aria-label="What's new in ASAP Protocol v2.5.0"
       className="w-full border-y border-zinc-900 bg-zinc-950"
     >
       <div className="container mx-auto flex max-w-5xl flex-col gap-4 px-4 py-8 md:flex-row md:items-center md:gap-4 md:px-6 md:py-10">
@@ -115,10 +102,10 @@ export function WhatsNewRibbon() {
           <Sparkles className="h-4 w-4 shrink-0 text-indigo-400" aria-hidden />
           <div className="flex flex-col">
             <span className="font-mono text-xs uppercase tracking-wider text-indigo-400">
-              What&apos;s new in v2.4.1
+              What&apos;s new in v2.5.0
             </span>
             <span className="text-xs text-zinc-500">
-              Security hardening patch — June 2026
+              MCP Auth Bridge — June 2026
             </span>
           </div>
         </div>

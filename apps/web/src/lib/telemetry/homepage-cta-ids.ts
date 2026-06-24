@@ -11,6 +11,10 @@ export const HOMEPAGE_HERO_CTA_IDS = {
 
 /** CTA ids used by the “What’s new” ribbon (subset also appears in {@link HOMEPAGE_CTA_IDS}). */
 export const WHATS_NEW_RIBBON_CTA_IDS = {
+  docsMcpAuthBridge: 'docs-mcp-auth-bridge',
+  docsMcpIntegration: 'docs-mcp-integration',
+  docsMcpAuthExample: 'docs-mcp-auth-example',
+  docsMigration250: 'docs-migration-250',
   docsOpenapi: 'docs-openapi',
   docsTypescript: 'docs-typescript',
   docsMastraIntegration: 'docs-mastra-integration',
@@ -43,12 +47,11 @@ export const HOMEPAGE_CTA_IDS = [
   HOMEPAGE_HERO_CTA_IDS.releaseBadge,
   HOMEPAGE_HERO_CTA_IDS.exploreAgents,
   HOMEPAGE_HERO_CTA_IDS.registerAgent,
-  WHATS_NEW_RIBBON_CTA_IDS.docsOpenapi,
+  WHATS_NEW_RIBBON_CTA_IDS.docsMcpAuthBridge,
+  WHATS_NEW_RIBBON_CTA_IDS.docsMcpIntegration,
+  WHATS_NEW_RIBBON_CTA_IDS.docsMcpAuthExample,
+  WHATS_NEW_RIBBON_CTA_IDS.docsMigration250,
   WHATS_NEW_RIBBON_CTA_IDS.docsTypescript,
-  WHATS_NEW_RIBBON_CTA_IDS.docsMastraIntegration,
-  WHATS_NEW_RIBBON_CTA_IDS.docsOpenaiAgentsIntegration,
-  WHATS_NEW_RIBBON_CTA_IDS.docsAutoRegistration,
-  WHATS_NEW_RIBBON_CTA_IDS.docsCapabilitiesEscalation,
   ...LANDING_FEATURE_SLUGS.map((slug) => `feature-${slug}` as const),
   WHATS_NEW_RIBBON_CTA_IDS.releaseChangelogGithub,
 ] as const;

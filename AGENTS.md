@@ -9,8 +9,8 @@
 **ASAP Protocol** (Async Simple Agent Protocol) is a production-ready standard for agent-to-agent communication.
 - **Stack**: Python 3.13+, FastAPI, Pydantic v2.
 - **Transport**: JSON-RPC 2.0 over HTTP/WebSocket.
-- **Status**: v2.5.0 shipped on `main` (2026-06-24, tag [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0)); **PyPI** `asap-protocol` **2.5.0** via maintainer publish workflow; **npm** `@asap-protocol/client` remains **2.4.1** until v2.5.0.1 (`@asap-protocol/mcp-auth` deferred).
-- **Framework Integrations**: LangChain, CrewAI, PydanticAI, LlamaIndex, SmolAgents, Vercel AI SDK, MCP, OpenClaw, A2H.
+- **Status**: v2.5.0 shipped on `main` (2026-06-24, tag [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0)); **PyPI** `asap-protocol` **2.5.0**; **`asap-compliance` 1.3.0** via tag [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1); **npm** `@asap-protocol/client` remains **2.4.1** (`@asap-protocol/mcp-auth` deferred).
+- **Framework Integrations**: LangChain, CrewAI, PydanticAI, LlamaIndex, SmolAgents, Vercel AI SDK, MCP (envelope + **MCP Auth Bridge** v2.5.0), OpenClaw, A2H.
 - **npm (TypeScript)**: The official client is **`@asap-protocol/client`** (scoped, **public** on npm for v2.4.x). Maintainer workflow: `.github/workflows/publish-typescript.yml`; context: `docs/maintainers/npm-publishing.md`.
 - **General contact** (humans coordinating on the protocol; not security): [info@asap-protocol.com](mailto:info@asap-protocol.com) — vulnerabilities: [SECURITY.md](SECURITY.md).
 
@@ -53,7 +53,7 @@ For coverage and pre-push gates, see [`.cursor/README.md`](.cursor/README.md#can
 
 ### 2. Development Status
 - **Active Sprint**: `engineering/tasks/`
-- **Adoption Roadmap**: v2.4.0 edge-AI discovery + ShellClaw onboarding shipped; v2.3.x OpenAPI + TypeScript SDK foundations; private v2.3.x adapter/distribution planning continues.
+- **Adoption Roadmap**: v2.5.0 **MCP Auth Bridge** shipped (2026-06-24); `asap-compliance` **1.3.0** on PyPI (tag `v2.5.0.1`); v2.5.1 Adapter Lab II next; `@asap-protocol/mcp-auth` (HTTP/SSE) still deferred.
 - **Code Reviews**: `engineering/code-review/`
 
 ## Organization
