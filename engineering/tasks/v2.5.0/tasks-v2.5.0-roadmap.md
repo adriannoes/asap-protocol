@@ -10,14 +10,14 @@ Based on [PRD v2.5.0 MCP Auth Bridge](../../../product/prd/prd-v2.5.0-mcp-auth-b
 - [x] Agent JWT + Host JWT stable (`auth/agent_jwt.py`, v2.2+)
 - [x] Capability grants + constraint validation (`CapabilityRegistry.check_grant`, `validate_constraints`, v2.2+)
 - [x] `MCPServer` stdio + `tools/call` (`mcp/server.py`, MCP 2025-11-25)
-- [ ] S0 design lock: confirm wrapper strategy, `CapabilityRegistry` injection, and `_meta` parser changes before S1
+- [x] S0 design lock: confirm wrapper strategy, `CapabilityRegistry` injection, and `_meta` parser changes before S1
 
 ## Sprint Plan
 
 | Sprint | Focus | PRD sections | Priority | Status |
 |--------|-------|--------------|----------|--------|
-| **S0** | [Design lock & scaffold](./sprint-S0-design-lock.md) | §6 API, MCP-AUTH-005 | P0 | 🔵 Planned |
-| **S1** | [Core auth middleware](./sprint-S1-core-middleware.md) | MCP-AUTH-001..004, 006 and auth portions of 007 | P0 | 🔵 Planned |
+| **S0** | [Design lock & scaffold](./sprint-S0-design-lock.md) | §6 API, MCP-AUTH-005 | P0 | ✅ Done |
+| **S1** | [Core auth middleware](./sprint-S1-core-middleware.md) | MCP-AUTH-001..004, 006 and auth portions of 007 | P0 | ✅ Done (`feat/v2.5.0-s1-middleware`) |
 | **S2** | [Capability mapping & errors](./sprint-S2-capability-mapping.md) | MCP-MAP-*, §4.5–4.6 | P0 | 🔵 Planned |
 | **S3** | [Docs, examples & discovery](./sprint-S3-docs-examples.md) | MCP-DISC-*, MCP-DOC-* | P0/P1 | 🔵 Planned |
 | **S4** | [Compliance & integration tests](./sprint-S4-compliance.md) | MCP-DISC-003, harness | P1 | 🔵 Planned |
@@ -168,3 +168,4 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
 | 2026-06-22 | Parent tasks 1.0–5.0 added (Phase 1) |
 | 2026-06-22 | Phase 2: sprint S0–S5 sub-tasks; `release/2.5.0` integration branch |
 | 2026-06-24 | Reconciled task plan with PRD paths, repo APIs, compliance scope, and TypeScript spike/defer gate |
+| 2026-06-24 | S0 complete on `release/2.5.0`; S1 branch `feat/v2.5.0-s1-middleware` opened with parallel agent workstreams |
