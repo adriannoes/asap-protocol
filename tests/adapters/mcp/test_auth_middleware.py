@@ -11,8 +11,14 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from asap.adapters.mcp.auth_middleware import MCPAuthConfig, protect_server
-from asap.adapters.mcp.errors import AUTH_REQUIRED, INVALID_TOKEN
-from asap.auth.capabilities import CapabilityRegistry
+from asap.adapters.mcp.capability_map import resolve_capability
+from asap.adapters.mcp.errors import (
+    AUTH_REQUIRED,
+    CAPABILITY_DENIED,
+    CONSTRAINT_VIOLATION,
+    INVALID_TOKEN,
+)
+from asap.auth.capabilities import CapabilityDefinition, CapabilityGrant, CapabilityRegistry
 from asap.auth.identity import (
     AgentSession,
     HostIdentity,
@@ -48,15 +54,30 @@ def _build_auth_config(
     capability_registry: CapabilityRegistry,
     *,
     public_tools: frozenset[str] = frozenset(),
+    enforce_grants: bool = False,
 ) -> MCPAuthConfig:
-    """MCP auth config for S1 tests (JWT gate only; grants deferred to S2)."""
+    """MCP auth config for middleware tests."""
     return MCPAuthConfig(
         host_store=host_store,
         agent_store=agent_store,
         capability_registry=capability_registry,
         public_tools=public_tools,
-        enforce_grants=False,
+        enforce_grants=enforce_grants,
         expected_audience=MCP_TEST_AUDIENCE,
+    )
+
+
+def _build_grant_auth_config(
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+) -> MCPAuthConfig:
+    """MCP auth config with grant enforcement enabled (S2)."""
+    return _build_auth_config(
+        host_store,
+        agent_store,
+        capability_registry,
+        enforce_grants=True,
     )
 
 
@@ -293,3 +314,327 @@ async def test_dispatch_tools_call_enforces_auth(
     assert "result" in data
     assert data["result"]["isError"] is True
     assert AUTH_REQUIRED in data["result"]["content"][0]["text"]
+
+
+# --- S2 capability mapping (1.2) & startup validation (1.3); Agent D: green when impl lands ---
+
+_BRIDGE_TOOL_CAPABILITIES_ATTR = "_bridge_tool_capabilities"
+
+
+def _s2_auth_config(
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+    **kwargs: object,
+) -> MCPAuthConfig:
+    """MCP auth config for S2 mapping/validation tests (no grant enforcement)."""
+    return MCPAuthConfig(
+        host_store=host_store,
+        agent_store=agent_store,
+        capability_registry=capability_registry,
+        enforce_grants=False,
+        expected_audience=MCP_TEST_AUDIENCE,
+        **kwargs,
+    )
+
+
+def test_protect_server_honors_register_time_capability_metadata(
+    search_mcp_server: MCPServer,
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+    register_capability: Callable[..., CapabilityDefinition],
+) -> None:
+    """Bridge registry from register-time metadata is used when config map is empty."""
+    # Agent D: green when 1.2 impl lands
+    register_capability("web_search", description="Web search capability")
+    setattr(
+        search_mcp_server,
+        _BRIDGE_TOOL_CAPABILITIES_ATTR,
+        {"search": "web_search"},
+    )
+    config = _s2_auth_config(
+        host_store,
+        agent_store,
+        capability_registry,
+        validate_tools_at_startup=True,
+    )
+    protected = protect_server(search_mcp_server, config)
+    assert getattr(protected, "_startup_tools_validated", False) is True
+    assert resolve_capability("search", config) == "web_search"
+
+
+def test_config_tool_capability_map_overrides_register_time_metadata(
+    search_mcp_server: MCPServer,
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+    register_capability: Callable[..., CapabilityDefinition],
+) -> None:
+    """Runtime ``tool_capability_map`` overrides register-time bridge metadata."""
+    # Agent D: green when 1.2 impl lands
+    register_capability("custom_search", description="Custom search capability")
+    setattr(
+        search_mcp_server,
+        _BRIDGE_TOOL_CAPABILITIES_ATTR,
+        {"search": "web_search"},
+    )
+    config = _s2_auth_config(
+        host_store,
+        agent_store,
+        capability_registry,
+        tool_capability_map={"search": "custom_search"},
+        validate_tools_at_startup=True,
+    )
+    protected = protect_server(search_mcp_server, config)
+    assert getattr(protected, "_startup_tools_validated", False) is True
+    assert resolve_capability("search", config) == "custom_search"
+
+
+def test_validate_tools_at_startup_fails_on_empty_resolved_capability(
+    echo_mcp_server: MCPServer,
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+    register_capability: Callable[..., CapabilityDefinition],
+) -> None:
+    """Startup validation rejects tools that resolve to an empty capability name."""
+    # Agent D: green when 1.3 impl lands
+    register_capability("echo", description="Echo capability")
+    config = _s2_auth_config(
+        host_store,
+        agent_store,
+        capability_registry,
+        tool_capability_map={"echo": ""},
+        validate_tools_at_startup=True,
+    )
+    with pytest.raises(ValueError, match="empty capability|capability"):
+        protect_server(echo_mcp_server, config)
+
+
+def test_validate_tools_at_startup_fails_on_unknown_capability(
+    echo_mcp_server: MCPServer,
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+) -> None:
+    """Startup validation rejects tools whose resolved capability is not in the registry."""
+    # Agent D: green when 1.3 impl lands
+    config = _s2_auth_config(
+        host_store,
+        agent_store,
+        capability_registry,
+        validate_tools_at_startup=True,
+    )
+    assert capability_registry.describe("echo") is None
+    with pytest.raises(ValueError, match="unknown capability|not registered|describe"):
+        protect_server(echo_mcp_server, config)
+
+
+def test_validate_tools_at_startup_succeeds_with_registered_capability(
+    echo_mcp_server: MCPServer,
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+    register_capability: Callable[..., CapabilityDefinition],
+) -> None:
+    """Startup validation passes when every tool resolves to a known capability."""
+    # Agent D: green when 1.3 impl lands
+    register_capability("echo", description="Echo tool capability")
+    config = _s2_auth_config(
+        host_store,
+        agent_store,
+        capability_registry,
+        validate_tools_at_startup=True,
+    )
+    protected = protect_server(echo_mcp_server, config)
+    assert protected is not None
+    assert getattr(protected, "_startup_tools_validated", False) is True
+
+
+def test_validate_tools_at_startup_succeeds_with_explicit_capability_map(
+    search_mcp_server: MCPServer,
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+    register_capability: Callable[..., CapabilityDefinition],
+) -> None:
+    """Startup validation passes when mapped capability exists in the registry."""
+    # Agent D: green when 1.3 impl lands
+    register_capability("web_search", description="Web search capability")
+    config = _s2_auth_config(
+        host_store,
+        agent_store,
+        capability_registry,
+        tool_capability_map={"search": "web_search"},
+        validate_tools_at_startup=True,
+    )
+    protected = protect_server(search_mcp_server, config)
+    assert protected is not None
+    assert getattr(protected, "_startup_tools_validated", False) is True
+    assert capability_registry.describe("web_search") is not None
+
+
+# --- S2 grant enforcement (2.1, 2.2) ---
+
+
+@pytest.mark.asyncio
+async def test_denied_grant_returns_capability_denied(
+    echo_mcp_server: MCPServer,
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+    host_identity: HostIdentity,
+    agent_session: AgentSession,
+    mint_agent_jwt: Callable[..., str],
+    register_capability: Callable[..., CapabilityDefinition],
+) -> None:
+    """Valid JWT without registry grant returns ``asap:capability_denied``."""
+    register_capability("echo", description="Echo tool capability")
+    token = mint_agent_jwt(capabilities=["echo"])
+    config = _build_grant_auth_config(host_store, agent_store, capability_registry)
+    protected = protect_server(echo_mcp_server, config)
+    result = await protected._handle_tools_call(
+        _tool_call_params("echo", arguments={"message": "hi"}, jwt=token)
+    )
+    assert CAPABILITY_DENIED in _error_text(result)
+
+
+@pytest.mark.asyncio
+async def test_jwt_capability_claim_mismatch_returns_capability_denied(
+    echo_mcp_server: MCPServer,
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+    host_identity: HostIdentity,
+    agent_session: AgentSession,
+    mint_agent_jwt: Callable[..., str],
+    register_capability: Callable[..., CapabilityDefinition],
+    grant_capability: Callable[..., CapabilityGrant],
+) -> None:
+    """Active grant but JWT missing capability claim returns ``asap:capability_denied``."""
+    register_capability("echo", description="Echo tool capability")
+    grant_capability(agent_session.agent_id, "echo")
+    token = mint_agent_jwt()
+    config = _build_grant_auth_config(host_store, agent_store, capability_registry)
+    protected = protect_server(echo_mcp_server, config)
+    result = await protected._handle_tools_call(
+        _tool_call_params("echo", arguments={"message": "hi"}, jwt=token)
+    )
+    assert CAPABILITY_DENIED in _error_text(result)
+
+
+@pytest.mark.asyncio
+async def test_grant_and_jwt_capability_succeeds(
+    echo_mcp_server: MCPServer,
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+    host_identity: HostIdentity,
+    agent_session: AgentSession,
+    mint_agent_jwt: Callable[..., str],
+    register_capability: Callable[..., CapabilityDefinition],
+    grant_capability: Callable[..., CapabilityGrant],
+) -> None:
+    """Active grant and matching JWT capability claim invoke the handler."""
+    register_capability("echo", description="Echo tool capability")
+    grant_capability(agent_session.agent_id, "echo")
+    token = mint_agent_jwt(capabilities=["echo"])
+    config = _build_grant_auth_config(host_store, agent_store, capability_registry)
+    protected = protect_server(echo_mcp_server, config)
+    result = await protected._handle_tools_call(
+        _tool_call_params("echo", arguments={"message": "granted"}, jwt=token)
+    )
+    assert result["isError"] is False
+    assert result["content"][0]["text"] == "granted"
+
+
+@pytest.mark.asyncio
+async def test_constraint_violation_returns_constraint_violation(
+    echo_mcp_server: MCPServer,
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+    host_identity: HostIdentity,
+    agent_session: AgentSession,
+    mint_agent_jwt: Callable[..., str],
+    register_capability: Callable[..., CapabilityDefinition],
+    grant_capability: Callable[..., CapabilityGrant],
+) -> None:
+    """Arguments exceeding grant ``max`` constraint return ``asap:constraint_violation``."""
+    register_capability("echo", description="Echo tool capability")
+    grant_capability(
+        agent_session.agent_id,
+        "echo",
+        constraints={"tokens": {"max": 100}},
+    )
+    token = mint_agent_jwt(capabilities=["echo"])
+    config = _build_grant_auth_config(host_store, agent_store, capability_registry)
+    protected = protect_server(echo_mcp_server, config)
+    result = await protected._handle_tools_call(
+        _tool_call_params(
+            "echo",
+            arguments={"message": "hi", "tokens": 150},
+            jwt=token,
+        )
+    )
+    assert CONSTRAINT_VIOLATION in _error_text(result)
+
+
+# --- S2 optional tools/list filtering (3.1) — MCP-MAP-004 deferred per design-lock §6 ---
+
+
+def test_hide_unauthorized_tools_default_leaves_tools_list_unchanged(
+    echo_mcp_server: MCPServer,
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+) -> None:
+    """Default ``hide_unauthorized_tools=False`` lists all registered tools unchanged."""
+    config = _build_auth_config(host_store, agent_store, capability_registry)
+    assert config.hide_unauthorized_tools is False
+    protected = protect_server(echo_mcp_server, config)
+    result = protected._handle_tools_list(None)
+    tool_names = {tool["name"] for tool in result["tools"]}
+    assert tool_names == set(echo_mcp_server._tools.keys())
+
+
+@pytest.mark.skip(
+    reason="MCP-MAP-004 deferred: stdio tools/list lacks JWT carriage — see design-lock §6"
+)
+@pytest.mark.asyncio
+async def test_hide_unauthorized_tools_filters_unauthorized_when_enabled(
+    echo_mcp_server: MCPServer,
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+    host_identity: HostIdentity,
+    agent_session: AgentSession,
+    mint_agent_jwt: Callable[..., str],
+    register_capability: Callable[..., CapabilityDefinition],
+    grant_capability: Callable[..., CapabilityGrant],
+) -> None:
+    """Document expected MCP-MAP-004 behavior if ``hide_unauthorized_tools`` is implemented.
+
+    When stdio ``tools/list`` can carry an Agent JWT (transport TBD), enabling
+    ``hide_unauthorized_tools`` should return only tools the caller may invoke:
+    ``public_tools``, tools with an active grant, and a matching JWT
+    ``capabilities`` claim. Unauthorized tools must be omitted from the list.
+    """
+    register_capability("echo", description="Echo tool capability")
+    grant_capability(agent_session.agent_id, "echo")
+    token = mint_agent_jwt(capabilities=["echo"])
+    config = MCPAuthConfig(
+        host_store=host_store,
+        agent_store=agent_store,
+        capability_registry=capability_registry,
+        enforce_grants=True,
+        hide_unauthorized_tools=True,
+        expected_audience=MCP_TEST_AUDIENCE,
+    )
+    protected = protect_server(echo_mcp_server, config)
+    # Future: pass JWT via list-request context once stdio carriage is defined.
+    _ = token
+    result = protected._handle_tools_list(None)
+    tool_names = {tool["name"] for tool in result["tools"]}
+    assert tool_names == {"echo"}

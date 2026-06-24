@@ -34,8 +34,10 @@ class MCPAuthConfig:
     agent_store: AgentStore
     capability_registry: CapabilityRegistry
     tool_capability_map: dict[str, str] = field(default_factory=dict)
+    bridge_tool_capability_map: dict[str, str] = field(default_factory=dict)
     public_tools: frozenset[str] = frozenset()
     enforce_grants: bool = True
+    # MCP-MAP-004 (MAY): deferred — stdio tools/list has no standard JWT carriage (design-lock §6).
     hide_unauthorized_tools: bool = False
     validate_tools_at_startup: bool = False
     jwt_extractor: Callable[[CallToolRequestParams], str | None] | None = None
