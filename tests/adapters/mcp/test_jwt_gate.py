@@ -12,6 +12,7 @@ import pytest
 
 from asap.adapters.mcp import protect_server
 from asap.adapters.mcp.errors import AUTH_REQUIRED, INVALID_TOKEN
+from asap.auth.agent_jwt import JtiReplayCache
 from asap.auth.capabilities import CapabilityRegistry
 from asap.auth.identity import (
     AgentSession,
@@ -203,6 +204,35 @@ async def test_public_tool_with_jwt_logs_warning(
         )
     assert result["isError"] is False
     assert "mcp.tool.public_jwt_ignored" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_jti_replay_cache_rejects_replayed_token_on_tools_call(
+    echo_mcp_server: MCPServer,
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+    host_identity: HostIdentity,
+    agent_session: AgentSession,
+    mint_agent_jwt: Callable[..., str],
+) -> None:
+    """Adapter passes ``jti_replay_cache`` through to ``verify_agent_jwt`` on ``tools/call``."""
+    token = mint_agent_jwt()
+    cache = JtiReplayCache()
+    config = build_auth_config(
+        host_store,
+        agent_store,
+        capability_registry,
+        jti_replay_cache=cache,
+    )
+    protected = protect_server(echo_mcp_server, config)
+    params = tool_call_params("echo", arguments={"message": "first"}, jwt=token)
+
+    first = await protected._handle_tools_call(params)
+    assert first["isError"] is False
+
+    second = await protected._handle_tools_call(params)
+    assert INVALID_TOKEN in error_text(second)
 
 
 @pytest.mark.asyncio

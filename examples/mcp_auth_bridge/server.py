@@ -180,6 +180,12 @@ async def build_protected_server() -> tuple[MCPServer, DemoIdentity]:
 
 def _print_startup_instructions(identity: DemoIdentity) -> None:
     """Print reviewer-facing JWT and ``tools/call`` guidance on stderr."""
+    print(
+        "WARNING: allow_env_jwt_fallback=True — this demo reads ASAP_AGENT_JWT from the "
+        "process environment. Do not deploy this example unchanged in production.",
+        file=sys.stderr,
+        flush=True,
+    )
     lines = [
         "",
         "=== MCP Auth Bridge example ===",

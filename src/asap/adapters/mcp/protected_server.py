@@ -33,6 +33,8 @@ class ProtectedMCPServer(MCPServer):
         super().__init__()
         self._auth_config = config
         self._jwt_extractor = resolve_jwt_extractor(config)
+        if config.hide_unauthorized_tools:
+            logger.warning("mcp.auth.hide_unauthorized_tools_noop")
 
     @classmethod
     def from_server(cls, server: MCPServer, config: MCPAuthConfig) -> ProtectedMCPServer:
@@ -99,6 +101,8 @@ class ProtectedMCPServer(MCPServer):
             grant_error = self._check_capability_grant(parsed, verify_result)
             if grant_error is not None:
                 return grant_error
+        else:
+            logger.debug("mcp.tool.grants_skipped", tool_name=parsed.name)
 
         agent = verify_result.agent
         if agent is not None:
