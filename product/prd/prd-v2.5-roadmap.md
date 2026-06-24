@@ -36,13 +36,15 @@ Between **v2.4.1** (security patch) and **v3.0** (economy), the project needs a 
 
 | Version | Codename | Primary outcome | PRD | Status |
 |---------|----------|-----------------|-----|--------|
-| **v2.5.0** | MCP Auth Bridge | ASAP Agent JWT + capabilities em MCP `tools/call` | [prd-v2.5.0-mcp-auth-bridge.md](./prd-v2.5.0-mcp-auth-bridge.md) | **READY FOR IMPLEMENTATION** — [tasks roadmap](../../engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md) |
+| **v2.5.0** | MCP Auth Bridge | ASAP Agent JWT + capabilities em MCP `tools/call` | [prd-v2.5.0-mcp-auth-bridge.md](./prd-v2.5.0-mcp-auth-bridge.md) | **S5 RELEASE PENDING** — S0–S4 on `release/2.5.0` (`a60c1e9`); [tasks roadmap](../../engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md) · [S5 sprint](../../engineering/tasks/v2.5.0/sprint-S5-release.md) |
 | **v2.5.1** | Adapter Lab II | Enterprise/workflow adapters (ex v2.3.2) | [prd-v2.5.1-adapter-lab-ii.md](./prd-v2.5.1-adapter-lab-ii.md) | Planned (after 2.5.0) |
 | **v2.5.2** | Distribution Loop | Homepage, templates, métricas (ex v2.3.3) | [prd-v2.5.2-distribution-loop.md](./prd-v2.5.2-distribution-loop.md) | Planned (after 2.5.1) |
 | **v2.5.3** | Formal Spec & Interop | RFC spec, introspection, privacy, cross-protocol | [prd-v2.5.3-formal-spec-interop.md](./prd-v2.5.3-formal-spec-interop.md) | Planned |
 | **v2.5.4** | Security Follow-up | `extra="forbid"`, operator API auth, Redis replay (ex v2.4.1 §8) | *(inline in train — patch PRD when triggered)* | Optional |
 
-**Execution rule:** v2.5.1 and v2.5.2 **do not start** until v2.5.0 ships. v2.5.3 may overlap planning/docs-only work but implementation waits for stable MCP Auth Bridge APIs.
+**Execution rule:** v2.5.1 and v2.5.2 **do not start** until v2.5.0 ships (S5: version bump, CHANGELOG, `release/2.5.0` → `main`, tag `v2.5.0`). v2.5.3 may overlap planning/docs-only work but implementation waits for stable MCP Auth Bridge APIs.
+
+**v2.5.0 release gate (S5):** Pre-push CI green on `release/2.5.0`; `@asap-protocol/mcp-auth` (TypeScript) **deferred to v2.5.0.1** — does not block Python PyPI publish.
 
 ---
 
@@ -67,7 +69,7 @@ Narrativa pública: **ASAP não substitui MCP** — fornece a camada de identida
 | Capability model stable (v2.2+) | ✅ |
 | Agent JWT + Host JWT (v2.2+) | ✅ |
 | MCP server/client in tree (`asap.mcp`) | ✅ stdio + tools |
-| Envelope MCP payloads (`McpToolCall`) | ✅ A2A path only — not native MCP auth |
+| Envelope MCP payloads (`McpToolCall`) | ✅ A2A path; native MCP auth via v2.5.0 bridge (S0–S4 complete, tag pending) |
 | OpenAPI Adapter (v2.3.0) | ✅ |
 
 ---
@@ -100,3 +102,4 @@ Narrativa pública: **ASAP não substitui MCP** — fornece a camada de identida
 |------|--------|
 | 2026-06-22 | Parent tasks 1.0–5.0 added to sprint index |
 | 2026-06-24 | Sprint sub-tasks S0–S5 finalized; v2.5.0 marked ready for implementation |
+| 2026-06-24 | v2.5.0 S0–S4 merged on `release/2.5.0` (`a60c1e9`, incl. PR #233 compliance + PR #234 refactor); status → **S5 RELEASE PENDING**; TS `@asap-protocol/mcp-auth` deferred to v2.5.0.1 |

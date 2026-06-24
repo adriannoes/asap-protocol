@@ -209,8 +209,8 @@ Detail appended after `:` when present (e.g. `asap:invalid_token: expired`).
 
 ### 7.1 During S5 release (required)
 
-- [ ] **CHANGELOG.md** — Under v2.5.0, add subsection *TypeScript*: state MCP-TS-001..003 **deferred to v2.5.0.1** with link to this spike
-- [ ] **docs/adapters/mcp-auth-bridge.md** — One paragraph: Python stdio shipped; `@asap-protocol/mcp-auth` for HTTP/SSE planned v2.5.0.1 (link spike)
+- [x] **CHANGELOG.md** — Under v2.5.0, add subsection *TypeScript*: state MCP-TS-001..003 **deferred to v2.5.0.1** with link to this spike (S5 — PR #235)
+- [x] **docs/adapters/mcp-auth-bridge.md** — One paragraph: Python stdio shipped; `@asap-protocol/mcp-auth` for HTTP/SSE planned v2.5.0.1 (link spike) (S5 — PR #235)
 - [ ] **product/checkpoints.md** — Note TS middleware defer; not a v2.5.0 blocker
 - [ ] **Do not** add `packages/typescript/mcp-auth` or bump TS packages to 2.5.0 for this feature
 

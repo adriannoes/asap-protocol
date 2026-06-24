@@ -3,7 +3,7 @@
 > **Product Requirements Document**
 >
 > **Version**: 2.5.0
-> **Status**: READY FOR IMPLEMENTATION
+> **Status**: IMPLEMENTATION COMPLETE — **S5 RELEASE PENDING**
 > **Created**: 2026-03-20 (origin); **rescoped to v2.5.0**: 2026-06-22
 > **Last Updated**: 2026-06-24
 >
@@ -32,14 +32,14 @@ Today MCP has no standard auth story for per-agent, scoped tool access. ASAP alr
 
 ### 1.3 Deliverables
 
-| # | Deliverable | Package / surface |
-|---|-------------|-------------------|
-| 1 | Python auth middleware for `MCPServer` | `asap.adapters.mcp.auth_middleware` |
-| 2 | Tool → capability mapping + grant enforcement | `asap.adapters.mcp.capability_map` |
-| 3 | Discovery: well-known manifest alongside MCP | docs + optional `MCPAuthConfig.manifest_url` |
-| 4 | TypeScript middleware (SHOULD) | `@asap-protocol/mcp-auth` |
-| 5 | Reference server + compliance tests | `examples/mcp_auth_bridge/server.py`, harness cases |
-| 6 | Integration guide | `docs/adapters/mcp-auth-bridge.md` |
+| # | Deliverable | Package / surface | Status |
+|---|-------------|-------------------|--------|
+| 1 | Python auth middleware for `MCPServer` | `asap.adapters.mcp.auth_middleware` | ✅ Shipped (S1; refined PR #234) |
+| 2 | Tool → capability mapping + grant enforcement | `asap.adapters.mcp.capability_map` | ✅ Shipped (S2; unified metadata PR #234) |
+| 3 | Discovery: well-known manifest alongside MCP | docs + optional `MCPAuthConfig.manifest_url` | ✅ Shipped (S3 docs; S4 compliance) |
+| 4 | TypeScript middleware (SHOULD) | `@asap-protocol/mcp-auth` | ⏸ **Deferred to v2.5.0.1** ([spike](../../engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md)) |
+| 5 | Reference server + compliance tests | `examples/mcp_auth_bridge/server.py`, harness cases | ✅ Shipped (S3 example; S4 `mcp-auth-bridge` profile) |
+| 6 | Integration guide | `docs/adapters/mcp-auth-bridge.md` | ✅ Shipped (S3) |
 
 ### 1.4 Out of scope (v2.5.0)
 
@@ -239,7 +239,7 @@ That registry validates grant status, expiry, and constraints with `validate_con
 ### 6.1 Configuration
 
 ```python
-# asap/adapters/mcp/auth_middleware.py (new)
+# asap/adapters/mcp/config.py
 
 @dataclass
 class MCPAuthConfig:
@@ -293,11 +293,13 @@ def default_jwt_extractor(params: CallToolRequestParams) -> str | None:
 
 **Definition of Done (v2.5.0):**
 
-- [ ] `protect_server` passes unit + integration tests with mock Agent JWT
-- [ ] Example server runs: `uv run python examples/mcp_auth_bridge/server.py`
-- [ ] Compliance harness includes `mcp_auth` profile cases for auth, grants, constraints, and manifest alignment
-- [ ] Docs published; `AGENTS.md` knowledge map updated
-- [ ] No breaking change to unprotected `MCPServer` usage
+- [x] `protect_server` passes unit + integration tests with mock Agent JWT (S1–S2; tests split in PR #234)
+- [x] Example server runs: `uv run python examples/mcp_auth_bridge/server.py` (S3)
+- [x] Compliance harness includes `mcp-auth-bridge` profile cases for auth, grants, constraints, and manifest alignment (S4, [PR #233](https://github.com/adriannoes/asap-protocol/pull/233))
+- [x] Docs published; `AGENTS.md` knowledge map references MCP Auth Bridge (S3)
+- [x] No breaking change to unprotected `MCPServer` usage (opt-in `protect_server`)
+- [x] Version bump `2.5.0` + CHANGELOG `[2.5.0]` with TypeScript defer to v2.5.0.1 (S5 — [PR #235](https://github.com/adriannoes/asap-protocol/pull/235))
+- [ ] `release/2.5.0` → `main`, tag `v2.5.0`, PyPI publish (S5 §3.0 — [sprint-S5-release.md](../../engineering/tasks/v2.5.0/sprint-S5-release.md))
 
 ---
 
@@ -315,13 +317,13 @@ def default_jwt_extractor(params: CallToolRequestParams) -> str | None:
 
 ## 9. Success metrics
 
-| Metric | Target |
-|--------|--------|
-| Protected MCP example server | 1 runnable in repo |
-| Test coverage on `asap.adapters.mcp` | ≥ 90% |
-| External MCP servers adopting (post-release) | 3+ within 90 days (aspirational) |
-| Compliance harness | New `mcp_auth` module green in CI |
-| Time to ship from task kickoff | ≤ 3 weeks (solo maintainer estimate) |
+| Metric | Target | Status |
+|--------|--------|--------|
+| Protected MCP example server | 1 runnable in repo | ✅ `examples/mcp_auth_bridge/` |
+| Test coverage on `asap.adapters.mcp` | ≥ 90% | ✅ (verify in S5 pre-release gate) |
+| External MCP servers adopting (post-release) | 3+ within 90 days (aspirational) | — post-tag |
+| Compliance harness | `mcp-auth-bridge` profile green in CI | ✅ on `release/2.5.0` |
+| Time to ship from task kickoff | ≤ 3 weeks (solo maintainer estimate) | 🟡 S5 pending |
 
 ---
 
@@ -332,8 +334,9 @@ def default_jwt_extractor(params: CallToolRequestParams) -> str | None:
 | v2.4.1 shipped | ✅ |
 | `verify_agent_jwt` stable | ✅ |
 | `CapabilityRegistry.check_grant` + `validate_constraints` | ✅ |
-| `MCPServer` tools/call hook point | ✅ `_handle_tools_call` exists; S0 locks wrapper strategy |
-| v2.5.1+ adapter work | ❌ blocked until v2.5.0 ships |
+| `MCPServer` tools/call hook point | ✅ wrapper via `protect_server` (S1; `config.py` + `ProtectedMCPServer` PR #234) |
+| S0–S4 on `release/2.5.0` | ✅ (`a60c1e9`) |
+| v2.5.1+ adapter work | ❌ blocked until v2.5.0 tag (S5) |
 
 ---
 
@@ -357,3 +360,4 @@ def default_jwt_extractor(params: CallToolRequestParams) -> str | None:
 | 2026-06-22 | 1.0.0 | **Rescoped to v2.5.0**; full architecture, API, task breakdown; split from formal spec (→ v2.5.3) |
 | 2026-06-22 | 1.1.0 | Parent tasks 1.0–5.0 in [tasks-v2.5.0-roadmap.md](../../engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md) |
 | 2026-06-24 | 1.2.0 | Aligned task plan with repo APIs, canonical docs/example paths, grant registry config, and compliance/doc gaps |
+| 2026-06-24 | 1.3.0 | S0–S4 complete on `release/2.5.0` (`a60c1e9`); deliverables table + DoD updated; TS middleware deferred to v2.5.0.1; S5 release gate remains |
