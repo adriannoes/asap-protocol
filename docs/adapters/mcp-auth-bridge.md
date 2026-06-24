@@ -195,10 +195,10 @@ Resolution still honors `tool_capability_map` overrides first.
 
 ### Public exports
 
-Package root (`asap.adapters.mcp`) intentionally exposes only the primary integration surface:
+Package root (`asap.adapters.mcp`) exposes the primary integration surface:
 
 ```python
-from asap.adapters.mcp import MCPAuthConfig, protect_server
+from asap.adapters.mcp import MCPAuthConfig, ProtectedMCPServer, protect_server, resolve_jwt_extractor
 ```
 
 Advanced helpers and error constants live in submodules:
