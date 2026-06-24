@@ -2,13 +2,14 @@
 
 > **Context Map for AI Agents**. Use this file to locate project knowledge.
 > **Rules Enforcement**: Strictly follow all active `.cursor/rules/*.mdc`.
+> **Agent index**: [`.cursor/README.md`](.cursor/README.md) — precedence, canonical commands, rules vs skills.
 
 ## Project Context
 
 **ASAP Protocol** (Async Simple Agent Protocol) is a production-ready standard for agent-to-agent communication.
 - **Stack**: Python 3.13+, FastAPI, Pydantic v2.
 - **Transport**: JSON-RPC 2.0 over HTTP/WebSocket.
-- **Status**: v2.4.1 (released in tree; **PyPI** `asap-protocol` and **npm** `@asap-protocol/client` ship from maintainer tags + publish workflows).
+- **Status**: v2.5.0 in tree on `release/2.5.0` (MCP Auth Bridge); **PyPI** `asap-protocol` and **npm** `@asap-protocol/client` remain **2.4.1** until maintainer tag `v2.5.0` + publish workflows.
 - **Framework Integrations**: LangChain, CrewAI, PydanticAI, LlamaIndex, SmolAgents, Vercel AI SDK, MCP, OpenClaw, A2H.
 - **npm (TypeScript)**: The official client is **`@asap-protocol/client`** (scoped, **public** on npm for v2.4.x). Maintainer workflow: `.github/workflows/publish-typescript.yml`; context: `docs/maintainers/npm-publishing.md`.
 - **General contact** (humans coordinating on the protocol; not security): [info@asap-protocol.com](mailto:info@asap-protocol.com) — vulnerabilities: [SECURITY.md](SECURITY.md).
@@ -17,10 +18,28 @@
 
 ```bash
 uv sync                                     # Install dependencies
-uv run pytest                               # Run tests (add -v for verbose)
+uv run pytest -n auto --tb=short            # Fast test run (CI-parity)
 uv run uvicorn asap.transport.server:app --reload  # Start dev server
 uv run mypy src/ scripts/ tests/ && uv run ruff check src/  # Verify quality
 ```
+
+For coverage and pre-push gates, see [`.cursor/README.md`](.cursor/README.md#canonical-commands).
+
+## Agent Guidance (rules vs skills)
+
+| I need to… | Read |
+|------------|------|
+| Run tests or check coverage | [`.cursor/README.md`](.cursor/README.md#canonical-commands) + `testing-standards.mdc` |
+| Test rate-limited endpoints / fix 429 flakes | `testing-rate-limiting.mdc` → `skills/testing-rate-limiting/SKILL.md` |
+| Write or refactor code | `agent-clean-code.mdc` |
+| Choose where new code lives | `architecture-principles.mdc` |
+| Commit or push | `git-commits.mdc` (always on) |
+| Frontend (`apps/web/`) | `frontend-best-practices.mdc` |
+| Security audit | `skills/security-review/SKILL.md` |
+| Security PR review (high-confidence) | `.cursor/commands/security-pr-review.md` |
+| Code quality review | `skills/code-quality-review/SKILL.md` |
+
+**Precedence:** user rules → always-on rules → scoped/requestable rules → skills → commands → docs. Details in [`.cursor/README.md`](.cursor/README.md).
 
 ## Knowledge Map
 
@@ -30,6 +49,7 @@ uv run mypy src/ scripts/ tests/ && uv run ruff check src/  # Verify quality
 - **Arch Decisions (ADRs)**: `product/decision-records/`
 - **Documentation checkpoints** (post-release PRD follow-up): `product/checkpoints.md`
 - **Tech Stack**: `engineering/architecture/tech-stack-decisions.md`
+- **MCP Auth Bridge**: `asap.adapters.mcp` (`protect_server`, `MCPAuthConfig`) — [docs/adapters/mcp-auth-bridge.md](docs/adapters/mcp-auth-bridge.md)
 
 ### 2. Development Status
 - **Active Sprint**: `engineering/tasks/`
@@ -41,6 +61,7 @@ uv run mypy src/ scripts/ tests/ && uv run ruff check src/  # Verify quality
 ### Project Structure
 ```text
 src/asap/
+├── adapters/      # Third-party wire adapters (OpenAPI, MCP auth bridge)
 ├── models/        # Data models (Envelope, TaskRequest, TaskStream)
 ├── auth/          # OAuth2/OIDC, Agent Identity, Capabilities, Approval
 ├── transport/     # HTTP Client/Server, WebSocket, SSE Streaming
@@ -51,9 +72,10 @@ src/asap/
 ```
 
 ### AI Toolbox (Available Capabilities)
-- **Rules**: `.cursor/rules/*.mdc` (Auto-loaded context)
-- **Commands**: `.cursor/commands/` (Workflows like `create-prd`, `generate-tasks`)
-- **Skills**: `.cursor/skills/` (Specialized agents for Security, Reviews)
+- **Agent index**: [`.cursor/README.md`](.cursor/README.md) — start here for rules, skills, and commands
+- **Rules**: `.cursor/rules/*.mdc` (auto-loaded or requestable by glob)
+- **Commands**: `.cursor/commands/` (Workflows like `create-prd`, `generate-tasks`, `security-pr-review`)
+- **Skills**: `.cursor/skills/` (Security review, code quality, rate-limit testing)
 - **Web E2E**: `apps/web/docs/playwright-e2e.md` — Playwright browser path troubleshooting
 
 ## Key Architectural Patterns

@@ -7,7 +7,7 @@
 
 > A production-ready protocol for agent-to-agent communication and task coordination.
 
-**Quick Info**: `v2.4.1` (PyPI) · **npm TS [`2.4.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.4.1)** | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | **[PyPI `asap-protocol`](https://pypi.org/project/asap-protocol/)** | **[npm `@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client)** | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
+**Quick Info**: `v2.5.0` (release branch; PyPI/npm publish on `v2.5.0` tag) · **npm TS [`2.4.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.4.1)** (latest published) | `Apache 2.0` | `Python 3.13+` | [Documentation](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md) | **[PyPI `asap-protocol`](https://pypi.org/project/asap-protocol/)** | **[npm `@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client)** | [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)
 
 > 📦 Install the ASAP **Python SDK / protocol** from **`https://pypi.org/project/asap-protocol/`** — package name **`asap-protocol`** on [PyPI](https://pypi.org/project/asap-protocol/).
 
@@ -88,10 +88,10 @@ uv run python -m asap.examples.run_demo
 uv run pytest -n auto --tb=short
 ```
 
-With coverage:
+With coverage (separate run — do not combine with `-n auto`):
 
 ```bash
-uv run pytest --cov=src --cov-report=term-missing
+uv run pytest --tb=short --cov=asap --cov-report=term-missing --cov-fail-under=85
 ```
 
 [Testing Guide](https://github.com/adriannoes/asap-protocol/blob/main/docs/testing.md) (structure, fixtures, property/load/chaos tests). [Contributing](https://github.com/adriannoes/asap-protocol/blob/main/CONTRIBUTING.md) (dev setup, CI).

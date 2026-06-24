@@ -188,7 +188,7 @@
   - Expected: Zero errors
 
 - [x] 2.3.3 Check test coverage
-  - Command: `uv run pytest --cov=src --cov-report=term-missing`
+  - Command: `uv run pytest --tb=short --cov=asap --cov-report=term-missing --cov-fail-under=85`
   - Expected: ≥95%
   - Identify: Any uncovered lines
 

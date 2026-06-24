@@ -6,6 +6,12 @@ disable-model-invocation: false
 
 # Testing Rate Limiting (SlowAPI)
 
+## Pre-requisites
+
+- `.cursor/rules/testing-rate-limiting.mdc` (bridge rule)
+- `.cursor/rules/testing-standards.mdc` (pytest + xdist; do not combine coverage with `-n auto`)
+- `.cursor/README.md` (canonical test commands)
+
 ## When to use
 
 - Writing or reviewing tests that hit rate-limited transport endpoints (e.g., `/asap`).

@@ -15,13 +15,13 @@ Thanks for helping out! Here's how to get started quickly.
     ```bash
     uv run pytest -n auto --tb=short
     ```
-    For coverage locally: `uv run pytest --tb=short --cov=src --cov-report=xml`
+    For coverage locally: `uv run pytest --tb=short --cov=asap --cov-report=xml --cov-fail-under=85`
 
 ## Development Workflow
 
 -   **Linting & Formatting**: `uv run ruff check .` and `uv run ruff format .`
 -   **Type Checking**: `uv run mypy src/ scripts/ tests/`
--   **Testing**: `uv run pytest -n auto --tb=short` (same as CI test job, fast). For coverage: `uv run pytest --tb=short --cov=src --cov-report=xml` (same as CI coverage job; do not combine -n with --cov due to known xdist+cov bug).
+-   **Testing**: `uv run pytest -n auto --tb=short` (same as CI test job, fast). For coverage: `uv run pytest --tb=short --cov=asap --cov-report=xml --cov-fail-under=85` (same as CI coverage job; do not combine `-n` with `--cov` due to known xdist+cov bug).
 
 ## Pull Requests
 
@@ -71,7 +71,7 @@ See the [Testing Guide](docs/testing.md) for complete details on:
 - Using fixtures
 - Troubleshooting test interference
 
-**Troubleshooting**: If you see `unrecognized arguments: -n`, run `uv sync --all-extras --dev` so pytest-xdist is installed. CI uses two jobs: **test** (`pytest -n auto --tb=short`) for fast feedback and **coverage** (`pytest --cov=src --cov-report=xml`) for Codecov; do not combine -n with --cov locally (known xdist+cov bug).
+**Troubleshooting**: If you see `unrecognized arguments: -n`, run `uv sync --all-extras --dev` so pytest-xdist is installed. CI uses two jobs: **test** (`pytest -n auto --tb=short`) for fast feedback and **coverage** (`pytest --tb=short --cov=asap --cov-report=xml --cov-fail-under=85`) for Codecov; do not combine `-n` with `--cov` locally (known xdist+cov bug).
 
 ## Guidelines
 

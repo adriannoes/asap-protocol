@@ -264,7 +264,7 @@
 - [x] P4.1.1 Add coverage threshold to pytest
   - **File**: `pyproject.toml` or `pytest.ini`
   - **What**: CI already uses `--cov-fail-under=85`; threshold in place (90 deferred until coverage allows)
-  - **Verify**: `uv run pytest --cov=src --cov-report=xml --cov-fail-under=85` fails if coverage drops
+  - **Verify**: `uv run pytest --tb=short --cov=asap --cov-report=xml --cov-fail-under=85` fails if coverage drops
 
 - [x] P4.1.2 Add to CI workflow
   - **File**: `.github/workflows/*.yml` (or equivalent)

@@ -24,8 +24,11 @@ dependencies = [
     "pytest>=8.0",
     "httpx>=0.28.0",
     "pydantic>=2.12.0",
-    "asap-protocol>=1.2.0",
+    "asap-protocol>=2.5.0",
 ]
+
+[tool.uv.sources]
+asap-protocol = { path = "..", editable = true }
 
 [project.optional-dependencies]
 dev = [

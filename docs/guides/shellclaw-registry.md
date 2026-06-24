@@ -165,7 +165,7 @@ uv run python scripts/validate_registry.py path/to/registry.json
 **Tests:**
 
 ```bash
-PYTHONPATH=src uv run pytest tests/discovery/test_registry.py -k shellclaw -v
+uv run pytest tests/discovery/test_registry.py -k shellclaw -v
 ```
 
 Runs the ShellClaw fixture regression test.

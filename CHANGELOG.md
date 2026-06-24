@@ -12,11 +12,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `extra="forbid"` on ingress payload models (`TaskRequestConfig`, `CommonMetadata`)
 - Opt-in protection for operator APIs (`/usage`, `/sla`, `/audit`)
 - Redis-backed `JtiReplayCache` and distributed Next.js rate limits
+- `@asap-protocol/mcp-auth` HTTP/SSE middleware (deferred from v2.5.0 — see [2.5.0] TypeScript note and [typescript-mcp-auth-spike.md](engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md))
 
 ### Fixed
 
 - **CI security (`pip-audit`)**: Raised `cryptography` to `>=48.0.1,<49` (GHSA-537c-gmf6-5ccf), `python-multipart>=0.0.31` (CVE-2026-53538–53540), and `starlette>=1.3.1` (CVE-2026-54282 / CVE-2026-54283) via `pyproject.toml` floors and `tool.uv.override-dependencies`.
 - **pydantic-ai (CVE-2026-46678)**: Optional `[pydanticai]` extra pins `pydantic-ai>=1.99.0`; removed obsolete `pip-audit` ignore from CI.
+
+---
+
+## [2.5.0] - 2026-06-24
+
+**MCP Auth Bridge** — ASAP Host/Agent JWT and capability grants as an **opt-in**
+authorization layer for native **stdio MCP** `tools/call` (Mode A). Unprotected
+`MCPServer` usage is unchanged. No wire-protocol or manifest schema breaking
+changes.
+
+### Added
+
+- **feat(adapters): MCP Auth Bridge (`asap.adapters.mcp`)**
+  - **`protect_server(server, config)`** — wraps `MCPServer` via
+    `ProtectedMCPServer`; intercepts `_handle_tools_call` only (MCP-AUTH-006).
+  - **`MCPAuthConfig`** (`config.py`) — `host_store`, `agent_store`,
+    `capability_registry`, `tool_capability_map`, `public_tools`,
+    `enforce_grants`, `jwt_extractor`, `jti_replay_cache`, `expected_audience`.
+  - **Token carriage (stdio)** — Agent JWT in `tools/call` params
+    `_meta.asap_agent_jwt`; optional dev-only `ASAP_AGENT_JWT` when
+    `allow_env_jwt_fallback=True`.
+  - **Grant enforcement** — `verify_agent_jwt` + `CapabilityRegistry.check_grant`
+    with constraint validation on tool arguments; MCP-safe `asap:*` error codes
+    (`asap:auth_required`, `asap:invalid_token`, `asap:capability_denied`,
+    `asap:constraint_violation`).
+  - **Tool → capability mapping** — explicit `tool_capability_map`, register-time
+    metadata, or default identity (tool name == capability); optional startup
+    validation (`validate_tools_at_startup`).
+  - **Reference example** — `examples/mcp_auth_bridge/` (protected stdio server +
+    client, smoke tests in `tests/examples/test_mcp_auth_bridge_example.py`).
+  - **Docs** — [MCP Auth Bridge adapter](docs/adapters/mcp-auth-bridge.md);
+    [MCP integration](docs/mcp-integration.md) distinguishes Mode A (native MCP +
+    bridge) vs Mode B (MCP-over-ASAP envelope).
+- **feat(compliance): `mcp-auth-bridge` profile** (`asap-compliance`) — stdio MCP
+  release gate: auth paths, grants, constraints, manifest tools ⊆ registered
+  tools (MCP-DISC-003). Requires `asap-protocol>=2.5.0`.
+- **test(adapters/mcp)** — unit, grant, startup, and stdio integration coverage
+  (≥90% on `asap.adapters.mcp`).
+
+### Deferred (not in v2.5.0)
+
+- **`hide_unauthorized_tools` / `tools/list` filtering** (MCP-MAP-004) — no
+  standard JWT carriage on stdio `tools/list` today; see
+  [design lock](engineering/tasks/v2.5.0/design-lock-mcp-auth-bridge.md).
+- **`initialize` session-token handshake** (PRD §4.3 SHOULD) — clients pass JWT
+  on each protected `tools/call` in v2.5.0.
+
+### TypeScript
+
+- **`@asap-protocol/mcp-auth` deferred to v2.5.0.1** — MCP-TS-001..003 (HTTP/SSE
+  Bearer middleware) are SHOULD-scope; v2.5.0 ships the Python stdio bridge as the
+  release gate. Rationale and implementation checklist:
+  [typescript-mcp-auth-spike.md](engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md);
+  carry-over tracked in
+  [PRD v2.5.1 §3](product/prd/prd-v2.5.1-adapter-lab-ii.md#3-carry-over-from-v250-asap-protocolmcp-auth).
+  Existing `@asap-protocol/*` npm packages remain at **2.4.1** until a separate
+  publish.
+
+### Migration
+
+- **v2.4.1 → v2.5.0**: **No breaking changes.** MCP servers without
+  `protect_server` behave as before. To enforce Agent JWT + capabilities on native
+  MCP, wrap your server with `protect_server` and configure grants — see
+  [MCP Auth Bridge adapter](docs/adapters/mcp-auth-bridge.md).
 
 ---
 

@@ -24,9 +24,9 @@ Use this section first; the checkpoint sections below add detail or archive.
 | **v2.3.0 Adoption Multiplier** | **S1** merged (**#132**, commit `04c56be`). Subsequent v2.3.x / v2.4.0 trains shipped on the timeline below. | Optional: consolidated v2.3 retro if you want a single narrative. |
 | **v2.4.0 — Edge-AI discovery** | **Released** **2026-05-24** — hardware/inference manifest fields, registry mirror, marketplace filters, ShellClaw onboarding ([`CHANGELOG.md`](../CHANGELOG.md#240---2026-05-24)). | Community enum feedback: [#176](https://github.com/adriannoes/asap-protocol/issues/176). |
 | **v2.4.1 — Security hardening** | **Released** **2026-06-14** — OAuth2 `iss`/`aud` validation, fail-closed identity binding, web SSRF/redirect hardening, dependency bumps ([`CHANGELOG.md`](../CHANGELOG.md#241---2026-06-14), [migration](../docs/migration.md#upgrading-from-v240-to-v241)). Tag **v2.4.1**; PyPI/npm/Docker/GitHub Release per [sprint-S2-release.md](../engineering/tasks/private/v2.4.1/sprint-S2-release.md). | **v2.5.0** follow-ups: [#209](https://github.com/adriannoes/asap-protocol/issues/209). |
-| **After v2.4.1** | **CP-7** partial: landing/WhatsNew + CHANGELOG aligned with **2.4.1**. | Full CP-7 retro, PRD refresh, adoption metrics; ship **v2.5.0** scope from `[Unreleased]` follow-ups. |
+| **After v2.4.1** | **CP-7** partial: landing/WhatsNew + CHANGELOG aligned with **2.4.1**. | Full CP-7 retro; PRD refresh for **v2.5.x train**; ship **v2.5.0** MCP Auth Bridge. |
 
-**Sources of truth for current execution**: [sprint-S2-release.md](../engineering/tasks/private/v2.4.1/sprint-S2-release.md), [prd-v2.4.1-security-hardening.md](./prd/private/prd-v2.4.1-security-hardening.md), [AGENTS.md](../AGENTS.md).
+**Sources of truth for current execution**: [prd-v2.5-roadmap.md](./prd/prd-v2.5-roadmap.md), [tasks-v2.5.0-roadmap.md](../engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md), [sprint-S2-release.md](../engineering/tasks/private/v2.4.1/sprint-S2-release.md), [AGENTS.md](../AGENTS.md).
 
 ---
 
@@ -189,10 +189,10 @@ Pre-release: Release materials (CHANGELOG, README, AGENTS.md, secure_agent examp
 - [ ] Time taken vs estimated (S1–S5); parallelism assumptions validated?
 
 **Update**:
-- [ ] `prd-v2.3-scale.md` — ship checklist vs actual scope; note deferred v2.3.1–v2.3.3 tracks
+- [ ] `prd-v2.3-scale.md` — ship checklist vs actual scope; note v2.3.1 shipped; v2.3.2/2.3.3 → v2.5.1/2.5.2
 - [x] `CHANGELOG.md` + public docs — homepage / apps/web announcement aligned with shipped surface (**v2.4.1**, 2026-06-14)
 - [ ] Optional: `engineering/lessons-learned/v2.3.0-retro.md` — short retrospective (hypothesis: adoption flywheel vs 500-agent trigger)
-- [ ] Feed learnings into [prd-v2.4-adoption.md](./prd/prd-v2.4-adoption.md) or patch PRDs as needed
+- [ ] Feed learnings into [prd-v2.5-roadmap.md](./prd/prd-v2.5-roadmap.md) and [prd-v2.5.0-mcp-auth-bridge.md](./prd/prd-v2.5.0-mcp-auth-bridge.md)
 
 **Reference**: [tasks-v2.3.0-adoption-multiplier.md](../engineering/tasks/v2.3.0/tasks-v2.3.0-adoption-multiplier.md)
 
@@ -235,6 +235,9 @@ Track actual vs estimated to improve future planning:
 
 - [PRD v2.0 — Marketplace roadmap](./prd/prd-v2.0-roadmap.md)
 - [PRD v2.3 — Adoption multiplier](./prd/prd-v2.3-scale.md)
+- [PRD v2.5.x train](./prd/prd-v2.5-roadmap.md)
+- [PRD v2.5.0 — MCP Auth Bridge](./prd/prd-v2.5.0-mcp-auth-bridge.md)
+- [Tasks v2.5.0 roadmap](../engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md)
 - [Product strategy ADRs (deferrals & pivots)](./decision-records/05-product-strategy.md)
 - [v2.0-marketplace-usage-foundation.md](../engineering/tasks/v2.0.0/v2.0-marketplace-usage-foundation.md) — Usage storage & control for v2.0
 - [lessons-learned/](../engineering/lessons-learned/)
@@ -254,4 +257,4 @@ Track actual vs estimated to improve future planning:
 | 2026-04-28 | **Status roll-up**: Table for shipped vs ahead; CP-1–CP-6 folded under `<details>` as archive; **CP-7** added for v2.3.x adoption; honesty note on missing retros; velocity rows for v2.2.x. |
 | 2026-05-02 | **Repo-verified evidence**: `pyproject.toml` still **2.2.1**; S1 merge **`04c56be`** (2026-05-02 01:03 -0300), first adapter commit **`cedb3f9`** (2026-05-01); linked PR-132 review date. |
 | 2026-05-02 | **Archive checklists**: All CP-1–CP-6 items set to **`[x]`** (milestone closed); CP-7 remains **`[ ]`** until post–v2.3.0 review. |
-| 2026-06-14 | **v2.4.1 post-release**: Evidence snapshot → **`pyproject.toml` 2.4.1**; roll-up adds v2.4.0/v2.4.1 rows; CP-7 partial closure (public docs aligned); v2.5.0 follow-ups [#209](https://github.com/adriannoes/asap-protocol/issues/209). |
+| 2026-06-22 | **v2.5.x PRD train**: Rescoped adoption PRD → v2.5.0–v2.5.3; v2.3.2/2.3.3 → v2.5.1/2.5.2; deprecated `prd-v2.4-adoption.md`. |
