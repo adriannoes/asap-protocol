@@ -13,7 +13,7 @@
 - **Observability**: First-class tracking with correlation IDs and trace IDs
 - **Security & authorization (v2.2+, WebAuthn real in v2.2.1)**: Per-runtime Host/Agent JWTs, capability grants with constraints, approval flows, opt-in WebAuthn (`asap-protocol[webauthn]`) for browser-controlled and high-risk capability registration — see [Security](security.md) and [Migration](migration.md)
 - **Edge-AI discovery (v2.4.0+)**: Optional `capabilities.hardware` / `inference` on manifests; [Transport](transport.md#hardware-and-inference-capabilities-v24), [ShellClaw registry guide](guides/shellclaw-registry.md), [registry examples](examples/registry-shellclaw.md)
-- **Adoption tools (v2.3.0+)**: [OpenAPI adapter](adapters/openapi.md), [TypeScript client](sdks/typescript.md) (`@asap-protocol/client@2.4.1`), [Mastra adapter](integrations/mastra.md) (`@asap-protocol/mastra@2.4.1`), [OpenAI Agents SDK adapter](integrations/openai-agents.md) (`@asap-protocol/openai-agents@2.4.1`), [Auto-registration](registry/auto-registration.md), [Capability escalation](capabilities/escalation.md), [ASAP HTTP challenge](transport/asap-challenge.md)
+- **Adoption tools (v2.3.0+)**: [OpenAPI adapter](adapters/openapi.md), [MCP Auth Bridge](adapters/mcp-auth-bridge.md) (v2.5.0 — opt-in JWT + capability grants for native stdio MCP), [TypeScript client](sdks/typescript.md) (`@asap-protocol/client@2.4.1`), [Mastra adapter](integrations/mastra.md) (`@asap-protocol/mastra@2.4.1`), [OpenAI Agents SDK adapter](integrations/openai-agents.md) (`@asap-protocol/openai-agents@2.4.1`), [Auto-registration](registry/auto-registration.md), [Capability escalation](capabilities/escalation.md), [ASAP HTTP challenge](transport/asap-challenge.md)
 
 ## Installation
 
@@ -93,6 +93,7 @@ See [CLI reference](cli.md) (all commands, exit codes, `compliance-check`, `audi
 ## Documentation
 
 - [OpenAPI adapter](adapters/openapi.md) — derive ASAP skills and an upstream proxy from OpenAPI 3.x (`asap.adapters.openapi`)
+- [MCP Auth Bridge](adapters/mcp-auth-bridge.md) — opt-in Agent JWT + capability enforcement for native stdio `MCPServer` (`asap.adapters.mcp.protect_server`)
 - [TypeScript client SDK](sdks/typescript.md) — `@asap-protocol/client@2.4.1` on npm (browser + Node; optional LLM adapters; edge-AI registry fields)
 - [Mastra adapter](integrations/mastra.md) — `@asap-protocol/mastra@2.4.1`: ASAP capabilities as `@mastra/core` tools + streaming bridge
 - [OpenAI Agents SDK adapter](integrations/openai-agents.md) — `@asap-protocol/openai-agents@2.4.1`: ASAP capabilities as `@openai/agents` tools + handoff-oriented remote agent helper (`@openai/agents`, distinct from `@asap-protocol/client/adapters/openai`)
