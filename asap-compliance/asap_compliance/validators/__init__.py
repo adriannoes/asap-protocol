@@ -8,6 +8,13 @@ from asap_compliance.validators.handshake import (
     validate_handshake,
     validate_handshake_async,
 )
+from asap_compliance.validators.mcp_auth import (
+    McpAuthProbeTokens,
+    McpAuthResult,
+    MockMcpTransport,
+    validate_mcp_auth,
+    validate_mcp_auth_async,
+)
 from asap_compliance.validators.schema import (
     SchemaResult,
     validate_envelope,
@@ -28,11 +35,16 @@ from asap_compliance.validators.state import (
 __all__ = [
     "CheckResult",
     "HandshakeResult",
+    "McpAuthProbeTokens",
+    "McpAuthResult",
+    "MockMcpTransport",
     "SchemaResult",
     "StateResult",
     "validate_envelope",
     "validate_handshake",
     "validate_handshake_async",
+    "validate_mcp_auth",
+    "validate_mcp_auth_async",
     "validate_payload",
     "validate_schema",
     "validate_sla",
