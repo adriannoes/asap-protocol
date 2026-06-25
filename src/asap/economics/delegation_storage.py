@@ -20,12 +20,8 @@ from typing import Protocol, runtime_checkable
 
 import aiosqlite
 
-from asap.state.stores._sqlite_base import (
-    DEFAULT_DB_PATH,
-    AsyncSqliteRepository,
-    _build_sql_in_placeholders,
-    parse_iso,
-)
+from asap.state.stores import DEFAULT_DB_PATH, AsyncSqliteRepository, parse_iso
+from asap.state.stores._sqlite_base import _build_sql_in_placeholders
 
 # Maximum cascade depth to prevent stack overflow / DoS from circular chains.
 _MAX_CASCADE_DEPTH = 50

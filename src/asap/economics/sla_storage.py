@@ -20,12 +20,7 @@ import aiosqlite  # noqa: F401 - retained so tests can patch `sla_storage.aiosql
 
 from asap.economics.metering import StorageStats
 from asap.economics.sla import SLABreach, SLAMetrics
-from asap.state.stores._sqlite_base import (
-    DEFAULT_DB_PATH,
-    AsyncSqliteRepository,
-    build_where,
-    parse_iso,
-)
+from asap.state.stores import DEFAULT_DB_PATH, AsyncSqliteRepository, build_where, parse_iso
 
 # Backward-compat alias: tests/economics/test_sla_storage.py:18 imports
 # `_parse_iso` from this module. The canonical impl now lives in the shared base.

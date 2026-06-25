@@ -41,12 +41,7 @@ from asap.models.ids import generate_id
 # usage_events DDL + repository base here cannot form a cycle. One canonical DDL
 # owner prevents divergent indexes when both stores share asap_state.db; the
 # shared base owns WAL pragmas, ``:memory:`` handling, and idempotent schema init.
-from asap.state.stores._sqlite_base import (
-    DEFAULT_DB_PATH,
-    AsyncSqliteRepository,
-    build_where,
-    parse_iso,
-)
+from asap.state.stores import DEFAULT_DB_PATH, AsyncSqliteRepository, build_where, parse_iso
 from asap.state.stores.sqlite import _USAGE_EVENTS_DDL
 
 UsageAggregate = Union[
@@ -474,14 +469,19 @@ class SQLiteMeteringStorage(AsyncSqliteRepository, MeteringStorageBase):
 
     async def _query_impl(self, filters: MeteringQuery) -> list[UsageMetrics]:
         """Select events matching ``filters`` via the base allow-list WHERE builder."""
-        where, params = _filters_to_where(filters)
-        # Fail-closed: reject any fragment not in _ALLOWED_QUERY_FRAGMENTS (tests
-        # empty the set to verify the guard).
-        fragments = (
-            [fragment.strip() for fragment in where.split(" AND ")] if where != "1=1" else []
-        )
-        if not all(f in self._ALLOWED_QUERY_FRAGMENTS for f in fragments):
+        # Fail-closed: derive the emitted fragments from the non-None filter keys
+        # (rather than splitting the assembled WHERE string, which would be brittle
+        # if a fragment ever embedded " AND "). Tests empty _ALLOWED_QUERY_FRAGMENTS
+        # to verify the guard rejects any fragment outside the allow-list.
+        active_keys = [
+            key
+            for key in ("agent_id", "consumer_id", "task_id", "start", "end")
+            if getattr(filters, key) is not None
+        ]
+        emitted = [_USAGE_EVENTS_WHERE[key] for key in active_keys]
+        if not all(f in self._ALLOWED_QUERY_FRAGMENTS for f in emitted):
             raise ValueError("unexpected WHERE fragment")
+        where, params = _filters_to_where(filters)
         sql = f"""
             {_USAGE_EVENTS_SELECT}
             WHERE {where}

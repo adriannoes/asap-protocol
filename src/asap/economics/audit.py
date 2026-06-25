@@ -18,7 +18,7 @@ from pydantic import ConfigDict, Field
 
 from asap.models.base import ASAPBaseModel
 from asap.models.ids import generate_id
-from asap.state.stores._sqlite_base import AsyncSqliteRepository
+from asap.state.stores import AsyncSqliteRepository
 
 
 class AuditChainBroken(Exception):
@@ -194,12 +194,17 @@ class SQLiteAuditStore(AsyncSqliteRepository):
     async def _get_connection(self) -> aiosqlite.Connection:
         """Return an open connection the caller must close (unless persistent).
 
-        Thin compatibility shim over the base ``_acquire_connection`` so
-        existing tamper-detection tests can grab a raw connection to mutate
-        rows outside the store API. Schema init is skipped here on purpose:
-        callers always append first, so the table already exists.
+        Test-only escape hatch for the tamper-detection tests, which grab a raw
+        connection to mutate ``audit_log`` rows outside the store API. Ensures
+        the schema exists (so a caller that has not ``append``-ed first still
+        sees the table); WAL pragmas are not re-applied here because
+        ``journal_mode=WAL`` is persistent per file and ``:memory:`` has no WAL.
+        Production code should use ``self._connect()`` / ``self.execute`` /
+        ``self.fetch_*`` instead.
         """
-        return await self._acquire_connection()
+        conn = await self._acquire_connection()
+        await self._ensure_schema(conn)
+        return conn
 
     async def append(self, entry: AuditEntry) -> AuditEntry:
         """Append an entry, linking it to the last stored hash.
