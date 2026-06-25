@@ -21,7 +21,6 @@ from asap.auth.agent_jwt import (
     HOST_PUBLIC_KEY_CLAIM,
     JtiReplayCache,
     JwtVerifyResult,
-    verify_host_jwt,
 )
 from asap.auth.approval import (
     A2HApprovalChannel,
@@ -52,7 +51,7 @@ from asap.auth.identity import (
 from asap.models.base import ASAPBaseModel
 from asap.models.ids import generate_id
 from asap.observability import get_logger
-from asap.transport._auth_helpers import bearer_token_from_request
+from asap.transport._auth_helpers import verify_host_bearer
 from asap.transport.capability_routes import _grant_to_dict
 
 logger = get_logger(__name__)
@@ -236,52 +235,6 @@ async def background_a2h_resolve(
         )
 
 
-async def _verify_host_bearer_identity(
-    request: Request,
-    *,
-    jti_replay_cache: JtiReplayCache | None,
-) -> tuple[JwtVerifyResult | None, JSONResponse | None]:
-    """Verify Host JWT; optional ``jti`` replay cache for mutating routes."""
-    token = bearer_token_from_request(request)
-    if not token:
-        return None, JSONResponse(
-            status_code=401,
-            content={"detail": "Authentication required"},
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    host_store: HostStore = request.app.state.identity_host_store
-    expected_audience: str | list[str] = request.app.state.identity_jwt_audience
-    result = await verify_host_jwt(
-        token,
-        host_store,
-        expected_audience=expected_audience,
-        jti_replay_cache=jti_replay_cache,
-    )
-    if not result.ok:
-        return None, JSONResponse(
-            status_code=401,
-            content={"detail": result.error or "Invalid host token"},
-        )
-
-    claims = result.claims
-    if claims is None:
-        return None, JSONResponse(status_code=401, content={"detail": "Invalid host token"})
-
-    iss = claims.get("iss")
-    if not isinstance(iss, str) or not iss.strip():
-        return None, JSONResponse(
-            status_code=400,
-            content={"detail": "missing iss in host JWT"},
-        )
-
-    host = result.host
-    if host is not None and host.status == "revoked":
-        return None, JSONResponse(status_code=403, content={"detail": "host revoked"})
-
-    return result, None
-
-
 def _effective_identity_host_id(result: JwtVerifyResult) -> str:
     """Host id from store or synthetic id for first-seen keys (matches register)."""
     claims = result.claims
@@ -327,7 +280,7 @@ async def _handle_agent_register(
 ) -> JSONResponse:
     """Create or return an agent session from a verified Host JWT."""
     jti_cache: JtiReplayCache = request.app.state.identity_jti_cache
-    result, err = await _verify_host_bearer_identity(request, jti_replay_cache=jti_cache)
+    result, err = await verify_host_bearer(request, jti_replay_cache=jti_cache)
     if err is not None:
         return err
     if result is None:
@@ -548,7 +501,7 @@ async def _handle_agent_register(
 
 async def _handle_agent_status(request: Request, agent_id: str) -> JSONResponse:
     """Return agent session status and lifecycle for the authenticated host."""
-    result, err = await _verify_host_bearer_identity(request, jti_replay_cache=None)
+    result, err = await verify_host_bearer(request, jti_replay_cache=None)
     if err is not None:
         return err
     if result is None:
@@ -663,7 +616,7 @@ async def _handle_agent_status(request: Request, agent_id: str) -> JSONResponse:
 async def _handle_agent_revoke(request: Request, body: AgentRevokeBody) -> JSONResponse:
     """Permanently revoke an agent session for the authenticated host."""
     jti_cache: JtiReplayCache = request.app.state.identity_jti_cache
-    result, err = await _verify_host_bearer_identity(request, jti_replay_cache=jti_cache)
+    result, err = await verify_host_bearer(request, jti_replay_cache=jti_cache)
     if err is not None:
         return err
     if result is None:
@@ -696,7 +649,7 @@ async def _handle_agent_revoke(request: Request, body: AgentRevokeBody) -> JSONR
 async def _handle_agent_rotate_key(request: Request, body: AgentRotateKeyBody) -> JSONResponse:
     """Replace the agent session's Ed25519 public JWK (old JWTs no longer verify)."""
     jti_cache: JtiReplayCache = request.app.state.identity_jti_cache
-    result, err = await _verify_host_bearer_identity(request, jti_replay_cache=jti_cache)
+    result, err = await verify_host_bearer(request, jti_replay_cache=jti_cache)
     if err is not None:
         return err
     if result is None:

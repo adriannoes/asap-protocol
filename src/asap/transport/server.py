@@ -1998,7 +1998,13 @@ def create_app(
         }
         if oauth2_config.jwks_fetcher is not None:
             middleware_kwargs["jwks_fetcher"] = oauth2_config.jwks_fetcher
+        oauth2_middleware = OAuth2Middleware(app, **middleware_kwargs)
         app.add_middleware(OAuth2Middleware, **middleware_kwargs)
+        # Expose the middleware instance so the WS path can enforce OAuth2 at
+        # connection acceptance; the HTTP middleware stack never runs over WS
+        # (B4/BUG #4). Stored on app.state to keep server.py decoupled from the
+        # WS module's signature.
+        app.state.oauth2_middleware = oauth2_middleware
         logger.info(
             "asap.server.oauth2_enabled",
             manifest_id=manifest.id,
@@ -2143,12 +2149,16 @@ def create_app(
         """ASAP JSON-RPC over WebSocket; same handlers as POST /asap."""
         ws_rate_limit: float | None = getattr(app.state, "websocket_message_rate_limit", 10.0)
         sla_subscribers: set[WebSocket] | None = getattr(app.state, "sla_breach_subscribers", None)
+        # OAuth2 is enforced at WS acceptance when configured (B4/BUG #4); the
+        # HTTP middleware stack does not run over WebSocket.
+        oauth2_middleware: OAuth2Middleware | None = getattr(app.state, "oauth2_middleware", None)
         await handle_websocket_connection(
             websocket,
             handler,
             app.state.websocket_connections,
             ws_message_rate_limit=ws_rate_limit,
             sla_breach_subscribers=sla_subscribers,
+            oauth2_middleware=oauth2_middleware,
         )
 
     @app.get("/audit")

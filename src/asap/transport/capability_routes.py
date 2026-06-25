@@ -12,7 +12,6 @@ from asap.auth.agent_jwt import (
     JtiReplayCache,
     JwtVerifyResult,
     verify_agent_jwt,
-    verify_host_jwt,
 )
 from pydantic import ValidationError
 
@@ -21,7 +20,7 @@ from asap.auth.identity import AgentStore, HostStore
 from asap.auth.lifecycle import reactivate_agent
 from asap.models.base import ASAPBaseModel
 from asap.observability import get_logger
-from asap.transport._auth_helpers import bearer_token_from_request
+from asap.transport._auth_helpers import bearer_token_from_request, verify_host_bearer
 
 logger = get_logger(__name__)
 
@@ -55,32 +54,6 @@ class AgentReactivateBody(ASAPBaseModel):
 # ---------------------------------------------------------------------------
 # Auth helpers
 # ---------------------------------------------------------------------------
-
-
-async def _verify_host_bearer(
-    request: Request,
-    *,
-    jti_replay_cache: JtiReplayCache | None = None,
-) -> tuple[JwtVerifyResult | None, JSONResponse | None]:
-    """Verify a Host JWT Bearer token."""
-    token = bearer_token_from_request(request)
-    if not token:
-        return None, JSONResponse(
-            status_code=401,
-            content={"detail": "Authentication required"},
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    host_store: HostStore = request.app.state.identity_host_store
-    audience = request.app.state.identity_jwt_audience
-    result = await verify_host_jwt(
-        token,
-        host_store,
-        expected_audience=audience,
-        jti_replay_cache=jti_replay_cache,
-    )
-    if not result.ok:
-        return None, JSONResponse(status_code=401, content={"detail": result.error})
-    return result, None
 
 
 async def verify_agent_bearer(
@@ -276,7 +249,7 @@ async def _handle_capability_execute(request: Request) -> JSONResponse:
 async def _handle_agent_reactivate(request: Request) -> JSONResponse:
     """Reactivate an expired agent (Host JWT required)."""
     jti_cache: JtiReplayCache = request.app.state.identity_jti_cache
-    result, err = await _verify_host_bearer(request, jti_replay_cache=jti_cache)
+    result, err = await verify_host_bearer(request, jti_replay_cache=jti_cache)
     if err is not None:
         return err
     if result is None or result.claims is None:

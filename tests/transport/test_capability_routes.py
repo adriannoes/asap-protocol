@@ -547,6 +547,41 @@ class TestAgentReactivate:
         assert r.status_code == 403
         assert "revoked" in r.json()["detail"].lower()
 
+    async def test_reactivate_revoked_host_returns_403(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: ASAPRateLimiter | None,
+    ) -> None:
+        """A revoked HOST must not authenticate on capability routes.
+
+        Distinct from ``test_reactivate_revoked_agent_returns_403`` (which
+        revokes the AGENT and hits the agent-status check inside
+        ``reactivate_agent``): here the HOST is revoked, so the Host-JWT
+        verifier itself must reject the request with 403.
+        """
+        app, agent_store, host_store, _ = _setup(sample_manifest, isolated_rate_limiter)
+        client = TestClient(app)
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        aid = await _register_and_activate(
+            client, app, agent_store, host_sk, agent_sk, status="active"
+        )
+
+        host = await host_store.get_by_public_key(
+            jwk_thumbprint_sha256(ed25519_public_jwk(host_sk))
+        )
+        assert host is not None
+        await host_store.revoke(host.host_id)
+
+        token = _host_jwt(host_sk)
+        r = client.post(
+            "/asap/agent/reactivate",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"agent_id": aid},
+        )
+        assert r.status_code == 403
+        assert "revoked" in r.json()["detail"].lower()
+
     async def test_reactivate_absolute_lifetime_exceeded_returns_403(
         self,
         sample_manifest: Manifest,

@@ -9,6 +9,7 @@ Table: revocations (id, revoked_at, reason). Persists across restarts.
 
 from __future__ import annotations
 
+import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -132,8 +133,22 @@ class DelegationStorageBase(ABC):
     ) -> None:
         """Revoke a token and all child delegations (iterative BFS).
 
+        Delegates the tree-walk + revocation to :meth:`_revoke_cascade_atomic`
+        so each backend controls its own transaction/lock boundary. Public
+        signature is stable.
+        """
+        await self._revoke_cascade_atomic(token_id, reason)
+
+    async def _revoke_cascade_atomic(
+        self,
+        token_id: str,
+        reason: str | None = None,
+    ) -> None:
+        """Default BFS cascade using public per-id methods.
+
         Uses a visited set to handle circular delegation chains and a
-        depth limit (_MAX_CASCADE_DEPTH) to prevent DoS.
+        depth limit (_MAX_CASCADE_DEPTH) to prevent DoS. Subclasses override
+        this to wrap the walk in a single transaction/lock for atomicity.
         """
         visited: set[str] = set()
         stack: list[tuple[str, int]] = [(token_id, 0)]
@@ -151,9 +166,15 @@ class DelegationStorageBase(ABC):
 
 
 class InMemoryDelegationStorage(DelegationStorageBase):
-    """In-memory revocation store for tests. Not persistent across restarts."""
+    """In-memory revocation store for tests. Not persistent across restarts.
+
+    Async-safe via ``asyncio.Lock`` (parity with ``InMemorySLAStorage`` /
+    ``InMemoryMeteringStorage``). The lock is held across the whole cascade so
+    concurrent ``register_issued`` cannot interleave and lose/split children.
+    """
 
     def __init__(self) -> None:
+        self._lock = asyncio.Lock()
         self._revoked: dict[str, tuple[datetime, str | None]] = {}
         self._issued: dict[str, tuple[str, str | None, datetime]] = {}
 
@@ -162,9 +183,12 @@ class InMemoryDelegationStorage(DelegationStorageBase):
         token_id: str,
         reason: str | None = None,
     ) -> None:
-        self._revoked[token_id] = (datetime.now(timezone.utc), reason)
+        async with self._lock:
+            self._revoked[token_id] = (datetime.now(timezone.utc), reason)
 
     async def is_revoked(self, token_id: str) -> bool:
+        # Read-only snapshot; a concurrent writer cannot corrupt a dict lookup
+        # under the GIL, so no lock is required here.
         return token_id in self._revoked
 
     async def register_issued(
@@ -174,7 +198,8 @@ class InMemoryDelegationStorage(DelegationStorageBase):
         delegate_urn: str | None = None,
     ) -> None:
         now = datetime.now(timezone.utc)
-        self._issued[token_id] = (delegator_urn, delegate_urn, now)
+        async with self._lock:
+            self._issued[token_id] = (delegator_urn, delegate_urn, now)
 
     async def get_delegator(self, token_id: str) -> str | None:
         entry = self._issued.get(token_id)
@@ -218,6 +243,32 @@ class InMemoryDelegationStorage(DelegationStorageBase):
             is_revoked=rev is not None,
             revoked_at=rev[0] if rev else None,
         )
+
+    async def _revoke_cascade_atomic(
+        self,
+        token_id: str,
+        reason: str | None = None,
+    ) -> None:
+        """Hold the lock across the whole BFS walk so concurrent mutations
+        (``register_issued`` / ``revoke``) cannot interleave and split the
+        cascade. The tree-walk reuses the base BFS logic on a consistent
+        in-memory snapshot.
+        """
+        async with self._lock:
+            visited: set[str] = set()
+            stack: list[tuple[str, int]] = [(token_id, 0)]
+            while stack:
+                tid, depth = stack.pop()
+                if tid in visited or depth > _MAX_CASCADE_DEPTH:
+                    continue
+                visited.add(tid)
+                entry = self._issued.get(tid)
+                delegate_urn = entry[1] if entry and entry[1] is not None else None
+                if delegate_urn:
+                    for child_id, (d, _, _) in self._issued.items():
+                        if d == delegate_urn:
+                            stack.append((child_id, depth + 1))
+                self._revoked[tid] = (datetime.now(timezone.utc), reason)
 
 
 class SQLiteDelegationStorage(DelegationStorageBase):
@@ -290,6 +341,73 @@ class SQLiteDelegationStorage(DelegationStorageBase):
                 (token_id, now, reason),
             )
             await conn.commit()
+
+    async def _revoke_on_conn(
+        self,
+        conn: aiosqlite.Connection,
+        token_id: str,
+        reason: str | None,
+    ) -> None:
+        """Insert a revocation row on a shared connection (no commit).
+
+        Used by :meth:`_revoke_cascade_atomic` so every per-id revoke in a
+        cascade shares one transaction boundary; the caller controls COMMIT /
+        ROLLBACK.
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        await conn.execute(
+            """
+            INSERT OR REPLACE INTO revocations (id, revoked_at, reason)
+            VALUES (?, ?, ?)
+            """,
+            (token_id, now, reason),
+        )
+
+    async def _revoke_cascade_atomic(
+        self,
+        token_id: str,
+        reason: str | None = None,
+    ) -> None:
+        """Single-connection, single-transaction cascade.
+
+        Opens ONE ``aiosqlite.connect``, walks the delegation tree with
+        conn-scoped reads, and inserts every revocation on that connection.
+        COMMIT happens only after the full walk succeeds; any exception
+        propagates and the ``async with`` block closes the connection without
+        committing, so SQLite discards the uncommitted rows (atomic rollback).
+        """
+        async with aiosqlite.connect(self._db_path) as conn:
+            await self._ensure_tables(conn)
+            await conn.execute("BEGIN")
+            try:
+                visited: set[str] = set()
+                stack: list[tuple[str, int]] = [(token_id, 0)]
+                while stack:
+                    tid, depth = stack.pop()
+                    if tid in visited or depth > _MAX_CASCADE_DEPTH:
+                        continue
+                    visited.add(tid)
+                    cursor = await conn.execute(
+                        "SELECT delegate_urn FROM issued_delegations WHERE id = ?",
+                        (tid,),
+                    )
+                    row = await cursor.fetchone()
+                    delegate_urn = str(row[0]) if row and row[0] else None
+                    if delegate_urn:
+                        cursor = await conn.execute(
+                            "SELECT id FROM issued_delegations WHERE delegator_urn = ?",
+                            (delegate_urn,),
+                        )
+                        child_rows = await cursor.fetchall()
+                        for child_row in child_rows:
+                            stack.append((str(child_row[0]), depth + 1))
+                    await self._revoke_on_conn(conn, tid, reason)
+                await conn.commit()
+            except BaseException:
+                # Roll back any pending writes so a mid-cascade crash leaves
+                # no partial revocation state. Re-raise to surface the error.
+                await conn.rollback()
+                raise
 
     async def is_revoked(self, token_id: str) -> bool:
         async with aiosqlite.connect(self._db_path) as conn:

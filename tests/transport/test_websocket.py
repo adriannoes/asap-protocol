@@ -490,6 +490,90 @@ class TestWebSocketTransportCorrelation(NoRateLimitTestBase):
             )
 
     @pytest.mark.asyncio
+    async def test_send_and_receive_rejects_mismatched_correlation_id(self) -> None:
+        """B6 (BUG #6): WS recv loop rejects a response whose correlation_id != request id.
+
+        The server returns a structurally valid JSON-RPC response (non-empty
+        ``correlation_id``) carrying the right JSON-RPC ``id`` but an envelope
+        ``correlation_id`` that does not match the request envelope id. The recv
+        loop must raise ``ProtocolCorrelationError`` rather than pairing it with
+        the in-flight request. Deterministic: ``_ws`` is mocked, no real server.
+        """
+        from asap.models.enums import TaskStatus
+        from asap.models.payloads import TaskResponse
+        from asap.transport.errors import ProtocolCorrelationError
+
+        request = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:client",
+            recipient="urn:asap:agent:server",
+            payload_type="task.request",
+            payload=TaskRequest(
+                conversation_id="c1",
+                skill_id="echo",
+                input={"msg": "hi"},
+            ).model_dump(),
+        )
+
+        # Response envelope: non-empty correlation_id that does NOT match request.id.
+        mismatched_response = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:server",
+            recipient="urn:asap:agent:client",
+            payload_type="task.response",
+            payload=TaskResponse(
+                task_id="task_456",
+                status=TaskStatus.COMPLETED,
+                result={"echoed": {"message": "hi"}},
+            ).model_dump(),
+            correlation_id="different-id",
+        )
+
+        async def send_stub(frame: str) -> None:
+            # Capture the JSON-RPC request_id the transport assigned so the
+            # fake recv() can return a response carrying that same id.
+            payload = json.loads(frame)
+            send_stub.request_id = payload["id"]
+
+        async def recv_stub() -> str:
+            await asyncio.sleep(0)  # let send_and_receive register the pending future
+            response_frame = {
+                "jsonrpc": "2.0",
+                "id": send_stub.request_id,
+                "result": {"envelope": mismatched_response.model_dump(by_alias=True, mode="json")},
+            }
+            return json.dumps(response_frame)
+
+        class FakeWs:
+            sent_id: str = ""
+
+            async def send(self, frame: str) -> None:
+                await send_stub(frame)
+
+            async def recv(self) -> str:
+                return await recv_stub()
+
+            async def close(self) -> None:
+                return None
+
+        transport = WebSocketTransport(receive_timeout=2.0)
+        transport._ws = cast(Any, FakeWs())
+        transport._closed = False
+        transport._recv_task = asyncio.create_task(transport._recv_loop())
+        transport._ack_check_task = asyncio.create_task(transport._ack_check_loop())
+
+        try:
+            with pytest.raises(ProtocolCorrelationError) as exc_info:
+                await transport.send_and_receive(request)
+
+            message = str(exc_info.value)
+            assert "correlation_id" in message
+            assert repr(request.id) in message
+            assert repr("different-id") in message
+        finally:
+            await transport.close()
+
+    @pytest.mark.asyncio
     async def test_close_swallows_oserror_from_ws_close(self) -> None:
         """close() does not raise when _ws.close() raises OSError."""
         transport = WebSocketTransport(receive_timeout=5.0)

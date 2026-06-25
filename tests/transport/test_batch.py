@@ -238,3 +238,115 @@ class TestBatchClient(NoRateLimitTestBase):
         ) as client:
             with pytest.raises(ValueError, match="empty"):
                 await client.batch([])
+
+    async def test_client_batch_rejects_mismatched_correlation_id(self) -> None:
+        """B6/BUG #6: batch() rejects a sub-response whose correlation_id != request id.
+
+        A malicious/buggy peer could permute batch response bodies (or ids) while
+        keeping HTTP 200; the client must bind each sub-response to its originating
+        request by correlation_id and raise ProtocolCorrelationError on mismatch,
+        mirroring send() and the WebSocket recv loop.
+        """
+        import httpx
+
+        from asap.models.enums import TaskStatus
+        from asap.models.payloads import TaskResponse
+        from asap.transport.client import ASAPClient
+        from asap.transport.errors import ProtocolCorrelationError
+
+        env1 = _make_envelope()
+        env2 = _make_envelope()
+
+        def malicious_transport(request: httpx.Request) -> httpx.Response:
+            # Parse the batch array the client sent so we can echo each request's
+            # JSON-RPC id while returning a response whose correlation_id does NOT
+            # match the request envelope id (the B6 attack).
+            batch_body = json.loads(request.content)
+            items: list[dict[str, Any]] = []
+            for entry in batch_body:
+                req_id = entry["id"]
+                response_envelope = Envelope(
+                    asap_version="0.1",
+                    sender="urn:asap:agent:batch-test",
+                    recipient="urn:asap:agent:client",
+                    payload_type="task.response",
+                    payload=TaskResponse(
+                        task_id="task_evil",
+                        status=TaskStatus.COMPLETED,
+                        result={"echoed": {"message": "permuted"}},
+                    ).model_dump(),
+                    # Non-empty but wrong: does not match the request envelope id.
+                    correlation_id="definitely-not-the-request-id",
+                )
+                items.append(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": req_id,
+                        "result": {"envelope": response_envelope.model_dump(mode="json")},
+                    }
+                )
+            return httpx.Response(200, json=items)
+
+        async with ASAPClient(
+            "http://test",
+            require_https=False,
+            transport=httpx.MockTransport(malicious_transport),
+        ) as client:
+            with pytest.raises(ProtocolCorrelationError) as exc_info:
+                await client.batch([env1, env2])
+
+            message = str(exc_info.value)
+            assert "correlation_id" in message
+            assert repr("definitely-not-the-request-id") in message
+
+    async def test_client_batch_rejects_unknown_response_id(self) -> None:
+        """B6/BUG #6: batch() rejects a sub-response whose JSON-RPC id matches no sent request.
+
+        A peer that returns a result for an id we did not send (permutation / forgery)
+        must be rejected rather than silently paired by array index.
+        """
+        import httpx
+
+        from asap.models.enums import TaskStatus
+        from asap.models.payloads import TaskResponse
+        from asap.transport.client import ASAPClient
+        from asap.transport.errors import ProtocolCorrelationError
+
+        env1 = _make_envelope()
+
+        def malicious_transport(request: httpx.Request) -> httpx.Response:
+            response_envelope = Envelope(
+                asap_version="0.1",
+                sender="urn:asap:agent:batch-test",
+                recipient="urn:asap:agent:client",
+                payload_type="task.response",
+                payload=TaskResponse(
+                    task_id="task_evil",
+                    status=TaskStatus.COMPLETED,
+                    result={},
+                ).model_dump(),
+                correlation_id=env1.id,
+            )
+            # An id we never sent.
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "jsonrpc": "2.0",
+                        "id": "forged-id-not-in-batch",
+                        "result": {"envelope": response_envelope.model_dump(mode="json")},
+                    }
+                ],
+            )
+
+        async with ASAPClient(
+            "http://test",
+            require_https=False,
+            transport=httpx.MockTransport(malicious_transport),
+        ) as client:
+            with pytest.raises(ProtocolCorrelationError) as exc_info:
+                await client.batch([env1])
+
+            # The forged JSON-RPC id appears as the expected request_id, proving
+            # the unknown-id branch fired (no sent request had that id).
+            assert repr("forged-id-not-in-batch") in str(exc_info.value)
