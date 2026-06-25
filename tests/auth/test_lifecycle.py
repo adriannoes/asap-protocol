@@ -7,9 +7,10 @@ from typing import get_args
 
 import pytest
 
-from asap.auth.identity import AgentSession, HostIdentity
-from asap.auth.lifecycle import (
+from asap.auth.identity import (
+    AgentSession,
     ExpiryStatus,
+    HostIdentity,
     check_agent_expiry,
     extend_session,
     reactivate_agent,

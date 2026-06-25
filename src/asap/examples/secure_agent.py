@@ -30,7 +30,7 @@ import sys
 import httpx
 
 from asap.auth import OAuth2Config
-from asap.auth.claims import parse_expected_audience_from_env
+from asap.auth.middleware import parse_expected_audience_from_env
 from asap.auth.oauth2 import OAuth2ClientCredentials
 from asap.auth.oidc import OIDCDiscovery
 from asap.models.entities import Capability, Endpoint, Manifest, Skill

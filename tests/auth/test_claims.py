@@ -5,11 +5,8 @@ from typing import Any
 
 import pytest
 
-from asap.auth.claims import (
-    audience_matches_expected,
-    issuer_matches_expected,
-    parse_expected_audience_from_env,
-)
+from asap.auth.jwks import audience_matches_expected, issuer_matches_expected
+from asap.auth.middleware import parse_expected_audience_from_env
 
 
 class TestAudienceMatchesExpected:

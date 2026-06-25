@@ -15,7 +15,7 @@ from typing import Any, Optional
 import httpx
 from pydantic import Field
 
-from asap.auth.utils import parse_scope
+from asap.auth.scopes import parse_scope
 from asap.models.base import ASAPBaseModel
 
 # Default TTL for inactive token cache entries (reduce introspection endpoint load)

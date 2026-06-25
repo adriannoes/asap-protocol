@@ -257,11 +257,12 @@ def test_default_webauthn_verifier_real_when_configured(monkeypatch: pytest.Monk
     monkeypatch.setattr("asap.auth.self_auth._webauthn_extra_installed", lambda: True)
     monkeypatch.setenv("ASAP_WEBAUTHN_RP_ID", "localhost")
     monkeypatch.setenv("ASAP_WEBAUTHN_ORIGIN", "http://localhost:8000")
-    from asap.auth.webauthn import WebAuthnSelfAuthVerifier
+    from asap.auth.webauthn import WebAuthnVerifierImpl
 
     v = default_webauthn_verifier()
-    assert isinstance(v, WebAuthnSelfAuthVerifier)
+    assert isinstance(v, WebAuthnVerifierImpl)
     assert isinstance(v, WebAuthnVerifier)
+    assert uses_real_webauthn_verifier(v) is True
 
 
 def test_select_browser_controls_forces_ciba_despite_device_hint() -> None:
