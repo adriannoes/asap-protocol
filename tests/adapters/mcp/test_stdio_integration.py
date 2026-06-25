@@ -16,8 +16,8 @@ from typing import Any
 
 import pytest
 
-from asap.adapters.mcp.errors import AUTH_REQUIRED, CAPABILITY_DENIED
-from asap.adapters.mcp import MCPAuthConfig, protect_server
+from asap.mcp.auth.errors import AUTH_REQUIRED, CAPABILITY_DENIED
+from asap.mcp.auth import MCPAuthConfig, protect_server
 from asap.auth.capabilities import CapabilityDefinition, CapabilityGrant, CapabilityRegistry
 from asap.auth.identity import (
     AgentSession,

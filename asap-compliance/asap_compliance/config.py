@@ -8,7 +8,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from asap.adapters.mcp.config import MCP_COMPLIANCE_ENV_VAR
+from asap.mcp.auth.config import MCP_COMPLIANCE_ENV_VAR
 
 # Requires asap-protocol>=2.5.0 (MCP Auth Bridge adapter ships in v2.5.0).
 MCP_AUTH_BRIDGE_PROFILE = "mcp-auth-bridge"

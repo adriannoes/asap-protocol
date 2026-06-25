@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from asap.adapters.mcp.capability_map import resolve_capability
-from asap.adapters.mcp.config import MCPAuthConfig
+from asap.mcp.auth.capability_map import resolve_capability
+from asap.mcp.auth.config import MCPAuthConfig
 from asap.auth.capabilities import CapabilityRegistry
 from asap.auth.identity import InMemoryAgentStore, InMemoryHostStore
 from asap.mcp.server import MCPServer

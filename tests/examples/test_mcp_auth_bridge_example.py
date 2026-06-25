@@ -15,7 +15,7 @@ from types import ModuleType
 import pytest
 from pytest import MonkeyPatch
 
-from asap.adapters.mcp.errors import AUTH_REQUIRED
+from asap.mcp.auth.errors import AUTH_REQUIRED
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SERVER_SCRIPT = _REPO_ROOT / "examples" / "mcp_auth_bridge" / "server.py"

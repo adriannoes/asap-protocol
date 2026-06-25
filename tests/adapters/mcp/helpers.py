@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from asap.adapters.mcp.config import MCPAuthConfig
+from asap.mcp.auth.config import MCPAuthConfig
 from asap.auth.capabilities import CapabilityRegistry
 from asap.auth.identity import InMemoryAgentStore, InMemoryHostStore
 from tests.adapters.mcp.conftest import MCP_TEST_AUDIENCE
