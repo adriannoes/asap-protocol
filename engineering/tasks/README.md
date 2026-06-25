@@ -8,7 +8,7 @@ Sprint roadmaps and release checklists per protocol version. Pair each folder wi
 
 | Folder | PRD | Status |
 |--------|-----|--------|
-| [v2.5.0/](./v2.5.0/tasks-v2.5.0-roadmap.md) | [prd-v2.5.0-mcp-auth-bridge.md](../../product/prd/prd-v2.5.0-mcp-auth-bridge.md) | **IN PROGRESS** — parent tasks 1.0–5.0; sub-tasks after LGTM |
+| *(none — start `v2.5.1/` when Adapter Lab II kicks off)* | [prd-v2.5.1-adapter-lab-ii.md](../../product/prd/prd-v2.5.1-adapter-lab-ii.md) | **PLANNED** |
 
 ---
 
@@ -16,6 +16,7 @@ Sprint roadmaps and release checklists per protocol version. Pair each folder wi
 
 | Folder | PRD | Shipped |
 |--------|-----|---------|
+| [v2.5.0/](./v2.5.0/tasks-v2.5.0-roadmap.md) | [prd-v2.5.0-mcp-auth-bridge.md](../../product/prd/prd-v2.5.0-mcp-auth-bridge.md) | 2026-06-24 — [release-checklist.md](./v2.5.0/release-checklist.md) |
 | [v2.4.0/](./v2.4.0/tasks-v2.4.0-roadmap.md) | [prd-v2.4.0-edge-ai-discovery.md](../../product/prd/prd-v2.4.0-edge-ai-discovery.md) | 2026-05-24 |
 | [v2.3.0/](./v2.3.0/tasks-v2.3.0-adoption-multiplier.md) | [prd-v2.3-scale.md](../../product/prd/prd-v2.3-scale.md) | 2026-05-04 |
 | [v2.2.1/](./v2.2.1/tasks-v2.2.1-patch.md) | [prd-v2.2.1-patch.md](../../product/prd/prd-v2.2.1-patch.md) | 2026-04-21 |
@@ -39,7 +40,7 @@ Sprint roadmaps and release checklists per protocol version. Pair each folder wi
 
 | Version | PRD | Blocked by |
 |---------|-----|------------|
-| v2.5.1 | [prd-v2.5.1-adapter-lab-ii.md](../../product/prd/prd-v2.5.1-adapter-lab-ii.md) | v2.5.0 ship |
+| v2.5.1 | [prd-v2.5.1-adapter-lab-ii.md](../../product/prd/prd-v2.5.1-adapter-lab-ii.md) | — (v2.5.0 ✅) |
 | v2.5.2 | [prd-v2.5.2-distribution-loop.md](../../product/prd/prd-v2.5.2-distribution-loop.md) | v2.5.1 |
 | v2.5.3 | [prd-v2.5.3-formal-spec-interop.md](../../product/prd/prd-v2.5.3-formal-spec-interop.md) | v2.5.2 (soft) |
 

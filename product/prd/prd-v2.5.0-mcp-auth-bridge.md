@@ -298,8 +298,8 @@ def default_jwt_extractor(params: CallToolRequestParams) -> str | None:
 - [x] Compliance harness includes `mcp-auth-bridge` profile cases for auth, grants, constraints, and manifest alignment (S4, [PR #233](https://github.com/adriannoes/asap-protocol/pull/233))
 - [x] Docs published; `AGENTS.md` knowledge map references MCP Auth Bridge (S3)
 - [x] No breaking change to unprotected `MCPServer` usage (opt-in `protect_server`)
-- [x] Version bump `2.5.0` + CHANGELOG `[2.5.0]` with TypeScript defer to v2.5.0.1 (S5 — [PR #235](https://github.com/adriannoes/asap-protocol/pull/235))
-- [ ] `release/2.5.0` → `main`, tag `v2.5.0`, PyPI publish (S5 §3.0 — [sprint-S5-release.md](../../engineering/tasks/v2.5.0/sprint-S5-release.md))
+- [x] Version bump `2.5.0` + CHANGELOG `[2.5.0]` with TypeScript defer (npm patch TBD; tag `v2.5.0.1` = compliance only) — [PR #235](https://github.com/adriannoes/asap-protocol/pull/235)
+- [x] `release/2.5.0` → `main`, tags `v2.5.0` + `v2.5.0.1`, PyPI publish — [release-checklist.md](../../engineering/tasks/v2.5.0/release-checklist.md)
 
 ---
 
@@ -320,10 +320,10 @@ def default_jwt_extractor(params: CallToolRequestParams) -> str | None:
 | Metric | Target | Status |
 |--------|--------|--------|
 | Protected MCP example server | 1 runnable in repo | ✅ `examples/mcp_auth_bridge/` |
-| Test coverage on `asap.adapters.mcp` | ≥ 90% | ✅ (verify in S5 pre-release gate) |
+| Test coverage on `asap.adapters.mcp` | ≥ 90% | ✅ 96.17% (S5 gate) |
 | External MCP servers adopting (post-release) | 3+ within 90 days (aspirational) | — post-tag |
 | Compliance harness | `mcp-auth-bridge` profile green in CI | ✅ on `release/2.5.0` |
-| Time to ship from task kickoff | ≤ 3 weeks (solo maintainer estimate) | 🟡 S5 pending |
+| Time to ship from task kickoff | ≤ 3 weeks (solo maintainer estimate) | ✅ shipped 2026-06-24 |
 
 ---
 
@@ -336,7 +336,7 @@ def default_jwt_extractor(params: CallToolRequestParams) -> str | None:
 | `CapabilityRegistry.check_grant` + `validate_constraints` | ✅ |
 | `MCPServer` tools/call hook point | ✅ wrapper via `protect_server` (S1; `config.py` + `ProtectedMCPServer` PR #234) |
 | S0–S4 on `release/2.5.0` | ✅ (`a60c1e9`) |
-| v2.5.1+ adapter work | ❌ blocked until v2.5.0 tag (S5) |
+| v2.5.1+ adapter work | ✅ unblocked — tag `v2.5.0` shipped |
 
 ---
 
@@ -360,4 +360,4 @@ def default_jwt_extractor(params: CallToolRequestParams) -> str | None:
 | 2026-06-22 | 1.0.0 | **Rescoped to v2.5.0**; full architecture, API, task breakdown; split from formal spec (→ v2.5.3) |
 | 2026-06-22 | 1.1.0 | Parent tasks 1.0–5.0 in [tasks-v2.5.0-roadmap.md](../../engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md) |
 | 2026-06-24 | 1.2.0 | Aligned task plan with repo APIs, canonical docs/example paths, grant registry config, and compliance/doc gaps |
-| 2026-06-24 | 1.3.0 | S0–S4 complete on `release/2.5.0` (`a60c1e9`); deliverables table + DoD updated; TS middleware deferred to v2.5.0.1; S5 release gate remains |
+| 2026-06-24 | 1.4.0 | **SHIPPED** — tags `v2.5.0` + `v2.5.0.1`; [release-checklist.md](../../engineering/tasks/v2.5.0/release-checklist.md); v2.5.1 unblocked |

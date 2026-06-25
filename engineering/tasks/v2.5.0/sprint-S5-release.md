@@ -4,7 +4,7 @@
 **Branch**: `feat/v2.5.0-s5-release` → merge into **`release/2.5.0`**, then **`release/2.5.0` → `main`**
 **Depends on**: S0–S4 complete on `release/2.5.0`
 
-> **Status:** **SHIPPED** — `main` @ tag [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0) (2026-06-24). Merge [#236](https://github.com/adriannoes/asap-protocol/pull/236); prep [#235](https://github.com/adriannoes/asap-protocol/pull/235).
+> **Status:** **CLOSED** — shipped 2026-06-24. See [release-checklist.md](./release-checklist.md).
 
 **Trigger:** All sprint acceptance criteria met on integration branch.
 **Enables:** v2.5.1 Adapter Lab II.
@@ -15,7 +15,8 @@
 ## Relevant Files
 
 ### Sprint tracking (docs sync — pre-S5)
-- `engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md` — sprint index; S5 active
+- `engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md` — sprint index; train **CLOSED**
+- `engineering/tasks/v2.5.0/release-checklist.md` — tag/PyPI verification record
 - `engineering/tasks/v2.5.0/sprint-S5-release.md` — this file
 - `product/prd/prd-v2.5.0-mcp-auth-bridge.md` — DoD + deliverable status
 - `product/prd/prd-v2.5-roadmap.md` — train schedule status
@@ -29,7 +30,7 @@
 - `AGENTS.md` — knowledge map and version context ✅
 
 ### Optional (SHOULD defer)
-- `packages/typescript/` — `@asap-protocol/mcp-auth` npm package (v2.5.0.1 if not ready)
+- `packages/typescript/` — `@asap-protocol/mcp-auth` npm package (npm patch TBD — tag `v2.5.0.1` used for compliance only)
 - `engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md` — S4 ship/defer decision
 
 ### CI / publish

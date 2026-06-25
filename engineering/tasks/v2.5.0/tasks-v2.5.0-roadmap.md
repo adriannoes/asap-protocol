@@ -1,6 +1,6 @@
 # Tasks: v2.5.0 MCP Auth Bridge — Sprint Index
 
-**Status: ✅ SHIPPED** — tag [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0) on `main` (2026-06-24); merge [PR #236](https://github.com/adriannoes/asap-protocol/pull/236).
+**Status: ✅ SHIPPED (CLOSED)** — tags [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0) + [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1); [release-checklist.md](./release-checklist.md).
 
 Based on [PRD v2.5.0 MCP Auth Bridge](../../../product/prd/prd-v2.5.0-mcp-auth-bridge.md). Each sprint maps to a PR into **`release/2.5.0`** (see [BRANCHING.md](./BRANCHING.md)); merge to `main` only after S5.
 
@@ -88,19 +88,20 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
     - [x] Manifest ↔ tool alignment pattern documented, including `skills[].id` ↔ MCP tool snippets (MCP-DISC-001/002)
     - [x] Migration note states unprotected MCP servers remain valid and protection is opt-in (MCP-DOC-004)
 
-- [ ] **5.0 Compliance, quality & release (S4–S5)**
+- [x] **5.0 Compliance, quality & release (S4–S5)**
   - **Trigger:** Example server + docs merged.
-  - **Enables:** v2.5.1 Adapter Lab II (blocked until tag).
+  - **Enables:** v2.5.1 Adapter Lab II (unblocked).
   - **Depends on:** Tasks 2.0–4.0.
   - **Acceptance criteria:**
     - [x] `asap-compliance` includes `mcp-auth-bridge` profile cases for stdio MCP, including manifest tools ⊆ registered tools (merged `4b67b50`, [PR #233](https://github.com/adriannoes/asap-protocol/pull/233))
     - [x] Post-S4 refactor: unified capability metadata, `MCPAuthConfig` in `config.py`, split adapter tests (merged `a60c1e9`, [PR #234](https://github.com/adriannoes/asap-protocol/pull/234))
     - [x] TS middleware: **deferred** per [typescript-mcp-auth-spike.md](./typescript-mcp-auth-spike.md) (MCP-TS-001..003; npm patch TBD; tag `v2.5.0.1` = compliance only)
     - [x] `pyproject.toml` / `src/asap/__init__.py` / `uv.lock` → **2.5.0** (S5 — [PR #235](https://github.com/adriannoes/asap-protocol/pull/235))
-    - [x] `AGENTS.md` knowledge map updated; CHANGELOG `[2.5.0]` with TS defer subsection (S5 — PR #235)
-    - [x] Pre-push CI suite green on `release/2.5.0` (ruff, mypy, pytest ≥85% cov, pip-audit) — results in [sprint-S5-release.md](./sprint-S5-release.md) §1.0 (2026-06-24)
-    - [ ] Tag `v2.5.0` published (S5 §3.2)
-    - [ ] `release/2.5.0` → `main` merge + maintainer PyPI publish (S5)
+    - [x] `AGENTS.md` knowledge map updated; CHANGELOG `[2.5.0]` + `[2.5.0.1]` (S5)
+    - [x] Pre-push CI suite green on `release/2.5.0` (ruff, mypy, pytest ≥85% cov, pip-audit) — [sprint-S5-release.md](./sprint-S5-release.md) §1.0
+    - [x] Tag `v2.5.0` published; PyPI `asap-protocol` **2.5.0** ([release-checklist.md](./release-checklist.md))
+    - [x] Tag `v2.5.0.1` → PyPI `asap-compliance` **1.3.0**
+    - [x] `release/2.5.0` → `main` merge — [PR #236](https://github.com/adriannoes/asap-protocol/pull/236)
 
 ## Relevant Files (overview)
 
@@ -144,7 +145,7 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
 
 ## Definition of Done (v2.5.0)
 
-- [ ] All parent tasks 1.0–5.0 complete (1.0–4.0 + S4 ✅; 5.0 pending S5 release)
+- [x] All parent tasks 1.0–5.0 complete (S0–S5 shipped 2026-06-24)
 - [x] PRD requirements MCP-AUTH-001..006, MCP-MAP-001..003, MCP-DOC-001..004 satisfied (MCP-MAP-004 / `hide_unauthorized_tools` deferred per design lock §6)
 - [x] PRD discovery requirements MCP-DISC-001..003 satisfied or explicitly deferred with rationale (MCP-DISC-001/002 ✅ in S3; MCP-DISC-003 ✅ in S4 `mcp-auth-bridge` harness, PR #233)
 - [x] Unprotected `MCPServer` usage unchanged (opt-in via `protect_server`)
@@ -184,4 +185,4 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
 | 2026-06-24 | S4 acceptance gate green on `feat/v2.5.0-s4-compliance` (pytest + ruff + mypy); PR pending merge into `release/2.5.0` |
 | 2026-06-24 | S4 merged on `release/2.5.0` (`4b67b50`, [PR #233](https://github.com/adriannoes/asap-protocol/pull/233)); `mcp-auth-bridge` compliance profile, stdio integration tests, CI on `release/2.5.0`, TS `@asap-protocol/mcp-auth` defer to v2.5.0.1; S5 release pending |
 | 2026-06-24 | Post-S4 refactor merged (`a60c1e9`, [PR #234](https://github.com/adriannoes/asap-protocol/pull/234)); `MCPAuthConfig` → `config.py`, adapter tests split; branch synced with `origin/release/2.5.0`; S5 active |
-| 2026-06-24 | S5 release prep — [PR #235](https://github.com/adriannoes/asap-protocol/pull/235) merged; [PR #236](https://github.com/adriannoes/asap-protocol/pull/236) `release/2.5.0` → `main` |
+| 2026-06-24 | v2.5.0 train **CLOSED** — tags `v2.5.0` + `v2.5.0.1`; PyPI verified; [release-checklist.md](./release-checklist.md) |
