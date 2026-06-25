@@ -2117,3 +2117,48 @@ class TestManifestSignatureVerification:
         ) as client:
             result = await client.get_manifest()
         assert result.id == "urn:asap:agent:plain"
+
+
+class TestClientCorrelationBinding:
+    """B6 (BUG #6): client must reject responses whose correlation_id does not bind to the request.
+
+    The structural ``validate_response_correlation`` check only ensures the response carries a
+    non-empty ``correlation_id``. The BINDING check (response.correlation_id == request.id)
+    must be enforced at the client pairing site so a buggy/malicious server cannot return a
+    response meant for a different request under concurrency.
+    """
+
+    async def test_send_rejects_mismatched_correlation_id(
+        self, sample_request_envelope: Envelope
+    ) -> None:
+        """``send`` raises ``ProtocolCorrelationError`` when response correlation_id != request id."""
+        from asap.transport.errors import ProtocolCorrelationError
+
+        # Non-empty but different from sample_request_envelope.id so it passes the
+        # structural non-empty check but must fail the binding check.
+        mismatched_response = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:server",
+            recipient="urn:asap:agent:client",
+            payload_type="task.response",
+            payload=TaskResponse(
+                task_id="task_456",
+                status=TaskStatus.COMPLETED,
+                result={"echoed": {"message": "Hello!"}},
+            ).model_dump(),
+            correlation_id="different-id",
+        )
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return create_mock_response(mismatched_response)
+
+        async with ASAPClient(
+            "http://localhost:8000", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            with pytest.raises(ProtocolCorrelationError) as exc_info:
+                await client.send(sample_request_envelope)
+
+            message = str(exc_info.value)
+            assert "correlation_id" in message
+            assert repr(sample_request_envelope.id) in message
+            assert repr("different-id") in message

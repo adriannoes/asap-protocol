@@ -87,6 +87,7 @@ from asap.transport.mtls import MTLSConfig, create_ssl_context
 from asap.transport.circuit_breaker import CircuitBreaker, CircuitState, get_registry
 from asap.transport.codecs import lambda_codec
 from asap.transport.codecs.lambda_codec import LAMBDA_CONTENT_TYPE
+from asap.transport.errors import ProtocolCorrelationError, assert_correlation_binds
 from asap.transport.compression import (
     COMPRESSION_THRESHOLD,
     CompressionAlgorithm,
@@ -1031,6 +1032,11 @@ class ASAPClient:
 
                 response_envelope = Envelope(**envelope_data)
 
+                # BINDING check: a structurally valid response still must bind to the
+                # request we sent, otherwise a buggy/malicious server could return a
+                # response meant for a different request and mix pairs under concurrency.
+                assert_correlation_binds(str(envelope.id), response_envelope)
+
                 # Record success in circuit breaker
                 if self._circuit_breaker is not None:
                     previous_state = self._circuit_breaker.get_state()
@@ -1142,6 +1148,7 @@ class ASAPClient:
                 ASAPRemoteError,
                 RemoteRecoverableRPCError,
                 ASAPTimeoutError,
+                ProtocolCorrelationError,
             ):
                 # Re-raise our custom errors without recording failure again
                 # (failures are already recorded before these exceptions are raised)
@@ -1893,6 +1900,11 @@ class ASAPClient:
             )
 
         batch_body: list[dict[str, Any]] = []
+        # Map JSON-RPC id -> originating request envelope so each batch sub-response
+        # can be bound to its request by correlation_id (B6/BUG #6). A malicious/buggy
+        # peer could otherwise permute response bodies while keeping HTTP 200 and the
+        # client would pair the wrong task.response to each batch slot.
+        requests_by_id: dict[str, Envelope] = {}
         for env in envelopes:
             rpc_req = {
                 "jsonrpc": "2.0",
@@ -1901,6 +1913,7 @@ class ASAPClient:
                 "id": env.id,
             }
             batch_body.append(rpc_req)
+            requests_by_id[str(env.id)] = env
 
         url = f"{self.base_url}/asap"
         headers: dict[str, str] = {
@@ -1930,5 +1943,19 @@ class ASAPClient:
                 raise remote_rpc_error_from_json(wire_code, err_msg, err_data)
             result_data = item.get("result", {})
             env_data = result_data.get("envelope", result_data)
-            out.append(Envelope.model_validate(env_data))
+            response_envelope = Envelope.model_validate(env_data)
+            # BINDING check (B6/BUG #6): each batch sub-response must bind to its
+            # originating request by correlation_id. Resolve the request via the
+            # JSON-RPC id; if the peer permuted ids or returned a response for a
+            # request we did not send, reject it.
+            rpc_id = item.get("id")
+            request_envelope = requests_by_id.get(str(rpc_id)) if rpc_id is not None else None
+            if request_envelope is None:
+                raise ProtocolCorrelationError(
+                    request_id=str(rpc_id) if rpc_id is not None else "",
+                    correlation_id=response_envelope.correlation_id,
+                    details={"reason": "batch sub-response id does not match any sent request"},
+                )
+            assert_correlation_binds(str(request_envelope.id), response_envelope)
+            out.append(response_envelope)
         return out

@@ -830,11 +830,29 @@ async def test_create_openapi_task_handler_returns_task_response_envelope(tmp_pa
         assert envelope_out.correlation_id == envelope_in.id
 
 
-def test_openapi_path_parameter_error_requires_exactly_one_of_missing_or_invalid() -> None:
-    with pytest.raises(ValueError, match="exactly one of missing="):
-        OpenAPIPathParameterError(path_template="/x/{a}", missing=[], invalid=[])
-    with pytest.raises(ValueError, match="exactly one of missing="):
-        OpenAPIPathParameterError(path_template="/x/{a}", missing=["a"], invalid=["a"])
+def test_openapi_path_parameter_error_constructor_is_pure() -> None:
+    # Construction must NOT raise, even for ambiguous (both/neither) invocations.
+    both = OpenAPIPathParameterError(path_template="/x/{a}", missing=["a"], invalid=["a"])
+    neither = OpenAPIPathParameterError(path_template="/x/{a}", missing=[], invalid=[])
+    assert both.path_template == "/x/{a}"
+    assert neither.path_template == "/x/{a}"
+    assert isinstance(both, OpenAPIPathParameterError)
+    assert isinstance(neither, OpenAPIPathParameterError)
+
+
+def test_openapi_path_parameter_error_factories_enforce_invariant() -> None:
+    # The "exactly one / non-empty" invariant now lives at the call-site factories.
+    with pytest.raises(ValueError, match="for_missing requires a non-empty"):
+        OpenAPIPathParameterError.for_missing("/x/{a}", [])
+    with pytest.raises(ValueError, match="for_invalid requires a non-empty"):
+        OpenAPIPathParameterError.for_invalid("/x/{a}", [])
+    # Valid factory calls still produce the expected messages/details.
+    miss_err = OpenAPIPathParameterError.for_missing("/x/{a}", ["a"])
+    assert "Missing path parameter" in str(miss_err)
+    assert miss_err.missing == ["a"]
+    inv_err = OpenAPIPathParameterError.for_invalid("/x/{a}", ["a"])
+    assert "Invalid path parameter" in str(inv_err)
+    assert inv_err.invalid == ["a"]
 
 
 @pytest.mark.asyncio

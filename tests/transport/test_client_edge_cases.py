@@ -44,6 +44,9 @@ def sample_request_envelope() -> Envelope:
 
 def _make_success_response(envelope: Envelope) -> httpx.Response:
     """Create a mock httpx.Response with valid JSON-RPC success."""
+    # Per ASAP protocol semantics, a response's correlation_id MUST echo the
+    # REQUEST envelope's id (see handlers.py + testing/mocks.py). The client
+    # binding (B6/BUG #6) enforces this.
     response_envelope = Envelope(
         asap_version="0.1",
         sender="urn:asap:agent:server",
@@ -53,7 +56,7 @@ def _make_success_response(envelope: Envelope) -> httpx.Response:
             task_id="task_1",
             status=TaskStatus.COMPLETED,
         ).model_dump(),
-        correlation_id="req_1",
+        correlation_id=envelope.id,
     )
     body = {
         "jsonrpc": "2.0",

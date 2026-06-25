@@ -15,12 +15,15 @@ from asap.transport.client import ASAPClient
 
 
 def _echo_response_json(for_envelope: Envelope) -> dict[str, object]:
+    # Per ASAP protocol semantics (see handlers.py + testing/mocks.py), a
+    # response's correlation_id MUST echo the REQUEST envelope's id, not its
+    # correlation_id field. Binding the client (B6/BUG #6) enforces this.
     env = Envelope(
         asap_version=for_envelope.asap_version,
         sender=for_envelope.recipient,
         recipient=for_envelope.sender,
         payload_type="task.response",
-        correlation_id=for_envelope.correlation_id,
+        correlation_id=for_envelope.id,
         payload=TaskResponse(
             task_id="task-version",
             status=TaskStatus.COMPLETED,

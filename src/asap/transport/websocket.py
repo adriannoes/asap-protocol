@@ -33,6 +33,7 @@ from asap.models.envelope import Envelope
 from asap.models.payloads import MessageAck
 from asap.observability import get_logger
 from asap.transport.circuit_breaker import CircuitBreaker
+from asap.transport.errors import ProtocolCorrelationError, assert_correlation_binds
 from asap.transport.jsonrpc import ASAP_METHOD
 from asap.transport.rate_limit import (
     DEFAULT_WS_MESSAGES_PER_SECOND,
@@ -43,6 +44,7 @@ from asap.transport.rate_limit import (
 ASAP_ACK_METHOD = "asap.ack"
 
 if TYPE_CHECKING:
+    from asap.auth.middleware import OAuth2Middleware
     from asap.economics.sla import SLABreach
     from asap.transport.server import ASAPRequestHandler
     from websockets.legacy.client import WebSocketClientProtocol
@@ -132,6 +134,7 @@ __all__ = [
     "WebSocketConnectionPool",
     "WebSocketRemoteError",
     "WebSocketTransport",
+    "WS_CLOSE_AUTH_REQUIRED",
     "WS_CLOSE_GOING_AWAY",
     "WS_CLOSE_POLICY_VIOLATION",
     "WS_CLOSE_REASON_SHUTDOWN",
@@ -217,6 +220,10 @@ class WebSocketTransport:
         self._ack_check_interval = ack_check_interval
         self._request_counter = itertools.count(1)
         self._pending: dict[str, asyncio.Future[Envelope]] = {}
+        # Maps JSON-RPC request_id -> request envelope id so the recv loop can
+        # enforce response.correlation_id binding (B6/BUG #6). Kept separate from
+        # ``_pending`` to avoid disturbing the future cleanup paths in close().
+        self._pending_request_ids: dict[str, str] = {}
         self._pending_acks: dict[str, PendingAck] = {}
         self._recv_task: asyncio.Task[None] | None = None
         self._ack_check_task: asyncio.Task[None] | None = None
@@ -388,6 +395,10 @@ class WebSocketTransport:
                     exc = WebSocketRemoteError(code, msg, err_data)
                     if request_id is not None and request_id in self._pending:
                         future = self._pending.pop(request_id, None)
+                        # Keep _pending_request_ids in lockstep with _pending so the
+                        # recv loop is self-contained and no stale id entries leak
+                        # if other callers ever read this map (B6 review follow-up).
+                        self._pending_request_ids.pop(request_id, None)
                         if future is not None and not future.done():
                             future.set_exception(exc)
                     else:
@@ -401,6 +412,7 @@ class WebSocketTransport:
                 if not result or "envelope" not in result:
                     if request_id is not None and request_id in self._pending:
                         future = self._pending.pop(request_id, None)
+                        self._pending_request_ids.pop(request_id, None)
                         if future is not None and not future.done():
                             future.set_exception(
                                 WebSocketRemoteError(
@@ -413,7 +425,16 @@ class WebSocketTransport:
                 envelope = Envelope.model_validate(result["envelope"])
                 if request_id is not None and request_id in self._pending:
                     future = self._pending.pop(request_id, None)
+                    request_envelope_id = self._pending_request_ids.pop(request_id, None)
                     if future is not None and not future.done():
+                        # BINDING check: the response must correlate to the request
+                        # we sent, else a buggy/malicious server could pair a response
+                        # with the wrong request under concurrency (B6/BUG #6).
+                        try:
+                            assert_correlation_binds(str(request_envelope_id), envelope)
+                        except ProtocolCorrelationError as corr_err:
+                            future.set_exception(corr_err)
+                            continue
                         future.set_result(envelope)
                 elif self._on_message is not None:
                     try:
@@ -435,6 +456,7 @@ class WebSocketTransport:
                 if not future.done():
                     future.set_exception(WebSocketRemoteError(-32603, str(e)))
             self._pending.clear()
+            self._pending_request_ids.clear()
 
     async def close(self) -> None:
         self._closed = True
@@ -459,6 +481,7 @@ class WebSocketTransport:
             if not future.done():
                 future.set_exception(asyncio.TimeoutError("Connection closed"))
         self._pending.clear()
+        self._pending_request_ids.clear()
         if self._ws is not None:
             with suppress(OSError):
                 await self._ws.close()
@@ -577,6 +600,9 @@ class WebSocketTransport:
         request_id = self._next_request_id()
         future: asyncio.Future[Envelope] = asyncio.get_running_loop().create_future()
         self._pending[request_id] = future
+        # Track the request envelope id so the recv loop can bind the response
+        # correlation_id to it (B6/BUG #6).
+        self._pending_request_ids[request_id] = str(envelope.id)
         frame = encode_envelope_frame(
             self._envelope_dict_for_send(envelope),
             request_id=request_id,
@@ -590,6 +616,7 @@ class WebSocketTransport:
             return await asyncio.wait_for(future, timeout=self._receive_timeout)
         finally:
             self._pending.pop(request_id, None)
+            self._pending_request_ids.pop(request_id, None)
 
     async def send_and_receive_stream(self, envelope: Envelope) -> AsyncIterator[Envelope]:
         """Send one JSON-RPC frame and yield every streaming ``result.envelope`` with matching id.
@@ -786,6 +813,54 @@ async def _make_fake_request(body: str, websocket: WebSocket) -> Request:
     return Request(scope, receive, send)
 
 
+def _bearer_token_from_websocket(websocket: WebSocket) -> str | None:
+    """Return the raw Bearer token from the WS ``Authorization`` header, if any.
+
+    WS subprotocols cannot carry per-message auth headers, so the Bearer MUST be
+    presented in the handshake ``Authorization`` header (kept in
+    ``websocket.scope["headers"]`` by Starlette).
+    """
+    auth = websocket.headers.get("Authorization")
+    if not auth or not auth.startswith("Bearer "):
+        return None
+    return auth[7:].strip() or None
+
+
+async def _enforce_ws_oauth2(
+    websocket: WebSocket,
+    oauth2_middleware: "OAuth2Middleware",
+) -> bool:
+    """Validate the WS Bearer JWT at acceptance; close 4401 on failure (B4/BUG #4).
+
+    Returns ``True`` when the connection is admitted, ``False`` after closing it.
+    Mirrors :class:`OAuth2Middleware` HTTP semantics so a WS-only deployment can
+    no longer bypass IdP JWT validation. Auth is decided here, at acceptance,
+    so it does NOT depend on the ``_make_fake_request`` middleware pass-through
+    that S2 Task 3.2 will remove.
+
+    Auth scope asymmetry (deliberate for S0): unlike the HTTP path, which
+    re-validates the JWT and refreshes ``request.state.oauth2_claims`` on every
+    POST, the WS path validates the Bearer ONCE at connection acceptance. A
+    token that expires or loses scope mid-session stays admitted on WS until the
+    client disconnects. This is acceptable for S0 (closes the bypass gap); S3
+    hardening can re-validate on the first message or on token expiry.
+    """
+    token = _bearer_token_from_websocket(websocket)
+    path = websocket.scope.get("path", "/asap/ws")
+    if not token:
+        logger.warning("asap.oauth2.missing_token", path=path)
+        await websocket.close(code=WS_CLOSE_AUTH_REQUIRED, reason="Authentication required")
+        return False
+    _claims, error = await oauth2_middleware.validate_bearer_token(token, path=path)
+    if error is not None:
+        # The middleware returns 401/403 JSON for HTTP; over WS we surface the
+        # failure as a close with the auth code rather than a JSON body, since
+        # the client has not yet sent any JSON-RPC frame to correlate.
+        await websocket.close(code=WS_CLOSE_AUTH_REQUIRED, reason="Invalid token")
+        return False
+    return True
+
+
 def _is_heartbeat_pong(data: dict[str, Any]) -> bool:
     return data.get("type") == HEARTBEAT_FRAME_TYPE_PONG and "method" not in data
 
@@ -864,6 +939,10 @@ WS_CLOSE_REASON_SHUTDOWN = "Server shutting down"
 # Rate limit: close code when client exceeds message rate (RFC 6455 policy violation)
 WS_CLOSE_POLICY_VIOLATION = 1008
 
+# Auth rejection at WS acceptance (B4/BUG #4): RFC 6455 application range 4000-4999.
+# Custom code keeps WS auth failures distinct from rate-limit (1008) and shutdown (1001).
+WS_CLOSE_AUTH_REQUIRED = 4401
+
 # JSON-RPC methods for SLA breach subscription (v1.3)
 SLA_SUBSCRIBE_METHOD = "sla.subscribe"
 SLA_UNSUBSCRIBE_METHOD = "sla.unsubscribe"
@@ -908,8 +987,16 @@ async def handle_websocket_connection(
     active_connections: set[WebSocket] | None = None,
     ws_message_rate_limit: float | None = DEFAULT_WS_MESSAGES_PER_SECOND,
     sla_breach_subscribers: set[WebSocket] | None = None,
+    oauth2_middleware: "OAuth2Middleware | None" = None,
 ) -> None:
     await websocket.accept()
+    # OAuth2-only deployments must not admit an unauthenticated WS: the HTTP
+    # middleware stack never runs over WebSocket, so enforce IdP JWT validation
+    # explicitly at acceptance (B4/BUG #4). When ``manifest.auth`` is the active
+    # auth path, ``oauth2_middleware`` is None and the existing fake-request
+    # flow keeps handling auth via ``handle_message``.
+    if oauth2_middleware is not None and not await _enforce_ws_oauth2(websocket, oauth2_middleware):
+        return
     if active_connections is not None:
         active_connections.add(websocket)
     logger.info("asap.websocket.connected", client=websocket.client)

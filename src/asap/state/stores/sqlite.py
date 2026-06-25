@@ -67,6 +67,39 @@ async def _apply_wal_pragmas(conn: aiosqlite.Connection, db_key: str) -> None:
     await conn.execute("PRAGMA synchronous=NORMAL")
 
 
+# Canonical usage_events DDL: the single source of truth for the table + BOTH
+# indexes (agent and consumer). Lives in the state stores module because state is
+# the lower layer (no dependency on economics), so economics.storage can import it
+# without forming an import cycle. Both SQLiteMeteringStore (state) and
+# SQLiteMeteringStorage (economics) call _ensure_usage_events_schema so the
+# physical schema is identical regardless of which store initializes first.
+_USAGE_EVENTS_DDL = """
+CREATE TABLE IF NOT EXISTS usage_events (
+    id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL,
+    agent_id TEXT NOT NULL,
+    consumer_id TEXT NOT NULL,
+    metrics TEXT NOT NULL,
+    timestamp TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_usage_agent_timestamp
+ON usage_events (agent_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_usage_consumer_timestamp
+ON usage_events (consumer_id, timestamp);
+"""
+
+
+async def _ensure_usage_events_schema(conn: aiosqlite.Connection) -> None:
+    """Apply the canonical usage_events schema (table + both indexes), idempotently.
+
+    Uses IF NOT EXISTS on every statement so re-running on an already-initialized
+    DB is a no-op AND a pre-existing table missing an index (created by an older
+    code path) gets the missing index added.
+    """
+    await conn.executescript(_USAGE_EVENTS_DDL)
+    await conn.commit()
+
+
 # Shared executor for sync bridge when called from async context.
 # Reused across all DB operations to avoid per-call ThreadPoolExecutor creation.
 _SYNC_BRIDGE_EXECUTOR: concurrent.futures.ThreadPoolExecutor | None = None
@@ -395,25 +428,7 @@ class SQLiteMeteringStore:
             yield conn
 
     async def _ensure_usage_table(self, conn: aiosqlite.Connection) -> None:
-        await conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS usage_events (
-                id TEXT PRIMARY KEY,
-                task_id TEXT NOT NULL,
-                agent_id TEXT NOT NULL,
-                consumer_id TEXT NOT NULL,
-                metrics TEXT NOT NULL,
-                timestamp TEXT NOT NULL
-            )
-            """
-        )
-        await conn.execute(
-            """
-            CREATE INDEX IF NOT EXISTS idx_usage_agent_timestamp
-            ON usage_events (agent_id, timestamp)
-            """
-        )
-        await conn.commit()
+        await _ensure_usage_events_schema(conn)
 
     async def _record_impl(self, event: UsageEvent) -> None:
         async with self._connect() as conn:

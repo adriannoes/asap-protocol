@@ -258,6 +258,113 @@ class OAuth2Middleware(BaseHTTPMiddleware):
                 require_exp=False,
             )
 
+    async def validate_bearer_token(
+        self, token: str, *, path: str = ""
+    ) -> tuple[OAuth2Claims | None, JSONResponse | None]:
+        """Run the full JWKS validation pipeline for a single Bearer token.
+
+        Shared by the HTTP middleware ``dispatch`` and the WebSocket acceptance
+        path so both transports enforce identical OAuth2 semantics (B4/BUG #4).
+        Returns ``(claims, None)`` on success or ``(None, error_response)`` on
+        failure. ``path`` is used only for log context.
+        """
+        try:
+            key_set = await self._get_key_set()
+            claims = await self._validate_token_claims(token, key_set)
+        except httpx.HTTPError as e:
+            logger.error(
+                "asap.oauth2.jwks_fetch_failed",
+                path=path,
+                jwks_uri=self._jwks_uri,
+                error=str(e),
+            )
+            return None, JSONResponse(
+                status_code=503,
+                content={"detail": "Authentication service unavailable"},
+            )
+        except JoseError as e:
+            logger.warning("asap.oauth2.invalid_token", path=path, error=str(e))
+            return None, JSONResponse(
+                status_code=HTTP_UNAUTHORIZED,
+                content={"detail": ERROR_INVALID_TOKEN},
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        exp = claims.get("exp")
+        exp_ts = 0
+        if exp is not None:
+            if not isinstance(exp, (int, float)):
+                logger.warning("asap.oauth2.invalid_exp_type", path=path)
+                return None, JSONResponse(
+                    status_code=HTTP_UNAUTHORIZED,
+                    content={"detail": ERROR_INVALID_TOKEN},
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            try:
+                exp_ts = int(exp)
+            except (TypeError, ValueError):
+                logger.warning("asap.oauth2.invalid_exp_type", path=path)
+                return None, JSONResponse(
+                    status_code=HTTP_UNAUTHORIZED,
+                    content={"detail": ERROR_INVALID_TOKEN},
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+        if exp is not None and exp_ts < time.time():
+            logger.warning("asap.oauth2.expired_token", path=path)
+            return None, JSONResponse(
+                status_code=HTTP_UNAUTHORIZED,
+                content={"detail": ERROR_INVALID_TOKEN},
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        sub = claims.get("sub")
+        if not sub or not isinstance(sub, str):
+            logger.warning("asap.oauth2.missing_sub", path=path)
+            return None, JSONResponse(
+                status_code=HTTP_UNAUTHORIZED,
+                content={"detail": ERROR_INVALID_TOKEN},
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        scope_list = parse_scope(claims.get("scope"))
+        if not self._validate_scope(scope_list):
+            logger.warning(
+                "asap.oauth2.insufficient_scope",
+                path=path,
+                required=self._required_scope,
+                has_scopes=scope_list,
+            )
+            return None, JSONResponse(
+                status_code=HTTP_FORBIDDEN,
+                content={"detail": ERROR_INSUFFICIENT_SCOPE},
+            )
+
+        success, err_detail, _, use_allowlist = self._validate_identity_binding(claims, sub)
+        if not success:
+            logger.warning(
+                "asap.oauth2.identity_mismatch",
+                path=path,
+                detail=err_detail,
+            )
+            detail_msg = (
+                f"{ERROR_IDENTITY_MISMATCH} (expected: {self._manifest_id})"
+                if self._manifest_id
+                else ERROR_IDENTITY_MISMATCH
+            )
+            return None, JSONResponse(
+                status_code=HTTP_FORBIDDEN,
+                content={"detail": detail_msg},
+            )
+        if use_allowlist:
+            logger.warning(
+                "asap.oauth2.identity_via_allowlist",
+                path=path,
+                manifest_id=self._manifest_id,
+                sub=sub,
+            )
+
+        return OAuth2Claims(sub=sub, scope=scope_list, exp=exp_ts), None
+
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
@@ -274,100 +381,10 @@ class OAuth2Middleware(BaseHTTPMiddleware):
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        try:
-            key_set = await self._get_key_set()
-            claims = await self._validate_token_claims(token, key_set)
-        except httpx.HTTPError as e:
-            logger.error(
-                "asap.oauth2.jwks_fetch_failed",
-                path=request.url.path,
-                jwks_uri=self._jwks_uri,
-                error=str(e),
-            )
-            return JSONResponse(
-                status_code=503,
-                content={"detail": "Authentication service unavailable"},
-            )
-        except JoseError as e:
-            logger.warning("asap.oauth2.invalid_token", path=request.url.path, error=str(e))
-            return JSONResponse(
-                status_code=HTTP_UNAUTHORIZED,
-                content={"detail": ERROR_INVALID_TOKEN},
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
-        exp = claims.get("exp")
-        exp_ts = 0
-        if exp is not None:
-            if not isinstance(exp, (int, float)):
-                logger.warning("asap.oauth2.invalid_exp_type", path=request.url.path)
-                return JSONResponse(
-                    status_code=HTTP_UNAUTHORIZED,
-                    content={"detail": ERROR_INVALID_TOKEN},
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-            try:
-                exp_ts = int(exp)
-            except (TypeError, ValueError):
-                logger.warning("asap.oauth2.invalid_exp_type", path=request.url.path)
-                return JSONResponse(
-                    status_code=HTTP_UNAUTHORIZED,
-                    content={"detail": ERROR_INVALID_TOKEN},
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-        if exp is not None and exp_ts < time.time():
-            logger.warning("asap.oauth2.expired_token", path=request.url.path)
-            return JSONResponse(
-                status_code=HTTP_UNAUTHORIZED,
-                content={"detail": ERROR_INVALID_TOKEN},
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
-        sub = claims.get("sub")
-        if not sub or not isinstance(sub, str):
-            logger.warning("asap.oauth2.missing_sub", path=request.url.path)
-            return JSONResponse(
-                status_code=HTTP_UNAUTHORIZED,
-                content={"detail": ERROR_INVALID_TOKEN},
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
-        scope_list = parse_scope(claims.get("scope"))
-        if not self._validate_scope(scope_list):
-            logger.warning(
-                "asap.oauth2.insufficient_scope",
-                path=request.url.path,
-                required=self._required_scope,
-                has_scopes=scope_list,
-            )
-            return JSONResponse(
-                status_code=HTTP_FORBIDDEN,
-                content={"detail": ERROR_INSUFFICIENT_SCOPE},
-            )
-
-        success, err_detail, _, use_allowlist = self._validate_identity_binding(claims, sub)
-        if not success:
-            logger.warning(
-                "asap.oauth2.identity_mismatch",
-                path=request.url.path,
-                detail=err_detail,
-            )
-            detail_msg = (
-                f"{ERROR_IDENTITY_MISMATCH} (expected: {self._manifest_id})"
-                if self._manifest_id
-                else ERROR_IDENTITY_MISMATCH
-            )
-            return JSONResponse(
-                status_code=HTTP_FORBIDDEN,
-                content={"detail": detail_msg},
-            )
-        if use_allowlist:
-            logger.warning(
-                "asap.oauth2.identity_via_allowlist",
-                path=request.url.path,
-                manifest_id=self._manifest_id,
-                sub=sub,
-            )
-
-        request.state.oauth2_claims = OAuth2Claims(sub=sub, scope=scope_list, exp=exp_ts)
+        claims, error = await self.validate_bearer_token(token, path=request.url.path)
+        if error is not None:
+            return error
+        # validate_bearer_token returns None claims only with an error response;
+        # the guard above ensures claims is set on the success path.
+        request.state.oauth2_claims = claims
         return await call_next(request)

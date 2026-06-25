@@ -37,6 +37,11 @@ from asap.economics.metering import (
 from asap.models.base import ASAPBaseModel
 from asap.models.ids import generate_id
 
+# State is the lower layer (never imports economics), so importing the shared
+# usage_events DDL helper here cannot form a cycle. Keeping one canonical DDL
+# owner prevents divergent indexes when both stores share asap_state.db.
+from asap.state.stores.sqlite import _ensure_usage_events_schema
+
 UsageAggregate = Union[
     UsageAggregateByAgent,
     UsageAggregateByConsumer,
@@ -484,31 +489,7 @@ class SQLiteMeteringStorage(MeteringStorageBase):
             yield conn
 
     async def _ensure_table(self, conn: aiosqlite.Connection) -> None:
-        await conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS usage_events (
-                id TEXT PRIMARY KEY,
-                task_id TEXT NOT NULL,
-                agent_id TEXT NOT NULL,
-                consumer_id TEXT NOT NULL,
-                metrics TEXT NOT NULL,
-                timestamp TEXT NOT NULL
-            )
-            """
-        )
-        await conn.execute(
-            """
-            CREATE INDEX IF NOT EXISTS idx_usage_agent_timestamp
-            ON usage_events (agent_id, timestamp)
-            """
-        )
-        await conn.execute(
-            """
-            CREATE INDEX IF NOT EXISTS idx_usage_consumer_timestamp
-            ON usage_events (consumer_id, timestamp)
-            """
-        )
-        await conn.commit()
+        await _ensure_usage_events_schema(conn)
 
     async def _ensure_table_once(self, conn: aiosqlite.Connection) -> None:
         if self._initialized:

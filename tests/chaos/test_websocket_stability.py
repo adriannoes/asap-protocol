@@ -83,6 +83,16 @@ class _DroppingWebSocket:
 @pytest.mark.asyncio
 async def test_websocket_high_latency_resilience() -> None:
     """Client handles high latency (within timeout) gracefully."""
+    envelope = Envelope(
+        asap_version="0.1",
+        payload_type="task.request",
+        sender="urn:asap:agent:me",
+        recipient="urn:asap:agent:remote",
+        payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
+    )
+    # Per ASAP protocol semantics, the response correlation_id MUST echo the
+    # REQUEST envelope's id (see handlers.py + testing/mocks.py). The client
+    # binding (B6/BUG #6) enforces this, so the mock must match.
     rpc_response = {
         "jsonrpc": "2.0",
         "result": {
@@ -93,7 +103,7 @@ async def test_websocket_high_latency_resilience() -> None:
                 "sender": "urn:asap:agent:remote",
                 "recipient": "urn:asap:agent:local",
                 "payload": {"task_id": "t1", "status": "completed"},
-                "correlation_id": "req_1",
+                "correlation_id": envelope.id,
             }
         },
         "id": "req_1",
@@ -123,13 +133,6 @@ async def test_websocket_high_latency_resilience() -> None:
 
     try:
         start_time = time.monotonic()
-        envelope = Envelope(
-            asap_version="0.1",
-            payload_type="task.request",
-            sender="urn:asap:agent:me",
-            recipient="urn:asap:agent:remote",
-            payload={"conversation_id": "c1", "skill_id": "s1", "input": {}},
-        )
         result = await transport.send_and_receive(envelope)
         duration = time.monotonic() - start_time
 
