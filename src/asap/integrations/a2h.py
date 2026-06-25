@@ -77,6 +77,17 @@ class ChannelFallback(BaseModel):
     address: str
 
 
+class RenderContent(BaseModel):
+    """Rendered content for display to the human."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    body: str
+    title: str | None = None
+    footer: str | None = None
+    icon: str | None = None
+
+
 class ChannelBinding(BaseModel):
     """Primary channel and optional fallbacks for message delivery."""
 
@@ -88,17 +99,6 @@ class ChannelBinding(BaseModel):
     expires_at: datetime | None = None
     render: RenderContent | None = None
     fallback: list[ChannelFallback] | None = None
-
-
-class RenderContent(BaseModel):
-    """Rendered content for display to the human."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    body: str
-    title: str | None = None
-    footer: str | None = None
-    icon: str | None = None
 
 
 class AssuranceConfig(BaseModel):

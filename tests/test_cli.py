@@ -94,7 +94,10 @@ class TestCliExportSchemas:
 
     def test_handles_permission_error(self, tmp_path: Path) -> None:
         """Ensure export-schemas handles permission errors gracefully."""
-        with patch("asap.cli.export_all_schemas") as mock_export:
+        # Patch the symbol the command actually calls after the S3 cli split
+        # (schemas.py imports export_all_schemas from asap.schemas directly;
+        # patching asap.cli.export_all_schemas no longer intercepts the call).
+        with patch("asap.cli.schemas.export_all_schemas") as mock_export:
             mock_export.side_effect = PermissionError("Access denied")
             runner = CliRunner()
             result = runner.invoke(app, ["export-schemas", "--output-dir", str(tmp_path)])
@@ -105,7 +108,7 @@ class TestCliExportSchemas:
 
     def test_handles_os_error(self, tmp_path: Path) -> None:
         """Ensure export-schemas handles OS errors gracefully."""
-        with patch("asap.cli.export_all_schemas") as mock_export:
+        with patch("asap.cli.schemas.export_all_schemas") as mock_export:
             mock_export.side_effect = OSError("Disk full")
             runner = CliRunner()
             result = runner.invoke(app, ["export-schemas", "--output-dir", str(tmp_path)])
