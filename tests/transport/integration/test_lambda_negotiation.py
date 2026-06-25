@@ -16,7 +16,7 @@ from fastapi.testclient import TestClient
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.envelope import Envelope
 from asap.models.payloads import TaskRequest
-from asap.transport.codecs.lambda_codec import LAMBDA_CONTENT_TYPE, decode
+from asap.transport.lambda_codec import LAMBDA_CONTENT_TYPE, decode
 from asap.transport.jsonrpc import JsonRpcRequest
 from asap.transport.server import create_app
 

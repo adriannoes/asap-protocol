@@ -60,8 +60,8 @@ from asap.transport.jsonrpc import (
     JsonRpcRequest,
     JsonRpcResponse,
 )
-from asap.transport.codecs import lambda_codec
-from asap.transport.codecs.lambda_codec import LAMBDA_CONTENT_TYPE
+from asap.transport import lambda_codec
+from asap.transport.lambda_codec import LAMBDA_CONTENT_TYPE
 from asap.transport.compression import decompress_payload, get_supported_encodings
 from asap.transport.validators import (
     NonceStore,

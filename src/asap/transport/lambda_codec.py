@@ -19,7 +19,7 @@ Content-Type: application/vnd.asap+lambda
 
 Example:
     >>> import json
-    >>> from asap.transport.codecs.lambda_codec import encode, decode
+    >>> from asap.transport.lambda_codec import encode, decode
     >>>
     >>> json_str = json.dumps({"jsonrpc": "2.0", "method": "asap.message", "params": {}})
     >>> encoded = encode(json_str)

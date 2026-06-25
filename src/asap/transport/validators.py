@@ -117,27 +117,12 @@ class NonceStore(Protocol):
 
     Implementations must provide thread-safe storage and TTL-based expiration
     for nonce values to prevent replay attacks.
+
+    Only the race-safe ``check_and_mark`` method is exposed: the separate
+    ``is_used`` / ``mark_used`` pair was removed because using them in sequence
+    opens a TOCTOU window between the check and the mark. Callers that need to
+    test-then-act must use ``check_and_mark`` atomically.
     """
-
-    def is_used(self, nonce: str) -> bool:
-        """Check if a nonce has been used.
-
-        Args:
-            nonce: The nonce value to check
-
-        Returns:
-            True if the nonce has been used, False otherwise
-        """
-        ...
-
-    def mark_used(self, nonce: str, ttl_seconds: int) -> None:
-        """Mark a nonce as used with a TTL.
-
-        Args:
-            nonce: The nonce value to mark as used
-            ttl_seconds: Time-to-live in seconds for the nonce
-        """
-        ...
 
     def check_and_mark(self, nonce: str, ttl_seconds: int) -> bool:
         """Atomically check if nonce is used and mark it if not.
@@ -186,20 +171,6 @@ class InMemoryNonceStore:
         expired = [nonce for nonce, expiry in self._store.items() if expiry < now]
         for nonce in expired:
             self._store.pop(nonce, None)
-
-    def is_used(self, nonce: str) -> bool:
-        with self._lock:
-            self._cleanup_expired()
-            if nonce not in self._store:
-                return False
-            expiry = self._store[nonce]
-            return expiry >= time.time()
-
-    def mark_used(self, nonce: str, ttl_seconds: int) -> None:
-        with self._lock:
-            self._cleanup_expired()
-            expiry = time.time() + ttl_seconds
-            self._store[nonce] = expiry
 
     def check_and_mark(self, nonce: str, ttl_seconds: int) -> bool:
         with self._lock:

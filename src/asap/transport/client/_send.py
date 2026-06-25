@@ -26,7 +26,7 @@ from asap.errors import (
     ASAPRemoteError,
     ASAPTimeoutError,
     CircuitOpenError,
-    RemoteRecoverableRPCError,
+    RemoteRPCError,
     remote_rpc_error_from_json,
 )
 from asap.models.constants import ASAP_VERSION_HEADER
@@ -41,8 +41,8 @@ from asap.transport.client._helpers import (
     _record_send_error_metrics,
     logger,
 )
-from asap.transport.codecs import lambda_codec
-from asap.transport.codecs.lambda_codec import LAMBDA_CONTENT_TYPE
+from asap.transport import lambda_codec
+from asap.transport.lambda_codec import LAMBDA_CONTENT_TYPE
 from asap.transport.compression import (
     CompressionAlgorithm,
     compress_payload,
@@ -206,7 +206,7 @@ class _SendMixin:
             except (
                 ASAPConnectionError,
                 ASAPRemoteError,
-                RemoteRecoverableRPCError,
+                RemoteRPCError,
                 ASAPTimeoutError,
                 ProtocolCorrelationError,
             ):
@@ -530,7 +530,7 @@ class _SendMixin:
         err_msg = str(error.get("message", "Unknown error"))
         rpc_exc = remote_rpc_error_from_json(wire_code, err_msg, err_data)
         if (
-            isinstance(rpc_exc, RemoteRecoverableRPCError)
+            rpc_exc.is_recoverable
             and rpc_exc.retry_after_ms is not None
             and attempt < self.max_retries - 1
         ):

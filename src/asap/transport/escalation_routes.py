@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from fastapi.responses import JSONResponse
 from pydantic import ConfigDict, Field, ValidationError
 
@@ -27,6 +27,8 @@ from asap.transport.agent_routes import (
     parse_capability_registration_body,
 )
 from asap.transport.capability_routes import verify_agent_bearer
+from asap.transport._state_deps import require_identity_limiter
+from asap.transport.rate_limit import ASAPRateLimiter
 
 logger = get_logger(__name__)
 
@@ -191,9 +193,10 @@ def create_escalation_router() -> APIRouter:
     async def request_capability_route(
         request: Request,
         background_tasks: BackgroundTasks,
+        limiter: ASAPRateLimiter = Depends(require_identity_limiter),
     ) -> JSONResponse:
         """Request additional capabilities (Agent JWT; may start Device Auth / CIBA)."""
-        request.app.state.identity_limiter.check(request)
+        limiter.check(request)
         return await _handle_request_capability(request, background_tasks)
 
     return router

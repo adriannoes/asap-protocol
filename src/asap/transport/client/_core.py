@@ -43,7 +43,7 @@ from asap.transport.client._helpers import (
     logger,
 )
 from asap.transport.client._send import _SendMixin
-from asap.transport.codecs.lambda_codec import LAMBDA_CONTENT_TYPE  # noqa: F401 (re-exported surface)
+from asap.transport.lambda_codec import LAMBDA_CONTENT_TYPE  # noqa: F401 (re-exported surface)
 from asap.transport.compression import COMPRESSION_THRESHOLD
 from asap.transport.errors import ProtocolCorrelationError, assert_correlation_binds
 from asap.transport.jsonrpc import ASAP_METHOD

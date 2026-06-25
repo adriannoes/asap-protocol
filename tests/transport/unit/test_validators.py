@@ -159,8 +159,9 @@ class TestNonceValidation:
         # First use should pass
         validate_envelope_nonce(envelope, store)
 
-        # Verify nonce is marked as used
-        assert store.is_used("unique-nonce-123")
+        # Verify nonce is marked as used: a second check_and_mark reports it
+        # as already used (the race-safe way to confirm a nonce is spent).
+        assert store.check_and_mark("unique-nonce-123", ttl_seconds=NONCE_TTL_SECONDS) is True
 
     def test_duplicate_nonce_rejected(self) -> None:
         """Test that duplicate nonces are rejected."""
@@ -210,16 +211,19 @@ class TestNonceValidation:
         # First use should pass
         validate_envelope_nonce(envelope, store)
 
-        # Mark with very short TTL (1 second)
-        store.mark_used("expiring-nonce-789", ttl_seconds=1)
+        # Overwrite with a very short TTL (1 second). check_and_mark cannot
+        # re-mark an already-used nonce, so set the expiry directly under the
+        # store lock (same private-attribute pattern used by the TTL test below).
+        current_time = time.time()
+        with store._lock:
+            store._store["expiring-nonce-789"] = current_time + 1
 
         # Use time mocking to simulate expiration without actual sleep
-        current_time = time.time()
         with patch("asap.transport.validators.time.time") as mock_time:
-            # First call: nonce still valid (just marked)
+            # First call: nonce still valid (within TTL) — check_and_mark
+            # reports it as already used without re-marking.
             mock_time.return_value = current_time + 0.5
-            # Verify nonce is still marked as used
-            assert store.is_used("expiring-nonce-789")
+            assert store.check_and_mark("expiring-nonce-789", ttl_seconds=1) is True
 
             # Second call: nonce expired (past TTL)
             mock_time.return_value = current_time + 1.1
@@ -261,10 +265,10 @@ class TestNonceValidation:
         assert "must be a non-empty string" in exc_info.value.message.lower()
         assert "empty string" in exc_info.value.message.lower()
 
-    def test_is_used_returns_false_for_nonexistent_nonce(self) -> None:
-        """Test that is_used returns False when nonce is not in store."""
+    def test_check_and_mark_returns_false_for_nonexistent_nonce(self) -> None:
+        """check_and_mark returns False (newly marked) for a nonce not in the store."""
         store = InMemoryNonceStore()
-        assert store.is_used("nonexistent-nonce") is False
+        assert store.check_and_mark("nonexistent-nonce", ttl_seconds=NONCE_TTL_SECONDS) is False
 
     def test_nonce_ttl_uses_configured_constant(self) -> None:
         """Test that nonce TTL uses the configured constant (2x envelope age).

@@ -32,6 +32,7 @@ from asap.economics.delegation import (
 from asap.economics.delegation_storage import DelegationStorage
 from asap.models.base import ASAPBaseModel
 from asap.observability import get_logger
+from asap.transport._state_deps import require_state
 
 if TYPE_CHECKING:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -82,22 +83,34 @@ class CreateDelegationRequest(ASAPBaseModel):
 def _get_delegation_key_store(
     request: Request,
 ) -> Callable[[str], "Ed25519PrivateKey"]:
-    store = getattr(request.app.state, "delegation_key_store", None)
-    if store is None:
-        raise HTTPException(
-            status_code=503,
-            detail="Delegation API not configured (delegation_key_store not set)",
-        )
+    store = require_state(
+        request,
+        "delegation_key_store",
+        "Delegation API not configured (delegation_key_store not set)",
+    )
     return cast(Callable[[str], "Ed25519PrivateKey"], store)
 
 
 def _get_delegation_storage(request: Request) -> DelegationStorage:
+    storage = require_state(
+        request,
+        "delegation_storage",
+        "Delegation revocation not configured (delegation_storage not set)",
+    )
+    return cast(DelegationStorage, storage)
+
+
+def get_optional_delegation_storage(request: Request) -> DelegationStorage | None:
+    """Return the optional delegation storage, or ``None`` when not wired.
+
+    ``POST /asap/delegations`` records issued tokens only when storage is
+    configured; a missing store is a silent no-op (the token is still issued and
+    returned). This makes that intent explicit as a typed optional dependency
+    instead of an inline ``getattr`` + ``cast`` + silent fallback in the handler.
+    """
     storage = getattr(request.app.state, "delegation_storage", None)
     if storage is None:
-        raise HTTPException(
-            status_code=503,
-            detail="Delegation revocation not configured (delegation_storage not set)",
-        )
+        return None
     return cast(DelegationStorage, storage)
 
 
@@ -116,6 +129,7 @@ def create_delegation_router() -> APIRouter:
         request: Request,
         body: CreateDelegationRequest,
         claims: OAuth2Claims = Depends(require_scope(SCOPE_EXECUTE)),
+        storage: DelegationStorage | None = Depends(get_optional_delegation_storage),
     ) -> JSONResponse:
         delegator_urn = claims.sub
         key_store = _get_delegation_key_store(request)
@@ -147,13 +161,12 @@ def create_delegation_router() -> APIRouter:
             constraints=constraints,
             private_key=private_key,
         )
-        storage = getattr(request.app.state, "delegation_storage", None)
+        # Storage is optional: when absent the token is still issued but not
+        # recorded for later revocation/listing (explicit typed dependency).
         if storage is not None:
             jti = get_jti_from_jwt(token)
             if jti:
-                await cast(DelegationStorage, storage).register_issued(
-                    jti, delegator_urn, delegate_urn=body.delegate
-                )
+                await storage.register_issued(jti, delegator_urn, delegate_urn=body.delegate)
         return JSONResponse(
             status_code=201,
             content={"token": token},
