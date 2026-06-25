@@ -9,8 +9,11 @@ import pytest
 from asap.economics.delegation_storage import (
     InMemoryDelegationStorage,
     SQLiteDelegationStorage,
+)
+from asap.state.stores._sqlite_base import (
     _assert_sql_in_placeholders,
     _build_sql_in_placeholders,
+    parse_iso,
 )
 
 if TYPE_CHECKING:
@@ -498,16 +501,13 @@ class TestSQLiteDelegationStorageCoverage:
         delegator = await sqlite_storage.get_delegator("unknown_tok")
         assert delegator is None
 
-    @pytest.mark.asyncio
-    async def test_parse_iso_datetime_edge_cases(
-        self, sqlite_storage: SQLiteDelegationStorage
-    ) -> None:
-        """_parse_iso_datetime handles None and invalid values."""
-        assert sqlite_storage._parse_iso_datetime(None) is None
-        assert sqlite_storage._parse_iso_datetime("") is None
-        assert sqlite_storage._parse_iso_datetime("not-a-date") is None
+    def test_parse_iso_datetime_edge_cases(self) -> None:
+        """parse_iso handles None and invalid values (canonical base helper)."""
+        assert parse_iso(None) is None
+        assert parse_iso("") is None
+        assert parse_iso("not-a-date") is None
         # Z suffix handled
-        result = sqlite_storage._parse_iso_datetime("2026-01-01T00:00:00Z")
+        result = parse_iso("2026-01-01T00:00:00Z")
         assert result is not None
 
     def test_build_sql_in_placeholders_formats_question_marks(self) -> None:
