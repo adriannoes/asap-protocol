@@ -18,13 +18,15 @@ from fastapi.responses import Response
 from pydantic import ValidationError
 from starlette.requests import Request
 
+from asap.errors import ASAPError
 from asap.models.envelope import Envelope
-from asap.observability import get_logger
+from asap.observability import get_logger, is_debug_mode
 from asap.observability.tracing import inject_envelope_trace_context
 from asap.transport.jsonrpc import INTERNAL_ERROR, JsonRpcResponse
 from asap.transport.rate_limit import WebSocketTokenBucket
 from asap.transport.ws._actions import WSCloseAction
 from asap.transport.ws.codecs import _build_ack_notification_frame
+from fastapi.responses import JSONResponse
 from opentelemetry import context
 
 if TYPE_CHECKING:
@@ -74,6 +76,10 @@ async def _synthesize_ws_request(body: str, websocket: WebSocket) -> Request:
         "root_path": "",
         "query_string": b"",
         "server": websocket.scope.get("server", ("localhost", 8000)),
+        # Mirror the WS handshake's app + client so _prepare_request reads
+        # (e.g. request.app.state) and sender extraction behave like the HTTP path.
+        "app": websocket.scope.get("app"),
+        "client": websocket.scope.get("client"),
     }
     first_receive = True
 
@@ -174,10 +180,24 @@ async def _dispatch_ws_envelope(
         body = cast("Response", prepared).body
         await websocket.send_text(body.decode("utf-8") if isinstance(body, bytes) else str(body))
         return WSCloseAction.CONTINUE
+    except ASAPError as e:
+        ctx = cast("PreparedRequest", prepared).ctx if _is_prepared_request(prepared) else None
+        logger.warning("asap.websocket.protocol_error", error=str(e), error_type=type(e).__name__)
+        await _send_ws_dispatch_failure(websocket, envelope_for_ack, e)
+        if ctx is not None:
+            asap_payload_type = (
+                envelope_for_ack.payload_type if envelope_for_ack is not None else ""
+            )
+            await _send_ws_asap_error_frame(
+                websocket, request_handler, ctx, e, payload_type=asap_payload_type
+            )
+        return WSCloseAction.CONTINUE
     except Exception as e:
+        ctx = cast("PreparedRequest", prepared).ctx if _is_prepared_request(prepared) else None
+        payload_type = envelope_for_ack.payload_type if envelope_for_ack is not None else ""
         logger.warning("asap.websocket.message_error", error=str(e))
         await _send_ws_dispatch_failure(websocket, envelope_for_ack, e)
-        return await _send_internal_error_frame(websocket, e)
+        return await _send_internal_error_frame(websocket, e, ctx=ctx, payload_type=payload_type)
     finally:
         if _is_prepared_request(prepared):
             context.detach(cast("PreparedRequest", prepared).trace_token)
@@ -189,16 +209,145 @@ async def _run_ws_dispatch(
     prepared: PreparedRequest,
     response_id: str | int,
 ) -> None:
-    """Dispatch the prepared envelope via the registry and stream frames back over WS."""
+    """Dispatch the prepared envelope with HTTP-parity error handling and observability.
+
+    Routes through :meth:`ASAPRequestHandler._dispatch_to_handler` so
+    ``HandlerNotFoundError`` and ``ThreadPoolExhaustedError`` map to the same
+    JSON-RPC error codes / retry hints as the HTTP path (instead of collapsing
+    to a generic ``-32603``). Records request-level success metrics + audit log
+    on the happy path (parity with ``handle_message``). Any error response
+    returned by the dispatch mapper is forwarded as a WS frame verbatim.
+    """
     envelope = prepared.envelope
-    manifest = request_handler.manifest
+    ctx = prepared.ctx
     registry = request_handler.registry_holder.registry
-    if _registry_has_streaming_for_payload(registry, envelope.payload_type):
+    payload_type = envelope.payload_type
+    if _registry_has_streaming_for_payload(registry, payload_type):
+        await _run_ws_stream_dispatch(websocket, request_handler, registry, prepared, response_id)
+        return
+    dispatch_result = await request_handler._dispatch_to_handler(  # noqa: SLF001 — shared mapper
+        envelope, ctx
+    )
+    if isinstance(dispatch_result, JSONResponse):
+        await _send_ws_response_frame(websocket, dispatch_result)
+        return
+    response_envelope, payload_type = dispatch_result
+    await _record_ws_success(
+        websocket, request_handler, ctx, envelope, response_envelope, payload_type
+    )
+    await _send_ws_result_frame(websocket, response_envelope, response_id)
+
+
+async def _run_ws_stream_dispatch(
+    websocket: WebSocket,
+    request_handler: "ASAPRequestHandler",
+    registry: Any,
+    prepared: PreparedRequest,
+    response_id: str | int,
+) -> None:
+    """Stream-dispatch variant: yield one result frame per streamed chunk + final metrics."""
+    envelope = prepared.envelope
+    ctx = prepared.ctx
+    manifest = request_handler.manifest
+    payload_type = envelope.payload_type
+    try:
         async for response_envelope in registry.dispatch_stream_async(envelope, manifest):
             await _send_ws_result_frame(websocket, response_envelope, response_id)
-        return
-    response_envelope = await registry.dispatch_async(envelope, manifest)
-    await _send_ws_result_frame(websocket, response_envelope, response_id)
+        await _record_ws_stream_success(request_handler, ctx, envelope, payload_type)
+    except ASAPError as exc:
+        await _send_ws_asap_error_frame(
+            websocket, request_handler, ctx, exc, payload_type=payload_type
+        )
+    except Exception as exc:  # noqa: BLE001 — parity with HTTP internal-error handling
+        await _send_internal_error_frame(websocket, exc, ctx=ctx, payload_type=payload_type)
+
+
+async def _record_ws_success(
+    websocket: WebSocket,
+    request_handler: "ASAPRequestHandler",
+    ctx: Any,
+    envelope: Envelope,
+    response_envelope: Envelope,
+    payload_type: str,
+) -> None:
+    """Record request-level success metrics + audit log (parity with HTTP ``handle_message``)."""
+    import time as _time
+
+    duration_seconds = _time.perf_counter() - ctx.start_time
+    normalized = request_handler._normalize_payload_type_for_metrics(payload_type)  # noqa: SLF001
+    ctx.metrics.increment_counter(
+        "asap_requests_total", {"payload_type": normalized, "status": "success"}
+    )
+    ctx.metrics.increment_counter("asap_requests_success_total", {"payload_type": normalized})
+    ctx.metrics.observe_histogram(
+        "asap_request_duration_seconds",
+        duration_seconds,
+        {"payload_type": normalized, "status": "success"},
+    )
+    try:
+        from asap.transport._request_handler import _audit_log_operation
+
+        await _audit_log_operation(
+            _ws_app_state(websocket),
+            operation=payload_type,
+            agent_urn=envelope.sender,
+            details={"envelope_id": envelope.id, "response_id": response_envelope.id},
+        )
+    except Exception:  # noqa: BLE001 — audit is best-effort
+        logger.warning("asap.websocket.audit_failed", exc_info=True)
+
+
+async def _record_ws_stream_success(
+    request_handler: "ASAPRequestHandler",
+    ctx: Any,
+    envelope: Envelope,
+    payload_type: str,
+) -> None:
+    """Record request-level success metrics for the streaming WS path."""
+    import time as _time
+
+    duration_seconds = _time.perf_counter() - ctx.start_time
+    normalized = request_handler._normalize_payload_type_for_metrics(payload_type)  # noqa: SLF001
+    ctx.metrics.increment_counter(
+        "asap_requests_total", {"payload_type": normalized, "status": "success"}
+    )
+    ctx.metrics.increment_counter("asap_requests_success_total", {"payload_type": normalized})
+    ctx.metrics.observe_histogram(
+        "asap_request_duration_seconds",
+        duration_seconds,
+        {"payload_type": normalized, "status": "success"},
+    )
+
+
+def _ws_app_state(websocket: WebSocket) -> Any:
+    """Return the websocket's app state (used for audit log injection)."""
+    return websocket.app.state
+
+
+async def _send_ws_response_frame(websocket: WebSocket, response: JSONResponse) -> None:
+    """Forward an HTTP ``JSONResponse`` (already a JSON-RPC error/503 body) as a WS frame."""
+    body = response.body
+    await websocket.send_text(body.decode("utf-8") if isinstance(body, bytes) else str(body))
+
+
+async def _send_ws_asap_error_frame(
+    websocket: WebSocket,
+    request_handler: "ASAPRequestHandler",
+    ctx: Any,
+    exc: ASAPError,
+    payload_type: str = "",
+) -> None:
+    """Map an :class:`ASAPError` raised mid-stream to a canonical JSON-RPC error frame."""
+    import time as _time
+
+    duration_seconds = _time.perf_counter() - ctx.start_time
+    request_handler.record_error_metrics(  # noqa: SLF001
+        ctx.metrics, payload_type, type(exc).__name__, duration_seconds
+    )
+    err_resp = request_handler.build_jsonrpc_error_for_asap_exception(  # noqa: SLF001
+        exc, request_id=ctx.request_id, extra_data={"error": str(exc)}
+    )
+    await _send_ws_response_frame(websocket, err_resp)
 
 
 async def _send_ws_result_frame(
@@ -227,14 +376,55 @@ async def _send_ws_dispatch_failure(
     await websocket.send_text(reject_frame)
 
 
-async def _send_internal_error_frame(websocket: WebSocket, error: Exception) -> WSCloseAction:
-    """Best-effort emit a JSON-RPC internal-error frame; ``CLOSE_FATAL`` if send fails."""
+async def _send_internal_error_frame(
+    websocket: WebSocket,
+    error: Exception,
+    *,
+    ctx: Any = None,
+    payload_type: str = "",
+) -> WSCloseAction:
+    """Emit a sanitized JSON-RPC internal-error frame; ``CLOSE_FATAL`` if send fails.
+
+    Parity with HTTP :meth:`ASAPRequestHandler._handle_internal_error`: the full
+    exception is logged server-side, but the client only sees ``str(error)`` in
+    debug mode and a generic ``"Internal server error"`` otherwise (no exception
+    text leakage in production). Records error metrics when *ctx* is available.
+    """
+    import time as _time
+
+    if ctx is not None:
+        duration_seconds = _time.perf_counter() - ctx.start_time
+        # Inline the error-metric recording (parity with record_error_metrics)
+        # rather than calling the unbound handler method.
+        ctx.metrics.increment_counter(
+            "asap_requests_total", {"payload_type": payload_type, "status": "error"}
+        )
+        ctx.metrics.increment_counter(
+            "asap_requests_error_total",
+            {"payload_type": payload_type, "error_type": "internal_error"},
+        )
+        ctx.metrics.observe_histogram(
+            "asap_request_duration_seconds",
+            duration_seconds,
+            {"payload_type": payload_type, "status": "error"},
+        )
+    logger.warning(
+        "asap.websocket.internal_error",
+        error=str(error),
+        error_type=type(error).__name__,
+        exc_info=True,
+    )
+    error_data: dict[str, Any] = (
+        {"error": str(error), "type": type(error).__name__}
+        if is_debug_mode()
+        else {"error": "Internal server error"}
+    )
     error_payload = {
         "jsonrpc": "2.0",
         "error": {
             "code": INTERNAL_ERROR,
             "message": "Internal error",
-            "data": {"error": str(error)},
+            "data": error_data,
         },
         "id": None,
     }

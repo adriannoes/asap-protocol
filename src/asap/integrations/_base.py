@@ -118,14 +118,16 @@ def _schema_property_to_field(
 
 
 def resolve_and_cache_skill(client: MarketClient, urn: str) -> tuple[ResolvedAgent, str]:
-    """Eagerly resolve *urn* (sync) and cache the result on *client*.
+    """Eagerly resolve *urn* (sync) and cache the result on *client*, keyed by URN.
 
     Drives :meth:`MarketClient.resolve` via ``asyncio.run``. A running event loop
     signals deferral by raising :class:`RuntimeError`; wrappers catch it and
     resolve lazily on the first ``_arun``. The resolved agent and first skill id
-    are stashed on the client as ``_asap_resolved`` / ``_asap_skill_id``. A
-    re-entrant call for an in-flight URN raises :class:`RuntimeError` instead of
-    deadlocking.
+    are stashed on the client in a URN-keyed cache
+    (``_asap_resolved_by_urn``) so a single shared :class:`MarketClient` used by
+    several tools with different URNs cannot route one tool's invoke to another
+    agent's resolution. A re-entrant resolve of the same URN raises
+    :class:`RuntimeError` instead of deadlocking.
 
     Args:
         client: The market client performing the resolution.
@@ -142,21 +144,24 @@ def resolve_and_cache_skill(client: MarketClient, urn: str) -> tuple[ResolvedAge
     """
     if _has_running_loop():
         raise RuntimeError(f"event loop running; defer resolve of {urn!r}")
-    cached = getattr(client, "_asap_resolved", None)
+    cache = getattr(client, "_asap_resolved_by_urn", None)
+    if cache is None:
+        cache = {}
+        object.__setattr__(client, "_asap_resolved_by_urn", cache)
+    cached = cache.get(urn)
     if cached is not None and cached is not _RESOLVING_SENTINEL:
-        return cached, getattr(client, "_asap_skill_id", "")
+        return cast("tuple[ResolvedAgent, str]", cached)
     if cached is _RESOLVING_SENTINEL:
         raise RuntimeError(f"Re-entrant resolve detected for URN {urn!r}; aborting.")
-    object.__setattr__(client, "_asap_resolved", _RESOLVING_SENTINEL)
+    cache[urn] = _RESOLVING_SENTINEL
     try:
         resolved = asyncio.run(client.resolve(urn))
     finally:
-        if getattr(client, "_asap_resolved", None) is _RESOLVING_SENTINEL:
-            object.__setattr__(client, "_asap_resolved", None)
+        if cache.get(urn) is _RESOLVING_SENTINEL:
+            cache.pop(urn, None)
     skills = resolved.manifest.capabilities.skills
     skill_id = skills[0].id if skills else ""
-    object.__setattr__(client, "_asap_resolved", resolved)
-    object.__setattr__(client, "_asap_skill_id", skill_id)
+    cache[urn] = (resolved, skill_id)
     return resolved, skill_id
 
 
@@ -393,7 +398,10 @@ async def invoke_skill_async(
         the agent declares no skills.
     """
     try:
-        resolved = await _resolve_or_cache(client, urn, cache)
+        try:
+            resolved = await _resolve_or_cache(client, urn, cache)
+        except Exception as resolve_exc:  # noqa: BLE001 — resolve-time failures
+            return _format_resolve_error(resolve_exc, urn)
         skill_id = getattr(cache, "_skill_id", "")
         if not skill_id:
             return "Error: Agent has no skills; cannot build task request."
@@ -402,7 +410,7 @@ async def invoke_skill_async(
             input_payload = {"value": input_payload}
         result = await resolved.run(build_task_payload(skill_id, input_payload))
         return result if isinstance(result, dict) else str(result)
-    except Exception as exc:  # noqa: BLE001 — wrappers return error strings
+    except Exception as exc:  # noqa: BLE001 — run-time failures (truthful per-type prefix)
         return format_invoke_error(exc)
 
 
@@ -420,6 +428,24 @@ async def invoke_skill_json_async(
     """
     result = await invoke_skill_async(client, urn, cache, tool_input)
     return result if isinstance(result, str) else to_str_result(result)
+
+
+def _format_resolve_error(exc: BaseException, urn: str) -> str:
+    """Map a resolve-time failure to a truthful error string naming the URN.
+
+    Distinct from :func:`format_invoke_error` (run-time): ``MarketClient.resolve``
+    raises ``ValueError`` for "agent not found", which the run-time mapper would
+    mislabel as ``"Invalid skill input or task request"``. Resolve failures get a
+    resolve-scoped prefix instead, while revocation/signature errors keep their
+    truthful per-type prefix.
+    """
+    if isinstance(exc, AgentRevokedException):
+        return f"Error: Agent revoked: {exc!s}"
+    if isinstance(exc, SignatureVerificationError):
+        return f"Error: Agent signature verification failed: {exc!s}"
+    if isinstance(exc, ValueError):
+        return f"Error: Failed to resolve agent {urn}: {exc!s}"
+    return f"Error: ASAP resolve failed for {urn}: {exc!s}"
 
 
 def _has_running_loop() -> bool:

@@ -35,6 +35,7 @@ from pydantic import BaseModel, Field
 from asap.client.cache import get_registry
 from asap.client.market import MarketClient
 from asap.discovery.registry import DEFAULT_REGISTRY_URL, LiteRegistry
+from asap.integrations._base import format_invoke_error
 from asap.models.entities import Manifest
 from asap.models.ids import generate_id
 
@@ -217,7 +218,7 @@ def create_asap_tools_router(
                 return InvokeResponse(result=result)
             return InvokeResponse(result={"value": str(result)})
         except Exception as e:
-            return InvokeResponse(error=str(e))
+            return InvokeResponse(error=format_invoke_error(e))
 
     @router.get("/discover")
     async def discover_agents(

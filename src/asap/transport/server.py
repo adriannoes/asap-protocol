@@ -227,10 +227,10 @@ class PreparedRequest:
 
     Produced by :meth:`ASAPRequestHandler._prepare_request`, which runs the
     parse → auth → envelope → trace → sender → timestamp → nonce gate shared
-    by ``handle_message``, ``_prepare_streaming_request`` and
-    ``iter_websocket_stream``. The caller owns detaching ``trace_token`` once
-    it is done with the request (the pipeline detaches it on its own error
-    returns).
+    by ``handle_message``, ``_prepare_streaming_request`` and the WebSocket
+    dispatch path (``asap.transport.ws._dispatch``). The caller owns detaching
+    ``trace_token`` once it is done with the request (the pipeline detaches it
+    on its own error returns).
 
     Attributes:
         ctx: Request-scoped context (request id, metrics, rpc_request)

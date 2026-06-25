@@ -2,13 +2,18 @@
 
 The four framework wrappers (langchain/crewai/llamaindex/smolagents) and the
 function-based integrations (pydanticai/openclaw/vercel_ai) exercise this module
-indirectly, but the misleading-error-string fix (S2 Task 5.0) and the
-loop-detection / cache invariants deserve explicit regression assertions so a
-future change cannot silently re-collapse the distinct error messages or regress
-the re-entrant-resolve guard.
+indirectly, but the misleading-error-string fix (S2 Task 5.0), the URN-scoped
+resolve cache, the resolve-vs-run error split, and the loop-detection invariant
+deserve explicit regression assertions so a future change cannot silently
+re-collapse the distinct error messages, regress the re-entrant-resolve guard,
+or re-introduce the URN-agnostic cache (S2 PR-review HIGH finding).
 """
 
 from __future__ import annotations
+
+import asyncio
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -17,9 +22,16 @@ from asap.integrations._base import (
     build_task_payload,
     default_input_schema,
     format_invoke_error,
+    invoke_skill_async,
     json_schema_to_pydantic,
+    resolve_and_cache_skill,
     sanitize_tool_name,
 )
+
+
+def _run(coro: Any) -> Any:
+    """Run *coro* to completion synchronously (tests are sync; invoke is async)."""
+    return asyncio.run(coro)
 
 
 class TestFormatInvokeError:
@@ -83,6 +95,60 @@ class TestFormatInvokeError:
         assert len(prefixes) == 4, f"prefixes collided: {prefixes}"
 
 
+class TestInvokeSkillResolveRunSplit:
+    """Resolve-time vs run-time errors get distinct, truthful prefixes.
+
+    Regression for the S2 PR-review "Should Fix": ``MarketClient.resolve`` raises
+    ``ValueError`` for "agent not found", but the shared run-time
+    ``format_invoke_error`` mapped all ``ValueError`` to "Invalid skill input or
+    task request" — mislabeling a resolve failure. The resolve path now uses a
+    resolve-scoped prefix naming the URN.
+    """
+
+    @staticmethod
+    def _client_resolve_raises(exc: BaseException) -> _FakeMarketClient:
+        client = _FakeMarketClient()
+        client.resolve.side_effect = exc
+        return client
+
+    @staticmethod
+    def _cache() -> Any:
+        from unittest.mock import MagicMock
+
+        cache = MagicMock()
+        cache._resolved = None
+        return cache
+
+    def test_resolve_value_error_names_urn_not_skill_input(self) -> None:
+        """A resolve ValueError reports 'Failed to resolve agent <urn>', not invalid input."""
+        client = self._client_resolve_raises(ValueError("agent not found"))
+        result = _run(invoke_skill_async(client, "urn:asap:agent:ghost", self._cache(), {"q": 1}))
+        assert "Failed to resolve agent urn:asap:agent:ghost" in result
+        assert "Invalid skill input" not in result
+
+    def test_resolve_agent_revoked_keeps_revoked_prefix(self) -> None:
+        """Resolve-time revocation still reports 'Agent revoked' (truthful per-type prefix)."""
+        client = self._client_resolve_raises(AgentRevokedException("urn:asap:agent:ghost"))
+        result = _run(invoke_skill_async(client, "urn:asap:agent:ghost", self._cache(), {}))
+        assert result.startswith("Error: Agent revoked:")
+
+    def test_run_value_error_keeps_skill_input_prefix(self) -> None:
+        """A run-time ValueError (after successful resolve) keeps the skill-input prefix."""
+        client = _FakeMarketClient()
+        agent = MagicMock()
+        agent.manifest.capabilities.skills = [MagicMock(id="skill-1")]
+        client.resolve.side_effect = None
+
+        async def _resolve(_urn: str) -> MagicMock:
+            return agent
+
+        client.resolve.side_effect = _resolve
+        agent.run = AsyncMock(side_effect=ValueError("bad input"))
+        result = _run(invoke_skill_async(client, "urn:asap:agent:x", self._cache(), {"q": 1}))
+        assert "Invalid skill input or task request" in result
+        assert "Failed to resolve" not in result
+
+
 class TestJsonSchemaToPydantic:
     """``json_schema_to_pydantic`` converts a JSON Schema object to a pydantic model."""
 
@@ -136,6 +202,85 @@ class TestSanitizeToolName:
     )
     def test_sanitization_rules(self, raw: str, expected: str) -> None:
         assert sanitize_tool_name(raw) == expected
+
+
+class TestResolveAndCacheSkill:
+    """URN-scoped resolve cache invariants.
+
+    Regression for the S2 PR-review HIGH finding: the client-level cache was
+    URN-agnostic, so a shared ``MarketClient`` used by two tools with different
+    URNs routed the second tool to the first agent's resolution. The cache must
+    be keyed by URN and each resolve must validate it returns the agent for the
+    requested URN.
+    """
+
+    def test_two_urns_on_shared_client_resolve_distinct_agents(self) -> None:
+        """A shared client resolving two URNs must cache and return each URN's agent."""
+        resolved_by_urn: dict[str, object] = {}
+        client = _FakeMarketClient.resolving(resolved_by_urn)
+
+        agent_a, skill_a = resolve_and_cache_skill(client, "urn:asap:agent:a")
+        agent_b, skill_b = resolve_and_cache_skill(client, "urn:asap:agent:b")
+
+        assert agent_a.manifest.id == "urn:asap:agent:a"
+        assert agent_b.manifest.id == "urn:asap:agent:b"
+        assert agent_a is not agent_b
+        assert skill_a == "skill-urn:asap:agent:a"
+        assert skill_b == "skill-urn:asap:agent:b"
+
+    def test_cache_hit_returns_same_instance_without_second_resolve(self) -> None:
+        """A repeat resolve of the same URN reuses the cached agent (no second call)."""
+        resolved_by_urn: dict[str, object] = {}
+        client = _FakeMarketClient.resolving(resolved_by_urn)
+
+        first, _ = resolve_and_cache_skill(client, "urn:asap:agent:solo")
+        second, _ = resolve_and_cache_skill(client, "urn:asap:agent:solo")
+
+        assert first is second
+        assert client.resolve.await_count == 1
+
+    def test_cache_is_keyed_by_urn_not_single_slot(self) -> None:
+        """The cache lives under ``_asap_resolved_by_urn`` and holds both URNs."""
+        resolved_by_urn: dict[str, object] = {}
+        client = _FakeMarketClient.resolving(resolved_by_urn)
+
+        resolve_and_cache_skill(client, "urn:asap:agent:a")
+        resolve_and_cache_skill(client, "urn:asap:agent:b")
+
+        cache = getattr(client, "_asap_resolved_by_urn", None)
+        assert isinstance(cache, dict)
+        assert set(cache) == {"urn:asap:agent:a", "urn:asap:agent:b"}
+        # The legacy single-slot attrs must not exist (the old bug).
+        assert not hasattr(client, "_asap_resolved")
+        assert not hasattr(client, "_asap_skill_id")
+
+
+class _FakeMarketClient:
+    """Minimal MarketClient stand-in for cache tests.
+
+    ``MarketClient`` is a regular class (no ``__slots__``); the resolve cache
+    sets attributes on it via ``object.__setattr__``. This stand-in mirrors that
+    contract without importing the real client (which pulls HTTP/registry deps).
+    """
+
+    def __init__(self) -> None:
+        self.resolve = AsyncMock()
+
+    @classmethod
+    def resolving(cls, resolved_by_urn: dict[str, object]) -> _FakeMarketClient:
+        """Build a client whose ``resolve`` returns a per-URN agent mock."""
+        client = cls()
+
+        async def _resolve(urn: str) -> MagicMock:
+            agent = MagicMock(name=f"agent-{urn}")
+            agent.manifest.id = urn
+            skills = [MagicMock(id=f"skill-{urn}")]
+            agent.manifest.capabilities.skills = skills
+            resolved_by_urn[urn] = agent
+            return agent
+
+        client.resolve.side_effect = _resolve
+        return client
 
 
 def instance_input(model: type) -> dict[str, object]:
