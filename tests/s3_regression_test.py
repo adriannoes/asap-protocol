@@ -14,6 +14,13 @@ silently regress it:
 * ``test_adapters_mcp_shim_identity_with_mcp_auth`` — the S3 4.2 fold's
   deprecation shim must re-export the SAME objects as ``asap.mcp.auth``
   (``is`` identity), so the public surface did not fork.
+* ``test_identity_limiter_missing_returns_503_on_agent_register`` — S3 5.1
+  parity on a second identity route (``/asap/agent/register``): a missing
+  ``identity_limiter`` must 503 cleanly (was ``AttributeError`` -> 500).
+* ``test_allow_env_jwt_fallback_emits_construction_warning`` — S3 M-2: the
+  process-wide JWT bypass flag warns at ``ProtectedMCPServer`` construction
+  (via stderr ``warnings.warn``, not the stdout logger, so stdio is not
+  corrupted).
 """
 
 from __future__ import annotations
@@ -132,3 +139,70 @@ def test_adapters_mcp_shim_identity_with_mcp_auth() -> None:
     assert legacy.MCPAuthConfig is canonical.MCPAuthConfig
     assert legacy.ProtectedMCPServer is canonical.ProtectedMCPServer
     assert legacy.resolve_jwt_extractor is canonical.resolve_jwt_extractor
+
+
+def test_identity_limiter_missing_returns_503_on_agent_register() -> None:
+    """S3 5.1 parity: a second identity route also 503s cleanly when the limiter is missing.
+
+    Mirrors ``TestIdentityLimiterMissingReturns503`` (capability/list) on the
+    ``/asap/agent/register`` path so the ``Depends(require_identity_limiter)``
+    migration is verified on more than one of the 9 migrated sites. Previously
+    the inline ``request.app.state.identity_limiter.check(request)`` raised
+    ``AttributeError`` (HTTP 500); the typed dependency converts it to 503.
+    """
+    from asap.auth.identity import InMemoryAgentStore, InMemoryHostStore
+    from asap.transport.server import create_app
+
+    manifest = _oauth2_only_manifest()
+    agent_store = InMemoryAgentStore()
+    host_store = InMemoryHostStore(agent_store=agent_store)
+    app = create_app(
+        manifest,
+        rate_limit="999999/minute",
+        identity_host_store=host_store,
+        identity_agent_store=agent_store,
+        identity_rate_limit="999999/minute",
+    )
+    # Simulate a misconfigured server: identity routes mounted but no limiter.
+    if hasattr(app.state, "identity_limiter"):
+        delattr(app.state, "identity_limiter")
+    client = TestClient(app)
+
+    r = client.post("/asap/agent/register")
+
+    assert r.status_code == 503
+    assert "identity_limiter not set" in r.json()["detail"]
+
+
+def test_allow_env_jwt_fallback_emits_construction_warning() -> None:
+    """S3 M-2: ``allow_env_jwt_fallback=True`` warns at ``ProtectedMCPServer`` construction.
+
+    The warning goes to stderr via ``warnings.warn`` (not the stdout structlog
+    logger) so it does not corrupt the JSON-RPC stream when the server runs as a
+    stdio subprocess — the failure mode that forced the Wave C attempt to revert
+    a stdout log at ``MCPAuthConfig`` construction. Operators get a loud signal
+    before deploying a process-wide JWT bypass in multi-tool production.
+    """
+    import warnings
+
+    from asap.auth.identity import InMemoryAgentStore, InMemoryHostStore
+    from asap.auth.capabilities import CapabilityRegistry
+    from asap.mcp.auth import MCPAuthConfig, ProtectedMCPServer
+
+    config = MCPAuthConfig(
+        host_store=InMemoryHostStore(agent_store=InMemoryAgentStore()),
+        agent_store=InMemoryAgentStore(),
+        capability_registry=CapabilityRegistry(),
+        allow_env_jwt_fallback=True,
+    )
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        ProtectedMCPServer(config)
+
+    fallback_warnings = [w for w in caught if "allow_env_jwt_fallback" in str(w.message)]
+    assert len(fallback_warnings) == 1, (
+        "expected exactly one allow_env_jwt_fallback construction warning, "
+        f"got {len(fallback_warnings)}: {[str(w.message) for w in fallback_warnings]}"
+    )
+    assert "unsafe for multi-tool production" in str(fallback_warnings[0].message)
+
