@@ -23,7 +23,7 @@ Based on [PRD v2.5.0 MCP Auth Bridge](../../../product/prd/prd-v2.5.0-mcp-auth-b
 | **S4** | [Compliance & integration tests](./sprint-S4-compliance.md) | MCP-DISC-003, harness | P1 | ✅ Done (merged `4b67b50`, [PR #233](https://github.com/adriannoes/asap-protocol/pull/233)) |
 | **S5** | [Release v2.5.0](./sprint-S5-release.md) | DoD, metrics | P0 | ✅ Shipped — tag `v2.5.0` (2026-06-24) |
 
-> **Note:** `@asap-protocol/mcp-auth` (TypeScript, MCP-TS-*) is SHOULD. S4 spike **decided DEFER to v2.5.0.1** ([typescript-mcp-auth-spike.md](./typescript-mcp-auth-spike.md)); S5 records defer in CHANGELOG/backlog — does not block Python tag.
+> **Note:** `@asap-protocol/mcp-auth` (TypeScript, MCP-TS-*) is SHOULD. S4 spike **deferred** ([typescript-mcp-auth-spike.md](./typescript-mcp-auth-spike.md)); tag **`v2.5.0.1`** = **`asap-compliance` 1.3.0** only — npm middleware TBD.
 
 ## Dependency Graph
 
@@ -95,7 +95,7 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
   - **Acceptance criteria:**
     - [x] `asap-compliance` includes `mcp-auth-bridge` profile cases for stdio MCP, including manifest tools ⊆ registered tools (merged `4b67b50`, [PR #233](https://github.com/adriannoes/asap-protocol/pull/233))
     - [x] Post-S4 refactor: unified capability metadata, `MCPAuthConfig` in `config.py`, split adapter tests (merged `a60c1e9`, [PR #234](https://github.com/adriannoes/asap-protocol/pull/234))
-    - [x] TS middleware: **deferred to v2.5.0.1** per [typescript-mcp-auth-spike.md](./typescript-mcp-auth-spike.md) (MCP-TS-001..003; not a release blocker)
+    - [x] TS middleware: **deferred** per [typescript-mcp-auth-spike.md](./typescript-mcp-auth-spike.md) (MCP-TS-001..003; npm patch TBD; tag `v2.5.0.1` = compliance only)
     - [x] `pyproject.toml` / `src/asap/__init__.py` / `uv.lock` → **2.5.0** (S5 — [PR #235](https://github.com/adriannoes/asap-protocol/pull/235))
     - [x] `AGENTS.md` knowledge map updated; CHANGELOG `[2.5.0]` with TS defer subsection (S5 — PR #235)
     - [x] Pre-push CI suite green on `release/2.5.0` (ruff, mypy, pytest ≥85% cov, pip-audit) — results in [sprint-S5-release.md](./sprint-S5-release.md) §1.0 (2026-06-24)

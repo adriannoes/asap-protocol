@@ -37,7 +37,7 @@ Today MCP has no standard auth story for per-agent, scoped tool access. ASAP alr
 | 1 | Python auth middleware for `MCPServer` | `asap.adapters.mcp.auth_middleware` | ✅ Shipped (S1; refined PR #234) |
 | 2 | Tool → capability mapping + grant enforcement | `asap.adapters.mcp.capability_map` | ✅ Shipped (S2; unified metadata PR #234) |
 | 3 | Discovery: well-known manifest alongside MCP | docs + optional `MCPAuthConfig.manifest_url` | ✅ Shipped (S3 docs; S4 compliance) |
-| 4 | TypeScript middleware (SHOULD) | `@asap-protocol/mcp-auth` | ⏸ **Deferred to v2.5.0.1** ([spike](../../engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md)) |
+| 4 | TypeScript middleware (SHOULD) | `@asap-protocol/mcp-auth` | ⏸ **Deferred** — npm patch TBD ([spike](../../engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md); tag `v2.5.0.1` = compliance only) |
 | 5 | Reference server + compliance tests | `examples/mcp_auth_bridge/server.py`, harness cases | ✅ Shipped (S3 example; S4 `mcp-auth-bridge` profile) |
 | 6 | Integration guide | `docs/adapters/mcp-auth-bridge.md` | ✅ Shipped (S3) |
 

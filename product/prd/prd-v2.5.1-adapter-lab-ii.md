@@ -3,7 +3,7 @@
 > **Product Requirements Document**
 >
 > **Version**: 2.5.1
-> **Status**: PLANNED (blocked until v2.5.0 ships)
+> **Status**: PLANNED (v2.5.0 shipped 2026-06-24; adoption signal pending)
 > **Created**: 2026-04-28 (as v2.3.2); **renumbered**: 2026-06-22
 > **Parent train**: [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md)
 > **Predecessor**: [prd-v2.5.0-mcp-auth-bridge.md](./prd-v2.5.0-mcp-auth-bridge.md)
@@ -35,7 +35,7 @@ v2.5.1 expands adoption testing into **enterprise and workflow-heavy ecosystems*
 
 ## 3. Carry-over from v2.5.0: `@asap-protocol/mcp-auth`
 
-> **Decision (2026-06-24, S4 spike):** Ship `@asap-protocol/mcp-auth` in **v2.5.0.1** (patch on the v2.5.0 train), **not** in v2.5.0 and **not** as part of v2.5.1 Adapter Lab II scope.
+> **Decision (2026-06-24, S4 spike):** Ship `@asap-protocol/mcp-auth` in a **future npm patch** (TBD git tag — **not** tag `v2.5.0.1`, which published **`asap-compliance` 1.3.0** only), **not** in v2.5.0 and **not** as part of v2.5.1 Adapter Lab II scope.
 >
 > **Spike:** [typescript-mcp-auth-spike.md](../../engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md)
 > **Source requirements:** [prd-v2.5.0-mcp-auth-bridge.md §5.4](./prd-v2.5.0-mcp-auth-bridge.md#54-typescript-should) (MCP-TS-001..003)
@@ -49,9 +49,9 @@ v2.5.1 expands adoption testing into **enterprise and workflow-heavy ecosystems*
 | Implementation gap | No `packages/typescript/mcp-auth/`, no public `verifyAgentJwt()` on `@asap-protocol/client`, no HTTP/SSE MCP example or publish CI for a fourth npm package |
 | SDK fit | `@modelcontextprotocol/sdk` Bearer middleware targets OAuth transport errors; ASAP needs per-`tools/call` grant checks and `CallToolResult` codes — requires a composed wrapper, not a drop-in |
 
-Deferring does **not** block v2.5.0 Definition of Done or v2.5.1 planning. v2.5.0.1 may ship between v2.5.0 and v2.5.1 without delaying Adapter Lab II.
+Deferring does **not** block v2.5.0 Definition of Done or v2.5.1 planning. The npm middleware may ship as a patch after v2.5.0 without delaying Adapter Lab II (**v2.5.1** is a separate **minor** train, not yet started).
 
-### 3.2 Minimum scope (v2.5.0.1)
+### 3.2 Minimum scope (npm patch TBD)
 
 When implemented, the package MUST satisfy MCP-TS-001..003 at minimum:
 

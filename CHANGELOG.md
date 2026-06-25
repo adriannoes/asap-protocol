@@ -23,13 +23,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.5.0.1] - 2026-06-24
 
-**Compliance package publish** — no change to `asap-protocol` Python API (remains **2.5.0** on PyPI).
+**Compliance package publish** — no change to `asap-protocol` Python API (remains **2.5.0** on PyPI). Git tag **`v2.5.0.1`** is **compliance-only** (not an npm TypeScript release).
 
 ### Fixed
 
 - **PyPI `asap-compliance`**: Bump to **1.3.0** and publish the `mcp-auth-bridge` stdio MCP profile shipped in v2.5.0. The v2.5.0 tag did not upload a new compliance wheel because `release.yml` uses `skip-existing` and the version was still **1.2.0** (February 2026 artifact without MCP auth checks). Requires `asap-protocol>=2.5.0`.
 
 ---
+
+## [2.5.0] - 2026-06-24
 
 **MCP Auth Bridge** — ASAP Host/Agent JWT and capability grants as an **opt-in**
 authorization layer for native **stdio MCP** `tools/call` (Mode A). Unprotected
@@ -75,15 +77,11 @@ changes.
 
 ### TypeScript
 
-- **`@asap-protocol/mcp-auth` deferred to v2.5.0.1** — MCP-TS-001..003 (HTTP/SSE
-  Bearer middleware) are SHOULD-scope; v2.5.0 ships the Python stdio bridge as the
-  release gate. Rationale and implementation checklist:
+- **`@asap-protocol/mcp-auth` deferred** — MCP-TS-001..003 (HTTP/SSE Bearer middleware) are SHOULD-scope; v2.5.0 ships the Python stdio bridge as the release gate. Rationale and checklist:
   [typescript-mcp-auth-spike.md](engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md);
-  carry-over tracked in
-  [PRD v2.5.1 §3](product/prd/prd-v2.5.1-adapter-lab-ii.md#3-carry-over-from-v250-asap-protocolmcp-auth) and
   [backlog](engineering/tasks/v2.5.0/backlog-mcp-auth-typescript.md).
-  Existing `@asap-protocol/*` npm packages remain at **2.4.1** until a separate
-  publish.
+  **Note:** git tag **`v2.5.0.1`** was used for **`asap-compliance` 1.3.0** only; the npm middleware targets a **future patch** (TBD tag, e.g. `v2.5.0.2`).
+  Existing `@asap-protocol/*` npm packages remain at **2.4.1** until that publish.
 
 ### Migration
 

@@ -3,7 +3,7 @@
 > **Status**: COMPLETE (S4)
 > **PRD**: [MCP-TS-001..003](../../../product/prd/prd-v2.5.0-mcp-auth-bridge.md#54-typescript-should)
 > **Sprint**: [sprint-S4-compliance.md](./sprint-S4-compliance.md) task 4.1
-> **Decision**: **DEFER to v2.5.0.1** (see §6; durable record in [PRD v2.5.1 §3](../../../product/prd/prd-v2.5.1-adapter-lab-ii.md#3-carry-over-from-v250-asap-protocolmcp-auth))
+> **Decision**: **DEFER** (npm patch TBD). Git tag **`v2.5.0.1`** was later used for **`asap-compliance` 1.3.0** only — see [backlog](./backlog-mcp-auth-typescript.md).
 
 ---
 
@@ -11,7 +11,7 @@
 
 | Question | Answer |
 |----------|--------|
-| Ship `@asap-protocol/mcp-auth` in v2.5.0? | **No — defer to v2.5.0.1** |
+| Ship `@asap-protocol/mcp-auth` in v2.5.0? | **No — defer** (npm patch TBD; not tag `v2.5.0.1`, which is compliance-only) |
 | Block v2.5.0 Python release? | **No** — MCP-TS-* are SHOULD; Python stdio bridge is the release gate |
 | Minimum viable scope (when shipped) | Bearer extraction + ASAP Agent JWT verify + `asap:*` error mapping on `tools/call` |
 | Estimated effort (v2.5.0.1) | ~3–5 maintainer days (package scaffold, verifier, middleware hook, tests, publish CI) |

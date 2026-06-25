@@ -42,9 +42,9 @@ Between **v2.4.1** (security patch) and **v3.0** (economy), the project needs a 
 | **v2.5.3** | Formal Spec & Interop | RFC spec, introspection, privacy, cross-protocol | [prd-v2.5.3-formal-spec-interop.md](./prd-v2.5.3-formal-spec-interop.md) | Planned |
 | **v2.5.4** | Security Follow-up | `extra="forbid"`, operator API auth, Redis replay (ex v2.4.1 §8) | *(inline in train — patch PRD when triggered)* | Optional |
 
-**Execution rule:** v2.5.1 and v2.5.2 **do not start** until v2.5.0 ships (S5: version bump, CHANGELOG, `release/2.5.0` → `main`, tag `v2.5.0`). v2.5.3 may overlap planning/docs-only work but implementation waits for stable MCP Auth Bridge APIs.
+**Execution rule:** **v2.5.0** shipped 2026-06-24. **v2.5.1** (Adapter Lab II) and **v2.5.2** start when maintainers open the next train — not blocked on code, only on planning/adoption signal. **v2.5.3** may overlap docs-only work.
 
-**v2.5.0 release gate (S5):** Pre-push CI green on `release/2.5.0`; `@asap-protocol/mcp-auth` (TypeScript) **deferred to v2.5.0.1** — does not block Python PyPI publish.
+**Patch tags (not minor releases):** [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1) republished **`asap-compliance` 1.3.0** only; `pyproject.toml` remains **2.5.0**. **`@asap-protocol/mcp-auth`** (npm) is still deferred — future npm patch TBD (do not confuse with tag `v2.5.0.1`).
 
 ---
 
