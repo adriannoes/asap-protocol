@@ -12,6 +12,7 @@ import inspect
 import json
 import sys
 from collections.abc import Callable
+from dataclasses import dataclass, field
 from typing import Any, cast
 
 import jsonschema
@@ -44,6 +45,42 @@ _INTERNAL_TOOL_ERROR_MESSAGE = "Internal tool error"
 EMPTY_INPUT_SCHEMA: dict[str, Any] = {"type": "object", "additionalProperties": False}
 
 
+@dataclass(frozen=True, slots=True)
+class ToolRegistration:
+    """Typed per-tool registration entry stored on :class:`MCPServer._tools`.
+
+    Replaces the former untyped positional 5-tuple
+    ``(handler, schema, description, title, capability)`` so ``from_server`` and
+    ``ProtectedMCPServer`` access fields by name (attribute access) rather than
+    by fragile positional index. Capability metadata stays PER-TOOL-INSTANCE
+    here, not hoisted onto a shared client/server, so two tools with different
+    capability URNs registered on one server cannot inherit each other's grant
+    (guards the S2 #240 URN-agnostic resolve-cache regression).
+
+    Attributes:
+        name: Unique tool name (e.g. ``echo``).
+        handler: Callable invoked by ``tools/call`` (sync or async).
+        schema: JSON Schema for the tool's parameters (``inputSchema``).
+        metadata: Display metadata (``description`` + optional ``title``).
+        capabilities: ASAP capability URN metadata for MCP Auth Bridge
+            (MCP-MAP-002); ``None`` means the tool resolves to its own name.
+    """
+
+    name: str
+    handler: Callable[..., Any]
+    schema: dict[str, Any]
+    metadata: ToolMetadata = field(default_factory=lambda: ToolMetadata())
+    capabilities: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ToolMetadata:
+    """Human-readable display metadata for a registered tool (``tools/list``)."""
+
+    description: str = ""
+    title: str | None = None
+
+
 class MCPServer:
     """MCP server with stdio transport and tools support.
 
@@ -66,9 +103,7 @@ class MCPServer:
             description=description,
         )
         self._instructions = instructions
-        self._tools: dict[
-            str, tuple[Callable[..., Any], dict[str, Any], str, str | None, str | None]
-        ] = {}
+        self._tools: dict[str, ToolRegistration] = {}
         self._request_id_counter = 0
 
     def get_tool_capability(self, name: str) -> str | None:
@@ -76,7 +111,7 @@ class MCPServer:
         entry = self._tools.get(name)
         if entry is None:
             return None
-        return entry[4]
+        return entry.capabilities
 
     def register_tool(
         self,
@@ -103,12 +138,15 @@ class MCPServer:
             capability: Optional ASAP capability name for MCP Auth Bridge (MCP-MAP-002).
         """
         input_schema = schema if schema else EMPTY_INPUT_SCHEMA
-        self._tools[name] = (
-            func,
-            input_schema,
-            description or f"Tool {name}",
-            title,
-            capability,
+        self._tools[name] = ToolRegistration(
+            name=name,
+            handler=func,
+            schema=input_schema,
+            metadata=ToolMetadata(
+                description=description or f"Tool {name}",
+                title=title,
+            ),
+            capabilities=capability,
         )
 
     def _get_capabilities(self) -> dict[str, Any]:
@@ -130,12 +168,12 @@ class MCPServer:
     def _handle_tools_list(self, params: dict[str, Any] | None) -> dict[str, Any]:
         tools = [
             Tool(
-                name=name,
-                description=description,
-                inputSchema=input_schema,
-                title=title,
+                name=registration.name,
+                description=registration.metadata.description,
+                inputSchema=registration.schema,
+                title=registration.metadata.title,
             )
-            for name, (_, input_schema, description, title, _cap) in self._tools.items()
+            for registration in self._tools.values()
         ]
         result = ListToolsResult(tools=tools)
         return result.model_dump(by_alias=True, exclude_none=True)
@@ -160,7 +198,9 @@ class MCPServer:
                 isError=True,
             ).model_dump(by_alias=True, exclude_none=True)
 
-        func, input_schema, _desc, _title, _cap = self._tools[parsed.name]
+        registration = self._tools[parsed.name]
+        func = registration.handler
+        input_schema = registration.schema
         try:
             jsonschema.validate(instance=parsed.arguments, schema=input_schema)
         except jsonschema.ValidationError as e:

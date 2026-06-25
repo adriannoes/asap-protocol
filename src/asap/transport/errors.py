@@ -9,8 +9,8 @@ under concurrency would mix request/response pairs.
 
 The taxonomy code and JSON-RPC slot reuse ``asap:protocol/malformed_envelope``
 (``RPC_MALFORMED_ENVELOPE``) to stay consistent with the existing error style
-(``RemoteFatalRPCError`` / ``RemoteRecoverableRPCError``) until the roadmap
-collapse of those two RPC error types happens in a later wave.
+(``RemoteRPCError``, whose ``is_recoverable`` property distinguishes fatal
+from retryable remote JSON-RPC failures after the v2.5.1 twin-class collapse).
 
 This module is also the single source of truth for the response-binding check
 (``assert_correlation_binds``) shared by the HTTP client (``send``/``batch``)

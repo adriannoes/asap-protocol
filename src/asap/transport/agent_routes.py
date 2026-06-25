@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any, cast
 
-from fastapi import APIRouter, BackgroundTasks, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request
 from fastapi.responses import JSONResponse
 from joserfc.errors import JoseError
 from joserfc.jwk import OKPKey
@@ -52,7 +52,9 @@ from asap.models.base import ASAPBaseModel
 from asap.models.ids import generate_id
 from asap.observability import get_logger
 from asap.transport._auth_helpers import verify_host_bearer
+from asap.transport._state_deps import require_identity_limiter
 from asap.transport.capability_routes import _grant_to_dict
+from asap.transport.rate_limit import ASAPRateLimiter
 
 logger = get_logger(__name__)
 
@@ -725,30 +727,40 @@ def create_agent_identity_router() -> APIRouter:
     async def agent_register(
         request: Request,
         background_tasks: BackgroundTasks,
+        limiter: ASAPRateLimiter = Depends(require_identity_limiter),
     ) -> JSONResponse:
         """Register an agent session under a host using a Host JWT (Bearer)."""
-        request.app.state.identity_limiter.check(request)
+        limiter.check(request)
         return await _handle_agent_register(request, background_tasks)
 
     @router.get("/asap/agent/status")
     async def agent_status(
         request: Request,
         agent_id: Annotated[str, Query(min_length=1)],
+        limiter: ASAPRateLimiter = Depends(require_identity_limiter),
     ) -> JSONResponse:
         """Return agent status and lifecycle for the authenticated host (Host JWT)."""
-        request.app.state.identity_limiter.check(request)
+        limiter.check(request)
         return await _handle_agent_status(request, agent_id)
 
     @router.post("/asap/agent/revoke")
-    async def agent_revoke(request: Request, body: AgentRevokeBody) -> JSONResponse:
+    async def agent_revoke(
+        request: Request,
+        body: AgentRevokeBody,
+        limiter: ASAPRateLimiter = Depends(require_identity_limiter),
+    ) -> JSONResponse:
         """Revoke an agent session (Host JWT; body: ``agent_id``)."""
-        request.app.state.identity_limiter.check(request)
+        limiter.check(request)
         return await _handle_agent_revoke(request, body)
 
     @router.post("/asap/agent/rotate-key")
-    async def agent_rotate_key(request: Request, body: AgentRotateKeyBody) -> JSONResponse:
+    async def agent_rotate_key(
+        request: Request,
+        body: AgentRotateKeyBody,
+        limiter: ASAPRateLimiter = Depends(require_identity_limiter),
+    ) -> JSONResponse:
         """Rotate agent Ed25519 public key (Host JWT; body: ``agent_id``, ``new_public_key``)."""
-        request.app.state.identity_limiter.check(request)
+        limiter.check(request)
         return await _handle_agent_rotate_key(request, body)
 
     return router

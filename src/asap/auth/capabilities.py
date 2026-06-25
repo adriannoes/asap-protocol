@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import Any, Literal
 
 from asap.auth.identity import HostIdentity
+from asap.auth.scopes import SCOPE_ADMIN, SCOPE_EXECUTE, SCOPE_READ
 from asap.models.base import ASAPBaseModel
 
 GrantStatus = Literal["active", "pending", "denied"]
@@ -292,11 +293,6 @@ def partition_escalation_capability_specs(
 # OAuth2 scope → capability mapping (backward compatibility)
 # ---------------------------------------------------------------------------
 
-# Scope constants (mirrored from asap.auth.scopes to avoid circular import)
-_SCOPE_READ = "asap:read"
-_SCOPE_EXECUTE = "asap:execute"
-_SCOPE_ADMIN = "asap:admin"
-
 
 def map_scopes_to_capabilities(
     scopes: list[str],
@@ -306,15 +302,15 @@ def map_scopes_to_capabilities(
     all_caps = registry.list_capabilities()
     granted_names: set[str] = set()
 
-    if _SCOPE_ADMIN in scopes:
+    if SCOPE_ADMIN in scopes:
         granted_names = {c.name for c in all_caps}
     else:
-        if _SCOPE_READ in scopes:
+        if SCOPE_READ in scopes:
             for c in all_caps:
                 lower = c.name.lower()
                 if any(kw in lower for kw in ("read", "list", "describe")):
                     granted_names.add(c.name)
-        if _SCOPE_EXECUTE in scopes:
+        if SCOPE_EXECUTE in scopes:
             for c in all_caps:
                 lower = c.name.lower()
                 if any(kw in lower for kw in ("execute", "write", "invoke")):

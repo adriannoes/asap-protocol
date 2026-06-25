@@ -221,6 +221,9 @@ ignore = [
 "src/asap/transport/usage_api.py" = ["B008"]
 "src/asap/transport/delegation_api.py" = ["B008"]
 "src/asap/transport/sla_api.py" = ["B008"]
+"src/asap/transport/agent_routes.py" = ["B008"]
+"src/asap/transport/capability_routes.py" = ["B008"]
+"src/asap/transport/escalation_routes.py" = ["B008"]
 "src/asap/cli/__init__.py" = ["B008"]
 
 [tool.ruff.format]

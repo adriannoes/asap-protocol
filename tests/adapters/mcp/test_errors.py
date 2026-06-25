@@ -1,6 +1,6 @@
 """Unit tests for MCP auth error helpers."""
 
-from asap.adapters.mcp.errors import (
+from asap.mcp.auth.errors import (
     AUTH_REQUIRED,
     CAPABILITY_DENIED,
     CONSTRAINT_VIOLATION,

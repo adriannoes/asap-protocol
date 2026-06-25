@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from asap.adapters.mcp import protect_server
-from asap.adapters.mcp.errors import AUTH_REQUIRED, INVALID_TOKEN
+from asap.mcp.auth import protect_server
+from asap.mcp.auth.errors import AUTH_REQUIRED, INVALID_TOKEN
 from asap.auth.agent_jwt import JtiReplayCache
 from asap.auth.capabilities import CapabilityRegistry
 from asap.auth.identity import (

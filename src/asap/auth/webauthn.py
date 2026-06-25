@@ -1,27 +1,30 @@
-"""WebAuthn credential storage and verification (optional ``asap-protocol[webauthn]`` extra)."""
+"""WebAuthn registration/assertion ceremony and verifier (optional ``asap-protocol[webauthn]`` extra).
+
+Storage backends live in :mod:`asap.auth.webauthn_store` (split out in Sprint S3
+because store backend and ceremony spec have different change drivers). This
+module re-exports the store names so existing ``from asap.auth.webauthn import
+InMemoryWebAuthnCredentialStore`` callers keep resolving.
+
+This module owns:
+    WebAuthnCeremonyError  — ceremony failure (stable detail code, log-safe)
+    WebAuthnVerifierImpl   — registration/assertion + WebAuthnVerifier protocol impl
+"""
 
 from __future__ import annotations
 
 import asyncio
 import secrets
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Protocol, runtime_checkable
+from typing import Any
 
-import aiosqlite
-
+from asap.auth.webauthn_store import (
+    InMemoryWebAuthnCredentialStore,
+    SQLiteWebAuthnCredentialStore,
+    WebAuthnCredentialRecord,
+    WebAuthnCredentialStore,
+)
 from asap.observability import get_logger
 
 logger = get_logger(__name__)
-
-
-@dataclass(frozen=True, slots=True)
-class WebAuthnCredentialRecord:
-    """Stored credential material for a WebAuthn public key credential."""
-
-    credential_id: bytes
-    public_key: bytes
-    sign_count: int
 
 
 class WebAuthnCeremonyError(Exception):
@@ -32,190 +35,15 @@ class WebAuthnCeremonyError(Exception):
         self.detail = detail
 
 
-@runtime_checkable
-class WebAuthnCredentialStore(Protocol):
-    """Persist WebAuthn credentials keyed by host and credential id."""
-
-    async def save_credential(
-        self,
-        host_id: str,
-        credential_id: bytes,
-        public_key: bytes,
-        sign_count: int,
-    ) -> None:
-        """Insert or replace a credential for ``host_id``."""
-
-    async def get_credential(
-        self,
-        host_id: str,
-        credential_id: bytes,
-    ) -> WebAuthnCredentialRecord | None:
-        """Return the stored row, or ``None`` if missing."""
-
-    async def update_sign_count(
-        self,
-        host_id: str,
-        credential_id: bytes,
-        new_count: int,
-    ) -> None:
-        """Persist the authenticator sign counter after a successful assertion."""
-
-    async def list_credentials(self, host_id: str) -> list[bytes]:
-        """Return credential ids for ``host_id``."""
-
-
-class InMemoryWebAuthnCredentialStore:
-    """In-memory :class:`WebAuthnCredentialStore` (asyncio.Lock, per-process only)."""
-
-    def __init__(self) -> None:
-        self._lock = asyncio.Lock()
-        self._rows: dict[tuple[str, bytes], WebAuthnCredentialRecord] = {}
-
-    async def save_credential(
-        self,
-        host_id: str,
-        credential_id: bytes,
-        public_key: bytes,
-        sign_count: int,
-    ) -> None:
-        async with self._lock:
-            self._rows[(host_id, credential_id)] = WebAuthnCredentialRecord(
-                credential_id=credential_id,
-                public_key=public_key,
-                sign_count=sign_count,
-            )
-
-    async def get_credential(
-        self,
-        host_id: str,
-        credential_id: bytes,
-    ) -> WebAuthnCredentialRecord | None:
-        async with self._lock:
-            return self._rows.get((host_id, credential_id))
-
-    async def update_sign_count(
-        self,
-        host_id: str,
-        credential_id: bytes,
-        new_count: int,
-    ) -> None:
-        async with self._lock:
-            key = (host_id, credential_id)
-            row = self._rows.get(key)
-            if row is None:
-                msg = f"no credential for host_id={host_id!r} credential_id={credential_id!r}"
-                raise KeyError(msg)
-            self._rows[key] = WebAuthnCredentialRecord(
-                credential_id=row.credential_id,
-                public_key=row.public_key,
-                sign_count=new_count,
-            )
-
-    async def list_credentials(self, host_id: str) -> list[bytes]:
-        async with self._lock:
-            return [cid for (hid, cid) in self._rows if hid == host_id]
-
-
-class SQLiteWebAuthnCredentialStore:
-    """File-backed :class:`WebAuthnCredentialStore` using SQLite (``aiosqlite``)."""
-
-    def __init__(self, db_path: str | Path) -> None:
-        self._db_path = str(Path(db_path))
-
-    async def _ensure_schema(self, conn: aiosqlite.Connection) -> None:
-        await conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS webauthn_credentials (
-                host_id TEXT NOT NULL,
-                credential_id BLOB NOT NULL,
-                public_key BLOB NOT NULL,
-                sign_count INTEGER NOT NULL,
-                PRIMARY KEY (host_id, credential_id)
-            )
-            """
-        )
-
-    async def save_credential(
-        self,
-        host_id: str,
-        credential_id: bytes,
-        public_key: bytes,
-        sign_count: int,
-    ) -> None:
-        async with aiosqlite.connect(self._db_path) as conn:
-            await self._ensure_schema(conn)
-            await conn.execute(
-                """
-                INSERT OR REPLACE INTO webauthn_credentials
-                    (host_id, credential_id, public_key, sign_count)
-                VALUES (?, ?, ?, ?)
-                """,
-                (host_id, credential_id, public_key, sign_count),
-            )
-            await conn.commit()
-
-    async def get_credential(
-        self,
-        host_id: str,
-        credential_id: bytes,
-    ) -> WebAuthnCredentialRecord | None:
-        async with aiosqlite.connect(self._db_path) as conn:
-            await self._ensure_schema(conn)
-            conn.row_factory = aiosqlite.Row
-            cur = await conn.execute(
-                """
-                SELECT credential_id, public_key, sign_count
-                FROM webauthn_credentials
-                WHERE host_id = ? AND credential_id = ?
-                """,
-                (host_id, credential_id),
-            )
-            row = await cur.fetchone()
-            if row is None:
-                return None
-            return WebAuthnCredentialRecord(
-                credential_id=row["credential_id"],
-                public_key=row["public_key"],
-                sign_count=int(row["sign_count"]),
-            )
-
-    async def update_sign_count(
-        self,
-        host_id: str,
-        credential_id: bytes,
-        new_count: int,
-    ) -> None:
-        async with aiosqlite.connect(self._db_path) as conn:
-            await self._ensure_schema(conn)
-            cur = await conn.execute(
-                """
-                UPDATE webauthn_credentials
-                SET sign_count = ?
-                WHERE host_id = ? AND credential_id = ?
-                """,
-                (new_count, host_id, credential_id),
-            )
-            await conn.commit()
-            if cur.rowcount != 1:
-                msg = f"no credential for host_id={host_id!r} credential_id={credential_id!r}"
-                raise KeyError(msg)
-
-    async def list_credentials(self, host_id: str) -> list[bytes]:
-        async with aiosqlite.connect(self._db_path) as conn:
-            await self._ensure_schema(conn)
-            cur = await conn.execute(
-                """
-                SELECT credential_id FROM webauthn_credentials
-                WHERE host_id = ?
-                """,
-                (host_id,),
-            )
-            rows = await cur.fetchall()
-            return [r[0] for r in rows]
-
-
 class WebAuthnVerifierImpl:
-    """WebAuthn registration/assertion (lazy-imports ``webauthn``; needs ``[webauthn]`` extra)."""
+    """WebAuthn registration/assertion (lazy-imports ``webauthn``; needs ``[webauthn]`` extra).
+
+    Implements the :class:`asap.auth.self_auth.WebAuthnVerifier` protocol
+    directly via :meth:`verify`, so callers that need proof-of-presence
+    (approval paths) can use this class without an adapter wrapper.
+    """
+
+    __asap_performs_real_webauthn__ = True
 
     def __init__(
         self,
@@ -433,15 +261,6 @@ class WebAuthnVerifierImpl:
         await self._store.update_sign_count(host_id, credential_id, verified.new_sign_count)
         return True
 
-
-class WebAuthnSelfAuthVerifier:
-    """Wraps :class:`WebAuthnVerifierImpl` for :class:`WebAuthnVerifier`."""
-
-    __asap_performs_real_webauthn__ = True
-
-    def __init__(self, impl: WebAuthnVerifierImpl) -> None:
-        self._impl = impl
-
     async def verify(
         self,
         challenge: str,
@@ -450,11 +269,18 @@ class WebAuthnSelfAuthVerifier:
         host_id: str | None = None,
         require_user_verification: bool = False,
     ) -> bool:
+        """Verify a WebAuthn assertion for proof-of-presence.
+
+        Implements the :class:`WebAuthnVerifier` protocol by delegating to
+        :meth:`finish_webauthn_assertion`. Rejects upfront when the caller
+        omits ``host_id`` or supplies a non-dict ``response`` so the ceremony
+        never runs with malformed inputs.
+        """
         if host_id is None:
             return False
         if not isinstance(response, dict):
             return False
-        return await self._impl.finish_webauthn_assertion(
+        return await self.finish_webauthn_assertion(
             host_id,
             response,
             claimed_challenge_b64url=challenge,
@@ -462,12 +288,13 @@ class WebAuthnSelfAuthVerifier:
         )
 
 
+# Re-exported so legacy ``from asap.auth.webauthn import <store>`` keeps working
+# after the Sprint S3 store/ceremony split.
 __all__ = [
     "InMemoryWebAuthnCredentialStore",
     "SQLiteWebAuthnCredentialStore",
     "WebAuthnCeremonyError",
     "WebAuthnCredentialRecord",
     "WebAuthnCredentialStore",
-    "WebAuthnSelfAuthVerifier",
     "WebAuthnVerifierImpl",
 ]

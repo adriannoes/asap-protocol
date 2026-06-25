@@ -19,6 +19,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CI security (`pip-audit`)**: Raised `cryptography` to `>=48.0.1,<49` (GHSA-537c-gmf6-5ccf), `python-multipart>=0.0.31` (CVE-2026-53538–53540), and `starlette>=1.3.1` (CVE-2026-54282 / CVE-2026-54283) via `pyproject.toml` floors and `tool.uv.override-dependencies`.
 - **pydantic-ai (CVE-2026-46678)**: Optional `[pydanticai]` extra pins `pydantic-ai>=1.99.0`; removed obsolete `pip-audit` ignore from CI.
 
+### Changed (Sprint S3 — auth/mcp/transport/errors cleanup)
+
+- **`OAuth2Middleware` JWKS delegation**: the middleware now delegates to a single shared `JWKSValidator` instead of keeping its own JWKS cache. `transport/server.py` collapses the two `OAuth2Middleware` instances (HTTP stack + WebSocket `app.state`) into one shared validator, closing the S0 #237 landmine where the WS accept-time and HTTP per-request validation could diverge on key-set freshness. TTL reconciled to one constant (`JWKS_CACHE_TTL_SECONDS=86400`).
+- **`MCPServer._tools` typed registration**: the untyped positional 5-tuple is replaced by a frozen `ToolRegistration` dataclass (`name`/`handler`/`schema`/`metadata`/`capabilities`); capability metadata is now per-tool-instance (guards against the S2 #240 URN-agnostic resolve-cache regression).
+- **`RemoteRPCError` unification**: `RemoteFatalRPCError`/`RemoteRecoverableRPCError` collapse into one `RemoteRPCError(ASAPError)` with an `is_recoverable` property. The twin names are kept as **deprecated subclasses** so `isinstance`/exception-tuple callers stay green; `transport/client/_send.py` retry decision now reads `rpc_exc.is_recoverable`.
+- **`OpenAPIExecutionKind` metadata**: the dead `ASYNC_POLLING` variant is pruned. A `202 + Location` OpenAPI operation now classifies as `SYNC` (was `ASYNC_POLLING`). No production handler consumed the old value, but external tooling reading `execution_kind` from mapped capabilities will see a different enum value.
+- **MCP Auth Bridge location**: `asap.adapters.mcp.*` is folded into `asap.mcp.auth.*` (the adapter boundary was a layering inversion). `asap.adapters.mcp` remains as a thin **deprecation shim** re-exporting `protect_server`/`MCPAuthConfig`/`ProtectedMCPServer`/`resolve_jwt_extractor` (object identity preserved).
+- **Transport identity-rate-limit dependency**: the 9 inline `request.app.state.identity_limiter.check(request)` sites now use `Depends(require_identity_limiter)`. A missing limiter returns a clean **503** (was `AttributeError` → 500).
+
+### Removed (Sprint S3 — import path changes; non-breaking narrowing, grep-verified zero external root callers)
+
+- **`asap.transport` root re-exports trimmed**: `DEFAULT_TTL`, `DEFAULT_MAX_SIZE`, `DEFAULT_CLEANUP_INTERVAL`, `start_periodic_cleanup`, `DEFAULT_WEBHOOK_TIMEOUT`, `DEFAULT_MAX_RETRIES`, `DEFAULT_RETRY_BASE_DELAY`, `DEFAULT_RETRY_MAX_DELAY`, `DEFAULT_WEBHOOK_RATE_PER_SECOND`, `WebhookDelivery`, `WebhookResult`, `WebhookRetryManager`, `RetryPolicy`, `DeadLetterEntry`, `X_ASAP_SIGNATURE_HEADER`, `validate_callback_url`, `compute_signature`, `verify_signature` are no longer re-exported from `asap.transport.__init__`. They remain importable from their owning modules (`asap.transport.cache`, `asap.transport.webhook`). Downstream `from asap.transport import start_periodic_cleanup` callers must update to `from asap.transport.cache import start_periodic_cleanup`.
+- **`asap.transport.codecs` package inlined** to `asap.transport.lambda_codec` (one import path; no shim — grep-verified zero external callers).
+- **`NonceStore.is_used` / `mark_used`** removed in favor of the atomic `check_and_mark` (the separate methods advertised a TOCTOU footgun; `NonceStore` is now a one-method protocol). Custom nonce stores implementing the old surface should switch to `check_and_mark`.
+- **`asap.auth.{claims,utils,lifecycle}` modules** merged into `jwks`/`middleware`, `scopes`, `identity` respectively (the symbols moved; `asap.auth` root re-exports of `Claims`/`fetch_keys`/`validate_jwt`/`host_urn_from_thumbprint` were trimmed — grep-verified zero external root callers).
+- **`WebAuthnSelfAuthVerifier`** pass-through wrapper deleted; `WebAuthnVerifierImpl` now satisfies the `WebAuthnVerifier` protocol directly and `default_webauthn_verifier()` returns it.
+
 ---
 
 ## [2.5.0.1] - 2026-06-24

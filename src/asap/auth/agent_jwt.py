@@ -20,15 +20,16 @@ from joserfc.errors import JoseError
 from joserfc.jwk import OKPKey
 from joserfc.jws import extract_compact as _jws_extract_compact
 
-from asap.auth.claims import audience_matches_expected as _audience_matches_expected
+from asap.auth.jwks import audience_matches_expected as _audience_matches_expected
 from asap.auth.identity import (
     AgentSession,
     AgentStore,
     HostIdentity,
     HostStore,
+    check_agent_expiry,
+    extend_session,
     jwk_thumbprint_sha256,
 )
-from asap.auth.lifecycle import check_agent_expiry, extend_session
 from asap.models.ids import generate_id
 
 # Encode/decode: EdDSA (RFC 8037 Ed25519); joserfc also accepts "Ed25519" alias.
@@ -57,6 +58,29 @@ class JwtVerifyResult:
     host: HostIdentity | None = None
     agent: AgentSession | None = None
     error: str | None = None
+
+    @property
+    def capabilities(self) -> list[str]:
+        """Typed view of the JWT ``capabilities`` claim (additive accessor).
+
+        Returns the claim as a ``list[str]`` when present and well-typed, else
+        an empty list. Preserves the prior behavior where callers re-derived
+        the claim with ``isinstance`` (e.g. the MCP Auth Bridge grant gate) so
+        they can read it typed instead of re-parsing ``self.claims``.
+
+        Example:
+            >>> result = JwtVerifyResult(ok=True, claims={"capabilities": ["web_search"]})
+            >>> result.capabilities
+            ['web_search']
+            >>> JwtVerifyResult(ok=True).capabilities
+            []
+        """
+        if self.claims is None:
+            return []
+        raw = self.claims.get(CAPABILITIES_CLAIM)
+        if not isinstance(raw, list):
+            return []
+        return [entry for entry in raw if isinstance(entry, str)]
 
 
 class JtiReplayCache:
@@ -120,7 +144,10 @@ def _unverified_header_and_payload(token: str) -> tuple[dict[str, Any], dict[str
 
 
 def _okp_from_public_jwk(public_key: dict[str, Any]) -> OKPKey:
-    return OKPKey.import_key(cast("dict[str, str | list[str]]", dict(public_key)))
+    # Input is validated at the model boundary (OkpPublicKey AfterValidator calls
+    # OKPKey.import_key) or isinstance(dict)-checked by the caller; the copy keeps
+    # the original JWK dict immutable.
+    return OKPKey.import_key(dict(public_key))
 
 
 def _claims_dict(token: Any) -> dict[str, Any]:
@@ -153,6 +180,34 @@ def _exp_valid(claims: dict[str, Any], *, now_ts: float) -> bool:
 def _jti_present(claims: dict[str, Any]) -> bool:
     jti = claims.get("jti")
     return isinstance(jti, str) and bool(jti.strip())
+
+
+def _validate_standard_claims(
+    claims: dict[str, Any],
+    *,
+    now_ts: float,
+    expected_audience: str | list[str] | None,
+) -> str | None:
+    """Validate the shared ``exp``/``iat``/``jti``/``aud`` claims.
+
+    Returns the first failure reason, or ``None`` when all checks pass. Used by
+    both :func:`verify_host_jwt` and :func:`verify_agent_jwt` so the standard
+    claim gate has a single source of truth.
+
+    Example:
+        >>> err = _validate_standard_claims(claims, now_ts=now, expected_audience="aud")
+        >>> if err is not None:
+        ...     return JwtVerifyResult(ok=False, error=err)
+    """
+    if not _exp_valid(claims, now_ts=now_ts):
+        return "token expired or missing exp"
+    if not _iat_not_in_future(claims, now_ts=now_ts):
+        return "invalid iat (too far in the future)"
+    if not _jti_present(claims):
+        return "missing jti"
+    if expected_audience is not None and not _audience_matches_expected(claims, expected_audience):
+        return "audience mismatch"
+    return None
 
 
 async def verify_host_jwt(
@@ -195,14 +250,10 @@ async def verify_host_jwt(
 
     claims = _claims_dict(decoded)
     now_ts = time.time()
-    if not _exp_valid(claims, now_ts=now_ts):
-        return JwtVerifyResult(ok=False, error="token expired or missing exp")
-    if not _iat_not_in_future(claims, now_ts=now_ts):
-        return JwtVerifyResult(ok=False, error="invalid iat (too far in the future)")
-    if not _jti_present(claims):
-        return JwtVerifyResult(ok=False, error="missing jti")
-    if expected_audience is not None and not _audience_matches_expected(claims, expected_audience):
-        return JwtVerifyResult(ok=False, error="audience mismatch")
+    if (
+        err := _validate_standard_claims(claims, now_ts=now_ts, expected_audience=expected_audience)
+    ) is not None:
+        return JwtVerifyResult(ok=False, error=err)
 
     host_pub = claims.get(HOST_PUBLIC_KEY_CLAIM)
     if not isinstance(host_pub, dict):
@@ -232,12 +283,13 @@ async def verify_agent_jwt(
     *,
     expected_audience: str | list[str] | None = None,
     jti_replay_cache: JtiReplayCache | None = None,
-    agent_store_writable: bool = True,
 ) -> JwtVerifyResult:
     """Verify an Agent JWT: typ, signatures, host/agent rows, exp/iat/jti, capabilities.
 
     When ``expected_audience`` is set, ``aud`` must match (RFC 7519 §4.1.3).
-    When ``agent_store_writable`` is False, session extension after verification is not persisted.
+
+    Returns the extended :class:`AgentSession` in ``result.agent``; the caller
+    decides whether to persist it via ``await agent_store.save(agent)``.
     """
     try:
         header, unverified_payload = _unverified_header_and_payload(token)
@@ -266,14 +318,10 @@ async def verify_agent_jwt(
 
     claims = _claims_dict(decoded)
     now_ts = time.time()
-    if not _exp_valid(claims, now_ts=now_ts):
-        return JwtVerifyResult(ok=False, error="token expired or missing exp")
-    if not _iat_not_in_future(claims, now_ts=now_ts):
-        return JwtVerifyResult(ok=False, error="invalid iat (too far in the future)")
-    if not _jti_present(claims):
-        return JwtVerifyResult(ok=False, error="missing jti")
-    if expected_audience is not None and not _audience_matches_expected(claims, expected_audience):
-        return JwtVerifyResult(ok=False, error="audience mismatch")
+    if (
+        err := _validate_standard_claims(claims, now_ts=now_ts, expected_audience=expected_audience)
+    ) is not None:
+        return JwtVerifyResult(ok=False, error=err)
 
     if claims.get("sub") != agent.agent_id:
         return JwtVerifyResult(ok=False, error="sub does not match verified agent id")
@@ -302,8 +350,6 @@ async def verify_agent_jwt(
         return JwtVerifyResult(ok=False, error="agent_expired")
 
     agent = extend_session(agent)
-    if agent_store_writable:
-        await agent_store.save(agent)
 
     return JwtVerifyResult(ok=True, claims=claims, host=host, agent=agent)
 

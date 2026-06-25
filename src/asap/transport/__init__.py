@@ -23,6 +23,10 @@ Public exports:
     ASAPTimeoutError: Timeout error exception
     ASAPRemoteError: Remote error exception
 
+Tuning constants (``DEFAULT_*``), webhook internals, and ``start_periodic_cleanup``
+remain importable from their owning modules (``asap.transport.cache``,
+``asap.transport.webhook``) but are no longer re-exported from the package root.
+
 Example:
     >>> from asap.transport import ASAPClient, create_app
     >>> from asap.models.entities import Manifest, Capability, Endpoint, Skill
@@ -41,13 +45,7 @@ Example:
     >>> app = create_app(manifest)
 """
 
-from asap.transport.cache import (
-    DEFAULT_CLEANUP_INTERVAL,
-    DEFAULT_MAX_SIZE,
-    DEFAULT_TTL,
-    ManifestCache,
-    start_periodic_cleanup,
-)
+from asap.transport.cache import ManifestCache
 from asap.transport.client import (
     ASAPClient,
     ASAPConnectionError,
@@ -80,22 +78,6 @@ from asap.transport.jsonrpc import (
     JsonRpcResponse,
 )
 from asap.transport.server import ASAPRequestHandler, create_app
-from asap.transport.webhook import (
-    DEFAULT_MAX_RETRIES,
-    DEFAULT_RETRY_BASE_DELAY,
-    DEFAULT_RETRY_MAX_DELAY,
-    DEFAULT_WEBHOOK_RATE_PER_SECOND,
-    DEFAULT_WEBHOOK_TIMEOUT,
-    X_ASAP_SIGNATURE_HEADER,
-    DeadLetterEntry,
-    RetryPolicy,
-    WebhookDelivery,
-    WebhookResult,
-    WebhookRetryManager,
-    compute_signature,
-    validate_callback_url,
-    verify_signature,
-)
 
 __all__ = [
     # JSON-RPC
@@ -124,10 +106,6 @@ __all__ = [
     "RetryConfig",
     # Cache
     "ManifestCache",
-    "DEFAULT_TTL",
-    "DEFAULT_MAX_SIZE",
-    "DEFAULT_CLEANUP_INTERVAL",
-    "start_periodic_cleanup",
     # Compression
     "COMPRESSION_THRESHOLD",
     "CompressionAlgorithm",
@@ -137,19 +115,4 @@ __all__ = [
     "get_supported_encodings",
     "is_brotli_available",
     "select_best_encoding",
-    # Webhook
-    "WebhookDelivery",
-    "WebhookResult",
-    "WebhookRetryManager",
-    "RetryPolicy",
-    "DeadLetterEntry",
-    "X_ASAP_SIGNATURE_HEADER",
-    "DEFAULT_WEBHOOK_TIMEOUT",
-    "DEFAULT_MAX_RETRIES",
-    "DEFAULT_RETRY_BASE_DELAY",
-    "DEFAULT_RETRY_MAX_DELAY",
-    "DEFAULT_WEBHOOK_RATE_PER_SECOND",
-    "validate_callback_url",
-    "compute_signature",
-    "verify_signature",
 ]

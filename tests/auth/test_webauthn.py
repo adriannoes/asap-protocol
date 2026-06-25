@@ -483,39 +483,28 @@ async def test_finish_assertion_unknown_credential_id() -> None:
 
 @pytest.mark.asyncio
 async def test_self_auth_verifier_rejects_missing_host_id() -> None:
-    from asap.auth.webauthn import (
-        InMemoryWebAuthnCredentialStore,
-        WebAuthnSelfAuthVerifier,
-        WebAuthnVerifierImpl,
-    )
+    from asap.auth.webauthn import InMemoryWebAuthnCredentialStore, WebAuthnVerifierImpl
 
     impl = WebAuthnVerifierImpl(InMemoryWebAuthnCredentialStore(), rp_id=_RP_ID, origin=_ORIGIN)
-    v = WebAuthnSelfAuthVerifier(impl)
-    assert await v.verify("x", {}, host_id=None) is False
+    assert await impl.verify("x", {}, host_id=None) is False
 
 
 @pytest.mark.asyncio
 async def test_self_auth_verifier_rejects_non_dict_response() -> None:
-    from asap.auth.webauthn import (
-        InMemoryWebAuthnCredentialStore,
-        WebAuthnSelfAuthVerifier,
-        WebAuthnVerifierImpl,
-    )
+    from asap.auth.webauthn import InMemoryWebAuthnCredentialStore, WebAuthnVerifierImpl
 
     impl = WebAuthnVerifierImpl(InMemoryWebAuthnCredentialStore(), rp_id=_RP_ID, origin=_ORIGIN)
-    v = WebAuthnSelfAuthVerifier(impl)
-    assert await v.verify("x", "not-a-dict", host_id="host-a") is False
+    assert await impl.verify("x", "not-a-dict", host_id="host-a") is False
 
 
 @pytest.mark.asyncio
 async def test_self_auth_verifier_verify_success() -> None:
-    from asap.auth.webauthn import InMemoryWebAuthnCredentialStore, WebAuthnSelfAuthVerifier
+    from asap.auth.webauthn import InMemoryWebAuthnCredentialStore
 
     store = InMemoryWebAuthnCredentialStore()
     impl = _verifier_for_vectors(store)
-    v = WebAuthnSelfAuthVerifier(impl)
     cid = base64url_to_bytes(_EC2_CREDENTIAL_ID_B64)
     pk = base64url_to_bytes(_ASSERTION_CREDENTIAL_PUBLIC_KEY_B64)
     await store.save_credential("host-a", cid, pk, _ASSERTION_SIGN_COUNT_BEFORE)
     await impl.start_webauthn_assertion("host-a")
-    assert await v.verify(_AUTH_CHALLENGE_B64, _ASSERTION_EC2, host_id="host-a") is True
+    assert await impl.verify(_AUTH_CHALLENGE_B64, _ASSERTION_EC2, host_id="host-a") is True

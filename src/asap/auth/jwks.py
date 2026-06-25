@@ -9,14 +9,13 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any, Optional
+from typing import Any, Awaitable, Callable, Optional
 
 import httpx
 from joserfc import jwk
 from joserfc import jwt as jose_jwt
 from joserfc.errors import InvalidClaimError, JoseError, MissingClaimError
 
-from asap.auth.claims import audience_matches_expected, issuer_matches_expected
 from asap.observability import get_logger
 
 logger = get_logger(__name__)
@@ -40,6 +39,42 @@ class _JWKSCacheEntry:
 
 # Type alias for decoded JWT claims
 Claims = dict[str, Any]
+
+
+def audience_matches_expected(
+    claims: dict[str, Any],
+    expected_audience: str | list[str],
+) -> bool:
+    """Return True if ``aud`` intersects ``expected_audience``.
+
+    Example:
+        >>> audience_matches_expected({"aud": "a"}, "a")
+        True
+    """
+    aud = claims.get("aud")
+    expected = (
+        [expected_audience] if isinstance(expected_audience, str) else list(expected_audience)
+    )
+    if isinstance(aud, str):
+        token_auds = [aud]
+    elif isinstance(aud, list):
+        token_auds = [a for a in aud if isinstance(a, str)]
+    else:
+        return False
+    return any(a in expected for a in token_auds)
+
+
+def issuer_matches_expected(claims: dict[str, Any], expected_issuer: str) -> bool:
+    """Return True if ``iss`` matches ``expected_issuer`` (trailing-slash agnostic).
+
+    Example:
+        >>> issuer_matches_expected({"iss": "https://issuer.example/"}, "https://issuer.example")
+        True
+    """
+    iss = claims.get("iss")
+    if not isinstance(iss, str) or not iss.strip():
+        return False
+    return iss.rstrip("/") == expected_issuer.rstrip("/")
 
 
 async def fetch_keys(
@@ -140,13 +175,22 @@ class JWKSValidator:
         jwks_uri: str,
         *,
         transport: Optional[httpx.AsyncBaseTransport] = None,
+        fetcher: Optional[Callable[[str], Awaitable[jwk.KeySet]]] = None,
         expected_issuer: str | None = None,
         expected_audience: str | list[str] | None = None,
+        require_exp: bool = True,
     ) -> None:
         self._jwks_uri = jwks_uri
         self._transport = transport
+        # When ``fetcher`` is supplied (e.g. by OAuth2Middleware test seams) it
+        # overrides the default httpx-based fetch so callers can inject a mock
+        # KeySet without constructing an httpx transport.
+        self._fetcher = fetcher
         self._expected_issuer = expected_issuer
         self._expected_audience = expected_audience
+        # ``require_exp=False`` lets ASAP IdP JWTs that omit ``exp`` (validated
+        # separately by the caller's expiry checks) pass signature/claim checks.
+        self._require_exp = require_exp
         self._key_set: Optional[jwk.KeySet] = None
         self._keys_cache: Optional[_JWKSCacheEntry] = None
         self._lock = asyncio.Lock()
@@ -163,7 +207,11 @@ class JWKSValidator:
                 self._key_set = self._keys_cache.key_set
                 return self._keys_cache.key_set
 
-        key_set = await fetch_keys(uri, transport=self._transport)
+        key_set = (
+            await self._fetcher(uri)
+            if self._fetcher is not None
+            else await fetch_keys(uri, transport=self._transport)
+        )
 
         async with self._lock:
             self._keys_cache = _JWKSCacheEntry(key_set, JWKS_CACHE_TTL_SECONDS)
@@ -175,6 +223,10 @@ class JWKSValidator:
         async with self._lock:
             self._keys_cache = None
             self._key_set = None
+
+    async def invalidate_cache(self) -> None:
+        """Public cache-clear seam for callers (e.g. OAuth2Middleware retry)."""
+        await self._invalidate_keys_cache()
 
     def validate_jwt(self, token: str, key_set: jwk.KeySet) -> Claims:
         """Validate JWT with given KeySet and return claims.
@@ -194,6 +246,7 @@ class JWKSValidator:
             key_set,
             expected_issuer=self._expected_issuer,
             expected_audience=self._expected_audience,
+            require_exp=self._require_exp,
         )
 
     async def validate_token(self, token: str) -> Claims:

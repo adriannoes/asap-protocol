@@ -69,7 +69,7 @@ from asap.observability import get_logger, is_debug_mode
 # ``no_implicit_reexport`` and for ``_request_handler``'s ``_server`` access.
 from asap.observability import is_debug_log_mode as is_debug_log_mode
 from asap.observability.tracing import configure_tracing
-from asap.auth import OAuth2Config, OAuth2Middleware
+from asap.auth import JWKSValidator, OAuth2Config, OAuth2Middleware
 from asap.auth.agent_jwt import JtiReplayCache
 from asap.auth.approval import A2HApprovalChannel, ApprovalStore, InMemoryApprovalStore
 from asap.auth.self_auth import (
@@ -649,6 +649,20 @@ def _wire_middleware(
         }
         if oauth2_config.jwks_fetcher is not None:
             middleware_kwargs["jwks_fetcher"] = oauth2_config.jwks_fetcher
+        # ONE canonical JWKSValidator shared by both transports so the HTTP
+        # middleware stack instance and the WS ``app.state`` instance do not
+        # keep divergent JWKS caches (S0 #237). Both middleware instances are
+        # constructed with the same ``validator``; the WS path reads the
+        # ``app.state`` instance and calls ``validate_bearer_token`` directly,
+        # which delegates to this shared validator.
+        shared_validator = JWKSValidator(
+            oauth2_config.jwks_uri,
+            fetcher=oauth2_config.jwks_fetcher,
+            expected_issuer=oauth2_config.expected_issuer,
+            expected_audience=oauth2_config.expected_audience,
+            require_exp=False,
+        )
+        middleware_kwargs["validator"] = shared_validator
         oauth2_middleware = OAuth2Middleware(app, **middleware_kwargs)
         app.add_middleware(OAuth2Middleware, **middleware_kwargs)
         # Expose the middleware instance so the WS path can enforce OAuth2 at

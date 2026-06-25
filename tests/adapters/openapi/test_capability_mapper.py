@@ -433,7 +433,15 @@ async def test_execution_kind_streaming_when_text_event_stream_response(tmp_path
 
 
 @pytest.mark.asyncio
-async def test_execution_kind_async_polling_when_202_and_location_header(tmp_path: Path) -> None:
+async def test_execution_kind_sync_when_202_and_location_header_after_polling_prune(
+    tmp_path: Path,
+) -> None:
+    """202 + Location classifies as SYNC after the ASYNC_POLLING prune (S3 4.3).
+
+    The ``async_polling`` variant was dead metadata (no production consumer); a
+    ``202`` + ``Location`` operation now falls through to ``SYNC`` until a
+    polling handler is wired.
+    """
     raw = {
         "openapi": "3.0.3",
         "info": {"title": "T", "version": "1"},
@@ -453,11 +461,12 @@ async def test_execution_kind_async_polling_when_202_and_location_header(tmp_pat
             },
         },
     }
+    assert not hasattr(OpenAPIExecutionKind, "ASYNC_POLLING")
     with tmp_openapi_spec(tmp_path, raw, "exec_202") as path:
         doc = await load_spec(path)
         caps = map_openapi_to_capabilities(doc)
         assert len(caps) == 1
-        assert caps[0].execution_kind == OpenAPIExecutionKind.ASYNC_POLLING
+        assert caps[0].execution_kind == OpenAPIExecutionKind.SYNC
 
 
 @pytest.mark.asyncio
