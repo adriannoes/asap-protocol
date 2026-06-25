@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Callable
 from typing import Any
 
@@ -43,6 +44,19 @@ class ProtectedMCPServer(MCPServer):
                     "hide_unauthorized_tools=True is a no-op: tools/list still "
                     "returns all tools; only tools/call is gated"
                 ),
+            )
+        if config.allow_env_jwt_fallback:
+            # Loud operator signal at construction so a process-wide JWT bypass
+            # is not silently enabled in multi-tool production (formal review M-2).
+            # Emitted via warnings.warn (stderr) instead of the structlog logger
+            # (stdout) so it does not corrupt the JSON-RPC stream when the server
+            # runs as a stdio subprocess — the same reason the Wave C attempt to
+            # log this at MCPAuthConfig construction broke the MCPClient handshake.
+            warnings.warn(
+                "allow_env_jwt_fallback=True: tools/call with no in-band JWT "
+                "authenticates as the ASAP_AGENT_JWT env holder — dev-only, "
+                "unsafe for multi-tool production",
+                stacklevel=2,
             )
 
     @classmethod

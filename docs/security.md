@@ -1070,7 +1070,7 @@ When a duplicate nonce is detected:
 
 #### Custom Nonce Store
 
-For production deployments with multiple server instances, implement a distributed nonce store:
+For production deployments with multiple server instances, implement a distributed nonce store. `NonceStore` is a one-method protocol built around the atomic `check_and_mark` — a separate `is_used`/`mark_used` pair was removed because it advertised a TOCTOU footgun (two callers could race between the check and the mark).
 
 ```python
 from asap.transport.validators import NonceStore
@@ -1078,17 +1078,14 @@ import redis
 
 class RedisNonceStore:
     """Redis-based nonce store for distributed deployments."""
-    
+
     def __init__(self, redis_client: redis.Redis):
         self.redis = redis_client
-    
-    def is_used(self, nonce: str) -> bool:
-        """Check if nonce exists in Redis."""
-        return self.redis.exists(f"nonce:{nonce}") > 0
-    
-    def mark_used(self, nonce: str, ttl_seconds: int) -> None:
-        """Store nonce in Redis with TTL."""
-        self.redis.setex(f"nonce:{nonce}", ttl_seconds, "1")
+
+    def check_and_mark(self, nonce: str, ttl_seconds: int) -> bool:
+        """Atomically claim the nonce. Returns True if it was unused (now claimed), False if already seen."""
+        # SETNX returns 1 when the key was set (first sighting) and 0 when it already existed.
+        return bool(self.redis.set(f"nonce:{nonce}", "1", nx=True, ex=ttl_seconds))
 
 # Use custom store
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
