@@ -13,6 +13,12 @@ import os
 from pathlib import Path
 
 from asap.state.snapshot import SnapshotStore, create_async_snapshot_store
+from asap.state.stores._sqlite_base import (
+    DEFAULT_DB_PATH as DEFAULT_DB_PATH,
+    AsyncSqliteRepository as AsyncSqliteRepository,
+    build_where as build_where,
+    parse_iso as parse_iso,
+)
 from asap.state.stores.memory import (
     AsyncInMemorySnapshotStore,
     InMemoryMeteringStore,
@@ -26,7 +32,6 @@ from asap.state.stores.sqlite import (
 
 ASAP_STORAGE_BACKEND_ENV = "ASAP_STORAGE_BACKEND"
 ASAP_STORAGE_PATH_ENV = "ASAP_STORAGE_PATH"
-DEFAULT_DB_PATH = "asap_state.db"
 
 
 def create_snapshot_store() -> SnapshotStore:
@@ -54,11 +59,14 @@ def create_snapshot_store() -> SnapshotStore:
 
 __all__ = [
     "AsyncInMemorySnapshotStore",
+    "AsyncSqliteRepository",
     "InMemorySnapshotStore",
     "InMemoryMeteringStore",
     "SQLiteAsyncSnapshotStore",
     "SQLiteSnapshotStore",
     "SQLiteMeteringStore",
+    "build_where",
     "create_async_snapshot_store",
     "create_snapshot_store",
+    "parse_iso",
 ]

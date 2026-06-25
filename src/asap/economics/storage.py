@@ -15,15 +15,15 @@ from __future__ import annotations
 import asyncio
 import json
 from abc import ABC, abstractmethod
-from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, Union, cast, runtime_checkable
 
 if TYPE_CHECKING:
-    from asap.state.metering import MeteringStore, UsageAggregate as StateUsageAggregate, UsageEvent
+    # ``MeteringStore`` is referenced only as a string return annotation on the
+    # ``metering_storage_adapter`` compat shim (resolved by mypy via TYPE_CHECKING).
+    from asap.state.metering import MeteringStore
 
-import aiosqlite
 from pydantic import Field
 
 from asap.economics.metering import (
@@ -38,9 +38,11 @@ from asap.models.base import ASAPBaseModel
 from asap.models.ids import generate_id
 
 # State is the lower layer (never imports economics), so importing the shared
-# usage_events DDL helper here cannot form a cycle. Keeping one canonical DDL
-# owner prevents divergent indexes when both stores share asap_state.db.
-from asap.state.stores.sqlite import _ensure_usage_events_schema
+# usage_events DDL + repository base here cannot form a cycle. One canonical DDL
+# owner prevents divergent indexes when both stores share asap_state.db; the
+# shared base owns WAL pragmas, ``:memory:`` handling, and idempotent schema init.
+from asap.state.stores import DEFAULT_DB_PATH, AsyncSqliteRepository, build_where, parse_iso
+from asap.state.stores.sqlite import _USAGE_EVENTS_DDL
 
 UsageAggregate = Union[
     UsageAggregateByAgent,
@@ -330,8 +332,6 @@ class InMemoryMeteringStorage(MeteringStorageBase):
         """Remove events older than retention_ttl_seconds. Returns count removed."""
         if self._retention_ttl_seconds is None:
             return 0
-        from datetime import timedelta, timezone
-
         cutoff = datetime.now(timezone.utc) - timedelta(seconds=self._retention_ttl_seconds)
         cutoff = cutoff.replace(microsecond=0)
         async with self._lock:
@@ -340,88 +340,39 @@ class InMemoryMeteringStorage(MeteringStorageBase):
             return before - len(self._events)
 
 
-# Adapter: MeteringStorage -> MeteringStore (state layer) for handler recording.
+# Compat shim: the MeteringStorage -> MeteringStore bridge now lives in the
+# state foundation layer (``asap.state.metering.MeteringStorageBridge``); this
+# wrapper preserves the public name for existing importers.
 def metering_storage_adapter(storage: MeteringStorage) -> "MeteringStore":
-    """Create MeteringStore adapter wrapping MeteringStorage for use by handlers."""
+    """Create a ``MeteringStore`` view over ``storage`` (delegates to the state bridge)."""
+    from asap.state.metering import MeteringStorageBridge
 
-    class _Adapter:
-        def __init__(self, s: MeteringStorage) -> None:
-            self._storage = s
-
-        async def record(self, event: "UsageEvent") -> None:
-            metrics = UsageMetrics.from_usage_event(event)
-            await self._storage.record(metrics)
-
-        async def query(
-            self,
-            agent_id: str,
-            start: datetime,
-            end: datetime,
-            limit: int | None = None,
-            offset: int = 0,
-        ) -> list["UsageEvent"]:
-            filters = MeteringQuery(
-                agent_id=agent_id,
-                start=start,
-                end=end,
-                limit=limit,
-                offset=offset,
-            )
-            events = await self._storage.query(filters)
-            return [m.to_usage_event() for m in events]
-
-        async def aggregate(self, agent_id: str, period: str) -> "StateUsageAggregate":
-            from asap.economics.metering import UsageAggregateByAgent
-            from asap.state.metering import UsageAggregate as StateUsageAggregate
-
-            filters = _period_to_metering_query(agent_id, period)
-            aggs = await self._storage.aggregate("agent", filters=filters)
-            for a in aggs:
-                if isinstance(a, UsageAggregateByAgent) and a.agent_id == agent_id:
-                    return StateUsageAggregate(
-                        agent_id=a.agent_id,
-                        period=period,
-                        total_tokens=a.total_tokens,
-                        total_duration=a.total_duration_ms,
-                        total_tasks=a.total_tasks,
-                        total_api_calls=a.total_api_calls,
-                    )
-            return StateUsageAggregate(agent_id=agent_id, period=period)
-
-    return _Adapter(storage)
+    return MeteringStorageBridge(storage)
 
 
+# Compat shim: delegates to ``asap.state.metering._period_to_metering_query``.
 def _period_to_metering_query(agent_id: str, period: str) -> MeteringQuery | None:
-    """Convert period string (hour, day, week, today) to MeteringQuery with start/end.
+    """Convert a period string to a ``MeteringQuery`` (delegates to the state helper)."""
+    from asap.state.metering import _period_to_metering_query as _state_helper
 
-    Returns None for unknown periods (no time filter).
-    """
-    from datetime import timedelta, timezone
-
-    now = datetime.now(timezone.utc)
-    if period in ("hour", "h"):
-        start = now - timedelta(hours=1)
-        return MeteringQuery(agent_id=agent_id, start=start, end=now)
-    if period in ("day", "d", "today"):
-        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        return MeteringQuery(agent_id=agent_id, start=start, end=now)
-    if period in ("week", "w"):
-        start = now - timedelta(weeks=1)
-        return MeteringQuery(agent_id=agent_id, start=start, end=now)
-    # Unknown period: filter by agent_id only (no time range)
-    return MeteringQuery(agent_id=agent_id)
+    return _state_helper(agent_id, period)
 
 
-# SQLite storage constants (aligned with state layer for shared DB).
-_DEFAULT_DB_PATH = "asap_state.db"
-# Safe to use in f-strings: compile-time constant, never user-controlled (no SQL injection).
+# MeteringQuery field -> usage_events WHERE fragment. Values are bound via
+# ``build_where`` params, never interpolated. ``_ALLOWED_QUERY_FRAGMENTS`` is
+# the fail-closed guard tests monkeypatch to verify no fragment leaks.
+_USAGE_EVENTS_WHERE: dict[str, str] = {
+    "agent_id": "agent_id = ?",
+    "consumer_id": "consumer_id = ?",
+    "task_id": "task_id = ?",
+    "start": "timestamp >= ?",
+    "end": "timestamp <= ?",
+}
 
-
-async def _apply_wal_pragmas(conn: aiosqlite.Connection) -> None:
-    """WAL + NORMAL sync for concurrency; busy_timeout to avoid 'database is locked' under load."""
-    await conn.execute("PRAGMA journal_mode=WAL")
-    await conn.execute("PRAGMA synchronous=NORMAL")
-    await conn.execute("PRAGMA busy_timeout=15000")
+# SELECT projection for usage_events (shared by query/aggregate/summary full scans).
+_USAGE_EVENTS_SELECT = (
+    "SELECT id, task_id, agent_id, consumer_id, metrics, timestamp FROM usage_events"
+)
 
 
 def _metrics_to_row(metrics: UsageMetrics, event_id: str) -> tuple[str, str, str, str, str, str]:
@@ -449,7 +400,7 @@ def _row_to_metrics(row: tuple[Any, ...]) -> UsageMetrics:
     """Build UsageMetrics from DB row."""
     _id, task_id, agent_id, consumer_id, metrics_json, ts_str = row
     data = json.loads(metrics_json)
-    ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+    ts = datetime.fromisoformat(str(ts_str).replace("Z", "+00:00"))
     return UsageMetrics(
         task_id=task_id,
         agent_id=agent_id,
@@ -462,107 +413,90 @@ def _row_to_metrics(row: tuple[Any, ...]) -> UsageMetrics:
     )
 
 
-class SQLiteMeteringStorage(MeteringStorageBase):
+def _filters_to_where(filters: MeteringQuery) -> tuple[str, list[Any]]:
+    """Map a ``MeteringQuery`` to a WHERE clause via the base allow-list builder.
+
+    Datetimes are isoformatted for SQLite TEXT comparison. ``limit``/``offset``
+    are appended separately by callers (they are not WHERE predicates).
+    """
+    return build_where(
+        {
+            "agent_id": filters.agent_id,
+            "consumer_id": filters.consumer_id,
+            "task_id": filters.task_id,
+            "start": filters.start.isoformat() if filters.start else None,
+            "end": filters.end.isoformat() if filters.end else None,
+        },
+        _USAGE_EVENTS_WHERE,
+    )
+
+
+class SQLiteMeteringStorage(AsyncSqliteRepository, MeteringStorageBase):
     """SQLite-backed MeteringStorage; usage events persist across restarts.
 
-    Uses the same usage_events table as state SQLiteMeteringStore for
-    compatibility. Indexed by agent_id, consumer_id, and timestamp.
-    Optional retention_ttl_seconds for configurable TTL; call purge_expired()
-    periodically to remove old data.
+    Subclasses :class:`AsyncSqliteRepository` so aiosqlite plumbing, WAL pragmas,
+    the ``:memory:`` persistent connection, and idempotent schema init are owned
+    by the shared base. Uses the same ``usage_events`` table as the state
+    ``SQLiteMeteringStore`` (canonical DDL via ``_USAGE_EVENTS_DDL``) for physical
+    compatibility. Optional ``retention_ttl_seconds`` for configurable TTL; call
+    ``purge_expired()`` periodically to remove old data.
     """
 
     def __init__(
         self,
-        db_path: str | Path = _DEFAULT_DB_PATH,
+        db_path: str | Path = DEFAULT_DB_PATH,
         retention_ttl_seconds: int | None = None,
     ) -> None:
-        self._db_path = Path(db_path)
+        super().__init__(db_path, schema_ddl=_USAGE_EVENTS_DDL)
         self._retention_ttl_seconds = retention_ttl_seconds
-        self._initialized = False
-        self._init_lock = asyncio.Lock()
 
-    @asynccontextmanager
-    async def _connect(self) -> Any:
-        """Connection with WAL pragmas applied."""
-        async with aiosqlite.connect(self._db_path) as conn:
-            await _apply_wal_pragmas(conn)
-            yield conn
-
-    async def _ensure_table(self, conn: aiosqlite.Connection) -> None:
-        await _ensure_usage_events_schema(conn)
-
-    async def _ensure_table_once(self, conn: aiosqlite.Connection) -> None:
-        if self._initialized:
-            return
-        async with self._init_lock:
-            if not self._initialized:
-                await self._ensure_table(conn)
-                self._initialized = True
+    # Fail-closed guard: tests monkeypatch this to ``frozenset()`` to verify
+    # ``_query_impl`` rejects any WHERE fragment not in the allow-list.
+    _ALLOWED_QUERY_FRAGMENTS: frozenset[str] = frozenset(_USAGE_EVENTS_WHERE.values())
 
     async def _record_impl(self, metrics: UsageMetrics) -> None:
-        async with self._connect() as conn:
-            await self._ensure_table_once(conn)
-            event_id = f"evt_{generate_id()}"
-            row = _metrics_to_row(metrics, event_id)
-            await conn.execute(
-                """
-                INSERT INTO usage_events
-                (id, task_id, agent_id, consumer_id, metrics, timestamp)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                row,
-            )
-            await conn.commit()
-
-    # Closed set of WHERE clause fragments. Each appends ``?`` placeholders; values are
-    # bound via the ``params`` list, never interpolated. Keeping this as a module-level
-    # frozenset lets the dynamic-SQL builder below assert no unexpected fragment can leak
-    # into the final query even if a future edit forgets to parameterize.
-    _ALLOWED_QUERY_FRAGMENTS: frozenset[str] = frozenset(
-        {
-            "agent_id = ?",
-            "consumer_id = ?",
-            "task_id = ?",
-            "timestamp >= ?",
-            "timestamp <= ?",
-        }
-    )
+        """Insert one usage event row."""
+        event_id = f"evt_{generate_id()}"
+        row = _metrics_to_row(metrics, event_id)
+        await self.execute(
+            """
+            INSERT INTO usage_events
+            (id, task_id, agent_id, consumer_id, metrics, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            row,
+        )
 
     async def _query_impl(self, filters: MeteringQuery) -> list[UsageMetrics]:
-        async with self._connect() as conn:
-            await self._ensure_table_once(conn)
-            conditions: list[str] = []
-            params: list[Any] = []
-            if filters.agent_id is not None:
-                conditions.append("agent_id = ?")
-                params.append(filters.agent_id)
-            if filters.consumer_id is not None:
-                conditions.append("consumer_id = ?")
-                params.append(filters.consumer_id)
-            if filters.task_id is not None:
-                conditions.append("task_id = ?")
-                params.append(filters.task_id)
-            if filters.start is not None:
-                conditions.append("timestamp >= ?")
-                params.append(filters.start.isoformat())
-            if filters.end is not None:
-                conditions.append("timestamp <= ?")
-                params.append(filters.end.isoformat())
-            if not all(c in self._ALLOWED_QUERY_FRAGMENTS for c in conditions):
-                raise ValueError("unexpected WHERE fragment")
-            where = " AND ".join(conditions) if conditions else "1=1"
-            sql = f"""
-                SELECT id, task_id, agent_id, consumer_id, metrics, timestamp
-                FROM usage_events
-                WHERE {where}
-                ORDER BY timestamp
-                LIMIT ? OFFSET ?
-            """  # nosec B608 - ``where`` is assembled from _ALLOWED_QUERY_FRAGMENTS only; values parameterized
-            limit_val = filters.limit if filters.limit is not None else -1
-            params.extend([limit_val, filters.offset])
-            cursor = await conn.execute(sql, params)
-            rows = await cursor.fetchall()
-            return [_row_to_metrics(tuple(r)) for r in rows]
+        """Select events matching ``filters`` via the base allow-list WHERE builder."""
+        # Fail-closed: derive the emitted fragments from the non-None filter keys
+        # (rather than splitting the assembled WHERE string, which would be brittle
+        # if a fragment ever embedded " AND "). Tests empty _ALLOWED_QUERY_FRAGMENTS
+        # to verify the guard rejects any fragment outside the allow-list.
+        active_keys = [
+            key
+            for key in ("agent_id", "consumer_id", "task_id", "start", "end")
+            if getattr(filters, key) is not None
+        ]
+        emitted = [_USAGE_EVENTS_WHERE[key] for key in active_keys]
+        if not all(f in self._ALLOWED_QUERY_FRAGMENTS for f in emitted):
+            raise ValueError("unexpected WHERE fragment")
+        where, params = _filters_to_where(filters)
+        sql = f"""
+            {_USAGE_EVENTS_SELECT}
+            WHERE {where}
+            ORDER BY timestamp
+            LIMIT ? OFFSET ?
+        """  # nosec B608 - ``where`` is assembled by build_where from _USAGE_EVENTS_WHERE; values parameterized
+        limit_val = filters.limit if filters.limit is not None else -1
+        params.extend([limit_val, filters.offset])
+        rows = await self.fetch_all(sql, tuple(params))
+        return [_row_to_metrics(r) for r in rows]
+
+    async def _fetch_all_events(self) -> list[UsageMetrics]:
+        """Read every usage_events row (full-table scan path for unfiltered aggregate/summary)."""
+        rows = await self.fetch_all(f"{_USAGE_EVENTS_SELECT} ORDER BY timestamp")  # nosec B608 - static SQL
+        return [_row_to_metrics(r) for r in rows]
 
     async def _aggregate_impl(
         self,
@@ -581,17 +515,7 @@ class SQLiteMeteringStorage(MeteringStorageBase):
             )
             events = await self._query_impl(agg_filters)
         else:
-            async with self._connect() as conn:
-                await self._ensure_table_once(conn)
-                cursor = await conn.execute(
-                    """
-                    SELECT id, task_id, agent_id, consumer_id, metrics, timestamp
-                    FROM usage_events
-                    ORDER BY timestamp
-                    """,
-                )
-                rows = await cursor.fetchall()
-            events = [_row_to_metrics(tuple(r)) for r in rows]
+            events = await self._fetch_all_events()
         return _dispatch_aggregate(events, group_by)
 
     async def record(self, metrics: UsageMetrics) -> None:
@@ -624,17 +548,7 @@ class SQLiteMeteringStorage(MeteringStorageBase):
             )
             events = await self._query_impl(summary_filters)
         else:
-            async with self._connect() as conn:
-                await self._ensure_table_once(conn)
-                cursor = await conn.execute(
-                    """
-                    SELECT id, task_id, agent_id, consumer_id, metrics, timestamp
-                    FROM usage_events
-                    ORDER BY timestamp
-                    """,
-                )
-                rows = await cursor.fetchall()
-            events = [_row_to_metrics(tuple(r)) for r in rows]
+            events = await self._fetch_all_events()
         return _compute_summary(events)
 
     async def summary(self, filters: MeteringQuery | None = None) -> UsageSummary:
@@ -643,19 +557,9 @@ class SQLiteMeteringStorage(MeteringStorageBase):
 
     async def _stats_impl(self) -> StorageStats:
         """Compute storage stats from SQLite."""
-        async with self._connect() as conn:
-            await self._ensure_table_once(conn)
-            cursor = await conn.execute(
-                """
-                SELECT COUNT(*), MIN(timestamp)
-                FROM usage_events
-                """,
-            )
-            row = await cursor.fetchone()
+        row = await self.fetch_one("SELECT COUNT(*), MIN(timestamp) FROM usage_events")
         count = row[0] if row and row[0] is not None else 0
-        oldest_ts: datetime | None = None
-        if row and row[1] is not None:
-            oldest_ts = datetime.fromisoformat(str(row[1]).replace("Z", "+00:00"))
+        oldest_ts = parse_iso(str(row[1])) if row and row[1] is not None else None
         return StorageStats(
             total_events=count,
             oldest_timestamp=oldest_ts,
@@ -670,23 +574,12 @@ class SQLiteMeteringStorage(MeteringStorageBase):
         """Delete events older than retention_ttl_seconds. Returns count removed."""
         if self._retention_ttl_seconds is None:
             return 0
-        from datetime import timedelta, timezone
-
         cutoff = datetime.now(timezone.utc) - timedelta(seconds=self._retention_ttl_seconds)
         cutoff = cutoff.replace(microsecond=0)
-        cutoff_str = cutoff.isoformat()
-        async with self._connect() as conn:
-            await self._ensure_table_once(conn)
-            cursor = await conn.execute(
-                """
-                DELETE FROM usage_events
-                WHERE timestamp < ?
-                """,
-                (cutoff_str,),
-            )
-            deleted = cursor.rowcount if cursor.rowcount is not None else 0
-            await conn.commit()
-            return max(0, deleted)
+        return await self.execute(
+            "DELETE FROM usage_events WHERE timestamp < ?",
+            (cutoff.isoformat(),),
+        )
 
     async def purge_expired(self) -> int:
         """Remove events older than retention_ttl_seconds. Returns count removed."""

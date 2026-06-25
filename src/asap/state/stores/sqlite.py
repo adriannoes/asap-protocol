@@ -1,15 +1,18 @@
-"""SQLite-backed SnapshotStore and MeteringStore (persistent, file-based)."""
+"""SQLite-backed SnapshotStore and MeteringStore (persistent, file-based).
+
+Both stores subclass :class:`AsyncSqliteRepository` (v2.5.1 S1): the base owns
+aiosqlite connection lifecycle, WAL pragma setup, and idempotent schema init;
+this module supplies per-store DDL, SQL, and row mappers. The sync->async bridge
+for :class:`SQLiteSnapshotStore` lives in :mod:`state.stores._sync_bridge`.
+
+The canonical ``usage_events`` DDL + :func:`_ensure_usage_events_schema` stay here
+because ``asap.economics.storage`` imports the helper directly (state is the lower
+layer, so the import direction is acyclic).
+"""
 
 from __future__ import annotations
 
-import asyncio
-import atexit
-import concurrent.futures
 import json
-import threading
-import weakref
-from collections import OrderedDict
-from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
@@ -20,59 +23,19 @@ from asap.models.entities import StateSnapshot
 from asap.models.ids import generate_id
 from asap.models.types import TaskID
 from asap.state.metering import UsageAggregate, UsageEvent, UsageMetrics
+from asap.state.stores._sqlite_base import DEFAULT_DB_PATH, AsyncSqliteRepository
+from asap.state.stores._sync_bridge import (
+    _co_snapshot_delete,
+    _co_snapshot_get,
+    _co_snapshot_list_versions,
+    _co_snapshot_save,
+    _run_sync,
+)
 
-DEFAULT_DB_PATH = "asap_state.db"
-
-# One asyncio lock per DB path: concurrent openings raced on journal_mode=WAL.
-# Weak values drop entries when locks are collectable (limits growth in long test runs).
-_PRAGMA_SETUP_LOCKS: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
-_PRAGMA_DICT_GUARD = threading.Lock()
-# journal_mode=WAL is persistent per DB file; skip redundant SET after first success.
-# LRU-bounded so tmp_path-heavy suites do not grow this map without bound; eviction only
-# loses the in-memory hint (next open may re-run journal_mode=WAL; harmless).
-_MAX_WAL_METADATA_KEYS = 512
-_WAL_INITIALIZED_LRU: OrderedDict[str, None] = OrderedDict()
-
-
-def _pragma_setup_lock(db_path: Path) -> asyncio.Lock:
-    """Per-DB asyncio lock (snapshot and metering share the same path key)."""
-    key = str(db_path.resolve())
-    with _PRAGMA_DICT_GUARD:
-        lock = _PRAGMA_SETUP_LOCKS.get(key)
-        if lock is None:
-            lock = asyncio.Lock()
-            _PRAGMA_SETUP_LOCKS[key] = lock
-        return lock
-
-
-def _wal_mark_initialized(db_key: str) -> None:
-    """Record that journal_mode=WAL was applied for this resolved path (LRU-bounded)."""
-    with _PRAGMA_DICT_GUARD:
-        if db_key in _WAL_INITIALIZED_LRU:
-            _WAL_INITIALIZED_LRU.move_to_end(db_key)
-        else:
-            _WAL_INITIALIZED_LRU[db_key] = None
-            while len(_WAL_INITIALIZED_LRU) > _MAX_WAL_METADATA_KEYS:
-                _WAL_INITIALIZED_LRU.popitem(last=False)
-
-
-async def _apply_wal_pragmas(conn: aiosqlite.Connection, db_key: str) -> None:
-    """Apply WAL pragmas; busy_timeout runs before journal_mode to reduce lock errors."""
-    await conn.execute("PRAGMA busy_timeout=15000")
-    with _PRAGMA_DICT_GUARD:
-        need_journal_mode = db_key not in _WAL_INITIALIZED_LRU
-    if need_journal_mode:
-        await conn.execute("PRAGMA journal_mode=WAL")
-        _wal_mark_initialized(db_key)
-    await conn.execute("PRAGMA synchronous=NORMAL")
-
-
-# Canonical usage_events DDL: the single source of truth for the table + BOTH
-# indexes (agent and consumer). Lives in the state stores module because state is
-# the lower layer (no dependency on economics), so economics.storage can import it
-# without forming an import cycle. Both SQLiteMeteringStore (state) and
-# SQLiteMeteringStorage (economics) call _ensure_usage_events_schema so the
-# physical schema is identical regardless of which store initializes first.
+# Canonical usage_events DDL: single source of truth for the table + BOTH indexes
+# (agent and consumer). State is the lower layer, so economics.storage can import
+# it without forming an import cycle; both stores call _ensure_usage_events_schema
+# so the physical schema is identical regardless of which store initializes first.
 _USAGE_EVENTS_DDL = """
 CREATE TABLE IF NOT EXISTS usage_events (
     id TEXT PRIMARY KEY,
@@ -88,257 +51,145 @@ CREATE INDEX IF NOT EXISTS idx_usage_consumer_timestamp
 ON usage_events (consumer_id, timestamp);
 """
 
+_SNAPSHOTS_DDL = """
+CREATE TABLE IF NOT EXISTS snapshots (
+    task_id TEXT NOT NULL,
+    id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    data TEXT NOT NULL,
+    checkpoint INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (task_id, version)
+)
+"""
+
+_SNAPSHOT_COLS = "task_id, id, version, data, checkpoint, created_at"
+_SAVE_SQL = f"INSERT OR REPLACE INTO snapshots ({_SNAPSHOT_COLS}) VALUES (?, ?, ?, ?, ?, ?)"
+_GET_BY_VERSION_SQL = f"SELECT {_SNAPSHOT_COLS} FROM snapshots WHERE task_id = ? AND version = ?"
+_GET_LATEST_SQL = (
+    f"SELECT {_SNAPSHOT_COLS} FROM snapshots WHERE task_id = ? ORDER BY version DESC LIMIT 1"
+)
+_LIST_VERSIONS_SQL = "SELECT version FROM snapshots WHERE task_id = ? ORDER BY version"
+_DELETE_VERSION_SQL = "DELETE FROM snapshots WHERE task_id = ? AND version = ?"
+_DELETE_TASK_SQL = "DELETE FROM snapshots WHERE task_id = ?"
+
+_INSERT_EVENT_SQL = (
+    "INSERT INTO usage_events "
+    "(id, task_id, agent_id, consumer_id, metrics, timestamp) "
+    "VALUES (?, ?, ?, ?, ?, ?)"
+)
+_QUERY_EVENTS_SQL = (
+    "SELECT id, task_id, agent_id, consumer_id, metrics, timestamp "
+    "FROM usage_events "
+    "WHERE agent_id = ? AND timestamp >= ? AND timestamp <= ? "
+    "ORDER BY timestamp"
+)
+_AGGREGATE_SQL = """
+SELECT
+    SUM(CAST(json_extract(metrics, '$.tokens_in') AS INTEGER) + CAST(json_extract(metrics, '$.tokens_out') AS INTEGER)),
+    SUM(CAST(json_extract(metrics, '$.duration_ms') AS INTEGER)),
+    COUNT(*),
+    SUM(CAST(json_extract(metrics, '$.api_calls') AS INTEGER))
+FROM usage_events
+WHERE agent_id = ?
+"""
+
 
 async def _ensure_usage_events_schema(conn: aiosqlite.Connection) -> None:
     """Apply the canonical usage_events schema (table + both indexes), idempotently.
 
-    Uses IF NOT EXISTS on every statement so re-running on an already-initialized
-    DB is a no-op AND a pre-existing table missing an index (created by an older
-    code path) gets the missing index added.
+    Economics imports this and calls it with a raw connection; ``SQLiteMeteringStore``
+    instead relies on the base's ``_ensure_schema`` (same DDL), so the table is never
+    created twice on one instance.
     """
     await conn.executescript(_USAGE_EVENTS_DDL)
     await conn.commit()
 
 
-# Shared executor for sync bridge when called from async context.
-# Reused across all DB operations to avoid per-call ThreadPoolExecutor creation.
-_SYNC_BRIDGE_EXECUTOR: concurrent.futures.ThreadPoolExecutor | None = None
-
-
-def _shutdown_sync_bridge_executor() -> None:
-    """Best-effort shutdown for test suites and clean interpreter exit."""
-    global _SYNC_BRIDGE_EXECUTOR
-    if _SYNC_BRIDGE_EXECUTOR is not None:
-        _SYNC_BRIDGE_EXECUTOR.shutdown(wait=False)
-        _SYNC_BRIDGE_EXECUTOR = None
-
-
-def _get_sync_bridge_executor() -> concurrent.futures.ThreadPoolExecutor:
-    """Return the shared executor for running async coros from sync code."""
-    global _SYNC_BRIDGE_EXECUTOR
-    if _SYNC_BRIDGE_EXECUTOR is None:
-        _SYNC_BRIDGE_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
-            max_workers=4,
-            thread_name_prefix="asap-sqlite-sync",
-        )
-        atexit.register(_shutdown_sync_bridge_executor)
-    return _SYNC_BRIDGE_EXECUTOR
-
-
-def _run_sync(coro: Any) -> Any:
-    """Run an async coroutine from sync code (creates new loop or uses shared executor)."""
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(coro)
-    executor = _get_sync_bridge_executor()
-    future = executor.submit(asyncio.run, coro)
-    return future.result()
-
-
 def _snapshot_to_row(snapshot: StateSnapshot) -> tuple[str, str, int, str, int, str]:
-    data_json = json.dumps(snapshot.data)
-    created_at = snapshot.created_at.isoformat()
-    checkpoint = 1 if snapshot.checkpoint else 0
     return (
         snapshot.task_id,
         snapshot.id,
         snapshot.version,
-        data_json,
-        checkpoint,
-        created_at,
+        json.dumps(snapshot.data),
+        1 if snapshot.checkpoint else 0,
+        snapshot.created_at.isoformat(),
     )
 
 
 def _row_to_snapshot(row: tuple[Any, ...]) -> StateSnapshot:
     task_id, id_, version, data_json, checkpoint, created_at_str = row
-    data = json.loads(data_json)
-    created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
     return StateSnapshot(
         id=id_,
         task_id=task_id,
         version=version,
-        data=data,
+        data=json.loads(data_json),
         checkpoint=bool(checkpoint),
-        created_at=created_at,
+        created_at=datetime.fromisoformat(created_at_str.replace("Z", "+00:00")),
     )
 
 
 def _event_to_row(event: UsageEvent, event_id: str) -> tuple[str, str, str, str, str, str]:
-    metrics_json = event.metrics.model_dump_json()
-    ts = event.timestamp.isoformat()
     return (
         event_id,
         event.task_id,
         event.agent_id,
         event.consumer_id,
-        metrics_json,
-        ts,
+        event.metrics.model_dump_json(),
+        event.timestamp.isoformat(),
     )
 
 
 def _row_to_event(row: tuple[Any, ...]) -> UsageEvent:
-    (
-        _id,
-        task_id,
-        agent_id,
-        consumer_id,
-        metrics_json,
-        ts_str,
-    ) = row
-    metrics = UsageMetrics.model_validate_json(metrics_json)
-    ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+    _id, task_id, agent_id, consumer_id, metrics_json, ts_str = row
     return UsageEvent(
         task_id=task_id,
         agent_id=agent_id,
         consumer_id=consumer_id,
-        metrics=metrics,
-        timestamp=ts,
+        metrics=UsageMetrics.model_validate_json(metrics_json),
+        timestamp=datetime.fromisoformat(ts_str.replace("Z", "+00:00")),
     )
 
 
-class _SQLiteSnapshotBackend:
-    """Shared SQLite snapshot table access (internal)."""
+class _SQLiteSnapshotBackend(AsyncSqliteRepository):
+    """Shared SQLite snapshot table access (internal).
+
+    The base's idempotent ``_ensure_schema`` replaces the old per-connect
+    ``_ensure_snapshots_table`` (both are ``IF NOT EXISTS``).
+    """
 
     def __init__(self, db_path: str | Path = DEFAULT_DB_PATH) -> None:
-        self._db_path = Path(db_path)
-
-    @asynccontextmanager
-    async def _connect(self) -> Any:
-        """Connection with WAL pragmas applied."""
-        db_key = str(self._db_path.resolve())
-        async with aiosqlite.connect(self._db_path, timeout=15.0) as conn:
-            async with _pragma_setup_lock(self._db_path):
-                await _apply_wal_pragmas(conn, db_key)
-            yield conn
-
-    async def _ensure_snapshots_table(self, conn: aiosqlite.Connection) -> None:
-        await conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS snapshots (
-                task_id TEXT NOT NULL,
-                id TEXT NOT NULL,
-                version INTEGER NOT NULL,
-                data TEXT NOT NULL,
-                checkpoint INTEGER NOT NULL,
-                created_at TEXT NOT NULL,
-                PRIMARY KEY (task_id, version)
-            )
-            """
-        )
-        await conn.commit()
+        super().__init__(db_path, schema_ddl=_SNAPSHOTS_DDL)
 
     async def _save_impl(self, snapshot: StateSnapshot) -> None:
-        async with self._connect() as conn:
-            await self._ensure_snapshots_table(conn)
-            row = _snapshot_to_row(snapshot)
-            await conn.execute(
-                """
-                INSERT OR REPLACE INTO snapshots
-                (task_id, id, version, data, checkpoint, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                row,
-            )
-            await conn.commit()
+        await self.execute(_SAVE_SQL, _snapshot_to_row(snapshot))
 
     async def _get_impl(
         self,
         task_id: TaskID,
         version: int | None,
     ) -> StateSnapshot | None:
-        async with self._connect() as conn:
-            await self._ensure_snapshots_table(conn)
-            if version is not None:
-                cursor = await conn.execute(
-                    """
-                    SELECT task_id, id, version, data, checkpoint, created_at
-                    FROM snapshots
-                    WHERE task_id = ? AND version = ?
-                    """,
-                    (task_id, version),
-                )
-                row = await cursor.fetchone()
-            else:
-                cursor = await conn.execute(
-                    """
-                    SELECT task_id, id, version, data, checkpoint, created_at
-                    FROM snapshots
-                    WHERE task_id = ?
-                    ORDER BY version DESC LIMIT 1
-                    """,
-                    (task_id,),
-                )
-                row = await cursor.fetchone()
-            if row is None:
-                return None
-            return _row_to_snapshot(tuple(row))
+        if version is not None:
+            row = await self.fetch_one(_GET_BY_VERSION_SQL, (task_id, version))
+        else:
+            row = await self.fetch_one(_GET_LATEST_SQL, (task_id,))
+        return _row_to_snapshot(row) if row is not None else None
 
     async def _list_versions_impl(self, task_id: TaskID) -> list[int]:
-        async with self._connect() as conn:
-            await self._ensure_snapshots_table(conn)
-            cursor = await conn.execute(
-                """
-                SELECT version FROM snapshots
-                WHERE task_id = ?
-                ORDER BY version
-                """,
-                (task_id,),
-            )
-            rows = await cursor.fetchall()
-            return [r[0] for r in rows]
+        rows = await self.fetch_all(_LIST_VERSIONS_SQL, (task_id,))
+        return [r[0] for r in rows]
 
-    async def _delete_impl(
-        self,
-        task_id: TaskID,
-        version: int | None,
-    ) -> bool:
-        async with self._connect() as conn:
-            await self._ensure_snapshots_table(conn)
-            if version is not None:
-                cursor = await conn.execute(
-                    "DELETE FROM snapshots WHERE task_id = ? AND version = ?",
-                    (task_id, version),
-                )
-            else:
-                cursor = await conn.execute(
-                    "DELETE FROM snapshots WHERE task_id = ?",
-                    (task_id,),
-                )
-            await conn.commit()
-            return bool(cursor.rowcount) if cursor.rowcount is not None else False
+    async def _delete_impl(self, task_id: TaskID, version: int | None) -> bool:
+        if version is not None:
+            affected = await self.execute(_DELETE_VERSION_SQL, (task_id, version))
+        else:
+            affected = await self.execute(_DELETE_TASK_SQL, (task_id,))
+        return affected > 0
 
     async def initialize(self) -> None:
-        """Create tables if not exists (call from async context if needed)."""
+        """Create the snapshots table if it does not yet exist."""
         async with self._connect() as conn:
-            await self._ensure_snapshots_table(conn)
-
-
-async def _co_snapshot_save(backend: _SQLiteSnapshotBackend, snapshot: StateSnapshot) -> None:
-    await backend._save_impl(snapshot)
-
-
-async def _co_snapshot_get(
-    backend: _SQLiteSnapshotBackend,
-    task_id: TaskID,
-    version: int | None,
-) -> StateSnapshot | None:
-    return await backend._get_impl(task_id, version)
-
-
-async def _co_snapshot_list_versions(
-    backend: _SQLiteSnapshotBackend,
-    task_id: TaskID,
-) -> list[int]:
-    return await backend._list_versions_impl(task_id)
-
-
-async def _co_snapshot_delete(
-    backend: _SQLiteSnapshotBackend,
-    task_id: TaskID,
-    version: int | None,
-) -> bool:
-    return await backend._delete_impl(task_id, version)
+            await self._ensure_schema(conn)
 
 
 class SQLiteAsyncSnapshotStore(_SQLiteSnapshotBackend):
@@ -412,38 +263,25 @@ class SQLiteSnapshotStore(_SQLiteSnapshotBackend):
         return await _co_snapshot_delete(self, task_id, version)
 
 
-class SQLiteMeteringStore:
-    """SQLite-backed MeteringStore; usage events persist across restarts."""
+class SQLiteMeteringStore(AsyncSqliteRepository):
+    """SQLite-backed MeteringStore; usage events persist across restarts.
+
+    ``schema_ddl=_USAGE_EVENTS_DDL`` makes the base's ``_ensure_schema`` install both
+    indexes (agent + consumer) once per instance — preserving the S0 fix where the
+    state store must not omit the consumer index. ``_ensure_usage_table`` delegates
+    to the base so the DDL never runs twice on one instance.
+    """
 
     def __init__(self, db_path: str | Path = DEFAULT_DB_PATH) -> None:
-        self._db_path = Path(db_path)
-
-    @asynccontextmanager
-    async def _connect(self) -> Any:
-        """Connection with WAL pragmas applied."""
-        db_key = str(self._db_path.resolve())
-        async with aiosqlite.connect(self._db_path, timeout=15.0) as conn:
-            async with _pragma_setup_lock(self._db_path):
-                await _apply_wal_pragmas(conn, db_key)
-            yield conn
+        super().__init__(db_path, schema_ddl=_USAGE_EVENTS_DDL)
 
     async def _ensure_usage_table(self, conn: aiosqlite.Connection) -> None:
-        await _ensure_usage_events_schema(conn)
+        await self._ensure_schema(conn)
 
     async def _record_impl(self, event: UsageEvent) -> None:
-        async with self._connect() as conn:
-            await self._ensure_usage_table(conn)
-            event_id = f"evt_{generate_id()}"
-            row = _event_to_row(event, event_id)
-            await conn.execute(
-                """
-                INSERT INTO usage_events
-                (id, task_id, agent_id, consumer_id, metrics, timestamp)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                row,
-            )
-            await conn.commit()
+        event_id = f"evt_{generate_id()}"
+        row = _event_to_row(event, event_id)
+        await self.execute(_INSERT_EVENT_SQL, row)
 
     async def _query_impl(
         self,
@@ -453,57 +291,29 @@ class SQLiteMeteringStore:
         limit: int | None = None,
         offset: int = 0,
     ) -> list[UsageEvent]:
-        async with self._connect() as conn:
-            await self._ensure_usage_table(conn)
-            start_s = start.isoformat()
-            end_s = end.isoformat()
-            query = """
-                SELECT id, task_id, agent_id, consumer_id, metrics, timestamp
-                FROM usage_events
-                WHERE agent_id = ? AND timestamp >= ? AND timestamp <= ?
-                ORDER BY timestamp
-            """
-            params: list[Any] = [agent_id, start_s, end_s]
-            if limit is not None:
-                query += " LIMIT ? OFFSET ?"
-                params.extend([limit, offset])
-            elif offset > 0:
-                query += " LIMIT -1 OFFSET ?"
-                params.append(offset)
-            cursor = await conn.execute(query, params)
-            rows = await cursor.fetchall()
-            return [_row_to_event(tuple(r)) for r in rows]
+        query = _QUERY_EVENTS_SQL
+        params: list[Any] = [agent_id, start.isoformat(), end.isoformat()]
+        if limit is not None:
+            query += " LIMIT ? OFFSET ?"
+            params.extend([limit, offset])
+        elif offset > 0:
+            query += " LIMIT -1 OFFSET ?"
+            params.append(offset)
+        rows = await self.fetch_all(query, tuple(params))
+        return [_row_to_event(r) for r in rows]
 
     async def _aggregate_impl(self, agent_id: str, period: str) -> UsageAggregate:
-        async with self._connect() as conn:
-            await self._ensure_usage_table(conn)
-            cursor = await conn.execute(
-                """
-                SELECT
-                    SUM(CAST(json_extract(metrics, '$.tokens_in') AS INTEGER) + CAST(json_extract(metrics, '$.tokens_out') AS INTEGER)),
-                    SUM(CAST(json_extract(metrics, '$.duration_ms') AS INTEGER)),
-                    COUNT(*),
-                    SUM(CAST(json_extract(metrics, '$.api_calls') AS INTEGER))
-                FROM usage_events
-                WHERE agent_id = ?
-                """,
-                (agent_id,),
-            )
-            row = await cursor.fetchone()
-            if row is None or (row[0] is None and row[1] is None):
-                return UsageAggregate(agent_id=agent_id, period=period)
-            total_tokens = row[0] or 0
-            total_duration = row[1] or 0
-            total_tasks = row[2] or 0
-            total_api_calls = row[3] or 0
-            return UsageAggregate(
-                agent_id=agent_id,
-                period=period,
-                total_tokens=total_tokens,
-                total_duration=total_duration,
-                total_tasks=total_tasks,
-                total_api_calls=total_api_calls,
-            )
+        row = await self.fetch_one(_AGGREGATE_SQL, (agent_id,))
+        if row is None or (row[0] is None and row[1] is None):
+            return UsageAggregate(agent_id=agent_id, period=period)
+        return UsageAggregate(
+            agent_id=agent_id,
+            period=period,
+            total_tokens=row[0] or 0,
+            total_duration=row[1] or 0,
+            total_tasks=row[2] or 0,
+            total_api_calls=row[3] or 0,
+        )
 
     async def record(self, event: UsageEvent) -> None:
         """Record a usage event."""
@@ -530,3 +340,13 @@ class SQLiteMeteringStore:
         """Create usage_events table if not exists."""
         async with self._connect() as conn:
             await self._ensure_usage_table(conn)
+
+
+__all__ = [
+    "DEFAULT_DB_PATH",
+    "SQLiteAsyncSnapshotStore",
+    "SQLiteMeteringStore",
+    "SQLiteSnapshotStore",
+    "_USAGE_EVENTS_DDL",
+    "_ensure_usage_events_schema",
+]

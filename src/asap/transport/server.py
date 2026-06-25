@@ -145,7 +145,8 @@ from asap.state.metering import MeteringStore
 from asap.state.snapshot import SnapshotStore
 from asap.economics.audit import AuditEntry, AuditStore
 from asap.economics.sla_storage import SLAStorage
-from asap.economics.storage import MeteringStorage, metering_storage_adapter
+from asap.economics.storage import MeteringStorage
+from asap.state.metering import MeteringStorageBridge
 from asap.transport.agent_routes import create_agent_identity_router
 from asap.transport.capability_routes import create_capability_router
 from asap.transport.escalation_routes import create_escalation_router
@@ -1763,10 +1764,11 @@ def create_app(
             max_threads=max_threads,
         )
 
-    # Resolve metering: metering_storage takes precedence (enables usage API)
+    # Resolve metering: metering_storage takes precedence (enables usage API);
+    # the bridge adapts it to the MeteringStore interface handlers expect.
     effective_metering_store: MeteringStore | None = metering_store
     if metering_storage is not None and isinstance(metering_storage, MeteringStorage):
-        effective_metering_store = metering_storage_adapter(metering_storage)
+        effective_metering_store = MeteringStorageBridge(metering_storage)
 
     # Use default registry if none provided
     use_default_registry = registry is None
