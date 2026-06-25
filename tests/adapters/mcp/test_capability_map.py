@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from asap.adapters.mcp.capability_map import resolve_capability
+from asap.adapters.mcp.capability_map import format_constraint_violations, resolve_capability
 from asap.adapters.mcp.config import MCPAuthConfig
-from asap.auth.capabilities import CapabilityRegistry
+from asap.auth.capabilities import CapabilityRegistry, ConstraintViolation
 from asap.auth.identity import InMemoryAgentStore, InMemoryHostStore
 from asap.mcp.server import MCPServer
 
@@ -62,3 +62,34 @@ def test_resolve_capability_config_map_overrides_register_metadata() -> None:
         capability="web_search",
     )
     assert resolve_capability("search", config, server=server) == "custom_search"
+
+
+def test_format_constraint_violations_joins_multiple_messages() -> None:
+    """Multiple constraint failures are joined with semicolons for MCP error detail."""
+    detail = format_constraint_violations(
+        [
+            ConstraintViolation(
+                "tokens",
+                "max",
+                100,
+                150,
+                "tokens: 150 exceeds maximum 100",
+            ),
+            ConstraintViolation(
+                "path",
+                "prefix",
+                "/safe",
+                "/unsafe",
+                "path: /unsafe not under /safe",
+            ),
+        ]
+    )
+
+    assert detail == (
+        "tokens: 150 exceeds maximum 100; path: /unsafe not under /safe"
+    )
+
+
+def test_format_constraint_violations_empty_list_returns_empty_string() -> None:
+    """Empty violation list yields an empty detail string."""
+    assert format_constraint_violations([]) == ""
