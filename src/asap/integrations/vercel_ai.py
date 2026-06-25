@@ -27,7 +27,7 @@ Usage:
 from __future__ import annotations
 
 import hmac
-from typing import Any, cast
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -80,7 +80,7 @@ def _search_registry(registry: LiteRegistry, query: str) -> list[dict[str, Any]]
 
 
 def _parameters_schema_from_manifest(manifest: Manifest) -> dict[str, Any]:
-    skills = getattr(manifest.capabilities, "skills", None) or []
+    skills = manifest.capabilities.skills
     if not skills:
         return {
             "type": "object",
@@ -88,8 +88,7 @@ def _parameters_schema_from_manifest(manifest: Manifest) -> dict[str, Any]:
                 "input": {"type": "object", "description": "Skill input payload"},
             },
         }
-    first = skills[0]
-    schema = getattr(first, "input_schema", None) if first else None
+    schema = skills[0].input_schema
     if not schema or not isinstance(schema, dict) or schema.get("type") != "object":
         return {
             "type": "object",
@@ -97,7 +96,7 @@ def _parameters_schema_from_manifest(manifest: Manifest) -> dict[str, Any]:
                 "input": {"type": "object", "description": "Skill input payload"},
             },
         }
-    return cast(dict[str, Any], schema)
+    return schema
 
 
 class InvokeRequest(BaseModel):

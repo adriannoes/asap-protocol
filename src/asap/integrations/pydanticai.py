@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar
 
 from asap.client.market import MarketClient, ResolvedAgent
 from asap.errors import AgentRevokedException, SignatureVerificationError
+from asap.integrations._base import format_invoke_error
 from asap.models.entities import Manifest
 from asap.models.ids import generate_id
 
@@ -33,14 +34,13 @@ DEFAULT_PARAMETERS_JSON_SCHEMA: dict[str, Any] = {
 
 
 def _parameters_schema_from_manifest(manifest: Manifest) -> dict[str, Any]:
-    skills = getattr(manifest.capabilities, "skills", None) or []
+    skills = manifest.capabilities.skills
     if not skills:
         return DEFAULT_PARAMETERS_JSON_SCHEMA
-    first = skills[0]
-    schema = getattr(first, "input_schema", None) if first else None
+    schema = skills[0].input_schema
     if not schema or not isinstance(schema, dict) or schema.get("type") != "object":
         return DEFAULT_PARAMETERS_JSON_SCHEMA
-    return cast(dict[str, Any], schema)
+    return schema
 
 
 def _to_str_result(value: str | dict[str, Any]) -> str:
@@ -108,12 +108,8 @@ def asap_tool_for_urn(
         try:
             result = await agent.run(payload)
             return _to_str_result(result if isinstance(result, dict) else str(result))
-        except AgentRevokedException as e:
-            return _to_str_result(f"Error: Agent revoked or invalid input: {e!s}")
-        except SignatureVerificationError as e:
-            return _to_str_result(f"Error: Agent revoked or invalid input: {e!s}")
-        except ValueError as e:
-            return _to_str_result(f"Error: Agent revoked or invalid input: {e!s}")
+        except (AgentRevokedException, SignatureVerificationError, ValueError) as e:
+            return _to_str_result(format_invoke_error(e))
 
     return PydanticAITool.from_schema(
         _invoke,
