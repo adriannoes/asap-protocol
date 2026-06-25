@@ -25,7 +25,6 @@ from asap.transport.websocket import (
     DEFAULT_POOL_IDLE_TIMEOUT,
     DEFAULT_POOL_MAX_SIZE,
     DEFAULT_WS_RECEIVE_TIMEOUT,
-    FRAME_ENCODING_BINARY,
     FRAME_ENCODING_JSON,
     HEARTBEAT_FRAME_TYPE_PING,
     HEARTBEAT_FRAME_TYPE_PONG,
@@ -42,7 +41,6 @@ from asap.transport.websocket import (
     _build_ack_notification_frame,
     _heartbeat_loop,
     _is_heartbeat_pong,
-    _make_fake_request,
     decode_frame_to_json,
     encode_envelope_frame,
     handle_websocket_connection,
@@ -93,29 +91,10 @@ class TestWebSocketFraming:
         assert parsed.get("params", {}).get("envelope") == envelope
         assert parsed.get("method") == ASAP_METHOD
 
-    def test_encode_decode_binary_roundtrip(self) -> None:
-        """Envelope as base64 frame round-trips correctly."""
-        envelope = {
-            "sender": "urn:asap:agent:a",
-            "recipient": "urn:asap:agent:b",
-            "payload_type": "task.request",
-            "payload": {},
-            "asap_version": "0.1",
-        }
-        frame = encode_envelope_frame(envelope, request_id=2, encoding=FRAME_ENCODING_BINARY)
-        assert isinstance(frame, bytes)
-        parsed = decode_frame_to_json(frame)
-        assert parsed.get("params", {}).get("envelope") == envelope
-
     def test_decode_invalid_json_raises(self) -> None:
         """Invalid JSON string raises ValueError."""
         with pytest.raises(ValueError, match="Expecting value|Invalid"):
             decode_frame_to_json("not json")
-
-    def test_decode_invalid_base64_raises(self) -> None:
-        """Invalid base64 bytes raise ValueError."""
-        with pytest.raises(ValueError, match="base64|Invalid"):
-            decode_frame_to_json(b"!!!invalid base64!!!")
 
 
 class TestWebSocketRemoteError:
@@ -128,57 +107,6 @@ class TestWebSocketRemoteError:
     def test_remote_error_data_preserved(self) -> None:
         err = WebSocketRemoteError(-32600, "Parse error", data={"line": 1})
         assert err.data == {"line": 1}
-
-
-class TestMakeFakeRequest:
-    @pytest.mark.asyncio
-    async def test_make_fake_request_receive_returns_disconnect_second_call(
-        self,
-    ) -> None:
-        class FakeWs:
-            scope: dict[str, Any] = {"headers": []}
-
-        body = '{"jsonrpc":"2.0","method":"asap.send","params":{},"id":1}'
-        request = await _make_fake_request(body, FakeWs())
-        r1 = await request.receive()
-        assert r1["type"] == "http.request"
-        assert r1.get("body", b"").decode() == body
-        r2 = await request.receive()
-        assert r2["type"] == "http.disconnect"
-
-    @pytest.mark.asyncio
-    async def test_make_fake_request_scope_has_required_asgi_fields(self) -> None:
-        """Fake request scope includes path, root_path, query_string, server for middleware compatibility."""
-
-        class FakeWs:
-            scope: dict[str, Any] = {
-                "headers": [],
-                "path": "/asap/ws",
-                "server": ("localhost", 9000),
-            }
-
-        body = '{"jsonrpc":"2.0","method":"asap.send","params":{},"id":1}'
-        request = await _make_fake_request(body, FakeWs())
-        assert request.scope["path"] == "/asap/ws"
-        assert request.scope["root_path"] == ""
-        assert request.scope["query_string"] == b""
-        assert request.scope["server"] == ("localhost", 9000)
-
-    @pytest.mark.asyncio
-    async def test_make_fake_request_scope_defaults_when_missing_in_websocket_scope(
-        self,
-    ) -> None:
-        """When WebSocket scope has no path/server, fake request uses sensible defaults."""
-
-        class FakeWs:
-            scope: dict[str, Any] = {"headers": []}
-
-        body = "{}"
-        request = await _make_fake_request(body, FakeWs())
-        assert request.scope["path"] == "/asap"
-        assert request.scope["root_path"] == ""
-        assert request.scope["query_string"] == b""
-        assert request.scope["server"] == ("localhost", 8000)
 
 
 class TestHeartbeatHelpers:
@@ -1920,80 +1848,6 @@ class TestWebSocketTransportSend(NoRateLimitTestBase):
             pytest.raises(TypeError, match="Expected text frame"),
         ):
             await transport.send(envelope)
-
-
-class TestWebSocketServerExceptions(NoRateLimitTestBase):
-    """Tests for server-side exception handling during message processing."""
-
-    async def test_handler_exception_returns_error_and_ack_rejection(
-        self,
-        sample_manifest: Manifest,
-    ) -> None:
-        """If internal processing raises exception (e.g. fake request creation),
-        websocket sends error frame and rejection ack if needed.
-
-        so we need to mock something outside handle_message to trigger the websocket exception handler.
-        _make_fake_request is outside handle_message.
-        """
-        from asap.transport.server import create_app
-        from asap.transport.handlers import create_default_registry
-        from unittest.mock import patch
-
-        app_instance = create_app(sample_manifest, create_default_registry())
-        client = TestClient(app_instance)
-
-        # Patch _make_fake_request in websocket module to raise exception
-        with (
-            patch(
-                "asap.transport.websocket._make_fake_request",
-                side_effect=ValueError("Fake request failed"),
-            ),
-            client.websocket_connect("/asap/ws") as websocket,
-        ):
-            # Send message requiring ack
-            websocket.send_text(
-                json.dumps(
-                    {
-                        "jsonrpc": "2.0",
-                        "method": "asap.send",
-                        "params": {
-                            "envelope": {
-                                "asap_version": "0.1",
-                                "sender": "urn:asap:agent:sender",
-                                "recipient": "urn:asap:agent:test",
-                                "payload_type": "test",
-                                "payload": {},
-                                "id": "msg-1",
-                                "requires_ack": True,
-                            }
-                        },
-                        "id": 1,
-                    }
-                )
-            )
-
-            # Expect 3 messages: "received" ack, "rejected" ack, and Error response
-            messages = [json.loads(websocket.receive_text()) for _ in range(3)]
-
-            error_res = next((m for m in messages if "error" in m and m.get("id") is None), None)
-            assert error_res is not None
-            assert error_res["error"]["code"] == -32603
-            assert "Fake request failed" in error_res["error"]["data"]["error"]
-
-            rejection_ack = next(
-                (
-                    m
-                    for m in messages
-                    if m.get("method") == "asap.ack"
-                    and m.get("params", {}).get("envelope", {}).get("payload", {}).get("status")
-                    == "rejected"
-                ),
-                None,
-            )
-
-            assert rejection_ack is not None
-            assert rejection_ack["params"]["envelope"]["payload"]["original_envelope_id"] == "msg-1"
-            assert "Fake request failed" in rejection_ack["params"]["envelope"]["payload"]["error"]
 
 
 # ---------------------------------------------------------------------------
