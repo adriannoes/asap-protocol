@@ -65,9 +65,9 @@ CREATE TABLE IF NOT EXISTS snapshots (
 
 _SNAPSHOT_COLS = "task_id, id, version, data, checkpoint, created_at"
 _SAVE_SQL = f"INSERT OR REPLACE INTO snapshots ({_SNAPSHOT_COLS}) VALUES (?, ?, ?, ?, ?, ?)"
-_GET_BY_VERSION_SQL = f"SELECT {_SNAPSHOT_COLS} FROM snapshots WHERE task_id = ? AND version = ?"
+_GET_BY_VERSION_SQL = f"SELECT {_SNAPSHOT_COLS} FROM snapshots WHERE task_id = ? AND version = ?"  # nosec B608 — _SNAPSHOT_COLS is a hardcoded constant, not user input
 _GET_LATEST_SQL = (
-    f"SELECT {_SNAPSHOT_COLS} FROM snapshots WHERE task_id = ? ORDER BY version DESC LIMIT 1"
+    f"SELECT {_SNAPSHOT_COLS} FROM snapshots WHERE task_id = ? ORDER BY version DESC LIMIT 1"  # nosec B608 — _SNAPSHOT_COLS is a hardcoded constant, not user input
 )
 _LIST_VERSIONS_SQL = "SELECT version FROM snapshots WHERE task_id = ? ORDER BY version"
 _DELETE_VERSION_SQL = "DELETE FROM snapshots WHERE task_id = ? AND version = ?"

@@ -14,6 +14,9 @@ from asap.integrations._base import (
     invoke_skill_json_async,
 )
 from asap.integrations._base import default_input_schema as _default_input_schema
+from asap.integrations._base import (
+    json_schema_to_pydantic as _json_schema_to_pydantic,  # noqa: F401 (test API)
+)
 
 # Lazy import to avoid requiring llama-index-core when not used (``Any`` keeps ``None`` typed).
 FunctionTool: Any = None
