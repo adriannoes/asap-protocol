@@ -9,7 +9,7 @@
 
 **Quick Info**: [`v2.5.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.1) | `Apache 2.0` | `Python 3.13+` | [Documentation](docs/index.md) | [Changelog](CHANGELOG.md)
 
-> 📦 **Install** the Python SDK ([`asap-protocol` on PyPI](https://pypi.org/project/asap-protocol/)) or the TypeScript client ([`@asap-protocol/client` on npm](https://www.npmjs.com/package/@asap-protocol/client) — **2.4.1**; `@asap-protocol/mcp-auth` npm middleware still deferred).
+> 📦 **Install** — [`asap-protocol` on PyPI](https://pypi.org/project/asap-protocol/) (Python) · [`@asap-protocol/client` on npm](https://www.npmjs.com/package/@asap-protocol/client) (TypeScript)
 
 🚀 **Live now** our [**agentic marketplace**](https://asap-protocol.com/) — browse agents, register yours, request verification.
 
@@ -38,13 +38,13 @@ Plain HTTP between two agents is enough for the simplest cases. ASAP is built fo
 | Schema-first | Pydantic v2 + JSON Schema for cross-agent interchange | [API reference](docs/api-reference.md) |
 | Async-native | `asyncio` + `httpx`; sync and async handlers | [Transport](docs/transport.md) |
 | MCP integration | Tool execution and coordination in one envelope (Mode B) | [MCP integration](docs/mcp-integration.md) |
-| MCP Auth Bridge (v2.5.0+) | Opt-in Agent JWT + capability grants on native stdio MCP `tools/call` (Mode A) | [MCP Auth Bridge](docs/adapters/mcp-auth-bridge.md) |
+| MCP Auth Bridge | Opt-in Agent JWT + capability grants on native stdio MCP `tools/call` (Mode A) | [MCP Auth Bridge](docs/adapters/mcp-auth-bridge.md) |
 | Observability | `trace_id` and `correlation_id` for debugging | [Observability](docs/observability.md) |
 | Security | OAuth2/JWT, Ed25519 manifests, mTLS, rate limiting | [Security](docs/security.md) |
-| Identity & capabilities (v2.2+) | Host/Agent JWTs, constrained grants, approval flows, opt-in WebAuthn | [Capabilities](docs/capabilities/index.md) |
-| Streaming & wire protocol (v2.2+) | SSE `/asap/stream`, JSON-RPC batch, `ASAP-Version` negotiation | [Transport](docs/transport.md) |
-| Adoption tools (v2.3.0+) | OpenAPI adapter, `@asap-protocol/client`, auto-registration, escalation | [Migration (v2.2 → v2.3)](docs/migration.md#upgrading-from-v22x-to-v230) |
-| Edge-AI discovery (v2.4.0+) | Hardware/inference manifests, registry mirror, marketplace filters | [ShellClaw guide](docs/guides/shellclaw-registry.md) |
+| Identity & capabilities | Host/Agent JWTs, constrained grants, approval flows, opt-in WebAuthn | [Capabilities](docs/capabilities/index.md) |
+| Streaming & wire protocol | SSE `/asap/stream`, JSON-RPC batch, `ASAP-Version` negotiation | [Transport](docs/transport.md) |
+| Adoption tools | OpenAPI adapter, `@asap-protocol/client`, auto-registration, escalation | [Migration (v2.2 → v2.3)](docs/migration.md#upgrading-from-v22x-to-v230) |
+| Edge-AI discovery | Hardware/inference manifests, registry mirror, marketplace filters | [ShellClaw guide](docs/guides/shellclaw-registry.md) |
 | Framework adapters (npm) | `@asap-protocol/mastra` and `@asap-protocol/openai-agents` tool bridges | [Mastra](docs/integrations/mastra.md) · [OpenAI Agents](docs/integrations/openai-agents.md) |
 | Economics | Usage metering, delegation tokens, SLA breach alerts | [Audit log](docs/audit.md) |
 
@@ -154,17 +154,18 @@ See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/
 
 ```bash
 asap --version                                    # Show version
-asap list-schemas                                 # List all available schemas
-asap export-schemas                               # Export JSON schemas to file
-asap compliance-check --url https://agent.example # Compliance Harness v2 (HTTP(S))
+asap list-schemas                                 # List JSON schemas
+asap export-schemas                               # Export schemas to disk
+asap validate-schema payload.json                 # Validate JSON against a schema
+asap compliance-check --url https://agent.example # Remote Compliance Harness v2
 asap audit export --store memory --format json    # Export audit log (stdout)
-asap keys generate -o key.pem                     # Generate Ed25519 keypair
-asap manifest sign -k key.pem manifest.json       # Sign manifest
-asap manifest verify signed.json                  # Verify signature
-asap manifest info signed.json                    # Show trust level
+asap keys generate -o key.pem                     # Ed25519 keypair
+asap manifest sign -k key.pem manifest.json       # Sign agent manifest
+asap delegation create -d <urn> -s read -k key.pem --delegator <urn>
+asap trace <trace-id> --log-file asap.log         # Visualize request flow from logs
 ```
 
-See the [CLI reference](docs/cli.md) for `compliance-check` and `audit export` flag details, the [CI compliance gate](docs/ci-compliance.md) for wiring `compliance-check` into GitHub Actions, the [audit export guide](docs/audit.md), [Identity Signing](docs/guides/identity-signing.md), or run `asap --help` for the full command surface.
+See [docs/cli.md](docs/cli.md) for delegation tokens, schema validation, trace visualization, REPL, and full flag reference. Run `asap --help` for your installed version.
 
 ## Version History
 
@@ -190,7 +191,14 @@ High-level only — see **[Changelog](https://github.com/adriannoes/asap-protoco
 
 ## 🔭 What's Next?
 
-ASAP is evolving toward an **Agent Marketplace** — an open ecosystem where AI agents discover, trust and collaborate autonomously. See the [ADR index](https://github.com/adriannoes/asap-protocol/blob/main/product/decision-records/README.md) and [v2.0 roadmap PRD](https://github.com/adriannoes/asap-protocol/blob/main/product/prd/prd-v2.0-roadmap.md). Detailed long-term strategy narratives are maintained privately (not shipped in this repository).
+The [agentic marketplace](https://asap-protocol.com/) and Lite Registry are live. The **v2.5.x train** focuses on interop and adoption:
+
+- **v2.5.2** — enterprise/workflow adapter spikes
+- **Distribution loop** — homepage templates, starter kits, and lightweight adoption metrics
+- **`@asap-protocol/mcp-auth`** (npm) — HTTP/SSE MCP middleware
+- **Formal spec track** (v2.5.3+) — introspection, privacy, cross-protocol interop on the path to v3.0 economy
+
+See the [v2.5 roadmap PRD](https://github.com/adriannoes/asap-protocol/blob/main/product/prd/prd-v2.5-roadmap.md) and [ADR index](https://github.com/adriannoes/asap-protocol/blob/main/product/decision-records/README.md).
 
 ## Contributing
 
@@ -218,4 +226,4 @@ This project is licensed under the Apache 2.0 License - see the [license](https:
 
 ---
 
-**Built with [Cursor](https://cursor.com/)** using Opus 4.6/4.7, Composer 1.5/2.0, Gemini 3.1 Pro and Kimi K2.5.
+**Built with [Cursor](https://cursor.com/)**, with Composer, Opus, Gemini, Kimi and more.
