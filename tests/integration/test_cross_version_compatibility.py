@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -15,6 +16,7 @@ from asap.crypto.keys import generate_keypair
 from asap.crypto.signing import sign_manifest
 from asap.discovery.validation import validate_signed_manifest_response
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
+from scripts.process_registration import fetch_manifest
 
 
 def _make_signed_manifest_dict() -> dict:
@@ -95,3 +97,22 @@ class TestSignedManifestFixtureCompatibility:
         data = json.loads(path.read_text(encoding="utf-8"))
         result = validate_signed_manifest_response(data, verify_signature=True)
         assert result.id == "urn:asap:agent:fixture-agent"
+
+
+class TestRegistrationPathParity:
+    """Registration fetchers must accept the same signed payloads as discovery validation."""
+
+    def test_issueops_fetch_manifest_matches_discovery_validator(self) -> None:
+        """IssueOps fetch_manifest unwraps the same signed fixture as discovery validation."""
+        data = _make_signed_manifest_dict()
+        discovery_result = validate_signed_manifest_response(data, verify_signature=True)
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = data
+        mock_resp.raise_for_status = MagicMock()
+        mock_client = MagicMock()
+        mock_client.__enter__.return_value.get.return_value = mock_resp
+        mock_client.__exit__.return_value = None
+        with patch("scripts.process_registration.httpx.Client", return_value=mock_client):
+            issueops_result = fetch_manifest("https://example.com/manifest.json")
+        assert issueops_result.id == discovery_result.id
+        assert issueops_result.name == discovery_result.name

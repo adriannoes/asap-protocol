@@ -7,7 +7,12 @@ import socket
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
+
+from asap.crypto.keys import generate_keypair
+from asap.crypto.signing import sign_manifest
+from asap.models.entities import Capability, Endpoint, Manifest, Skill
 
 from scripts.process_registration import (
     fetch_manifest,
@@ -175,11 +180,86 @@ class TestFetchManifestSSRF:
         with pytest.raises(ValueError, match="Blocked URL"):
             fetch_manifest("http://192.168.1.1/manifest.json")
 
+    def test_rejects_http_redirect_without_following(self) -> None:
+        """302 redirect to metadata must fail without following (SSRF parity)."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 302
+        mock_resp.headers = {"location": "http://169.254.169.254/latest/meta-data/"}
+        mock_resp.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "Redirect",
+            request=MagicMock(),
+            response=mock_resp,
+        )
+        mock_client = MagicMock()
+        mock_client.__enter__.return_value.get.return_value = mock_resp
+        mock_client.__exit__.return_value = None
+        with (
+            patch("scripts.process_registration.httpx.Client", return_value=mock_client),
+            pytest.raises(httpx.HTTPStatusError),
+        ):
+            fetch_manifest("https://example.com/manifest.json")
+
+    def test_accepts_valid_signed_envelope(self) -> None:
+        """Signed manifest envelope unwraps to inner Manifest (compliance harness parity)."""
+        manifest = Manifest(
+            id="urn:asap:agent:testuser:my-agent",
+            name="my-agent",
+            version="1.0.0",
+            description="Signed envelope test",
+            capabilities=Capability(
+                asap_version="1.1.0",
+                skills=[
+                    Skill(id="web_research", description="Research"),
+                    Skill(id="summarization", description="Summarize"),
+                ],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="https://example.com/asap"),
+        )
+        private_key, _ = generate_keypair()
+        signed_payload = sign_manifest(manifest, private_key).model_dump(mode="json")
+        with patch(
+            "scripts.process_registration.httpx.Client",
+            return_value=_mock_httpx_client(signed_payload),
+        ):
+            result = fetch_manifest("https://example.com/manifest.json")
+        assert result.id == "urn:asap:agent:testuser:my-agent"
+        assert result.name == "my-agent"
+
+    def test_rejects_tampered_signed_envelope(self) -> None:
+        """Tampered signed manifest fails signature verification."""
+        manifest = Manifest(
+            id="urn:asap:agent:testuser:my-agent",
+            name="my-agent",
+            version="1.0.0",
+            description="Tampered envelope test",
+            capabilities=Capability(
+                asap_version="1.1.0",
+                skills=[Skill(id="web_research", description="Research")],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="https://example.com/asap"),
+        )
+        private_key, _ = generate_keypair()
+        signed_payload = sign_manifest(manifest, private_key).model_dump(mode="json")
+        inner = signed_payload["manifest"]
+        assert isinstance(inner, dict)
+        inner["name"] = "tampered-name"
+        with (
+            patch(
+                "scripts.process_registration.httpx.Client",
+                return_value=_mock_httpx_client(signed_payload),
+            ),
+            pytest.raises(Exception, match="signature|verification|Invalid"),
+        ):
+            fetch_manifest("https://example.com/manifest.json")
+
 
 def _mock_httpx_client(response_json: dict) -> MagicMock:
     """Build a MagicMock for httpx.Client that returns the given JSON as manifest."""
     mock_resp = MagicMock()
     mock_resp.text = json.dumps(response_json)
+    mock_resp.json.return_value = response_json
     mock_resp.raise_for_status = MagicMock()
     mock_client = MagicMock()
     mock_client.__enter__.return_value.get.return_value = mock_resp
@@ -330,6 +410,94 @@ class TestProcessRegistrationRun:
         assert entry.get("hardware_class") == "edge_accelerator"
         assert entry.get("inference_modes") == ["cloud", "local_cuda"]
         assert entry.get("hardware_io") == ["gpio", "i2c"]
+
+    def test_valid_issue_accepts_signed_manifest_envelope(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """IssueOps accepts signed manifest envelopes (parity with compliance harness)."""
+        manifest = Manifest(
+            id="urn:asap:agent:testuser:my-agent",
+            name="my-agent",
+            version="1.0.0",
+            description="An agent that does research.",
+            capabilities=Capability(
+                asap_version="1.1.0",
+                skills=[
+                    Skill(id="web_research", description="Research"),
+                    Skill(id="summarization", description="Summarize"),
+                ],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="https://example.com/asap"),
+        )
+        private_key, _ = generate_keypair()
+        signed_payload = sign_manifest(manifest, private_key).model_dump(mode="json")
+        with patch(
+            "scripts.process_registration.httpx.Client",
+            return_value=_mock_httpx_client(signed_payload),
+        ):
+            registry_path = tmp_path / "registry.json"
+            registry_path.write_text("[]")
+            output_path = tmp_path / "result.json"
+            run(
+                body=VALID_BODY_MINIMAL,
+                issue_number="11",
+                author="testuser",
+                output_path=str(output_path),
+                registry_path=str(registry_path),
+            )
+        result = json.loads(output_path.read_text())
+        assert result["valid"] is True
+        entry = json.loads(registry_path.read_text())[0]
+        assert entry["id"] == "urn:asap:agent:testuser:my-agent"
+
+    def test_invalid_tampered_signed_manifest_rejected(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Tampered signed manifest envelope fails before registry write."""
+        manifest = Manifest(
+            id="urn:asap:agent:testuser:my-agent",
+            name="my-agent",
+            version="1.0.0",
+            description="An agent that does research.",
+            capabilities=Capability(
+                asap_version="1.1.0",
+                skills=[
+                    Skill(id="web_research", description="Research"),
+                    Skill(id="summarization", description="Summarize"),
+                ],
+                state_persistence=False,
+            ),
+            endpoints=Endpoint(asap="https://example.com/asap"),
+        )
+        private_key, _ = generate_keypair()
+        signed_payload = sign_manifest(manifest, private_key).model_dump(mode="json")
+        inner = signed_payload["manifest"]
+        assert isinstance(inner, dict)
+        inner["name"] = "wrong-slug"
+        with patch(
+            "scripts.process_registration.httpx.Client",
+            return_value=_mock_httpx_client(signed_payload),
+        ):
+            registry_path = tmp_path / "registry.json"
+            registry_path.write_text("[]")
+            output_path = tmp_path / "result.json"
+            run(
+                body=VALID_BODY_MINIMAL,
+                issue_number="12",
+                author="testuser",
+                output_path=str(output_path),
+                registry_path=str(registry_path),
+            )
+        result = json.loads(output_path.read_text())
+        assert result["valid"] is False
+        assert (
+            "schema validation" in result["errors"].lower()
+            or "signature" in result["errors"].lower()
+        )
+        assert json.loads(registry_path.read_text()) == []
 
     def test_invalid_missing_required_fields(self, tmp_path: Path) -> None:
         output_path = tmp_path / "result.json"

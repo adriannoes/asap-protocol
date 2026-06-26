@@ -32,6 +32,11 @@ from asap.discovery.registry import (  # noqa: E402
     derive_registry_hardware_fields,
     generate_registry_entry,
 )
+from asap.discovery.validation import (  # noqa: E402
+    ManifestValidationError,
+    validate_signed_manifest_response,
+)
+from asap.errors import SignatureVerificationError  # noqa: E402
 from asap.models.entities import Manifest  # noqa: E402
 from lib.debug_id import generate_debug_id  # noqa: E402
 from lib.registry_io import (  # noqa: E402
@@ -110,7 +115,16 @@ def fetch_manifest(url: str, timeout: float = 15.0) -> Manifest:
     with httpx.Client(timeout=timeout, follow_redirects=False) as client:
         resp = client.get(url)
         resp.raise_for_status()
-    return Manifest.model_validate_json(resp.text)
+    try:
+        data = resp.json()
+    except ValueError as exc:
+        raise ValueError(f"Manifest response is not JSON: {url}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"Manifest JSON must be an object: {url}")
+    try:
+        return validate_signed_manifest_response(data, verify_signature=True)
+    except SignatureVerificationError as exc:
+        raise ManifestValidationError(str(exc), field="signature") from exc
 
 
 def run(
@@ -155,6 +169,13 @@ def run(
 
     try:
         manifest = fetch_manifest(manifest_url)
+    except ManifestValidationError as e:
+        errors.append(
+            f"Manifest failed schema validation. {e.message} "
+            "Ensure it follows the ASAP Manifest format."
+        )
+        _fail_registration(output_path, errors, issue_number)
+        return
     except ValidationError as e:
         error_count = e.error_count()
         errors.append(
@@ -163,8 +184,12 @@ def run(
         )
         _fail_registration(output_path, errors, issue_number)
         return
-    except ValueError:
-        errors.append(f"Blocked URL (private/metadata): {manifest_url}")
+    except ValueError as e:
+        msg = str(e)
+        if "Blocked URL" in msg or "private/metadata" in msg:
+            errors.append(f"Blocked URL (private/metadata): {manifest_url}")
+        else:
+            errors.append(msg)
         _fail_registration(output_path, errors, issue_number)
         return
     except httpx.HTTPError:
