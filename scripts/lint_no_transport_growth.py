@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
-"""Enforce D4: forbid growing public surface on transport server/client monolith files.
+"""Enforce D4: forbid growing public surface on transport server/client modules.
 
-Compares the set of public function/method names in ``server.py`` and ``client.py``
-against ``scripts/_transport_baseline_v2.3.0.json``. New public symbols fail CI;
-removed symbols are allowed.
+Compares the set of public function/method names in the transport server module
+(``server.py``) and the transport client package (``client/``) against the frozen
+baseline in ``scripts/_transport_baseline_v2.5.1.json``. New public symbols fail
+CI; removed symbols are allowed.
+
+The client was a single ``client.py`` monolith through v2.5.0; the v2.5.1
+thermo-nuclear patch (Sprint S2) decomposed it into the ``client/`` package
+(``_core`` / ``_send`` / ``_discovery`` / ``_helpers``). To keep D4 effective on
+a decomposed package, the linter aggregates public symbols across **every**
+``*.py`` module in the package directory (methods are named by their defining
+class, e.g. ``ASAPClient.batch`` or ``_SendMixin.send``). ``server.py`` is still
+a single file and is measured directly.
 
 Design rationale:
     AST inspection avoids importing ASAP dependencies when emitting/checking.
@@ -22,10 +31,12 @@ from pathlib import Path
 from typing import Final
 
 _REPO_ROOT: Final = Path(__file__).resolve().parent.parent
-_BASELINE_REL_PATH: Final = Path("scripts/_transport_baseline_v2.3.0.json")
+_BASELINE_REL_PATH: Final = Path("scripts/_transport_baseline_v2.5.1.json")
+# Each entry is either a single-file module (``server.py``) or a package
+# directory (``client/``) whose public surface is aggregated across its modules.
 _TRANSPORT_REL_PATHS: Final[tuple[str, ...]] = (
     "src/asap/transport/server.py",
-    "src/asap/transport/client.py",
+    "src/asap/transport/client",
 )
 
 
@@ -63,23 +74,44 @@ def extract_public_symbols(py_path: Path) -> list[str]:
     return sorted(symbols)
 
 
+def extract_package_symbols(pkg_dir: Path) -> list[str]:
+    """Aggregate public symbols across every ``*.py`` module in package *pkg_dir*.
+
+    Methods are named by their defining class (``ClassName.method``), so a method
+    moved into a mixin during decomposition (e.g. ``_SendMixin.send``) is tracked
+    at its definition site. The union across modules is the package's public
+    surface that D4 freezes.
+    """
+    symbols: set[str] = set()
+    for py_path in sorted(pkg_dir.rglob("*.py")):
+        symbols.update(extract_public_symbols(py_path))
+    return sorted(symbols)
+
+
+def extract_surface_symbols(rel_path: Path) -> list[str]:
+    """Extract D4 surface symbols for a file module or a package directory."""
+    if rel_path.is_dir():
+        return extract_package_symbols(rel_path)
+    return extract_public_symbols(rel_path)
+
+
 def emit_baseline(repo_root: Path) -> dict[str, object]:
     """Build baseline payload with sorted symbol lists."""
     files_payload: dict[str, list[str]] = {}
     for rel in _TRANSPORT_REL_PATHS:
         abs_path = repo_root / rel
-        if not abs_path.is_file():
-            msg = f"Expected transport file missing: {rel}"
+        if not abs_path.exists():
+            msg = f"Expected transport module/package missing: {rel}"
             raise FileNotFoundError(msg)
-        files_payload[rel] = extract_public_symbols(abs_path)
+        files_payload[rel] = extract_surface_symbols(abs_path)
 
     return {
         "_meta": {
             "description": (
-                "Frozen public callable surface for D4 transport monolith lint "
+                "Frozen public callable surface for D4 transport surface lint "
                 "(see docs/maintainers/transport-evolution.md)."
             ),
-            "frozen_at_release": "v2.3.0",
+            "frozen_at_release": "v2.5.1",
         },
         "files": files_payload,
     }
@@ -120,11 +152,11 @@ def check_no_growth(repo_root: Path, baseline_path: Path) -> list[str]:
 
     for rel in _TRANSPORT_REL_PATHS:
         abs_path = repo_root / rel
-        if not abs_path.is_file():
-            errors.append(f"Missing transport module {rel}")
+        if not abs_path.exists():
+            errors.append(f"Missing transport module/package {rel}")
             continue
 
-        current = set(extract_public_symbols(abs_path))
+        current = set(extract_surface_symbols(abs_path))
         allowed = set(baseline_files[rel])
         added = sorted(current - allowed)
         if added:
@@ -142,7 +174,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--emit-baseline",
         action="store_true",
-        help="Print baseline JSON to stdout (redirect to scripts/_transport_baseline_v2.3.0.json).",
+        help=f"Print baseline JSON to stdout (redirect to {_BASELINE_REL_PATH.as_posix()}).",
     )
     parser.add_argument(
         "--baseline-path",

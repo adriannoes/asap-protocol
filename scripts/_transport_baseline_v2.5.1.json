@@ -1,0 +1,25 @@
+{
+  "_meta": {
+    "description": "Frozen public callable surface for D4 transport surface lint (see docs/maintainers/transport-evolution.md).",
+    "frozen_at_release": "v2.5.1"
+  },
+  "files": {
+    "src/asap/transport/client": [
+      "ASAPClient.batch",
+      "ASAPClient.is_connected",
+      "ASAPClient.last_asap_challenge_discovery_url",
+      "ASAPClient.last_response_asap_version",
+      "ASAPClient.send_batch",
+      "_DiscoveryMixin.discover",
+      "_DiscoveryMixin.get_manifest",
+      "_DiscoveryMixin.health_check",
+      "_DiscoveryMixin.request_capability",
+      "_SendMixin.send",
+      "_SendMixin.stream"
+    ],
+    "src/asap/transport/server.py": [
+      "RegistryHolder.replace_registry",
+      "create_app"
+    ]
+  }
+}
