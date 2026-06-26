@@ -7,34 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Follow-up (not in this release)
+### Follow-up (not in v2.5.1)
 
-- `extra="forbid"` on ingress payload models (`TaskRequestConfig`, `CommonMetadata`)
-- Opt-in protection for operator APIs (`/usage`, `/sla`, `/audit`)
-- Redis-backed `JtiReplayCache` and distributed Next.js rate limits
-- `@asap-protocol/mcp-auth` HTTP/SSE middleware (deferred from v2.5.0 — see [2.5.0] TypeScript note and [typescript-mcp-auth-spike.md](engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md))
+- **Adapter Lab II** — new framework adapters (separate PRD: [prd-v2.5.1-adapter-lab-ii.md](product/prd/prd-v2.5.1-adapter-lab-ii.md)).
+- `extra="forbid"` on ingress payload models (`TaskRequestConfig`, `CommonMetadata`).
+- Opt-in protection for operator APIs (`/usage`, `/sla`, `/audit`).
+- Redis-backed `JtiReplayCache` and distributed Next.js rate limits.
+- `@asap-protocol/mcp-auth` HTTP/SSE middleware (deferred from v2.5.0 — see [2.5.0] TypeScript note and [typescript-mcp-auth-spike.md](engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md)).
+- Collapse the dual `UsageMetrics`/`InMemoryMeteringStore` pair retained in S1 for API stability.
+- Reduce the `asap.transport.client` package aggregate LOC below the S2 target.
+
+---
+
+## [2.5.1] - 2026-06-25
+
+**Code quality patch** — behavior-preserving refactor of the transport, storage,
+auth, and integration layers accumulated through v2.5.0, plus six correctness and
+security fixes. No wire-protocol, manifest schema, or public API breaking changes.
+Deprecated import paths keep working via shims until v2.6.0.
 
 ### Fixed
 
-- **CI security (`pip-audit`)**: Raised `cryptography` to `>=48.0.1,<49` (GHSA-537c-gmf6-5ccf), `python-multipart>=0.0.31` (CVE-2026-53538–53540), and `starlette>=1.3.1` (CVE-2026-54282 / CVE-2026-54283) via `pyproject.toml` floors and `tool.uv.override-dependencies`.
-- **pydantic-ai (CVE-2026-46678)**: Optional `[pydanticai]` extra pins `pydantic-ai>=1.99.0`; removed obsolete `pip-audit` ignore from CI.
+- **`revoke_cascade` atomicity**: delegation revocation now runs in a single SQLite transaction (BEGIN→walk→COMMIT, rollback on failure); the in-memory store holds an `asyncio.Lock` across the cascade so concurrent `register_issued` can't leave children un-revoked.
+- **`usage_events` schema**: one canonical DDL owner in `state/stores/sqlite.py`; both indexes created with `IF NOT EXISTS` regardless of store init order, fixing schema/query-plan divergence.
+- **Host-JWT verifier**: collapsed the divergent verifiers into one `verify_host_bearer`; revoked hosts now return 403 (was 401) on every protected route, including `/asap/agent/reactivate`.
+- **WebSocket OAuth2 bypass**: `/asap/ws` no longer skips `OAuth2Middleware`. In OAuth2-only deployments the WS path now requires a Bearer JWT in the handshake `Authorization` header and rejects with close code 4401 when absent or invalid. Deploys without an OAuth2 IdP are unchanged.
+- **OpenAPI handler**: hoisted the inline `format_www_authenticate_asap` import to module top; `OpenAPIPathParameterError.__init__` no longer raises (validation moved to `for_missing()`/`for_invalid()` factories). `resolve_headers` stays as documented public API.
+- **Client correlation binding**: the client now asserts `response.correlation_id == request.id` in `send()`, `batch()`, and the WS recv loop, raising `ProtocolCorrelationError` (previously only checked non-empty).
 
-### Changed (Sprint S3 — auth/mcp/transport/errors cleanup)
+### Changed
 
-- **`OAuth2Middleware` JWKS delegation**: the middleware now delegates to a single shared `JWKSValidator` instead of keeping its own JWKS cache. `transport/server.py` collapses the two `OAuth2Middleware` instances (HTTP stack + WebSocket `app.state`) into one shared validator, closing the S0 #237 landmine where the WS accept-time and HTTP per-request validation could diverge on key-set freshness. TTL reconciled to one constant (`JWKS_CACHE_TTL_SECONDS=86400`).
-- **`MCPServer._tools` typed registration**: the untyped positional 5-tuple is replaced by a frozen `ToolRegistration` dataclass (`name`/`handler`/`schema`/`metadata`/`capabilities`); capability metadata is now per-tool-instance (guards against the S2 #240 URN-agnostic resolve-cache regression).
-- **`RemoteRPCError` unification**: `RemoteFatalRPCError`/`RemoteRecoverableRPCError` collapse into one `RemoteRPCError(ASAPError)` with an `is_recoverable` property. The twin names are kept as **deprecated subclasses** so `isinstance`/exception-tuple callers stay green; `transport/client/_send.py` retry decision now reads `rpc_exc.is_recoverable`.
-- **`OpenAPIExecutionKind` metadata**: the dead `ASYNC_POLLING` variant is pruned. A `202 + Location` OpenAPI operation now classifies as `SYNC` (was `ASYNC_POLLING`). No production handler consumed the old value, but external tooling reading `execution_kind` from mapped capabilities will see a different enum value.
-- **MCP Auth Bridge location**: `asap.adapters.mcp.*` is folded into `asap.mcp.auth.*` (the adapter boundary was a layering inversion). `asap.adapters.mcp` remains as a thin **deprecation shim** re-exporting `protect_server`/`MCPAuthConfig`/`ProtectedMCPServer`/`resolve_jwt_extractor` (object identity preserved).
-- **Transport identity-rate-limit dependency**: the 9 inline `request.app.state.identity_limiter.check(request)` sites now use `Depends(require_identity_limiter)`. A missing limiter returns a clean **503** (was `AttributeError` → 500).
+- **Storage consolidation**: six SQLite backends (snapshot, metering, delegation, SLA, audit, plus the economics metering store) now subclass a shared `AsyncSqliteRepository` (`state/stores/_sqlite_base.py`) with one WAL setup, `transaction()`, `parse_iso`, and `build_where`. `server.py` uses the new `MeteringStorageBridge` directly; `metering_storage_adapter` is kept as a one-line shim.
+- **`server.py` decomposition**: split into `create_*_router` factories plus `routes/{health,jsonrpc,websocket,audit}.py` (2256 → 1000 LOC); `create_app` is thin wiring. Shared request prep (`parse→auth→envelope→timestamp→nonce`) moved to `ASAPRequestHandler._prepare_request`.
+- **`client.py` decomposition**: split into a `client/` package (`_core`, `_send`, `_discovery`, `_helpers`); `get_manifest`/`discover` now share `_fetch_and_cache_manifest`, and `send`'s Retry-After parser is extracted. `from asap.transport.client import ASAPClient` is unchanged.
+- **`websocket.py` decomposition**: split into `asap/transport/ws/` (`codecs`, `client`, `server`, `pool`, `_recv`, `_ack`, `_dispatch`, `_actions`, `_errors`); `_make_fake_request` is gone and WS dispatches envelopes directly through `_prepare_request`. `websocket.py` stays as a re-export shim.
+- **Integrations**: shared `asap/integrations/_base.py` centralizes JSON-schema→Pydantic conversion, URN-scoped skill resolve cache, and per-exception error formatting; `langchain`/`crewai`/`llamaindex`/`smolagents` slimmed to glue-only (71–80 LOC each).
+- **`OAuth2Middleware` JWKS**: delegates to one shared `JWKSValidator` instead of its own cache; HTTP and WS now use the same validator and TTL (`JWKS_CACHE_TTL_SECONDS=86400`).
+- **`MCPServer` tool registration**: the untyped 5-tuple is now a frozen `ToolRegistration` dataclass with per-tool capability metadata.
+- **`RemoteRPCError`**: `RemoteFatalRPCError`/`RemoteRecoverableRPCError` collapse into one `RemoteRPCError` with an `is_recoverable` property; the old names stay as deprecated subclasses.
+- **Identity rate limiting**: the 9 inline limiter checks now use `Depends(require_identity_limiter)`; a missing limiter returns 503 (was `AttributeError` → 500).
+- **`auth/` modules**: `claims`→`jwks`/`middleware`, `utils`→`scopes`, `lifecycle`→`identity`; `WebAuthnSelfAuthVerifier` deleted (`WebAuthnVerifierImpl` satisfies the protocol directly).
+- **MCP Auth Bridge**: folded `asap.adapters.mcp.*` into `asap.mcp.auth.*`; `asap.adapters.mcp` stays as a re-export shim.
 
-### Removed (Sprint S3 — import path changes; non-breaking narrowing, grep-verified zero external root callers)
+### Removed
 
-- **`asap.transport` root re-exports trimmed**: `DEFAULT_TTL`, `DEFAULT_MAX_SIZE`, `DEFAULT_CLEANUP_INTERVAL`, `start_periodic_cleanup`, `DEFAULT_WEBHOOK_TIMEOUT`, `DEFAULT_MAX_RETRIES`, `DEFAULT_RETRY_BASE_DELAY`, `DEFAULT_RETRY_MAX_DELAY`, `DEFAULT_WEBHOOK_RATE_PER_SECOND`, `WebhookDelivery`, `WebhookResult`, `WebhookRetryManager`, `RetryPolicy`, `DeadLetterEntry`, `X_ASAP_SIGNATURE_HEADER`, `validate_callback_url`, `compute_signature`, `verify_signature` are no longer re-exported from `asap.transport.__init__`. They remain importable from their owning modules (`asap.transport.cache`, `asap.transport.webhook`). Downstream `from asap.transport import start_periodic_cleanup` callers must update to `from asap.transport.cache import start_periodic_cleanup`.
-- **`asap.transport.codecs` package inlined** to `asap.transport.lambda_codec` (one import path; no shim — grep-verified zero external callers).
-- **`NonceStore.is_used` / `mark_used`** removed in favor of the atomic `check_and_mark` (the separate methods advertised a TOCTOU footgun; `NonceStore` is now a one-method protocol). Custom nonce stores implementing the old surface should switch to `check_and_mark`.
-- **`asap.auth.{claims,utils,lifecycle}` modules** merged into `jwks`/`middleware`, `scopes`, `identity` respectively (the symbols moved; `asap.auth` root re-exports of `Claims`/`fetch_keys`/`validate_jwt`/`host_urn_from_thumbprint` were trimmed — grep-verified zero external root callers).
-- **`WebAuthnSelfAuthVerifier`** pass-through wrapper deleted; `WebAuthnVerifierImpl` now satisfies the `WebAuthnVerifier` protocol directly and `default_webauthn_verifier()` returns it.
+- **`asap.transport` root re-exports**: `start_periodic_cleanup`, `WebhookDelivery`, `RetryPolicy`, `compute_signature`, and other tuning/webhook internals are no longer re-exported from `asap.transport.__init__` — import them from their owning modules (`asap.transport.cache`, `asap.transport.webhook`).
+- **`asap.transport.codecs` package**: inlined into `asap.transport.lambda_codec`; WS framing primitives moved to `asap.transport.ws.codecs`. No shim (grep-verified zero external callers).
+- **`NonceStore.is_used` / `mark_used`**: replaced by the atomic `check_and_mark`. Custom nonce stores should switch to the one-method protocol.
+- **`OpenAPIExecutionKind.ASYNC_POLLING`**: pruned; a `202 + Location` OpenAPI operation now classifies as `SYNC`.
+- **Dead binary/base64 WS framing**: frames are JSON text only.
+
+### Deprecated (remove in v2.6.0)
+
+- `from asap.transport.websocket import ...` — use `asap.transport.ws` directly.
+- `from asap.adapters.mcp import ...` — use `asap.mcp.auth` directly.
+- `RemoteFatalRPCError` / `RemoteRecoverableRPCError` — use `RemoteRPCError` + `is_recoverable`.
+- `metering_storage_adapter` — use `MeteringStorageBridge`.
+- `FRAME_ENCODING_BINARY` — binary framing is gone; the literal remains on the shim for import compat only.
+
+### Migration
+
+- **v2.5.0 → v2.5.1**: No breaking changes. Update deprecated import paths at your convenience (removed in v2.6.0). If you run an OAuth2-only deployment, note that `/asap/ws` now requires a Bearer JWT in the handshake — see [migration guide](docs/migration.md#upgrading-from-v250-to-v251).
 
 ---
 

@@ -761,6 +761,72 @@ For deployments that enforce self-authorization prevention with real passkeys:
 See [Self-authorization prevention](security/self-authorization-prevention.md)
 (**Real WebAuthn**) for the threat model and ceremony flow.
 
+### Upgrading from v2.5.0 to v2.5.1
+
+v2.5.1 is a **code quality patch**. JSON-RPC envelopes, OAuth2, capability grants,
+manifests, and the MCP Auth Bridge are unchanged. Most deployments upgrade with no
+code changes; the one operator-relevant case is WebSocket in OAuth2-only
+deployments (see below).
+
+#### What changed
+
+- **Behavior-preserving refactors**: transport (`server`/`client`/`websocket` split
+  into packages), SQLite storage consolidated onto a shared `AsyncSqliteRepository`,
+  `auth/` module reorg, and shared integration plumbing. Public import paths are
+  preserved via re-export shims.
+- **Six fixes**: atomic `revoke_cascade`; canonical `usage_events` DDL; unified
+  Host-JWT verifier (revoked host → 403); **WebSocket now enforces OAuth2**; OpenAPI
+  handler import/constructor cleanup; client-side `correlation_id` binding.
+- **Deprecated import paths** (removed in v2.6.0): `asap.transport.websocket`,
+  `asap.adapters.mcp`, `RemoteFatalRPCError`/`RemoteRecoverableRPCError`,
+  `metering_storage_adapter`, `FRAME_ENCODING_BINARY`.
+
+#### Operator action: OAuth2-only WebSocket deployments
+
+If you run `OAuth2Middleware` **without** `manifest.auth` / `token_validator`
+(OAuth2-only), the WebSocket endpoint `/asap/ws` was previously unauthenticated — it
+skipped the Starlette middleware stack. It now requires a Bearer JWT in the
+handshake `Authorization` header and rejects with close code **4401** when absent or
+invalid. Connect your WS clients with a Bearer token. Deployments without an OAuth2
+IdP are unchanged.
+
+#### Upgrade steps
+
+1. **Bump dependency**:
+   ```bash
+   pip install --upgrade asap-protocol==2.5.1
+   # or
+   uv add asap-protocol==2.5.1
+   ```
+   TypeScript consumers: no npm bump required — `@asap-protocol/*` stays at **2.4.1**.
+
+2. **Migrate deprecated imports** at your convenience (removed in v2.6.0):
+   ```python
+   # Before
+   from asap.transport.websocket import WebSocketTransport
+   from asap.adapters.mcp import protect_server, MCPAuthConfig
+
+   # After
+   from asap.transport.ws import WebSocketTransport
+   from asap.mcp.auth import protect_server, MCPAuthConfig
+   ```
+   `from asap.transport.client import ASAPClient` and
+   `from asap.transport.server import create_app` are unchanged.
+
+3. **OAuth2-only WS operators**: pass a Bearer JWT on the WS handshake (see above).
+
+4. **Re-run Compliance Harness v2** after upgrading production agents
+   (`asap compliance-check --exit-on-fail`).
+
+#### Backward compatibility
+
+- **Wire protocol**: Unchanged from v2.5.0.
+- **Breaking changes**: None. Deprecated imports keep working via shims until v2.6.0.
+- **Behavior change**: WebSocket OAuth2 enforcement (above) closes an authentication
+  gap; only OAuth2-only WS deployments are affected.
+
+---
+
 ### Upgrading from v2.4.1 to v2.5.0
 
 v2.5.0 is an **additive, backward-compatible** minor release. JSON-RPC envelopes,

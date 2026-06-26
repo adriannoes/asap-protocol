@@ -8,7 +8,7 @@ Sprint roadmaps and release checklists per protocol version. Pair each folder wi
 
 | Folder | PRD | Status |
 |--------|-----|--------|
-| *(none — start `v2.5.1/` when Adapter Lab II kicks off)* | [prd-v2.5.1-adapter-lab-ii.md](../../product/prd/prd-v2.5.1-adapter-lab-ii.md) | **PLANNED** |
+| *(none — start `v2.5.2/` when Adapter Lab II or Distribution Loop kicks off)* | [prd-v2.5.1-adapter-lab-ii.md](../../product/prd/prd-v2.5.1-adapter-lab-ii.md) or [prd-v2.5.2-distribution-loop.md](../../product/prd/prd-v2.5.2-distribution-loop.md) | **PLANNED** |
 
 ---
 
@@ -31,6 +31,7 @@ Sprint roadmaps and release checklists per protocol version. Pair each folder wi
 
 | Folder | PRD | Shipped |
 |--------|-----|---------|
+| `private/v2.5.1/` | code quality review patch (S0–S3 + release); Adapter Lab II deferred to v2.5.2 | 2026-06-25 |
 | `private/v2.4.1/` | [prd-v2.4.1-security-hardening.md](../../product/prd/prd-v2.4.1-security-hardening.md) + `private/prd-v2.4.1-*` | 2026-06-14 |
 | `private/v2.3.1/` | `private/prd-v2.3.1-adapter-lab.md` | 2026-05-21 |
 
@@ -40,11 +41,10 @@ Sprint roadmaps and release checklists per protocol version. Pair each folder wi
 
 | Version | PRD | Blocked by |
 |---------|-----|------------|
-| v2.5.1 | [prd-v2.5.1-adapter-lab-ii.md](../../product/prd/prd-v2.5.1-adapter-lab-ii.md) | — (v2.5.0 ✅) |
-| v2.5.2 | [prd-v2.5.2-distribution-loop.md](../../product/prd/prd-v2.5.2-distribution-loop.md) | v2.5.1 |
+| v2.5.2 | [prd-v2.5.1-adapter-lab-ii.md](../../product/prd/prd-v2.5.1-adapter-lab-ii.md) (Adapter Lab II, slipped from v2.5.1) or [prd-v2.5.2-distribution-loop.md](../../product/prd/prd-v2.5.2-distribution-loop.md) | — (v2.5.1 ✅) |
 | v2.5.3 | [prd-v2.5.3-formal-spec-interop.md](../../product/prd/prd-v2.5.3-formal-spec-interop.md) | v2.5.2 (soft) |
 
-Create `engineering/tasks/v2.5.1/` etc. when each release starts.
+Create `engineering/tasks/v2.5.2/` etc. when each release starts.
 
 ---
 

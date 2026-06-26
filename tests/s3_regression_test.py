@@ -205,4 +205,3 @@ def test_allow_env_jwt_fallback_emits_construction_warning() -> None:
         f"got {len(fallback_warnings)}: {[str(w.message) for w in fallback_warnings]}"
     )
     assert "unsafe for multi-tool production" in str(fallback_warnings[0].message)
-
