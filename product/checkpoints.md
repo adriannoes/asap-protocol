@@ -3,7 +3,7 @@
 > **Purpose**: Formal review points to update documentation with learnings (product follow-up after releases).
 > **Location**: Lives under **`product/`** because it drives PRD updates and retros, not day-to-day engineering execution.
 > **Created**: 2026-02-06
-> **Updated**: 2026-06-24 — Status roll-up refreshed for **v2.5.0** MCP Auth Bridge ship; `pyproject.toml` **2.5.0**; tag [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0).
+> **Updated**: 2026-06-26 — Status roll-up refreshed for **v2.5.1** code quality patch ship; `pyproject.toml` **2.5.1**; tag [`v2.5.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.1).
 
 ---
 
@@ -12,7 +12,8 @@
 Use this section first; the checkpoint sections below add detail or archive.
 
 **Evidence snapshot** (refresh with `git log` and [`pyproject.toml`](../pyproject.toml)):
-- **Shipped on `main` (2026-06-24):** `pyproject.toml` **`version = "2.5.0"`** (no 2.5.1 bump). Tags: [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0) (MCP Auth Bridge, merge [#236](https://github.com/adriannoes/asap-protocol/pull/236)); [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1) (**compliance-only** → PyPI `asap-compliance` **1.3.0**). PyPI `asap-protocol` **2.5.0**. npm `@asap-protocol/*` **2.4.1**. **`v2.5.1`** (Adapter Lab II) = **planned**, not released.
+- **Shipped on `main` (2026-06-26):** `pyproject.toml` **`version = "2.5.1"`**. Tags: [`v2.5.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.1) (code quality patch, merge [#244](https://github.com/adriannoes/asap-protocol/pull/244)); [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0) (MCP Auth Bridge); [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1) (**compliance-only** → PyPI `asap-compliance` **1.3.0**). PyPI `asap-protocol` **2.5.1**. npm `@asap-protocol/*` **2.4.1**. **v2.5.1** was rescoped from Adapter Lab II to a behavior-preserving quality patch (thermo-nuclear audit S0–S3 + P0 fixes); **Adapter Lab II slipped to v2.5.2**.
+- **v2.5.0** MCP Auth Bridge shipped **2026-06-24** (tag [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0)).
 - **v2.4.1** security hardening patch shipped **2026-06-14** (tag [`v2.4.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.4.1)).
 - **v2.4.0** edge-AI discovery shipped **2026-05-24** ([`CHANGELOG.md`](../CHANGELOG.md#240---2026-05-24)).
 - **S1 OpenAPI adapter** (v2.3.0): first package commit **`cedb3f9`** — `2026-05-01` 19:16 -0300; merge **`04c56be`** — `2026-05-02` 01:03 -0300 (`#132`). Review: [`engineering/code-review/v2.3.0/pr-132-openapi-adapter.md`](../engineering/code-review/v2.3.0/pr-132-openapi-adapter.md).
@@ -25,10 +26,11 @@ Use this section first; the checkpoint sections below add detail or archive.
 | **v2.3.0 Adoption Multiplier** | **S1** merged (**#132**, commit `04c56be`). Subsequent v2.3.x / v2.4.0 trains shipped on the timeline below. | Optional: consolidated v2.3 retro if you want a single narrative. |
 | **v2.4.0 — Edge-AI discovery** | **Released** **2026-05-24** — hardware/inference manifest fields, registry mirror, marketplace filters, ShellClaw onboarding ([`CHANGELOG.md`](../CHANGELOG.md#240---2026-05-24)). | Community enum feedback: [#176](https://github.com/adriannoes/asap-protocol/issues/176). |
 | **v2.4.1 — Security hardening** | **Released** **2026-06-14** — OAuth2 `iss`/`aud` validation, fail-closed identity binding, web SSRF/redirect hardening, dependency bumps ([`CHANGELOG.md`](../CHANGELOG.md#241---2026-06-14), [migration](../docs/migration.md#upgrading-from-v240-to-v241)). Tag **v2.4.1**; PyPI/npm/Docker/GitHub Release per [sprint-S2-release.md](../engineering/tasks/private/v2.4.1/sprint-S2-release.md). | **v2.5.0** follow-ups: [#209](https://github.com/adriannoes/asap-protocol/issues/209). |
-| **v2.5.0 — MCP Auth Bridge** | **Released** **2026-06-24** — `asap.adapters.mcp` (`protect_server`), stdio JWT carriage, compliance profile `mcp-auth-bridge`, [adapter guide](../docs/adapters/mcp-auth-bridge.md) ([`CHANGELOG.md`](../CHANGELOG.md#250---2026-06-24), [migration](../docs/migration.md#upgrading-from-v241-to-v250), [PRD](./prd/prd-v2.5.0-mcp-auth-bridge.md)). Tag **v2.5.0**; PyPI/Docker via [sprint-S5-release.md](../engineering/tasks/v2.5.0/sprint-S5-release.md). | **`asap-compliance` 1.3.0** on PyPI (tag **v2.5.0.1**); `@asap-protocol/mcp-auth` ([backlog](../engineering/tasks/v2.5.0/backlog-mcp-auth-typescript.md)); **v2.5.1** Adapter Lab II blocked until adoption signal. |
-| **After v2.5.0** | **CP-7** partial: README, `docs/index.md`, CHANGELOG, AGENTS.md, and `apps/web` homepage aligned with **2.5.0**; train index [prd-v2.5-roadmap.md](./prd/prd-v2.5-roadmap.md). | Full CP-7 retro; optional GitHub issue for MCP-TS backlog. |
+| **v2.5.0 — MCP Auth Bridge** | **Released** **2026-06-24** — `asap.adapters.mcp` (`protect_server`), stdio JWT carriage, compliance profile `mcp-auth-bridge`, [adapter guide](../docs/adapters/mcp-auth-bridge.md) ([`CHANGELOG.md`](../CHANGELOG.md#250---2026-06-24), [migration](../docs/migration.md#upgrading-from-v241-to-v250), [PRD](./prd/prd-v2.5.0-mcp-auth-bridge.md)). Tag **v2.5.0**; PyPI/Docker via [sprint-S5-release.md](../engineering/tasks/v2.5.0/sprint-S5-release.md). | **`asap-compliance` 1.3.0** on PyPI (tag **v2.5.0.1**); `@asap-protocol/mcp-auth` ([backlog](../engineering/tasks/v2.5.0/backlog-mcp-auth-typescript.md)). |
+| **v2.5.1 — Code quality patch** | **Released** **2026-06-26** — behavior-preserving refactor (transport/server, client, websocket, SQLite storage, auth, integrations) + six P0 correctness/security fixes (atomic `revoke_cascade`, `usage_events` DDL, unified Host-JWT verifier, **WS now enforces OAuth2**, OpenAPI handler cleanup, client `correlation_id` binding). PR [#244](https://github.com/adriannoes/asap-protocol/pull/244) (code review CR#1–#7 addressed; CR#2/#3/#5/#6/#7 fixed, follow-ups → [#245](https://github.com/adriannoes/asap-protocol/issues/245)–[#249](https://github.com/adriannoes/asap-protocol/issues/249)). Tag **v2.5.1**; PyPI/Docker/GitHub Release via [sprint-S4-release.md](../engineering/tasks/private/v2.5.1/sprint-S4-release.md). ([`CHANGELOG.md`](../CHANGELOG.md#251---2026-06-25), [migration](../docs/migration.md#upgrading-from-v250-to-v251)). | **Adapter Lab II slipped to v2.5.2**; follow-up issues #245–#249 (SQLite `execute()` serialization, `auto` mode WS auth, streaming correlation, stale WS tests, `/asap/agent/status` JTI replay). |
+| **After v2.5.1** | **CP-7** extended: README, `docs/index.md`, CHANGELOG, AGENTS.md, `apps/web` WhatsNewRibbon, and `engineering/tasks/README.md` aligned with **2.5.1**; v2.5.1 follow-ups filed (#245–#249). | Full CP-7 retro; **v2.5.2** (Adapter Lab II or Distribution Loop) kickoff. |
 
-**Sources of truth for current execution**: [prd-v2.5-roadmap.md](./prd/prd-v2.5-roadmap.md), [tasks-v2.5.0-roadmap.md](../engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md), [sprint-S2-release.md](../engineering/tasks/private/v2.4.1/sprint-S2-release.md), [AGENTS.md](../AGENTS.md).
+**Sources of truth for current execution**: [prd-v2.5-roadmap.md](./prd/prd-v2.5-roadmap.md), [tasks-v2.5.0-roadmap.md](../engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md), [sprint-S4-release.md](../engineering/tasks/private/v2.5.1/sprint-S4-release.md), [AGENTS.md](../AGENTS.md).
 
 ---
 
@@ -178,7 +180,7 @@ Pre-release: Release materials (CHANGELOG, README, AGENTS.md, secure_agent examp
 
 ### CP-7: Post v2.3.x Adoption train (documentation & learning)
 
-**When**: After **v2.3.0** ships (S5 complete), or mid-flight if you run a **beta** period before tagging. **Partial closure (2026-06-24)**: **v2.5.0** MCP Auth Bridge shipped; README, `docs/index.md`, CHANGELOG, AGENTS.md, and `apps/web` homepage reflect **2.5.0** / **`asap-compliance` 1.3.0** (tag `v2.5.0.1`).
+**When**: After **v2.3.0** ships (S5 complete), or mid-flight if you run a **beta** period before tagging. **Partial closure (2026-06-26)**: **v2.5.1** code quality patch shipped; README, `docs/index.md`, CHANGELOG, AGENTS.md, `apps/web` WhatsNewRibbon, and `engineering/tasks/README.md` reflect **2.5.1** / **`asap-compliance` 1.3.0** (tag `v2.5.0.1`). v2.5.1 follow-ups filed (#245–#249).
 
 **Why**: v2.3.0 rescoped to adoption (OpenAPI, TS SDK, auto-registration, escalation/challenge). This checkpoint captures whether docs and PRDs reflect reality—not registry scale gates.
 
@@ -189,11 +191,12 @@ Pre-release: Release materials (CHANGELOG, README, AGENTS.md, secure_agent examp
 - [ ] Escalation + `WWW-Authenticate` challenge path — observability and support burden?
 - [ ] Coverage / quality bar met for new modules (Python + TS) per Definition of Done?
 - [ ] Time taken vs estimated (S1–S5); parallelism assumptions validated?
+- [ ] **v2.5.1 thermo-nuclear patch**: did the audit-driven refactor hold up under the PR #244 code review? Follow-ups #245–#249 worth a v2.5.1.1 patch or roll into v2.5.2?
 
 **Update**:
-- [ ] `prd-v2.3-scale.md` — ship checklist vs actual scope; note v2.3.1 shipped; v2.3.2/2.3.3 → v2.5.1/2.5.2
-- [x] `CHANGELOG.md` + public docs — README + `docs/index.md` aligned with shipped surface (**v2.5.0**, 2026-06-24)
-- [x] `apps/web` homepage / WhatsNew — hero badge, ribbon, and metadata reflect **v2.5.0** MCP Auth Bridge
+- [ ] `prd-v2.3-scale.md` — ship checklist vs actual scope; note v2.3.1 shipped; v2.3.2/2.3.3 → v2.5.2/2.5.3 (Adapter Lab II slipped from v2.5.1)
+- [x] `CHANGELOG.md` + public docs — README + `docs/index.md` + `docs/migration.md` aligned with shipped surface (**v2.5.1**, 2026-06-26)
+- [x] `apps/web` homepage / WhatsNew — ribbon reflects **v2.5.1**; MCP Auth Bridge kept as Hero/marquee (v2.5.1 is a quality patch, not a feature release)
 - [ ] Optional: `engineering/lessons-learned/v2.3.0-retro.md` — short retrospective (hypothesis: adoption flywheel vs 500-agent trigger)
 - [ ] Feed learnings into [prd-v2.5-roadmap.md](./prd/prd-v2.5-roadmap.md) and [prd-v2.5.0-mcp-auth-bridge.md](./prd/prd-v2.5.0-mcp-auth-bridge.md)
 
@@ -229,6 +232,7 @@ Track actual vs estimated to improve future planning:
 | v2.4.0 | — | — | Shipped 2026-05-24 |
 | v2.4.1 | — | ~0.5 day (S2) | Shipped 2026-06-14 (security patch) |
 | v2.5.0 | — | — | Shipped 2026-06-24 (MCP Auth Bridge; S0–S5) |
+| v2.5.1 | 0.5 day (S4 est.) | ~1.5 days (S4 + code review fixes) | Shipped 2026-06-26 (code quality patch; thermo-nuclear audit S0–S3 + P0 fixes + PR #244 review) |
 
 > [!NOTE]
 > Estimates updated after Lean Marketplace pivot: v1.2 reduced (6→4 sprints), v1.3 reduced (4→3 sprints), v2.0 reduced (6→4 sprints). Fill **Actual** when you reconcile from sprint notes.
@@ -263,3 +267,4 @@ Track actual vs estimated to improve future planning:
 | 2026-05-02 | **Archive checklists**: All CP-1–CP-6 items set to **`[x]`** (milestone closed); CP-7 remains **`[ ]`** until post–v2.3.0 review. |
 | 2026-06-22 | **v2.5.x PRD train**: Rescoped adoption PRD → v2.5.0–v2.5.3; v2.3.2/2.3.3 → v2.5.1/2.5.2; deprecated `prd-v2.4-adoption.md`. |
 | 2026-06-24 | **v2.5.0 ship + doc sync**: Status roll-up for MCP Auth Bridge; README, `docs/index.md`, AGENTS.md aligned with **2.5.0**; CP-7 partial closure updated. |
+| 2026-06-26 | **v2.5.1 ship + doc sync**: Status roll-up for the code quality patch (thermo-nuclear audit S0–S3 + six P0 fixes); README, `docs/index.md`, `docs/migration.md`, AGENTS.md, `apps/web` WhatsNewRibbon, `engineering/tasks/README.md` aligned with **2.5.1**; Adapter Lab II slipped to v2.5.2; follow-ups filed (#245–#249); velocity row for v2.5.1 added. |

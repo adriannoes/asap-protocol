@@ -22,13 +22,13 @@ type Pill = {
 };
 
 const CHANGELOG_URL =
-  'https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#250---2026-06-24';
+  'https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#251---2026-06-25';
 const DOCS_MCP_AUTH_BRIDGE =
   'https://github.com/adriannoes/asap-protocol/blob/main/docs/adapters/mcp-auth-bridge.md';
 const DOCS_MCP_INTEGRATION =
   'https://github.com/adriannoes/asap-protocol/blob/main/docs/mcp-integration.md';
-const DOCS_MIGRATION_250 =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md#upgrading-from-v241-to-v250';
+const DOCS_MIGRATION_251 =
+  'https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md#upgrading-from-v250-to-v251';
 const EXAMPLE_MCP_AUTH_BRIDGE =
   'https://github.com/adriannoes/asap-protocol/tree/main/examples/mcp_auth_bridge';
 const DOCS_TS_SDK =
@@ -77,7 +77,7 @@ const PILLS: Pill[] = [
   },
   {
     label: 'Migration',
-    href: DOCS_MIGRATION_250,
+    href: DOCS_MIGRATION_251,
     icon: BookOpen,
     external: true,
     dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsMigration250,
@@ -94,7 +94,7 @@ const PILLS: Pill[] = [
 export function WhatsNewRibbon() {
   return (
     <aside
-      aria-label="What's new in ASAP Protocol v2.5.0"
+      aria-label="What's new in ASAP Protocol v2.5.1"
       className="w-full border-y border-zinc-900 bg-zinc-950"
     >
       <div className="container mx-auto flex max-w-5xl flex-col gap-4 px-4 py-8 md:flex-row md:items-center md:gap-4 md:px-6 md:py-10">
@@ -102,10 +102,10 @@ export function WhatsNewRibbon() {
           <Sparkles className="h-4 w-4 shrink-0 text-indigo-400" aria-hidden />
           <div className="flex flex-col">
             <span className="font-mono text-xs uppercase tracking-wider text-indigo-400">
-              What&apos;s new in v2.5.0
+              What&apos;s new in v2.5.1
             </span>
             <span className="text-xs text-zinc-500">
-              MCP Auth Bridge — June 2026
+              Code quality patch — June 2026
             </span>
           </div>
         </div>
