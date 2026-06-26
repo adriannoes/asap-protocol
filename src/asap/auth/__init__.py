@@ -22,6 +22,7 @@ Public exports:
 """
 
 from asap.auth.agent_jwt import (
+    HOST_REVOKED_ERROR,
     create_agent_jwt,
     create_host_jwt,
     verify_agent_jwt,
@@ -56,6 +57,7 @@ __all__ = [
     "SCOPE_ADMIN",
     "SCOPE_EXECUTE",
     "SCOPE_READ",
+    "HOST_REVOKED_ERROR",
     "Token",
     "TokenInfo",
     "TokenIntrospector",

@@ -504,6 +504,11 @@ class ASAPClient(_SendMixin, _DiscoveryMixin):
         if self._mtls_config is not None:
             ws_ssl_context = create_ssl_context(self._mtls_config, purpose="client")
         if self._use_websocket:
+            # Carry the HTTP ``auth_token`` onto the WS handshake so OAuth2-only
+            # deployments don't reject the connection with 4401 (CR#3).
+            ws_extra_headers: dict[str, str] | None = None
+            if self._auth_token:
+                ws_extra_headers = {"Authorization": f"Bearer {self._auth_token}"}
             self._ws_transport = WebSocketTransport(
                 receive_timeout=self.timeout,
                 on_message=self._on_message,
@@ -511,6 +516,7 @@ class ASAPClient(_SendMixin, _DiscoveryMixin):
                 max_ack_retries=DEFAULT_MAX_ACK_RETRIES,
                 circuit_breaker=self._circuit_breaker,
                 ssl_context=ws_ssl_context,
+                extra_headers=ws_extra_headers,
             )
             await self._ws_transport.connect(self._ws_url)
             # WebSocket mode still uses HTTP client for manifest fetches; small pool is enough.

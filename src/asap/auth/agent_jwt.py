@@ -45,6 +45,11 @@ CAPABILITIES_CLAIM = "capabilities"
 DEFAULT_HOST_JWT_TTL_SECONDS = 300
 AGENT_JWT_TTL_SECONDS = 60
 
+# Canonical error string surfaced on ``JwtVerifyResult`` when the resolved host is
+# in ``revoked`` status. Shared with ``asap.transport._auth_helpers`` so the 401/403
+# decision does not hinge on a fragile literal match (CR#7).
+HOST_REVOKED_ERROR = "host revoked"
+
 # Clock skew allowance for ``iat`` checks (seconds).
 _IAT_MAX_FUTURE_SKEW_SECONDS = 60
 
@@ -271,7 +276,7 @@ async def verify_host_jwt(
 
     host = await host_store.get_by_public_key(str(iss))
     if host is not None and host.status == "revoked":
-        return JwtVerifyResult(ok=False, error="host revoked")
+        return JwtVerifyResult(ok=False, error=HOST_REVOKED_ERROR)
 
     return JwtVerifyResult(ok=True, claims=claims, host=host)
 
@@ -334,7 +339,7 @@ async def verify_agent_jwt(
     if host is None:
         return JwtVerifyResult(ok=False, error="unknown host for iss")
     if host.status == "revoked":
-        return JwtVerifyResult(ok=False, error="host revoked")
+        return JwtVerifyResult(ok=False, error=HOST_REVOKED_ERROR)
     if host.host_id != agent.host_id:
         return JwtVerifyResult(ok=False, error="agent host_id does not match iss host")
 

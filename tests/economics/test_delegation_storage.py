@@ -701,3 +701,76 @@ class TestRevokeCascadeAtomic:
         # And the originally-seeded tree was revoked consistently.
         assert await memory_storage.is_revoked("parent") is True
         assert await memory_storage.is_revoked("child") is True
+
+    @pytest.mark.asyncio
+    async def test_revoke_cascade_sqlite_serializes_concurrent_register_issued(
+        self,
+        sqlite_storage: SQLiteDelegationStorage,
+    ) -> None:
+        """SQLite cascade holds ``BEGIN IMMEDIATE`` so a concurrent issue cannot interleave.
+
+        CR#6: ``register_issued`` commits on a separate connection; without write
+        serialization a concurrent issuer could insert a child that escapes the
+        cascade's snapshot. ``BEGIN IMMEDIATE`` acquires the write lock at
+        transaction start, so the concurrent ``register_issued`` is delayed until
+        the cascade commits. The new child is observable afterwards (not lost)
+        and the originally-seeded tree is revoked consistently.
+        """
+        await sqlite_storage.register_issued(
+            "parent", "urn:asap:agent:root", delegate_urn="urn:asap:agent:mid"
+        )
+        await sqlite_storage.register_issued(
+            "child", "urn:asap:agent:mid", delegate_urn="urn:asap:agent:leaf"
+        )
+
+        events: list[str] = []
+        cascade_in_transaction = asyncio.Event()
+        cascade_can_commit = asyncio.Event()
+        original_revoke_on_conn = sqlite_storage._revoke_on_conn  # noqa: SLF001
+
+        async def _gated_revoke_on_conn(
+            conn: object, token_id: str, reason: str | None = None
+        ) -> None:
+            # Signal that the cascade's transaction is open, then wait for the
+            # concurrent register_issued to attempt (and block on the write lock)
+            # before completing the cascade.
+            if token_id == "parent":
+                cascade_in_transaction.set()
+                await asyncio.wait_for(cascade_can_commit.wait(), timeout=5.0)
+            await original_revoke_on_conn(conn, token_id, reason)
+
+        sqlite_storage._revoke_on_conn = _gated_revoke_on_conn  # noqa: SLF001
+
+        async def _issue_new_child() -> None:
+            # Wait until the cascade holds the write lock, then issue a new child.
+            # This register_issued must block on BEGIN IMMEDIATE until the cascade commits.
+            await cascade_in_transaction.wait()
+            await sqlite_storage.register_issued(
+                "child_new",
+                "urn:asap:agent:mid",
+                delegate_urn="urn:asap:agent:leaf_new",
+            )
+            events.append("issue:child_new")
+
+        async def _run_cascade() -> None:
+            await sqlite_storage.revoke_cascade("parent", reason="concurrent test")
+            events.append("cascade:committed")
+
+        cascade_task = asyncio.create_task(_run_cascade())
+        issue_task = asyncio.create_task(_issue_new_child())
+        # Give the concurrent issue a chance to start and block on the write lock.
+        await asyncio.sleep(0.05)
+        assert "issue:child_new" not in events, (
+            "register_issued completed while the cascade held the write lock "
+            "(BEGIN IMMEDIATE did not serialize)"
+        )
+        cascade_can_commit.set()
+        await asyncio.gather(cascade_task, issue_task)
+
+        # The new child was issued and is observable (not lost).
+        assert await sqlite_storage.get_delegator("child_new") == "urn:asap:agent:mid"
+        # Serialization: the cascade committed before the issue completed.
+        assert events.index("cascade:committed") < events.index("issue:child_new")
+        # The originally-seeded tree was revoked consistently.
+        assert await sqlite_storage.is_revoked("parent") is True
+        assert await sqlite_storage.is_revoked("child") is True

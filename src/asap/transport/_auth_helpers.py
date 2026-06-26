@@ -8,6 +8,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 
 from asap.auth.agent_jwt import (
+    HOST_REVOKED_ERROR,
     JtiReplayCache,
     JwtVerifyResult,
     verify_host_jwt,
@@ -71,10 +72,12 @@ async def verify_host_bearer(
     )
     if not result.ok:
         # ``verify_host_jwt`` short-circuits revoked hosts to ``ok=False`` with
-        # ``error="host revoked"`` before we can inspect ``result.host``; surface
-        # that as 403 (not 401) so a revoked HOST is rejected with the same
-        # status the strict verifier returned for the agent-identity routes.
-        if require_active_host and result.error == "host revoked":
+        # ``error == HOST_REVOKED_ERROR`` before we can inspect ``result.host``
+        # (which is left ``None``); surface that as 403 (not 401) so a revoked
+        # HOST is rejected with the same status the strict verifier returned for
+        # the agent-identity routes. The shared constant avoids a fragile literal
+        # match across modules (CR#7).
+        if require_active_host and result.error == HOST_REVOKED_ERROR:
             return None, JSONResponse(status_code=403, content={"detail": "host revoked"})
         return None, JSONResponse(
             status_code=401,

@@ -108,6 +108,7 @@ class WebSocketTransport(_RecvDispatch, _AckRetransmit):
         circuit_breaker: CircuitBreaker | None = None,
         ack_check_interval: float = 5.0,
         ssl_context: ssl.SSLContext | None = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> None:
         self._ws: WebSocketClientProtocol | None = None
         self._receive_timeout = receive_timeout
@@ -136,6 +137,9 @@ class WebSocketTransport(_RecvDispatch, _AckRetransmit):
         self._connected_event: asyncio.Event = asyncio.Event()
         self._connect_error: Exception | None = None
         self._ssl_context = ssl_context
+        # Headers applied to every WS handshake (e.g. ``Authorization: Bearer …``)
+        # so OAuth2-only deployments don't reject the connection with 4401 (CR#3).
+        self._extra_headers: dict[str, str] = dict(extra_headers) if extra_headers else {}
         self._connect_lock = asyncio.Lock()
 
     async def _do_connect(self, url: str) -> None:
@@ -154,6 +158,8 @@ class WebSocketTransport(_RecvDispatch, _AckRetransmit):
         }
         if self._ssl_context is not None:
             connect_kwargs["ssl"] = self._ssl_context
+        if self._extra_headers:
+            connect_kwargs["extra_headers"] = self._extra_headers
         self._ws = cast(Any, await _shim.websockets.connect(url, **connect_kwargs))
         if self._closed:
             await self._close_ws()

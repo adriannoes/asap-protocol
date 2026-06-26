@@ -256,15 +256,23 @@ class AsyncSqliteRepository:
 
     @asynccontextmanager
     async def transaction(self) -> AsyncIterator[aiosqlite.Connection]:
-        """Yield one connection inside BEGIN/COMMIT; ROLLBACK on any exception.
+        """Yield one connection inside BEGIN IMMEDIATE/COMMIT; ROLLBACK on any exception.
 
         Use for atomic multi-step operations (e.g. cascade revocation). The
         caller runs reads/writes directly on the yielded ``conn``; the context
         manager owns the transaction boundary. For ``:memory:`` the persistent
         connection is reused (so the transaction sees prior writes).
+
+        ``BEGIN IMMEDIATE`` acquires the SQLite write lock at transaction start
+        (rather than deferring it to the first write). This serializes the
+        transaction against concurrent ``execute()`` writes on separate
+        connections (e.g. ``register_issued`` during a ``revoke_cascade``), so a
+        concurrent issuer cannot insert a child that escapes the cascade's
+        snapshot (CR#6). ``busy_timeout=15000`` (set in ``_apply_wal_pragmas``)
+        makes a contended ``BEGIN IMMEDIATE`` wait instead of failing fast.
         """
         async with self._connect() as conn:
-            await conn.execute("BEGIN")
+            await conn.execute("BEGIN IMMEDIATE")
             try:
                 yield conn
                 await conn.commit()

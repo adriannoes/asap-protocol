@@ -109,6 +109,19 @@ class _RecvDispatch:
     def _resolve_error_frame(self, data: dict[str, Any], request_id: Any) -> None:
         """Set the exception on the pending future matching *request_id*, if any."""
         err = data["error"]
+        # Defend against malformed frames where ``error`` is not a dict (e.g. a
+        # non-JSON-RPC HTTP body forwarded over WS) so the recv loop keeps running
+        # instead of crashing with ``AttributeError`` (CR#2 defensive guard).
+        if not isinstance(err, dict):
+            exc = WebSocketRemoteError(-32603, str(err) if err else "Unknown error")
+            if request_id is not None and request_id in self._pending:
+                future = self._pending.pop(request_id, None)
+                self._pending_request_ids.pop(request_id, None)
+                if future is not None and not future.done():
+                    future.set_exception(exc)
+            else:
+                logger.warning("asap.websocket.recv_loop_malformed_error_frame", error=str(err))
+            return
         code = err.get("code", -32603)
         msg = err.get("message", "Unknown error")
         exc = WebSocketRemoteError(code, msg, err.get("data"))
