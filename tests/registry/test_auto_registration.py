@@ -924,6 +924,43 @@ def test_register_agent_manifest_fetch_connect_error_502(
     assert resp.status_code == 502
 
 
+def test_register_agent_manifest_validation_error_returns_400(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Invalid manifest schema must map to HTTP 400, not an unhandled 500."""
+
+    async def _fake_fetch(_client: object, _url: str) -> Manifest:
+        raise ManifestValidationError(
+            "capabilities is required",
+            field="capabilities",
+        )
+
+    monkeypatch.setattr(
+        "asap.registry.auto_registration.fetch_manifest_at_url",
+        _fake_fetch,
+    )
+
+    cfg = AutoRegistrationConfig(
+        oauth_claims_dependency=_oauth_bypass,
+        run_compliance=lambda _b: _passing_report(),
+        open_pull_request=lambda _e, _u: BotPRResult(pr_url="x", branch_name="b"),
+    )
+    app = FastAPI()
+    app.state.registration_limiter = create_test_limiter(
+        ["100000/hour"],
+        key_func=registration_token_key,
+    )
+    app.include_router(create_auto_registration_router(cfg))
+    client = TestClient(app)
+    resp = client.post(
+        "/registry/agents",
+        json={"manifest_url": "https://example.com/invalid.json"},
+        headers={"Authorization": "Bearer schema"},
+    )
+    assert resp.status_code == 400
+    assert "capabilities" in resp.json()["detail"]
+
+
 def test_register_agent_without_receipt_cache_still_ok(
     manifest_https: Manifest,
     monkeypatch: pytest.MonkeyPatch,
