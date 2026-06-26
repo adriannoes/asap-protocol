@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 import httpx
 from pydantic import ValidationError
 
-from asap.adapters.mcp.errors import (
+from asap.mcp.auth.errors import (
     AUTH_REQUIRED,
     CAPABILITY_DENIED,
     CONSTRAINT_VIOLATION,

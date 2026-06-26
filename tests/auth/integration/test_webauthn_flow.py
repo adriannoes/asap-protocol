@@ -59,8 +59,8 @@ async def test_webauthn_verifier_registration_then_assertion_smoke() -> None:
 
 @pytest.mark.asyncio
 async def test_webauthn_self_auth_verifier_matches_impl_assertion_path() -> None:
-    """``WebAuthnSelfAuthVerifier`` delegates to the same finish path as the impl."""
-    from asap.auth.webauthn import InMemoryWebAuthnCredentialStore, WebAuthnSelfAuthVerifier
+    """``WebAuthnVerifierImpl.verify`` delegates to the same finish path as the impl."""
+    from asap.auth.webauthn import InMemoryWebAuthnCredentialStore
 
     from tests.auth.test_webauthn import (
         _ASSERTION_CREDENTIAL_PUBLIC_KEY_B64,
@@ -73,11 +73,10 @@ async def test_webauthn_self_auth_verifier_matches_impl_assertion_path() -> None
 
     store = InMemoryWebAuthnCredentialStore()
     impl = _verifier_for_vectors(store)
-    verifier = WebAuthnSelfAuthVerifier(impl)
 
     cid = base64url_to_bytes(_EC2_CREDENTIAL_ID_B64)
     pk = base64url_to_bytes(_ASSERTION_CREDENTIAL_PUBLIC_KEY_B64)
     await store.save_credential("host-as", cid, pk, _ASSERTION_SIGN_COUNT_BEFORE)
     await impl.start_webauthn_assertion("host-as")
 
-    assert await verifier.verify(_AUTH_CHALLENGE_B64, _ASSERTION_EC2, host_id="host-as") is True
+    assert await impl.verify(_AUTH_CHALLENGE_B64, _ASSERTION_EC2, host_id="host-as") is True

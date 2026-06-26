@@ -164,13 +164,13 @@ def default_webauthn_verifier() -> WebAuthnVerifier:
     else:
         from asap.auth.webauthn import (
             InMemoryWebAuthnCredentialStore,
-            WebAuthnSelfAuthVerifier,
             WebAuthnVerifierImpl,
         )
 
         store = InMemoryWebAuthnCredentialStore()
-        impl = WebAuthnVerifierImpl(store, rp_id=rp_id, origin=origin)
-        verifier = WebAuthnSelfAuthVerifier(impl)
+        # WebAuthnVerifierImpl implements the WebAuthnVerifier protocol directly
+        # (verify() + __asap_performs_real_webauthn__), so no adapter wrapper.
+        verifier = WebAuthnVerifierImpl(store, rp_id=rp_id, origin=origin)
 
     _default_verifier_cache = (key, verifier)
     return verifier

@@ -352,7 +352,14 @@ class TestOutOfOrderDelivery:
 
         Simulates a scenario where responses get mixed up or delayed,
         and the client receives a response with wrong correlation ID.
+
+        Per B6/BUG #6, the client now BINDS the response correlation_id to the
+        request envelope id and rejects a mismatch (preventing request/response
+        mixup under concurrency). Previously the client accepted any non-empty
+        correlation_id and left validation to the application — that was the bug.
         """
+        from asap.transport.errors import ProtocolCorrelationError
+
         wrong_response = Envelope(
             asap_version="0.1",
             sender="urn:asap:agent:server",
@@ -379,12 +386,16 @@ class TestOutOfOrderDelivery:
             transport=httpx.MockTransport(mock_transport),
             max_retries=1,
         ) as client:
-            # Client should still return the response (correlation validation
-            # is typically done at application level, not transport)
-            response = await client.send(sample_request_envelope)
-            assert response.payload_type == "task.response"
-            # Correlation ID mismatch - application should validate
-            assert response.correlation_id != sample_request_envelope.id
+            # B6: the client must REJECT a response whose correlation_id does not
+            # bind to the request id, rather than accepting it and leaving the
+            # mismatch for the application to detect.
+            with pytest.raises(ProtocolCorrelationError) as exc_info:
+                await client.send(sample_request_envelope)
+
+            message = str(exc_info.value)
+            assert "correlation_id" in message
+            assert repr(sample_request_envelope.id) in message
+            assert repr("completely_different_id") in message
 
     async def test_stale_response_ignored(self) -> None:
         """Test handling of stale responses from previous requests.

@@ -24,11 +24,13 @@ from asap.mcp.protocol import (
     TextContent,
     Tool,
 )
-from asap.mcp.server import MCPServer
+from asap.mcp.server import MCPServer, ToolMetadata, ToolRegistration
 
 __all__ = [
     "MCPClient",
     "MCPServer",
+    "ToolMetadata",
+    "ToolRegistration",
     "MCP_PROTOCOL_VERSION",
     "CallToolRequestParams",
     "CallToolResult",

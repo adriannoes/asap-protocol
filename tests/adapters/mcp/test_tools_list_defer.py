@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from asap.adapters.mcp import protect_server
-from asap.adapters.mcp.config import MCPAuthConfig
+from asap.mcp.auth import protect_server
+from asap.mcp.auth.config import MCPAuthConfig
 from asap.auth.capabilities import CapabilityDefinition, CapabilityGrant, CapabilityRegistry
 from asap.auth.identity import (
     AgentSession,

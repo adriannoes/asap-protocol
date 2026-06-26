@@ -23,6 +23,10 @@ from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
 from asap.models.ids import generate_id
 from asap.models.payloads import TaskRequest, TaskResponse
+
+# No circular dependency: asap.transport.challenge imports only asap.discovery and
+# asap.models, never asap.adapters.openapi — safe to import at module top.
+from asap.transport.challenge import format_www_authenticate_asap
 from asap.transport.handlers import AsyncHandler
 
 logger = logging.getLogger(__name__)
@@ -68,7 +72,12 @@ class OpenAPIInvocationError(FatalError):
 
 
 class OpenAPIPathParameterError(FatalError):
-    """Path template could not be fully substituted from *args*."""
+    """Path template could not be fully substituted from *args*.
+
+    Construction is pure (side-effect-free); use :meth:`for_missing` or
+    :meth:`for_invalid` to enforce the "exactly one of missing/invalid" invariant
+    at the raise-site rather than from ``__init__``.
+    """
 
     def __init__(
         self,
@@ -79,21 +88,22 @@ class OpenAPIPathParameterError(FatalError):
     ) -> None:
         miss = list(missing) if missing else []
         inv = list(invalid) if invalid else []
-        if bool(miss) == bool(inv):
-            raise ValueError(
-                "OpenAPIPathParameterError requires exactly one of missing= or invalid=."
-            )
         if miss:
             message = (
                 f"Missing path parameter(s) for template {path_template!r}: {', '.join(miss)}."
             )
             details: dict[str, Any] = {"path_template": path_template, "missing": miss}
-        else:
+        elif inv:
             message = (
                 f"Invalid path parameter value(s) for template {path_template!r}: "
                 f"{', '.join(inv)} (must not be None, empty, or whitespace-only)."
             )
             details = {"path_template": path_template, "invalid": inv}
+        else:
+            # No validation here: pure construction. Ambiguous invocations get a
+            # neutral message; the invariant is enforced by the from_* factories.
+            message = f"Path parameter error for template {path_template!r}."
+            details = {"path_template": path_template}
         super().__init__(
             _PATH_PARAMS,
             message,
@@ -103,6 +113,20 @@ class OpenAPIPathParameterError(FatalError):
         self.path_template = path_template
         self.missing = miss
         self.invalid = inv
+
+    @classmethod
+    def for_missing(cls, path_template: str, missing: list[str]) -> OpenAPIPathParameterError:
+        """Build an error for unsubstituted path placeholders (requires non-empty *missing*)."""
+        if not missing:
+            raise ValueError("for_missing requires a non-empty missing= list.")
+        return cls(path_template=path_template, missing=missing)
+
+    @classmethod
+    def for_invalid(cls, path_template: str, invalid: list[str]) -> OpenAPIPathParameterError:
+        """Build an error for empty/None/whitespace path values (requires non-empty *invalid*)."""
+        if not invalid:
+            raise ValueError("for_invalid requires a non-empty invalid= list.")
+        return cls(path_template=path_template, invalid=invalid)
 
 
 def index_capabilities(caps: Iterable[OpenAPICapability]) -> dict[str, OpenAPICapability]:
@@ -283,7 +307,7 @@ def _fill_path_template(path_template: str, path_params: Mapping[str, Any]) -> s
     names_order = list(dict.fromkeys(raw_names))
     missing = [n for n in names_order if n not in path_params]
     if missing:
-        raise OpenAPIPathParameterError(path_template=path_template, missing=missing)
+        raise OpenAPIPathParameterError.for_missing(path_template, missing)
     invalid_names = [
         n
         for n in names_order
@@ -291,7 +315,7 @@ def _fill_path_template(path_template: str, path_params: Mapping[str, Any]) -> s
         or (isinstance(path_params[n], str) and cast(str, path_params[n]).strip() == "")
     ]
     if invalid_names:
-        raise OpenAPIPathParameterError(path_template=path_template, invalid=invalid_names)
+        raise OpenAPIPathParameterError.for_invalid(path_template, invalid_names)
     out = path_template
     for name in names_order:
         raw = path_params[name]
@@ -437,8 +461,6 @@ class OpenAPIUpstreamHandler:
                 "body_snippet": snippet,
             }
             if status == 401 and self._asap_challenge_discovery_url:
-                from asap.transport.challenge import format_www_authenticate_asap
-
                 details["_www_authenticate_asap"] = format_www_authenticate_asap(
                     self._asap_challenge_discovery_url,
                 )

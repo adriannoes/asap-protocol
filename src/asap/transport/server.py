@@ -43,52 +43,33 @@ Example:
 
 from __future__ import annotations
 
-import asyncio
 import importlib
-import json
 import os
 import sys
 import threading
 import time
-import traceback
+from collections.abc import AsyncIterator  # noqa: F401  (re-exported for compat)
 from contextlib import asynccontextmanager, suppress
-from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable
 
-from fastapi import FastAPI, HTTPException, Request, WebSocket
-from fastapi.responses import JSONResponse, PlainTextResponse, Response
-from starlette.responses import StreamingResponse
-from opentelemetry import context
-from pydantic import ValidationError
+from fastapi import FastAPI, WebSocket
+from opentelemetry import context  # noqa: F401  (re-exported for compat)
 
-from asap.discovery import health as discovery_health
-from asap.discovery import wellknown
-from asap.errors import (
-    ASAPError,
-    InvalidNonceError,
-    InvalidTimestampError,
-    ThreadPoolExhaustedError,
-    jsonrpc_error_data_for_asap_exception,
-)
 from asap.models.constants import MAX_REQUEST_SIZE
 from asap.models.entities import Capability, Endpoint, Manifest, Skill
 from asap.models.envelope import Envelope
-from asap.observability import (
-    get_logger,
-    get_metrics,
-    is_debug_log_mode,
-    is_debug_mode,
-    sanitize_for_logging,
-)
-from asap.observability.tracing import (
-    configure_tracing,
-    extract_and_activate_envelope_trace_context,
-    inject_envelope_trace_context,
-)
-from asap.utils.sanitization import sanitize_nonce
-from asap.auth import OAuth2Config, OAuth2Middleware
+from asap.observability import get_logger, is_debug_mode
+
+# ``is_debug_log_mode`` is imported (and kept) solely so tests can patch
+# ``asap.transport.server.is_debug_log_mode``; the handler reads it via
+# ``_server.is_debug_log_mode`` (attribute lookup) to stay patchable across
+# the ``_request_handler`` module boundary. Re-exported explicitly for mypy
+# ``no_implicit_reexport`` and for ``_request_handler``'s ``_server`` access.
+from asap.observability import is_debug_log_mode as is_debug_log_mode
+from asap.observability.tracing import configure_tracing
+from asap.auth import JWKSValidator, OAuth2Config, OAuth2Middleware
 from asap.auth.agent_jwt import JtiReplayCache
 from asap.auth.approval import A2HApprovalChannel, ApprovalStore, InMemoryApprovalStore
 from asap.auth.self_auth import (
@@ -117,53 +98,29 @@ from asap.transport.rate_limit import (
 )
 from asap.observability.metrics import MetricsCollector
 from asap.transport.executors import BoundedExecutor
-from asap.transport.handlers import (
-    HandlerNotFoundError,
-    HandlerRegistry,
-    create_default_registry,
-)
-from asap.transport.jsonrpc import (
-    ASAP_METHOD,
-    DEFAULT_MAX_BATCH_SIZE,
-    INTERNAL_ERROR,
-    INVALID_PARAMS,
-    INVALID_REQUEST,
-    METHOD_NOT_FOUND,
-    PARSE_ERROR,
-    JsonRpcError,
-    JsonRpcErrorResponse,
-    JsonRpcRequest,
-    JsonRpcResponse,
-)
-from asap.transport.codecs import lambda_codec
-from asap.transport.codecs.lambda_codec import LAMBDA_CONTENT_TYPE
-from asap.transport.compression import (
-    decompress_payload,
-    get_supported_encodings,
-)
+from asap.transport.handlers import HandlerRegistry, create_default_registry
+from asap.transport.jsonrpc import DEFAULT_MAX_BATCH_SIZE, JsonRpcRequest
 from asap.state.metering import MeteringStore
 from asap.state.snapshot import SnapshotStore
-from asap.economics.audit import AuditEntry, AuditStore
+from asap.economics.audit import AuditStore
 from asap.economics.sla_storage import SLAStorage
-from asap.economics.storage import MeteringStorage, metering_storage_adapter
+from asap.economics.storage import MeteringStorage
+from asap.state.metering import MeteringStorageBridge
 from asap.transport.agent_routes import create_agent_identity_router
 from asap.transport.capability_routes import create_capability_router
 from asap.transport.escalation_routes import create_escalation_router
 from asap.transport.delegation_api import create_delegation_router
 from asap.transport.sla_api import create_sla_router
 from asap.transport.usage_api import create_usage_router
+from asap.transport.routes import (
+    create_audit_router,
+    create_health_router,
+    create_jsonrpc_router,
+    create_websocket_router,
+)
 from asap.state.stores import create_snapshot_store
-from asap.transport.validators import (
-    InMemoryNonceStore,
-    NonceStore,
-    validate_envelope_nonce,
-    validate_envelope_timestamp,
-)
-from asap.transport.websocket import (
-    WS_CLOSE_GOING_AWAY,
-    WS_CLOSE_REASON_SHUTDOWN,
-    handle_websocket_connection,
-)
+from asap.transport.validators import InMemoryNonceStore, NonceStore
+from asap.transport.websocket import WS_CLOSE_GOING_AWAY, WS_CLOSE_REASON_SHUTDOWN
 from asap.transport.mtls import MTLSConfig
 
 if TYPE_CHECKING:
@@ -171,12 +128,6 @@ if TYPE_CHECKING:
 
 # Module logger
 logger = get_logger(__name__)
-
-# Type variable for handler result pattern
-T = TypeVar("T")
-HandlerResult = tuple[Optional[T], Optional[JSONResponse]]
-
-EnvelopeOrError = Union[JSONResponse, tuple["Envelope", str]]
 
 # Environment variable to enable handler hot reload (development)
 ENV_HOT_RELOAD = "ASAP_HOT_RELOAD"
@@ -270,1313 +221,519 @@ class RequestContext:
     rpc_request: JsonRpcRequest
 
 
-class ASAPRequestHandler:
-    """Handler for processing ASAP protocol requests.
+@dataclass
+class PreparedRequest:
+    """Result of the shared request-preparation pipeline.
 
-    Encapsulates the logic for:
-    - Parsing and validating JSON-RPC requests
-    - Authenticating requests based on manifest configuration
-    - Validating sender identity
-    - Dispatching to registered handlers
-    - Building error responses
-    - Recording metrics
-
-    This class is instantiated by create_app() and used to handle
-    incoming requests on the /asap endpoint.
+    Produced by :meth:`ASAPRequestHandler._prepare_request`, which runs the
+    parse → auth → envelope → trace → sender → timestamp → nonce gate shared
+    by ``handle_message``, ``_prepare_streaming_request`` and the WebSocket
+    dispatch path (``asap.transport.ws._dispatch``). The caller owns detaching
+    ``trace_token`` once it is done with the request (the pipeline detaches it
+    on its own error returns).
 
     Attributes:
-        registry: Handler registry for payload dispatch
-        manifest: Agent manifest for context
-        auth_middleware: Optional authentication middleware
-
-    Example:
-        >>> handler = ASAPRequestHandler(RegistryHolder(registry), manifest, auth_middleware)
-        >>> response = await handler.handle_message(request)
+        ctx: Request-scoped context (request id, metrics, rpc_request)
+        envelope: Validated ASAP envelope extracted from rpc_request params
+        authenticated_agent_id: Agent id from auth middleware, or None
+        trace_token: OpenTelemetry token to detach when processing ends, or None
     """
 
-    def __init__(
-        self,
-        registry_holder: RegistryHolder,
-        manifest: Manifest,
-        auth_middleware: AuthenticationMiddleware | None = None,
-        max_request_size: int = MAX_REQUEST_SIZE,
-        nonce_store: NonceStore | None = None,
-    ) -> None:
-        self.registry_holder = registry_holder
-        self.manifest = manifest
-        self.auth_middleware = auth_middleware
-        self.max_request_size = max_request_size
-        self.nonce_store = nonce_store
-
-    def _normalize_payload_type_for_metrics(self, payload_type: str) -> str:
-        if self.registry_holder.registry.has_handler(payload_type):
-            return payload_type
-        return "other"
-
-    def build_error_response(
-        self,
-        code: int,
-        data: dict[str, Any] | None = None,
-        request_id: str | int | None = None,
-    ) -> JSONResponse:
-        error_response = JsonRpcErrorResponse(
-            error=JsonRpcError.from_code(code, data=data),
-            id=request_id,
-        )
-        return JSONResponse(status_code=200, content=error_response.model_dump())
-
-    def build_jsonrpc_error_for_asap_exception(
-        self,
-        exc: ASAPError,
-        *,
-        request_id: str | int | None,
-        extra_data: dict[str, Any] | None = None,
-    ) -> JSONResponse:
-        """JSON-RPC error with ASAP *rpc_code* top-level and recovery hints in *data*."""
-        data = jsonrpc_error_data_for_asap_exception(exc)
-        if extra_data:
-            data = {**data, **extra_data}
-        extra_headers: dict[str, str] = {}
-        details = data.get("details")
-        if isinstance(details, dict):
-            wa = details.pop("_www_authenticate_asap", None)
-            if isinstance(wa, str):
-                extra_headers["WWW-Authenticate"] = wa
-        payload = JsonRpcErrorResponse(
-            error=JsonRpcError(code=exc.rpc_code, message=exc.message, data=data),
-            id=request_id,
-        )
-        if extra_headers:
-            return JSONResponse(
-                status_code=200, content=payload.model_dump(), headers=extra_headers
-            )
-        return JSONResponse(status_code=200, content=payload.model_dump())
-
-    def record_error_metrics(
-        self,
-        metrics: MetricsCollector,
-        payload_type: str,
-        error_type: str,
-        duration_seconds: float,
-    ) -> None:
-        # Normalize payload_type to prevent cardinality explosion
-        normalized_payload_type = self._normalize_payload_type_for_metrics(payload_type)
-        metrics.increment_counter(
-            "asap_requests_total",
-            {"payload_type": normalized_payload_type, "status": "error"},
-        )
-        metrics.increment_counter(
-            "asap_requests_error_total",
-            {"payload_type": normalized_payload_type, "error_type": error_type},
-        )
-        metrics.observe_histogram(
-            "asap_request_duration_seconds",
-            duration_seconds,
-            {"payload_type": normalized_payload_type, "status": "error"},
-        )
-        # Specific error counters for observability
-        if error_type == "parse_error":
-            metrics.increment_counter("asap_parse_errors_total")
-        elif error_type == "auth_failed":
-            metrics.increment_counter("asap_auth_failures_total")
-        elif error_type == "invalid_timestamp":
-            metrics.increment_counter("asap_invalid_timestamp_total")
-        elif error_type == "invalid_nonce":
-            metrics.increment_counter("asap_invalid_nonce_total")
-        elif error_type == "sender_mismatch":
-            metrics.increment_counter("asap_sender_mismatch_total")
-        elif error_type in (
-            "invalid_envelope",
-            "missing_envelope",
-            "invalid_params",
-        ):
-            metrics.increment_counter("asap_validation_errors_total", {"reason": error_type})
-
-    def _validate_envelope(self, ctx: RequestContext) -> EnvelopeOrError:
-        rpc_request = ctx.rpc_request
-        if not isinstance(rpc_request.params, dict):
-            logger.warning(
-                "asap.request.invalid_params_type",
-                params_type=type(rpc_request.params).__name__,
-            )
-            error_response = self.build_error_response(
-                INVALID_PARAMS,
-                data={
-                    "error": "JSON-RPC 'params' must be an object",
-                    "received_type": type(rpc_request.params).__name__,
-                },
-                request_id=ctx.request_id,
-            )
-            self.record_error_metrics(
-                ctx.metrics,
-                "unknown",
-                "invalid_params",
-                time.perf_counter() - ctx.start_time,
-            )
-            return error_response
-
-        # Extract envelope from params
-        envelope_data = rpc_request.params.get("envelope")
-        if envelope_data is None:
-            logger.warning("asap.request.missing_envelope")
-            error_response = self.build_error_response(
-                INVALID_PARAMS,
-                data={"error": "Missing 'envelope' in params"},
-                request_id=ctx.request_id,
-            )
-            self.record_error_metrics(
-                ctx.metrics,
-                "unknown",
-                "missing_envelope",
-                time.perf_counter() - ctx.start_time,
-            )
-            return error_response
-
-        if not isinstance(envelope_data, dict):
-            logger.warning(
-                "asap.request.invalid_envelope_type",
-                type=type(envelope_data).__name__,
-            )
-            error_response = self.build_error_response(
-                INVALID_PARAMS,
-                data={"error": "'envelope' must be a JSON object"},
-                request_id=ctx.request_id,
-            )
-            self.record_error_metrics(
-                ctx.metrics,
-                "unknown",
-                "invalid_envelope",
-                time.perf_counter() - ctx.start_time,
-            )
-            return error_response
-
-        try:
-            envelope = Envelope(**envelope_data)
-            payload_type = envelope.payload_type
-            return envelope, payload_type
-        except ValidationError as e:
-            log_data: dict[str, Any] = {
-                "error": "Invalid envelope structure",
-                "validation_errors": e.errors(),
-            }
-            if not is_debug_mode():
-                log_data = sanitize_for_logging(log_data)
-            logger.warning("asap.request.invalid_envelope", **log_data)
-            duration_seconds = time.perf_counter() - ctx.start_time
-            self.record_error_metrics(ctx.metrics, "unknown", "invalid_envelope", duration_seconds)
-            return self.build_error_response(
-                INVALID_PARAMS,
-                data={
-                    "error": "Invalid envelope structure",
-                    "validation_errors": e.errors(),
-                },
-                request_id=ctx.request_id,
-            )
-
-    async def _dispatch_to_handler(
-        self,
-        envelope: Envelope,
-        ctx: RequestContext,
-    ) -> EnvelopeOrError:
-        """Dispatch envelope to registered handler.
-
-        Looks up and executes the handler for the envelope's payload type.
-        Handles HandlerNotFoundError and converts it to JSON-RPC error response.
-
-        Args:
-            envelope: Validated ASAP envelope
-            ctx: Request context with rpc_request, start_time, and metrics
-
-        Returns:
-            ``(envelope, payload_type)``, a :class:`JSONResponse` (503), or a JSON-RPC error
-            response for handler-not-found.
-        """
-        payload_type = envelope.payload_type
-        try:
-            response_envelope = await self.registry_holder.registry.dispatch_async(
-                envelope, self.manifest
-            )
-            return response_envelope, payload_type
-        except ThreadPoolExhaustedError as e:
-            # Thread pool exhausted - service temporarily unavailable
-            logger.warning(
-                "asap.request.thread_pool_exhausted",
-                payload_type=payload_type,
-                envelope_id=envelope.id,
-                max_threads=e.max_threads,
-                active_threads=e.active_threads,
-            )
-            # Record error metric
-            duration_seconds = time.perf_counter() - ctx.start_time
-            self.record_error_metrics(
-                ctx.metrics, payload_type, "thread_pool_exhausted", duration_seconds
-            )
-            # Return HTTP 503 Service Unavailable (not JSON-RPC error)
-            return JSONResponse(
-                status_code=503,
-                content={
-                    "error": "Service Temporarily Unavailable",
-                    "code": e.code,
-                    "rpc_code": e.rpc_code,
-                    "message": e.message,
-                    "details": e.details,
-                    "recoverable": True,
-                    "retry_after_ms": e.retry_after_ms,
-                    "fallback_action": e.fallback_action,
-                },
-            )
-        except HandlerNotFoundError as e:
-            # No handler registered for this payload type
-            logger.warning(
-                "asap.request.handler_not_found",
-                payload_type=e.payload_type,
-                envelope_id=envelope.id,
-            )
-            # Record error metric
-            duration_seconds = time.perf_counter() - ctx.start_time
-            self.record_error_metrics(
-                ctx.metrics, payload_type, "handler_not_found", duration_seconds
-            )
-            return self.build_jsonrpc_error_for_asap_exception(
-                e,
-                request_id=ctx.request_id,
-                extra_data={"error": str(e)},
-            )
-
-    async def _authenticate_request(
-        self,
-        request: Request,
-        ctx: RequestContext,
-    ) -> HandlerResult[str]:
-        if self.auth_middleware is None:
-            return None, None
-
-        try:
-            authenticated_agent_id = await self.auth_middleware.verify_authentication(request)
-            return authenticated_agent_id, None
-        except HTTPException as e:
-            # Authentication failed - return JSON-RPC error
-            logger.warning(
-                "asap.request.auth_failed",
-                status_code=e.status_code,
-                detail=e.detail,
-            )
-            # Map HTTP status to JSON-RPC error code
-            error_code = INVALID_REQUEST if e.status_code == 401 else INVALID_PARAMS
-            error_response = self.build_error_response(
-                error_code,
-                data={"error": str(e.detail), "status_code": e.status_code},
-                request_id=ctx.request_id,
-            )
-            self.record_error_metrics(
-                ctx.metrics,
-                "unknown",
-                "auth_failed",
-                time.perf_counter() - ctx.start_time,
-            )
-            return None, error_response
-
-    def _verify_sender_matches_auth(
-        self,
-        authenticated_agent_id: str | None,
-        envelope: Envelope,
-        ctx: RequestContext,
-        payload_type: str,
-    ) -> JSONResponse | None:
-        if self.auth_middleware is None:
-            return None
-
-        try:
-            self.auth_middleware.verify_sender_matches_auth(authenticated_agent_id, envelope.sender)
-            return None
-        except HTTPException as e:
-            # Sender mismatch - return JSON-RPC error
-            logger.warning(
-                "asap.request.sender_mismatch",
-                authenticated_agent=authenticated_agent_id,
-                envelope_sender=envelope.sender,
-            )
-            error_response = self.build_error_response(
-                INVALID_PARAMS,
-                data={"error": str(e.detail), "status_code": e.status_code},
-                request_id=ctx.request_id,
-            )
-            duration_seconds = time.perf_counter() - ctx.start_time
-            self.record_error_metrics(
-                ctx.metrics, payload_type, "sender_mismatch", duration_seconds
-            )
-            return error_response
-
-    def _build_success_response(
-        self,
-        response_envelope: Envelope,
-        ctx: RequestContext,
-        payload_type: str,
-        accept_lambda: bool = False,
-    ) -> Response:
-        response_envelope = inject_envelope_trace_context(response_envelope)
-        duration_seconds = time.perf_counter() - ctx.start_time
-        duration_ms = duration_seconds * 1000
-
-        # Normalize payload_type to prevent cardinality explosion
-        normalized_payload_type = self._normalize_payload_type_for_metrics(payload_type)
-
-        # Record success metrics
-        ctx.metrics.increment_counter(
-            "asap_requests_total",
-            {"payload_type": normalized_payload_type, "status": "success"},
-        )
-        ctx.metrics.increment_counter(
-            "asap_requests_success_total",
-            {"payload_type": normalized_payload_type},
-        )
-        ctx.metrics.observe_histogram(
-            "asap_request_duration_seconds",
-            duration_seconds,
-            {"payload_type": normalized_payload_type, "status": "success"},
-        )
-
-        # Log successful processing
-        logger.info(
-            "asap.request.processed",
-            envelope_id=response_envelope.id,
-            response_id=response_envelope.id,
-            trace_id=response_envelope.trace_id,
-            payload_type=payload_type,
-            duration_ms=round(duration_ms, 2),
-        )
-
-        # Wrap response in JSON-RPC
-        # JsonRpcResponse requires id to be str | int, not None
-        response_id: str | int = ctx.request_id if ctx.request_id is not None else ""
-        rpc_response = JsonRpcResponse(
-            result={"envelope": response_envelope.model_dump(mode="json")},
-            id=response_id,
-        )
-
-        if accept_lambda and lambda_codec.is_available():
-            try:
-                encoded_body = lambda_codec.encode(rpc_response.model_dump_json(by_alias=True))
-                logger.debug(
-                    "asap.server.lambda_response",
-                    envelope_id=response_envelope.id,
-                    encoded_size=len(encoded_body),
-                )
-                return Response(
-                    status_code=200,
-                    content=encoded_body,
-                    media_type=LAMBDA_CONTENT_TYPE,
-                )
-            except Exception as e:
-                logger.warning(
-                    "asap.server.lambda_encode_failed",
-                    error=str(e),
-                    error_type=type(e).__name__,
-                    exc_info=True,
-                )
-                # Fall through to JSON response
-
-        return JSONResponse(
-            status_code=200,
-            content=rpc_response.model_dump(),
-        )
-
-    def _handle_internal_error(
-        self,
-        error: Exception,
-        ctx: RequestContext,
-        payload_type: str,
-    ) -> JSONResponse:
-        duration_seconds = time.perf_counter() - ctx.start_time
-        duration_ms = duration_seconds * 1000
-
-        # Record error metrics (normalized to prevent cardinality explosion)
-        self.record_error_metrics(ctx.metrics, payload_type, "internal_error", duration_seconds)
-
-        # Always log full error server-side for diagnostics
-        logger.exception(
-            "asap.request.error",
-            error=str(error),
-            error_type=type(error).__name__,
-            duration_ms=round(duration_ms, 2),
-        )
-
-        # Production: generic error to client; debug: full error and stack trace
-        if is_debug_mode():
-            error_data: dict[str, Any] = {
-                "error": str(error),
-                "type": type(error).__name__,
-                "traceback": traceback.format_exc(),
-            }
-        else:
-            error_data = {"error": "Internal server error"}
-
-        internal_error = JsonRpcErrorResponse(
-            error=JsonRpcError.from_code(INTERNAL_ERROR, data=error_data),
-            id=ctx.request_id,
-        )
-        return JSONResponse(
-            status_code=200,
-            content=internal_error.model_dump(),
-        )
-
-    def _log_request_debug(self, rpc_request: JsonRpcRequest) -> None:
-        """Log full JSON-RPC request when ASAP_DEBUG_LOG is enabled (structured JSON)."""
-        if not is_debug_log_mode():
-            return
-        request_dict: dict[str, Any] = rpc_request.model_dump()
-        if not is_debug_mode():
-            request_dict = sanitize_for_logging(request_dict)
-        logger.info("asap.request.debug_request", request_json=request_dict)
-
-    def _log_response_debug(self, response: Response) -> None:
-        """Log full response when ASAP_DEBUG_LOG is enabled (structured JSON)."""
-        if not is_debug_log_mode():
-            return
-        try:
-            body_bytes = response.body
-            # Handle both bytes and memoryview
-            if isinstance(body_bytes, memoryview):
-                body_bytes = body_bytes.tobytes()
-            response_dict: dict[str, Any] = json.loads(body_bytes.decode("utf-8"))
-        except (ValueError, AttributeError):
-            response_dict = {"_raw": "(unable to decode response body)"}
-        if not is_debug_mode():
-            response_dict = sanitize_for_logging(response_dict)
-        logger.info(
-            "asap.request.debug_response",
-            status_code=response.status_code,
-            response_json=response_dict,
-        )
-
-    async def _parse_and_validate_request(
-        self,
-        request: Request,
-    ) -> HandlerResult[JsonRpcRequest]:
-        # Parse JSON body
-        try:
-            body = await self.parse_json_body(request)
-        except HTTPException as e:
-            # HTTPException (e.g., 413 Payload Too Large) should be returned directly
-            # Don't convert to JSON-RPC error response
-            from fastapi.responses import JSONResponse
-
-            return None, JSONResponse(
-                status_code=e.status_code,
-                content={"detail": e.detail},
-                headers=e.headers if hasattr(e, "headers") else None,
-            )
-        except ValueError as e:
-            # Invalid JSON - return parse error
-            error_response = self.build_error_response(
-                PARSE_ERROR,
-                data={"error": str(e)},
-                request_id=None,
-            )
-            # Create temporary context for metrics (before we have rpc_request)
-            temp_metrics = get_metrics()
-            self.record_error_metrics(temp_metrics, "unknown", "parse_error", 0.0)
-            return None, error_response
-
-        if not isinstance(body, dict):
-            error_response = self.build_error_response(
-                INVALID_REQUEST,
-                data={
-                    "error": "JSON-RPC request must be an object",
-                    "received_type": type(body).__name__,
-                },
-                request_id=None,
-            )
-            temp_metrics = get_metrics()
-            self.record_error_metrics(temp_metrics, "unknown", "invalid_request", 0.0)
-            return None, error_response
-
-        rpc_request, validation_error = self.validate_jsonrpc_request(body)
-        if validation_error is not None:
-            temp_metrics = get_metrics()
-            self.record_error_metrics(temp_metrics, "unknown", "invalid_request", 0.0)
-            return None, validation_error
-
-        if rpc_request is None:
-            error_response = self.build_error_response(
-                INTERNAL_ERROR,
-                data={"error": "Internal validation error"},
-                request_id=None,
-            )
-            temp_metrics = get_metrics()
-            self.record_error_metrics(
-                temp_metrics, "unknown", "internal_error", time.perf_counter()
-            )
-            return None, error_response
-
-        return rpc_request, None
-
-    def _validate_request_size(self, request: Request, max_size: int) -> None:
-        """Validate that request size does not exceed maximum.
-
-        Checks Content-Length header first, then validates actual body size
-        if available. Raises HTTPException(413) if request is too large.
-
-        Args:
-            request: FastAPI request object
-            max_size: Maximum allowed request size in bytes
-
-        Raises:
-            HTTPException: If request size exceeds maximum (413 Payload Too Large)
-        """
-        content_length = request.headers.get("content-length")
-        if content_length:
-            try:
-                size = int(content_length)
-                if size > max_size:
-                    logger.warning(
-                        "asap.request.size_exceeded",
-                        content_length=size,
-                        max_size=max_size,
-                    )
-                    raise HTTPException(
-                        status_code=413,
-                        detail=f"Request size ({size} bytes) exceeds maximum ({max_size} bytes)",
-                    )
-            except ValueError:
-                logger.debug("asap.request.invalid_content_length", content_length=content_length)
-
-    async def parse_json_body(self, request: Request) -> dict[str, Any]:
-        """Parse JSON body from request with size validation and decompression.
-
-        Validates request size before parsing to prevent DoS attacks.
-        Checks both Content-Length header and actual body size.
-        Automatically decompresses gzip/brotli encoded requests.
-
-        Args:
-            request: FastAPI request object
-
-        Returns:
-            Parsed JSON body
-
-        Raises:
-            HTTPException: If request size exceeds maximum (413)
-            HTTPException: If Content-Encoding is unsupported (415)
-            ValueError: If JSON is invalid
-        """
-        content_encoding = request.headers.get("content-encoding", "").lower().strip()
-        supported_encodings = get_supported_encodings() + ["identity", ""]
-        if content_encoding and content_encoding not in supported_encodings:
-            logger.warning(
-                "asap.request.unsupported_encoding",
-                content_encoding=content_encoding,
-                supported=supported_encodings,
-            )
-            raise HTTPException(
-                status_code=415,
-                detail=f"Unsupported Content-Encoding: {content_encoding}. Supported: {', '.join(get_supported_encodings())}",
-            )
-
-        try:
-            body_bytes = bytearray()
-            async for chunk in request.stream():
-                body_bytes.extend(chunk)
-                if len(body_bytes) > self.max_request_size:
-                    logger.warning(
-                        "asap.request.size_exceeded",
-                        actual_size=len(body_bytes),
-                        max_size=self.max_request_size,
-                    )
-                    raise HTTPException(
-                        status_code=413,
-                        detail=f"Request size ({len(body_bytes)} bytes) exceeds maximum ({self.max_request_size} bytes)",
-                    )
-
-            # Decompress if Content-Encoding is specified
-            if content_encoding and content_encoding not in ("identity", ""):
-                try:
-                    compressed_size = len(body_bytes)
-                    body_bytes = bytearray(decompress_payload(bytes(body_bytes), content_encoding))
-                    decompressed_size = len(body_bytes)
-
-                    logger.debug(
-                        "asap.request.decompressed",
-                        content_encoding=content_encoding,
-                        compressed_size=compressed_size,
-                        decompressed_size=decompressed_size,
-                    )
-
-                    if decompressed_size > self.max_request_size:
-                        compression_ratio = (
-                            decompressed_size / compressed_size if compressed_size > 0 else 0
-                        )
-                        logger.warning(
-                            "asap.request.decompressed_size_exceeded",
-                            decompressed_size=decompressed_size,
-                            original_compressed_size=compressed_size,
-                            compression_ratio=round(compression_ratio, 2),
-                            max_size=self.max_request_size,
-                        )
-                        raise HTTPException(
-                            status_code=413,
-                            detail=f"Decompressed request size ({decompressed_size} bytes) exceeds maximum ({self.max_request_size} bytes)",
-                        )
-                except ValueError as e:
-                    # Decompression failed (invalid compressed data or unsupported encoding)
-                    logger.warning(
-                        "asap.request.decompression_failed",
-                        content_encoding=content_encoding,
-                        error=str(e),
-                    )
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Failed to decompress request: {e}",
-                    ) from e
-                except (OSError, EOFError) as e:
-                    # Invalid gzip/brotli data (OSError) or truncated data (EOFError)
-                    logger.warning(
-                        "asap.request.invalid_compressed_data",
-                        content_encoding=content_encoding,
-                        error=str(e),
-                    )
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Invalid compressed data: {e}",
-                    ) from e
-
-            # Parse JSON from bytes
-            body: dict[str, Any] = json.loads(body_bytes.decode("utf-8"))
-            return body
-        except UnicodeDecodeError as e:
-            logger.warning("asap.request.invalid_encoding", error=str(e))
-            raise ValueError(f"Invalid UTF-8 encoding: {e}") from e
-        except json.JSONDecodeError as e:
-            logger.warning("asap.request.invalid_json", error=str(e))
-            raise ValueError(f"Invalid JSON: {e}") from e
-
-    def validate_jsonrpc_request(
-        self, body: dict[str, Any]
-    ) -> tuple[JsonRpcRequest | None, JSONResponse | None]:
-        """Validate JSON-RPC request structure and method.
-
-        Args:
-            body: Parsed JSON body
-
-        Returns:
-            Tuple of (JsonRpcRequest, None) if valid, or (None, error_response) if invalid
-        """
-        try:
-            rpc_request = JsonRpcRequest(**body)
-        except (ValidationError, TypeError) as e:
-            error_code = INVALID_REQUEST
-            error_message = "Invalid JSON-RPC structure"
-            if isinstance(e, ValidationError):
-                errors = e.errors()
-                # If params validation failed with dict_type error, use INVALID_PARAMS
-                for error in errors:
-                    if error.get("loc") == ("params",) and error.get("type") == "dict_type":
-                        error_code = INVALID_PARAMS
-                        error_message = "JSON-RPC 'params' must be an object"
-                        break
-
-            log_struct: dict[str, Any] = {
-                "error": error_message,
-                "error_type": type(e).__name__,
-                "validation_errors": (
-                    e.errors()
-                    if isinstance(e, ValidationError)
-                    else [{"type": "type_error", "loc": (), "msg": str(e), "input": None}]
-                ),
-            }
-            if not is_debug_mode():
-                log_struct = sanitize_for_logging(log_struct)
-            logger.warning("asap.request.invalid_structure", **log_struct)
-            error_response = self.build_error_response(
-                error_code,
-                data={
-                    "error": error_message,
-                    "validation_errors": (
-                        e.errors()
-                        if isinstance(e, ValidationError)
-                        else [{"type": "type_error", "loc": (), "msg": str(e), "input": None}]
-                    ),
-                },
-                request_id=body.get("id") if isinstance(body, dict) else None,
-            )
-            return None, error_response
-
-        if rpc_request.method != ASAP_METHOD:
-            logger.warning("asap.request.unknown_method", method=rpc_request.method)
-            error_response = self.build_error_response(
-                METHOD_NOT_FOUND,
-                data={"method": rpc_request.method},
-                request_id=rpc_request.id,
-            )
-            return None, error_response
-
-        return rpc_request, None
-
-    async def handle_message(self, request: Request) -> Response:
-        """Handle ASAP messages wrapped in JSON-RPC 2.0.
-
-        This method:
-        1. Receives JSON-RPC wrapped ASAP envelopes
-        2. Validates the request structure
-        3. Extracts and processes the ASAP envelope
-        4. Returns response wrapped in JSON-RPC
-        5. Records metrics for observability
-
-        Args:
-            request: FastAPI request object with JSON body
-
-        Returns:
-            JSON-RPC response or error response
-
-        Example:
-            >>> response = await handler.handle_message(request)
-        """
-        start_time = time.perf_counter()
-        metrics = get_metrics()
-        payload_type = "unknown"
-
-        try:
-            parse_result = await self._parse_and_validate_request(request)
-            rpc_request, parse_error = parse_result
-            if parse_error is not None:
-                self._log_response_debug(parse_error)
-                return parse_error
-            if rpc_request is None:
-                raise RuntimeError("Internal error: rpc_request is None after validation")
-
-            self._log_request_debug(rpc_request)
-
-            ctx = RequestContext(
-                request_id=rpc_request.id,
-                start_time=start_time,
-                metrics=metrics,
-                rpc_request=rpc_request,
-            )
-
-            auth_result = await self._authenticate_request(request, ctx)
-            authenticated_agent_id, auth_error = auth_result
-            if auth_error is not None:
-                self._log_response_debug(auth_error)
-                return auth_error
-
-            envelope_result = self._validate_envelope(ctx)
-            if isinstance(envelope_result, JSONResponse):
-                self._log_response_debug(envelope_result)
-                return envelope_result
-            envelope, payload_type = envelope_result
-
-            trace_token = extract_and_activate_envelope_trace_context(envelope)
-            try:
-                sender_error = self._verify_sender_matches_auth(
-                    authenticated_agent_id,
-                    envelope,
-                    ctx,
-                    payload_type,
-                )
-                if sender_error is not None:
-                    self._log_response_debug(sender_error)
-                    return sender_error
-
-                try:
-                    validate_envelope_timestamp(envelope)
-                except InvalidTimestampError as e:
-                    log_ts: dict[str, Any] = {
-                        "envelope_id": envelope.id,
-                        "error": e.message,
-                        "details": e.details,
-                    }
-                    if not is_debug_mode() and isinstance(e.details, dict):
-                        log_ts["details"] = sanitize_for_logging(e.details)
-                    logger.warning("asap.request.invalid_timestamp", **log_ts)
-                    duration_seconds = time.perf_counter() - ctx.start_time
-                    self.record_error_metrics(
-                        ctx.metrics, payload_type, "invalid_timestamp", duration_seconds
-                    )
-                    err_resp = self.build_jsonrpc_error_for_asap_exception(
-                        e,
-                        request_id=ctx.request_id,
-                        extra_data={"error": "Invalid envelope timestamp"},
-                    )
-                    self._log_response_debug(err_resp)
-                    return err_resp
-
-                try:
-                    validate_envelope_nonce(envelope, self.nonce_store)
-                except InvalidNonceError as e:
-                    # Sanitize nonce in logs to prevent full value exposure
-                    nonce_sanitized = sanitize_nonce(e.nonce)
-                    error_msg = e.message if is_debug_mode() else "Duplicate nonce detected"
-                    logger.warning(
-                        "asap.request.invalid_nonce",
-                        envelope_id=envelope.id,
-                        nonce=nonce_sanitized,
-                        error=error_msg,
-                    )
-                    duration_seconds = time.perf_counter() - ctx.start_time
-                    self.record_error_metrics(
-                        ctx.metrics, payload_type, "invalid_nonce", duration_seconds
-                    )
-                    err_resp = self.build_jsonrpc_error_for_asap_exception(
-                        e,
-                        request_id=ctx.request_id,
-                        extra_data={"error": "Invalid envelope nonce"},
-                    )
-                    self._log_response_debug(err_resp)
-                    return err_resp
-
-                logger.info(
-                    "asap.request.received",
-                    envelope_id=envelope.id,
-                    trace_id=envelope.trace_id,
-                    payload_type=envelope.payload_type,
-                    sender=envelope.sender,
-                    recipient=envelope.recipient,
-                    authenticated=authenticated_agent_id is not None,
-                )
-
-                dispatch_result = await self._dispatch_to_handler(envelope, ctx)
-                if isinstance(dispatch_result, JSONResponse):
-                    self._log_response_debug(dispatch_result)
-                    return dispatch_result
-                response_envelope, payload_type = dispatch_result
-
-                # Check if client accepts Lambda-encoded responses
-                accept_header = request.headers.get("accept", "")
-                accept_lambda = LAMBDA_CONTENT_TYPE in accept_header
-
-                try:
-                    await _audit_log_operation(
-                        request.app.state,
-                        operation=payload_type,
-                        agent_urn=envelope.sender,
-                        details={
-                            "envelope_id": envelope.id,
-                            "response_id": response_envelope.id,
-                        },
-                    )
-                except Exception:
-                    logger.warning("asap.audit.log_failed", exc_info=True)
-
-                success_resp = self._build_success_response(
-                    response_envelope, ctx, payload_type, accept_lambda=accept_lambda
-                )
-                self._log_response_debug(success_resp)
-                return success_resp
-            finally:
-                if trace_token is not None:
-                    context.detach(trace_token)
-
-        except ASAPError as e:
-            # Preserve protocol-level errors raised by handlers as JSON-RPC ASAP errors.
-            if "ctx" not in locals():
-                temp_rpc_request = JsonRpcRequest(
-                    jsonrpc="2.0", method=ASAP_METHOD, params={}, id=""
-                )
-                ctx = RequestContext(
-                    request_id="",
-                    start_time=start_time,
-                    metrics=metrics,
-                    rpc_request=temp_rpc_request,
-                )
-            duration_seconds = time.perf_counter() - ctx.start_time
-            self.record_error_metrics(ctx.metrics, payload_type, type(e).__name__, duration_seconds)
-            logger.warning(
-                "asap.request.protocol_error",
-                error=str(e),
-                error_type=type(e).__name__,
-                duration_ms=round(duration_seconds * 1000, 2),
-                exc_info=True,
-            )
-            err_resp = self.build_jsonrpc_error_for_asap_exception(
-                e,
-                request_id=ctx.request_id,
-                extra_data={"error": str(e)},
-            )
-            self._log_response_debug(err_resp)
-            return err_resp
-        except Exception as e:
-            # Create minimal context for error handling if we don't have rpc_request yet
-            if "ctx" not in locals():
-                # Fallback: create context with minimal info
-                temp_metrics = get_metrics()
-                # JsonRpcRequest requires id to be str | int, use empty string as fallback
-                temp_rpc_request = JsonRpcRequest(
-                    jsonrpc="2.0", method=ASAP_METHOD, params={}, id=""
-                )
-                ctx = RequestContext(
-                    request_id="",
-                    start_time=start_time,
-                    metrics=temp_metrics,
-                    rpc_request=temp_rpc_request,
-                )
-            err_resp = self._handle_internal_error(e, ctx, payload_type)
-            self._log_response_debug(err_resp)
-            return err_resp
-
-    async def _prepare_streaming_request(
-        self,
-        request: Request,
-        start_time: float,
-    ) -> tuple[RequestContext, Envelope, Any | None] | Response:
-        """Parse JSON-RPC, auth, nonce/timestamp, ensure a streaming handler exists.
-
-        Returns ``(context, envelope, trace_token)`` on success, or an error
-        ``Response`` (caller must not start a stream).
-        """
-        metrics = get_metrics()
-        payload_type = "unknown"
-
-        parse_result = await self._parse_and_validate_request(request)
-        rpc_request, parse_error = parse_result
-        if parse_error is not None:
-            self._log_response_debug(parse_error)
-            return parse_error
-        if rpc_request is None:
-            raise RuntimeError("Internal error: rpc_request is None after validation")
-
-        self._log_request_debug(rpc_request)
-
-        ctx = RequestContext(
-            request_id=rpc_request.id,
-            start_time=start_time,
-            metrics=metrics,
-            rpc_request=rpc_request,
-        )
-
-        auth_result = await self._authenticate_request(request, ctx)
-        authenticated_agent_id, auth_error = auth_result
-        if auth_error is not None:
-            self._log_response_debug(auth_error)
-            return auth_error
-
-        envelope_result = self._validate_envelope(ctx)
-        if isinstance(envelope_result, JSONResponse):
-            self._log_response_debug(envelope_result)
-            return envelope_result
-        envelope, payload_type = envelope_result
-
-        trace_token = extract_and_activate_envelope_trace_context(envelope)
-        sender_error = self._verify_sender_matches_auth(
-            authenticated_agent_id,
-            envelope,
-            ctx,
-            payload_type,
-        )
-        if sender_error is not None:
-            self._log_response_debug(sender_error)
-            if trace_token is not None:
-                context.detach(trace_token)
-            return sender_error
-
-        try:
-            validate_envelope_timestamp(envelope)
-        except InvalidTimestampError as e:
-            log_ts: dict[str, Any] = {
-                "envelope_id": envelope.id,
-                "error": e.message,
-                "details": e.details,
-            }
-            if not is_debug_mode() and isinstance(e.details, dict):
-                log_ts["details"] = sanitize_for_logging(e.details)
-            logger.warning("asap.request.invalid_timestamp", **log_ts)
-            duration_seconds = time.perf_counter() - ctx.start_time
-            self.record_error_metrics(
-                ctx.metrics, payload_type, "invalid_timestamp", duration_seconds
-            )
-            err_resp = self.build_jsonrpc_error_for_asap_exception(
-                e,
-                request_id=ctx.request_id,
-                extra_data={"error": "Invalid envelope timestamp"},
-            )
-            self._log_response_debug(err_resp)
-            if trace_token is not None:
-                context.detach(trace_token)
-            return err_resp
-
-        try:
-            validate_envelope_nonce(envelope, self.nonce_store)
-        except InvalidNonceError as e:
-            nonce_sanitized = sanitize_nonce(e.nonce)
-            error_msg = e.message if is_debug_mode() else "Duplicate nonce detected"
-            logger.warning(
-                "asap.request.invalid_nonce",
-                envelope_id=envelope.id,
-                nonce=nonce_sanitized,
-                error=error_msg,
-            )
-            duration_seconds = time.perf_counter() - ctx.start_time
-            self.record_error_metrics(ctx.metrics, payload_type, "invalid_nonce", duration_seconds)
-            err_resp = self.build_jsonrpc_error_for_asap_exception(
-                e,
-                request_id=ctx.request_id,
-                extra_data={"error": "Invalid envelope nonce"},
-            )
-            self._log_response_debug(err_resp)
-            if trace_token is not None:
-                context.detach(trace_token)
-            return err_resp
-
-        logger.info(
-            "asap.request.stream_received",
-            envelope_id=envelope.id,
-            trace_id=envelope.trace_id,
-            payload_type=envelope.payload_type,
-            sender=envelope.sender,
-            recipient=envelope.recipient,
-            authenticated=authenticated_agent_id is not None,
-        )
-
-        if not self.registry_holder.registry.has_streaming_handler(envelope.payload_type):
-            duration_seconds = time.perf_counter() - ctx.start_time
-            self.record_error_metrics(
-                ctx.metrics, payload_type, "handler_not_found", duration_seconds
-            )
-            err_resp = self.build_jsonrpc_error_for_asap_exception(
-                HandlerNotFoundError(envelope.payload_type),
-                request_id=ctx.request_id,
-                extra_data={"error": "No streaming handler registered for payload type"},
-            )
-            self._log_response_debug(err_resp)
-            if trace_token is not None:
-                context.detach(trace_token)
-            return err_resp
-
-        return ctx, envelope, trace_token
-
-    async def handle_stream(self, request: Request) -> Response:
-        """Handle ASAP streaming: JSON-RPC body, SSE ``text/event-stream`` response.
-
-        Each event body is one ``Envelope`` (typically ``TaskStream``) as JSON on a ``data:`` line.
-        """
-        start_time = time.perf_counter()
-        payload_type = "unknown"
-
-        try:
-            prepared = await self._prepare_streaming_request(request, start_time)
-            if isinstance(prepared, Response):
-                return prepared
-            ctx, envelope, trace_token = prepared
-            payload_type = envelope.payload_type
-
-            async def sse_events() -> AsyncIterator[bytes]:
-                try:
-                    async for (
-                        response_envelope
-                    ) in self.registry_holder.registry.dispatch_stream_async(
-                        envelope, self.manifest
-                    ):
-                        injected = inject_envelope_trace_context(response_envelope)
-                        line = f"data: {json.dumps(injected.model_dump(mode='json'))}\n\n"
-                        yield line.encode("utf-8")
-                    duration_seconds = time.perf_counter() - ctx.start_time
-                    normalized_payload_type = self._normalize_payload_type_for_metrics(payload_type)
-                    ctx.metrics.increment_counter(
-                        "asap_requests_total",
-                        {"payload_type": normalized_payload_type, "status": "success"},
-                    )
-                    ctx.metrics.increment_counter(
-                        "asap_requests_success_total",
-                        {"payload_type": normalized_payload_type},
-                    )
-                    ctx.metrics.observe_histogram(
-                        "asap_request_duration_seconds",
-                        duration_seconds,
-                        {"payload_type": normalized_payload_type, "status": "success"},
-                    )
-                    logger.info(
-                        "asap.request.stream_processed",
-                        envelope_id=envelope.id,
-                        payload_type=payload_type,
-                        duration_ms=round(duration_seconds * 1000, 2),
-                    )
-                finally:
-                    if trace_token is not None:
-                        context.detach(trace_token)
-
-            return StreamingResponse(
-                sse_events(),
-                media_type="text/event-stream",
-                headers={
-                    "Cache-Control": "no-cache",
-                    "Connection": "keep-alive",
-                },
-            )
-        except Exception as e:
-            if "ctx" not in locals():
-                temp_metrics = get_metrics()
-                temp_rpc_request = JsonRpcRequest(
-                    jsonrpc="2.0", method=ASAP_METHOD, params={}, id=""
-                )
-                ctx = RequestContext(
-                    request_id="",
-                    start_time=start_time,
-                    metrics=temp_metrics,
-                    rpc_request=temp_rpc_request,
-                )
-            err_resp = self._handle_internal_error(e, ctx, payload_type)
-            self._log_response_debug(err_resp)
-            return err_resp
-
-    async def iter_websocket_stream(
-        self,
-        request: Request,
-        jsonrpc_id: str | int | None,
-    ) -> AsyncIterator[str]:
-        """Yield JSON-RPC ``result.envelope`` frames for each streamed chunk (WebSocket)."""
-        start_time = time.perf_counter()
-        prepared = await self._prepare_streaming_request(request, start_time)
-        if isinstance(prepared, Response):
-            body = prepared.body
-            payload = body.decode("utf-8") if isinstance(body, bytes) else str(body)
-            yield payload
-            return
-        ctx, envelope, trace_token = prepared
-        payload_type = envelope.payload_type
-        response_id: str | int = jsonrpc_id if jsonrpc_id is not None else ""
-        try:
-            async for response_envelope in self.registry_holder.registry.dispatch_stream_async(
-                envelope, self.manifest
-            ):
-                injected = inject_envelope_trace_context(response_envelope)
-                rpc_response = JsonRpcResponse(
-                    result={"envelope": injected.model_dump(mode="json")},
-                    id=response_id,
-                )
-                yield json.dumps(rpc_response.model_dump())
-            duration_seconds = time.perf_counter() - ctx.start_time
-            normalized_payload_type = self._normalize_payload_type_for_metrics(payload_type)
-            ctx.metrics.increment_counter(
-                "asap_requests_total",
-                {"payload_type": normalized_payload_type, "status": "success"},
-            )
-            ctx.metrics.increment_counter(
-                "asap_requests_success_total",
-                {"payload_type": normalized_payload_type},
-            )
-            ctx.metrics.observe_histogram(
-                "asap_request_duration_seconds",
-                duration_seconds,
-                {"payload_type": normalized_payload_type, "status": "success"},
-            )
-            logger.info(
-                "asap.request.ws_stream_processed",
-                envelope_id=envelope.id,
-                payload_type=payload_type,
-                duration_ms=round(duration_seconds * 1000, 2),
-            )
-        finally:
-            if trace_token is not None:
-                context.detach(trace_token)
-
-
-def _make_body_receive(body: bytes) -> Any:
-    """Create an ASGI receive callable that returns the given body bytes."""
-    sent = False
-
-    async def receive() -> dict[str, Any]:
-        nonlocal sent
-        if not sent:
-            sent = True
-            return {"type": "http.request", "body": body, "more_body": False}
-        return {"type": "http.disconnect"}
-
-    return receive
-
-
-async def _handle_batch(
-    request: Request,
-    items: list[Any],
-    handler: ASAPRequestHandler,
-    app: FastAPI,
-) -> JSONResponse:
-    """Process a JSON-RPC batch request (array of requests).
-
-    Empty batches and oversized batches return a single JSON-RPC error.
-    Each sub-request is processed independently; failures do not abort the batch.
+    ctx: RequestContext
+    envelope: Envelope
+    authenticated_agent_id: str | None
+    trace_token: Any
+
+
+# Deferred import: _request_handler needs RequestContext/PreparedRequest/RegistryHolder
+# defined above, and references ``server.logger``/``server.is_debug_log_mode`` via
+# ``_server`` for test patchability. Importing it here (after the dataclasses) breaks
+# the cycle without copying bindings. Re-exported explicitly (``as`` alias) so mypy
+# ``no_implicit_reexport`` exposes it and ``routes`` can type-hint against it.
+from asap.transport._request_handler import (  # noqa: E402
+    ASAPRequestHandler as ASAPRequestHandler,
+)
+
+
+@dataclass
+class ServerComponents:
+    """Resolved server components produced by :func:`_build_server_components`.
+
+    Bundles the registry holder, request handler, identity stores, and
+    env-defaulted config so :func:`create_app` stays a thin wiring function.
+
+    Attributes:
+        registry_holder: Hot-reload-aware handler registry holder
+        handler: ASAP request handler bound to the registry/manifest/auth
+        executor: Bounded thread pool (or None for unbounded)
+        auth_middleware: Authentication middleware (or None when no auth)
+        max_request_size: Resolved max request size in bytes
+        nonce_store: Nonce replay store (or None when nonce validation off)
+        identity_host_store: Resolved host identity store
+        identity_agent_store: Resolved agent identity store
+        identity_jti_cache: Host JWT jti replay cache
+        identity_jwt_audience: Expected Host JWT ``aud`` value(s)
+        identity_approval_store: Registration approval store
+        snapshot_store: Resolved snapshot store
     """
-    if len(items) == 0:
-        return JSONResponse(
-            status_code=200,
-            content={
-                "jsonrpc": "2.0",
-                "error": {
-                    "code": INVALID_REQUEST,
-                    "message": "Invalid request",
-                    "data": {"reason": "empty batch"},
-                },
-                "id": None,
-            },
-        )
 
-    max_size: int = getattr(app.state, "max_batch_size", DEFAULT_MAX_BATCH_SIZE)
-    if len(items) > max_size:
-        return JSONResponse(
-            status_code=200,
-            content={
-                "jsonrpc": "2.0",
-                "error": {
-                    "code": INVALID_REQUEST,
-                    "message": "Invalid request",
-                    "data": {"reason": f"batch size {len(items)} exceeds max {max_size}"},
-                },
-                "id": None,
-            },
-        )
-
-    app.state.limiter.check_n(request, len(items))
-
-    async def _process_one(item: Any) -> dict[str, Any]:
-        if not isinstance(item, dict):
-            return {
-                "jsonrpc": "2.0",
-                "error": {"code": INVALID_REQUEST, "message": "Invalid request"},
-                "id": None,
-            }
-        sub_body = json.dumps(item).encode("utf-8")
-        scope = dict(request.scope)
-        sub_request = Request(scope, receive=_make_body_receive(sub_body))
-        sub_response = await handler.handle_message(sub_request)
-        if isinstance(sub_response, JSONResponse):
-            raw = sub_response.body
-            result: dict[str, Any] = json.loads(bytes(raw) if isinstance(raw, memoryview) else raw)
-            return result
-        if isinstance(sub_response, StreamingResponse):
-            parts: list[bytes] = []
-            async for chunk in sub_response.body_iterator:
-                parts.append(chunk if isinstance(chunk, bytes) else str(chunk).encode())
-            streamed: dict[str, Any] = json.loads(b"".join(parts))
-            return streamed
-        raw2 = sub_response.body
-        fallback: dict[str, Any] = json.loads(bytes(raw2) if isinstance(raw2, memoryview) else raw2)
-        return fallback
-
-    results = await asyncio.gather(*[_process_one(item) for item in items])
-    return JSONResponse(status_code=200, content=list(results))
+    registry_holder: RegistryHolder
+    handler: ASAPRequestHandler
+    executor: BoundedExecutor | None
+    auth_middleware: AuthenticationMiddleware | None
+    max_request_size: int
+    nonce_store: NonceStore | None
+    identity_host_store: HostStore
+    identity_agent_store: AgentStore
+    identity_jti_cache: JtiReplayCache
+    identity_jwt_audience: str | list[str]
+    identity_approval_store: ApprovalStore
+    snapshot_store: SnapshotStore
 
 
-async def _audit_log_operation(
-    app_state: Any,
-    operation: str,
-    agent_urn: str,
-    details: dict[str, Any],
-) -> None:
-    """Append an audit entry if an audit store is configured.
+def _build_server_components(
+    *,
+    manifest: Manifest,
+    registry: HandlerRegistry | None,
+    token_validator: Callable[[str], str | None] | None,
+    max_request_size: int | None,
+    max_threads: int | None,
+    require_nonce: bool,
+    hot_reload: bool | None,
+    snapshot_store: SnapshotStore | None,
+    metering_store: MeteringStore | None,
+    metering_storage: object | None,
+    identity_host_store: HostStore | None,
+    identity_agent_store: AgentStore | None,
+    identity_jti_cache: JtiReplayCache | None,
+    identity_jwt_audience: str | list[str] | None,
+    identity_approval_store: ApprovalStore | None,
+) -> ServerComponents:
+    """Resolve the registry, handler, auth, identity stores, and config defaults.
 
-    Failures are logged but never propagate — audit must not break the
-    main request path.
+    Pure setup (no FastAPI app) — extracted from :func:`create_app` so the
+    wiring function stays thin.
     """
-    store: AuditStore | None = getattr(app_state, "audit_store", None)
-    if store is None:
-        return
-    from datetime import datetime as _dt
-    from datetime import timezone as _tz
+    executor: BoundedExecutor | None = None
+    if max_threads is None:
+        max_threads_env = os.getenv("ASAP_MAX_THREADS")
+        if max_threads_env:
+            max_threads = int(max_threads_env)
+    if max_threads is not None:
+        executor = BoundedExecutor(max_threads=max_threads)
+        logger.info(
+            "asap.server.bounded_executor_enabled",
+            manifest_id=manifest.id,
+            max_threads=max_threads,
+        )
 
-    entry = AuditEntry(
-        timestamp=_dt.now(_tz.utc),
-        operation=operation,
-        agent_urn=agent_urn,
-        details=details,
+    # metering_storage takes precedence (enables usage API); the bridge adapts
+    # it to the MeteringStore interface handlers expect.
+    effective_metering_store: MeteringStore | None = metering_store
+    if metering_storage is not None and isinstance(metering_storage, MeteringStorage):
+        effective_metering_store = MeteringStorageBridge(metering_storage)
+
+    use_default_registry = registry is None
+    if registry is None:
+        registry = create_default_registry(metering_store=effective_metering_store)
+    elif effective_metering_store is not None:
+        registry.set_metering_store(effective_metering_store)
+
+    if executor is not None:
+        registry._executor = executor
+
+    registry_holder = RegistryHolder(registry)
+    if executor is not None:
+        registry_holder._executor = executor
+
+    if hot_reload is None:
+        hot_reload = os.getenv(ENV_HOT_RELOAD, "").strip().lower() in ("true", "1", "yes")
+
+    auth_middleware: AuthenticationMiddleware | None = None
+    if manifest.auth is not None:
+        if token_validator is None:
+            raise ValueError(
+                "token_validator is required when manifest.auth is configured. "
+                "Provide a function that validates tokens and returns agent IDs."
+            )
+        validator = BearerTokenValidator(token_validator)
+        auth_middleware = AuthenticationMiddleware(manifest, validator)
+        logger.info(
+            "asap.server.auth_enabled",
+            manifest_id=manifest.id,
+            schemes=manifest.auth.schemes,
+        )
+
+    if max_request_size is None:
+        max_request_size = int(os.getenv("ASAP_MAX_REQUEST_SIZE", str(MAX_REQUEST_SIZE)))
+
+    nonce_store: NonceStore | None = None
+    if require_nonce:
+        nonce_store = InMemoryNonceStore()
+        logger.info(
+            "asap.server.nonce_validation_enabled",
+            manifest_id=manifest.id,
+        )
+
+    resolved_host_store, resolved_agent_store = _resolve_identity_stores(
+        identity_host_store, identity_agent_store
     )
-    await store.append(entry)
+    resolved_jti_cache = identity_jti_cache if identity_jti_cache is not None else JtiReplayCache()
+    resolved_jwt_audience: str | list[str] = (
+        identity_jwt_audience if identity_jwt_audience is not None else manifest.id
+    )
+    resolved_approval_store: ApprovalStore = (
+        identity_approval_store if identity_approval_store is not None else InMemoryApprovalStore()
+    )
+
+    if snapshot_store is None:
+        snapshot_store = create_snapshot_store()
+        logger.info(
+            "asap.server.snapshot_store_from_env",
+            manifest_id=manifest.id,
+            backend=os.environ.get("ASAP_STORAGE_BACKEND", "memory"),
+        )
+
+    handler = ASAPRequestHandler(
+        registry_holder, manifest, auth_middleware, max_request_size, nonce_store
+    )
+
+    if hot_reload and use_default_registry:
+        _start_handler_watcher(registry_holder, manifest_id=manifest.id)
+
+    return ServerComponents(
+        registry_holder=registry_holder,
+        handler=handler,
+        executor=executor,
+        auth_middleware=auth_middleware,
+        max_request_size=max_request_size,
+        nonce_store=nonce_store,
+        identity_host_store=resolved_host_store,
+        identity_agent_store=resolved_agent_store,
+        identity_jti_cache=resolved_jti_cache,
+        identity_jwt_audience=resolved_jwt_audience,
+        identity_approval_store=resolved_approval_store,
+        snapshot_store=snapshot_store,
+    )
+
+
+def _resolve_identity_stores(
+    host_store: HostStore | None,
+    agent_store: AgentStore | None,
+) -> tuple[HostStore, AgentStore]:
+    """Resolve identity stores, defaulting both to in-memory when both omitted."""
+    if host_store is None and agent_store is None:
+        agent = InMemoryAgentStore()
+        return InMemoryHostStore(agent_store=agent), agent
+    if host_store is not None and agent_store is not None:
+        return host_store, agent_store
+    msg = "identity_host_store and identity_agent_store must both be set or both omitted"
+    raise ValueError(msg)
+
+
+def _start_handler_watcher(registry_holder: RegistryHolder, *, manifest_id: str) -> None:
+    """Start the background handler file watcher for hot reload (default registry only)."""
+    handlers_module = sys.modules.get("asap.transport.handlers")
+    handlers_file = getattr(handlers_module, "__file__", "") if handlers_module else ""
+    if not (handlers_file and Path(handlers_file).exists()):
+        logger.warning(
+            "asap.server.hot_reload_skipped",
+            reason="handlers module path not found",
+        )
+        return
+    watcher = threading.Thread(
+        target=_run_handler_watcher,
+        args=(registry_holder, handlers_file),
+        name="asap-handler-watcher",
+        daemon=True,
+    )
+    watcher.start()
+    logger.info(
+        "asap.server.hot_reload_enabled",
+        manifest_id=manifest_id,
+        path=handlers_file,
+    )
+
+
+def _create_fastapi_app(manifest: Manifest, components: ServerComponents) -> FastAPI:
+    """Build the bare FastAPI app with docs gating and a graceful-shutdown lifespan."""
+    _docs_url = "/docs" if is_debug_mode() else None
+    _redoc_url = "/redoc" if is_debug_mode() else None
+    _openapi_url = "/openapi.json" if is_debug_mode() else None
+
+    active_websockets: set[WebSocket] = set()
+    sla_breach_subscribers: set[WebSocket] = set()
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> Any:
+        yield
+        for ws in list(active_websockets):
+            with suppress(OSError):
+                await ws.close(
+                    code=WS_CLOSE_GOING_AWAY,
+                    reason=WS_CLOSE_REASON_SHUTDOWN,
+                )
+
+    app = FastAPI(
+        title="ASAP Protocol Server",
+        description=f"ASAP server for {manifest.name}",
+        version=manifest.version,
+        docs_url=_docs_url,
+        redoc_url=_redoc_url,
+        openapi_url=_openapi_url,
+        lifespan=lifespan,
+    )
+    # Stash the connection sets so the lifespan closure can reach them via app.state.
+    app.state.websocket_connections = active_websockets
+    app.state.sla_breach_subscribers = sla_breach_subscribers
+    # Core handler + manifest + start timestamp for the route-group routers.
+    app.state.request_handler = components.handler
+    app.state.manifest = manifest
+    app.state.server_started_at = time.monotonic()
+    return app
+
+
+def _populate_app_state(
+    app: FastAPI,
+    *,
+    components: ServerComponents,
+    manifest: Manifest,
+    max_request_size: int,
+    max_batch_size: int,
+    snapshot_store: SnapshotStore,
+    metering_store: MeteringStore | None,
+    audit_store: AuditStore | None,
+    websocket_message_rate_limit: float | None,
+    mtls_config: MTLSConfig | None,
+    identity_host_supports_ciba: bool,
+    identity_approval_a2h_channel: A2HApprovalChannel | None,
+    identity_fresh_session_config: FreshSessionConfig | None,
+    identity_webauthn_verifier: WebAuthnVerifier | None,
+    identity_rate_limit: str | None,
+) -> None:
+    """Populate ``app.state`` with identity, snapshot, and feature config."""
+    app.state.websocket_message_rate_limit = websocket_message_rate_limit
+    app.state.mtls_config = mtls_config
+    app.state.identity_host_store = components.identity_host_store
+    app.state.identity_agent_store = components.identity_agent_store
+    app.state.identity_jti_cache = components.identity_jti_cache
+    app.state.identity_jwt_audience = components.identity_jwt_audience
+    app.state.identity_approval_store = components.identity_approval_store
+    app.state.identity_host_supports_ciba = identity_host_supports_ciba
+    if identity_approval_a2h_channel is not None:
+        app.state.identity_approval_a2h_channel = identity_approval_a2h_channel
+    if identity_fresh_session_config is not None:
+        app.state.identity_fresh_session_config = identity_fresh_session_config
+    app.state.identity_webauthn_verifier = (
+        identity_webauthn_verifier
+        if identity_webauthn_verifier is not None
+        else default_webauthn_verifier()
+    )
+    identity_rl = identity_rate_limit or "5/second;30/minute"
+    app.state.identity_limiter = create_limiter([identity_rl])
+    app.state.max_request_size = max_request_size
+    app.state.max_batch_size = max_batch_size
+    app.state.snapshot_store = snapshot_store
+    app.state.metering_store = metering_store
+    app.state.audit_store = audit_store
+    if audit_store is not None:
+        logger.warning(
+            "asap.server.audit_api_unauthenticated",
+            message=(
+                "Audit API (/audit) is enabled but unauthenticated. "
+                "Intended for local/operator use only. "
+                "Protect with OAuth2 or network controls when exposed."
+            ),
+        )
+    _ = manifest  # manifest already stored on app.state by _create_fastapi_app
+
+
+def _wire_optional_routers(
+    app: FastAPI,
+    *,
+    registry_auto_registration: "AutoRegistrationConfig | None",
+    metering_storage: object | None,
+    sla_storage: object | None,
+    oauth2_config: OAuth2Config | None,
+    delegation_key_store: Callable[[str], Any] | None,
+    delegation_storage: object | None,
+    mtls_config: MTLSConfig | None,
+    manifest: Manifest,
+) -> None:
+    """Include feature-flagged routers: identity, capability, registry, usage, SLA, delegation."""
+    app.include_router(create_agent_identity_router())
+    app.include_router(create_escalation_router())
+
+    # Capability-based authorization (S1)
+    from asap.auth.capabilities import CapabilityRegistry
+
+    if not hasattr(app.state, "capability_registry"):
+        app.state.capability_registry = CapabilityRegistry()
+    app.include_router(create_capability_router())
+
+    if registry_auto_registration is not None:
+        from asap.registry.auto_registration import create_auto_registration_router
+        from asap.registry.receipt_cache import create_registration_receipt_cache
+
+        app.state.registration_limiter = create_registration_rate_limiter()
+        app.state.registration_receipt_cache = create_registration_receipt_cache()
+        app.include_router(create_auto_registration_router(registry_auto_registration))
+        logger.info(
+            "asap.server.registry_auto_registration_enabled",
+            manifest_id=manifest.id,
+        )
+
+    if metering_storage is not None and isinstance(metering_storage, MeteringStorage):
+        app.state.metering_storage = metering_storage
+        app.include_router(create_usage_router())
+        logger.warning(
+            "asap.server.usage_api_unauthenticated",
+            message=(
+                "Usage API (/usage) is enabled but unauthenticated. "
+                "Intended for local/operator use only. Protect with OAuth2 or network controls when exposed."
+            ),
+        )
+
+    if mtls_config is not None:
+        logger.info(
+            "asap.server.mtls_enabled",
+            manifest_id=manifest.id,
+            cert_file=str(mtls_config.cert_file),
+        )
+
+    if sla_storage is not None and isinstance(sla_storage, SLAStorage):
+        app.state.sla_storage = sla_storage
+        app.include_router(create_sla_router())
+        logger.warning(
+            "asap.server.sla_api_unauthenticated",
+            message=(
+                "SLA API (/sla) is enabled but unauthenticated. "
+                "Intended for local/operator use only. Protect with OAuth2 or network controls when exposed."
+            ),
+        )
+
+    if oauth2_config is not None and delegation_key_store is not None:
+        app.state.delegation_key_store = delegation_key_store
+        if delegation_storage is not None:
+            app.state.delegation_storage = delegation_storage
+        app.include_router(create_delegation_router(), prefix="/asap")
+        logger.info(
+            "asap.server.delegation_api_enabled",
+            manifest_id=manifest.id,
+        )
+
+
+def _wire_middleware(
+    app: FastAPI,
+    *,
+    oauth2_config: OAuth2Config | None,
+    max_request_size: int,
+    asap_challenge_enabled: bool,
+    asap_challenge_discovery_url: str | None,
+    asap_challenge_path_prefixes: tuple[str, ...] | None,
+    manifest: Manifest,
+) -> None:
+    """Add the size-limit, OAuth2, ASAP-version, and WWW-Authenticate middlewares."""
+    # Size limit runs before routing.
+    app.add_middleware(SizeLimitMiddleware, max_size=max_request_size)
+
+    if oauth2_config is not None:
+        middleware_kwargs: dict[str, Any] = {
+            "jwks_uri": oauth2_config.jwks_uri,
+            "required_scope": oauth2_config.required_scope,
+            "path_prefix": oauth2_config.path_prefix,
+            "manifest_id": manifest.id,
+            "custom_claim": oauth2_config.custom_claim,
+            "expected_issuer": oauth2_config.expected_issuer,
+            "expected_audience": oauth2_config.expected_audience,
+        }
+        if oauth2_config.jwks_fetcher is not None:
+            middleware_kwargs["jwks_fetcher"] = oauth2_config.jwks_fetcher
+        # ONE canonical JWKSValidator shared by both transports so the HTTP
+        # middleware stack instance and the WS ``app.state`` instance do not
+        # keep divergent JWKS caches (S0 #237). Both middleware instances are
+        # constructed with the same ``validator``; the WS path reads the
+        # ``app.state`` instance and calls ``validate_bearer_token`` directly,
+        # which delegates to this shared validator.
+        shared_validator = JWKSValidator(
+            oauth2_config.jwks_uri,
+            fetcher=oauth2_config.jwks_fetcher,
+            expected_issuer=oauth2_config.expected_issuer,
+            expected_audience=oauth2_config.expected_audience,
+            require_exp=False,
+        )
+        middleware_kwargs["validator"] = shared_validator
+        oauth2_middleware = OAuth2Middleware(app, **middleware_kwargs)
+        app.add_middleware(OAuth2Middleware, **middleware_kwargs)
+        # Expose the middleware instance so the WS path can enforce OAuth2 at
+        # connection acceptance; the HTTP middleware stack never runs over WS
+        # (B4/BUG #4). Stored on app.state to keep server.py decoupled from the
+        # WS module's signature.
+        app.state.oauth2_middleware = oauth2_middleware
+        logger.info(
+            "asap.server.oauth2_enabled",
+            manifest_id=manifest.id,
+            jwks_uri=oauth2_config.jwks_uri,
+            path_prefix=oauth2_config.path_prefix,
+        )
+
+    app.add_middleware(ASAPVersionMiddleware)
+
+    if asap_challenge_enabled:
+        from asap.transport.challenge import (
+            WWWAuthenticateASAPMiddleware,
+            default_manifest_discovery_url,
+        )
+
+        disc = asap_challenge_discovery_url or default_manifest_discovery_url(
+            manifest.endpoints.asap
+        )
+        app.add_middleware(
+            WWWAuthenticateASAPMiddleware,
+            default_discovery_url=disc,
+            path_prefixes=asap_challenge_path_prefixes,
+        )
+
+
+def _wire_core_routes(app: FastAPI, *, manifest: Manifest, rate_limit: str | None) -> None:
+    """Include the core route groups: health/discovery/metrics, JSON-RPC, WS, audit."""
+    _ = manifest  # routers read manifest from app.state
+    _ = rate_limit  # rate limiting wired separately via _configure_rate_limiting
+    app.include_router(create_health_router())
+    app.include_router(create_jsonrpc_router())
+    app.include_router(create_websocket_router())
+    app.include_router(create_audit_router())
+
+
+def _configure_rate_limiting(
+    app: FastAPI,
+    *,
+    rate_limit: str | None,
+    manifest: Manifest,
+) -> None:
+    """Create the per-app rate limiter and register the 429 exception handler."""
+    if rate_limit is None:
+        # Default matches DD-012: burst allowance for bursty agent traffic.
+        rate_limit_str = os.getenv("ASAP_RATE_LIMIT", "10/second;100/minute")
+    else:
+        rate_limit_str = rate_limit
+
+    # Isolated per-app limiter storage; tests override via app.state.limiter.
+    app.state.limiter = create_limiter(
+        [rate_limit_str],
+        key_func=_get_sender_from_envelope,
+    )
+    app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+    logger.info(
+        "asap.server.rate_limit_enabled",
+        manifest_id=manifest.id,
+        rate_limit=rate_limit_str,
+    )
+    logger.info(
+        "asap.server.max_request_size",
+        manifest_id=manifest.id,
+        max_request_size=app.state.max_request_size,
+    )
 
 
 def create_app(
@@ -1749,470 +906,69 @@ def create_app(
         >>> app = create_app(manifest, registry)
         >>> # Run with uvicorn: uvicorn module:app
     """
-    # Configure thread pool executor for DoS prevention
-    executor: BoundedExecutor | None = None
-    if max_threads is None:
-        max_threads_env = os.getenv("ASAP_MAX_THREADS")
-        if max_threads_env:
-            max_threads = int(max_threads_env)
-    if max_threads is not None:
-        executor = BoundedExecutor(max_threads=max_threads)
-        logger.info(
-            "asap.server.bounded_executor_enabled",
-            manifest_id=manifest.id,
-            max_threads=max_threads,
-        )
-
-    # Resolve metering: metering_storage takes precedence (enables usage API)
-    effective_metering_store: MeteringStore | None = metering_store
-    if metering_storage is not None and isinstance(metering_storage, MeteringStorage):
-        effective_metering_store = metering_storage_adapter(metering_storage)
-
-    # Use default registry if none provided
-    use_default_registry = registry is None
-    if registry is None:
-        registry = create_default_registry(metering_store=effective_metering_store)
-    elif effective_metering_store is not None:
-        registry.set_metering_store(effective_metering_store)
-
-    # Attach executor to registry if provided
-    if executor is not None:
-        registry._executor = executor
-
-    # Wrap registry in holder for hot reload support
-    registry_holder = RegistryHolder(registry)
-    if executor is not None:
-        registry_holder._executor = executor
-
-    # Resolve hot_reload from env if not specified
-    if hot_reload is None:
-        hot_reload = os.getenv(ENV_HOT_RELOAD, "").strip().lower() in ("true", "1", "yes")
-
-    # Create authentication middleware if auth is configured
-    auth_middleware: AuthenticationMiddleware | None = None
-    if manifest.auth is not None:
-        if token_validator is None:
-            raise ValueError(
-                "token_validator is required when manifest.auth is configured. "
-                "Provide a function that validates tokens and returns agent IDs."
-            )
-        validator = BearerTokenValidator(token_validator)
-        auth_middleware = AuthenticationMiddleware(manifest, validator)
-        logger.info(
-            "asap.server.auth_enabled",
-            manifest_id=manifest.id,
-            schemes=manifest.auth.schemes,
-        )
-
-    # Configure max request size
-    if max_request_size is None:
-        max_request_size = int(os.getenv("ASAP_MAX_REQUEST_SIZE", str(MAX_REQUEST_SIZE)))
-
-    # Create nonce store if required
-    nonce_store: NonceStore | None = None
-    if require_nonce:
-        nonce_store = InMemoryNonceStore()
-        logger.info(
-            "asap.server.nonce_validation_enabled",
-            manifest_id=manifest.id,
-        )
-
-    _identity_host_store: HostStore
-    _identity_agent_store: AgentStore
-    if identity_host_store is None and identity_agent_store is None:
-        _identity_agent_store = InMemoryAgentStore()
-        _identity_host_store = InMemoryHostStore(agent_store=_identity_agent_store)
-    elif identity_host_store is not None and identity_agent_store is not None:
-        _identity_host_store = identity_host_store
-        _identity_agent_store = identity_agent_store
-    else:
-        msg = "identity_host_store and identity_agent_store must both be set or both omitted"
-        raise ValueError(msg)
-    _identity_jti_cache = identity_jti_cache if identity_jti_cache is not None else JtiReplayCache()
-    _identity_jwt_audience: str | list[str] = (
-        identity_jwt_audience if identity_jwt_audience is not None else manifest.id
-    )
-    _identity_approval_store: ApprovalStore = (
-        identity_approval_store if identity_approval_store is not None else InMemoryApprovalStore()
-    )
-
-    # Resolve snapshot store (env-based when not provided)
-    if snapshot_store is None:
-        snapshot_store = create_snapshot_store()
-        logger.info(
-            "asap.server.snapshot_store_from_env",
-            manifest_id=manifest.id,
-            backend=os.environ.get("ASAP_STORAGE_BACKEND", "memory"),
-        )
-
-    # Create request handler
-    handler = ASAPRequestHandler(
-        registry_holder, manifest, auth_middleware, max_request_size, nonce_store
-    )
-
-    # Start handler file watcher when hot reload is enabled (only with default registry)
-    if hot_reload and use_default_registry:
-        _handlers_module = sys.modules.get("asap.transport.handlers")
-        _handlers_file = getattr(_handlers_module, "__file__", "") if _handlers_module else ""
-        if _handlers_file and Path(_handlers_file).exists():
-            watcher = threading.Thread(
-                target=_run_handler_watcher,
-                args=(registry_holder, _handlers_file),
-                name="asap-handler-watcher",
-                daemon=True,
-            )
-            watcher.start()
-            logger.info(
-                "asap.server.hot_reload_enabled",
-                manifest_id=manifest.id,
-                path=_handlers_file,
-            )
-        else:
-            logger.warning(
-                "asap.server.hot_reload_skipped",
-                reason="handlers module path not found",
-            )
-
-    # Enable Swagger UI (/docs) and ReDoc (/redoc) only when ASAP_DEBUG=true
-    _docs_url = "/docs" if is_debug_mode() else None
-    _redoc_url = "/redoc" if is_debug_mode() else None
-    _openapi_url = "/openapi.json" if is_debug_mode() else None
-
-    # Track active WebSocket connections for graceful shutdown (close with reason)
-    _active_websockets: set[WebSocket] = set()
-    # Subset of connections subscribed to SLA breach notifications (v1.3)
-    _sla_breach_subscribers: set[WebSocket] = set()
-
-    @asynccontextmanager
-    async def _lifespan(app: FastAPI) -> Any:
-        yield
-        for ws in list(_active_websockets):
-            with suppress(OSError):
-                await ws.close(
-                    code=WS_CLOSE_GOING_AWAY,
-                    reason=WS_CLOSE_REASON_SHUTDOWN,
-                )
-
-    app = FastAPI(
-        title="ASAP Protocol Server",
-        description=f"ASAP server for {manifest.name}",
-        version=manifest.version,
-        docs_url=_docs_url,
-        redoc_url=_redoc_url,
-        openapi_url=_openapi_url,
-        lifespan=_lifespan,
-    )
-    app.state.websocket_connections = _active_websockets
-    app.state.sla_breach_subscribers = _sla_breach_subscribers
-    app.state.websocket_message_rate_limit = websocket_message_rate_limit
-    app.state.mtls_config = mtls_config
-    app.state.identity_host_store = _identity_host_store
-    app.state.identity_agent_store = _identity_agent_store
-    app.state.identity_jti_cache = _identity_jti_cache
-    app.state.identity_jwt_audience = _identity_jwt_audience
-    app.state.identity_approval_store = _identity_approval_store
-    app.state.identity_host_supports_ciba = identity_host_supports_ciba
-    if identity_approval_a2h_channel is not None:
-        app.state.identity_approval_a2h_channel = identity_approval_a2h_channel
-    if identity_fresh_session_config is not None:
-        app.state.identity_fresh_session_config = identity_fresh_session_config
-    app.state.identity_webauthn_verifier = (
-        identity_webauthn_verifier
-        if identity_webauthn_verifier is not None
-        else default_webauthn_verifier()
-    )
-    # Dedicated rate limiter for /asap/agent/* (separate budget from main limiter)
-    _identity_rl = identity_rate_limit or "5/second;30/minute"
-    app.state.identity_limiter = create_limiter([_identity_rl])
-    app.include_router(create_agent_identity_router())
-    app.include_router(create_escalation_router())
-
-    # Capability-based authorization (S1)
-    from asap.auth.capabilities import CapabilityRegistry
-
-    if not hasattr(app.state, "capability_registry"):
-        app.state.capability_registry = CapabilityRegistry()
-    app.include_router(create_capability_router())
-    if registry_auto_registration is not None:
-        from asap.registry.auto_registration import create_auto_registration_router
-        from asap.registry.receipt_cache import create_registration_receipt_cache
-
-        app.state.registration_limiter = create_registration_rate_limiter()
-        app.state.registration_receipt_cache = create_registration_receipt_cache()
-        app.include_router(create_auto_registration_router(registry_auto_registration))
-        logger.info(
-            "asap.server.registry_auto_registration_enabled",
-            manifest_id=manifest.id,
-        )
-    if metering_storage is not None and isinstance(metering_storage, MeteringStorage):
-        app.state.metering_storage = metering_storage
-        app.include_router(create_usage_router())
-        logger.warning(
-            "asap.server.usage_api_unauthenticated",
-            message=(
-                "Usage API (/usage) is enabled but unauthenticated. "
-                "Intended for local/operator use only. Protect with OAuth2 or network controls when exposed."
-            ),
-        )
-    if mtls_config is not None:
-        logger.info(
-            "asap.server.mtls_enabled",
-            manifest_id=manifest.id,
-            cert_file=str(mtls_config.cert_file),
-        )
-
-    if sla_storage is not None and isinstance(sla_storage, SLAStorage):
-        app.state.sla_storage = sla_storage
-        app.state.manifest = manifest
-        app.include_router(create_sla_router())
-        logger.warning(
-            "asap.server.sla_api_unauthenticated",
-            message=(
-                "SLA API (/sla) is enabled but unauthenticated. "
-                "Intended for local/operator use only. Protect with OAuth2 or network controls when exposed."
-            ),
-        )
-
-    if oauth2_config is not None and delegation_key_store is not None:
-        app.state.delegation_key_store = delegation_key_store
-        if delegation_storage is not None:
-            app.state.delegation_storage = delegation_storage
-        app.include_router(create_delegation_router(), prefix="/asap")
-        logger.info(
-            "asap.server.delegation_api_enabled",
-            manifest_id=manifest.id,
-        )
-
-    # Add size limit middleware (runs before routing)
-    app.add_middleware(SizeLimitMiddleware, max_size=max_request_size)
-
-    if oauth2_config is not None:
-        middleware_kwargs: dict[str, Any] = {
-            "jwks_uri": oauth2_config.jwks_uri,
-            "required_scope": oauth2_config.required_scope,
-            "path_prefix": oauth2_config.path_prefix,
-            "manifest_id": manifest.id,
-            "custom_claim": oauth2_config.custom_claim,
-            "expected_issuer": oauth2_config.expected_issuer,
-            "expected_audience": oauth2_config.expected_audience,
-        }
-        if oauth2_config.jwks_fetcher is not None:
-            middleware_kwargs["jwks_fetcher"] = oauth2_config.jwks_fetcher
-        app.add_middleware(OAuth2Middleware, **middleware_kwargs)
-        logger.info(
-            "asap.server.oauth2_enabled",
-            manifest_id=manifest.id,
-            jwks_uri=oauth2_config.jwks_uri,
-            path_prefix=oauth2_config.path_prefix,
-        )
-
-    app.add_middleware(ASAPVersionMiddleware)
-
-    # Configure rate limiting
-    if rate_limit is None:
-        # Default matches DD-012: Burst allowance for better UX with bursty agent traffic
-        rate_limit_str = os.getenv("ASAP_RATE_LIMIT", "10/second;100/minute")
-    else:
-        rate_limit_str = rate_limit
-
-    # Create isolated limiter instance for this app.
-    # Each app instance gets its own rate limiter storage.
-    # Tests can override via direct assignment to app.state.limiter.
-    app.state.limiter = create_limiter(
-        [rate_limit_str],
-        key_func=_get_sender_from_envelope,
-    )
-    app.state.max_request_size = max_request_size
-    app.state.max_batch_size = max_batch_size
-    app.state.snapshot_store = snapshot_store
-    app.state.metering_store = metering_store
-    app.state.audit_store = audit_store
-    if audit_store is not None:
-        logger.warning(
-            "asap.server.audit_api_unauthenticated",
-            message=(
-                "Audit API (/audit) is enabled but unauthenticated. "
-                "Intended for local/operator use only. "
-                "Protect with OAuth2 or network controls when exposed."
-            ),
-        )
-    app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
-    logger.info(
-        "asap.server.rate_limit_enabled",
-        manifest_id=manifest.id,
-        rate_limit=rate_limit_str,
-    )
-    logger.info(
-        "asap.server.max_request_size",
-        manifest_id=manifest.id,
+    components = _build_server_components(
+        manifest=manifest,
+        registry=registry,
+        token_validator=token_validator,
         max_request_size=max_request_size,
+        max_threads=max_threads,
+        require_nonce=require_nonce,
+        hot_reload=hot_reload,
+        snapshot_store=snapshot_store,
+        metering_store=metering_store,
+        metering_storage=metering_storage,
+        identity_host_store=identity_host_store,
+        identity_agent_store=identity_agent_store,
+        identity_jti_cache=identity_jti_cache,
+        identity_jwt_audience=identity_jwt_audience,
+        identity_approval_store=identity_approval_store,
     )
+    # Re-bind resolved values so the wiring below uses env-defaulted config.
+    max_request_size = components.max_request_size
+    snapshot_store = components.snapshot_store
 
-    @app.get("/health")
-    async def health() -> JSONResponse:
-        """Liveness probe: always OK if the process is running.
-
-        Used by Kubernetes livenessProbe and Docker HEALTHCHECK.
-        Returns 200 with {"status": "ok"}.
-
-        Returns:
-            JSONResponse with status ok
-        """
-        return JSONResponse(status_code=200, content={"status": "ok"})
-
-    @app.get("/ready")
-    async def ready() -> JSONResponse:
-        """Readiness probe: OK when the server is ready to accept traffic.
-
-        Used by Kubernetes readinessProbe. Returns 200 when the app
-        is initialized and can serve requests.
-
-        Returns:
-            JSONResponse with status ok
-        """
-        return JSONResponse(status_code=200, content={"status": "ok"})
-
-    server_started_at = time.monotonic()
-    if manifest is not None:
-
-        @app.get(wellknown.WELLKNOWN_MANIFEST_PATH)
-        async def get_manifest(request: Request) -> Response:
-            """Return the agent's manifest for discovery.
-
-            This endpoint allows other agents to discover this agent's
-            capabilities, skills, and communication endpoints.
-            """
-            return await wellknown.get_manifest_response(manifest, request)
-
-        @app.get(discovery_health.WELLKNOWN_HEALTH_PATH)
-        async def get_health() -> JSONResponse:
-            """Return agent health/liveness status (200 healthy, 503 unhealthy)."""
-            return await discovery_health.get_health_response_async(manifest, server_started_at)
-
-    @app.get("/asap/metrics")
-    async def get_metrics_endpoint() -> PlainTextResponse:
-        """Return Prometheus-compatible metrics.
-
-        This endpoint exposes server metrics in Prometheus text format,
-        including request counts, error rates, and latency histograms.
-
-        Returns:
-            PlainTextResponse with metrics in Prometheus format
-
-        Example:
-            curl http://localhost:8000/asap/metrics
-        """
-        metrics = get_metrics()
-        return PlainTextResponse(
-            content=metrics.export_prometheus(),
-            media_type="application/openmetrics-text; version=1.0.0; charset=utf-8",
-        )
-
+    app = _create_fastapi_app(manifest, components)
+    _populate_app_state(
+        app,
+        components=components,
+        manifest=manifest,
+        max_request_size=max_request_size,
+        max_batch_size=max_batch_size,
+        snapshot_store=snapshot_store,
+        metering_store=metering_store,
+        audit_store=audit_store,
+        websocket_message_rate_limit=websocket_message_rate_limit,
+        mtls_config=mtls_config,
+        identity_host_supports_ciba=identity_host_supports_ciba,
+        identity_approval_a2h_channel=identity_approval_a2h_channel,
+        identity_fresh_session_config=identity_fresh_session_config,
+        identity_webauthn_verifier=identity_webauthn_verifier,
+        identity_rate_limit=identity_rate_limit,
+    )
+    _wire_optional_routers(
+        app,
+        registry_auto_registration=registry_auto_registration,
+        metering_storage=metering_storage,
+        sla_storage=sla_storage,
+        oauth2_config=oauth2_config,
+        delegation_key_store=delegation_key_store,
+        delegation_storage=delegation_storage,
+        mtls_config=mtls_config,
+        manifest=manifest,
+    )
+    _wire_middleware(
+        app,
+        oauth2_config=oauth2_config,
+        max_request_size=max_request_size,
+        asap_challenge_enabled=asap_challenge_enabled,
+        asap_challenge_discovery_url=asap_challenge_discovery_url,
+        asap_challenge_path_prefixes=asap_challenge_path_prefixes,
+        manifest=manifest,
+    )
+    _wire_core_routes(app, manifest=manifest, rate_limit=rate_limit)
+    _configure_rate_limiting(app, rate_limit=rate_limit, manifest=manifest)
     # OpenTelemetry tracing (zero-config via OTEL_* env vars)
     configure_tracing(service_name=manifest.id, app=app)
-
-    @app.post("/asap", response_model=None)
-    async def handle_asap_message(request: Request) -> Response:
-        """Handle ASAP messages or JSON-RPC batch arrays.
-
-        Uses ``request.body()`` (which Starlette caches) so that
-        ``parse_json_body`` inside ``handle_message`` can re-read via
-        ``request.stream()`` — Starlette yields the cached bytes.
-        """
-        body = await request.body()
-        try:
-            parsed = json.loads(body)
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            app.state.limiter.check(request)
-            return await handler.handle_message(request)
-
-        if isinstance(parsed, list):
-            return await _handle_batch(request, parsed, handler, app)
-
-        app.state.limiter.check(request)
-        return await handler.handle_message(request)
-
-    @app.post("/asap/stream", response_model=None)
-    async def handle_asap_stream(request: Request) -> Response:
-        """Stream task chunks as Server-Sent Events (``Envelope`` JSON per ``data:`` line)."""
-        app.state.limiter.check(request)
-        return await handler.handle_stream(request)
-
-    @app.websocket("/asap/ws")
-    async def websocket_asap(websocket: WebSocket) -> None:
-        """ASAP JSON-RPC over WebSocket; same handlers as POST /asap."""
-        ws_rate_limit: float | None = getattr(app.state, "websocket_message_rate_limit", 10.0)
-        sla_subscribers: set[WebSocket] | None = getattr(app.state, "sla_breach_subscribers", None)
-        await handle_websocket_connection(
-            websocket,
-            handler,
-            app.state.websocket_connections,
-            ws_message_rate_limit=ws_rate_limit,
-            sla_breach_subscribers=sla_subscribers,
-        )
-
-    @app.get("/audit")
-    async def get_audit_log(
-        request: Request,
-        urn: str | None = None,
-        start: str | None = None,
-        end: str | None = None,
-        limit: int = 100,
-        offset: int = 0,
-    ) -> JSONResponse:
-        """Query the tamper-evident audit log."""
-        store: AuditStore | None = getattr(app.state, "audit_store", None)
-        if store is None:
-            return JSONResponse(status_code=404, content={"detail": "audit not configured"})
-
-        if limit < 0 or offset < 0:
-            return JSONResponse(
-                status_code=400,
-                content={"detail": "limit and offset must be non-negative"},
-            )
-
-        from datetime import datetime as _dt
-        from datetime import timezone as _tz
-
-        try:
-            start_dt = _dt.fromisoformat(start).replace(tzinfo=_tz.utc) if start else None
-            end_dt = _dt.fromisoformat(end).replace(tzinfo=_tz.utc) if end else None
-        except ValueError:
-            return JSONResponse(
-                status_code=400,
-                content={"detail": "Invalid date format. Use ISO 8601 (e.g. 2026-01-01T00:00:00)"},
-            )
-
-        entries = await store.query(
-            agent_urn=urn,
-            start=start_dt,
-            end=end_dt,
-            limit=min(limit, 1000),
-            offset=offset,
-        )
-        return JSONResponse(
-            status_code=200,
-            content={
-                "entries": [e.model_dump(mode="json") for e in entries],
-                "count": len(entries),
-            },
-        )
-
-    if asap_challenge_enabled:
-        from asap.transport.challenge import (
-            WWWAuthenticateASAPMiddleware,
-            default_manifest_discovery_url,
-        )
-
-        disc = asap_challenge_discovery_url or default_manifest_discovery_url(
-            manifest.endpoints.asap
-        )
-        app.add_middleware(
-            WWWAuthenticateASAPMiddleware,
-            default_discovery_url=disc,
-            path_prefixes=asap_challenge_path_prefixes,
-        )
-
     return app
 
 

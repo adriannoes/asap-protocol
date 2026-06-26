@@ -1,15 +1,23 @@
 """Tests for delegation revocation storage."""
 
+import asyncio
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
 from asap.economics.delegation_storage import (
     InMemoryDelegationStorage,
     SQLiteDelegationStorage,
+)
+from asap.state.stores._sqlite_base import (
     _assert_sql_in_placeholders,
     _build_sql_in_placeholders,
+    parse_iso,
 )
+
+if TYPE_CHECKING:
+    from _pytest.monkeypatch import MonkeyPatch
 
 
 # ---------------------------------------------------------------------------
@@ -493,16 +501,13 @@ class TestSQLiteDelegationStorageCoverage:
         delegator = await sqlite_storage.get_delegator("unknown_tok")
         assert delegator is None
 
-    @pytest.mark.asyncio
-    async def test_parse_iso_datetime_edge_cases(
-        self, sqlite_storage: SQLiteDelegationStorage
-    ) -> None:
-        """_parse_iso_datetime handles None and invalid values."""
-        assert sqlite_storage._parse_iso_datetime(None) is None
-        assert sqlite_storage._parse_iso_datetime("") is None
-        assert sqlite_storage._parse_iso_datetime("not-a-date") is None
+    def test_parse_iso_datetime_edge_cases(self) -> None:
+        """parse_iso handles None and invalid values (canonical base helper)."""
+        assert parse_iso(None) is None
+        assert parse_iso("") is None
+        assert parse_iso("not-a-date") is None
         # Z suffix handled
-        result = sqlite_storage._parse_iso_datetime("2026-01-01T00:00:00Z")
+        result = parse_iso("2026-01-01T00:00:00Z")
         assert result is not None
 
     def test_build_sql_in_placeholders_formats_question_marks(self) -> None:
@@ -512,3 +517,260 @@ class TestSQLiteDelegationStorageCoverage:
     def test_assert_sql_in_placeholders_rejects_malformed(self) -> None:
         with pytest.raises(ValueError, match="placeholders must be"):
             _assert_sql_in_placeholders("id=1; DROP TABLE revocations; --")
+
+
+# ---------------------------------------------------------------------------
+# Task 1.0 (B1) — Atomic cascade revocation regression tests
+# ---------------------------------------------------------------------------
+
+
+class TestRevokeCascadeAtomic:
+    """Atomic cascade revocation: SQLite rollback + InMemory lock parity.
+
+    Covers the two regression scenarios from the v2.5.1 Thermo-Nuclear Patch:
+    1. SQLite mid-cascade crash must roll back atomically (no partial state).
+    2. InMemory concurrent ``register_issued`` during a cascade must not lose a
+       newly-issued child (cascade holds an ``asyncio.Lock``).
+    """
+
+    @pytest.mark.asyncio
+    async def test_revoke_cascade_atomic_rollback(
+        self,
+        sqlite_storage: SQLiteDelegationStorage,
+        monkeypatch: "MonkeyPatch",
+    ) -> None:
+        """A failing mid-cascade revoke must leave NO token revoked (atomic rollback).
+
+        Tree seeded (two branches off the root):
+            parent      -> child1      (delegate urn:mid1) -> grandchild1 (leaf1)
+            child_extra -> (issued by root, delegate urn:mid2)
+            child2      -> (issued by mid2) -> grandchild2 (leaf2)
+        The cascade from `parent` reaches child1, grandchild1, child_extra,
+        child2, grandchild2.
+        """
+        await sqlite_storage.register_issued(
+            "parent", "urn:asap:agent:root", delegate_urn="urn:asap:agent:mid1"
+        )
+        await sqlite_storage.register_issued(
+            "child1", "urn:asap:agent:mid1", delegate_urn="urn:asap:agent:leaf1"
+        )
+        await sqlite_storage.register_issued(
+            "child_extra", "urn:asap:agent:root", delegate_urn="urn:asap:agent:mid2"
+        )
+        await sqlite_storage.register_issued(
+            "child2", "urn:asap:agent:mid2", delegate_urn="urn:asap:agent:leaf2"
+        )
+        await sqlite_storage.register_issued(
+            "grandchild1", "urn:asap:agent:leaf1", delegate_urn="urn:asap:agent:end1"
+        )
+        await sqlite_storage.register_issued(
+            "grandchild2", "urn:asap:agent:leaf2", delegate_urn="urn:asap:agent:end2"
+        )
+        all_ids = [
+            "parent",
+            "child1",
+            "child_extra",
+            "child2",
+            "grandchild1",
+            "grandchild2",
+        ]
+
+        # Fail exactly once, on the 2nd per-id revoke the cascade performs.
+        # Patch the per-id hook the atomic path uses when present, and also the
+        # public ``revoke`` (used by the legacy non-atomic path) so the test is
+        # valid both before and after the refactor.
+        call_count = {"n": 0}
+
+        def _should_fail() -> bool:
+            call_count["n"] += 1
+            return call_count["n"] == 2
+
+        original_revoke = sqlite_storage.revoke
+
+        async def _failing_revoke(token_id: str, reason: str | None = None) -> None:
+            if _should_fail():
+                raise RuntimeError("simulated mid-cascade crash")
+            await original_revoke(token_id, reason)
+
+        monkeypatch.setattr(sqlite_storage, "revoke", _failing_revoke)
+
+        if hasattr(sqlite_storage, "_revoke_on_conn"):
+            from datetime import datetime, timezone
+
+            async def _failing_revoke_on_conn(
+                conn: object, token_id: str, reason: str | None
+            ) -> None:
+                if _should_fail():
+                    raise RuntimeError("simulated mid-cascade crash")
+                now_iso = datetime.now(timezone.utc).isoformat()
+                await conn.execute(
+                    "INSERT OR REPLACE INTO revocations (id, revoked_at, reason) VALUES (?, ?, ?)",
+                    (token_id, now_iso, reason),
+                )
+
+            monkeypatch.setattr(sqlite_storage, "_revoke_on_conn", _failing_revoke_on_conn)
+
+        with pytest.raises(RuntimeError, match="simulated mid-cascade crash"):
+            await sqlite_storage.revoke_cascade("parent", reason="rollback test")
+
+        # Atomic rollback: nothing should be persisted.
+        revoked = await sqlite_storage.are_revoked(all_ids)
+        assert revoked == dict.fromkeys(all_ids, False), (
+            f"expected no revocations after rollback, got {revoked}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_revoke_cascade_concurrent_inmemory_no_lost_child(
+        self,
+        memory_storage: InMemoryDelegationStorage,
+        monkeypatch: "MonkeyPatch",
+    ) -> None:
+        """A child issued mid-cascade must not be lost (cascade holds a lock).
+
+        Invariant: the cascade and a concurrent ``register_issued`` must be
+        serialized by an ``asyncio.Lock`` — the issue must not interleave
+        *inside* the cascade's critical section. We detect non-serialization
+        by recording the relative order of ``register_issued(child_new)``
+        completing vs. the cascade revoking the root's delegate branch. Without
+        a lock the issue completes mid-cascade (recorded before the cascade
+        finishes revoking); with the lock the issue is delayed until the
+        cascade releases, so it completes only after the cascade's final revoke.
+
+        The "not lost" check (``get_delegator(child_new)`` is observable) holds
+        in both worlds; the ordering check is what the lock guarantees.
+        """
+        await memory_storage.register_issued(
+            "parent", "urn:asap:agent:root", delegate_urn="urn:asap:agent:mid"
+        )
+        await memory_storage.register_issued(
+            "child", "urn:asap:agent:mid", delegate_urn="urn:asap:agent:leaf"
+        )
+
+        events: list[str] = []
+        yielded_once = {"done": False}
+        original_list = memory_storage.list_token_ids_issued_by
+        original_revoke = memory_storage.revoke
+
+        async def _yielding_list(delegator_urn: str) -> list[str]:
+            # Yield exactly once, while walking the root's delegate ("mid"),
+            # so the concurrent register_issued races the cascade's snapshot.
+            if delegator_urn == "urn:asap:agent:mid" and not yielded_once["done"]:
+                await asyncio.sleep(0)
+                yielded_once["done"] = True
+            return await original_list(delegator_urn)
+
+        async def _recording_revoke(token_id: str, reason: str | None = None) -> None:
+            events.append(f"revoke:{token_id}:start")
+            await original_revoke(token_id, reason)
+            events.append(f"revoke:{token_id}:end")
+
+        monkeypatch.setattr(memory_storage, "list_token_ids_issued_by", _yielding_list)
+        monkeypatch.setattr(memory_storage, "revoke", _recording_revoke)
+
+        async def _issue_new_child() -> None:
+            await memory_storage.register_issued(
+                "child_new",
+                "urn:asap:agent:mid",
+                delegate_urn="urn:asap:agent:leaf_new",
+            )
+            events.append("issue:child_new")
+
+        cascade_task = asyncio.create_task(
+            memory_storage.revoke_cascade("parent", reason="concurrent test")
+        )
+        issue_task = asyncio.create_task(_issue_new_child())
+        await asyncio.gather(cascade_task, issue_task)
+
+        # The new child was issued and is observable in the store (not lost).
+        delegator = await memory_storage.get_delegator("child_new")
+        assert delegator == "urn:asap:agent:mid", (
+            f"concurrent register_issued was lost during cascade (get_delegator={delegator!r})"
+        )
+        # Serialization: the issue must not complete while the cascade is
+        # mid-revoke. With the lock, every "revoke:*:end" for the cascade
+        # precedes "issue:child_new". Without the lock, "issue:child_new"
+        # appears between the yield and the first revoke (interleaved).
+        issue_idx = events.index("issue:child_new")
+        last_revoke_end = max(
+            (i for i, e in enumerate(events) if e.startswith("revoke:") and e.endswith(":end")),
+            default=-1,
+        )
+        assert issue_idx > last_revoke_end, (
+            f"register_issued interleaved inside the cascade critical section (events={events})"
+        )
+        # And the originally-seeded tree was revoked consistently.
+        assert await memory_storage.is_revoked("parent") is True
+        assert await memory_storage.is_revoked("child") is True
+
+    @pytest.mark.asyncio
+    async def test_revoke_cascade_sqlite_serializes_concurrent_register_issued(
+        self,
+        sqlite_storage: SQLiteDelegationStorage,
+    ) -> None:
+        """SQLite cascade holds ``BEGIN IMMEDIATE`` so a concurrent issue cannot interleave.
+
+        CR#6: ``register_issued`` commits on a separate connection; without write
+        serialization a concurrent issuer could insert a child that escapes the
+        cascade's snapshot. ``BEGIN IMMEDIATE`` acquires the write lock at
+        transaction start, so the concurrent ``register_issued`` is delayed until
+        the cascade commits. The new child is observable afterwards (not lost)
+        and the originally-seeded tree is revoked consistently.
+        """
+        await sqlite_storage.register_issued(
+            "parent", "urn:asap:agent:root", delegate_urn="urn:asap:agent:mid"
+        )
+        await sqlite_storage.register_issued(
+            "child", "urn:asap:agent:mid", delegate_urn="urn:asap:agent:leaf"
+        )
+
+        events: list[str] = []
+        cascade_in_transaction = asyncio.Event()
+        cascade_can_commit = asyncio.Event()
+        original_revoke_on_conn = sqlite_storage._revoke_on_conn  # noqa: SLF001
+
+        async def _gated_revoke_on_conn(
+            conn: object, token_id: str, reason: str | None = None
+        ) -> None:
+            # Signal that the cascade's transaction is open, then wait for the
+            # concurrent register_issued to attempt (and block on the write lock)
+            # before completing the cascade.
+            if token_id == "parent":
+                cascade_in_transaction.set()
+                await asyncio.wait_for(cascade_can_commit.wait(), timeout=5.0)
+            await original_revoke_on_conn(conn, token_id, reason)
+
+        sqlite_storage._revoke_on_conn = _gated_revoke_on_conn  # noqa: SLF001
+
+        async def _issue_new_child() -> None:
+            # Wait until the cascade holds the write lock, then issue a new child.
+            # This register_issued must block on BEGIN IMMEDIATE until the cascade commits.
+            await cascade_in_transaction.wait()
+            await sqlite_storage.register_issued(
+                "child_new",
+                "urn:asap:agent:mid",
+                delegate_urn="urn:asap:agent:leaf_new",
+            )
+            events.append("issue:child_new")
+
+        async def _run_cascade() -> None:
+            await sqlite_storage.revoke_cascade("parent", reason="concurrent test")
+            events.append("cascade:committed")
+
+        cascade_task = asyncio.create_task(_run_cascade())
+        issue_task = asyncio.create_task(_issue_new_child())
+        # Give the concurrent issue a chance to start and block on the write lock.
+        await asyncio.sleep(0.05)
+        assert "issue:child_new" not in events, (
+            "register_issued completed while the cascade held the write lock "
+            "(BEGIN IMMEDIATE did not serialize)"
+        )
+        cascade_can_commit.set()
+        await asyncio.gather(cascade_task, issue_task)
+
+        # The new child was issued and is observable (not lost).
+        assert await sqlite_storage.get_delegator("child_new") == "urn:asap:agent:mid"
+        # Serialization: the cascade committed before the issue completed.
+        assert events.index("cascade:committed") < events.index("issue:child_new")
+        # The originally-seeded tree was revoked consistently.
+        assert await sqlite_storage.is_revoked("parent") is True
+        assert await sqlite_storage.is_revoked("child") is True

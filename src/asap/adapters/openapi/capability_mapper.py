@@ -30,11 +30,17 @@ _HTTP_METHODS: tuple[str, ...] = (
 
 
 class OpenAPIExecutionKind(StrEnum):
-    """How upstream responses should be executed (OA-010)."""
+    """How upstream responses should be executed (OA-010).
+
+    ``async_polling`` (``202`` + ``Location``) was pruned in Sprint S3 Wave C
+    Task 4.3: it was detected and stored on :attr:`OpenAPICapability.execution_kind`
+    but never consumed by any production path (``factory`` only branches on
+    ``STREAMING``), so the variant was dead metadata. A ``202`` + ``Location``
+    operation now classifies as ``SYNC`` until a polling handler is wired.
+    """
 
     SYNC = "sync"
     STREAMING = "streaming"
-    ASYNC_POLLING = "async_polling"
 
 
 class _SupportsRef(Protocol):
@@ -262,30 +268,18 @@ def _responses_include_event_stream(operation: object, components: object | None
     return False
 
 
-def _responses_202_include_location(operation: object, components: object | None) -> bool:
-    responses = getattr(operation, "responses", None)
-    if not responses or "202" not in responses:
-        return False
-    resp = _resolve_response(cast(dict[str, Any], responses)["202"], components)
-    if resp is None:
-        return False
-    headers = getattr(resp, "headers", None)
-    if not headers:
-        return False
-    for name in cast(dict[str, Any], headers):
-        if isinstance(name, str) and name.lower() == "location":
-            return True
-    return False
-
-
 def detect_openapi_execution_kind(
     operation: object, components: object | None
 ) -> OpenAPIExecutionKind:
-    """Classify an operation for async/sync/streaming registration (OA-010)."""
+    """Classify an operation for sync/streaming registration (OA-010).
+
+    Returns ``STREAMING`` when any response advertises ``text/event-stream``,
+    otherwise ``SYNC``. The former ``async_polling`` branch (``202`` +
+    ``Location``) was pruned in Sprint S3 Wave C Task 4.3 — no production path
+    consumed it.
+    """
     if _responses_include_event_stream(operation, components):
         return OpenAPIExecutionKind.STREAMING
-    if _responses_202_include_location(operation, components):
-        return OpenAPIExecutionKind.ASYNC_POLLING
     return OpenAPIExecutionKind.SYNC
 
 
@@ -418,8 +412,8 @@ def map_openapi_to_capabilities(
 
     Each :class:`OpenAPICapability` includes :attr:`OpenAPICapability.execution_kind`
     (OA-010): ``streaming`` if any response advertises ``text/event-stream``,
-    else ``async_polling`` if a ``202`` response declares a ``Location`` header,
-    else ``sync``.
+    else ``sync``. (The former ``async_polling`` branch for ``202`` + ``Location``
+    was pruned in Sprint S3 Wave C Task 4.3 as dead metadata.)
 
     Args:
         doc: Parsed OpenAPI 3.0 / 3.1 root model.

@@ -547,6 +547,41 @@ class TestAgentReactivate:
         assert r.status_code == 403
         assert "revoked" in r.json()["detail"].lower()
 
+    async def test_reactivate_revoked_host_returns_403(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: ASAPRateLimiter | None,
+    ) -> None:
+        """A revoked HOST must not authenticate on capability routes.
+
+        Distinct from ``test_reactivate_revoked_agent_returns_403`` (which
+        revokes the AGENT and hits the agent-status check inside
+        ``reactivate_agent``): here the HOST is revoked, so the Host-JWT
+        verifier itself must reject the request with 403.
+        """
+        app, agent_store, host_store, _ = _setup(sample_manifest, isolated_rate_limiter)
+        client = TestClient(app)
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        aid = await _register_and_activate(
+            client, app, agent_store, host_sk, agent_sk, status="active"
+        )
+
+        host = await host_store.get_by_public_key(
+            jwk_thumbprint_sha256(ed25519_public_jwk(host_sk))
+        )
+        assert host is not None
+        await host_store.revoke(host.host_id)
+
+        token = _host_jwt(host_sk)
+        r = client.post(
+            "/asap/agent/reactivate",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"agent_id": aid},
+        )
+        assert r.status_code == 403
+        assert "revoked" in r.json()["detail"].lower()
+
     async def test_reactivate_absolute_lifetime_exceeded_returns_403(
         self,
         sample_manifest: Manifest,
@@ -740,3 +775,36 @@ class TestRegisterWithCapabilities:
         assert by_cap["file:read"].status == "active"
         assert by_cap["nonexistent:cap"].status == "denied"
         assert by_cap["nonexistent:cap"].reason
+
+
+# ---------------------------------------------------------------------------
+# Parity: missing identity_limiter surfaces a clean 503, not an AttributeError/500
+# (S2 #240 must-fix 1 — HTTP-side identity-route migration).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.filterwarnings("ignore:EdDSA is deprecated:UserWarning")
+class TestIdentityLimiterMissingReturns503:
+    """Identity routes must 503 cleanly when ``identity_limiter`` is unconfigured.
+
+    Previously the inline ``request.app.state.identity_limiter.check(request)``
+    raised ``AttributeError`` (surfacing as HTTP 500) when the limiter was not
+    wired. The ``Depends(require_identity_limiter)`` migration converts that into
+    a typed 503.
+    """
+
+    async def test_capability_list_returns_503_when_identity_limiter_missing(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: ASAPRateLimiter | None,
+    ) -> None:
+        app, _agent_store, _host_store, _registry = _setup(sample_manifest, isolated_rate_limiter)
+        # Simulate a misconfigured server: identity routes mounted but no limiter.
+        if hasattr(app.state, "identity_limiter"):
+            delattr(app.state, "identity_limiter")
+        client = TestClient(app)
+
+        r = client.get("/asap/capability/list")
+
+        assert r.status_code == 503
+        assert "identity_limiter not set" in r.json()["detail"]

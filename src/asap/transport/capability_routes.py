@@ -5,23 +5,23 @@ from __future__ import annotations
 import uuid
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
 from asap.auth.agent_jwt import (
     JtiReplayCache,
     JwtVerifyResult,
     verify_agent_jwt,
-    verify_host_jwt,
 )
 from pydantic import ValidationError
 
 from asap.auth.capabilities import CapabilityGrant, CapabilityRegistry
-from asap.auth.identity import AgentStore, HostStore
-from asap.auth.lifecycle import reactivate_agent
+from asap.auth.identity import AgentStore, HostStore, reactivate_agent
 from asap.models.base import ASAPBaseModel
 from asap.observability import get_logger
-from asap.transport._auth_helpers import bearer_token_from_request
+from asap.transport._auth_helpers import bearer_token_from_request, verify_host_bearer
+from asap.transport._state_deps import require_identity_limiter
+from asap.transport.rate_limit import ASAPRateLimiter
 
 logger = get_logger(__name__)
 
@@ -55,32 +55,6 @@ class AgentReactivateBody(ASAPBaseModel):
 # ---------------------------------------------------------------------------
 # Auth helpers
 # ---------------------------------------------------------------------------
-
-
-async def _verify_host_bearer(
-    request: Request,
-    *,
-    jti_replay_cache: JtiReplayCache | None = None,
-) -> tuple[JwtVerifyResult | None, JSONResponse | None]:
-    """Verify a Host JWT Bearer token."""
-    token = bearer_token_from_request(request)
-    if not token:
-        return None, JSONResponse(
-            status_code=401,
-            content={"detail": "Authentication required"},
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    host_store: HostStore = request.app.state.identity_host_store
-    audience = request.app.state.identity_jwt_audience
-    result = await verify_host_jwt(
-        token,
-        host_store,
-        expected_audience=audience,
-        jti_replay_cache=jti_replay_cache,
-    )
-    if not result.ok:
-        return None, JSONResponse(status_code=401, content={"detail": result.error})
-    return result, None
 
 
 async def verify_agent_bearer(
@@ -176,7 +150,6 @@ async def _handle_capability_list(
             host_store,
             agent_store,
             expected_audience=audience,
-            agent_store_writable=False,
         )
         if agent_result.ok and agent_result.agent:
             agent_id = agent_result.agent.agent_id
@@ -276,7 +249,7 @@ async def _handle_capability_execute(request: Request) -> JSONResponse:
 async def _handle_agent_reactivate(request: Request) -> JSONResponse:
     """Reactivate an expired agent (Host JWT required)."""
     jti_cache: JtiReplayCache = request.app.state.identity_jti_cache
-    result, err = await _verify_host_bearer(request, jti_replay_cache=jti_cache)
+    result, err = await verify_host_bearer(request, jti_replay_cache=jti_cache)
     if err is not None:
         return err
     if result is None or result.claims is None:
@@ -367,26 +340,34 @@ def create_capability_router() -> APIRouter:
         query: Annotated[str, Query()] = "",
         cursor: Annotated[int, Query(ge=0)] = 0,
         limit: Annotated[int, Query(ge=1, le=1000)] = 100,
+        limiter: ASAPRateLimiter = Depends(require_identity_limiter),
     ) -> JSONResponse:
-        request.app.state.identity_limiter.check(request)
+        limiter.check(request)
         return await _handle_capability_list(request, query=query, cursor=cursor, limit=limit)
 
     @router.get("/asap/capability/describe")
     async def capability_describe(
         request: Request,
         name: Annotated[str, Query(min_length=1)],
+        limiter: ASAPRateLimiter = Depends(require_identity_limiter),
     ) -> JSONResponse:
-        request.app.state.identity_limiter.check(request)
+        limiter.check(request)
         return await _handle_capability_describe(request, name)
 
     @router.post("/asap/capability/execute")
-    async def capability_execute(request: Request) -> JSONResponse:
-        request.app.state.identity_limiter.check(request)
+    async def capability_execute(
+        request: Request,
+        limiter: ASAPRateLimiter = Depends(require_identity_limiter),
+    ) -> JSONResponse:
+        limiter.check(request)
         return await _handle_capability_execute(request)
 
     @router.post("/asap/agent/reactivate")
-    async def agent_reactivate(request: Request) -> JSONResponse:
-        request.app.state.identity_limiter.check(request)
+    async def agent_reactivate(
+        request: Request,
+        limiter: ASAPRateLimiter = Depends(require_identity_limiter),
+    ) -> JSONResponse:
+        limiter.check(request)
         return await _handle_agent_reactivate(request)
 
     return router

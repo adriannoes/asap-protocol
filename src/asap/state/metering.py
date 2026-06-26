@@ -14,12 +14,19 @@ from __future__ import annotations
 import asyncio
 import warnings
 from collections.abc import Awaitable
-from datetime import datetime
-from typing import Protocol, runtime_checkable
+from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from pydantic import Field
 
 from asap.models.base import ASAPBaseModel
+
+if TYPE_CHECKING:
+    # Economics is the higher layer; importing it at runtime from the foundation
+    # layer would form a cycle (economics.storage imports state.stores). The
+    # metering_storage bridge below duck-types the MeteringStorage protocol at
+    # runtime and only needs the type for annotations.
+    from asap.economics.storage import MeteringQuery, MeteringStorage
 
 
 class UsageMetrics(ASAPBaseModel):
@@ -233,9 +240,104 @@ class InMemoryMeteringStore:
         )
 
 
+class MeteringStorageBridge:
+    """Adapt a ``MeteringStorage`` (economics, flat ``UsageMetrics``) to ``MeteringStore``.
+
+    The economics layer's ``MeteringStorage`` records flat ``UsageMetrics`` rows
+    (task_id + agent_id + consumer_id + metrics + timestamp in one model) and
+    exposes a richer query/aggregate/summary/stats/purge API. The state layer's
+    ``MeteringStore`` — consumed by ``handlers.record_task_usage`` — records
+    ``UsageEvent`` (identity + a ``UsageMetrics`` payload + timestamp) and
+    exposes a minimal record/query/aggregate.
+
+    This bridge lets a single ``MeteringStorage`` serve both the Usage REST API
+    (which wants the rich interface) and the handler recording path (which wants
+    ``MeteringStore``), without economics depending on state for the adapter.
+    It replaces the old ``economics.storage.metering_storage_adapter``.
+
+    Example:
+        >>> from asap.economics.storage import InMemoryMeteringStorage
+        >>> bridge = MeteringStorageBridge(InMemoryMeteringStorage())
+        >>> hasattr(bridge, "record") and hasattr(bridge, "query")
+        True
+    """
+
+    def __init__(self, storage: "MeteringStorage") -> None:
+        self._storage = storage
+
+    async def record(self, event: UsageEvent) -> None:
+        """Record a ``UsageEvent`` by flattening it into a ``UsageMetrics`` row."""
+        from asap.economics.metering import UsageMetrics
+
+        await self._storage.record(UsageMetrics.from_usage_event(event))
+
+    async def query(
+        self,
+        agent_id: str,
+        start: datetime,
+        end: datetime,
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> list[UsageEvent]:
+        """Return ``UsageEvent`` rows for ``agent_id`` in ``[start, end]``."""
+        from asap.economics.storage import MeteringQuery
+
+        filters = MeteringQuery(
+            agent_id=agent_id,
+            start=start,
+            end=end,
+            limit=limit,
+            offset=offset,
+        )
+        events = await self._storage.query(filters)
+        return [m.to_usage_event() for m in events]
+
+    async def aggregate(self, agent_id: str, period: str) -> UsageAggregate:
+        """Aggregate usage for ``agent_id`` over ``period`` into a state ``UsageAggregate``."""
+        from asap.economics.metering import UsageAggregateByAgent
+
+        filters = _period_to_metering_query(agent_id, period)
+        aggs = await self._storage.aggregate("agent", filters=filters)
+        for agg in aggs:
+            if isinstance(agg, UsageAggregateByAgent) and agg.agent_id == agent_id:
+                return UsageAggregate(
+                    agent_id=agg.agent_id,
+                    period=period,
+                    total_tokens=agg.total_tokens,
+                    total_duration=agg.total_duration_ms,
+                    total_tasks=agg.total_tasks,
+                    total_api_calls=agg.total_api_calls,
+                )
+        return UsageAggregate(agent_id=agent_id, period=period)
+
+
+def _period_to_metering_query(agent_id: str, period: str) -> "MeteringQuery | None":
+    """Convert a period string (hour/day/week/today) to a ``MeteringQuery`` time window.
+
+    Returns ``None`` for unknown periods so the caller applies agent_id-only
+    filtering (no time range). Mirrors the helper that previously lived in
+    ``economics.storage._period_to_metering_query``; moved here so the bridge is
+    self-contained and economics no longer needs to own the conversion.
+    """
+    from asap.economics.storage import MeteringQuery
+
+    now = datetime.now(timezone.utc)
+    if period in ("hour", "h"):
+        start = now - timedelta(hours=1)
+        return MeteringQuery(agent_id=agent_id, start=start, end=now)
+    if period in ("day", "d", "today"):
+        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        return MeteringQuery(agent_id=agent_id, start=start, end=now)
+    if period in ("week", "w"):
+        start = now - timedelta(weeks=1)
+        return MeteringQuery(agent_id=agent_id, start=start, end=now)
+    return MeteringQuery(agent_id=agent_id)
+
+
 __all__ = [
     "AsyncMeteringStore",
     "InMemoryMeteringStore",
+    "MeteringStorageBridge",
     "MeteringStore",
     "UsageAggregate",
     "UsageEvent",

@@ -8,6 +8,7 @@ from asap.errors import (
     RPC_REMOTE_GENERIC,
     RecoverableError,
     RemoteFatalRPCError,
+    RemoteRPCError,
     RemoteRecoverableRPCError,
     TaskNotFoundError,
     TaskAlreadyCompletedError,
@@ -335,7 +336,8 @@ class TestJsonRpcErrorInterop:
             },
         )
 
-        assert isinstance(err, RemoteRecoverableRPCError)
+        assert isinstance(err, RemoteRPCError)
+        assert err.is_recoverable is True
         assert err.rpc_code == -32033
         assert err.json_rpc_code == -32033
         assert err.code == "asap:transport/timeout"
@@ -356,7 +358,8 @@ class TestJsonRpcErrorInterop:
             },
         )
 
-        assert isinstance(err, RemoteFatalRPCError)
+        assert isinstance(err, RemoteRPCError)
+        assert err.is_recoverable is False
         assert err.code == "asap:resource/exhausted"
         assert err.details == {"queue_depth": 11}
 
@@ -368,7 +371,8 @@ class TestJsonRpcErrorInterop:
             data={"recoverable": False, "foo": "bar"},
         )
 
-        assert isinstance(err, RemoteFatalRPCError)
+        assert isinstance(err, RemoteRPCError)
+        assert err.is_recoverable is False
         assert err.json_rpc_code == -32603
         assert err.rpc_code == RPC_REMOTE_GENERIC
         assert err.details == {"foo": "bar"}
@@ -398,3 +402,17 @@ class TestJsonRpcErrorInterop:
             url="https://agent.example.test/asap",
         )
         assert str(err) == "Verify service availability before retrying."
+
+    def test_deprecated_remote_aliases_remain_isinstance_compatible(self) -> None:
+        """Deprecated twin aliases stay constructible and isinstance-compatible (S3 collapse)."""
+        fatal = RemoteFatalRPCError(-32603, "fatal", {"foo": "bar"})
+        recoverable = RemoteRecoverableRPCError(-32033, "retryable", {"retry_after_ms": 250})
+
+        assert isinstance(fatal, RemoteRPCError)
+        assert isinstance(recoverable, RemoteRPCError)
+        assert fatal.is_recoverable is False
+        assert recoverable.is_recoverable is True
+        assert fatal.json_rpc_code == -32603
+        assert recoverable.json_rpc_code == -32033
+        assert str(fatal) == "Remote error -32603: fatal"
+        assert str(recoverable) == "Remote error -32033: retryable"

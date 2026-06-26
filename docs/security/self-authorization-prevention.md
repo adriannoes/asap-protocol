@@ -78,7 +78,8 @@ With **real verification** enabled, the server:
    attempts are rejected when the authenticator’s sign counter does not
    strictly increase after a successful verification.
 3. **User verification (UV)**: when `agent_controls_browser` is true and the
-   app uses a real verifier (`WebAuthnSelfAuthVerifier`),
+   app uses a real verifier (`WebAuthnVerifierImpl`, which implements the
+   `WebAuthnVerifier` protocol directly),
    `check_webauthn_for_approval_path` calls `verify` with
    `require_user_verification=True`, so assertions without UV in authenticator
    data fail. Authentication options are generated with `user_verification`
@@ -126,7 +127,9 @@ assertions.
 ### Configuration example
 
 Enable the extra and set RP parameters so `default_webauthn_verifier()`
-returns `WebAuthnSelfAuthVerifier` wrapping `WebAuthnVerifierImpl`:
+returns `WebAuthnVerifierImpl` directly (it implements the `WebAuthnVerifier`
+protocol; the `WebAuthnSelfAuthVerifier` pass-through wrapper was removed in
+v2.5.1):
 
 ```bash
 # Optional extra: installs py_webauthn

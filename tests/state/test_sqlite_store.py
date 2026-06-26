@@ -17,6 +17,8 @@ from asap.state.metering import (
     UsageEvent,
     UsageMetrics,
 )
+from asap.economics.storage import SQLiteMeteringStorage
+from asap.economics.metering import UsageMetrics as EconomicsUsageMetrics
 from asap.state.snapshot import AsyncSnapshotStore, SnapshotStore
 from asap.state.stores.sqlite import (
     SQLiteAsyncSnapshotStore,
@@ -434,3 +436,77 @@ class TestSQLiteMeteringStore:
         assert agg.total_tokens == 0
         assert agg.total_tasks == 0
         assert agg.total_api_calls == 0
+
+
+async def _usage_event_indexes(db_path: Path) -> set[str]:
+    """Return the set of index names on the usage_events table for ``db_path``.
+
+    Queries sqlite_master directly so the assertion reflects the physical schema,
+    not any in-memory cache held by either store.
+    """
+    async with aiosqlite.connect(db_path) as conn:
+        cursor = await conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='usage_events'"
+        )
+        rows = await cursor.fetchall()
+    return {str(r[0]) for r in rows}
+
+
+class TestUsageEventsIndexConsolidation:
+    """Both stores must install both usage_events indexes regardless of init order.
+
+    Regression guard for divergent query plans: the state-layer store historically
+    omitted idx_usage_consumer_timestamp, and CREATE TABLE IF NOT EXISTS made the
+    metering store a no-op when it initialized second — so the consumer index was
+    never created if the state store won the race.
+    """
+
+    @pytest.mark.asyncio
+    async def test_state_store_only_creates_both_indexes(self, db_path: Path) -> None:
+        """State store alone must install both indexes (currently omits the consumer one)."""
+        state_store = SQLiteMeteringStore(db_path=db_path)
+        await state_store.initialize()
+
+        indexes = await _usage_event_indexes(db_path)
+        assert "idx_usage_agent_timestamp" in indexes, (
+            f"agent index missing after state-only init; got {sorted(indexes)}"
+        )
+        assert "idx_usage_consumer_timestamp" in indexes, (
+            f"consumer index missing after state-only init; got {sorted(indexes)}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_metering_storage_first_then_state_store_has_consumer_index(
+        self,
+        db_path: Path,
+        sample_usage_event: UsageEvent,
+    ) -> None:
+        """Economics store inits first (both indexes); state store reuses the same DB."""
+        metering = SQLiteMeteringStorage(db_path=db_path)
+        await metering.record(EconomicsUsageMetrics.from_usage_event(sample_usage_event))
+
+        state_store = SQLiteMeteringStore(db_path=db_path)
+        await state_store.initialize()
+
+        indexes = await _usage_event_indexes(db_path)
+        assert "idx_usage_consumer_timestamp" in indexes, (
+            f"consumer index missing after metering-first init; got {sorted(indexes)}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_state_store_first_then_metering_storage_has_consumer_index(
+        self,
+        db_path: Path,
+        sample_usage_event: UsageEvent,
+    ) -> None:
+        """State store inits first (previously omitted consumer index); economics store must add it."""
+        state_store = SQLiteMeteringStore(db_path=db_path)
+        await state_store.initialize()
+
+        metering = SQLiteMeteringStorage(db_path=db_path)
+        await metering.record(EconomicsUsageMetrics.from_usage_event(sample_usage_event))
+
+        indexes = await _usage_event_indexes(db_path)
+        assert "idx_usage_consumer_timestamp" in indexes, (
+            f"consumer index missing after state-first init; got {sorted(indexes)}"
+        )

@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any, cast
 
-from fastapi import APIRouter, BackgroundTasks, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request
 from fastapi.responses import JSONResponse
 from joserfc.errors import JoseError
 from joserfc.jwk import OKPKey
@@ -21,7 +21,6 @@ from asap.auth.agent_jwt import (
     HOST_PUBLIC_KEY_CLAIM,
     JtiReplayCache,
     JwtVerifyResult,
-    verify_host_jwt,
 )
 from asap.auth.approval import (
     A2HApprovalChannel,
@@ -52,8 +51,10 @@ from asap.auth.identity import (
 from asap.models.base import ASAPBaseModel
 from asap.models.ids import generate_id
 from asap.observability import get_logger
-from asap.transport._auth_helpers import bearer_token_from_request
+from asap.transport._auth_helpers import verify_host_bearer
+from asap.transport._state_deps import require_identity_limiter
 from asap.transport.capability_routes import _grant_to_dict
+from asap.transport.rate_limit import ASAPRateLimiter
 
 logger = get_logger(__name__)
 
@@ -236,52 +237,6 @@ async def background_a2h_resolve(
         )
 
 
-async def _verify_host_bearer_identity(
-    request: Request,
-    *,
-    jti_replay_cache: JtiReplayCache | None,
-) -> tuple[JwtVerifyResult | None, JSONResponse | None]:
-    """Verify Host JWT; optional ``jti`` replay cache for mutating routes."""
-    token = bearer_token_from_request(request)
-    if not token:
-        return None, JSONResponse(
-            status_code=401,
-            content={"detail": "Authentication required"},
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    host_store: HostStore = request.app.state.identity_host_store
-    expected_audience: str | list[str] = request.app.state.identity_jwt_audience
-    result = await verify_host_jwt(
-        token,
-        host_store,
-        expected_audience=expected_audience,
-        jti_replay_cache=jti_replay_cache,
-    )
-    if not result.ok:
-        return None, JSONResponse(
-            status_code=401,
-            content={"detail": result.error or "Invalid host token"},
-        )
-
-    claims = result.claims
-    if claims is None:
-        return None, JSONResponse(status_code=401, content={"detail": "Invalid host token"})
-
-    iss = claims.get("iss")
-    if not isinstance(iss, str) or not iss.strip():
-        return None, JSONResponse(
-            status_code=400,
-            content={"detail": "missing iss in host JWT"},
-        )
-
-    host = result.host
-    if host is not None and host.status == "revoked":
-        return None, JSONResponse(status_code=403, content={"detail": "host revoked"})
-
-    return result, None
-
-
 def _effective_identity_host_id(result: JwtVerifyResult) -> str:
     """Host id from store or synthetic id for first-seen keys (matches register)."""
     claims = result.claims
@@ -327,7 +282,7 @@ async def _handle_agent_register(
 ) -> JSONResponse:
     """Create or return an agent session from a verified Host JWT."""
     jti_cache: JtiReplayCache = request.app.state.identity_jti_cache
-    result, err = await _verify_host_bearer_identity(request, jti_replay_cache=jti_cache)
+    result, err = await verify_host_bearer(request, jti_replay_cache=jti_cache)
     if err is not None:
         return err
     if result is None:
@@ -548,7 +503,7 @@ async def _handle_agent_register(
 
 async def _handle_agent_status(request: Request, agent_id: str) -> JSONResponse:
     """Return agent session status and lifecycle for the authenticated host."""
-    result, err = await _verify_host_bearer_identity(request, jti_replay_cache=None)
+    result, err = await verify_host_bearer(request, jti_replay_cache=None)
     if err is not None:
         return err
     if result is None:
@@ -663,7 +618,7 @@ async def _handle_agent_status(request: Request, agent_id: str) -> JSONResponse:
 async def _handle_agent_revoke(request: Request, body: AgentRevokeBody) -> JSONResponse:
     """Permanently revoke an agent session for the authenticated host."""
     jti_cache: JtiReplayCache = request.app.state.identity_jti_cache
-    result, err = await _verify_host_bearer_identity(request, jti_replay_cache=jti_cache)
+    result, err = await verify_host_bearer(request, jti_replay_cache=jti_cache)
     if err is not None:
         return err
     if result is None:
@@ -696,7 +651,7 @@ async def _handle_agent_revoke(request: Request, body: AgentRevokeBody) -> JSONR
 async def _handle_agent_rotate_key(request: Request, body: AgentRotateKeyBody) -> JSONResponse:
     """Replace the agent session's Ed25519 public JWK (old JWTs no longer verify)."""
     jti_cache: JtiReplayCache = request.app.state.identity_jti_cache
-    result, err = await _verify_host_bearer_identity(request, jti_replay_cache=jti_cache)
+    result, err = await verify_host_bearer(request, jti_replay_cache=jti_cache)
     if err is not None:
         return err
     if result is None:
@@ -772,30 +727,40 @@ def create_agent_identity_router() -> APIRouter:
     async def agent_register(
         request: Request,
         background_tasks: BackgroundTasks,
+        limiter: ASAPRateLimiter = Depends(require_identity_limiter),
     ) -> JSONResponse:
         """Register an agent session under a host using a Host JWT (Bearer)."""
-        request.app.state.identity_limiter.check(request)
+        limiter.check(request)
         return await _handle_agent_register(request, background_tasks)
 
     @router.get("/asap/agent/status")
     async def agent_status(
         request: Request,
         agent_id: Annotated[str, Query(min_length=1)],
+        limiter: ASAPRateLimiter = Depends(require_identity_limiter),
     ) -> JSONResponse:
         """Return agent status and lifecycle for the authenticated host (Host JWT)."""
-        request.app.state.identity_limiter.check(request)
+        limiter.check(request)
         return await _handle_agent_status(request, agent_id)
 
     @router.post("/asap/agent/revoke")
-    async def agent_revoke(request: Request, body: AgentRevokeBody) -> JSONResponse:
+    async def agent_revoke(
+        request: Request,
+        body: AgentRevokeBody,
+        limiter: ASAPRateLimiter = Depends(require_identity_limiter),
+    ) -> JSONResponse:
         """Revoke an agent session (Host JWT; body: ``agent_id``)."""
-        request.app.state.identity_limiter.check(request)
+        limiter.check(request)
         return await _handle_agent_revoke(request, body)
 
     @router.post("/asap/agent/rotate-key")
-    async def agent_rotate_key(request: Request, body: AgentRotateKeyBody) -> JSONResponse:
+    async def agent_rotate_key(
+        request: Request,
+        body: AgentRotateKeyBody,
+        limiter: ASAPRateLimiter = Depends(require_identity_limiter),
+    ) -> JSONResponse:
         """Rotate agent Ed25519 public key (Host JWT; body: ``agent_id``, ``new_public_key``)."""
-        request.app.state.identity_limiter.check(request)
+        limiter.check(request)
         return await _handle_agent_rotate_key(request, body)
 
     return router

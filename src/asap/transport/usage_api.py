@@ -12,30 +12,33 @@ import io
 from datetime import datetime
 from typing import Literal, cast
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from pydantic import ValidationError
 
 from asap.economics import BatchUsageRequest, MeteringQuery, UsageMetrics
 from asap.economics.storage import MeteringStorage
+from asap.transport._state_deps import rate_limiter, require_state
 
 
 def _rate_limit_usage(request: Request) -> None:
-    """Apply rate limiting to usage API endpoints (uses app.state.limiter)."""
-    limiter = getattr(request.app.state, "limiter", None)
+    """Apply rate limiting to usage API endpoints (uses app.state.limiter).
+
+    A missing limiter is treated as "rate limiting disabled" (no-op) rather than
+    a 503, preserving the historic fallback pinned by
+    ``test_usage_api_ignores_missing_limiter``.
+    """
+    limiter = rate_limiter(request)
     if limiter is not None:
         limiter.check(request)
 
 
 def get_metering_storage(request: Request) -> MeteringStorage:
-    storage = getattr(request.app.state, "metering_storage", None)
-    if storage is None:
-        from fastapi import HTTPException
-
-        raise HTTPException(
-            status_code=503,
-            detail="Usage API not configured (metering_storage not set)",
-        )
+    storage = require_state(
+        request,
+        "metering_storage",
+        "Usage API not configured (metering_storage not set)",
+    )
     return cast(MeteringStorage, storage)
 
 
@@ -87,8 +90,6 @@ def create_usage_router() -> APIRouter:
         storage: MeteringStorage = Depends(get_metering_storage),
     ) -> JSONResponse:
         if group_by not in ("agent", "consumer", "day", "week"):
-            from fastapi import HTTPException
-
             raise HTTPException(
                 status_code=400,
                 detail="group_by must be one of: agent, consumer, day, week",
@@ -136,8 +137,6 @@ def create_usage_router() -> APIRouter:
         try:
             metrics = UsageMetrics.model_validate(body)
         except ValidationError as e:
-            from fastapi import HTTPException
-
             raise HTTPException(status_code=400, detail=str(e)) from e
         await storage.record(metrics)
         return JSONResponse(
@@ -154,8 +153,6 @@ def create_usage_router() -> APIRouter:
         try:
             batch = BatchUsageRequest.model_validate(body)
         except ValidationError as e:
-            from fastapi import HTTPException
-
             raise HTTPException(status_code=400, detail=str(e)) from e
         for metrics in batch.events:
             await storage.record(metrics)

@@ -1,32 +1,24 @@
-"""MCP-facing ASAP auth error codes and result helpers (v2.5.0)."""
+"""DEPRECATED re-export shim — import from :mod:`asap.mcp.auth` instead.
+
+Kept for the deprecation window so ``from asap.adapters.mcp.errors import
+AUTH_REQUIRED, ...`` continues to resolve. The real implementation lives in
+:mod:`asap.mcp.auth.errors`.
+"""
 
 from __future__ import annotations
 
-from typing import Any
+from asap.mcp.auth.errors import (
+    AUTH_REQUIRED as AUTH_REQUIRED,
+    CAPABILITY_DENIED as CAPABILITY_DENIED,
+    CONSTRAINT_VIOLATION as CONSTRAINT_VIOLATION,
+    INVALID_TOKEN as INVALID_TOKEN,
+    tool_error_result as tool_error_result,
+)
 
-from asap.mcp.protocol import CallToolResult, TextContent
-
-AUTH_REQUIRED = "asap:auth_required"
-INVALID_TOKEN = "asap:invalid_token"
-CAPABILITY_DENIED = "asap:capability_denied"
-CONSTRAINT_VIOLATION = "asap:constraint_violation"
-
-
-def tool_error_result(code: str, detail: str | None = None) -> dict[str, Any]:
-    """Build a ``tools/call`` error payload with ``isError: true``.
-
-    Args:
-        code: ASAP-namespaced error code (e.g. ``asap:auth_required``).
-        detail: Optional human-readable detail appended after the code.
-
-    Returns:
-        Dict suitable for JSON-RPC ``result`` (``CallToolResult`` shape).
-
-    Example:
-        >>> tool_error_result(AUTH_REQUIRED)["isError"]
-        True
-    """
-    text = code if detail is None else f"{code}: {detail}"
-    result = CallToolResult(content=[TextContent(text=text).model_dump(by_alias=True)])
-    result.is_error = True
-    return result.model_dump(by_alias=True, exclude_none=True)
+__all__ = [
+    "AUTH_REQUIRED",
+    "CAPABILITY_DENIED",
+    "CONSTRAINT_VIOLATION",
+    "INVALID_TOKEN",
+    "tool_error_result",
+]

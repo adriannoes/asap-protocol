@@ -42,7 +42,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from typing import Any, Awaitable, Callable, Optional, Protocol, cast
+from typing import Any, Awaitable, Callable, Protocol
 
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -78,55 +78,61 @@ AUTH_SCHEME_BEARER = "bearer"
 
 
 def _get_sender_from_envelope(request: Request) -> str:
-    """Extract identifier from request for rate limiting.
+    """Extract a rate-limiting key from *request*.
 
-    This function implements IP-based rate limiting for the transport layer.
-    The rate limiter executes before the route handler parses the request body,
-    so the ASAP envelope is not yet available at rate limit check time.
-    Therefore, this function primarily returns the client IP address.
-
-    The function attempts to extract the sender from the envelope if already
-    parsed (for future compatibility), but in practice always falls back to
-    the client IP address. This IP-based approach is safer for DoS prevention
-    as it doesn't require parsing the request body before rate limiting.
+    The rate limiter runs before the route handler parses the body, so the ASAP
+    envelope is usually not yet available; the client IP is the safe default for
+    DoS prevention. When an envelope or parsed JSON-RPC request is already on
+    ``request.state`` (sender explicitly populated upstream), that sender URN is
+    preferred for per-agent limiting.
 
     Args:
-        request: FastAPI request object
+        request: FastAPI request object.
 
     Returns:
-        Client IP address (used as rate limiting key)
+        Sender URN if already on ``request.state``, else the client IP address
+        coerced to ``str``.
 
     Example:
         >>> sender = _get_sender_from_envelope(request)
-        >>> # Returns "192.168.1.1" (IP address, not sender URN)
+        >>> # "192.168.1.1" (IP) or "urn:asap:agent:client" (envelope sender)
+    """
+    sender = _sender_from_state(request)
+    if sender is not None:
+        return sender
+    return str(get_remote_address(request))
+
+
+def _sender_from_state(request: Request) -> str | None:
+    """Return an explicit sender URN from ``request.state`` if one is populated.
+
+    Checks ``request.state.envelope.sender`` then
+    ``request.state.rpc_request.params["envelope"]["sender"]``; any structural
+    mismatch (missing attrs, non-dict params, non-str sender) yields ``None`` so
+    the caller falls back to the client IP.
+
+    Args:
+        request: FastAPI request object.
+
+    Returns:
+        Sender URN string if present and well-formed, otherwise ``None``.
     """
     try:
-        if hasattr(request.state, "envelope") and request.state.envelope:
-            envelope = request.state.envelope
-            if hasattr(envelope, "sender") and isinstance(envelope.sender, str):
-                return envelope.sender
+        envelope = getattr(request.state, "envelope", None)
+        if envelope is not None:
+            sender = getattr(envelope, "sender", None)
+            if isinstance(sender, str):
+                return sender
 
-        # Try to extract from JSON-RPC request if already parsed
-        if hasattr(request.state, "rpc_request"):
-            rpc_request = request.state.rpc_request
-            if (
-                hasattr(rpc_request, "params")
-                and isinstance(rpc_request.params, dict)
-                and "envelope" in rpc_request.params
-            ):
-                envelope_data = rpc_request.params.get("envelope")
-                if isinstance(envelope_data, dict) and "sender" in envelope_data:
-                    sender = envelope_data["sender"]
-                    if isinstance(sender, str):
-                        return sender
+        rpc_request = getattr(request.state, "rpc_request", None)
+        params = getattr(rpc_request, "params", None)
+        if isinstance(params, dict) and isinstance(params.get("envelope"), dict):
+            sender = params["envelope"].get("sender")
+            if isinstance(sender, str):
+                return sender
     except (AttributeError, KeyError, TypeError):
-        # Envelope not available, fall back to IP
-        pass
-
-    remote_addr = get_remote_address(request)
-    if isinstance(remote_addr, str):
-        return remote_addr
-    return str(remote_addr)
+        return None
+    return None
 
 
 _limiter: ASAPRateLimiter | None = None
@@ -294,6 +300,41 @@ class BearerTokenValidator:
         return self.validate_func(token)
 
 
+# Unified validator contract used internally by AuthenticationMiddleware:
+# every validator is normalized once at construction to this single async form.
+AsyncValidator = Callable[[str], Awaitable[str | None]]
+
+
+def _normalize_validator(validator: TokenValidator) -> AsyncValidator:
+    """Wrap *validator* once into the single async contract ``AsyncValidator``.
+
+    Async validators (coroutine functions, or callables returning a coroutine)
+    are awaited directly. Sync validators are run via :func:`asyncio.to_thread`
+    so blocking I/O (DB/Redis lookups) never pins the event loop.
+
+    Args:
+        validator: A sync or async token validator conforming to
+            :class:`TokenValidator`.
+
+    Returns:
+        An ``async def`` callable ``(token) -> str | None``.
+
+    Example:
+        >>> async_validator = _normalize_validator(BearerTokenValidator(my_fn))
+        >>> agent_id = await async_validator("token-123")
+    """
+    if inspect.iscoroutinefunction(validator.__call__):
+        return validator  # type: ignore[return-value]
+
+    async def _async_validator(token: str) -> str | None:
+        result = await asyncio.to_thread(validator, token)
+        if inspect.isawaitable(result):
+            return await result
+        return result
+
+    return _async_validator
+
+
 class AuthenticationMiddleware:
     """FastAPI middleware for ASAP protocol authentication.
 
@@ -339,6 +380,13 @@ class AuthenticationMiddleware:
             raise ValueError(
                 "Token validator required when authentication is configured in manifest"
             )
+
+        # Normalize the validator once to the single async contract so
+        # verify_authentication can await it without per-call casts or
+        # sync/async branching.
+        self._async_validator: AsyncValidator | None = (
+            _normalize_validator(validator) if validator is not None else None
+        )
 
     def _is_auth_required(self) -> bool:
         return self.manifest.auth is not None
@@ -428,17 +476,7 @@ class AuthenticationMiddleware:
                 "Token validator is None but authentication is required. "
                 "This should not happen if middleware was initialized correctly."
             )
-        if inspect.iscoroutinefunction(self.validator.__call__):
-            result = self.validator(token)
-            agent_id = await cast(Awaitable[Optional[str]], result)
-        else:
-            # Cast: to_thread expects Callable[..., T]; TokenValidator may return Awaitable
-            # but we handle that below (BearerTokenValidator wrapping async func)
-            agent_id = await asyncio.to_thread(
-                cast("Callable[[str], Optional[str]]", self.validator), token
-            )
-            if inspect.isawaitable(agent_id):
-                agent_id = await cast(Awaitable[Optional[str]], agent_id)
+        agent_id = await self._async_validator(token)
 
         if agent_id is None:
             # Log sanitized token to avoid exposing full token data

@@ -9,8 +9,8 @@ import json
 
 import pytest
 
-from asap.transport.codecs import lambda_codec
-from asap.transport.codecs.lambda_codec import (
+from asap.transport import lambda_codec
+from asap.transport.lambda_codec import (
     LAMBDA_CONTENT_TYPE,
     _DECODE_MAP,
     _ENCODE_MAP,

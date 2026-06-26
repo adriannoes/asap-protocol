@@ -6,9 +6,9 @@ from collections.abc import Callable
 
 import pytest
 
-from asap.adapters.mcp import protect_server
-from asap.adapters.mcp.capability_map import resolve_capability
-from asap.adapters.mcp.config import MCPAuthConfig
+from asap.mcp.auth import protect_server
+from asap.mcp.auth.capability_map import resolve_capability
+from asap.mcp.auth.config import MCPAuthConfig
 from asap.auth.capabilities import CapabilityDefinition, CapabilityRegistry
 from asap.auth.identity import InMemoryAgentStore, InMemoryHostStore
 from asap.mcp.server import MCPServer

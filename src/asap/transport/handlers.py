@@ -37,7 +37,7 @@ from threading import RLock
 from typing import TYPE_CHECKING, Callable, Protocol, Union, cast
 
 if TYPE_CHECKING:
-    from asap.state.metering import MeteringStore  # noqa: F401
+    from asap.state.metering import MeteringStore
 
 from asap.economics.hooks import record_task_usage
 from asap.errors import FatalError, RPC_HANDLER_NOT_FOUND
@@ -163,6 +163,95 @@ class HandlerNotFoundError(FatalError):
         self.payload_type = payload_type
 
 
+def _record_success(
+    *,
+    log_event: str,
+    payload_type: str,
+    envelope_id: str | None,
+    duration_ms: float,
+    response_id: str | None = None,
+) -> None:
+    """Emit completion metrics and a debug log for a finished handler call.
+
+    Shared by sync ``dispatch`` and the async dispatch paths so they report
+    identical observability. Increments ``asap_handler_executions_total`` and
+    observes ``asap_handler_duration_seconds`` for the payload type.
+
+    Args:
+        log_event: Structured log event name (e.g. ``"asap.handler.completed"``
+            or ``"asap.handler.stream_completed"``).
+        payload_type: The dispatched payload type.
+        envelope_id: The incoming envelope ID.
+        duration_ms: Elapsed handler duration in milliseconds.
+        response_id: The response envelope ID, if a single response was produced
+            (``None`` for streaming completions).
+
+    Example:
+        >>> _record_success(
+        ...     log_event="asap.handler.completed",
+        ...     payload_type="task.request",
+        ...     envelope_id="env-1",
+        ...     duration_ms=12.3,
+        ...     response_id="env-2",
+        ... )
+    """
+    duration_seconds = duration_ms / 1000.0
+    metrics = get_metrics()
+    metrics.increment_counter("asap_handler_executions_total", {"payload_type": payload_type})
+    metrics.observe_histogram(
+        "asap_handler_duration_seconds", duration_seconds, {"payload_type": payload_type}
+    )
+    logger.debug(
+        log_event,
+        payload_type=payload_type,
+        envelope_id=envelope_id,
+        response_id=response_id,
+        duration_ms=round(duration_ms, 2),
+    )
+
+
+def _record_error(
+    *,
+    log_event: str,
+    payload_type: str,
+    envelope_id: str | None,
+    error: Exception,
+    duration_ms: float,
+) -> None:
+    """Emit error metrics and an exception log for a failed handler call.
+
+    Shared by all three dispatch paths. Increments
+    ``asap_handler_errors_total`` for the payload type and logs the exception
+    with context.
+
+    Args:
+        log_event: Structured log event name (e.g. ``"asap.handler.error"`` or
+            ``"asap.handler.stream_error"``).
+        payload_type: The dispatched payload type.
+        envelope_id: The incoming envelope ID.
+        error: The exception raised by the handler.
+        duration_ms: Elapsed handler duration in milliseconds.
+
+    Example:
+        >>> _record_error(
+        ...     log_event="asap.handler.error",
+        ...     payload_type="task.request",
+        ...     envelope_id="env-1",
+        ...     error=RuntimeError("boom"),
+        ...     duration_ms=5.0,
+        ... )
+    """
+    get_metrics().increment_counter("asap_handler_errors_total", {"payload_type": payload_type})
+    logger.exception(
+        log_event,
+        payload_type=payload_type,
+        envelope_id=envelope_id,
+        error=str(error),
+        error_type=type(error).__name__,
+        duration_ms=round(duration_ms, 2),
+    )
+
+
 class HandlerRegistry:
     """Registry for ASAP payload handlers.
 
@@ -193,13 +282,13 @@ class HandlerRegistry:
     def __init__(
         self,
         executor: Executor | None = None,
-        metering_store: object | None = None,
+        metering_store: MeteringStore | None = None,
     ) -> None:
         self._handlers: dict[str, Handler] = {}
         self._streaming_handlers: dict[str, StreamingHandler] = {}
         self._lock = RLock()
         self._executor: Executor | None = executor
-        self._metering_store = metering_store
+        self._metering_store: MeteringStore | None = metering_store
 
     def register(self, payload_type: str, handler: Handler) -> None:
         validate_handler(handler)
@@ -238,7 +327,7 @@ class HandlerRegistry:
         with self._lock:
             return payload_type in self._streaming_handlers
 
-    def set_metering_store(self, store: object | None) -> None:
+    def set_metering_store(self, store: MeteringStore | None) -> None:
         """Set MeteringStore for usage recording (optional).
 
         When set, task.request completions are recorded to the store.
@@ -288,36 +377,40 @@ class HandlerRegistry:
             handler_name=handler.__name__ if hasattr(handler, "__name__") else str(handler),
         )
 
-        try:
-            result = handler(envelope, manifest)
-            if inspect.isawaitable(result):
-                if inspect.iscoroutine(result):
-                    result.close()
-                raise TypeError(
-                    f"Handler {handler} returned awaitable in sync dispatch(). "
-                    "Use dispatch_async() for async handlers."
+        with handler_span_context(
+            payload_type=payload_type,
+            agent_urn=manifest.id,
+            envelope_id=envelope.id,
+        ):
+            try:
+                result = handler(envelope, manifest)
+                if inspect.isawaitable(result):
+                    if inspect.iscoroutine(result):
+                        result.close()
+                    raise TypeError(
+                        f"Handler {handler} returned awaitable in sync dispatch(). "
+                        "Use dispatch_async() for async handlers."
+                    )
+                response: Envelope = result
+                duration_ms = (time.perf_counter() - start_time) * 1000
+                _record_success(
+                    log_event="asap.handler.completed",
+                    payload_type=payload_type,
+                    envelope_id=envelope.id,
+                    duration_ms=duration_ms,
+                    response_id=response.id,
                 )
-            response: Envelope = result
-            duration_ms = (time.perf_counter() - start_time) * 1000
-            logger.debug(
-                "asap.handler.completed",
-                payload_type=payload_type,
-                envelope_id=envelope.id,
-                response_id=response.id,
-                duration_ms=round(duration_ms, 2),
-            )
-            return response
-        except Exception as e:
-            duration_ms = (time.perf_counter() - start_time) * 1000
-            logger.exception(
-                "asap.handler.error",
-                payload_type=payload_type,
-                envelope_id=envelope.id,
-                error=str(e),
-                error_type=type(e).__name__,
-                duration_ms=round(duration_ms, 2),
-            )
-            raise
+                return response
+            except Exception as e:
+                duration_ms = (time.perf_counter() - start_time) * 1000
+                _record_error(
+                    log_event="asap.handler.error",
+                    payload_type=payload_type,
+                    envelope_id=envelope.id,
+                    error=e,
+                    duration_ms=duration_ms,
+                )
+                raise
 
     async def dispatch_async(self, envelope: Envelope, manifest: Manifest) -> Envelope:
         """Dispatch an envelope to its registered handler (async version).
@@ -383,48 +476,23 @@ class HandlerRegistry:
                         response = cast(Envelope, result)
 
                 duration_ms = (time.perf_counter() - start_time) * 1000
-                duration_seconds = duration_ms / 1000.0
-                logger.debug(
-                    "asap.handler.completed",
+                _record_success(
+                    log_event="asap.handler.completed",
                     payload_type=payload_type,
                     envelope_id=envelope.id,
+                    duration_ms=duration_ms,
                     response_id=response.id,
-                    duration_ms=round(duration_ms, 2),
                 )
-                metrics = get_metrics()
-                metrics.increment_counter(
-                    "asap_handler_executions_total",
-                    {"payload_type": payload_type},
-                )
-                metrics.observe_histogram(
-                    "asap_handler_duration_seconds",
-                    duration_seconds,
-                    {"payload_type": payload_type},
-                )
-                if self._metering_store is not None:
-                    from asap.state.metering import MeteringStore
-
-                    await record_task_usage(
-                        cast(MeteringStore, self._metering_store),
-                        envelope,
-                        response,
-                        duration_ms,
-                        manifest,
-                    )
+                await self._record_metering(envelope, response, duration_ms, manifest)
                 return response
             except Exception as e:
                 duration_ms = (time.perf_counter() - start_time) * 1000
-                get_metrics().increment_counter(
-                    "asap_handler_errors_total",
-                    {"payload_type": payload_type},
-                )
-                logger.exception(
-                    "asap.handler.error",
+                _record_error(
+                    log_event="asap.handler.error",
                     payload_type=payload_type,
                     envelope_id=envelope.id,
-                    error=str(e),
-                    error_type=type(e).__name__,
-                    duration_ms=round(duration_ms, 2),
+                    error=e,
+                    duration_ms=duration_ms,
                 )
                 raise
 
@@ -464,38 +532,50 @@ class HandlerRegistry:
                 async for response_envelope in handler(envelope, manifest):
                     yield response_envelope
             duration_ms = (time.perf_counter() - start_time) * 1000
-            duration_seconds = duration_ms / 1000.0
-            metrics = get_metrics()
-            metrics.increment_counter(
-                "asap_handler_executions_total",
-                {"payload_type": payload_type},
-            )
-            metrics.observe_histogram(
-                "asap_handler_duration_seconds",
-                duration_seconds,
-                {"payload_type": payload_type},
-            )
-            logger.debug(
-                "asap.handler.stream_completed",
+            _record_success(
+                log_event="asap.handler.stream_completed",
                 payload_type=payload_type,
                 envelope_id=envelope.id,
-                duration_ms=round(duration_ms, 2),
+                duration_ms=duration_ms,
             )
         except Exception as e:
             duration_ms = (time.perf_counter() - start_time) * 1000
-            get_metrics().increment_counter(
-                "asap_handler_errors_total",
-                {"payload_type": payload_type},
-            )
-            logger.exception(
-                "asap.handler.stream_error",
+            _record_error(
+                log_event="asap.handler.stream_error",
                 payload_type=payload_type,
                 envelope_id=envelope.id,
-                error=str(e),
-                error_type=type(e).__name__,
-                duration_ms=round(duration_ms, 2),
+                error=e,
+                duration_ms=duration_ms,
             )
             raise
+
+    async def _record_metering(
+        self,
+        envelope: Envelope,
+        response: Envelope,
+        duration_ms: float,
+        manifest: Manifest,
+    ) -> None:
+        """Record task usage to the configured metering store, if any.
+
+        No-op when no metering store is set. Called only from the async dispatch
+        paths since usage recording is itself async.
+
+        Args:
+            envelope: The incoming request envelope (task.request).
+            response: The response envelope (task.response).
+            duration_ms: Measured handler duration in milliseconds.
+            manifest: Agent manifest (agent_id = manifest.id).
+        """
+        if self._metering_store is None:
+            return
+        await record_task_usage(
+            self._metering_store,
+            envelope,
+            response,
+            duration_ms,
+            manifest,
+        )
 
     def list_handlers(self) -> list[str]:
         """List all registered payload types.
@@ -559,7 +639,7 @@ def create_echo_handler() -> SyncHandler:
 
 
 def create_default_registry(
-    metering_store: object | None = None,
+    metering_store: MeteringStore | None = None,
 ) -> HandlerRegistry:
     """Create a registry with default handlers.
 

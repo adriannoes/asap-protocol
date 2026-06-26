@@ -23,7 +23,7 @@ from typing import Any
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from asap.adapters.mcp import MCPAuthConfig, protect_server
+from asap.mcp.auth import MCPAuthConfig, protect_server
 from asap.auth.agent_jwt import create_agent_jwt
 from asap.auth.capabilities import CapabilityDefinition, CapabilityRegistry
 from asap.auth.identity import (
@@ -33,8 +33,8 @@ from asap.auth.identity import (
     InMemoryHostStore,
     jwk_thumbprint_sha256,
 )
+from asap.mcp.auth.config import MCP_COMPLIANCE_ENV_VAR as COMPLIANCE_ENV_VAR
 from asap.mcp.server import MCPServer
-from asap.adapters.mcp.config import MCP_COMPLIANCE_ENV_VAR as COMPLIANCE_ENV_VAR
 
 DEMO_HOST_ID = "mcp-auth-bridge-host"
 DEMO_AGENT_ID = "urn:asap:agent:mcp-auth-bridge-demo"

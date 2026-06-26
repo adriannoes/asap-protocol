@@ -2,19 +2,23 @@
 
 from __future__ import annotations
 
-import asyncio
-import json
-from typing import Any, Type, cast
+from types import SimpleNamespace
+from typing import Any, Type
 
-from pydantic import BaseModel, Field, create_model
+from pydantic import BaseModel
 
-from asap.client.market import MarketClient, ResolvedAgent
-from asap.errors import AgentRevokedException, SignatureVerificationError
-from asap.models.entities import Manifest
-from asap.models.ids import generate_id
+from asap.client.market import MarketClient
+from asap.integrations._base import (
+    build_fn_schema_from_manifest as _build_fn_schema_from_manifest,  # noqa: F401 (test API)
+    eager_resolve_or_raise,
+    invoke_skill_json_async,
+)
+from asap.integrations._base import default_input_schema as _default_input_schema
+from asap.integrations._base import (
+    json_schema_to_pydantic as _json_schema_to_pydantic,  # noqa: F401 (test API)
+)
 
-# Lazy import to avoid requiring llama-index-core when not used.
-# Use ``Any`` so optional ``None`` fallback type-checks when the extra is absent.
+# Lazy import to avoid requiring llama-index-core when not used (``Any`` keeps ``None`` typed).
 FunctionTool: Any = None
 ToolMetadata: Any = None
 _import_error_llamaindex: ImportError | None = None
@@ -28,70 +32,6 @@ except ImportError as _import_error:
     _import_error_llamaindex = _import_error
 
 
-def _default_input_schema() -> Type[BaseModel]:
-    return create_model(
-        "LlamaIndexAsapToolInput",
-        input=(dict[str, Any], Field(description="Skill input payload (key-value)")),
-    )
-
-
-def _json_schema_to_pydantic(
-    schema: dict[str, Any], model_name: str = "LlamaIndexAsapToolArgs"
-) -> Type[BaseModel]:
-    if not schema or schema.get("type") != "object":
-        return _default_input_schema()
-    props = schema.get("properties") or {}
-    required = set(schema.get("required") or [])
-    field_defs: dict[str, Any] = {}
-    for key, prop in props.items():
-        if not isinstance(prop, dict):
-            continue
-        typ = prop.get("type", "string")
-        desc = prop.get("description") or key
-        if typ == "string":
-            field_defs[key] = (
-                str,
-                Field(default=None if key in required else "", description=desc),
-            )
-        elif typ == "integer":
-            field_defs[key] = (
-                int,
-                Field(default=None if key in required else 0, description=desc),
-            )
-        elif typ == "number":
-            field_defs[key] = (
-                float,
-                Field(default=None if key in required else 0.0, description=desc),
-            )
-        elif typ == "boolean":
-            field_defs[key] = (
-                bool,
-                Field(default=None if key in required else False, description=desc),
-            )
-        elif typ == "array":
-            field_defs[key] = (list[Any], Field(default_factory=list, description=desc))
-        else:
-            field_defs[key] = (
-                dict[str, Any],
-                Field(default_factory=dict, description=desc),
-            )
-    if not field_defs:
-        return _default_input_schema()
-    return cast(Type[BaseModel], create_model(model_name, **field_defs))
-
-
-def _build_fn_schema_from_manifest(manifest: Manifest) -> Type[BaseModel]:
-    skills = getattr(manifest.capabilities, "skills", None) or []
-    if not skills:
-        return _default_input_schema()
-    first = skills[0]
-    schema = getattr(first, "input_schema", None) if first else None
-    if not schema or not isinstance(schema, dict):
-        return _default_input_schema()
-    name = f"LlamaIndexAsap_{getattr(first, 'id', 'input').replace('-', '_')}"
-    return _json_schema_to_pydantic(schema, model_name=name)
-
-
 class LlamaIndexAsapTool:
     """LlamaIndex FunctionTool wrapper that invokes an ASAP agent by URN; exposes call(), acall(), metadata."""
 
@@ -103,67 +43,26 @@ class LlamaIndexAsapTool:
         description: str | None = None,
     ) -> None:
         if FunctionTool is None or ToolMetadata is None:
-            import_err = _import_error_llamaindex or ImportError(
-                "llama-index-core is not installed"
-            )
             raise RuntimeError(
                 "llama-index-core is required for LlamaIndexAsapTool. "
                 "Install with: pip install asap-protocol[llamaindex]"
-            ) from import_err
-
+            ) from (_import_error_llamaindex or ImportError("llama-index-core is not installed"))
         client_instance = client or MarketClient()
-        resolved: ResolvedAgent | None = None
-        skill_id = ""
+        default_desc = f"Invoke ASAP agent {urn}."
         tool_name = name or urn
-        tool_description = description or f"Invoke ASAP agent {urn}."
-        fn_schema = _default_input_schema()
-        try:
-            asyncio.get_running_loop()
-        except RuntimeError:
-            try:
-                resolved = asyncio.run(client_instance.resolve(urn))
-            except Exception as e:
-                raise ValueError(f"Failed to resolve agent {urn}: {e}") from e
-            if resolved.manifest.capabilities.skills:
-                skill_id = resolved.manifest.capabilities.skills[0].id
+        tool_description = description or default_desc
+        fn_schema: Type[BaseModel] = _default_input_schema()
+        resolved, skill_id = eager_resolve_or_raise(client_instance, urn)
+        if resolved is not None:
             tool_name = name or resolved.manifest.name or urn
-            tool_description = (
-                description or resolved.manifest.description or f"Invoke ASAP agent {urn}."
+            tool_description = description or resolved.manifest.description or default_desc
+            fn_schema = _build_fn_schema_from_manifest(
+                resolved.manifest, model_prefix="LlamaIndexAsap"
             )
-            fn_schema = _build_fn_schema_from_manifest(resolved.manifest)
-        agent = resolved
+        cache = SimpleNamespace(_resolved=resolved, _skill_id=skill_id)
 
         async def _invoke(**kwargs: Any) -> str:
-            nonlocal agent, skill_id
-            if agent is None:
-                try:
-                    agent = await client_instance.resolve(urn)
-                except Exception as e:
-                    return f"Error: Failed to resolve agent {urn}: {e}"
-                if agent.manifest.capabilities.skills:
-                    skill_id = agent.manifest.capabilities.skills[0].id
-            input_payload = kwargs.get("input", kwargs)
-            if not isinstance(input_payload, dict):
-                input_payload = {"value": input_payload}
-            if not skill_id:
-                return "Error: Agent has no skills; cannot build task request."
-            resolved_agent = agent
-            if resolved_agent is None:
-                return "Error: Agent not resolved."
-            payload = {
-                "conversation_id": generate_id(),
-                "skill_id": skill_id,
-                "input": input_payload,
-            }
-            try:
-                result = await resolved_agent.run(payload)
-                return json.dumps(result) if isinstance(result, dict) else str(result)
-            except AgentRevokedException as e:
-                return f"Error: Agent revoked or invalid input: {e!s}"
-            except SignatureVerificationError as e:
-                return f"Error: Agent revoked or invalid input: {e!s}"
-            except ValueError as e:
-                return f"Error: Agent revoked or invalid input: {e!s}"
+            return await invoke_skill_json_async(client_instance, urn, cache, kwargs)
 
         self._tool = FunctionTool.from_defaults(
             async_fn=_invoke,

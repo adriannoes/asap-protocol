@@ -13,6 +13,7 @@ from .machine import can_transition, transition
 from .metering import (
     AsyncMeteringStore,
     InMemoryMeteringStore,
+    MeteringStorageBridge,
     MeteringStore,
     UsageAggregate,
     UsageEvent,
@@ -37,6 +38,7 @@ __all__ = [
     "SQLiteMeteringStore",
     "AsyncMeteringStore",
     "MeteringStore",
+    "MeteringStorageBridge",
     "InMemoryMeteringStore",
     "UsageEvent",
     "UsageMetrics",

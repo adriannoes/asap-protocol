@@ -11,7 +11,7 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Any, Literal, cast
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
 from asap.economics.sla import (
@@ -23,24 +23,26 @@ from asap.economics.sla import (
 )
 from asap.economics.sla_storage import SLAStorage
 from asap.models.entities import Manifest
+from asap.transport._state_deps import rate_limiter, require_state
 
 
 def _rate_limit_sla(request: Request) -> None:
-    """Apply rate limiting to SLA API endpoints (uses app.state.limiter)."""
-    limiter = getattr(request.app.state, "limiter", None)
+    """Apply rate limiting to SLA API endpoints (uses app.state.limiter).
+
+    A missing limiter is treated as "rate limiting disabled" (no-op) rather than
+    a 503, matching the usage-API fallback policy.
+    """
+    limiter = rate_limiter(request)
     if limiter is not None:
         limiter.check(request)
 
 
 def get_sla_storage(request: Request) -> SLAStorage:
-    storage = getattr(request.app.state, "sla_storage", None)
-    if storage is None:
-        from fastapi import HTTPException
-
-        raise HTTPException(
-            status_code=503,
-            detail="SLA API not configured (sla_storage not set)",
-        )
+    storage = require_state(
+        request,
+        "sla_storage",
+        "SLA API not configured (sla_storage not set)",
+    )
     return cast(SLAStorage, storage)
 
 
@@ -86,8 +88,6 @@ def create_sla_router() -> APIRouter:
     ) -> JSONResponse:
         """Current SLA status per agent with compliance percentage."""
         if window not in ("1h", "24h", "7d", "30d"):
-            from fastapi import HTTPException
-
             raise HTTPException(
                 status_code=400,
                 detail="window must be one of: 1h, 24h, 7d, 30d",
@@ -178,8 +178,6 @@ def create_sla_router() -> APIRouter:
     ) -> JSONResponse:
         """List SLA breaches with optional filters."""
         if severity is not None and severity not in ("warning", "critical"):
-            from fastapi import HTTPException
-
             raise HTTPException(
                 status_code=400,
                 detail="severity must be one of: warning, critical",

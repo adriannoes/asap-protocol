@@ -455,8 +455,29 @@ def _pop_remote_meta(
     return taxonomy, d, retry_after_ms, alternative_agents, fallback_action
 
 
-class RemoteFatalRPCError(FatalError):
-    """Fatal JSON-RPC error returned by a remote ASAP peer (client-side)."""
+class RemoteRPCError(ASAPError):
+    """JSON-RPC error returned by a remote ASAP peer (client-side).
+
+    Unified replacement for the former ``RemoteFatalRPCError`` /
+    ``RemoteRecoverableRPCError`` twin classes (v2.5.1 S3 collapse).
+    Recoverability is now a runtime property (``is_recoverable``) rather
+    than a distinct type, so callers branch on the property instead of
+    ``isinstance`` against one of two near-identical classes.
+
+    Attributes:
+        json_rpc_code: The wire JSON-RPC code as received from the peer
+            (preserved verbatim, even outside the ASAP reserved band).
+        is_recoverable: Whether the peer hinted the failure is retryable
+            (``data.recoverable`` was ``True``). Drives the client retry
+            decision without a second exception class.
+
+    Example:
+        >>> err = RemoteRPCError.from_jsonrpc(-32033, "timeout", {"recoverable": True})
+        >>> err.is_recoverable
+        True
+        >>> err.json_rpc_code
+        -32033
+    """
 
     json_rpc_code: int
 
@@ -466,6 +487,7 @@ class RemoteFatalRPCError(FatalError):
         message: str,
         details: dict[str, Any] | None = None,
         *,
+        is_recoverable: bool = False,
         taxonomy_code: str = "asap:rpc/remote_error",
         retry_after_ms: int | None = None,
         alternative_agents: list[str] | None = None,
@@ -484,6 +506,7 @@ class RemoteFatalRPCError(FatalError):
             fallback_action=fallback_action,
         )
         self.json_rpc_code = wire_jsonrpc_code
+        self.is_recoverable = is_recoverable
 
     def __str__(self) -> str:
         return f"Remote error {self.json_rpc_code}: {self.message}"
@@ -495,7 +518,7 @@ class RemoteFatalRPCError(FatalError):
     @classmethod
     def from_jsonrpc(
         cls, rpc_code: int, message: str, data: dict[str, Any] | None
-    ) -> RemoteFatalRPCError:
+    ) -> RemoteRPCError:
         raw = dict(data or {})
         taxonomy, details, retry_after_ms, alternative_agents, fallback_action = _pop_remote_meta(
             raw
@@ -504,6 +527,7 @@ class RemoteFatalRPCError(FatalError):
             rpc_code,
             message,
             details,
+            is_recoverable=raw.get("recoverable") is True,
             taxonomy_code=taxonomy,
             retry_after_ms=retry_after_ms,
             alternative_agents=alternative_agents,
@@ -511,10 +535,44 @@ class RemoteFatalRPCError(FatalError):
         )
 
 
-class RemoteRecoverableRPCError(RecoverableError):
-    """Recoverable JSON-RPC error returned by a remote ASAP peer (client-side)."""
+class RemoteFatalRPCError(RemoteRPCError, FatalError):
+    """Deprecated alias for a fatal ``RemoteRPCError`` (``is_recoverable=False``).
 
-    json_rpc_code: int
+    Retained for the v2.5.1 deprecation window so existing ``isinstance`` checks
+    and exception tuples keep working; new code should use ``RemoteRPCError``
+    and branch on ``is_recoverable``.
+    """
+
+    def __init__(
+        self,
+        wire_jsonrpc_code: int,
+        message: str,
+        details: dict[str, Any] | None = None,
+        *,
+        taxonomy_code: str = "asap:rpc/remote_error",
+        retry_after_ms: int | None = None,
+        alternative_agents: list[str] | None = None,
+        fallback_action: str | None = None,
+    ) -> None:
+        super().__init__(
+            wire_jsonrpc_code,
+            message,
+            details,
+            is_recoverable=False,
+            taxonomy_code=taxonomy_code,
+            retry_after_ms=retry_after_ms,
+            alternative_agents=alternative_agents,
+            fallback_action=fallback_action,
+        )
+
+
+class RemoteRecoverableRPCError(RemoteRPCError, RecoverableError):
+    """Deprecated alias for a recoverable ``RemoteRPCError`` (``is_recoverable=True``).
+
+    Retained for the v2.5.1 deprecation window so existing ``isinstance`` checks
+    and exception tuples keep working; new code should use ``RemoteRPCError``
+    and branch on ``is_recoverable``.
+    """
 
     def __init__(
         self,
@@ -527,59 +585,33 @@ class RemoteRecoverableRPCError(RecoverableError):
         alternative_agents: list[str] | None = None,
         fallback_action: str | None = None,
     ) -> None:
-        asap_slot = (
-            wire_jsonrpc_code if is_asap_json_rpc_code(wire_jsonrpc_code) else RPC_REMOTE_GENERIC
-        )
         super().__init__(
-            taxonomy_code,
-            message,
-            details or {},
-            rpc_code=asap_slot,
-            retry_after_ms=retry_after_ms,
-            alternative_agents=alternative_agents,
-            fallback_action=fallback_action,
-        )
-        self.json_rpc_code = wire_jsonrpc_code
-
-    def __str__(self) -> str:
-        return f"Remote error {self.json_rpc_code}: {self.message}"
-
-    @property
-    def data(self) -> dict[str, Any]:
-        return self.details
-
-    @classmethod
-    def from_jsonrpc(
-        cls, rpc_code: int, message: str, data: dict[str, Any] | None
-    ) -> RemoteRecoverableRPCError:
-        raw = dict(data or {})
-        taxonomy, details, retry_after_ms, alternative_agents, fallback_action = _pop_remote_meta(
-            raw
-        )
-        return cls(
-            rpc_code,
+            wire_jsonrpc_code,
             message,
             details,
-            taxonomy_code=taxonomy,
+            is_recoverable=True,
+            taxonomy_code=taxonomy_code,
             retry_after_ms=retry_after_ms,
             alternative_agents=alternative_agents,
             fallback_action=fallback_action,
         )
 
 
-ASAPRemoteError = RemoteFatalRPCError
+ASAPRemoteError = RemoteRPCError
 
 
 def remote_rpc_error_from_json(
     rpc_code: int,
     message: str,
     data: dict[str, Any] | None,
-) -> RemoteFatalRPCError | RemoteRecoverableRPCError:
-    """Construct a typed remote error from JSON-RPC *error* fields."""
-    d = dict(data or {})
-    if d.get("recoverable") is True:
-        return RemoteRecoverableRPCError.from_jsonrpc(rpc_code, message, d)
-    return RemoteFatalRPCError.from_jsonrpc(rpc_code, message, d)
+) -> RemoteRPCError:
+    """Construct a typed remote error from JSON-RPC *error* fields.
+
+    The returned ``RemoteRPCError`` carries ``is_recoverable`` derived from the
+    peer's ``data.recoverable`` hint, so callers no longer need a second
+    exception class to distinguish retryable from fatal remote failures.
+    """
+    return RemoteRPCError.from_jsonrpc(rpc_code, message, data)
 
 
 def jsonrpc_error_data_for_asap_exception(exc: ASAPError) -> dict[str, Any]:

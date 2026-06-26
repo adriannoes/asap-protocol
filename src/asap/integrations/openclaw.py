@@ -99,10 +99,10 @@ class OpenClawAsapBridge:
     ) -> str | dict[str, Any]:
         async def _do_run() -> str | dict[str, Any]:
             resolved = await self._client.resolve(urn)
-            skills = getattr(resolved.manifest.capabilities, "skills", None) or []
+            skills = resolved.manifest.capabilities.skills
             if not skills:
                 return f"{_ERROR_PREFIX} Agent has no skills; cannot build task request."
-            skill_id = getattr(skills[0], "id", "unknown") or "unknown"
+            skill_id = skills[0].id or "unknown"
             payload = {
                 "conversation_id": generate_id(),
                 "skill_id": skill_id,

@@ -13,10 +13,12 @@ import json
 from datetime import datetime
 from typing import Any, Protocol, runtime_checkable
 
+import aiosqlite
 from pydantic import ConfigDict, Field
 
 from asap.models.base import ASAPBaseModel
 from asap.models.ids import generate_id
+from asap.state.stores import AsyncSqliteRepository
 
 
 class AuditChainBroken(Exception):
@@ -156,102 +158,88 @@ class InMemoryAuditStore:
         return len(self._entries)
 
 
-class SQLiteAuditStore:
+_AUDIT_LOG_DDL = """
+CREATE TABLE IF NOT EXISTS audit_log (
+    rowid INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT NOT NULL UNIQUE,
+    timestamp TEXT NOT NULL,
+    operation TEXT NOT NULL,
+    agent_urn TEXT NOT NULL,
+    details TEXT NOT NULL DEFAULT '{}',
+    prev_hash TEXT NOT NULL DEFAULT '',
+    hash TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_audit_urn ON audit_log(agent_urn);
+CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_log(timestamp);
+"""
+
+
+class SQLiteAuditStore(AsyncSqliteRepository):
     """SQLite-backed audit store with hash chain verification.
 
-    Uses ``aiosqlite`` for async access. The table is lazily created on first
-    use so the store can be instantiated synchronously.
-
-    For ``:memory:`` databases a single persistent connection is kept alive
-    (because each ``aiosqlite.connect(":memory:")`` creates a *new* empty
-    database).  File-backed databases use per-call connections.  An
-    ``asyncio.Lock`` serialises all writes so the hash-chain stays linear.
+    Subclasses :class:`AsyncSqliteRepository` so aiosqlite plumbing, the
+    ``:memory:`` persistent connection, per-path WAL setup, and idempotent
+    schema init are owned by the base. An ``asyncio.Lock`` serialises the
+    logical read-prev-hash-then-write step in :meth:`append` so the hash
+    chain stays linear across concurrent writers (independent of which
+    backend holds the connection).
     """
 
     def __init__(self, db_path: str = ":memory:") -> None:
-        self._db_path = db_path
-        self._lock = asyncio.Lock()
-        self._initialized = False
-        self._persistent_conn: Any | None = None
+        super().__init__(db_path, schema_ddl=_AUDIT_LOG_DDL)
+        # Serialises the read-prev-hash + INSERT of an append so concurrent
+        # appends form one linear hash chain (the base owns connection mgmt).
+        self._lock: asyncio.Lock = asyncio.Lock()
 
-    async def _get_connection(self) -> Any:
-        """Return an open ``aiosqlite`` connection.
+    async def _get_connection(self) -> aiosqlite.Connection:
+        """Return an open connection the caller must close (unless persistent).
 
-        For ``:memory:`` databases the same connection is reused for the
-        lifetime of the store; for file-backed databases a fresh connection
-        is returned (caller must close it).
+        Test-only escape hatch for the tamper-detection tests, which grab a raw
+        connection to mutate ``audit_log`` rows outside the store API. Ensures
+        the schema exists (so a caller that has not ``append``-ed first still
+        sees the table); WAL pragmas are not re-applied here because
+        ``journal_mode=WAL`` is persistent per file and ``:memory:`` has no WAL.
+        Production code should use ``self._connect()`` / ``self.execute`` /
+        ``self.fetch_*`` instead.
         """
-        import aiosqlite
-
-        if self._db_path == ":memory:":
-            if self._persistent_conn is None:
-                self._persistent_conn = await aiosqlite.connect(":memory:")
-            return self._persistent_conn
-        return await aiosqlite.connect(self._db_path)
-
-    async def _release_connection(self, conn: Any) -> None:
-        """Close *conn* unless it is the persistent in-memory connection."""
-        if conn is not self._persistent_conn:
-            await conn.close()
-
-    async def _ensure_table(self, conn: Any) -> None:
-        """Create the audit_log table and indexes if they don't exist yet."""
-        if self._initialized:
-            return
-        await conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS audit_log (
-                rowid INTEGER PRIMARY KEY AUTOINCREMENT,
-                id TEXT NOT NULL UNIQUE,
-                timestamp TEXT NOT NULL,
-                operation TEXT NOT NULL,
-                agent_urn TEXT NOT NULL,
-                details TEXT NOT NULL DEFAULT '{}',
-                prev_hash TEXT NOT NULL DEFAULT '',
-                hash TEXT NOT NULL DEFAULT ''
-            )
-            """
-        )
-        await conn.execute("CREATE INDEX IF NOT EXISTS idx_audit_urn ON audit_log(agent_urn)")
-        await conn.execute("CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_log(timestamp)")
-        await conn.commit()
-        self._initialized = True
+        conn = await self._acquire_connection()
+        await self._ensure_schema(conn)
+        return conn
 
     async def append(self, entry: AuditEntry) -> AuditEntry:
-        """Append an entry, linking it to the last stored hash."""
-        async with self._lock:
-            conn = await self._get_connection()
-            try:
-                await self._ensure_table(conn)
-                cursor = await conn.execute(
-                    "SELECT hash FROM audit_log ORDER BY rowid DESC LIMIT 1"
-                )
-                row = await cursor.fetchone()
-                prev_hash = row[0] if row else ""
+        """Append an entry, linking it to the last stored hash.
 
-                computed_hash = compute_entry_hash(
-                    prev_hash, entry.timestamp, entry.operation, entry.details
-                )
-                sealed = entry.model_copy(update={"prev_hash": prev_hash, "hash": computed_hash})
+        The ``self._lock`` serialises the read-prev-hash + INSERT so
+        concurrent appends form a single linear chain; ``self._connect``
+        owns the connection lifecycle (persistent for ``:memory:``,
+        per-call WAL connection for files).
+        """
+        async with self._lock, self._connect() as conn:
+            cursor = await conn.execute("SELECT hash FROM audit_log ORDER BY rowid DESC LIMIT 1")
+            row = await cursor.fetchone()
+            prev_hash = row[0] if row else ""
 
-                await conn.execute(
-                    """
-                    INSERT INTO audit_log (id, timestamp, operation, agent_urn, details, prev_hash, hash)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        sealed.id,
-                        sealed.timestamp.isoformat(),
-                        sealed.operation,
-                        sealed.agent_urn,
-                        json.dumps(sealed.details, sort_keys=True, default=str),
-                        sealed.prev_hash,
-                        sealed.hash,
-                    ),
-                )
-                await conn.commit()
-            finally:
-                await self._release_connection(conn)
+            computed_hash = compute_entry_hash(
+                prev_hash, entry.timestamp, entry.operation, entry.details
+            )
+            sealed = entry.model_copy(update={"prev_hash": prev_hash, "hash": computed_hash})
+
+            await conn.execute(
+                """
+                INSERT INTO audit_log (id, timestamp, operation, agent_urn, details, prev_hash, hash)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    sealed.id,
+                    sealed.timestamp.isoformat(),
+                    sealed.operation,
+                    sealed.agent_urn,
+                    json.dumps(sealed.details, sort_keys=True, default=str),
+                    sealed.prev_hash,
+                    sealed.hash,
+                ),
+            )
+            await conn.commit()
         return sealed
 
     async def query(
@@ -283,9 +271,7 @@ class SQLiteAuditStore:
         params.extend([limit, offset])
 
         entries: list[AuditEntry] = []
-        conn = await self._get_connection()
-        try:
-            await self._ensure_table(conn)
+        async with self._connect() as conn:
             cursor = await conn.execute(sql, params)
             rows = await cursor.fetchall()
             for row in rows:
@@ -300,16 +286,12 @@ class SQLiteAuditStore:
                         hash=row[6],
                     )
                 )
-        finally:
-            await self._release_connection(conn)
         return entries
 
     async def verify_chain(self) -> bool:
         """Verify every hash link in insertion order."""
         prev_hash = ""
-        conn = await self._get_connection()
-        try:
-            await self._ensure_table(conn)
+        async with self._connect() as conn:
             cursor = await conn.execute(
                 "SELECT timestamp, operation, details, prev_hash, hash "
                 "FROM audit_log ORDER BY rowid"
@@ -326,17 +308,9 @@ class SQLiteAuditStore:
                 if stored_hash != expected or stored_prev != prev_hash:
                     return False
                 prev_hash = stored_hash
-        finally:
-            await self._release_connection(conn)
         return True
 
     async def count(self) -> int:
         """Return total number of stored entries."""
-        conn = await self._get_connection()
-        try:
-            await self._ensure_table(conn)
-            cursor = await conn.execute("SELECT COUNT(*) FROM audit_log")
-            row = await cursor.fetchone()
-            return row[0] if row else 0
-        finally:
-            await self._release_connection(conn)
+        row = await self.fetch_one("SELECT COUNT(*) FROM audit_log")
+        return row[0] if row else 0

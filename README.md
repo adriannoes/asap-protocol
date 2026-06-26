@@ -7,7 +7,7 @@
 
 > A production-ready protocol for agent-to-agent communication and task coordination.
 
-**Quick Info**: [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0) | `Apache 2.0` | `Python 3.13+` | [Documentation](docs/index.md) | [Changelog](CHANGELOG.md)
+**Quick Info**: [`v2.5.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.1) | `Apache 2.0` | `Python 3.13+` | [Documentation](docs/index.md) | [Changelog](CHANGELOG.md)
 
 > 📦 **Install** the Python SDK ([`asap-protocol` on PyPI](https://pypi.org/project/asap-protocol/)) or the TypeScript client ([`@asap-protocol/client` on npm](https://www.npmjs.com/package/@asap-protocol/client) — **2.4.1**; `@asap-protocol/mcp-auth` npm middleware still deferred).
 
@@ -73,7 +73,7 @@ Or with pip:
 pip install asap-protocol
 ```
 
-**TypeScript** (npm, **`2.4.1`** — unchanged for v2.5.0; `@asap-protocol/mcp-auth` HTTP middleware still deferred):
+**TypeScript** (npm, **`2.4.1`** — unchanged for v2.5.1; `@asap-protocol/mcp-auth` HTTP middleware still deferred):
 
 - [`@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client) — [SDK docs](docs/sdks/typescript.md)
 - [`@asap-protocol/mastra`](https://www.npmjs.com/package/@asap-protocol/mastra) — [docs](docs/integrations/mastra.md) · [demo](apps/example-mastra/README.md)
@@ -85,7 +85,7 @@ npm install @asap-protocol/mastra@2.4.1 @asap-protocol/client @mastra/core zod
 npm install @asap-protocol/openai-agents@2.4.1 @asap-protocol/client @openai/agents zod
 ```
 
-**Python v2.5.0** (MCP Auth Bridge): `uv add asap-protocol` or `pip install asap-protocol==2.5.0` — see [Migration (v2.4.1 → v2.5.0)](docs/migration.md#upgrading-from-v241-to-v250).
+**Python v2.5.1** (code quality patch): `uv add asap-protocol` or `pip install asap-protocol==2.5.1` — see [Migration (v2.5.0 → v2.5.1)](docs/migration.md#upgrading-from-v250-to-v251).
 
 ## Quick Start
 
@@ -172,6 +172,7 @@ High-level only — see **[Changelog](https://github.com/adriannoes/asap-protoco
 
 | Version | What shipped |
 | :-- | :-- |
+| **v2.5.1** | **Code quality patch** — behavior-preserving refactor (transport/server, client, websocket, SQLite storage, auth, integrations) + six correctness/security fixes (atomic `revoke_cascade`, `usage_events` DDL, unified Host-JWT verifier, **WS now enforces OAuth2**, OpenAPI handler cleanup, client `correlation_id` binding). Deprecated import paths removed in v2.6.0. See [CHANGELOG](CHANGELOG.md#251---2026-06-25) and [Migration (v2.5.0 → v2.5.1)](docs/migration.md#upgrading-from-v250-to-v251) |
 | **v2.5.0.1** | **Compliance publish** — **[GitHub Release `v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1)** · PyPI **`asap-compliance` 1.3.0** (`mcp-auth-bridge` profile; requires `asap-protocol>=2.5.0`). No `asap-protocol` API change. See [CHANGELOG](CHANGELOG.md#2501---2026-06-24) |
 | **v2.5.0** | **MCP Auth Bridge** — **[GitHub Release `v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0)** · opt-in `protect_server` for stdio MCP; Agent JWT + capability grants; reference example `examples/mcp_auth_bridge/`. See [CHANGELOG](CHANGELOG.md#250---2026-06-24) and [Migration (v2.4.1 → v2.5.0)](docs/migration.md#upgrading-from-v241-to-v250) |
 | **v2.4.1** | **Security hardening** — OAuth2 `iss`/`aud`, fail-closed identity binding, web SSRF/redirect fixes, dependency bumps. See [CHANGELOG](CHANGELOG.md#241---2026-06-14) and [Migration (v2.4.0 → v2.4.1)](docs/migration.md#upgrading-from-v240-to-v241) |
