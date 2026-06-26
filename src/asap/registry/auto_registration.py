@@ -17,7 +17,11 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 from asap.auth.middleware import OAuth2Claims
 from asap.auth.scopes import require_scope
 from asap.discovery.registry import RegistryEntry, generate_registry_entry
-from asap.discovery.validation import validate_manifest_schema
+from asap.discovery.validation import (
+    ManifestValidationError,
+    validate_signed_manifest_response,
+)
+from asap.errors import SignatureVerificationError
 from asap.errors import WebhookURLValidationError
 from asap.models.entities import Manifest
 from asap.registry.anti_spam import TRUST_LEVEL_SELF_SIGNED, auto_register_verification
@@ -127,7 +131,10 @@ async def fetch_manifest_at_url(client: httpx.AsyncClient, manifest_url: str) ->
         raise HTTPException(status_code=400, detail="Manifest response is not JSON") from exc
     if not isinstance(data, dict):
         raise HTTPException(status_code=400, detail="Manifest JSON must be an object")
-    return validate_manifest_schema(data)
+    try:
+        return validate_signed_manifest_response(data, verify_signature=True)
+    except SignatureVerificationError as exc:
+        raise ManifestValidationError(str(exc), field="signature") from exc
 
 
 def _build_registry_entry(manifest: Manifest, manifest_url: str) -> RegistryEntry:

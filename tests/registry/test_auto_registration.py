@@ -394,8 +394,8 @@ def test_harness_base_url_preserves_path_without_asap_suffix(manifest_https: Man
 
 
 @pytest.mark.asyncio
-async def test_fetch_manifest_rejects_signed_envelope(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Signed manifest envelopes are rejected until auto-registration unwraps them."""
+async def test_fetch_manifest_accepts_signed_envelope(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Signed manifest envelopes unwrap to inner Manifest (compliance harness parity)."""
     monkeypatch.setattr(
         "asap.registry.auto_registration.validate_callback_url",
         AsyncMock(return_value=None),
@@ -420,7 +420,44 @@ async def test_fetch_manifest_rejects_signed_envelope(monkeypatch: pytest.Monkey
 
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport) as client:
-        with pytest.raises(ManifestValidationError):
+        result = await fetch_manifest_at_url(client, "https://example.com/m.json")
+    assert result.id == "urn:asap:agent:signed-auto-reg"
+    assert result.name == "Signed Auto Reg"
+
+
+@pytest.mark.asyncio
+async def test_fetch_manifest_rejects_tampered_signed_envelope(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Tampered signed manifest envelope fails signature verification."""
+    monkeypatch.setattr(
+        "asap.registry.auto_registration.validate_callback_url",
+        AsyncMock(return_value=None),
+    )
+    manifest = Manifest(
+        id="urn:asap:agent:signed-auto-reg",
+        name="Signed Auto Reg",
+        version="1.0.0",
+        description="Signed manifest for auto-registration fetch test",
+        capabilities=Capability(
+            asap_version="0.1",
+            skills=[Skill(id="echo", description="Echo")],
+            state_persistence=False,
+        ),
+        endpoints=Endpoint(asap="https://example.com/asap"),
+    )
+    private_key, _ = generate_keypair()
+    signed_payload = sign_manifest(manifest, private_key).model_dump(mode="json")
+    inner = signed_payload["manifest"]
+    assert isinstance(inner, dict)
+    inner["name"] = "Tampered Name"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=signed_payload)
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        with pytest.raises(ManifestValidationError, match="signature|verification|Invalid"):
             await fetch_manifest_at_url(client, "https://example.com/m.json")
 
 
