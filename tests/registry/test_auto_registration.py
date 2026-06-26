@@ -1174,3 +1174,86 @@ def test_default_pr_opener_calls_open_registry_pull_request(
     assert resp.status_code == 200
     assert resp.json()["pr_url"] == "https://github.com/acme/reg/pull/77"
     assert len(calls) == 1
+
+
+@pytest.fixture
+def scoped_registration_app(
+    manifest_https: Manifest,
+    monkeypatch: pytest.MonkeyPatch,
+) -> FastAPI:
+    """Registry app using real ``require_scope`` with injectable OAuth claims."""
+
+    async def _fake_fetch(_client: object, _url: str) -> Manifest:
+        return manifest_https
+
+    monkeypatch.setattr(
+        "asap.registry.auto_registration.fetch_manifest_at_url",
+        _fake_fetch,
+    )
+
+    cfg = AutoRegistrationConfig(
+        run_compliance=lambda _base: _passing_report(),
+        open_pull_request=lambda _entry, _url: BotPRResult(
+            pr_url="https://github.com/o/r/pull/scope",
+            branch_name="auto-reg/scope",
+        ),
+    )
+    app = FastAPI()
+    app.state.registration_limiter = create_test_limiter(
+        ["100000/hour"],
+        key_func=registration_token_key,
+    )
+    app.state.registration_receipt_cache = {}
+    app.include_router(create_auto_registration_router(cfg))
+
+    from starlette.middleware.base import BaseHTTPMiddleware
+
+    class ScopeInjectorMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request: Request, call_next: object) -> object:
+            raw_scopes = request.headers.get("x-test-oauth-scopes")
+            if raw_scopes is not None:
+                scopes = [] if raw_scopes == "none" else raw_scopes.split()
+                request.state.oauth2_claims = OAuth2Claims(
+                    sub="urn:asap:agent:scope-test",
+                    scope=scopes,
+                    exp=9999999999,
+                )
+            return await call_next(request)  # type: ignore[misc, operator]
+
+    app.add_middleware(ScopeInjectorMiddleware)
+    return app
+
+
+def test_register_agent_requires_oauth_claims(scoped_registration_app: FastAPI) -> None:
+    """POST /registry/agents returns 401 when no OAuth claims are present."""
+    client = TestClient(scoped_registration_app)
+    resp = client.post(
+        "/registry/agents",
+        json={"manifest_url": "https://example.com/.well-known/asap/manifest.json"},
+    )
+    assert resp.status_code == 401
+    assert resp.json()["detail"] == "Authentication required"
+
+
+def test_register_agent_rejects_missing_registry_scope(scoped_registration_app: FastAPI) -> None:
+    """POST /registry/agents returns 403 when token lacks asap:registry scope."""
+    client = TestClient(scoped_registration_app)
+    resp = client.post(
+        "/registry/agents",
+        json={"manifest_url": "https://example.com/.well-known/asap/manifest.json"},
+        headers={"X-Test-OAuth-Scopes": "asap:read asap:execute"},
+    )
+    assert resp.status_code == 403
+    assert resp.json()["detail"] == "Insufficient scope"
+
+
+def test_register_agent_allows_registry_scope(scoped_registration_app: FastAPI) -> None:
+    """POST /registry/agents succeeds when token includes asap:registry scope."""
+    client = TestClient(scoped_registration_app)
+    resp = client.post(
+        "/registry/agents",
+        json={"manifest_url": "https://example.com/.well-known/asap/manifest.json"},
+        headers={"X-Test-OAuth-Scopes": "asap:registry"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["urn"] == "urn:asap:agent:ci:auto-reg-test"
