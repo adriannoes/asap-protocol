@@ -961,6 +961,178 @@ def test_register_agent_manifest_validation_error_returns_400(
     assert "capabilities" in resp.json()["detail"]
 
 
+def _inject_manifest_fetch_transport(
+    monkeypatch: pytest.MonkeyPatch,
+    transport: httpx.MockTransport,
+) -> None:
+    """Route manifest fetches through ``httpx.MockTransport`` without stubbing fetch."""
+    monkeypatch.setattr(
+        "asap.registry.auto_registration.validate_callback_url",
+        AsyncMock(return_value=None),
+    )
+    original_client = httpx.AsyncClient
+
+    def _client_factory(*args: object, **kwargs: object) -> httpx.AsyncClient:
+        kwargs["transport"] = transport
+        return original_client(*args, **kwargs)
+
+    monkeypatch.setattr(
+        "asap.registry.auto_registration.httpx.AsyncClient",
+        _client_factory,
+    )
+
+
+def _registration_client_with_transport(
+    monkeypatch: pytest.MonkeyPatch,
+    transport: httpx.MockTransport,
+    *,
+    pr_calls: list[tuple[RegistryEntry, str]] | None = None,
+) -> TestClient:
+    """Build a registry app whose manifest download uses the given mock transport."""
+    calls: list[tuple[RegistryEntry, str]] = pr_calls if pr_calls is not None else []
+
+    async def _fake_pr(entry: RegistryEntry, url: str) -> BotPRResult:
+        calls.append((entry, url))
+        return BotPRResult(pr_url="https://github.com/o/r/pull/1", branch_name="auto-reg/x")
+
+    _inject_manifest_fetch_transport(monkeypatch, transport)
+
+    cfg = AutoRegistrationConfig(
+        oauth_claims_dependency=_oauth_bypass,
+        run_compliance=lambda _b: _passing_report(),
+        open_pull_request=_fake_pr,
+    )
+    app = FastAPI()
+    app.state.registration_limiter = create_test_limiter(
+        ["100000/hour"],
+        key_func=registration_token_key,
+    )
+    app.include_router(create_auto_registration_router(cfg))
+    return TestClient(app)
+
+
+@pytest.mark.asyncio
+async def test_fetch_manifest_rejects_invalid_plain_schema(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Plain JSON missing required manifest fields must raise ManifestValidationError."""
+    monkeypatch.setattr(
+        "asap.registry.auto_registration.validate_callback_url",
+        AsyncMock(return_value=None),
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"id": "urn:asap:agent:incomplete"})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        with pytest.raises(ManifestValidationError):
+            await fetch_manifest_at_url(client, "https://example.com/incomplete.json")
+
+
+def test_register_agent_invalid_plain_manifest_returns_400(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Invalid plain manifest from real fetch must map to HTTP 400, not 500."""
+    compliance_called: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"id": "urn:asap:agent:incomplete"})
+
+    transport = httpx.MockTransport(handler)
+    _inject_manifest_fetch_transport(monkeypatch, transport)
+
+    cfg = AutoRegistrationConfig(
+        oauth_claims_dependency=_oauth_bypass,
+        run_compliance=lambda base: compliance_called.append(base) or _passing_report(),
+        open_pull_request=lambda _e, _u: BotPRResult(pr_url="x", branch_name="b"),
+    )
+    app = FastAPI()
+    app.state.registration_limiter = create_test_limiter(
+        ["100000/hour"],
+        key_func=registration_token_key,
+    )
+    app.include_router(create_auto_registration_router(cfg))
+    client = TestClient(app)
+    resp = client.post(
+        "/registry/agents",
+        json={"manifest_url": "https://example.com/incomplete.json"},
+        headers={"Authorization": "Bearer plain-schema"},
+    )
+    assert resp.status_code == 400
+    assert compliance_called == []
+
+
+def test_register_agent_tampered_signed_manifest_returns_400(
+    manifest_https: Manifest,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Tampered signed envelope must fail signature verification and return HTTP 400."""
+    compliance_called: list[str] = []
+    private_key, _ = generate_keypair()
+    signed_payload = sign_manifest(manifest_https, private_key).model_dump(mode="json")
+    inner = signed_payload["manifest"]
+    assert isinstance(inner, dict)
+    inner["name"] = "Tampered Name"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=signed_payload)
+
+    transport = httpx.MockTransport(handler)
+    _inject_manifest_fetch_transport(monkeypatch, transport)
+
+    cfg = AutoRegistrationConfig(
+        oauth_claims_dependency=_oauth_bypass,
+        run_compliance=lambda base: compliance_called.append(base) or _passing_report(),
+        open_pull_request=lambda _e, _u: BotPRResult(pr_url="x", branch_name="b"),
+    )
+    app = FastAPI()
+    app.state.registration_limiter = create_test_limiter(
+        ["100000/hour"],
+        key_func=registration_token_key,
+    )
+    app.include_router(create_auto_registration_router(cfg))
+    client = TestClient(app)
+    resp = client.post(
+        "/registry/agents",
+        json={"manifest_url": "https://example.com/tampered-signed.json"},
+        headers={"Authorization": "Bearer tampered"},
+    )
+    assert resp.status_code == 400
+    detail = resp.json()["detail"].lower()
+    assert "signature" in detail or "verification" in detail or "invalid" in detail
+    assert compliance_called == []
+
+
+def test_register_agent_accepts_signed_manifest_envelope(
+    manifest_https: Manifest,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Valid signed manifest envelope must register through the real fetch chain."""
+    pr_calls: list[tuple[RegistryEntry, str]] = []
+    private_key, _ = generate_keypair()
+    signed_payload = sign_manifest(manifest_https, private_key).model_dump(mode="json")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=signed_payload)
+
+    transport = httpx.MockTransport(handler)
+    client = _registration_client_with_transport(
+        monkeypatch,
+        transport,
+        pr_calls=pr_calls,
+    )
+    resp = client.post(
+        "/registry/agents",
+        json={"manifest_url": "https://example.com/signed-envelope.json"},
+        headers={"Authorization": "Bearer signed-ok"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["urn"] == manifest_https.id
+    assert len(pr_calls) == 1
+    assert pr_calls[0][0].id == manifest_https.id
+
+
 def test_register_agent_without_receipt_cache_still_ok(
     manifest_https: Manifest,
     monkeypatch: pytest.MonkeyPatch,
