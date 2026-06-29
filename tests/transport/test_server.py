@@ -1208,6 +1208,51 @@ class TestAgentRegisterEndpoint:
         assert stored.agent_id == data["agent_id"]
         assert stored.host_id == data["host_id"]
 
+    async def test_register_revoked_host_returns_403(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: "ASAPRateLimiter | None",
+    ) -> None:
+        """A revoked HOST must not register agents (parity with /reactivate)."""
+        app, agent_store, host_store = _app_with_identity_stores(
+            sample_manifest, isolated_rate_limiter
+        )
+        client = TestClient(app)
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        agent_jwk = ed25519_public_jwk(agent_sk)
+        token = create_host_jwt(
+            host_sk,
+            aud=_HOST_JWT_AUDIENCE,
+            agent_public_key=agent_jwk,
+            ttl_seconds=120,
+        )
+        first = client.post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert first.status_code == 200
+        host = await host_store.get_by_public_key(
+            jwk_thumbprint_sha256(ed25519_public_jwk(host_sk))
+        )
+        assert host is not None
+        await host_store.revoke(host.host_id)
+
+        revoked_token = create_host_jwt(
+            host_sk,
+            aud=_HOST_JWT_AUDIENCE,
+            agent_public_key=ed25519_public_jwk(Ed25519PrivateKey.generate()),
+            ttl_seconds=120,
+        )
+        response = client.post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {revoked_token}"},
+        )
+
+        assert response.status_code == 403
+        assert "revoked" in response.json()["detail"].lower()
+        assert len(await agent_store.list_by_host(host.host_id)) == 1
+
     async def test_register_a2h_uses_host_id_as_principal(
         self,
         sample_manifest: Manifest,
