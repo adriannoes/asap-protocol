@@ -1591,6 +1591,48 @@ class TestAgentRegisterEndpoint:
         r = TestClient(app).post("/asap/agent/register")
         assert r.status_code == 401
 
+    async def test_register_revoked_host_returns_403(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: "ASAPRateLimiter | None",
+    ) -> None:
+        """Revoked hosts must be rejected by the canonical Host-JWT verifier."""
+        app, agent_store, host_store = _app_with_identity_stores(sample_manifest, isolated_rate_limiter)
+        client = TestClient(app)
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        token = create_host_jwt(
+            host_sk,
+            aud=_HOST_JWT_AUDIENCE,
+            agent_public_key=ed25519_public_jwk(agent_sk),
+            ttl_seconds=120,
+        )
+        first = client.post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert first.status_code == 200
+
+        host = await host_store.get_by_public_key(
+            jwk_thumbprint_sha256(ed25519_public_jwk(host_sk))
+        )
+        assert host is not None
+        await host_store.revoke(host.host_id)
+
+        second_token = create_host_jwt(
+            host_sk,
+            aud=_HOST_JWT_AUDIENCE,
+            agent_public_key=ed25519_public_jwk(agent_sk),
+            ttl_seconds=120,
+        )
+        second = client.post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {second_token}"},
+        )
+        assert second.status_code == 403
+        assert "revoked" in second.json()["detail"].lower()
+        _ = agent_store
+
     def test_register_host_jwt_wrong_audience_returns_401(
         self,
         sample_manifest: Manifest,
