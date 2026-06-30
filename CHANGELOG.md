@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **CI security (`pip-audit`)**: Raised `joserfc` to `>=1.6.7,<2` (CVE-2026-48990) and added overrides for `python-engineio>=4.13.2` (CVE-2026-48802 / CVE-2026-48809) and `python-socketio>=5.16.2` (CVE-2026-48804). See [SECURITY.md](SECURITY.md).
+
 ### Follow-up (not in v2.5.1)
 
 - **Adapter Lab II** — new framework adapters (separate PRD: [prd-v2.5.1-adapter-lab-ii.md](product/prd/prd-v2.5.1-adapter-lab-ii.md)).
