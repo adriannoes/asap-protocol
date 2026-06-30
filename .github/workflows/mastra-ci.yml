@@ -70,7 +70,7 @@ jobs:
       - name: Install dependencies (mastra slice)
         run: pnpm install --no-frozen-lockfile --filter "@asap-protocol/mastra..." --filter example-mastra
 
-      - uses: actions/cache@v5
+      - uses: actions/cache@v6
         id: client-dist
         with:
           path: packages/typescript/client/dist
