@@ -2104,6 +2104,35 @@ class TestRecvLoopBranches:
             await task
 
     @pytest.mark.asyncio
+    async def test_recv_loop_non_dict_error_frame_does_not_crash(self) -> None:
+        """CR#2: string error payloads must not crash recv with AttributeError."""
+        transport = WebSocketTransport()
+        ws = _mock_ws()
+        transport._ws = ws
+
+        error_frame = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "error": "Service Temporarily Unavailable",
+                "id": "ws-req-1",
+            }
+        )
+        ws.recv = AsyncMock(side_effect=[error_frame, asyncio.CancelledError()])
+
+        future: asyncio.Future[Envelope] = asyncio.get_running_loop().create_future()
+        transport._pending["ws-req-1"] = future
+
+        task = asyncio.create_task(transport._recv_loop())
+        await asyncio.sleep(0.05)
+
+        with pytest.raises(WebSocketRemoteError, match="Service Temporarily Unavailable"):
+            future.result()
+
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+    @pytest.mark.asyncio
     async def test_recv_loop_error_frame_no_pending(self) -> None:
         """Error frame without matching pending logs warning (lines 396-400)."""
         transport = WebSocketTransport()
