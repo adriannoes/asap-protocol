@@ -86,7 +86,7 @@ jobs:
       - name: Install dependencies (openai-agents slice)
         run: pnpm install --no-frozen-lockfile --filter "@asap-protocol/openai-agents..." --filter example-openai-agents
 
-      - uses: actions/cache@v5
+      - uses: actions/cache@v6
         id: client-dist
         with:
           path: packages/typescript/client/dist
