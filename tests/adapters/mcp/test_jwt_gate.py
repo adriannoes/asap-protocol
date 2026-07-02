@@ -307,3 +307,33 @@ async def test_dispatch_tools_call_enforces_auth(
     assert "result" in data
     assert data["result"]["isError"] is True
     assert AUTH_REQUIRED in data["result"]["content"][0]["text"]
+
+
+@pytest.mark.asyncio
+async def test_valid_jwt_succeeds_without_grant_when_enforce_grants_disabled(
+    echo_mcp_server: MCPServer,
+    host_store: InMemoryHostStore,
+    agent_store: InMemoryAgentStore,
+    capability_registry: CapabilityRegistry,
+    host_identity: HostIdentity,
+    agent_session: AgentSession,
+    mint_agent_jwt: Callable[..., str],
+    caplog: LogCaptureFixture,
+) -> None:
+    """When enforce_grants is false, a valid JWT authorizes tools without active grants."""
+    token = mint_agent_jwt()
+    config = build_auth_config(
+        host_store,
+        agent_store,
+        capability_registry,
+        enforce_grants=False,
+    )
+    protected = protect_server(echo_mcp_server, config)
+
+    with caplog.at_level(logging.DEBUG):
+        result = await protected._handle_tools_call(
+            tool_call_params("echo", arguments={"message": "hi"}, jwt=token)
+        )
+
+    assert result["isError"] is False
+    assert "mcp.tool.grants_skipped" in caplog.text
