@@ -961,6 +961,72 @@ def test_register_agent_manifest_validation_error_returns_400(
     assert "capabilities" in resp.json()["detail"]
 
 
+def test_register_agent_tampered_signed_manifest_returns_400(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Tampered signed manifest from fetch maps to HTTP 400 through the route (#227)."""
+    monkeypatch.setattr(
+        "asap.registry.auto_registration.validate_callback_url",
+        AsyncMock(return_value=None),
+    )
+
+    manifest = Manifest(
+        id="urn:asap:agent:signed-route-reg",
+        name="Signed Route Reg",
+        version="1.0.0",
+        description="Signed manifest for register route signature test",
+        capabilities=Capability(
+            asap_version="0.1",
+            skills=[Skill(id="echo", description="Echo")],
+            state_persistence=False,
+        ),
+        endpoints=Endpoint(asap="https://example.com/asap"),
+    )
+    private_key, _ = generate_keypair()
+    signed_payload = sign_manifest(manifest, private_key).model_dump(mode="json")
+    inner = signed_payload["manifest"]
+    assert isinstance(inner, dict)
+    inner["name"] = "Tampered Name"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=signed_payload)
+
+    transport = httpx.MockTransport(handler)
+    original_async_client = httpx.AsyncClient
+
+    class _MockAsyncClient:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            self._client = original_async_client(transport=transport)
+
+        async def __aenter__(self) -> httpx.AsyncClient:
+            return self._client
+
+        async def __aexit__(self, *args: object, **kwargs: object) -> None:
+            await self._client.aclose()
+
+    monkeypatch.setattr("asap.registry.auto_registration.httpx.AsyncClient", _MockAsyncClient)
+
+    cfg = AutoRegistrationConfig(
+        oauth_claims_dependency=_oauth_bypass,
+        run_compliance=lambda _b: _passing_report(),
+        open_pull_request=lambda _e, _u: BotPRResult(pr_url="x", branch_name="b"),
+    )
+    app = FastAPI()
+    app.state.registration_limiter = create_test_limiter(
+        ["100000/hour"],
+        key_func=registration_token_key,
+    )
+    app.include_router(create_auto_registration_router(cfg))
+    client = TestClient(app)
+    resp = client.post(
+        "/registry/agents",
+        json={"manifest_url": "https://example.com/tampered.json"},
+        headers={"Authorization": "Bearer tampered"},
+    )
+    assert resp.status_code == 400
+    assert "signature" in resp.json()["detail"].lower()
+
+
 def test_register_agent_without_receipt_cache_still_ok(
     manifest_https: Manifest,
     monkeypatch: pytest.MonkeyPatch,
