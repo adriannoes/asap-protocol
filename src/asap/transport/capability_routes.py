@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
 from asap.auth.agent_jwt import (
+    HOST_REVOKED_ERROR,
     JtiReplayCache,
     JwtVerifyResult,
     verify_agent_jwt,
@@ -82,7 +83,9 @@ async def verify_agent_bearer(
         jti_replay_cache=jti_cache,
     )
     if not result.ok:
-        status = 403 if result.error in ("agent_expired", "agent_revoked") else 401
+        status = (
+            403 if result.error in ("agent_expired", "agent_revoked", HOST_REVOKED_ERROR) else 401
+        )
         return None, JSONResponse(
             status_code=status,
             content={
