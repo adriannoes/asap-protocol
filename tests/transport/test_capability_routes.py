@@ -377,6 +377,52 @@ class TestCapabilityExecute:
         assert "expired" in r.json()["detail"].lower()
         assert "request_id" in r.json() and r.json()["request_id"]
 
+    async def test_execute_revoked_host_returns_403(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: ASAPRateLimiter | None,
+    ) -> None:
+        """A revoked HOST must not authenticate on capability execute.
+
+        Mirrors ``test_reactivate_revoked_host_returns_403``: the Host-JWT
+        verifier must reject revoked hosts on every capability route, not only
+        ``/asap/agent/reactivate``.
+        """
+        app, agent_store, host_store, registry = _setup(
+            sample_manifest, isolated_rate_limiter, capabilities=_DEFAULT_CAPS
+        )
+        client = TestClient(app)
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        aid = await _register_and_activate(
+            client, app, agent_store, host_sk, agent_sk, status="active"
+        )
+        registry.grant(aid, "file:read")
+
+        host = await host_store.get_by_public_key(
+            jwk_thumbprint_sha256(ed25519_public_jwk(host_sk))
+        )
+        assert host is not None
+        # Mark host revoked without ``HostStore.revoke()`` so agent rows stay
+        # active and we exercise the host-revoked branch in ``verify_agent_jwt``.
+        await host_store.save(
+            host.model_copy(
+                update={
+                    "status": "revoked",
+                    "updated_at": datetime.now(timezone.utc),
+                }
+            )
+        )
+
+        token = _agent_jwt(agent_sk, host_sk, aid)
+        r = client.post(
+            "/asap/capability/execute",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"capability": "file:read"},
+        )
+        assert r.status_code == 403
+        assert "revoked" in r.json()["detail"].lower()
+
     async def test_execute_constraint_violated_returns_403_with_violations(
         self,
         sample_manifest: Manifest,
