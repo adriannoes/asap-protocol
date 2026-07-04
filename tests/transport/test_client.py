@@ -28,6 +28,7 @@ from asap.transport.client import (
     ASAPTimeoutError,
     RetryConfig,
 )
+from asap.transport.errors import ProtocolCorrelationError
 
 if TYPE_CHECKING:
     from asap.transport.rate_limit import ASAPRateLimiter
@@ -2132,8 +2133,6 @@ class TestClientCorrelationBinding:
         self, sample_request_envelope: Envelope
     ) -> None:
         """``send`` raises ``ProtocolCorrelationError`` when response correlation_id != request id."""
-        from asap.transport.errors import ProtocolCorrelationError
-
         # Non-empty but different from sample_request_envelope.id so it passes the
         # structural non-empty check but must fail the binding check.
         mismatched_response = Envelope(
@@ -2157,6 +2156,40 @@ class TestClientCorrelationBinding:
         ) as client:
             with pytest.raises(ProtocolCorrelationError) as exc_info:
                 await client.send(sample_request_envelope)
+
+            message = str(exc_info.value)
+            assert "correlation_id" in message
+            assert repr(sample_request_envelope.id) in message
+            assert repr("different-id") in message
+
+    async def test_stream_rejects_mismatched_taskstream_correlation_id(
+        self, sample_request_envelope: Envelope
+    ) -> None:
+        """CR#4: ``stream`` rejects a ``TaskStream`` chunk bound to a different request id."""
+        mismatched_chunk = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:server",
+            recipient="urn:asap:agent:client",
+            payload_type="TaskStream",
+            payload={"chunk": "partial", "final": True, "progress": 1.0},
+            correlation_id="different-id",
+        )
+
+        def mock_transport(_: httpx.Request) -> httpx.Response:
+            stream_body = (
+                f"data: {json.dumps(mismatched_chunk.model_dump(mode='json'))}\n\n".encode("utf-8")
+            )
+            return httpx.Response(
+                status_code=200,
+                headers={"content-type": "text/event-stream"},
+                content=stream_body,
+            )
+
+        async with ASAPClient(
+            "http://localhost:8000", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            with pytest.raises(ProtocolCorrelationError) as exc_info:
+                _ = [chunk async for chunk in client.stream(sample_request_envelope)]
 
             message = str(exc_info.value)
             assert "correlation_id" in message

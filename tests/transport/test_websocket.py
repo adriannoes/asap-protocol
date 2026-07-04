@@ -16,8 +16,10 @@ from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
 from asap.models.entities import Manifest
+from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
-from asap.models.payloads import MessageAck, TaskRequest
+from asap.models.payloads import MessageAck, TaskRequest, TaskResponse
+from asap.transport.errors import ProtocolCorrelationError
 from asap.transport.jsonrpc import ASAP_METHOD, JsonRpcRequest
 from asap.transport.server import create_app
 from asap.transport.websocket import (
@@ -427,10 +429,6 @@ class TestWebSocketTransportCorrelation(NoRateLimitTestBase):
         loop must raise ``ProtocolCorrelationError`` rather than pairing it with
         the in-flight request. Deterministic: ``_ws`` is mocked, no real server.
         """
-        from asap.models.enums import TaskStatus
-        from asap.models.payloads import TaskResponse
-        from asap.transport.errors import ProtocolCorrelationError
-
         request = Envelope(
             asap_version="0.1",
             sender="urn:asap:agent:client",
@@ -2640,6 +2638,7 @@ class TestSendAndReceiveStream:
         chunk: str = "part",
         final: bool = False,
         frame_id: str | None = None,
+        correlation_id: str = "c1",
     ) -> str:
         env = Envelope(
             asap_version="0.1",
@@ -2647,7 +2646,7 @@ class TestSendAndReceiveStream:
             recipient="urn:asap:agent:client",
             payload_type="TaskStream",
             payload={"chunk": chunk, "final": final, "progress": 0.5},
-            correlation_id="c1",
+            correlation_id=correlation_id,
         )
         return json.dumps(
             {
@@ -2669,16 +2668,21 @@ class TestSendAndReceiveStream:
         transport = self._transport()
         ws = _mock_ws()
         transport._ws = ws
+        request = _sample_envelope_cov()
         req_id = self._REQ_ID
         ws.recv = AsyncMock(
             side_effect=[
-                self._stream_result_frame(req_id, chunk="a", final=False),
-                self._stream_result_frame(req_id, chunk="b", final=True),
+                self._stream_result_frame(
+                    req_id, chunk="a", final=False, correlation_id=str(request.id)
+                ),
+                self._stream_result_frame(
+                    req_id, chunk="b", final=True, correlation_id=str(request.id)
+                ),
             ]
         )
         chunks: list[str] = []
         with patch.object(transport, "_next_request_id", return_value=req_id):
-            async for env in transport.send_and_receive_stream(_sample_envelope_cov()):
+            async for env in transport.send_and_receive_stream(request):
                 chunks.append(str(env.payload_dict.get("chunk")))
         assert chunks == ["a", "b"]
 
@@ -2687,6 +2691,7 @@ class TestSendAndReceiveStream:
         transport = self._transport()
         ws = _mock_ws()
         transport._ws = ws
+        request = _sample_envelope_cov()
         req_id = self._REQ_ID
         ack = json.dumps({"jsonrpc": "2.0", "method": ASAP_ACK_METHOD, "params": {}})
         pong = json.dumps({"type": HEARTBEAT_FRAME_TYPE_PONG})
@@ -2694,12 +2699,12 @@ class TestSendAndReceiveStream:
             side_effect=[
                 pong,
                 ack,
-                self._stream_result_frame(req_id, final=True),
+                self._stream_result_frame(req_id, final=True, correlation_id=str(request.id)),
             ]
         )
         count = 0
         with patch.object(transport, "_next_request_id", return_value=req_id):
-            async for _ in transport.send_and_receive_stream(_sample_envelope_cov()):
+            async for _ in transport.send_and_receive_stream(request):
                 count += 1
         assert count == 1
 
@@ -2729,16 +2734,17 @@ class TestSendAndReceiveStream:
         transport = self._transport()
         ws = _mock_ws()
         transport._ws = ws
+        request = _sample_envelope_cov()
         req_id = self._REQ_ID
         ws.recv = AsyncMock(
             side_effect=[
-                self._stream_result_frame(req_id, frame_id="other"),
-                self._stream_result_frame(req_id, final=True),
+                self._stream_result_frame(req_id, frame_id="other", correlation_id=str(request.id)),
+                self._stream_result_frame(req_id, final=True, correlation_id=str(request.id)),
             ]
         )
         count = 0
         with patch.object(transport, "_next_request_id", return_value=req_id):
-            async for _ in transport.send_and_receive_stream(_sample_envelope_cov()):
+            async for _ in transport.send_and_receive_stream(request):
                 count += 1
         assert count == 1
 
@@ -2757,14 +2763,43 @@ class TestSendAndReceiveStream:
                 pass
 
     @pytest.mark.asyncio
+    async def test_rejects_mismatched_taskstream_correlation_id(self) -> None:
+        """CR#4: WS streaming rejects a ``TaskStream`` chunk bound to another request."""
+        transport = self._transport()
+        ws = _mock_ws()
+        transport._ws = ws
+        request = _sample_envelope_cov()
+        req_id = self._REQ_ID
+        ws.recv = AsyncMock(
+            return_value=self._stream_result_frame(
+                req_id,
+                chunk="wrong",
+                final=True,
+                correlation_id="different-id",
+            )
+        )
+        with (
+            patch.object(transport, "_next_request_id", return_value=req_id),
+            pytest.raises(ProtocolCorrelationError, match="correlation_id mismatch"),
+        ):
+            async for _ in transport.send_and_receive_stream(request):
+                pass
+
+    @pytest.mark.asyncio
     async def test_mid_stream_disconnect_propagates(self) -> None:
         transport = self._transport()
         ws = _mock_ws()
         transport._ws = ws
+        request = _sample_envelope_cov()
         req_id = self._REQ_ID
         ws.recv = AsyncMock(
             side_effect=[
-                self._stream_result_frame(req_id, chunk="ok", final=False),
+                self._stream_result_frame(
+                    req_id,
+                    chunk="ok",
+                    final=False,
+                    correlation_id=str(request.id),
+                ),
                 OSError("connection lost"),
             ]
         )
@@ -2772,7 +2807,7 @@ class TestSendAndReceiveStream:
             patch.object(transport, "_next_request_id", return_value=req_id),
             pytest.raises(OSError, match="connection lost"),
         ):
-            async for _ in transport.send_and_receive_stream(_sample_envelope_cov()):
+            async for _ in transport.send_and_receive_stream(request):
                 pass
 
 
