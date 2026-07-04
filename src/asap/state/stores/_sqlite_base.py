@@ -145,11 +145,14 @@ class AsyncSqliteRepository:
     Subclasses supply ``schema_ddl`` (one ``CREATE TABLE IF NOT EXISTS`` block)
     and per-method SQL + row mappers; the boilerplate lives here once.
 
-    Write operations on one repository instance are serialized by a per-instance
-    ``asyncio.Lock`` acquired by both :meth:`execute` and :meth:`transaction`.
-    This closes the pre-``BEGIN IMMEDIATE`` setup window from issue #245 where a
-    same-instance ``execute()`` could commit before a concurrent transaction had
-    acquired SQLite's write lock.
+    Writes use a two-level serialization model. On one repository instance, a
+    per-instance ``asyncio.Lock`` acquired by both :meth:`execute` and
+    :meth:`transaction` closes the pre-``BEGIN IMMEDIATE`` setup window from
+    issue #245 where a same-instance ``execute()`` could commit before another
+    write had reached SQLite's lock boundary. Across repository instances,
+    SQLite ``BEGIN IMMEDIATE`` plus ``PRAGMA busy_timeout=15000`` serialize
+    contended writers at the database level instead of failing fast with
+    ``database is locked``.
 
     Atomic multi-step operations use :meth:`transaction`, which opens one
     connection, issues ``BEGIN IMMEDIATE``, yields it, and ``COMMIT``s on success

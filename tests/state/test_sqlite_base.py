@@ -291,6 +291,68 @@ async def test_file_backed_transaction_serializes_same_repo_execute_before_begin
     assert events.index("transaction:committed") < events.index("execute:committed")
 
 
+async def test_file_backed_execute_serializes_concurrent_same_repo_writes(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Issue #245: concurrent same-instance ``execute()`` calls must serialize.
+
+    The per-instance write lock is acquired before ``_connect()``. If that lock
+    regresses, a second ``execute()`` can enter connection/schema setup on the
+    same repository instance while the first write is still in flight.
+    """
+    db = tmp_path / "issue_245_execute_serialize.db"
+    repo = AsyncSqliteRepository(db, schema_ddl=_DDL)
+    await repo.execute("INSERT INTO sample(id, name) VALUES (?, ?)", (1, "seed"))
+
+    first_execute_in_setup = asyncio.Event()
+    allow_first_execute_to_continue = asyncio.Event()
+    events: list[str] = []
+    original_ensure_schema = repo._ensure_schema  # noqa: SLF001
+    setup_call_count = 0
+
+    async def _gated_ensure_schema(conn: aiosqlite.Connection) -> None:
+        nonlocal setup_call_count
+        setup_call_count += 1
+        if setup_call_count == 1:
+            first_execute_in_setup.set()
+            await asyncio.wait_for(allow_first_execute_to_continue.wait(), timeout=5.0)
+        await original_ensure_schema(conn)
+
+    monkeypatch.setattr(repo, "_ensure_schema", _gated_ensure_schema)
+
+    async def _run_first_execute() -> None:
+        await repo.execute("INSERT INTO sample(id, name) VALUES (?, ?)", (2, "first"))
+        events.append("execute:first")
+
+    async def _run_second_execute() -> None:
+        await asyncio.wait_for(first_execute_in_setup.wait(), timeout=5.0)
+        await repo.execute("INSERT INTO sample(id, name) VALUES (?, ?)", (3, "second"))
+        events.append("execute:second")
+
+    first_execute_task = asyncio.create_task(_run_first_execute())
+    second_execute_task = asyncio.create_task(_run_second_execute())
+    try:
+        await asyncio.wait_for(first_execute_in_setup.wait(), timeout=5.0)
+        await asyncio.sleep(0.05)
+        assert setup_call_count == 1, (
+            "same-instance execute() reached connection/schema setup while the "
+            "first execute() still held the per-instance write lock"
+        )
+        assert "execute:second" not in events, (
+            "same-instance execute() committed before the first execute() "
+            "released the per-instance write lock"
+        )
+    finally:
+        allow_first_execute_to_continue.set()
+
+    await asyncio.gather(first_execute_task, second_execute_task)
+
+    rows = await repo.fetch_all("SELECT id, name FROM sample ORDER BY id")
+    assert rows == [(1, "seed"), (2, "first"), (3, "second")]
+    assert events.index("execute:first") < events.index("execute:second")
+
+
 # ---------------------------------------------------------------------------
 # parse_iso — boundary coverage
 # ---------------------------------------------------------------------------
