@@ -115,6 +115,15 @@ class JtiReplayCache:
             oldest = min(self._expiry_by_key, key=lambda k: self._expiry_by_key[k])
             del self._expiry_by_key[oldest]
 
+    def contains(self, partition_key: str, jti: str) -> bool:
+        """Return whether ``jti`` is still recorded for ``partition_key``."""
+        if not jti or not str(jti).strip():
+            return False
+        now = time.time()
+        self._prune_expired(now)
+        key = (partition_key, jti)
+        return key in self._expiry_by_key and self._expiry_by_key[key] > now
+
     def check_and_record(self, partition_key: str, jti: str) -> bool:
         """Record ``jti`` for ``partition_key``.
 
@@ -221,6 +230,7 @@ async def verify_host_jwt(
     *,
     expected_audience: str | list[str] | None = None,
     jti_replay_cache: JtiReplayCache | None = None,
+    record_jti: bool = True,
 ) -> JwtVerifyResult:
     """Verify a Host JWT signature and resolve the host (or inline registration).
 
@@ -235,6 +245,11 @@ async def verify_host_jwt(
 
     When no host row exists for ``iss``, verification still succeeds (dynamic
     registration) with ``host=None`` and valid ``claims``.
+
+    When ``jti_replay_cache`` is set, callers may pass ``record_jti=False`` for
+    read-only replay checks. This preserves reusable polling tokens on
+    read-only routes while still rejecting Host JWTs whose ``jti`` was already
+    consumed by a recording route (issue #249).
     """
     try:
         header, unverified_payload = _unverified_header_and_payload(token)
@@ -271,7 +286,12 @@ async def verify_host_jwt(
     if jti_replay_cache is not None:
         partition = str(iss)
         jti = str(claims["jti"])
-        if not jti_replay_cache.check_and_record(partition, jti):
+        jti_ok = (
+            jti_replay_cache.check_and_record(partition, jti)
+            if record_jti
+            else not jti_replay_cache.contains(partition, jti)
+        )
+        if not jti_ok:
             return JwtVerifyResult(ok=False, error="jti replay detected")
 
     host = await host_store.get_by_public_key(str(iss))

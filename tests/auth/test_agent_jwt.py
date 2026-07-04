@@ -549,6 +549,18 @@ def test_jti_replay_cache_same_jti_allowed_after_ttl(monkeypatch: pytest.MonkeyP
     assert cache.check_and_record("part", "jti-1")
 
 
+def test_jti_replay_cache_contains_respects_ttl(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``contains()`` reports only unexpired replay keys for a partition."""
+    cache = JtiReplayCache(ttl_seconds=1.0)
+    t0 = 20_000.0
+    monkeypatch.setattr("asap.auth.agent_jwt.time.time", lambda: t0)
+    assert not cache.contains("part", "jti-1")
+    assert cache.check_and_record("part", "jti-1")
+    assert cache.contains("part", "jti-1")
+    monkeypatch.setattr("asap.auth.agent_jwt.time.time", lambda: t0 + 2.0)
+    assert not cache.contains("part", "jti-1")
+
+
 def test_jti_replay_cache_rejects_blank_jti() -> None:
     """Empty or whitespace ``jti`` must not be recorded as a replay key."""
     cache = JtiReplayCache()
