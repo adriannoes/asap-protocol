@@ -48,7 +48,11 @@ from asap.transport.compression import (
     compress_payload,
     get_accept_encoding_header,
 )
-from asap.transport.errors import ProtocolCorrelationError, assert_correlation_binds
+from asap.transport.errors import (
+    ProtocolCorrelationError,
+    assert_correlation_binds,
+    assert_stream_correlation_binds,
+)
 from asap.transport.jsonrpc import ASAP_METHOD
 from asap.transport.websocket import WebSocketRemoteError
 from asap.utils.sanitization import sanitize_url
@@ -622,7 +626,9 @@ class _SendMixin:
         """POST to ``/asap/stream`` and yield each SSE ``data:`` line as an ``Envelope``.
 
         Requires HTTP transport (not WebSocket). Each event body is a full envelope,
-        typically with ``payload_type`` ``TaskStream``.
+        typically with ``payload_type`` ``TaskStream``. Streamed response payloads
+        and ``TaskStream`` chunks are correlation-bound to ``envelope.id`` before
+        they are yielded (CR#4).
 
         Args:
             envelope: Outgoing request envelope (e.g. ``TaskRequest``).
@@ -712,4 +718,9 @@ class _SendMixin:
                         if not json_str:
                             continue
                         data = json.loads(json_str)
-                        yield Envelope.model_validate(data)
+                        stream_envelope = Envelope.model_validate(data)
+                        # BINDING: streamed chunks still answer the specific
+                        # request that opened this SSE stream, so reject chunks
+                        # whose correlation_id points at a different request.
+                        assert_stream_correlation_binds(str(envelope.id), stream_envelope)
+                        yield stream_envelope

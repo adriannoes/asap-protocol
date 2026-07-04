@@ -39,6 +39,7 @@ from typing import TYPE_CHECKING, Any, Union, cast
 from asap.models.envelope import Envelope
 from asap.observability import get_logger
 from asap.transport.circuit_breaker import CircuitBreaker
+from asap.transport.errors import assert_stream_correlation_binds
 from asap.transport.ws._ack import PendingAck, _AckRetransmit
 from asap.transport.ws._errors import WebSocketRemoteError
 from asap.transport.ws._recv import _RecvDispatch
@@ -333,7 +334,9 @@ class WebSocketTransport(_RecvDispatch, _AckRetransmit):
         """Send one JSON-RPC frame and yield each streaming ``result.envelope``.
 
         Stops after an envelope whose payload has ``final=True`` (e.g. ``TaskStream``).
-        Skips heartbeat pongs and ``asap.ack`` notifications.
+        Skips heartbeat pongs and ``asap.ack`` notifications. Streamed response
+        payloads and ``TaskStream`` chunks are correlation-bound to
+        ``envelope.id`` before they are yielded (CR#4).
         """
         request_id = await self._send_frame(envelope, register_ack=True)
         ws = self._ws
@@ -358,6 +361,9 @@ class WebSocketTransport(_RecvDispatch, _AckRetransmit):
             if not result or "envelope" not in result:
                 raise WebSocketRemoteError(-32603, "Missing result.envelope in response", data=data)
             env = Envelope.model_validate(result["envelope"])
+            # BINDING: WS streaming frames must still belong to the request
+            # that opened this stream, not some concurrent request.
+            assert_stream_correlation_binds(str(envelope.id), env)
             yield env
             if env.payload_dict.get("final") is True:
                 break
