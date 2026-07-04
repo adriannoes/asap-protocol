@@ -1,4 +1,12 @@
-"""Scope claim parsing helpers for ASAP Protocol."""
+"""Scope claim parsing helpers for ASAP Protocol.
+
+Kept as a tiny leaf module so ``asap.auth.scopes`` and
+``asap.auth.middleware`` can both normalize OAuth2/JWT scope claims without
+importing each other. ``scopes.require_scope`` references
+``middleware.OAuth2Claims`` at runtime, while middleware needs
+``parse_scope`` during bearer token validation, so this module breaks that
+import cycle.
+"""
 
 from __future__ import annotations
 
