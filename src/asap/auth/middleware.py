@@ -20,6 +20,7 @@ from joserfc import jwk
 from joserfc.errors import JoseError
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from asap.auth._scope_parse import parse_scope
 from asap.auth.jwks import JWKSValidator
 from asap.observability import get_logger
 
@@ -326,11 +327,6 @@ class OAuth2Middleware(BaseHTTPMiddleware):
                 content={"detail": ERROR_INVALID_TOKEN},
                 headers={"WWW-Authenticate": "Bearer"},
             )
-
-        # Imported here (not at module top) to break the scopes <-> middleware
-        # import cycle: scopes.require_scope references OAuth2Claims at runtime,
-        # so scopes must import middleware, which in turn needs parse_scope.
-        from asap.auth.scopes import parse_scope
 
         scope_list = parse_scope(claims.get("scope"))
         if not self._validate_scope(scope_list):
