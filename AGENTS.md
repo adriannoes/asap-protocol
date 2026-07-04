@@ -93,3 +93,12 @@ src/asap/
 - **Capabilities**: Constraint-based authorization with approval flows (v2.2).
 - **Transport**: mTLS optional (v1.2); ASAP-Version negotiation (v2.2).
 - **Compliance**: `asap-compliance` package validates specs.
+
+## Cursor Cloud specific instructions
+
+The VM update script already installs dependencies (`uv sync --all-extras --dev` at the repo root and `npm ci` in `apps/web`). `uv` lives in `~/.local/bin` and is on `PATH` via `~/.profile`/`~/.bashrc`. Python 3.13 is required and managed by `uv` (system `python3` is 3.12; always use `uv run`). Standard commands live in `AGENTS.md` Quick Start and [`.cursor/README.md`](.cursor/README.md#canonical-commands) — reference those rather than duplicating.
+
+Two independent products, testable in isolation (the web app is not wired to the local Python server):
+
+- **Python backend** (`asap-protocol`): dev server `uv run uvicorn asap.transport.server:app --reload` (port 8000). Non-obvious: the JSON-RPC endpoint is `POST /asap` (there is no `/asap/rpc`); health is `GET /health`. Quick smoke test uses method `asap.send` with an envelope whose payload is a `task.request` (see `tests/transport/integration/test_server_core.py` for the exact envelope shape); the built-in `echo` skill returns a `task.response`. No database/Redis needed (in-memory/SQLite by default).
+- **Web app** (`apps/web`): dev server `npm run dev` (binds `127.0.0.1:3000`). Non-obvious: `apps/web` is a standalone **npm** project (own `package-lock.json`), separate from the root **pnpm** workspace — do not run it through pnpm. It needs `apps/web/.env.local` (gitignored; copy from `.env.example`); for local dev set `REGISTRY_URL=http://127.0.0.1:3000/registry.json` (served from `public/registry.json`) and a placeholder `AUTH_SECRET`. There is no local `revoked_agents.json` file — a 404 on `REVOKED_URL` is expected and harmless. Playwright E2E needs `npx playwright install`; see `apps/web/docs/playwright-e2e.md` for sandbox browser-path issues.
