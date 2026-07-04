@@ -145,9 +145,19 @@ class AsyncSqliteRepository:
     Subclasses supply ``schema_ddl`` (one ``CREATE TABLE IF NOT EXISTS`` block)
     and per-method SQL + row mappers; the boilerplate lives here once.
 
+    Writes use a two-level serialization model. On one repository instance, a
+    per-instance ``asyncio.Lock`` acquired by both :meth:`execute` and
+    :meth:`transaction` closes the pre-``BEGIN IMMEDIATE`` setup window from
+    issue #245 where a same-instance ``execute()`` could commit before another
+    write had reached SQLite's lock boundary. Across repository instances,
+    SQLite ``BEGIN IMMEDIATE`` plus ``PRAGMA busy_timeout=15000`` serialize
+    contended writers at the database level instead of failing fast with
+    ``database is locked``.
+
     Atomic multi-step operations use :meth:`transaction`, which opens one
-    connection, issues ``BEGIN``, yields it, and ``COMMIT``s on success or
-    ``ROLLBACK``s on any exception (so a mid-step crash leaves no partial state).
+    connection, issues ``BEGIN IMMEDIATE``, yields it, and ``COMMIT``s on success
+    or ``ROLLBACK``s on any exception (so a mid-step crash leaves no partial
+    state).
     """
 
     def __init__(
@@ -159,6 +169,10 @@ class AsyncSqliteRepository:
         self._schema_ddl = schema_ddl
         self._initialized = False
         self._init_lock = asyncio.Lock()
+        # Issue #245: acquire before _connect()/BEGIN IMMEDIATE so no same-instance
+        # execute() can slip into the setup window before the transaction has its
+        # SQLite write lock. This lock is intentionally non-reentrant.
+        self._write_lock = asyncio.Lock()
         # ``:memory:`` creates a *new* empty DB on every connect, so keep one
         # persistent connection alive and serialise access to it. File-backed
         # DBs use per-call connections (handled in ``_connect``). This mirrors
@@ -226,8 +240,14 @@ class AsyncSqliteRepository:
             self._initialized = True
 
     async def execute(self, sql: str, params: tuple[Any, ...] = ()) -> int:
-        """Run a write query; commit; return affected row count (0 if unknown)."""
-        async with self._connect() as conn:
+        """Run a write query; commit; return affected row count (0 if unknown).
+
+        The per-instance write lock serializes this with :meth:`transaction`.
+        Because ``asyncio.Lock`` is non-reentrant, callers must not invoke
+        :meth:`execute` from inside the same instance's active
+        :meth:`transaction` block.
+        """
+        async with self._write_lock, self._connect() as conn:
             cursor = await conn.execute(sql, params)
             await conn.commit()
             return cursor.rowcount if cursor.rowcount is not None else 0
@@ -270,8 +290,15 @@ class AsyncSqliteRepository:
         concurrent issuer cannot insert a child that escapes the cascade's
         snapshot (CR#6). ``busy_timeout=15000`` (set in ``_apply_wal_pragmas``)
         makes a contended ``BEGIN IMMEDIATE`` wait instead of failing fast.
+
+        The same per-instance write lock used by :meth:`execute` is acquired
+        before opening the connection, so a same-instance ``execute()`` cannot
+        interleave during the setup window before ``BEGIN IMMEDIATE`` runs. This
+        lock is non-reentrant: while this context manager is active, the caller
+        must use the yielded ``conn`` directly instead of calling
+        :meth:`execute` or nesting :meth:`transaction` on the same instance.
         """
-        async with self._connect() as conn:
+        async with self._write_lock, self._connect() as conn:
             await conn.execute("BEGIN IMMEDIATE")
             try:
                 yield conn

@@ -11,10 +11,13 @@ Tests use ``:memory:`` so no temp files are needed and runs are deterministic.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 
+import aiosqlite
 import pytest
+from _pytest.monkeypatch import MonkeyPatch
 
 from asap.state.stores._sqlite_base import (
     AsyncSqliteRepository,
@@ -226,6 +229,128 @@ async def test_two_repos_share_wal_lock_without_deadlock(tmp_path: Path) -> None
     await repo_b.execute("INSERT INTO sample(id, name) VALUES (?, ?)", (2, "b"))
     rows = await repo_a.fetch_all("SELECT id FROM sample ORDER BY id")
     assert rows == [(1,), (2,)]
+
+
+async def test_file_backed_transaction_serializes_same_repo_execute_before_begin_immediate(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Issue #245: ``execute()`` must wait during the transaction setup window.
+
+    ``transaction()`` performs connection/WAL/schema setup before issuing
+    ``BEGIN IMMEDIATE``. Without the shared per-instance write lock, a
+    same-instance ``execute()`` can commit during that pre-BEGIN window and
+    escape the transaction's intended critical section.
+    """
+    db = tmp_path / "issue_245_setup_window.db"
+    repo = AsyncSqliteRepository(db, schema_ddl=_DDL)
+    await repo.execute("INSERT INTO sample(id, name) VALUES (?, ?)", (1, "seed"))
+
+    transaction_in_setup = asyncio.Event()
+    allow_transaction_to_begin = asyncio.Event()
+    events: list[str] = []
+    original_ensure_schema = repo._ensure_schema  # noqa: SLF001
+    setup_call_count = 0
+
+    async def _gated_ensure_schema(conn: aiosqlite.Connection) -> None:
+        nonlocal setup_call_count
+        setup_call_count += 1
+        if setup_call_count == 1:
+            transaction_in_setup.set()
+            await asyncio.wait_for(allow_transaction_to_begin.wait(), timeout=5.0)
+        await original_ensure_schema(conn)
+
+    monkeypatch.setattr(repo, "_ensure_schema", _gated_ensure_schema)
+
+    async def _run_transaction() -> None:
+        async with repo.transaction() as conn:
+            await conn.execute("INSERT INTO sample(id, name) VALUES (?, ?)", (2, "txn"))
+        events.append("transaction:committed")
+
+    async def _run_execute() -> None:
+        await asyncio.wait_for(transaction_in_setup.wait(), timeout=5.0)
+        await repo.execute("INSERT INTO sample(id, name) VALUES (?, ?)", (3, "execute"))
+        events.append("execute:committed")
+
+    transaction_task = asyncio.create_task(_run_transaction())
+    execute_task = asyncio.create_task(_run_execute())
+    try:
+        await asyncio.wait_for(transaction_in_setup.wait(), timeout=5.0)
+        await asyncio.sleep(0.05)
+        assert "execute:committed" not in events, (
+            "same-instance execute() committed before transaction() reached "
+            "BEGIN IMMEDIATE; write serialization did not cover the setup window"
+        )
+    finally:
+        allow_transaction_to_begin.set()
+
+    await asyncio.gather(transaction_task, execute_task)
+
+    rows = await repo.fetch_all("SELECT id, name FROM sample ORDER BY id")
+    assert rows == [(1, "seed"), (2, "txn"), (3, "execute")]
+    assert events.index("transaction:committed") < events.index("execute:committed")
+
+
+async def test_file_backed_execute_serializes_concurrent_same_repo_writes(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Issue #245: concurrent same-instance ``execute()`` calls must serialize.
+
+    The per-instance write lock is acquired before ``_connect()``. If that lock
+    regresses, a second ``execute()`` can enter connection/schema setup on the
+    same repository instance while the first write is still in flight.
+    """
+    db = tmp_path / "issue_245_execute_serialize.db"
+    repo = AsyncSqliteRepository(db, schema_ddl=_DDL)
+    await repo.execute("INSERT INTO sample(id, name) VALUES (?, ?)", (1, "seed"))
+
+    first_execute_in_setup = asyncio.Event()
+    allow_first_execute_to_continue = asyncio.Event()
+    events: list[str] = []
+    original_ensure_schema = repo._ensure_schema  # noqa: SLF001
+    setup_call_count = 0
+
+    async def _gated_ensure_schema(conn: aiosqlite.Connection) -> None:
+        nonlocal setup_call_count
+        setup_call_count += 1
+        if setup_call_count == 1:
+            first_execute_in_setup.set()
+            await asyncio.wait_for(allow_first_execute_to_continue.wait(), timeout=5.0)
+        await original_ensure_schema(conn)
+
+    monkeypatch.setattr(repo, "_ensure_schema", _gated_ensure_schema)
+
+    async def _run_first_execute() -> None:
+        await repo.execute("INSERT INTO sample(id, name) VALUES (?, ?)", (2, "first"))
+        events.append("execute:first")
+
+    async def _run_second_execute() -> None:
+        await asyncio.wait_for(first_execute_in_setup.wait(), timeout=5.0)
+        await repo.execute("INSERT INTO sample(id, name) VALUES (?, ?)", (3, "second"))
+        events.append("execute:second")
+
+    first_execute_task = asyncio.create_task(_run_first_execute())
+    second_execute_task = asyncio.create_task(_run_second_execute())
+    try:
+        await asyncio.wait_for(first_execute_in_setup.wait(), timeout=5.0)
+        await asyncio.sleep(0.05)
+        assert setup_call_count == 1, (
+            "same-instance execute() reached connection/schema setup while the "
+            "first execute() still held the per-instance write lock"
+        )
+        assert "execute:second" not in events, (
+            "same-instance execute() committed before the first execute() "
+            "released the per-instance write lock"
+        )
+    finally:
+        allow_first_execute_to_continue.set()
+
+    await asyncio.gather(first_execute_task, second_execute_task)
+
+    rows = await repo.fetch_all("SELECT id, name FROM sample ORDER BY id")
+    assert rows == [(1, "seed"), (2, "first"), (3, "second")]
+    assert events.index("execute:first") < events.index("execute:second")
 
 
 # ---------------------------------------------------------------------------
