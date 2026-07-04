@@ -2809,7 +2809,7 @@ def _ws_handler_stub_for_dispatch_error(
 
 class TestHandleWebSocketConnection:
     @pytest.mark.asyncio
-    async def test_handle_message_error_sends_error_payload(self) -> None:
+    async def test_dispatch_error_sends_internal_error_frame(self) -> None:
         """Dispatch error sends JSON-RPC internal-error frame with request id (CR#5)."""
         ws = AsyncMock()
         ws.accept = AsyncMock()
@@ -2860,7 +2860,7 @@ class TestHandleWebSocketConnection:
         assert frame["error"]["code"] == INTERNAL_ERROR
 
     @pytest.mark.asyncio
-    async def test_handle_message_error_with_ack_sends_reject(self) -> None:
+    async def test_dispatch_error_with_ack_sends_reject(self) -> None:
         """Dispatch error for requires_ack sends received, rejected, then internal error."""
         ws = AsyncMock()
         ws.accept = AsyncMock()
@@ -2909,19 +2909,21 @@ class TestHandleWebSocketConnection:
             payload = frame.get("params", {}).get("envelope", {}).get("payload", {})
             return payload.get("status") if isinstance(payload, dict) else None
 
-        received = [
-            f for f in frames if f.get("method") == ASAP_ACK_METHOD and _ack_status(f) == "received"
-        ]
-        rejected = [
-            f for f in frames if f.get("method") == ASAP_ACK_METHOD and _ack_status(f) == "rejected"
-        ]
-        errors = [f for f in frames if "error" in f]
+        received_index = next(
+            index
+            for index, frame in enumerate(frames)
+            if frame.get("method") == ASAP_ACK_METHOD and _ack_status(frame) == "received"
+        )
+        rejected_index = next(
+            index
+            for index, frame in enumerate(frames)
+            if frame.get("method") == ASAP_ACK_METHOD and _ack_status(frame) == "rejected"
+        )
+        error_index = next(index for index, frame in enumerate(frames) if "error" in frame)
 
-        assert len(received) == 1, f"expected received ack, got {frames}"
-        assert len(rejected) == 1, f"expected rejected ack, got {frames}"
-        assert len(errors) >= 1
-        assert errors[-1]["error"]["code"] == INTERNAL_ERROR
-        assert errors[-1]["id"] == "1"
+        assert frames[error_index]["error"]["code"] == INTERNAL_ERROR
+        assert frames[error_index]["id"] == "1"
+        assert received_index < rejected_index < error_index
 
     @pytest.mark.asyncio
     async def test_handle_error_payload_send_fails_breaks(self) -> None:
