@@ -837,8 +837,11 @@ def create_app(
             message processing events.
         identity_host_store: Optional HostStore; default in-memory when both stores omitted.
         identity_agent_store: Optional AgentStore; must be set with identity_host_store or both omitted.
-        identity_jti_cache: Optional ``jti`` replay cache for Host JWT on mutating agent routes.
-            Defaults to a new in-memory cache per app.
+        identity_jti_cache: Optional ``jti`` replay cache for Host JWT on agent routes.
+            Mutating routes record ``jti`` values; ``GET /asap/agent/status`` uses
+            the same cache in read-only mode so polling can reuse a token while
+            still rejecting Host JWTs already consumed elsewhere. Defaults to a
+            new in-memory cache per app.
         identity_jwt_audience: Expected ``aud`` value(s) for Host JWT verification on
             ``/asap/agent/*``. Defaults to ``manifest.id`` so tokens are bound to this
             server instance. Set explicitly for multi-audience or migration scenarios.

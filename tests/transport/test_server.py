@@ -1813,7 +1813,7 @@ class TestAgentStatusEndpoint:
         sample_manifest: Manifest,
         isolated_rate_limiter: "ASAPRateLimiter | None",
     ) -> None:
-        """GET status does not record ``jti``; same token can poll repeatedly."""
+        """GET status preserves polling by not recording ``jti`` on each read."""
         app, _a, _h = _app_with_identity_stores(sample_manifest, isolated_rate_limiter)
         host_sk = Ed25519PrivateKey.generate()
         agent_sk = Ed25519PrivateKey.generate()
@@ -1833,6 +1833,87 @@ class TestAgentStatusEndpoint:
         u = f"/asap/agent/status?agent_id={aid}"
         assert client.get(u, headers=headers).status_code == 200
         assert client.get(u, headers=headers).status_code == 200
+
+    def test_status_rejects_host_jwt_replayed_from_recording_route(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: "ASAPRateLimiter | None",
+    ) -> None:
+        """Status rejects Host JWTs whose ``jti`` was already consumed elsewhere."""
+        app, _a, _h = _app_with_identity_stores(sample_manifest, isolated_rate_limiter)
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        reg_tok = create_host_jwt(
+            host_sk,
+            aud=_HOST_JWT_AUDIENCE,
+            agent_public_key=ed25519_public_jwk(agent_sk),
+            ttl_seconds=120,
+        )
+        client = TestClient(app)
+        aid = client.post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {reg_tok}"},
+        ).json()["agent_id"]
+
+        replay = client.get(
+            f"/asap/agent/status?agent_id={aid}",
+            headers={"Authorization": f"Bearer {reg_tok}"},
+        )
+        assert replay.status_code == 401
+        assert replay.json() == {"detail": "jti replay detected"}
+
+    @pytest.mark.parametrize("recording_route", ["/asap/agent/revoke", "/asap/agent/rotate-key"])
+    def test_status_rejects_host_jwt_replayed_after_recording_route(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: "ASAPRateLimiter | None",
+        recording_route: str,
+    ) -> None:
+        """Status rejects Host JWTs already consumed by revoke or rotate-key."""
+        app, _agent_store, _host_store = _app_with_identity_stores(
+            sample_manifest, isolated_rate_limiter
+        )
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        reg_tok = create_host_jwt(
+            host_sk,
+            aud=_HOST_JWT_AUDIENCE,
+            agent_public_key=ed25519_public_jwk(agent_sk),
+            ttl_seconds=120,
+        )
+        client = TestClient(app)
+        aid = client.post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {reg_tok}"},
+        ).json()["agent_id"]
+
+        recording_tok = create_host_jwt(host_sk, aud=_HOST_JWT_AUDIENCE, ttl_seconds=120)
+        recording_headers = {"Authorization": f"Bearer {recording_tok}"}
+        if recording_route == "/asap/agent/revoke":
+            route_response = client.post(
+                recording_route,
+                headers=recording_headers,
+                json={"agent_id": aid},
+            )
+            assert route_response.status_code == 200
+            assert route_response.json()["status"] == "revoked"
+        else:
+            route_response = client.post(
+                recording_route,
+                headers=recording_headers,
+                json={
+                    "agent_id": aid,
+                    "new_public_key": ed25519_public_jwk(Ed25519PrivateKey.generate()),
+                },
+            )
+            assert route_response.status_code == 200
+
+        replay = client.get(
+            f"/asap/agent/status?agent_id={aid}",
+            headers=recording_headers,
+        )
+        assert replay.status_code == 401
+        assert replay.json() == {"detail": "jti replay detected"}
 
     def test_status_wrong_host_returns_403(
         self,

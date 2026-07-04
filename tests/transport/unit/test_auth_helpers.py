@@ -14,6 +14,7 @@ from starlette.requests import Request
 
 from asap.auth.agent_jwt import (
     HOST_REVOKED_ERROR,
+    JtiReplayCache,
     JwtVerifyResult,
     create_host_jwt,
 )
@@ -140,6 +141,46 @@ async def test_verify_host_bearer_valid_token_returns_result() -> None:
     assert result.ok is True
     assert isinstance(result.claims, dict)
     assert result.claims.get("iss")
+
+
+@pytest.mark.asyncio
+@pytest.mark.filterwarnings("ignore:EdDSA is deprecated:UserWarning")
+async def test_verify_host_bearer_read_only_jti_check_preserves_polling() -> None:
+    """Read-only JTI checks allow polling but reject tokens spent elsewhere."""
+    host_sk = Ed25519PrivateKey.generate()
+    host_store = InMemoryHostStore()
+    await _seed_active_host(host_sk, host_store)
+    app = _identity_app(host_store)
+    token = create_host_jwt(host_sk, aud=_HOST_JWT_AUDIENCE, ttl_seconds=120)
+    cache = JtiReplayCache()
+
+    for _ in range(2):
+        result, err = await verify_host_bearer(
+            _http_request(app, authorization=f"Bearer {token}"),
+            jti_replay_cache=cache,
+            record_jti=False,
+        )
+        assert err is None
+        assert result is not None
+        assert result.ok is True
+
+    recorded_result, recorded_err = await verify_host_bearer(
+        _http_request(app, authorization=f"Bearer {token}"),
+        jti_replay_cache=cache,
+    )
+    assert recorded_err is None
+    assert recorded_result is not None
+    assert recorded_result.ok is True
+
+    replay_result, replay_err = await verify_host_bearer(
+        _http_request(app, authorization=f"Bearer {token}"),
+        jti_replay_cache=cache,
+        record_jti=False,
+    )
+    assert replay_result is None
+    assert replay_err is not None
+    assert replay_err.status_code == 401
+    assert replay_err.body == b'{"detail":"jti replay detected"}'
 
 
 @pytest.mark.asyncio

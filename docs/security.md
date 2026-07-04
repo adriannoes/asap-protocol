@@ -1101,6 +1101,7 @@ nonce_store = RedisNonceStore(redis_client)
 3. **Generate Strong Nonces**: Use cryptographically secure random generators (e.g., `secrets.token_urlsafe()`)
 4. **Distributed Deployments**: Use a shared nonce store (Redis, database) for multi-instance deployments
 5. **Monitor Rejections**: Track `InvalidTimestampError` and `InvalidNonceError` to detect potential attacks
+6. **Host JWT polling**: `GET /asap/agent/status` performs a read-only `jti` replay check so polling can reuse one Host JWT, but any token already consumed by register, revoke, or rotate-key is rejected.
 
 ---
 

@@ -35,6 +35,7 @@ async def verify_host_bearer(
     *,
     jti_replay_cache: JtiReplayCache | None,
     require_active_host: bool = True,
+    record_jti: bool = True,
 ) -> tuple[JwtVerifyResult | None, JSONResponse | None]:
     """Verify a Host JWT Bearer token and enforce host liveness.
 
@@ -42,7 +43,9 @@ async def verify_host_bearer(
     strict behaviour previously inlined in ``agent_routes``: 401 when no token
     or signature/claim verification fails, 400 on a missing ``iss`` claim, and
     403 when the resolved host is ``revoked`` (gated by ``require_active_host``
-    so non-identity routes can opt out if needed).
+    so non-identity routes can opt out if needed). Pass ``record_jti=False`` to
+    perform a read-only replay check against ``jti_replay_cache`` without
+    consuming the token for subsequent polling requests.
 
     Returns ``(result, None)`` on success or ``(None, JSONResponse)`` on
     failure. Callers should propagate the error response unchanged.
@@ -69,6 +72,7 @@ async def verify_host_bearer(
         host_store,
         expected_audience=expected_audience,
         jti_replay_cache=jti_replay_cache,
+        record_jti=record_jti,
     )
     if not result.ok:
         # ``verify_host_jwt`` short-circuits revoked hosts to ``ok=False`` with

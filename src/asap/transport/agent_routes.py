@@ -503,7 +503,14 @@ async def _handle_agent_register(
 
 async def _handle_agent_status(request: Request, agent_id: str) -> JSONResponse:
     """Return agent session status and lifecycle for the authenticated host."""
-    result, err = await verify_host_bearer(request, jti_replay_cache=None)
+    jti_cache: JtiReplayCache = request.app.state.identity_jti_cache
+    # Status polling may legitimately reuse the same Host JWT, but issue #249
+    # still requires rejecting tokens already consumed on recording routes.
+    result, err = await verify_host_bearer(
+        request,
+        jti_replay_cache=jti_cache,
+        record_jti=False,
+    )
     if err is not None:
         return err
     if result is None:
