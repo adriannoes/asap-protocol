@@ -31,6 +31,14 @@ def _parse_payload(payload_type: str, payload: dict[str, Any]) -> PayloadType | 
     return cast(PayloadType, payload_class.model_validate(payload))
 
 
+# Structural correlation_id requirement: unary response payloads and streamed
+# TaskStream chunks must always carry a non-empty correlation_id so transport
+# pairing can then enforce request-id binding separately (B6/BUG #6, CR#4).
+CORRELATION_REQUIRED_PAYLOAD_KEYS = frozenset(
+    {"taskresponse", "taskstream", "mcptoolresult", "mcpresourcedata"}
+)
+
+
 class Envelope(ASAPBaseModel):
     """ASAP protocol message envelope.
 
@@ -137,10 +145,8 @@ class Envelope(ASAPBaseModel):
 
     @model_validator(mode="after")
     def validate_response_correlation(self) -> "Envelope":
-        response_type_keys = {"taskresponse", "mcptoolresult", "mcpresourcedata"}
-
         if (
-            _normalize_payload_type(self.payload_type) in response_type_keys
+            _normalize_payload_type(self.payload_type) in CORRELATION_REQUIRED_PAYLOAD_KEYS
             and not self.correlation_id
         ):
             raise ValueError(f"{self.payload_type} must have correlation_id for request tracking")

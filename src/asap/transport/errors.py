@@ -103,14 +103,7 @@ def assert_correlation_binds(request_envelope_id: str, response: "Envelope") -> 
         ProtocolCorrelationError: If ``response`` is a response payload type
             whose ``correlation_id`` does not equal ``request_envelope_id``.
     """
-    if _normalize_payload_type(response.payload_type) not in RESPONSE_PAYLOAD_KEYS:
-        return
-    if response.correlation_id == request_envelope_id:
-        return
-    raise ProtocolCorrelationError(
-        request_id=request_envelope_id,
-        correlation_id=response.correlation_id,
-    )
+    _assert_correlation_binds(request_envelope_id, response, RESPONSE_PAYLOAD_KEYS)
 
 
 def assert_stream_correlation_binds(request_envelope_id: str, response: "Envelope") -> None:
@@ -131,7 +124,16 @@ def assert_stream_correlation_binds(request_envelope_id: str, response: "Envelop
         ProtocolCorrelationError: If ``response`` is a stream-bound payload type
             whose ``correlation_id`` does not equal ``request_envelope_id``.
     """
-    if _normalize_payload_type(response.payload_type) not in STREAM_BOUND_PAYLOAD_KEYS:
+    _assert_correlation_binds(request_envelope_id, response, STREAM_BOUND_PAYLOAD_KEYS)
+
+
+def _assert_correlation_binds(
+    request_envelope_id: str,
+    response: "Envelope",
+    bound_keys: frozenset[str],
+) -> None:
+    """Raise when a bound payload's ``correlation_id`` does not match the request id."""
+    if _normalize_payload_type(response.payload_type) not in bound_keys:
         return
     if response.correlation_id == request_envelope_id:
         return

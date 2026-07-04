@@ -2195,3 +2195,43 @@ class TestClientCorrelationBinding:
             assert "correlation_id" in message
             assert repr(sample_request_envelope.id) in message
             assert repr("different-id") in message
+
+    async def test_stream_rejects_mismatched_taskresponse_correlation_id(
+        self, sample_request_envelope: Envelope
+    ) -> None:
+        """CR#4: ``stream`` also rejects a streamed ``TaskResponse`` bound elsewhere."""
+        mismatched_response = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:server",
+            recipient="urn:asap:agent:client",
+            payload_type="task.response",
+            payload=TaskResponse(
+                task_id="task_stream_response",
+                status=TaskStatus.COMPLETED,
+                result={"echoed": {"message": "Hello!"}},
+            ).model_dump(),
+            correlation_id="different-id",
+        )
+
+        def mock_transport(_: httpx.Request) -> httpx.Response:
+            stream_body = (
+                f"data: {json.dumps(mismatched_response.model_dump(mode='json'))}\n\n".encode(
+                    "utf-8"
+                )
+            )
+            return httpx.Response(
+                status_code=200,
+                headers={"content-type": "text/event-stream"},
+                content=stream_body,
+            )
+
+        async with ASAPClient(
+            "http://localhost:8000", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            with pytest.raises(ProtocolCorrelationError) as exc_info:
+                _ = [chunk async for chunk in client.stream(sample_request_envelope)]
+
+            message = str(exc_info.value)
+            assert "correlation_id" in message
+            assert repr(sample_request_envelope.id) in message
+            assert repr("different-id") in message
