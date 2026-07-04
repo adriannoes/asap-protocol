@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **CI security (`pip-audit`)**: Raised `joserfc` to `>=1.6.7,<2` (CVE-2026-48990) and added overrides for `python-engineio>=4.13.2` (CVE-2026-48802 / CVE-2026-48809) and `python-socketio>=5.16.2` (CVE-2026-48804). See [SECURITY.md](SECURITY.md).
+- **Streaming correlation binding (#247)**: SSE and WebSocket streaming now require `TaskStream` chunks to echo the request envelope `id` (not an arbitrary request `correlation_id`), and streamed response payloads reject missing or mismatched `correlation_id` values.
 
 ### Follow-up (not in v2.5.1)
 

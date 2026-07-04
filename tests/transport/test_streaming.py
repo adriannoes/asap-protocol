@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, AsyncIterator
 import httpx
 import pytest
 from httpx import ASGITransport
+from pydantic import ValidationError
 
 from asap.models.constants import ASAP_DEFAULT_TRANSPORT_VERSION, ASAP_VERSION_HEADER
 from asap.models.entities import Manifest
@@ -29,7 +30,6 @@ async def _word_stream_handler(envelope: Envelope, manifest: Any) -> AsyncIterat
     req = TaskRequest.model_validate(envelope.payload_dict)
     text = str(req.input.get("text", "hello stream"))
     words = text.split() or ["empty"]
-    cid = envelope.correlation_id or envelope.id or "corr"
     n = len(words)
     for i, w in enumerate(words):
         is_final = i == n - 1
@@ -45,7 +45,7 @@ async def _word_stream_handler(envelope: Envelope, manifest: Any) -> AsyncIterat
             recipient=envelope.sender,
             payload_type="TaskStream",
             payload=pl.model_dump(mode="json"),
-            correlation_id=cid,
+            correlation_id=envelope.id,
             trace_id=envelope.trace_id,
         )
 
@@ -65,6 +65,21 @@ async def test_taskstream_envelope_roundtrip(sample_manifest: Manifest) -> None:
     assert restored.payload_type == "TaskStream"
     assert isinstance(restored.payload, TaskStream)
     assert restored.payload.chunk == "x"
+
+
+def test_taskstream_envelope_requires_correlation_id(sample_manifest: Manifest) -> None:
+    """``TaskStream`` envelopes must carry ``correlation_id`` for stream pairing."""
+    payload = TaskStream(chunk="x", progress=0.5, final=False, status=TaskStatus.WORKING)
+
+    with pytest.raises(ValidationError, match="TaskStream must have correlation_id"):
+        Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:a",
+            recipient=sample_manifest.id,
+            payload_type="TaskStream",
+            payload=payload.model_dump(mode="json"),
+            correlation_id=None,
+        )
 
 
 @pytest.mark.anyio
@@ -118,6 +133,7 @@ async def test_asap_stream_sse_endpoint(
                         events.append(Envelope.model_validate(json.loads(payload_json)))
 
     assert len(events) == 2
+    assert all(event.correlation_id == env.id for event in events)
     assert events[0].payload_dict.get("chunk") == "one "
     assert events[0].payload_dict.get("final") is False
     assert events[-1].payload_dict.get("final") is True

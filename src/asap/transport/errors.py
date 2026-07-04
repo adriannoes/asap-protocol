@@ -12,10 +12,10 @@ The taxonomy code and JSON-RPC slot reuse ``asap:protocol/malformed_envelope``
 (``RemoteRPCError``, whose ``is_recoverable`` property distinguishes fatal
 from retryable remote JSON-RPC failures after the v2.5.1 twin-class collapse).
 
-This module is also the single source of truth for the response-binding check
-(``assert_correlation_binds``) shared by the HTTP client (``send``/``batch``)
-and the WebSocket recv loop, so the binding contract cannot drift between
-pairing sites (B6/BUG #6).
+This module is also the single source of truth for the response-binding checks
+(``assert_correlation_binds`` / ``assert_stream_correlation_binds``) shared by
+the HTTP client and WebSocket transport, so the binding contract cannot drift
+between unary and streaming pairing sites (B6/BUG #6, CR#4).
 """
 
 from __future__ import annotations
@@ -28,13 +28,23 @@ from asap.models.envelope import _normalize_payload_type
 if TYPE_CHECKING:
     from asap.models.envelope import Envelope
 
-__all__ = ["RESPONSE_PAYLOAD_KEYS", "ProtocolCorrelationError", "assert_correlation_binds"]
+__all__ = [
+    "RESPONSE_PAYLOAD_KEYS",
+    "STREAM_BOUND_PAYLOAD_KEYS",
+    "ProtocolCorrelationError",
+    "assert_correlation_binds",
+    "assert_stream_correlation_binds",
+]
 
 
-# Response payload types whose correlation_id must bind to the request id
-# (B6/BUG #6). Server-push notifications, acks and streaming chunks are
-# intentionally loose because they are not paired to a single request id.
+# Unary response payload types whose correlation_id must bind to the request id
+# (B6/BUG #6).
 RESPONSE_PAYLOAD_KEYS = frozenset({"taskresponse", "mcptoolresult", "mcpresourcedata"})
+
+# Streaming pairing is stricter than unary receive(): ``TaskStream`` chunks are
+# also bound because they are emitted in answer to one specific request stream
+# (CR#4).
+STREAM_BOUND_PAYLOAD_KEYS = RESPONSE_PAYLOAD_KEYS | frozenset({"taskstream"})
 
 
 class ProtocolCorrelationError(FatalError):
@@ -81,8 +91,8 @@ def assert_correlation_binds(request_envelope_id: str, response: "Envelope") -> 
     batch.
 
     Non-response payload types (server-push notifications, acks, streaming
-    chunks) intentionally skip the binding check because they are not paired to
-    a specific request id.
+    chunks) intentionally skip the binding check because unary pairing sites do
+    not bind them to a specific request id.
 
     Args:
         request_envelope_id: The ``id`` of the request envelope we are pairing
@@ -93,7 +103,37 @@ def assert_correlation_binds(request_envelope_id: str, response: "Envelope") -> 
         ProtocolCorrelationError: If ``response`` is a response payload type
             whose ``correlation_id`` does not equal ``request_envelope_id``.
     """
-    if _normalize_payload_type(response.payload_type) not in RESPONSE_PAYLOAD_KEYS:
+    _assert_correlation_binds(request_envelope_id, response, RESPONSE_PAYLOAD_KEYS)
+
+
+def assert_stream_correlation_binds(request_envelope_id: str, response: "Envelope") -> None:
+    """Assert that a streamed envelope binds to the request that opened the stream.
+
+    Streaming transport pairs each yielded chunk to a single request initiated
+    by the client. In addition to regular response payloads, ``TaskStream``
+    chunks MUST carry ``correlation_id == request_envelope_id`` so a
+    buggy/malicious server cannot splice another request's chunks into the
+    active stream (CR#4).
+
+    Args:
+        request_envelope_id: The ``id`` of the request envelope that opened the
+            stream.
+        response: The streamed envelope received from the peer.
+
+    Raises:
+        ProtocolCorrelationError: If ``response`` is a stream-bound payload type
+            whose ``correlation_id`` does not equal ``request_envelope_id``.
+    """
+    _assert_correlation_binds(request_envelope_id, response, STREAM_BOUND_PAYLOAD_KEYS)
+
+
+def _assert_correlation_binds(
+    request_envelope_id: str,
+    response: "Envelope",
+    bound_keys: frozenset[str],
+) -> None:
+    """Raise when a bound payload's ``correlation_id`` does not match the request id."""
+    if _normalize_payload_type(response.payload_type) not in bound_keys:
         return
     if response.correlation_id == request_envelope_id:
         return
