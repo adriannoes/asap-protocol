@@ -14,14 +14,16 @@ from asgi_lifespan import LifespanManager
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
+from opentelemetry import context
 
 from asap.models.entities import Manifest
 from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
 from asap.models.payloads import MessageAck, TaskRequest, TaskResponse
 from asap.transport.errors import ProtocolCorrelationError
-from asap.transport.jsonrpc import ASAP_METHOD, JsonRpcRequest
+from asap.transport.jsonrpc import ASAP_METHOD, INTERNAL_ERROR, JsonRpcRequest
 from asap.transport.server import create_app
+from asap.transport.ws._actions import WSCloseAction, _ws_close_code
 from asap.transport.websocket import (
     ASAP_ACK_METHOD,
     DEFAULT_POOL_IDLE_TIMEOUT,
@@ -285,7 +287,7 @@ class TestWebSocketErrorHandling(NoRateLimitTestBase):
         sample_manifest: Manifest,
         disable_rate_limiting: "ASAPRateLimiter",
     ) -> None:
-        """When handle_message raises, client receives JSON-RPC error frame (-32603); connection stays open."""
+        """When registry dispatch raises, client receives JSON-RPC error frame (-32603) with request id."""
         from asap.transport.handlers import HandlerRegistry
 
         def boom_handler(envelope: Envelope, manifest: Manifest) -> Envelope:
@@ -327,6 +329,7 @@ class TestWebSocketErrorHandling(NoRateLimitTestBase):
 
         data = json.loads(response_text)
         assert data.get("jsonrpc") == "2.0"
+        assert data.get("id") == "ws-req-boom"
         assert "error" in data
         assert data["error"].get("code") == -32603
         assert "Internal error" in (data["error"].get("message") or "")
@@ -2816,10 +2819,33 @@ class TestSendAndReceiveStream:
 # ---------------------------------------------------------------------------
 
 
+def _ws_handler_stub_for_dispatch_error(
+    *,
+    dispatch_error: Exception = RuntimeError("handler boom"),
+) -> MagicMock:
+    """Handler mock wired to the v2.5.1 WS dispatch seam (not handle_message)."""
+    handler = MagicMock()
+    prepared = MagicMock()
+    prepared.envelope.payload_type = "task.request"
+    prepared.envelope.id = "env-1"
+    prepared.envelope.sender = "urn:asap:agent:a"
+    prepared.ctx = MagicMock()
+    prepared.ctx.request_id = "req-1"
+    prepared.ctx.start_time = 0.0
+    prepared.ctx.metrics = MagicMock()
+    prepared.trace_token = context.attach(context.get_current())
+
+    handler._prepare_request = AsyncMock(return_value=prepared)  # noqa: SLF001
+    handler._dispatch_to_handler = AsyncMock(side_effect=dispatch_error)  # noqa: SLF001
+    handler.registry_holder.registry = MagicMock()
+    handler.registry_holder.registry.has_streaming_handler = MagicMock(return_value=False)
+    return handler
+
+
 class TestHandleWebSocketConnection:
     @pytest.mark.asyncio
-    async def test_handle_message_error_sends_error_payload(self) -> None:
-        """Handler error sends JSON-RPC error frame (lines 962-989)."""
+    async def test_dispatch_error_sends_internal_error_frame(self) -> None:
+        """Dispatch error sends JSON-RPC internal-error frame with request id (CR#5)."""
         ws = AsyncMock()
         ws.accept = AsyncMock()
         ws.close = AsyncMock()
@@ -2850,8 +2876,7 @@ class TestHandleWebSocketConnection:
 
         ws.receive_text = AsyncMock(side_effect=receive_text)
 
-        handler = MagicMock()
-        handler.handle_message = AsyncMock(side_effect=RuntimeError("handler boom"))
+        handler = _ws_handler_stub_for_dispatch_error()
 
         active: set[WebSocket] = set()
         await handle_websocket_connection(
@@ -2861,12 +2886,17 @@ class TestHandleWebSocketConnection:
             ws_message_rate_limit=None,
         )
 
-        # Should have sent at least an error payload
-        assert any('"error"' in t for t in sent_texts)
+        error_frames = [json.loads(t) for t in sent_texts if '"error"' in t]
+        assert len(error_frames) >= 1
+        frame = error_frames[-1]
+        assert frame["jsonrpc"] == "2.0"
+        assert frame["id"] == "1"
+        assert isinstance(frame["error"], dict)
+        assert frame["error"]["code"] == INTERNAL_ERROR
 
     @pytest.mark.asyncio
-    async def test_handle_message_error_with_ack_sends_reject(self) -> None:
-        """Handler error for requires_ack sends reject ack frame (lines 967-976)."""
+    async def test_dispatch_error_with_ack_sends_reject(self) -> None:
+        """Dispatch error for requires_ack sends received, rejected, then internal error."""
         ws = AsyncMock()
         ws.accept = AsyncMock()
         ws.close = AsyncMock()
@@ -2897,8 +2927,9 @@ class TestHandleWebSocketConnection:
 
         ws.receive_text = AsyncMock(side_effect=receive_text)
 
-        handler = MagicMock()
-        handler.handle_message = AsyncMock(side_effect=RuntimeError("handler fail"))
+        handler = _ws_handler_stub_for_dispatch_error(
+            dispatch_error=RuntimeError("handler fail"),
+        )
 
         await handle_websocket_connection(
             websocket=ws,
@@ -2907,25 +2938,40 @@ class TestHandleWebSocketConnection:
             ws_message_rate_limit=None,
         )
 
-        # Should have sent a "received" ack, then a "rejected" ack, then error payload
-        ack_frames = [t for t in sent_texts if ASAP_ACK_METHOD in t]
-        assert len(ack_frames) >= 1  # At least the rejected ack
+        frames = [json.loads(t) for t in sent_texts]
+
+        def _ack_status(frame: dict[str, Any]) -> str | None:
+            payload = frame.get("params", {}).get("envelope", {}).get("payload", {})
+            return payload.get("status") if isinstance(payload, dict) else None
+
+        received_index = next(
+            index
+            for index, frame in enumerate(frames)
+            if frame.get("method") == ASAP_ACK_METHOD and _ack_status(frame) == "received"
+        )
+        rejected_index = next(
+            index
+            for index, frame in enumerate(frames)
+            if frame.get("method") == ASAP_ACK_METHOD and _ack_status(frame) == "rejected"
+        )
+        error_index = next(index for index, frame in enumerate(frames) if "error" in frame)
+
+        assert frames[error_index]["error"]["code"] == INTERNAL_ERROR
+        assert frames[error_index]["id"] == "1"
+        assert received_index < rejected_index < error_index
 
     @pytest.mark.asyncio
     async def test_handle_error_payload_send_fails_breaks(self) -> None:
-        """If sending error payload also fails, loop breaks (lines 988-989)."""
+        """Internal-error frame send failure closes the connection with CLOSE_FATAL."""
         ws = AsyncMock()
         ws.accept = AsyncMock()
         ws.close = AsyncMock()
         ws.client = ("127.0.0.1", 12345)
         ws.scope = {"headers": [], "path": "/asap/ws", "server": ("localhost", 8000)}
 
-        send_count = 0
-
-        async def send_text(t: str) -> None:
-            nonlocal send_count
-            send_count += 1
-            if send_count >= 2:
+        async def send_text(payload: str) -> None:
+            parsed = json.loads(payload)
+            if parsed.get("error", {}).get("code") == INTERNAL_ERROR:
                 raise OSError("broken pipe")
 
         ws.send_text = AsyncMock(side_effect=send_text)
@@ -2951,8 +2997,7 @@ class TestHandleWebSocketConnection:
 
         ws.receive_text = AsyncMock(side_effect=receive_text)
 
-        handler = MagicMock()
-        handler.handle_message = AsyncMock(side_effect=RuntimeError("boom"))
+        handler = _ws_handler_stub_for_dispatch_error(dispatch_error=RuntimeError("boom"))
 
         await handle_websocket_connection(
             websocket=ws,
@@ -2960,11 +3005,12 @@ class TestHandleWebSocketConnection:
             active_connections=set(),
             ws_message_rate_limit=None,
         )
-        # Should not raise; loop breaks on send error
+
+        ws.close.assert_awaited_with(code=_ws_close_code(WSCloseAction.CLOSE_FATAL))
 
     @pytest.mark.asyncio
     async def test_handle_websocket_sla_subscribe_unsubscribe(self) -> None:
-        """SLA subscribe/unsubscribe messages are handled (lines 890-916)."""
+        """SLA subscribe/unsubscribe messages are handled without envelope dispatch."""
         ws = AsyncMock()
         ws.accept = AsyncMock()
         ws.close = AsyncMock()
@@ -3003,7 +3049,6 @@ class TestHandleWebSocketConnection:
         ws.receive_text = AsyncMock(side_effect=receive_text)
 
         handler = MagicMock()
-        handler.handle_message = AsyncMock()
 
         sla_subs: set[Any] = set()
         await handle_websocket_connection(
