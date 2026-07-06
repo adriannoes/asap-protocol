@@ -146,6 +146,50 @@ def test_oauth2_middleware_accepts_valid_jwt_with_required_scope() -> None:
     assert "asap:execute" in data["claims"]["scope"]
 
 
+def test_oauth2_middleware_accepts_jwt_with_scope_array() -> None:
+    """JWT scope as JSON array (not space-separated string) passes required_scope check."""
+    key = jwk.RSAKey.generate_key(2048, private=True)
+    key_set = jwk.KeySet.import_key_set({"keys": [key.as_dict(private=False)]})
+
+    async def jwks_fetcher(_uri: str) -> jwk.KeySet:
+        return key_set
+
+    app = FastAPI()
+
+    @app.get("/asap/me")
+    async def asap_me(request: Request) -> dict[str, Any]:
+        claims = getattr(request.state, "oauth2_claims", None)
+        if claims is None:
+            return {"claims": None}
+        return {"claims": {"sub": claims.sub, "scope": claims.scope, "exp": claims.exp}}
+
+    app.add_middleware(
+        OAuth2Middleware,
+        jwks_uri="https://auth.example.com/jwks.json",
+        required_scope="asap:execute",
+        path_prefix="/asap",
+        jwks_fetcher=jwks_fetcher,
+    )
+
+    now = int(time.time())
+    header = {"alg": "RS256", "typ": "JWT"}
+    claims = {
+        "sub": "urn:asap:agent:array-scope-client",
+        "scope": ["asap:read", "asap:execute"],
+        "exp": now + 3600,
+        "iat": now,
+    }
+    token = jose_jwt.encode(header, claims, key)
+
+    with TestClient(app) as client:
+        response = client.get("/asap/me", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["claims"]["sub"] == "urn:asap:agent:array-scope-client"
+    assert "asap:execute" in data["claims"]["scope"]
+
+
 def test_oauth2_middleware_rejects_expired_token() -> None:
     """Verify OAuth2Middleware returns 401 when JWT is expired."""
     key = jwk.RSAKey.generate_key(2048, private=True)
