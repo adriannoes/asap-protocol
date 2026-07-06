@@ -43,6 +43,12 @@ def test_parse_scope_invalid_type_returns_empty() -> None:
     assert parse_scope(True) == []
 
 
+def test_parse_scope_empty_string_returns_empty() -> None:
+    """parse_scope with empty or whitespace-only strings returns []."""
+    assert parse_scope("") == []
+    assert parse_scope("   ") == []
+
+
 # ---------------------------------------------------------------------------
 # require_scope
 # ---------------------------------------------------------------------------

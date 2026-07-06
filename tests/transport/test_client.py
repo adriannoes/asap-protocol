@@ -2162,6 +2162,46 @@ class TestClientCorrelationBinding:
             assert repr(sample_request_envelope.id) in message
             assert repr("different-id") in message
 
+    async def test_stream_rejects_chunk_bound_to_request_correlation_id_not_id(
+        self, sample_request_envelope: Envelope
+    ) -> None:
+        """#247: stream binding uses request.id even when request carries a distinct correlation_id."""
+        request = sample_request_envelope.model_copy(update={"correlation_id": "corr-chain-A"})
+        assert request.correlation_id is not None
+        assert request.correlation_id != request.id
+
+        bound_to_correlation = Envelope(
+            asap_version="0.1",
+            sender="urn:asap:agent:server",
+            recipient="urn:asap:agent:client",
+            payload_type="TaskStream",
+            payload={"chunk": "partial", "final": True, "progress": 1.0},
+            correlation_id=request.correlation_id,
+        )
+
+        def mock_transport(_: httpx.Request) -> httpx.Response:
+            stream_body = (
+                f"data: {json.dumps(bound_to_correlation.model_dump(mode='json'))}\n\n".encode(
+                    "utf-8"
+                )
+            )
+            return httpx.Response(
+                status_code=200,
+                headers={"content-type": "text/event-stream"},
+                content=stream_body,
+            )
+
+        async with ASAPClient(
+            "http://localhost:8000", transport=httpx.MockTransport(mock_transport)
+        ) as client:
+            with pytest.raises(ProtocolCorrelationError) as exc_info:
+                _ = [chunk async for chunk in client.stream(request)]
+
+            message = str(exc_info.value)
+            assert "correlation_id" in message
+            assert repr(request.id) in message
+            assert repr(request.correlation_id) in message
+
     async def test_stream_rejects_mismatched_taskstream_correlation_id(
         self, sample_request_envelope: Envelope
     ) -> None:

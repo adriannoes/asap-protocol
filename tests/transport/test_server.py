@@ -1915,6 +1915,48 @@ class TestAgentStatusEndpoint:
         assert replay.status_code == 401
         assert replay.json() == {"detail": "jti replay detected"}
 
+    async def test_status_rejects_host_jwt_replayed_after_reactivate(
+        self,
+        sample_manifest: Manifest,
+        isolated_rate_limiter: "ASAPRateLimiter | None",
+    ) -> None:
+        """Status rejects Host JWTs already consumed by reactivate (JTI recording route)."""
+        app, agent_store, _host_store = _app_with_identity_stores(
+            sample_manifest, isolated_rate_limiter
+        )
+        host_sk = Ed25519PrivateKey.generate()
+        agent_sk = Ed25519PrivateKey.generate()
+        reg_tok = create_host_jwt(
+            host_sk,
+            aud=_HOST_JWT_AUDIENCE,
+            agent_public_key=ed25519_public_jwk(agent_sk),
+            ttl_seconds=120,
+        )
+        client = TestClient(app)
+        aid = client.post(
+            "/asap/agent/register",
+            headers={"Authorization": f"Bearer {reg_tok}"},
+        ).json()["agent_id"]
+        sess = await agent_store.get(aid)
+        assert sess is not None
+        await agent_store.save(sess.model_copy(update={"status": "expired"}))
+
+        recording_tok = create_host_jwt(host_sk, aud=_HOST_JWT_AUDIENCE, ttl_seconds=120)
+        recording_headers = {"Authorization": f"Bearer {recording_tok}"}
+        reactivate = client.post(
+            "/asap/agent/reactivate",
+            headers=recording_headers,
+            json={"agent_id": aid},
+        )
+        assert reactivate.status_code == 200
+
+        replay = client.get(
+            f"/asap/agent/status?agent_id={aid}",
+            headers=recording_headers,
+        )
+        assert replay.status_code == 401
+        assert replay.json() == {"detail": "jti replay detected"}
+
     def test_status_wrong_host_returns_403(
         self,
         sample_manifest: Manifest,
