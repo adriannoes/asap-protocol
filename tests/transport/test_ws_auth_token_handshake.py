@@ -99,3 +99,39 @@ class TestWSHandshakeAuthToken:
             )
             async with client:
                 assert captured["extra_headers"] == {"Authorization": "Bearer secret-token"}
+
+    @pytest.mark.asyncio
+    async def test_asap_client_auto_mode_propagates_auth_token_to_ws_transport(self) -> None:
+        """``transport_mode=\"auto\"`` with ws:// must carry ``auth_token`` on the handshake (#246)."""
+        from asap.transport.client._core import ASAPClient
+
+        captured: dict[str, Any] = {}
+
+        original_init = WebSocketTransport.__init__
+
+        def _spy_init(self: WebSocketTransport, *args: Any, **kwargs: Any) -> None:
+            captured["extra_headers"] = kwargs.get("extra_headers")
+            original_init(self, *args, **kwargs)
+
+        class _FakeWS:
+            async def close(self) -> None:
+                return None
+
+        async def _fake_connect(url: str, **kwargs: Any) -> Any:
+            captured["connect_url"] = url
+            return _FakeWS()
+
+        with (
+            patch("asap.transport.websocket.websockets.connect", _fake_connect),
+            patch.object(WebSocketTransport, "__init__", _spy_init),
+            patch("httpx.AsyncClient", MagicMock(return_value=MagicMock(aclose=AsyncMock()))),
+        ):
+            client = ASAPClient(
+                base_url="ws://localhost:8000/asap/ws",
+                auth_token="auto-mode-token",
+                transport_mode="auto",
+                require_https=False,
+            )
+            async with client:
+                assert captured["extra_headers"] == {"Authorization": "Bearer auto-mode-token"}
+                assert captured["connect_url"] == "ws://localhost:8000/asap/ws"
