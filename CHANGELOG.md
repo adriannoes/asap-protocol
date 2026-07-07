@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **CLI legacy imports (#242)**: `DEFAULT_SCHEMAS_DIR`, `export_all_schemas`, and
+  `_repl_namespace` are no longer re-exported from `asap.cli` root. Import from
+  `asap.cli._compat` (shim) or the owning submodules (`asap.cli.schemas`,
+  `asap.schemas`, `asap.cli.repl`). The `_compat` shim is removed in v2.6.0
+  ([#275](https://github.com/adriannoes/asap-protocol/issues/275)).
+  See [migration guide](docs/migration.md#upgrading-from-v251).
+
 ### Fixed
 
 - **CI security (`pip-audit`)**: Raised `joserfc` to `>=1.6.7,<2` (CVE-2026-48990) and added overrides for `python-engineio>=4.13.2` (CVE-2026-48802 / CVE-2026-48809) and `python-socketio>=5.16.2` (CVE-2026-48804). See [SECURITY.md](SECURITY.md).
@@ -64,6 +73,9 @@ Deprecated import paths keep working via shims until v2.6.0.
 
 ### Deprecated (remove in v2.6.0)
 
+- `from asap.cli._compat import ...` — use `asap.cli.schemas`, `asap.schemas`, or
+  `asap.cli.repl` directly ([#242](https://github.com/adriannoes/asap-protocol/issues/242);
+  removal tracked in [#275](https://github.com/adriannoes/asap-protocol/issues/275)).
 - `from asap.transport.websocket import ...` — use `asap.transport.ws` directly.
 - `from asap.adapters.mcp import ...` — use `asap.mcp.auth` directly.
 - `RemoteFatalRPCError` / `RemoteRecoverableRPCError` — use `RemoteRPCError` + `is_recoverable`.
