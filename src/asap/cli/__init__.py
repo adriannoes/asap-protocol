@@ -25,24 +25,11 @@ from asap.cli.compliance_check import register_compliance_check_command
 from asap.cli.delegation import register_delegation_commands
 from asap.cli.keys import register_keys_commands
 from asap.cli.manifest import register_manifest_commands
-from asap.cli.repl import _repl_namespace
 from asap.cli.repl import register_repl_command
-from asap.cli.schemas import DEFAULT_SCHEMAS_DIR
 from asap.cli.schemas import register_schemas_commands
 from asap.cli.trace import register_trace_command
 
-# Re-exported so legacy `patch("asap.cli.export_all_schemas")` and
-# `from asap.cli import DEFAULT_SCHEMAS_DIR, export_all_schemas, _repl_namespace`
-# keep resolving after the v2.5.1 S3 cli split (behavior-preserving surface).
-from asap.schemas import export_all_schemas
-
-__all__ = [
-    "DEFAULT_SCHEMAS_DIR",
-    "app",
-    "export_all_schemas",
-    "main",
-    "_repl_namespace",
-]
+__all__ = ["app", "main"]
 
 app = typer.Typer(help="ASAP Protocol CLI.")
 
