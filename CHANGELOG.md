@@ -12,7 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CLI legacy imports (#242)**: `DEFAULT_SCHEMAS_DIR`, `export_all_schemas`, and
   `_repl_namespace` are no longer re-exported from `asap.cli` root. Import from
   `asap.cli._compat` (shim) or the owning submodules (`asap.cli.schemas`,
-  `asap.schemas`, `asap.cli.repl`). The `_compat` shim is removed in v2.6.0.
+  `asap.schemas`, `asap.cli.repl`). The `_compat` shim is removed in v2.6.0
+  ([#275](https://github.com/adriannoes/asap-protocol/issues/275)).
   See [migration guide](docs/migration.md#upgrading-from-v251).
 
 ### Fixed
@@ -72,6 +73,9 @@ Deprecated import paths keep working via shims until v2.6.0.
 
 ### Deprecated (remove in v2.6.0)
 
+- `from asap.cli._compat import ...` — use `asap.cli.schemas`, `asap.schemas`, or
+  `asap.cli.repl` directly ([#242](https://github.com/adriannoes/asap-protocol/issues/242);
+  removal tracked in [#275](https://github.com/adriannoes/asap-protocol/issues/275)).
 - `from asap.transport.websocket import ...` — use `asap.transport.ws` directly.
 - `from asap.adapters.mcp import ...` — use `asap.mcp.auth` directly.
 - `RemoteFatalRPCError` / `RemoteRecoverableRPCError` — use `RemoteRPCError` + `is_recoverable`.

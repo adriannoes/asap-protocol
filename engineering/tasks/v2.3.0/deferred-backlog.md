@@ -8,5 +8,6 @@ Post-release tracking items referenced from [sprint-S5-release.md](./sprint-S5-r
 | `apps/web` npm audit (postcss / Next) | [#140](https://github.com/adriannoes/asap-protocol/issues/140) | Moderate advisories until upstream fix |
 | Adoption metrics dashboard | [#141](https://github.com/adriannoes/asap-protocol/issues/141) | PRD metric; out of repo |
 | Registry API backend (gated) | [#142](https://github.com/adriannoes/asap-protocol/issues/142) | Product gate |
+| Remove `asap.cli._compat` shim | [#275](https://github.com/adriannoes/asap-protocol/issues/275) | v2.6.0; follow-up from #242 / #274 |
 
 Optional maintainer items (no dedicated issue unless opened): Vercel preview for `apps/example-nextjs`; broader deferred product themes (intent search, orchestration primitives) per roadmap.

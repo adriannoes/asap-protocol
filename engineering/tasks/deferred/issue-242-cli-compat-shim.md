@@ -1,6 +1,8 @@
 # Issue #242: CLI `_compat.py` shim
 
-**Issue**: [#242](https://github.com/adriannoes/asap-protocol/issues/242)
+**Issue**: [#242](https://github.com/adriannoes/asap-protocol/issues/242) (closed)
+**PR**: [#274](https://github.com/adriannoes/asap-protocol/pull/274) (merged 2026-07-07)
+**Follow-up (v2.6.0)**: [#275](https://github.com/adriannoes/asap-protocol/issues/275) — remove `_compat` shim
 **Branch**: `refactor/cli-compat-shim-242`
 **Depends on**: PR #241 merged (v2.5.1 S3 cli split)
 

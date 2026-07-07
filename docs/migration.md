@@ -836,7 +836,8 @@ not affect wire protocol or command behavior.
 
 The v2.5.1 S3 CLI split moved command groups into submodules but kept three
 legacy names on `asap.cli` root for compatibility. Those root re-exports are
-removed; use `asap.cli._compat` or canonical modules until **v2.6.0**:
+removed; use `asap.cli._compat` or canonical modules until **v2.6.0**
+([#275](https://github.com/adriannoes/asap-protocol/issues/275)):
 
 ```python
 # Before (no longer works)
