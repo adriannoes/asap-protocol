@@ -79,7 +79,7 @@ redis = [
 ]
 # Optional WebAuthn (real attestation/assertion when extra installed).
 webauthn = [
-    "webauthn>=2.6,<3",
+    "webauthn>=2.6,<4",
 ]
 # Framework integrations (Sprint E3 — PKG-003).
 mcp = [
