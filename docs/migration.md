@@ -827,6 +827,34 @@ IdP are unchanged.
 
 ---
 
+### Upgrading from v2.5.1
+
+Patch/minor releases after v2.5.1 may include small CLI surface trims that do
+not affect wire protocol or command behavior.
+
+#### CLI legacy import paths (#242)
+
+The v2.5.1 S3 CLI split moved command groups into submodules but kept three
+legacy names on `asap.cli` root for compatibility. Those root re-exports are
+removed; use `asap.cli._compat` or canonical modules until **v2.6.0**:
+
+```python
+# Before (no longer works)
+from asap.cli import DEFAULT_SCHEMAS_DIR, export_all_schemas, _repl_namespace
+
+# After — shim (removed in v2.6.0)
+from asap.cli._compat import DEFAULT_SCHEMAS_DIR, export_all_schemas, _repl_namespace
+
+# After — canonical (preferred)
+from asap.cli.schemas import DEFAULT_SCHEMAS_DIR
+from asap.schemas import export_all_schemas
+from asap.cli.repl import _repl_namespace
+```
+
+`asap = "asap.cli:main"` and `from asap.cli import app, main` are unchanged.
+
+---
+
 ### Upgrading from v2.4.1 to v2.5.0
 
 v2.5.0 is an **additive, backward-compatible** minor release. JSON-RPC envelopes,
