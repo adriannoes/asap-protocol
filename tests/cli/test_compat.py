@@ -48,7 +48,8 @@ def test_cli_init_does_not_export_legacy_symbols(name: str) -> None:
 
 def test_cli_init_line_count_within_ceiling() -> None:
     """cli/__init__.py stays within the 80 LOC ceiling (issue #242)."""
-    init_path = Path("src/asap/cli/__init__.py")
+    repo_root = Path(__file__).resolve().parents[2]
+    init_path = repo_root / "src/asap/cli/__init__.py"
     line_count = len(init_path.read_text(encoding="utf-8").splitlines())
     assert line_count <= 80
 
