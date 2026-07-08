@@ -9,7 +9,7 @@
 **ASAP Protocol** (Async Simple Agent Protocol) is a production-ready standard for agent-to-agent communication.
 - **Stack**: Python 3.13+, FastAPI, Pydantic v2.
 - **Transport**: JSON-RPC 2.0 over HTTP/WebSocket.
-- **Status**: v2.5.1 shipped on `main` (2026-06-26). **Current versions:** `pyproject.toml` **2.5.1** · PyPI `asap-protocol` **2.5.1** (tag [`v2.5.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.1)) · PyPI `asap-compliance` **1.3.0** (tag [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1)) · npm `@asap-protocol/client` **2.4.1**. v2.5.1 is a behavior-preserving **code quality patch** (thermo-nuclear audit S0–S3 + P0 fixes); **Adapter Lab II slipped to v2.5.2**. See `CHANGELOG.md` `[2.5.1]` and `docs/migration.md#upgrading-from-v250-to-v251`.
+- **Status**: **v2.5.2** on `release/2.5.2` (security & correctness follow-up — pending merge/tag). **Current versions:** `pyproject.toml` **2.5.2** · PyPI `asap-protocol` **2.5.1** (2.5.2 pending tag) · PyPI `asap-compliance` **1.3.0** (tag [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1)) · npm `@asap-protocol/client` **2.4.1**. Scope: [prd-v2.5.2-security-follow-up.md](product/prd/prd-v2.5.2-security-follow-up.md). Next adoption: Adapter Lab II → **v2.5.3**; Distribution Loop → **v2.5.4**; Formal Spec → **v2.5.5**. See `CHANGELOG.md` `[2.5.2]` and `docs/migration.md#upgrading-from-v251`.
 - **Framework Integrations**: LangChain, CrewAI, PydanticAI, LlamaIndex, SmolAgents, Vercel AI SDK, MCP (envelope + **MCP Auth Bridge** v2.5.0), OpenClaw, A2H.
 - **npm (TypeScript)**: The official client is **`@asap-protocol/client`** (scoped, **public** on npm for v2.4.x). Maintainer workflow: `.github/workflows/publish-typescript.yml`; context: `docs/maintainers/npm-publishing.md`.
 - **General contact** (humans coordinating on the protocol; not security): [info@asap-protocol.com](mailto:info@asap-protocol.com) — vulnerabilities: [SECURITY.md](SECURITY.md).
@@ -53,7 +53,7 @@ For coverage and pre-push gates, see [`.cursor/README.md`](.cursor/README.md#can
 
 ### 2. Development Status
 - **Active Sprint**: `engineering/tasks/`
-- **Adoption Roadmap**: v2.5.1 **code quality patch** shipped (2026-06-26, tag `v2.5.1`); v2.5.0 **MCP Auth Bridge** shipped (2026-06-24); `asap-compliance` **1.3.0** on PyPI (tag `v2.5.0.1`); **Adapter Lab II next as v2.5.2**; `@asap-protocol/mcp-auth` (HTTP/SSE) still deferred.
+- **Adoption Roadmap**: v2.5.2 **security follow-up** pending tag; v2.5.1 **code quality patch** shipped (2026-06-26); v2.5.0 **MCP Auth Bridge** shipped (2026-06-24); `asap-compliance` **1.3.0** on PyPI (tag `v2.5.0.1`); **next adoption:** Adapter Lab II (**v2.5.3**); `@asap-protocol/mcp-auth` (HTTP/SSE) still deferred.
 - **Code Reviews**: `engineering/code-review/`
 
 ## Organization

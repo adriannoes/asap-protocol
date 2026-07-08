@@ -11,10 +11,10 @@ Index of versioned PRDs. **Shipped** releases have retrospective PRDs; **planned
 | Version | File | Status |
 |---------|------|--------|
 | **v2.5.x train** | [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md) | Index |
-| **v2.5.0** MCP Auth Bridge | [prd-v2.5.0-mcp-auth-bridge.md](./prd-v2.5.0-mcp-auth-bridge.md) | **NEXT** |
-| v2.5.1 Adapter Lab II | [prd-v2.5.1-adapter-lab-ii.md](./prd-v2.5.1-adapter-lab-ii.md) | Planned |
-| v2.5.2 Distribution Loop | [prd-v2.5.2-distribution-loop.md](./prd-v2.5.2-distribution-loop.md) | Planned |
-| v2.5.3 Formal Spec & Interop | [prd-v2.5.3-formal-spec-interop.md](./prd-v2.5.3-formal-spec-interop.md) | Planned |
+| **v2.5.2** Security & correctness follow-up | [prd-v2.5.2-security-follow-up.md](./prd-v2.5.2-security-follow-up.md) | **RELEASE PENDING** |
+| v2.5.3 Adapter Lab II | [prd-v2.5.3-adapter-lab-ii.md](./prd-v2.5.3-adapter-lab-ii.md) | Planned |
+| v2.5.4 Distribution Loop | [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md) | Planned |
+| v2.5.5 Formal Spec & Interop | [prd-v2.5.5-formal-spec-interop.md](./prd-v2.5.5-formal-spec-interop.md) | Planned |
 | v3.0 Economy | [prd-v3.0-economy.md](./prd-v3.0-economy.md) | Vision |
 
 ---
@@ -23,6 +23,8 @@ Index of versioned PRDs. **Shipped** releases have retrospective PRDs; **planned
 
 | Version | File | Shipped |
 |---------|------|---------|
+| v2.5.1 | *(code quality patch — no public PRD; see `engineering/tasks/private/v2.5.1/`)* | 2026-06-26 |
+| v2.5.0 | [prd-v2.5.0-mcp-auth-bridge.md](./prd-v2.5.0-mcp-auth-bridge.md) | 2026-06-24 |
 | v2.4.1 | [prd-v2.4.1-security-hardening.md](./prd-v2.4.1-security-hardening.md) | 2026-06-14 |
 | v2.4.0 | [prd-v2.4.0-edge-ai-discovery.md](./prd-v2.4.0-edge-ai-discovery.md) | 2026-05-24 |
 | v2.3.0 | [prd-v2.3-scale.md](./prd-v2.3-scale.md) | 2026-05-04 |
@@ -40,8 +42,11 @@ Index of versioned PRDs. **Shipped** releases have retrospective PRDs; **planned
 |------|-------|
 | [prd-v2.2-scale.md](./prd-v2.2-scale.md) | Superseded by `prd-v2.2-protocol-hardening.md` |
 | [prd-v2.4-adoption.md](./prd-v2.4-adoption.md) | Deprecated — split into v2.4.0/2.4.1 shipped + v2.5.x |
-| `private/prd-v2.3.2-*` | Renumbered → `prd-v2.5.1-adapter-lab-ii.md` |
-| `private/prd-v2.3.3-*` | Renumbered → `prd-v2.5.2-distribution-loop.md` |
+| `private/prd-v2.3.2-*` | Renumbered → `prd-v2.5.3-adapter-lab-ii.md` (was v2.5.1) |
+| `private/prd-v2.3.3-*` | Renumbered → `prd-v2.5.4-distribution-loop.md` (was v2.5.2) |
+| `prd-v2.5.1-adapter-lab-ii.md` | Renamed → `prd-v2.5.3-adapter-lab-ii.md` (2026-07-08) |
+| `prd-v2.5.2-distribution-loop.md` | Renamed → `prd-v2.5.4-distribution-loop.md` (2026-07-08) |
+| `prd-v2.5.3-formal-spec-interop.md` | Renamed → `prd-v2.5.5-formal-spec-interop.md` (2026-07-08) |
 
 ---
 

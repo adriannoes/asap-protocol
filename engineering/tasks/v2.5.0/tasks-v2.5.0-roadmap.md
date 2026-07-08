@@ -90,7 +90,7 @@ Detailed sub-tasks live in per-sprint files (`sprint-S0` … `sprint-S5`).
 
 - [x] **5.0 Compliance, quality & release (S4–S5)**
   - **Trigger:** Example server + docs merged.
-  - **Enables:** v2.5.1 Adapter Lab II (unblocked).
+  - **Enables:** v2.5.3 Adapter Lab II (unblocked after v2.5.2 security follow-up).
   - **Depends on:** Tasks 2.0–4.0.
   - **Acceptance criteria:**
     - [x] `asap-compliance` includes `mcp-auth-bridge` profile cases for stdio MCP, including manifest tools ⊆ registered tools (merged `4b67b50`, [PR #233](https://github.com/adriannoes/asap-protocol/pull/233))

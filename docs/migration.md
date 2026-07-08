@@ -827,11 +827,11 @@ IdP are unchanged.
 
 ---
 
-### Upgrading from v2.5.1
+### Upgrading from v2.5.1 to v2.5.2
 
-Patch/minor releases after v2.5.1 may include small CLI surface trims and
-tighter ingress validation (e.g. rejecting unknown `config` / `metadata` keys)
-without changing the JSON-RPC envelope wire format.
+**v2.5.2** is a security & correctness follow-up ([PRD](../product/prd/prd-v2.5.2-security-follow-up.md)).
+It may include small CLI surface trims and tighter ingress validation (e.g. rejecting
+unknown `config` / `metadata` keys) without changing the JSON-RPC envelope wire format.
 
 #### CLI legacy import paths (#242)
 

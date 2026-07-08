@@ -7,7 +7,7 @@
 > **Status:** **CLOSED** — shipped 2026-06-24. See [release-checklist.md](./release-checklist.md).
 
 **Trigger:** All sprint acceptance criteria met on integration branch.
-**Enables:** v2.5.1 Adapter Lab II.
+**Enables:** v2.5.3 Adapter Lab II (after v2.5.2 security follow-up).
 **Depends on:** Full CI green on `release/2.5.0`.
 
 ---

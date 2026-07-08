@@ -8,7 +8,8 @@ Sprint roadmaps and release checklists per protocol version. Pair each folder wi
 
 | Folder | PRD | Status |
 |--------|-----|--------|
-| *(none — start `v2.5.2/` when Adapter Lab II or Distribution Loop kicks off)* | [prd-v2.5.1-adapter-lab-ii.md](../../product/prd/prd-v2.5.1-adapter-lab-ii.md) or [prd-v2.5.2-distribution-loop.md](../../product/prd/prd-v2.5.2-distribution-loop.md) | **PLANNED** |
+| `release/2.5.2` (no task folder — release PR) | [prd-v2.5.2-security-follow-up.md](../../product/prd/prd-v2.5.2-security-follow-up.md) | **RELEASE PENDING** |
+| *(next — start `v2.5.3/` when Adapter Lab II kicks off)* | [prd-v2.5.3-adapter-lab-ii.md](../../product/prd/prd-v2.5.3-adapter-lab-ii.md) | **PLANNED** (after v2.5.2 tag) |
 
 ---
 
@@ -31,7 +32,7 @@ Sprint roadmaps and release checklists per protocol version. Pair each folder wi
 
 | Folder | PRD | Shipped |
 |--------|-----|---------|
-| `private/v2.5.1/` | code quality review patch (S0–S3 + release); Adapter Lab II deferred to v2.5.2 | 2026-06-25 |
+| `private/v2.5.1/` | code quality review patch (S0–S3 + release); Adapter Lab II deferred to v2.5.3 | 2026-06-25 |
 | `private/v2.4.1/` | [prd-v2.4.1-security-hardening.md](../../product/prd/prd-v2.4.1-security-hardening.md) + `private/prd-v2.4.1-*` | 2026-06-14 |
 | `private/v2.3.1/` | `private/prd-v2.3.1-adapter-lab.md` | 2026-05-21 |
 
@@ -41,10 +42,11 @@ Sprint roadmaps and release checklists per protocol version. Pair each folder wi
 
 | Version | PRD | Blocked by |
 |---------|-----|------------|
-| v2.5.2 | [prd-v2.5.1-adapter-lab-ii.md](../../product/prd/prd-v2.5.1-adapter-lab-ii.md) (Adapter Lab II, slipped from v2.5.1) or [prd-v2.5.2-distribution-loop.md](../../product/prd/prd-v2.5.2-distribution-loop.md) | — (v2.5.1 ✅) |
-| v2.5.3 | [prd-v2.5.3-formal-spec-interop.md](../../product/prd/prd-v2.5.3-formal-spec-interop.md) | v2.5.2 (soft) |
+| v2.5.3 | [prd-v2.5.3-adapter-lab-ii.md](../../product/prd/prd-v2.5.3-adapter-lab-ii.md) | v2.5.2 tag |
+| v2.5.4 | [prd-v2.5.4-distribution-loop.md](../../product/prd/prd-v2.5.4-distribution-loop.md) | v2.5.3 |
+| v2.5.5 | [prd-v2.5.5-formal-spec-interop.md](../../product/prd/prd-v2.5.5-formal-spec-interop.md) | v2.5.4 (soft) |
 
-Create `engineering/tasks/v2.5.2/` etc. when each release starts.
+Create `engineering/tasks/v2.5.3/` etc. when each adoption release starts.
 
 ---
 

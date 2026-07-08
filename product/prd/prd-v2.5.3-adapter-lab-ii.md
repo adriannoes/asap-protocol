@@ -1,21 +1,21 @@
-# PRD: ASAP Protocol v2.5.1 — Adapter Lab II
+# PRD: ASAP Protocol v2.5.3 — Adapter Lab II
 
 > **Product Requirements Document**
 >
-> **Version**: 2.5.1
-> **Status**: PLANNED (v2.5.0 shipped 2026-06-24; adoption signal pending)
-> **Created**: 2026-04-28 (as v2.3.2); **renumbered**: 2026-06-22
+> **Version**: 2.5.3
+> **Status**: PLANNED (after v2.5.2 security follow-up ships)
+> **Created**: 2026-04-28 (as v2.3.2); **renumbered**: 2026-06-22 → v2.5.1; **2026-07-08 → v2.5.3**
 > **Parent train**: [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md)
-> **Predecessor**: [prd-v2.5.0-mcp-auth-bridge.md](./prd-v2.5.0-mcp-auth-bridge.md)
-> **Successor**: [prd-v2.5.2-distribution-loop.md](./prd-v2.5.2-distribution-loop.md)
+> **Predecessor**: [prd-v2.5.2-security-follow-up.md](./prd-v2.5.2-security-follow-up.md)
+> **Successor**: [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md)
 >
-> **Migration note**: Formerly `product/prd/private/prd-v2.3.2-enterprise-workflow-adapters.md` (v2.3.2). Renumbered post-v2.4.1; executes after MCP Auth Bridge.
+> **Migration note**: Formerly `product/prd/private/prd-v2.3.2-enterprise-workflow-adapters.md` (v2.3.2), then `prd-v2.5.1-adapter-lab-ii.md`. v2.5.1 was consumed by the code quality patch (2026-06-26); this work slipped again when v2.5.2 absorbed the security follow-up train.
 
 ---
 
 ## 1. Purpose
 
-v2.5.1 expands adoption testing into **enterprise and workflow-heavy ecosystems** after v2.5.0 delivers MCP auth and v2.3.1 (Adapter Lab I) validated high-signal TypeScript frameworks.
+v2.5.3 expands adoption testing into **enterprise and workflow-heavy ecosystems** after v2.5.0 delivers MCP auth, v2.5.1/v2.5.2 harden the core, and v2.3.1 (Adapter Lab I) validated high-signal TypeScript frameworks.
 
 **Question to answer:** which teams need ASAP because their agents must cross organizational, cloud, or workflow boundaries?
 
@@ -35,7 +35,7 @@ v2.5.1 expands adoption testing into **enterprise and workflow-heavy ecosystems*
 
 ## 3. Carry-over from v2.5.0: `@asap-protocol/mcp-auth`
 
-> **Decision (2026-06-24, S4 spike):** Ship `@asap-protocol/mcp-auth` in a **future npm patch** (TBD git tag — **not** tag `v2.5.0.1`, which published **`asap-compliance` 1.3.0** only), **not** in v2.5.0 and **not** as part of v2.5.1 Adapter Lab II scope.
+> **Decision (2026-06-24, S4 spike):** Ship `@asap-protocol/mcp-auth` in a **future npm patch** (TBD git tag — **not** tag `v2.5.0.1`, which published **`asap-compliance` 1.3.0** only), **not** in v2.5.0 and **not** as part of Adapter Lab II scope.
 >
 > **Spike:** [typescript-mcp-auth-spike.md](../../engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md)
 > **Source requirements:** [prd-v2.5.0-mcp-auth-bridge.md §5.4](./prd-v2.5.0-mcp-auth-bridge.md#54-typescript-should) (MCP-TS-001..003)
@@ -49,7 +49,7 @@ v2.5.1 expands adoption testing into **enterprise and workflow-heavy ecosystems*
 | Implementation gap | No `packages/typescript/mcp-auth/`, no public `verifyAgentJwt()` on `@asap-protocol/client`, no HTTP/SSE MCP example or publish CI for a fourth npm package |
 | SDK fit | `@modelcontextprotocol/sdk` Bearer middleware targets OAuth transport errors; ASAP needs per-`tools/call` grant checks and `CallToolResult` codes — requires a composed wrapper, not a drop-in |
 
-Deferring does **not** block v2.5.0 Definition of Done or v2.5.1 planning. The npm middleware may ship as a patch after v2.5.0 without delaying Adapter Lab II (**v2.5.1** is a separate **minor** train, not yet started).
+Deferring does **not** block Adapter Lab II planning. The npm middleware may ship as a patch after v2.5.0 without delaying this release.
 
 ### 3.2 Minimum scope (npm patch TBD)
 
@@ -61,11 +61,11 @@ When implemented, the package MUST satisfy MCP-TS-001..003 at minimum:
 | MCP-TS-002 | Bearer extraction from `Authorization` header + same `asap:*` error mapping as Python (`asap:auth_required`, `asap:invalid_token`, `asap:capability_denied`, `asap:constraint_violation`) on `tools/call` | SHOULD (carried from v2.5.0) |
 | MCP-TS-003 | Re-export types compatible with `@modelcontextprotocol/sdk` middleware signatures | SHOULD (carried from v2.5.0) |
 
-**Explicitly out of minimum v2.5.0.1 scope:** stdio `_meta.asap_agent_jwt` in TypeScript (Python-only for v2.5.0), full `CapabilityRegistry` port (inject `checkGrant` callback), `hide_unauthorized_tools` / `tools/list` filtering.
+**Explicitly out of minimum npm scope:** stdio `_meta.asap_agent_jwt` in TypeScript (Python-only for v2.5.0), full `CapabilityRegistry` port (inject `checkGrant` callback), `hide_unauthorized_tools` / `tools/list` filtering.
 
-### 3.3 Relation to v2.5.1 (LAB2-006)
+### 3.3 Relation to Adapter Lab II (LAB2-006)
 
-LAB2-006 applies to **Python Auth Bridge patterns** where Adapter Lab II work exposes MCP. It does not require shipping `@asap-protocol/mcp-auth`; HTTP/SSE TypeScript adopters should wait for v2.5.0.1 or use Python reference semantics manually until the npm package ships.
+LAB2-006 applies to **Python Auth Bridge patterns** where Adapter Lab II work exposes MCP. It does not require shipping `@asap-protocol/mcp-auth`; HTTP/SSE TypeScript adopters should wait for the npm patch or use Python reference semantics manually until the package ships.
 
 ---
 
@@ -104,6 +104,7 @@ LAB2-006 applies to **Python Auth Bridge patterns** where Adapter Lab II work ex
 
 - **v2.3.1 (shipped)**: `product/prd/private/prd-v2.3.1-adapter-lab.md`
 - **Adoption foundation**: [prd-v2.3-scale.md](./prd-v2.3-scale.md)
+- **Security baseline**: [prd-v2.5.2-security-follow-up.md](./prd-v2.5.2-security-follow-up.md)
 
 ---
 
@@ -111,5 +112,6 @@ LAB2-006 applies to **Python Auth Bridge patterns** where Adapter Lab II work ex
 
 | Date | Change |
 |------|--------|
-| 2026-06-24 | §3: Record S4 defer of `@asap-protocol/mcp-auth` to v2.5.0.1 (MCP-TS-001..003) |
+| 2026-07-08 | Renumbered v2.5.1 → **v2.5.3** (v2.5.1 = quality patch; v2.5.2 = security follow-up) |
+| 2026-06-24 | §3: Record S4 defer of `@asap-protocol/mcp-auth` (MCP-TS-001..003) |
 | 2026-06-22 | Renumbered v2.3.2 → v2.5.1; blocked on v2.5.0 |

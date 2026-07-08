@@ -1,19 +1,19 @@
-# PRD: ASAP Protocol v2.5.3 — Formal Spec & Interop
+# PRD: ASAP Protocol v2.5.5 — Formal Spec & Interop
 
 > **Product Requirements Document**
 >
-> **Version**: 2.5.3
+> **Version**: 2.5.5
 > **Status**: PLANNED
-> **Created**: 2026-03-20 (origin in `prd-v2.4-adoption.md`); **rescoped**: 2026-06-22
+> **Created**: 2026-03-20 (origin in `prd-v2.4-adoption.md`); **rescoped**: 2026-06-22 → v2.5.3; **2026-07-08 → v2.5.5**
 > **Parent train**: [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md)
-> **Predecessor**: [prd-v2.5.2-distribution-loop.md](./prd-v2.5.2-distribution-loop.md)
+> **Predecessor**: [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md)
 > **Successor**: [prd-v3.0-economy.md](./prd-v3.0-economy.md)
 
 ---
 
 ## 1. Purpose
 
-v2.5.3 closes the **standards-track loop** deferred since v2.3: formal RFC-style specification, capability-aware introspection, privacy considerations, and thin cross-protocol compatibility — **after** MCP Auth Bridge (v2.5.0) stabilizes the MCP integration surface.
+v2.5.5 closes the **standards-track loop** deferred since v2.3: formal RFC-style specification, capability-aware introspection, privacy considerations, and thin cross-protocol compatibility — **after** MCP Auth Bridge (v2.5.0) stabilizes the MCP integration surface and adoption work (v2.5.3–v2.5.4) supplies narrative examples.
 
 ---
 
@@ -85,7 +85,7 @@ Ship only if `@asap-protocol/openapi` did not land in v2.3:
 
 ## 4. Non-goals
 
-Same as v2.5 train — economy, federated registry, gRPC. MCP Auth Bridge is **not** in this PRD (shipped in v2.5.0).
+Same as v2.5 train — economy, federated registry, gRPC. MCP Auth Bridge is **not** in this PRD (shipped in v2.5.0). Security follow-ups from v2.4.1 §8 shipped in **v2.5.2**.
 
 ---
 
@@ -94,7 +94,7 @@ Same as v2.5 train — economy, federated registry, gRPC. MCP Auth Bridge is **n
 | Prerequisite | Source |
 |-------------|--------|
 | v2.5.0 MCP Auth Bridge shipped | Stable MCP adapter API for SPEC-009 |
-| v2.5.1/v2.5.2 adoption learnings | Optional narrative inputs for spec examples |
+| v2.5.3/v2.5.4 adoption learnings | Optional narrative inputs for spec examples |
 | Identity/capability model stable | v2.2+ |
 
 ---
@@ -102,6 +102,7 @@ Same as v2.5 train — economy, federated registry, gRPC. MCP Auth Bridge is **n
 ## 6. Related documents
 
 - **MCP Auth Bridge**: [prd-v2.5.0-mcp-auth-bridge.md](./prd-v2.5.0-mcp-auth-bridge.md)
+- **Security follow-up**: [prd-v2.5.2-security-follow-up.md](./prd-v2.5.2-security-follow-up.md)
 - **Legacy**: [prd-v2.4-adoption.md](./prd-v2.4-adoption.md)
 
 ---
@@ -110,4 +111,5 @@ Same as v2.5 train — economy, federated registry, gRPC. MCP Auth Bridge is **n
 
 | Date | Change |
 |------|--------|
+| 2026-07-08 | Renumbered v2.5.3 → **v2.5.5** (train shift after v2.5.2 security ship) |
 | 2026-06-22 | Split from `prd-v2.4-adoption.md` §4.2–4.6; renumbered to v2.5.3 |
