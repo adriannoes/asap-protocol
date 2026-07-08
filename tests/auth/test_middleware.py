@@ -17,7 +17,7 @@ from fastapi import FastAPI, Request
 from joserfc import jwk, jwt as jose_jwt
 from starlette.testclient import TestClient
 
-from asap.auth.middleware import OAuth2Middleware
+from asap.auth.middleware import OAuth2Middleware, path_under_prefix
 
 
 def _minimal_app() -> FastAPI:
@@ -33,6 +33,39 @@ def _minimal_app() -> FastAPI:
         return {"status": "ok"}
 
     return app
+
+
+def test_path_under_prefix_matches_exact_and_subpaths() -> None:
+    """Operator/registry prefixes must not match similarly named siblings."""
+    assert path_under_prefix("/usage", "/usage") is True
+    assert path_under_prefix("/usage/export", "/usage") is True
+    assert path_under_prefix("/usagex", "/usage") is False
+    assert path_under_prefix("/audit", "/audit") is True
+    assert path_under_prefix("/asap/agent/status", "/asap") is True
+
+
+def test_oauth2_middleware_validates_extra_path_prefixes() -> None:
+    """extra_path_prefixes protect operator paths outside path_prefix."""
+    app = _minimal_app()
+
+    @app.get("/usage")
+    async def usage() -> dict[str, str]:
+        return {"status": "ok"}
+
+    app.add_middleware(
+        OAuth2Middleware,
+        jwks_uri="https://auth.example.com/jwks.json",
+        path_prefix="/asap",
+        extra_path_prefixes=("/usage",),
+        jwks_fetcher=lambda uri: _mock_jwks_fetcher(uri),
+    )
+
+    with TestClient(app) as client:
+        unprotected = client.get("/other")
+        protected = client.get("/usage")
+
+    assert unprotected.status_code == 200
+    assert protected.status_code == 401
 
 
 _cached_mock_jwks: jwk.KeySet | None = None

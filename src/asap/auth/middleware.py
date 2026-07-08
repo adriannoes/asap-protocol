@@ -133,6 +133,24 @@ def _get_bearer_token(request: Request) -> str | None:
 
 AGENT_IDENTITY_ROUTE_PREFIX = "/asap/agent/"
 
+# Opt-in operator REST surfaces (#209): protected when create_app(require_operator_auth=True).
+OPERATOR_API_PATH_PREFIXES: tuple[str, ...] = ("/usage", "/sla", "/audit")
+
+
+def path_under_prefix(path: str, prefix: str) -> bool:
+    """Return True if ``path`` is ``prefix`` or a subpath of it.
+
+    Example:
+        >>> path_under_prefix("/usage/export", "/usage")
+        True
+        >>> path_under_prefix("/usagex", "/usage")
+        False
+    """
+    normalized = prefix.rstrip("/") or "/"
+    if normalized == "/":
+        return True
+    return path == normalized or path.startswith(f"{normalized}/")
+
 
 class OAuth2Middleware(BaseHTTPMiddleware):
     """Middleware that validates JWT Bearer tokens using JWKS.
@@ -152,6 +170,7 @@ class OAuth2Middleware(BaseHTTPMiddleware):
         *,
         required_scope: str | None = None,
         path_prefix: str | None = "/asap",
+        extra_path_prefixes: tuple[str, ...] = (),
         jwks_fetcher: Callable[[str], Awaitable[jwk.KeySet]] | None = None,
         manifest_id: str | None = None,
         custom_claim: str | None = None,
@@ -163,6 +182,7 @@ class OAuth2Middleware(BaseHTTPMiddleware):
         self._jwks_uri = jwks_uri
         self._required_scope = required_scope
         self._path_prefix = path_prefix
+        self._extra_path_prefixes = extra_path_prefixes
         self._manifest_id = manifest_id
         self._custom_claim = custom_claim
         self._custom_claim_key = self._custom_claim or os.environ.get(
@@ -191,9 +211,26 @@ class OAuth2Middleware(BaseHTTPMiddleware):
 
     def _should_validate(self, path: str) -> bool:
         """Return True if this request path should be validated."""
-        if self._path_prefix is not None and not path.startswith(self._path_prefix):
+        if path.startswith(AGENT_IDENTITY_ROUTE_PREFIX):
             return False
-        return not path.startswith(AGENT_IDENTITY_ROUTE_PREFIX)
+        # path_prefix=None keeps the historic "validate everything" semantics.
+        if self._path_prefix is None:
+            return True
+        if path_under_prefix(path, self._path_prefix):
+            return True
+        return any(path_under_prefix(path, prefix) for prefix in self._extra_path_prefixes)
+
+    def _enforces_global_scope(self, path: str) -> bool:
+        """Return True if the global ``required_scope`` should apply to ``path``.
+
+        Applies to ``path_prefix`` matches (and the historic ``path_prefix=None``
+        "validate everything" mode). Paths matched only via ``extra_path_prefixes``
+        (operator APIs) are excluded: their scope is enforced by the router
+        ``Depends(require_scope(...))`` so the global scope must not compound (#209).
+        """
+        if self._path_prefix is None:
+            return True
+        return path_under_prefix(path, self._path_prefix)
 
     def _validate_scope(self, scope_list: list[str]) -> bool:
         """Check if required_scope is present in scope list."""
@@ -262,7 +299,7 @@ class OAuth2Middleware(BaseHTTPMiddleware):
             return self._validator.validate_jwt(token, key_set)
 
     async def validate_bearer_token(
-        self, token: str, *, path: str = ""
+        self, token: str, *, path: str = "", enforce_required_scope: bool = True
     ) -> tuple[OAuth2Claims | None, JSONResponse | None]:
         """Run the full JWKS validation pipeline for a single Bearer token.
 
@@ -270,6 +307,11 @@ class OAuth2Middleware(BaseHTTPMiddleware):
         path so both transports enforce identical OAuth2 semantics (B4/BUG #4).
         Returns ``(claims, None)`` on success or ``(None, error_response)`` on
         failure. ``path`` is used only for log context.
+
+        ``enforce_required_scope`` gates the global ``required_scope`` check. It
+        is set to False for ``extra_path_prefixes`` (operator APIs) whose scope is
+        enforced by their own router ``Depends(require_scope(...))`` (#209), so the
+        global scope does not compound with the per-route scope.
         """
         try:
             claims = await self._validate_token_claims(token)
@@ -329,7 +371,7 @@ class OAuth2Middleware(BaseHTTPMiddleware):
             )
 
         scope_list = parse_scope(claims.get("scope"))
-        if not self._validate_scope(scope_list):
+        if enforce_required_scope and not self._validate_scope(scope_list):
             logger.warning(
                 "asap.oauth2.insufficient_scope",
                 path=path,
@@ -376,7 +418,11 @@ class OAuth2Middleware(BaseHTTPMiddleware):
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        claims, error = await self.validate_bearer_token(token, path=request.url.path)
+        claims, error = await self.validate_bearer_token(
+            token,
+            path=request.url.path,
+            enforce_required_scope=self._enforces_global_scope(request.url.path),
+        )
         if error is not None:
             return error
         # validate_bearer_token returns None claims only with an error response;

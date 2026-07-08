@@ -1,8 +1,8 @@
 """SLA REST API (v1.3). Requires sla_storage on app state.
 
-**Security (v1.3):** This API is intended for local/operator use only. Endpoints
-are unauthenticated by default. When exposing beyond localhost, configure
-OAuth2 or network-level access controls. Rate limiting is applied per-client.
+**Security:** Unauthenticated by default (local/operator use). Pass
+``require_auth=True`` from ``create_app(require_operator_auth=True)`` to require
+an OAuth2 Bearer JWT with scope ``asap:admin``. Rate limiting is applied per-client.
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ from typing import Any, Literal, cast
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
+from asap.auth.scopes import SCOPE_ADMIN, require_scope
 from asap.economics.sla import (
     SLADefinition,
     SLAMetrics,
@@ -68,12 +69,19 @@ def _compute_compliance_percent(
     return max(0.0, 100.0 - 5.0 * warning_count)
 
 
-def create_sla_router() -> APIRouter:
-    """Create the SLA API router with GET /sla, /sla/history, /sla/breaches."""
+def create_sla_router(*, require_auth: bool = False) -> APIRouter:
+    """Create the SLA API router with GET /sla, /sla/history, /sla/breaches.
+
+    Args:
+        require_auth: When True, require OAuth2 claims with scope ``asap:admin``.
+    """
+    deps = [Depends(_rate_limit_sla)]
+    if require_auth:
+        deps.append(Depends(require_scope(SCOPE_ADMIN)))
     router = APIRouter(
         prefix="/sla",
         tags=["sla"],
-        dependencies=[Depends(_rate_limit_sla)],
+        dependencies=deps,
     )
 
     @router.get("")
