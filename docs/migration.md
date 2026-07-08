@@ -829,8 +829,9 @@ IdP are unchanged.
 
 ### Upgrading from v2.5.1
 
-Patch/minor releases after v2.5.1 may include small CLI surface trims that do
-not affect wire protocol or command behavior.
+Patch/minor releases after v2.5.1 may include small CLI surface trims and
+tighter ingress validation (e.g. rejecting unknown `config` / `metadata` keys)
+without changing the JSON-RPC envelope wire format.
 
 #### CLI legacy import paths (#242)
 
@@ -904,6 +905,34 @@ startup. Operator tokens must:
 If you set `OAuth2Config.required_scope` for `/asap` tasks, it is **not** applied
 to `/usage`, `/sla`, or `/audit`: those enforce only ``asap:admin`` via the route
 dependency, so an admin-only token is accepted regardless of the global scope.
+
+#### Ingress validation: `TaskRequestConfig` and `CommonMetadata` (#209)
+
+`TaskRequest.config` and `Conversation.metadata` now reject unknown keys
+(`extra="forbid"`). Custom extension data that previously rode in ad-hoc
+`config` or `metadata` properties must move to `TaskRequest.input` or envelope
+`extensions`.
+
+```python
+# Before (accepted arbitrary keys)
+TaskRequest(
+    conversation_id="conv_1",
+    skill_id="research",
+    input={"query": "AI"},
+    config={"timeout_seconds": 60, "custom_flag": True},
+)
+
+# After — drop unknown config keys or relocate them
+TaskRequest(
+    conversation_id="conv_1",
+    skill_id="research",
+    input={"query": "AI", "custom_flag": True},
+    config={"timeout_seconds": 60},
+)
+```
+
+`TaskResponse.metrics` still allows extra fields (unchanged in this release).
+
 
 ---
 

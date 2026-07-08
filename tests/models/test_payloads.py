@@ -1,5 +1,8 @@
 """Tests for Task payload models (requests, responses, updates, cancellations)."""
 
+import pytest
+from pydantic import ValidationError
+
 from asap.models.enums import MessageRole, TaskStatus, UpdateType
 
 
@@ -58,6 +61,18 @@ class TestTaskRequest:
         assert request.config.timeout_seconds == 600
         assert request.config.streaming is True
         assert request.config.persist_state is True
+
+    def test_task_request_config_rejects_unknown_fields(self) -> None:
+        """TaskRequestConfig forbids extra properties in config."""
+        from asap.models.payloads import TaskRequest
+
+        with pytest.raises(ValidationError):
+            TaskRequest(
+                conversation_id="conv_123",
+                skill_id="web_research",
+                input={"query": "test"},
+                config={"timeout_seconds": 60, "unknown_flag": True},
+            )
 
     def test_task_request_json_schema(self):
         """Test that TaskRequest generates valid JSON Schema."""

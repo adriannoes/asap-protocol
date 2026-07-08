@@ -813,6 +813,20 @@ class TestConversation:
         assert conversation.metadata.purpose == "quarterly_report_research"
         assert conversation.metadata.ttl_hours == 72
 
+    def test_common_metadata_rejects_unknown_fields(self) -> None:
+        """CommonMetadata forbids extra properties in conversation metadata."""
+        from datetime import datetime, timezone
+
+        from asap.models.entities import Conversation
+
+        with pytest.raises(ValidationError):
+            Conversation(
+                id=generate_id(),
+                participants=["urn:asap:agent:a", "urn:asap:agent:b"],
+                created_at=datetime.now(timezone.utc),
+                metadata={"purpose": "research", "unknown_key": "value"},
+            )
+
     def test_conversation_json_schema(self):
         """Test that Conversation generates valid JSON Schema."""
         from asap.models.entities import Conversation
