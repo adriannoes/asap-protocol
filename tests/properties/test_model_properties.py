@@ -17,6 +17,7 @@ from asap.models.entities import (
     Artifact,
     AuthScheme,
     Capability,
+    CommonMetadata,
     Conversation,
     Endpoint,
     Manifest,
@@ -41,6 +42,7 @@ from asap.models.payloads import (
     TaskCancel,
     TaskMetrics,
     TaskRequest,
+    TaskRequestConfig,
     TaskResponse,
     TaskUpdate,
 )
@@ -88,6 +90,41 @@ def st_json_dict() -> st.SearchStrategy[dict]:
         ),
         max_size=8,
     )
+
+
+
+@st.composite
+def st_common_metadata(draw: st.DrawFn) -> CommonMetadata:
+    """Strategy for CommonMetadata (only known keys)."""
+    fields = {
+        "purpose": draw(st.none() | st.text(max_size=100)),
+        "ttl_hours": draw(st.none() | st.integers(min_value=1, max_value=8760)),
+        "source": draw(st.none() | st.text(max_size=80)),
+        "timestamp": draw(st.none() | st.just("2026-01-01T00:00:00Z")),
+        "tags": draw(st.none() | st.lists(st.text(max_size=30), max_size=5)),
+    }
+    present = {k: v for k, v in fields.items() if v is not None}
+    if not present:
+        return CommonMetadata()
+    return CommonMetadata(**present)
+
+
+@st.composite
+def st_task_request_config(draw: st.DrawFn) -> TaskRequestConfig:
+    """Strategy for TaskRequestConfig (only known keys)."""
+    fields = {
+        "timeout_seconds": draw(st.none() | st.integers(min_value=1, max_value=3600)),
+        "priority": draw(st.none() | st.sampled_from(["low", "normal", "high"])),
+        "idempotency_key": draw(st.none() | st.text(alphabet="a-z0-9-", max_size=40)),
+        "streaming": draw(st.none() | st.booleans()),
+        "persist_state": draw(st.none() | st.booleans()),
+        "model": draw(st.none() | st.text(alphabet="a-z0-9.-", max_size=40)),
+        "temperature": draw(st.none() | st.floats(min_value=0, max_value=2, allow_nan=False)),
+    }
+    present = {k: v for k, v in fields.items() if v is not None}
+    if not present:
+        return TaskRequestConfig()
+    return TaskRequestConfig(**present)
 
 
 def st_mime_type() -> st.SearchStrategy[str]:
@@ -233,7 +270,7 @@ def st_conversation(draw: st.DrawFn) -> Conversation:
         id=draw(st_ulid_like()),
         participants=draw(st.lists(st_agent_urn(), min_size=1, max_size=4)),
         created_at=draw(st_datetime_utc()),
-        metadata=draw(st.none() | st_json_dict()),
+        metadata=draw(st.none() | st_common_metadata()),
     )
 
 
@@ -303,7 +340,7 @@ def st_task_request(draw: st.DrawFn) -> TaskRequest:
         parent_task_id=draw(st.none() | st_ulid_like()),
         skill_id=draw(st.text(alphabet="a-z0-9_", min_size=1, max_size=40)),
         input=draw(st_json_dict()),
-        config=draw(st.none() | st_json_dict()),
+        config=draw(st.none() | st_task_request_config()),
     )
 
 
