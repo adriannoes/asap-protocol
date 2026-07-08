@@ -819,13 +819,15 @@ class TestConversation:
 
         from asap.models.entities import Conversation
 
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValidationError) as exc_info:
             Conversation(
                 id=generate_id(),
                 participants=["urn:asap:agent:a", "urn:asap:agent:b"],
                 created_at=datetime.now(timezone.utc),
                 metadata={"purpose": "research", "unknown_key": "value"},
             )
+        errors = exc_info.value.errors()
+        assert errors[0]["loc"] == ("metadata", "unknown_key")
 
     def test_conversation_json_schema(self):
         """Test that Conversation generates valid JSON Schema."""

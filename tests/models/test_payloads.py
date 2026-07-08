@@ -66,13 +66,15 @@ class TestTaskRequest:
         """TaskRequestConfig forbids extra properties in config."""
         from asap.models.payloads import TaskRequest
 
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValidationError) as exc_info:
             TaskRequest(
                 conversation_id="conv_123",
                 skill_id="web_research",
                 input={"query": "test"},
                 config={"timeout_seconds": 60, "unknown_flag": True},
             )
+        errors = exc_info.value.errors()
+        assert errors[0]["loc"] == ("config", "unknown_flag")
 
     def test_task_request_json_schema(self):
         """Test that TaskRequest generates valid JSON Schema."""

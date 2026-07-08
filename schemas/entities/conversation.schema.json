@@ -2,7 +2,7 @@
   "$defs": {
     "CommonMetadata": {
       "additionalProperties": false,
-      "description": "Common metadata keys (extra allowed).",
+      "description": "Common metadata keys (unknown keys rejected).",
       "properties": {
         "purpose": {
           "anyOf": [

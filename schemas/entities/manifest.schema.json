@@ -33,115 +33,9 @@
       "title": "AuthScheme",
       "type": "object"
     },
-    "HardwareCapability": {
-      "additionalProperties": false,
-      "description": "Optional hardware hosting profile for edge and physical agents.\n\nAll fields are optional; registrants may omit the object entirely.\nClosed enums support marketplace filtering (v2.4+).",
-      "properties": {
-        "class": {
-          "description": "Hardware class hosting the agent",
-          "enum": [
-            "cloud",
-            "sbc",
-            "edge_accelerator",
-            "microcontroller",
-            "desktop"
-          ],
-          "title": "Class",
-          "type": "string"
-        },
-        "model": {
-          "description": "Specific board or SoC (e.g. jetson_orin_nano_super_8gb)",
-          "maxLength": 100,
-          "title": "Model",
-          "type": "string"
-        },
-        "io": {
-          "description": "Physical I/O interfaces available to the agent",
-          "items": {
-            "enum": [
-              "gpio",
-              "i2c",
-              "spi",
-              "uart",
-              "csi_camera",
-              "usb_camera",
-              "audio_in",
-              "audio_out",
-              "bluetooth",
-              "lora",
-              "ble"
-            ],
-            "type": "string"
-          },
-          "title": "Io",
-          "type": "array",
-          "uniqueItems": true
-        }
-      },
-      "title": "HardwareCapability",
-      "type": "object"
-    },
-    "InferenceCapability": {
-      "additionalProperties": false,
-      "description": "Optional local and cloud inference modes advertised by the agent.",
-      "properties": {
-        "modes": {
-          "description": "Supported inference execution modes",
-          "items": {
-            "enum": [
-              "cloud",
-              "local_cpu",
-              "local_cuda",
-              "local_metal",
-              "local_npu"
-            ],
-            "type": "string"
-          },
-          "title": "Modes",
-          "type": "array",
-          "uniqueItems": true
-        },
-        "local_models": {
-          "description": "Self-reported local models (optional throughput)",
-          "items": {
-            "$ref": "#/$defs/LocalModelInfo"
-          },
-          "title": "Local Models",
-          "type": "array"
-        }
-      },
-      "title": "InferenceCapability",
-      "type": "object"
-    },
-    "LocalModelInfo": {
-      "additionalProperties": false,
-      "description": "Metadata for a model running on-device (self-reported).",
-      "properties": {
-        "id": {
-          "description": "Model identifier (e.g. Hugging Face repo or GGUF name)",
-          "maxLength": 200,
-          "title": "Id",
-          "type": "string"
-        },
-        "quantization": {
-          "description": "Quantization label (e.g. Q4_K_M)",
-          "maxLength": 50,
-          "title": "Quantization",
-          "type": "string"
-        },
-        "throughput_tokens_per_second": {
-          "description": "Self-reported throughput (tokens per second)",
-          "minimum": 0,
-          "title": "Throughput Tokens Per Second",
-          "type": "number"
-        }
-      },
-      "title": "LocalModelInfo",
-      "type": "object"
-    },
     "Capability": {
       "additionalProperties": false,
-      "description": "Collection of an agent's features and supported operations.\n\nCapabilities describe what an agent can do, including skills,\nstate persistence, streaming support, MCP tool integration, and\noptional hardware / inference advertising (v2.4+).\n\nAttributes:\n    asap_version: ASAP protocol version supported (e.g., \"0.1\")\n    skills: List of skills the agent can perform\n    state_persistence: Whether the agent supports state snapshots\n    streaming: Whether the agent supports streaming responses\n    mcp_tools: List of MCP tool names the agent can execute\n    hardware: Optional hardware class, model, and I/O (v2.4+)\n    inference: Optional inference modes and local models (v2.4+)\n\nExample:\n    >>> capability = Capability(\n    ...     asap_version=\"0.1\",\n    ...     skills=[Skill(id=\"research\", description=\"Research skill\")],\n    ...     state_persistence=True,\n    ...     streaming=True,\n    ...     mcp_tools=[\"web_search\"]\n    ... )",
+      "description": "Collection of an agent's features and supported operations.\n\nCapabilities describe what an agent can do, including skills,\nstate persistence, streaming support, and MCP tool integration.\n\nAttributes:\n    asap_version: ASAP protocol version supported (e.g., \"0.1\")\n    skills: List of skills the agent can perform\n    state_persistence: Whether the agent supports state snapshots\n    streaming: Whether the agent supports streaming responses\n    mcp_tools: List of MCP tool names the agent can execute\n    hardware: Optional hardware class, model, and I/O (v2.4+)\n    inference: Optional inference modes and local models (v2.4+)\n\nExample:\n    >>> capability = Capability(\n    ...     asap_version=\"0.1\",\n    ...     skills=[Skill(id=\"research\", description=\"Research skill\")],\n    ...     state_persistence=True,\n    ...     streaming=True,\n    ...     mcp_tools=[\"web_search\"]\n    ... )",
       "properties": {
         "asap_version": {
           "default": "0.1",
@@ -232,6 +126,162 @@
         "asap"
       ],
       "title": "Endpoint",
+      "type": "object"
+    },
+    "HardwareCapability": {
+      "additionalProperties": false,
+      "description": "Optional hardware hosting profile for edge and physical agents (v2.4+).\n\nAll fields are optional; registrants may omit the object entirely.",
+      "properties": {
+        "class": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HardwareClass"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Hardware class hosting the agent"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Specific board or SoC (e.g. jetson_orin_nano_super_8gb)",
+          "title": "Model"
+        },
+        "io": {
+          "description": "Physical I/O interfaces available to the agent",
+          "items": {
+            "$ref": "#/$defs/HardwareIoType"
+          },
+          "title": "Io",
+          "type": "array"
+        }
+      },
+      "title": "HardwareCapability",
+      "type": "object"
+    },
+    "HardwareClass": {
+      "description": "Hardware class for edge and physical agents (manifest v2.4+).",
+      "enum": [
+        "cloud",
+        "sbc",
+        "edge_accelerator",
+        "microcontroller",
+        "desktop"
+      ],
+      "title": "HardwareClass",
+      "type": "string"
+    },
+    "HardwareIoType": {
+      "description": "Physical I/O interfaces advertised on a manifest (v2.4+).",
+      "enum": [
+        "gpio",
+        "i2c",
+        "spi",
+        "uart",
+        "csi_camera",
+        "usb_camera",
+        "audio_in",
+        "audio_out",
+        "bluetooth",
+        "lora",
+        "ble"
+      ],
+      "title": "HardwareIoType",
+      "type": "string"
+    },
+    "InferenceCapability": {
+      "additionalProperties": false,
+      "description": "Optional local and cloud inference modes advertised by the agent (v2.4+).",
+      "properties": {
+        "modes": {
+          "description": "Supported inference execution modes",
+          "items": {
+            "$ref": "#/$defs/InferenceMode"
+          },
+          "title": "Modes",
+          "type": "array"
+        },
+        "local_models": {
+          "description": "Self-reported local models (optional throughput)",
+          "items": {
+            "$ref": "#/$defs/LocalModelInfo"
+          },
+          "title": "Local Models",
+          "type": "array"
+        }
+      },
+      "title": "InferenceCapability",
+      "type": "object"
+    },
+    "InferenceMode": {
+      "description": "Inference execution modes (manifest v2.4+).",
+      "enum": [
+        "cloud",
+        "local_cpu",
+        "local_cuda",
+        "local_metal",
+        "local_npu"
+      ],
+      "title": "InferenceMode",
+      "type": "string"
+    },
+    "LocalModelInfo": {
+      "additionalProperties": false,
+      "description": "Self-reported metadata for a model running on-device (v2.4+).\n\nAttributes:\n    id: Model identifier (e.g. Hugging Face repo or GGUF name)\n    quantization: Quantization label (e.g. Q4_K_M)\n    throughput_tokens_per_second: Optional self-reported throughput",
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Model identifier",
+          "title": "Id"
+        },
+        "quantization": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Quantization label",
+          "title": "Quantization"
+        },
+        "throughput_tokens_per_second": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Self-reported throughput (tokens per second)",
+          "title": "Throughput Tokens Per Second"
+        }
+      },
+      "title": "LocalModelInfo",
       "type": "object"
     },
     "SLADefinition": {
@@ -346,7 +396,7 @@
       "type": "object"
     },
     "VerificationState": {
-      "description": "Verification status for marketplace trust badge (Task 3.6).\n\nWhen status is VERIFIED, the agent displays a Verified badge in the registry UI.",
+      "description": "Verification status for marketplace trust badge.",
       "enum": [
         "verified",
         "pending",
@@ -357,7 +407,7 @@
     },
     "VerificationStatus": {
       "additionalProperties": false,
-      "description": "Verification status for marketplace trust badge (Task 3.6).\n\nWhen status is 'verified', the agent displays a Verified badge in the\nregistry UI. Admins add this after manual review of verification requests.",
+      "description": "Verification status for marketplace trust badge.",
       "properties": {
         "status": {
           "$ref": "#/$defs/VerificationState",
@@ -386,7 +436,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Self-describing metadata about an agent's capabilities.\n\nThe manifest is analogous to A2A's Agent Card but extended with\nadditional ASAP-specific features. It provides all information\nneeded to interact with an agent.\n\nAttributes:\n    id: Unique agent identifier (matches Agent.id)\n    name: Human-readable agent name\n    version: Semantic version of the agent\n    description: Description of what the agent does\n    capabilities: Detailed capability information\n    endpoints: Network endpoints for communication\n    auth: Optional authentication configuration\n    signature: Optional cryptographic signature for manifest verification\n    sla: Optional SLA guarantees (availability, latency, error rate)\n    ttl_seconds: How long to consider agent alive without re-check (default 300)\n\nExample:\n    >>> manifest = Manifest(\n    ...     id=\"urn:asap:agent:research-v1\",\n    ...     name=\"Research Agent\",\n    ...     version=\"1.0.0\",\n    ...     description=\"Performs web research and summarization\",\n    ...     capabilities=Capability(\n    ...         asap_version=\"0.1\",\n    ...         skills=[Skill(id=\"web_research\", description=\"Research skill\")],\n    ...         state_persistence=True\n    ...     ),\n    ...     endpoints=Endpoint(asap=\"https://api.example.com/asap\")\n    ... )\n    >>> # With SLA (optional):\n    >>> manifest_with_sla = Manifest(\n    ...     id=\"urn:asap:agent:research-v1\",\n    ...     name=\"Research Agent\",\n    ...     version=\"1.0.0\",\n    ...     description=\"Performs web research\",\n    ...     capabilities=Capability(\n    ...         asap_version=\"0.1\",\n    ...         skills=[Skill(id=\"web_research\", description=\"Research skill\")],\n    ...         state_persistence=True,\n    ...     ),\n    ...     endpoints=Endpoint(asap=\"https://api.example.com/asap\"),\n    ...     sla=SLADefinition(\n    ...         availability=\"99.5%\",\n    ...         max_latency_p95_ms=500,\n    ...         max_error_rate=\"1%\",\n    ...         support_hours=\"24/7\",\n    ...     ),\n    ... )",
+  "description": "Self-describing metadata about an agent's capabilities.\n\nThe manifest is analogous to A2A's Agent Card but extended with\nadditional ASAP-specific features. It provides all information\nneeded to interact with an agent.\n\nAttributes:\n    id: Unique agent identifier (matches Agent.id)\n    name: Human-readable agent name\n    version: Semantic version of the agent\n    description: Description of what the agent does\n    capabilities: Detailed capability information\n    endpoints: Network endpoints for communication\n    supported_versions: Supported HTTP wire versions (discovery)\n    auth: Optional authentication configuration\n    signature: Optional cryptographic signature for manifest verification\n    sla: Optional SLA guarantees (availability, latency, error rate)\n    ttl_seconds: How long to consider agent alive without re-check (default 300)\n\nExample:\n    >>> manifest = Manifest(\n    ...     id=\"urn:asap:agent:research-v1\",\n    ...     name=\"Research Agent\",\n    ...     version=\"1.0.0\",\n    ...     description=\"Performs web research and summarization\",\n    ...     capabilities=Capability(\n    ...         asap_version=\"0.1\",\n    ...         skills=[Skill(id=\"web_research\", description=\"Research skill\")],\n    ...         state_persistence=True\n    ...     ),\n    ...     endpoints=Endpoint(asap=\"https://api.example.com/asap\")\n    ... )\n    >>> # With SLA (optional):\n    >>> manifest_with_sla = Manifest(\n    ...     id=\"urn:asap:agent:research-v1\",\n    ...     name=\"Research Agent\",\n    ...     version=\"1.0.0\",\n    ...     description=\"Performs web research\",\n    ...     capabilities=Capability(\n    ...         asap_version=\"0.1\",\n    ...         skills=[Skill(id=\"web_research\", description=\"Research skill\")],\n    ...         state_persistence=True,\n    ...     ),\n    ...     endpoints=Endpoint(asap=\"https://api.example.com/asap\"),\n    ...     sla=SLADefinition(\n    ...         availability=\"99.5%\",\n    ...         max_latency_p95_ms=500,\n    ...         max_error_rate=\"1%\",\n    ...         support_hours=\"24/7\",\n    ...     ),\n    ... )",
   "properties": {
     "id": {
       "description": "Unique agent identifier (URN format)",
@@ -415,6 +465,15 @@
     "endpoints": {
       "$ref": "#/$defs/Endpoint",
       "description": "Communication endpoints"
+    },
+    "supported_versions": {
+      "description": "Supported ASAP HTTP wire versions (discovery / ASAP-Version)",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Supported Versions",
+      "type": "array"
     },
     "auth": {
       "anyOf": [
@@ -463,7 +522,7 @@
         }
       ],
       "default": null,
-      "description": "Verification status for marketplace trust badge (Task 3.6)"
+      "description": "Verification status for marketplace trust badge"
     },
     "ttl_seconds": {
       "default": 300,
