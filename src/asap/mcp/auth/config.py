@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from asap.auth.agent_jwt import JtiReplayCache
+from asap.auth.jti_replay_cache import JtiReplayCacheProtocol
 from asap.auth.capabilities import CapabilityRegistry
 from asap.auth.identity import AgentStore, HostStore
 from asap.mcp.auth.jwt_extractor import default_jwt_extractor
@@ -45,7 +45,7 @@ class MCPAuthConfig:
     validate_tools_at_startup: bool = False
     jwt_extractor: Callable[[CallToolRequestParams], str | None] | None = None
     allow_env_jwt_fallback: bool = False
-    jti_replay_cache: JtiReplayCache | None = None
+    jti_replay_cache: JtiReplayCacheProtocol | None = None
     expected_audience: str | list[str] | None = None
     manifest_url: str | None = None
 

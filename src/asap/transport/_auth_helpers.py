@@ -9,11 +9,11 @@ from fastapi.responses import JSONResponse
 
 from asap.auth.agent_jwt import (
     HOST_REVOKED_ERROR,
-    JtiReplayCache,
     JwtVerifyResult,
     verify_host_jwt,
 )
 from asap.auth.identity import HostStore
+from asap.auth.jti_replay_cache import JtiReplayCacheProtocol
 
 # ``identity_host_store`` and ``identity_jwt_audience`` are attached to
 # ``app.state`` by :func:`asap.transport.server.create_app`; read at call time
@@ -33,7 +33,7 @@ def bearer_token_from_request(request: Request) -> str | None:
 async def verify_host_bearer(
     request: Request,
     *,
-    jti_replay_cache: JtiReplayCache | None,
+    jti_replay_cache: JtiReplayCacheProtocol | None,
     require_active_host: bool = True,
     record_jti: bool = True,
 ) -> tuple[JwtVerifyResult | None, JSONResponse | None]:

@@ -19,9 +19,9 @@ from pydantic import Field
 from asap.auth.agent_jwt import (
     AGENT_PUBLIC_KEY_CLAIM,
     HOST_PUBLIC_KEY_CLAIM,
-    JtiReplayCache,
     JwtVerifyResult,
 )
+from asap.auth.jti_replay_cache import JtiReplayCacheProtocol
 from asap.auth.approval import (
     A2HApprovalChannel,
     ApprovalMethod,
@@ -281,7 +281,7 @@ async def _handle_agent_register(
     background_tasks: BackgroundTasks,
 ) -> JSONResponse:
     """Create or return an agent session from a verified Host JWT."""
-    jti_cache: JtiReplayCache = request.app.state.identity_jti_cache
+    jti_cache: JtiReplayCacheProtocol = request.app.state.identity_jti_cache
     result, err = await verify_host_bearer(request, jti_replay_cache=jti_cache)
     if err is not None:
         return err
@@ -503,7 +503,7 @@ async def _handle_agent_register(
 
 async def _handle_agent_status(request: Request, agent_id: str) -> JSONResponse:
     """Return agent session status and lifecycle for the authenticated host."""
-    jti_cache: JtiReplayCache = request.app.state.identity_jti_cache
+    jti_cache: JtiReplayCacheProtocol = request.app.state.identity_jti_cache
     # Status polling may legitimately reuse the same Host JWT, but issue #249
     # still requires rejecting tokens already consumed on recording routes.
     result, err = await verify_host_bearer(
@@ -624,7 +624,7 @@ async def _handle_agent_status(request: Request, agent_id: str) -> JSONResponse:
 
 async def _handle_agent_revoke(request: Request, body: AgentRevokeBody) -> JSONResponse:
     """Permanently revoke an agent session for the authenticated host."""
-    jti_cache: JtiReplayCache = request.app.state.identity_jti_cache
+    jti_cache: JtiReplayCacheProtocol = request.app.state.identity_jti_cache
     result, err = await verify_host_bearer(request, jti_replay_cache=jti_cache)
     if err is not None:
         return err
@@ -657,7 +657,7 @@ async def _handle_agent_revoke(request: Request, body: AgentRevokeBody) -> JSONR
 
 async def _handle_agent_rotate_key(request: Request, body: AgentRotateKeyBody) -> JSONResponse:
     """Replace the agent session's Ed25519 public JWK (old JWTs no longer verify)."""
-    jti_cache: JtiReplayCache = request.app.state.identity_jti_cache
+    jti_cache: JtiReplayCacheProtocol = request.app.state.identity_jti_cache
     result, err = await verify_host_bearer(request, jti_replay_cache=jti_cache)
     if err is not None:
         return err
