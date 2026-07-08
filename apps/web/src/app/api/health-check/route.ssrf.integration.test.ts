@@ -14,7 +14,7 @@ function createRequest(url: string): NextRequest {
 
 describe('GET /api/health-check', () => {
   beforeEach(() => {
-    vi.mocked(checkProxyRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkProxyRateLimit).mockResolvedValue({ allowed: true });
   });
 
   it('returns 400 for loopback URL 127.0.0.2', async () => {

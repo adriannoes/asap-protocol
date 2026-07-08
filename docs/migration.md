@@ -952,6 +952,30 @@ app = create_app(manifest, identity_jti_cache=jti_cache, ...)
 MCP Auth Bridge deployments can pass the same instance through
 ``MCPAuthConfig(jti_replay_cache=jti_cache)``.
 
+#### Web app distributed rate limits (#209)
+
+Self-hosted or multi-instance `apps/web` deployments can share dashboard and
+proxy rate-limit counters across replicas by configuring Upstash Redis REST
+credentials (or Vercel KV, which uses the same client):
+
+```bash
+# Upstash Redis
+UPSTASH_REDIS_REST_URL=https://....upstash.io
+UPSTASH_REDIS_REST_TOKEN=...
+
+# Vercel KV (when linked to the project)
+# KV_REST_API_URL=...
+# KV_REST_API_TOKEN=...
+```
+
+When these variables are unset, behavior is unchanged from v2.5.1: per-instance
+in-memory limits in `apps/web/src/lib/rate-limit.ts`. No code changes are
+required for local development.
+
+The Redis backend uses a **fixed window** aligned with the in-memory fallback.
+If Redis is unreachable, the app falls back to per-instance in-memory limits
+(weaker on multi-instance deploys); set both URL and token from the same
+provider family (Upstash **or** Vercel KV) to avoid misconfiguration.
 
 ---
 

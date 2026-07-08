@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const { url } = parsed.data;
 
     const ip = getClientIp(request);
-    const rateCheck = checkProxyRateLimit(ip);
+    const rateCheck = await checkProxyRateLimit(ip);
     if (!rateCheck.allowed) {
         return NextResponse.json(
             { error: 'Too many requests', retryAfter: rateCheck.retryAfter },

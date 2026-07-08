@@ -64,7 +64,7 @@ export async function fetchUserRegistrationIssues() {
 
         const userId =
             (session.user as { id?: string }).id ?? session.user.username ?? 'anonymous';
-        if (!checkRateLimit(userId, 30, 60_000)) {
+        if (!(await checkRateLimit(userId, 30, 60_000))) {
             return { success: false, error: 'Too many requests. Please try again in a minute.' };
         }
 

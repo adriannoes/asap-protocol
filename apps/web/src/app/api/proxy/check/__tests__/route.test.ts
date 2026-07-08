@@ -19,7 +19,7 @@ function createRequest(targetUrl: string, headers?: Record<string, string>): Nex
 describe('GET /api/proxy/check', () => {
     beforeEach(() => {
         vi.mocked(isAllowedProxyUrlAsync).mockResolvedValue({ valid: true });
-        vi.mocked(checkProxyRateLimit).mockReturnValue({ allowed: true });
+        vi.mocked(checkProxyRateLimit).mockResolvedValue({ allowed: true });
     });
 
     it('returns 400 when url parameter is missing', async () => {
@@ -31,7 +31,7 @@ describe('GET /api/proxy/check', () => {
     });
 
     it('returns 429 and Retry-After when rate limit blocks request', async () => {
-        vi.mocked(checkProxyRateLimit).mockReturnValue({ allowed: false, retryAfter: 9 });
+        vi.mocked(checkProxyRateLimit).mockResolvedValue({ allowed: false, retryAfter: 9 });
         const req = createRequest('https://example.com/health', { 'x-forwarded-for': '198.51.100.20' });
         const res = await GET(req);
         expect(res.status).toBe(429);
@@ -41,7 +41,7 @@ describe('GET /api/proxy/check', () => {
     });
 
     it('uses x-real-ip when x-forwarded-for is absent', async () => {
-        vi.mocked(checkProxyRateLimit).mockReturnValue({ allowed: true });
+        vi.mocked(checkProxyRateLimit).mockResolvedValue({ allowed: true });
         const req = createRequest('https://example.com/health', { 'x-real-ip': '203.0.113.5' });
         await GET(req);
         expect(checkProxyRateLimit).toHaveBeenCalledWith('203.0.113.5');

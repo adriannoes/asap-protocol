@@ -18,7 +18,7 @@ export async function submitVerificationRequest(
     const userId = (session.user as { id?: string }).id ?? 'anonymous';
     const username = (session.user as { username?: string }).username || session.user.name;
     const isE2E = process.env.ENABLE_FIXTURE_ROUTES === 'true' && username === 'e2e-tester';
-    if (!isE2E && !checkRateLimit(userId, 5, 60_000)) {
+    if (!isE2E && !(await checkRateLimit(userId, 5, 60_000))) {
         return { success: false, error: 'Too many verification attempts. Please try again in a minute.' };
     }
 
