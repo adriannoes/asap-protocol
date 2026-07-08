@@ -1,8 +1,8 @@
 """Usage metering REST API (v1.3). Requires metering_storage on app state.
 
-**Security (v1.3):** This API is intended for local/operator use only. Endpoints
-are unauthenticated by default. When exposing beyond localhost, configure
-OAuth2 or network-level access controls. Rate limiting is applied per-client.
+**Security:** Unauthenticated by default (local/operator use). Pass
+``require_auth=True`` from ``create_app(require_operator_auth=True)`` to require
+an OAuth2 Bearer JWT with scope ``asap:admin``. Rate limiting is applied per-client.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from pydantic import ValidationError
 
+from asap.auth.scopes import SCOPE_ADMIN, require_scope
 from asap.economics import BatchUsageRequest, MeteringQuery, UsageMetrics
 from asap.economics.storage import MeteringStorage
 from asap.transport._state_deps import rate_limiter, require_state
@@ -42,11 +43,22 @@ def get_metering_storage(request: Request) -> MeteringStorage:
     return cast(MeteringStorage, storage)
 
 
-def create_usage_router() -> APIRouter:
+def create_usage_router(*, require_auth: bool = False) -> APIRouter:
+    """Create the usage metering router.
+
+    Args:
+        require_auth: When True, require OAuth2 claims with scope ``asap:admin``.
+
+    Example:
+        >>> router = create_usage_router(require_auth=True)
+    """
+    deps = [Depends(_rate_limit_usage)]
+    if require_auth:
+        deps.append(Depends(require_scope(SCOPE_ADMIN)))
     router = APIRouter(
         prefix="/usage",
         tags=["usage"],
-        dependencies=[Depends(_rate_limit_usage)],
+        dependencies=deps,
     )
 
     @router.get("")

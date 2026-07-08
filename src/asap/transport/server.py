@@ -70,6 +70,7 @@ from asap.observability import get_logger, is_debug_mode
 from asap.observability import is_debug_log_mode as is_debug_log_mode
 from asap.observability.tracing import configure_tracing
 from asap.auth import JWKSValidator, OAuth2Config, OAuth2Middleware
+from asap.auth.middleware import OPERATOR_API_PATH_PREFIXES
 from asap.auth.agent_jwt import JtiReplayCache
 from asap.auth.approval import A2HApprovalChannel, ApprovalStore, InMemoryApprovalStore
 from asap.auth.self_auth import (
@@ -536,16 +537,29 @@ def _populate_app_state(
     app.state.snapshot_store = snapshot_store
     app.state.metering_store = metering_store
     app.state.audit_store = audit_store
-    if audit_store is not None:
-        logger.warning(
-            "asap.server.audit_api_unauthenticated",
-            message=(
-                "Audit API (/audit) is enabled but unauthenticated. "
-                "Intended for local/operator use only. "
-                "Protect with OAuth2 or network controls when exposed."
-            ),
-        )
+    # Unauthenticated-operator-API warnings are emitted after the
+    # ``require_operator_auth`` flag is known (#209).
     _ = manifest  # manifest already stored on app.state by _create_fastapi_app
+
+
+def _warn_if_operator_api_unauthenticated(
+    event: str, display: str, path: str, *, require_auth: bool
+) -> None:
+    """Warn that an operator API is exposed without auth (skipped when protected).
+
+    When ``require_auth`` is True the API is guarded by OAuth2 scope ``asap:admin``
+    (aggregate ``asap.server.operator_api_auth_enabled`` log), so no warning fires.
+    """
+    if require_auth:
+        return
+    logger.warning(
+        event,
+        message=(
+            f"{display} ({path}) is enabled but unauthenticated. "
+            "Intended for local/operator use only. Protect with OAuth2 or network "
+            "controls when exposed (create_app(require_operator_auth=True))."
+        ),
+    )
 
 
 def _wire_optional_routers(
@@ -559,6 +573,7 @@ def _wire_optional_routers(
     delegation_storage: object | None,
     mtls_config: MTLSConfig | None,
     manifest: Manifest,
+    require_operator_auth: bool = False,
 ) -> None:
     """Include feature-flagged routers: identity, capability, registry, usage, SLA, delegation."""
     app.include_router(create_agent_identity_router())
@@ -585,13 +600,12 @@ def _wire_optional_routers(
 
     if metering_storage is not None and isinstance(metering_storage, MeteringStorage):
         app.state.metering_storage = metering_storage
-        app.include_router(create_usage_router())
-        logger.warning(
+        app.include_router(create_usage_router(require_auth=require_operator_auth))
+        _warn_if_operator_api_unauthenticated(
             "asap.server.usage_api_unauthenticated",
-            message=(
-                "Usage API (/usage) is enabled but unauthenticated. "
-                "Intended for local/operator use only. Protect with OAuth2 or network controls when exposed."
-            ),
+            "Usage API",
+            "/usage",
+            require_auth=require_operator_auth,
         )
 
     if mtls_config is not None:
@@ -603,13 +617,12 @@ def _wire_optional_routers(
 
     if sla_storage is not None and isinstance(sla_storage, SLAStorage):
         app.state.sla_storage = sla_storage
-        app.include_router(create_sla_router())
-        logger.warning(
+        app.include_router(create_sla_router(require_auth=require_operator_auth))
+        _warn_if_operator_api_unauthenticated(
             "asap.server.sla_api_unauthenticated",
-            message=(
-                "SLA API (/sla) is enabled but unauthenticated. "
-                "Intended for local/operator use only. Protect with OAuth2 or network controls when exposed."
-            ),
+            "SLA API",
+            "/sla",
+            require_auth=require_operator_auth,
         )
 
     if oauth2_config is not None and delegation_key_store is not None:
@@ -632,6 +645,7 @@ def _wire_middleware(
     asap_challenge_discovery_url: str | None,
     asap_challenge_path_prefixes: tuple[str, ...] | None,
     manifest: Manifest,
+    require_operator_auth: bool = False,
 ) -> None:
     """Add the size-limit, OAuth2, ASAP-version, and WWW-Authenticate middlewares."""
     # Size limit runs before routing.
@@ -647,6 +661,10 @@ def _wire_middleware(
             "expected_issuer": oauth2_config.expected_issuer,
             "expected_audience": oauth2_config.expected_audience,
         }
+        if require_operator_auth:
+            # Keep OAuth2Config.required_scope untouched so /asap tasks are not
+            # forced to asap:admin; admin is enforced on operator routers via Depends.
+            middleware_kwargs["extra_path_prefixes"] = OPERATOR_API_PATH_PREFIXES
         if oauth2_config.jwks_fetcher is not None:
             middleware_kwargs["jwks_fetcher"] = oauth2_config.jwks_fetcher
         # ONE canonical JWKSValidator shared by both transports so the HTTP
@@ -675,6 +693,7 @@ def _wire_middleware(
             manifest_id=manifest.id,
             jwks_uri=oauth2_config.jwks_uri,
             path_prefix=oauth2_config.path_prefix,
+            operator_auth=require_operator_auth,
         )
 
     app.add_middleware(ASAPVersionMiddleware)
@@ -695,14 +714,20 @@ def _wire_middleware(
         )
 
 
-def _wire_core_routes(app: FastAPI, *, manifest: Manifest, rate_limit: str | None) -> None:
+def _wire_core_routes(
+    app: FastAPI,
+    *,
+    manifest: Manifest,
+    rate_limit: str | None,
+    require_operator_auth: bool = False,
+) -> None:
     """Include the core route groups: health/discovery/metrics, JSON-RPC, WS, audit."""
     _ = manifest  # routers read manifest from app.state
     _ = rate_limit  # rate limiting wired separately via _configure_rate_limiting
     app.include_router(create_health_router())
     app.include_router(create_jsonrpc_router())
     app.include_router(create_websocket_router())
-    app.include_router(create_audit_router())
+    app.include_router(create_audit_router(require_auth=require_operator_auth))
 
 
 def _configure_rate_limiting(
@@ -773,6 +798,7 @@ def create_app(
         "/asap/capability",
         "/asap/agent",
     ),
+    require_operator_auth: bool = False,
 ) -> FastAPI:
     """Create and configure a FastAPI application for ASAP protocol.
 
@@ -866,12 +892,17 @@ def create_app(
             ``oauth2_config.path_prefix`` to ``"/"`` (or a prefix covering ``/registry``) so
             :class:`~asap.auth.middleware.OAuth2Middleware` applies; rate limits use
             ``app.state.registration_limiter`` (5/hour per Bearer token).
+        require_operator_auth: When True, require a valid OAuth2 Bearer JWT with scope
+            ``asap:admin`` on ``/usage``, ``/sla``, and ``/audit``. Requires
+            ``oauth2_config``. Default False preserves local/operator open access
+            (startup warnings remain when those APIs are enabled without auth).
 
     Returns:
         Configured FastAPI application ready to run
 
     Raises:
-        ValueError: If manifest requires authentication but no token_validator provided
+        ValueError: If manifest requires authentication but no token_validator provided,
+            or if ``require_operator_auth`` is True without ``oauth2_config``.
 
     Example:
         >>> from asap.models.entities import Manifest, Capability, Endpoint, Skill, AuthScheme, SLADefinition
@@ -909,6 +940,12 @@ def create_app(
         >>> app = create_app(manifest, registry)
         >>> # Run with uvicorn: uvicorn module:app
     """
+    if require_operator_auth and oauth2_config is None:
+        raise ValueError(
+            "require_operator_auth=True requires oauth2_config so /usage, /sla, and "
+            "/audit can validate Bearer JWTs with scope asap:admin"
+        )
+
     components = _build_server_components(
         manifest=manifest,
         registry=registry,
@@ -948,6 +985,19 @@ def create_app(
         identity_webauthn_verifier=identity_webauthn_verifier,
         identity_rate_limit=identity_rate_limit,
     )
+    if audit_store is not None:
+        _warn_if_operator_api_unauthenticated(
+            "asap.server.audit_api_unauthenticated",
+            "Audit API",
+            "/audit",
+            require_auth=require_operator_auth,
+        )
+    if require_operator_auth:
+        logger.info(
+            "asap.server.operator_api_auth_enabled",
+            paths=list(OPERATOR_API_PATH_PREFIXES),
+            required_scope="asap:admin",
+        )
     _wire_optional_routers(
         app,
         registry_auto_registration=registry_auto_registration,
@@ -958,6 +1008,7 @@ def create_app(
         delegation_storage=delegation_storage,
         mtls_config=mtls_config,
         manifest=manifest,
+        require_operator_auth=require_operator_auth,
     )
     _wire_middleware(
         app,
@@ -967,8 +1018,14 @@ def create_app(
         asap_challenge_discovery_url=asap_challenge_discovery_url,
         asap_challenge_path_prefixes=asap_challenge_path_prefixes,
         manifest=manifest,
+        require_operator_auth=require_operator_auth,
     )
-    _wire_core_routes(app, manifest=manifest, rate_limit=rate_limit)
+    _wire_core_routes(
+        app,
+        manifest=manifest,
+        rate_limit=rate_limit,
+        require_operator_auth=require_operator_auth,
+    )
     _configure_rate_limiting(app, rate_limit=rate_limit, manifest=manifest)
     # OpenTelemetry tracing (zero-config via OTEL_* env vars)
     configure_tracing(service_name=manifest.id, app=app)

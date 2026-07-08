@@ -1,22 +1,33 @@
 """Audit log route group: ``GET /audit``.
 
 Queries the tamper-evident audit log when ``app.state.audit_store`` is set.
-Unauthenticated by default (intended for local/operator use only).
+Unauthenticated by default (local/operator use). Pass ``require_auth=True``
+from ``create_app(require_operator_auth=True)`` to require an OAuth2 Bearer JWT
+with scope ``asap:admin``.
 """
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 
+from asap.auth.scopes import SCOPE_ADMIN, require_scope
 from asap.economics.audit import AuditStore
 
 
-def create_audit_router() -> APIRouter:
-    """Create the audit router with ``GET /audit`` (no-op when no store is set)."""
-    router = APIRouter(tags=["audit"])
+def create_audit_router(*, require_auth: bool = False) -> APIRouter:
+    """Create the audit router with ``GET /audit`` (no-op when no store is set).
+
+    Args:
+        require_auth: When True, require OAuth2 claims with scope ``asap:admin``.
+    """
+    deps: list[Any] = []
+    if require_auth:
+        deps.append(Depends(require_scope(SCOPE_ADMIN)))
+    router = APIRouter(tags=["audit"], dependencies=deps)
 
     @router.get("/audit")
     async def get_audit_log(

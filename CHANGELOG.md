@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Opt-in operator API auth (#209)**: `create_app(require_operator_auth=True)`
+  requires an OAuth2 Bearer JWT with scope ``asap:admin`` on ``/usage``,
+  ``/sla``, and ``/audit``. Default remains open (local/operator ergonomics)
+  with the existing startup warnings. Requires ``oauth2_config``.
+
 ### Changed
 
 - **CLI legacy imports (#242)**: `DEFAULT_SCHEMAS_DIR`, `export_all_schemas`, and
@@ -25,7 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Adapter Lab II** — new framework adapters (separate PRD: [prd-v2.5.1-adapter-lab-ii.md](product/prd/prd-v2.5.1-adapter-lab-ii.md)).
 - `extra="forbid"` on ingress payload models (`TaskRequestConfig`, `CommonMetadata`).
-- Opt-in protection for operator APIs (`/usage`, `/sla`, `/audit`).
 - Redis-backed `JtiReplayCache` and distributed Next.js rate limits.
 - `@asap-protocol/mcp-auth` HTTP/SSE middleware (deferred from v2.5.0 — see [2.5.0] TypeScript note and [typescript-mcp-auth-spike.md](engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md)).
 - Collapse the dual `UsageMetrics`/`InMemoryMeteringStore` pair retained in S1 for API stability.

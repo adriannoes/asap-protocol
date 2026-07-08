@@ -854,6 +854,57 @@ from asap.cli.repl import _repl_namespace
 
 `asap = "asap.cli:main"` and `from asap.cli import app, main` are unchanged.
 
+#### Opt-in operator API auth (#209)
+
+`/usage`, `/sla`, and `/audit` remain **open by default** (local/operator ergonomics).
+To require OAuth2 when exposing them beyond localhost:
+
+```python
+from asap.auth import OAuth2Config
+from asap.transport.server import create_app
+
+app = create_app(
+    manifest,
+    oauth2_config=OAuth2Config(jwks_uri="https://idp.example.com/jwks.json"),
+    metering_storage=...,
+    sla_storage=...,
+    audit_store=...,
+    require_operator_auth=True,
+    # Bearer JWT must include scope asap:admin AND pass identity binding
+    # (custom claim = manifest.id, or sub in ASAP_AUTH_SUBJECT_MAP).
+)
+```
+
+Issue tokens from your IdP with **both** scope and identity binding — a common
+first-deploy mistake is `asap:admin` without the custom claim (403 identity mismatch):
+
+```python
+# Example JWT claims for an operator / dashboard token
+{
+    "sub": "urn:asap:agent:operator",  # or auth0|... / human IdP subject
+    "scope": "asap:admin",
+    # Default claim key (override with ASAP_AUTH_CUSTOM_CLAIM):
+    "https://github.com/adriannoes/asap-protocol/agent_id": manifest.id,
+}
+```
+
+If the IdP cannot emit custom claims, map `sub` via `ASAP_AUTH_SUBJECT_MAP`
+instead. See [Configuring Custom Claims](security/v1.1-security-model.md#configuring-custom-claims)
+and [Allowlist fallback](security/v1.1-security-model.md#option-2-allowlist-fallback).
+
+`require_operator_auth=True` without `oauth2_config` raises `ValueError` at
+startup. Operator tokens must:
+
+- carry scope ``asap:admin`` (``asap:execute`` alone yields 403); and
+- satisfy identity binding — the JWT custom claim (`ASAP_AUTH_CUSTOM_CLAIM`,
+  default `agent_id`) must equal the server `manifest.id`, or the subject must be
+  listed in `ASAP_AUTH_SUBJECT_MAP`. Human/operator IdP tokens without this claim
+  get **403 identity mismatch** (same rule already applied to `/asap`).
+
+If you set `OAuth2Config.required_scope` for `/asap` tasks, it is **not** applied
+to `/usage`, `/sla`, or `/audit`: those enforce only ``asap:admin`` via the route
+dependency, so an admin-only token is accepted regardless of the global scope.
+
 ---
 
 ### Upgrading from v2.4.1 to v2.5.0
