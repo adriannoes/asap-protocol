@@ -60,6 +60,7 @@ dev = [
     "types-jsonschema>=4.0.0",
     "ruff>=0.14.14",
     "pip-audit>=2.7",
+    "fakeredis>=2.26.0",
 ]
 docs = [
     "ghp-import>=2.1.0",

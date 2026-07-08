@@ -72,6 +72,7 @@ from asap.observability.tracing import configure_tracing
 from asap.auth import JWKSValidator, OAuth2Config, OAuth2Middleware
 from asap.auth.middleware import OPERATOR_API_PATH_PREFIXES
 from asap.auth.agent_jwt import JtiReplayCache
+from asap.auth.jti_replay_cache import JtiReplayCacheProtocol
 from asap.auth.approval import A2HApprovalChannel, ApprovalStore, InMemoryApprovalStore
 from asap.auth.self_auth import (
     FreshSessionConfig,
@@ -286,7 +287,7 @@ class ServerComponents:
     nonce_store: NonceStore | None
     identity_host_store: HostStore
     identity_agent_store: AgentStore
-    identity_jti_cache: JtiReplayCache
+    identity_jti_cache: JtiReplayCacheProtocol
     identity_jwt_audience: str | list[str]
     identity_approval_store: ApprovalStore
     snapshot_store: SnapshotStore
@@ -306,7 +307,7 @@ def _build_server_components(
     metering_storage: object | None,
     identity_host_store: HostStore | None,
     identity_agent_store: AgentStore | None,
-    identity_jti_cache: JtiReplayCache | None,
+    identity_jti_cache: JtiReplayCacheProtocol | None,
     identity_jwt_audience: str | list[str] | None,
     identity_approval_store: ApprovalStore | None,
 ) -> ServerComponents:
@@ -782,7 +783,7 @@ def create_app(
     audit_store: AuditStore | None = None,
     identity_host_store: HostStore | None = None,
     identity_agent_store: AgentStore | None = None,
-    identity_jti_cache: JtiReplayCache | None = None,
+    identity_jti_cache: JtiReplayCacheProtocol | None = None,
     identity_jwt_audience: str | list[str] | None = None,
     identity_rate_limit: str | None = None,
     identity_approval_store: ApprovalStore | None = None,
@@ -863,11 +864,14 @@ def create_app(
             message processing events.
         identity_host_store: Optional HostStore; default in-memory when both stores omitted.
         identity_agent_store: Optional AgentStore; must be set with identity_host_store or both omitted.
-        identity_jti_cache: Optional ``jti`` replay cache for Host JWT on agent routes.
+        identity_jti_cache: Optional ``jti`` replay cache for Host/Agent JWT routes.
             Mutating routes record ``jti`` values; ``GET /asap/agent/status`` uses
             the same cache in read-only mode so polling can reuse a token while
             still rejecting Host JWTs already consumed elsewhere. Defaults to a
-            new in-memory cache per app.
+            new in-memory :class:`~asap.auth.agent_jwt.JtiReplayCache` per app.
+            For multi-worker deployments, pass
+            :class:`~asap.auth.jti_replay_cache.RedisJtiReplayCache` (requires
+            the ``redis`` extra).
         identity_jwt_audience: Expected ``aud`` value(s) for Host JWT verification on
             ``/asap/agent/*``. Defaults to ``manifest.id`` so tokens are bound to this
             server instance. Set explicitly for multi-audience or migration scenarios.

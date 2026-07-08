@@ -10,10 +10,10 @@ from fastapi.responses import JSONResponse
 
 from asap.auth.agent_jwt import (
     HOST_REVOKED_ERROR,
-    JtiReplayCache,
     JwtVerifyResult,
     verify_agent_jwt,
 )
+from asap.auth.jti_replay_cache import JtiReplayCacheProtocol
 from pydantic import ValidationError
 
 from asap.auth.capabilities import CapabilityGrant, CapabilityRegistry
@@ -61,7 +61,7 @@ class AgentReactivateBody(ASAPBaseModel):
 async def verify_agent_bearer(
     request: Request,
     *,
-    jti_replay_cache: JtiReplayCache | None = None,
+    jti_replay_cache: JtiReplayCacheProtocol | None = None,
 ) -> tuple[JwtVerifyResult | None, JSONResponse | None]:
     """Verify an Agent JWT Bearer token."""
     token = bearer_token_from_request(request)
@@ -251,7 +251,7 @@ async def _handle_capability_execute(request: Request) -> JSONResponse:
 
 async def _handle_agent_reactivate(request: Request) -> JSONResponse:
     """Reactivate an expired agent (Host JWT required)."""
-    jti_cache: JtiReplayCache = request.app.state.identity_jti_cache
+    jti_cache: JtiReplayCacheProtocol = request.app.state.identity_jti_cache
     result, err = await verify_host_bearer(request, jti_replay_cache=jti_cache)
     if err is not None:
         return err

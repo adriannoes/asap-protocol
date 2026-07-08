@@ -30,6 +30,7 @@ from asap.auth.identity import (
     extend_session,
     jwk_thumbprint_sha256,
 )
+from asap.auth.jti_replay_cache import JtiReplayCacheProtocol
 from asap.models.ids import generate_id
 
 # Encode/decode: EdDSA (RFC 8037 Ed25519); joserfc also accepts "Ed25519" alias.
@@ -229,7 +230,7 @@ async def verify_host_jwt(
     host_store: HostStore,
     *,
     expected_audience: str | list[str] | None = None,
-    jti_replay_cache: JtiReplayCache | None = None,
+    jti_replay_cache: JtiReplayCacheProtocol | None = None,
     record_jti: bool = True,
 ) -> JwtVerifyResult:
     """Verify a Host JWT signature and resolve the host (or inline registration).
@@ -307,7 +308,7 @@ async def verify_agent_jwt(
     agent_store: AgentStore,
     *,
     expected_audience: str | list[str] | None = None,
-    jti_replay_cache: JtiReplayCache | None = None,
+    jti_replay_cache: JtiReplayCacheProtocol | None = None,
 ) -> JwtVerifyResult:
     """Verify an Agent JWT: typ, signatures, host/agent rows, exp/iat/jti, capabilities.
 

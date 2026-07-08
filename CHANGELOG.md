@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   requires an OAuth2 Bearer JWT with scope ``asap:admin`` on ``/usage``,
   ``/sla``, and ``/audit``. Default remains open (local/operator ergonomics)
   with the existing startup warnings. Requires ``oauth2_config``.
+- **Redis-backed JTI replay cache (#209)**: Optional
+  :class:`~asap.auth.jti_replay_cache.RedisJtiReplayCache` for multi-worker
+  Host/Agent JWT replay protection. Default remains in-memory
+  :class:`~asap.auth.agent_jwt.JtiReplayCache`. Requires
+  ``pip install 'asap-protocol[redis]'``. Inject via
+  ``create_app(identity_jti_cache=...)`` or ``MCPAuthConfig.jti_replay_cache``.
 
 ### Changed
 
@@ -38,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Follow-up (not in v2.5.1)
 
 - **Adapter Lab II** — new framework adapters (separate PRD: [prd-v2.5.1-adapter-lab-ii.md](product/prd/prd-v2.5.1-adapter-lab-ii.md)).
-- Redis-backed `JtiReplayCache` and distributed Next.js rate limits.
+- Distributed Next.js rate limits (Upstash Redis).
 - `@asap-protocol/mcp-auth` HTTP/SSE middleware (deferred from v2.5.0 — see [2.5.0] TypeScript note and [typescript-mcp-auth-spike.md](engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md)).
 - Collapse the dual `UsageMetrics`/`InMemoryMeteringStore` pair retained in S1 for API stability.
 - Reduce the `asap.transport.client` package aggregate LOC below the S2 target.
