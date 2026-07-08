@@ -3,7 +3,7 @@
  * Uses Upstash Redis / Vercel KV when configured; otherwise in-memory per instance.
  */
 
-import { Ratelimit } from '@upstash/ratelimit';
+import { Ratelimit, type Duration } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
 interface Entry {
@@ -88,9 +88,9 @@ function getRedisClient(): Redis | null {
 const userLimiterCache = new Map<string, Ratelimit>();
 let proxyLimiter: Ratelimit | null = null;
 
-function windowLabel(windowMs: number): string {
+function windowLabel(windowMs: number): Duration {
     const seconds = Math.max(1, Math.ceil(windowMs / 1000));
-    return `${seconds} s`;
+    return `${seconds} s` as Duration;
 }
 
 function getUserLimiter(maxRequests: number, windowMs: number): Ratelimit {

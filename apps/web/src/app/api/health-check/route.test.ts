@@ -21,7 +21,7 @@ function createRequest(url?: string, headers?: Record<string, string>): NextRequ
 describe('GET /api/health-check', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(checkProxyRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkProxyRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(isAllowedExternalUrl).mockResolvedValue({ valid: true });
   });
 
@@ -37,7 +37,7 @@ describe('GET /api/health-check', () => {
   });
 
   it('returns 429 and Retry-After when rate limit blocks request', async () => {
-    vi.mocked(checkProxyRateLimit).mockReturnValue({ allowed: false, retryAfter: 12 });
+    vi.mocked(checkProxyRateLimit).mockResolvedValue({ allowed: false, retryAfter: 12 });
     const res = await GET(createRequest('https://example.com/health', { 'x-forwarded-for': '203.0.113.10, 198.51.100.1' }));
     expect(res.status).toBe(429);
     expect(res.headers.get('Retry-After')).toBe('12');
