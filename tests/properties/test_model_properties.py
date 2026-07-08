@@ -92,7 +92,6 @@ def st_json_dict() -> st.SearchStrategy[dict]:
     )
 
 
-
 @st.composite
 def st_common_metadata(draw: st.DrawFn) -> CommonMetadata:
     """Strategy for CommonMetadata (only known keys)."""
