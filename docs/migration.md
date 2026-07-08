@@ -933,6 +933,25 @@ TaskRequest(
 
 `TaskResponse.metrics` still allows extra fields (unchanged in this release).
 
+#### Redis-backed JTI replay cache (#209)
+
+Single-process deployments keep the default in-memory
+:class:`~asap.auth.agent_jwt.JtiReplayCache`. Multi-worker or multi-instance
+hosts should share replay state via
+:class:`~asap.auth.jti_replay_cache.RedisJtiReplayCache` (requires
+``pip install 'asap-protocol[redis]'``):
+
+```python
+from asap.auth.jti_replay_cache import RedisJtiReplayCache
+from asap.transport.server import create_app
+
+jti_cache = RedisJtiReplayCache.from_url("redis://localhost:6379/0")
+app = create_app(manifest, identity_jti_cache=jti_cache, ...)
+```
+
+MCP Auth Bridge deployments can pass the same instance through
+``MCPAuthConfig(jti_replay_cache=jti_cache)``.
+
 
 ---
 

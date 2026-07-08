@@ -40,6 +40,13 @@ class RedisJtiReplayCache:
     Uses ``SET key 1 NX EX ttl`` for atomic first-use recording and ``EXISTS``
     for read-only replay checks (Host JWT polling routes).
 
+    ``partition_key`` and ``jti`` are assumed URL-safe (no ``:``); keys are
+    ``{prefix}:{partition_key}:{jti}``.
+
+    Redis connection errors propagate to callers (same pattern as
+    :mod:`asap.transport.rate_limit`); wrap with health checks or retries
+    if you need graceful degradation.
+
     Example:
         >>> cache = RedisJtiReplayCache.from_url("redis://localhost:6379/0")
         >>> cache.check_and_record("host-thumbprint", "jwt_abc")
@@ -97,5 +104,6 @@ class RedisJtiReplayCache:
         if _jti_blank(jti):
             return False
         key = _redis_key(self._key_prefix, partition_key, jti)
+        # Floor fractional seconds to whole-second Redis EX (in-memory keeps float TTL).
         ttl_int = max(1, int(self._ttl))
         return bool(self._client.set(key, "1", nx=True, ex=ttl_int))
