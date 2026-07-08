@@ -243,7 +243,7 @@ S5 would additionally require: implement minimum scope §4, extend publish workf
 
 ## 8. References
 
-- [PRD v2.5.1 — §3 carry-over (durable defer record)](../../../product/prd/prd-v2.5.1-adapter-lab-ii.md#3-carry-over-from-v250-asap-protocolmcp-auth)
+- [PRD v2.5.3 — §3 carry-over (durable defer record)](../../../product/prd/prd-v2.5.3-adapter-lab-ii.md#3-carry-over-from-v250-asap-protocolmcp-auth)
 - [PRD v2.5.0 MCP Auth Bridge — §5.4 TypeScript](../../../product/prd/prd-v2.5.0-mcp-auth-bridge.md)
 - [Python errors module](../../../src/asap/adapters/mcp/errors.py)
 - [Adapter guide (stdio)](../../../docs/adapters/mcp-auth-bridge.md)

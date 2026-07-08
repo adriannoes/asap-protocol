@@ -44,13 +44,15 @@ product/
 | **v2.4.0 — Edge-AI discovery** | **✅ Released (2026-05-24)** | `prd-v2.4.0-edge-ai-discovery.md` | Hardware/inference manifest fields, registry mirror, marketplace filters, ShellClaw onboarding |
 | **v2.4.1 — Security hardening** | **✅ Released (2026-06-14)** | `prd-v2.4.1-security-hardening.md` | OAuth2 iss/aud validation, fail-closed identity binding, web SSRF/redirect hardening |
 | **v2.5.0 — MCP Auth Bridge** | **✅ Released (2026-06-24)** | `prd-v2.5.0-mcp-auth-bridge.md` + [tasks-v2.5.0-roadmap.md](../engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md) | `asap.adapters.mcp`, compliance `mcp-auth-bridge`; tag [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0) |
-| v2.5.1 — Adapter Lab II | 🔭 Planned (after 2.5.0) | `prd-v2.5.1-adapter-lab-ii.md` | Enterprise/workflow adapters (ex v2.3.2) |
-| v2.5.2 — Distribution Loop | 🔭 Planned (after 2.5.1) | `prd-v2.5.2-distribution-loop.md` | Homepage, templates, metrics (ex v2.3.3) |
-| v2.5.3 — Formal Spec & Interop | 🔭 Planned | `prd-v2.5.3-formal-spec-interop.md` | RFC spec, introspection, privacy, cross-protocol |
+| **v2.5.1 — Code quality patch** | **✅ Released (2026-06-26)** | `engineering/tasks/private/v2.5.1/` | Thermo-nuclear audit S0–S3 + P0 fixes; Adapter Lab II slipped |
+| **v2.5.2 — Security follow-up** | **RELEASE PENDING** | `prd-v2.5.2-security-follow-up.md` | #209 + CR #245–#249 + registry fixes (ex planned v2.5.4) |
+| v2.5.3 — Adapter Lab II | 🔭 Planned (after 2.5.2) | `prd-v2.5.3-adapter-lab-ii.md` | Enterprise/workflow adapters (ex v2.3.2) |
+| v2.5.4 — Distribution Loop | 🔭 Planned (after 2.5.3) | `prd-v2.5.4-distribution-loop.md` | Homepage, templates, metrics (ex v2.3.3) |
+| v2.5.5 — Formal Spec & Interop | 🔭 Planned | `prd-v2.5.5-formal-spec-interop.md` | RFC spec, introspection, privacy, cross-protocol |
 | v2.5.x train index | Active | `prd-v2.5-roadmap.md` | Full schedule + rescope log |
 | v3.0 — Economy | 🔭 Long-term | `prd-v3.0-economy.md` | Settlement, billing |
 
-> **Strategic note**: Registry API Backend (PostgreSQL), Intent-Based Search, Orchestration Primitives, Delegated/Autonomous Mode formalization, and DeepEval remain deferred until their triggers materialize. **Adoption continuation** (Adapter Lab II, Distribution Loop) lives in the **v2.5.1–v2.5.2** train after MCP Auth Bridge (v2.5.0). See [prd/README.md](./prd/README.md).
+> **Strategic note**: Registry API Backend (PostgreSQL), Intent-Based Search, Orchestration Primitives, Delegated/Autonomous Mode formalization, and DeepEval remain deferred until their triggers materialize. **Adoption continuation** (Adapter Lab II, Distribution Loop) lives in the **v2.5.3–v2.5.4** train after the v2.5.2 security follow-up. See [prd/README.md](./prd/README.md).
 
 ## Key entrypoints
 

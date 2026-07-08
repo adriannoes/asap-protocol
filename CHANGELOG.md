@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Follow-up (planned v2.5.3+)
+
+- **Adapter Lab II** — enterprise/workflow adapters ([prd-v2.5.3-adapter-lab-ii.md](product/prd/prd-v2.5.3-adapter-lab-ii.md)).
+- **Distribution Loop** — homepage, templates, metrics ([prd-v2.5.4-distribution-loop.md](product/prd/prd-v2.5.4-distribution-loop.md)).
+- **Formal Spec & Interop** — RFC spec, introspection, privacy ([prd-v2.5.5-formal-spec-interop.md](product/prd/prd-v2.5.5-formal-spec-interop.md)).
+- `@asap-protocol/mcp-auth` HTTP/SSE middleware (deferred from v2.5.0 — see [2.5.0] TypeScript note and [typescript-mcp-auth-spike.md](engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md)).
+- Collapse the dual `UsageMetrics`/`InMemoryMeteringStore` pair retained in S1 for API stability.
+- Reduce the `asap.transport.client` package aggregate LOC below the S2 target.
+
+---
+
+## [2.5.2] - 2026-07-08
+
+**Security & correctness follow-up** — operator API auth, tighter ingress
+validation, Redis JTI replay, web distributed rate limits, v2.5.1 CR follow-ups,
+and registry fixes. Scope: [prd-v2.5.2-security-follow-up.md](product/prd/prd-v2.5.2-security-follow-up.md).
+Wire protocol and manifest schema are unchanged aside from rejecting unknown
+`config` / `metadata` keys (see Migration).
+
 ### Added
 
 - **Opt-in operator API auth (#209)**: `create_app(require_operator_auth=True)`
@@ -28,7 +47,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `metadata` properties must use known fields only or nest extensions under
   `TaskRequest.input` / envelope `extensions`. See
   [migration guide](docs/migration.md#upgrading-from-v251).
-
 - **CLI legacy imports (#242)**: `DEFAULT_SCHEMAS_DIR`, `export_all_schemas`, and
   `_repl_namespace` are no longer re-exported from `asap.cli` root. Import from
   `asap.cli._compat` (shim) or the owning submodules (`asap.cli.schemas`,
@@ -40,18 +58,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `KV_REST_API_URL` + `KV_REST_API_TOKEN`) are set; local dev without Redis
   keeps the existing in-memory per-instance limiter
   ([#209](https://github.com/adriannoes/asap-protocol/issues/209)).
+- **Auth scope parsing (#243)**: `parse_scope` lives in `asap.auth._scope_parse` so
+  `OAuth2Middleware` no longer needs an inline import to break a cycle.
 
 ### Fixed
 
 - **CI security (`pip-audit`)**: Raised `joserfc` to `>=1.6.7,<2` (CVE-2026-48990) and added overrides for `python-engineio>=4.13.2` (CVE-2026-48802 / CVE-2026-48809) and `python-socketio>=5.16.2` (CVE-2026-48804). See [SECURITY.md](SECURITY.md).
 - **Streaming correlation binding (#247)**: SSE and WebSocket streaming now require `TaskStream` chunks to echo the request envelope `id` (not an arbitrary request `correlation_id`), and streamed response payloads reject missing or mismatched `correlation_id` values.
+- **SQLite write serialization (#245)**: `AsyncSqliteRepository.execute()` now holds the same `asyncio.Lock` as other write paths so concurrent writers cannot interleave on a shared connection.
+- **Agent status JTI replay (#249)**: `GET /asap/agent/status` now records JWT `jti` in the replay cache (same hardening as other identity routes).
+- **Registry signed manifests (#224)**: Registration paths accept signed manifest envelopes (unwrap before validation).
+- **Registry validation errors (#227)**: Auto-registration maps `ManifestValidationError` to HTTP 400 instead of a 500.
 
-### Follow-up (not in v2.5.1)
+### Migration
 
-- **Adapter Lab II** — new framework adapters (separate PRD: [prd-v2.5.1-adapter-lab-ii.md](product/prd/prd-v2.5.1-adapter-lab-ii.md)).
-- `@asap-protocol/mcp-auth` HTTP/SSE middleware (deferred from v2.5.0 — see [2.5.0] TypeScript note and [typescript-mcp-auth-spike.md](engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md)).
-- Collapse the dual `UsageMetrics`/`InMemoryMeteringStore` pair retained in S1 for API stability.
-- Reduce the `asap.transport.client` package aggregate LOC below the S2 target.
+- **v2.5.1 → v2.5.2**: See [migration guide](docs/migration.md#upgrading-from-v251).
+  Breaking for clients that sent unknown keys on `TaskRequest.config` /
+  `CommonMetadata`. Operator auth and Redis JTI remain opt-in.
 
 ---
 

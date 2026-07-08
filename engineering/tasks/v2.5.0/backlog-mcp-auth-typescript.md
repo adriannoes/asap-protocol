@@ -3,7 +3,7 @@
 > **Status**: OPEN — deferred from v2.5.0 (S4 spike). Git tag **`v2.5.0.1`** was used for PyPI **`asap-compliance` 1.3.0** only.
 > **PRD**: [MCP-TS-001..003](../../../product/prd/prd-v2.5.0-mcp-auth-bridge.md#54-typescript-should)
 > **Spike**: [typescript-mcp-auth-spike.md](./typescript-mcp-auth-spike.md)
-> **Carry-over**: [PRD v2.5.1 §3](../../../product/prd/prd-v2.5.1-adapter-lab-ii.md#3-carry-over-from-v250-asap-protocolmcp-auth)
+> **Carry-over**: [PRD v2.5.3 §3](../../../product/prd/prd-v2.5.3-adapter-lab-ii.md#3-carry-over-from-v250-asap-protocolmcp-auth)
 
 v2.5.0 shipped the **Python stdio** MCP Auth Bridge. HTTP/SSE TypeScript middleware remains SHOULD-scope for a **future npm release** (after `v2.5.0.1` compliance tag).
 

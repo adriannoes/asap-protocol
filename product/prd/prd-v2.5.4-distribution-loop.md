@@ -1,21 +1,21 @@
-# PRD: ASAP Protocol v2.5.2 — Distribution Loop
+# PRD: ASAP Protocol v2.5.4 — Distribution Loop
 
 > **Product Requirements Document**
 >
-> **Version**: 2.5.2
-> **Status**: PLANNED (blocked until v2.5.1 ships)
-> **Created**: 2026-04-28 (as v2.3.3); **renumbered**: 2026-06-22
+> **Version**: 2.5.4
+> **Status**: PLANNED (blocked until v2.5.3 Adapter Lab II ships)
+> **Created**: 2026-04-28 (as v2.3.3); **renumbered**: 2026-06-22 → v2.5.2; **2026-07-08 → v2.5.4**
 > **Parent train**: [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md)
-> **Predecessor**: [prd-v2.5.1-adapter-lab-ii.md](./prd-v2.5.1-adapter-lab-ii.md)
-> **Successor**: [prd-v2.5.3-formal-spec-interop.md](./prd-v2.5.3-formal-spec-interop.md)
+> **Predecessor**: [prd-v2.5.3-adapter-lab-ii.md](./prd-v2.5.3-adapter-lab-ii.md)
+> **Successor**: [prd-v2.5.5-formal-spec-interop.md](./prd-v2.5.5-formal-spec-interop.md)
 >
-> **Migration note**: Formerly `product/prd/private/prd-v2.3.3-distribution-loop.md` (v2.3.3).
+> **Migration note**: Formerly `product/prd/private/prd-v2.3.3-distribution-loop.md` (v2.3.3), then `prd-v2.5.2-distribution-loop.md`. v2.5.2 was reassigned to the security follow-up patch (2026-07-08).
 
 ---
 
 ## 1. Purpose
 
-v2.5.2 turns adoption work from v2.3.0–v2.5.1 into a **repeatable distribution loop**: homepage, docs routing, templates, and lightweight metrics so developers discover ASAP through executable paths.
+v2.5.4 turns adoption work from v2.3.0–v2.5.3 into a **repeatable distribution loop**: homepage, docs routing, templates, and lightweight metrics so developers discover ASAP through executable paths.
 
 ---
 
@@ -64,4 +64,5 @@ v2.5.2 turns adoption work from v2.3.0–v2.5.1 into a **repeatable distribution
 
 | Date | Change |
 |------|--------|
+| 2026-07-08 | Renumbered v2.5.2 → **v2.5.4** (v2.5.2 = security follow-up) |
 | 2026-06-22 | Renumbered v2.3.3 → v2.5.2 |

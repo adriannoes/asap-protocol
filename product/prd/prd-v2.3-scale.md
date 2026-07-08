@@ -329,14 +329,14 @@ Inherited as a conscious carry-over from the v2.2.1 tech-debt sweep (2026-04-22)
 
 ## 7.1 v2.3.x Patch Train (shipped) + v2.5.x continuation
 
-The v2.3 line shipped **v2.3.0** (public) and **v2.3.1** (private). Further adoption patches were **renumbered to v2.5.1–v2.5.2** after v2.4.0/v2.4.1 — see [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md).
+The v2.3 line shipped **v2.3.0** (public) and **v2.3.1** (private). Further adoption patches were **renumbered into the v2.5.x train** after v2.4.0/v2.4.1 — see [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md).
 
 | Version | Codename | Status | PRD |
 |---------|----------|--------|-----|
 | v2.3.0 | Adoption Core | ✅ Shipped | This PRD |
 | v2.3.1 | Adapter Lab I | ✅ Shipped | `private/prd-v2.3.1-adapter-lab.md` |
-| ~~v2.3.2~~ → **v2.5.1** | Adapter Lab II | Planned | [prd-v2.5.1-adapter-lab-ii.md](./prd-v2.5.1-adapter-lab-ii.md) |
-| ~~v2.3.3~~ → **v2.5.2** | Distribution Loop | Planned | [prd-v2.5.2-distribution-loop.md](./prd-v2.5.2-distribution-loop.md) |
+| ~~v2.3.2~~ → ~~v2.5.1~~ → **v2.5.3** | Adapter Lab II | Planned | [prd-v2.5.3-adapter-lab-ii.md](./prd-v2.5.3-adapter-lab-ii.md) |
+| ~~v2.3.3~~ → ~~v2.5.2~~ → **v2.5.4** | Distribution Loop | Planned | [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md) |
 
 Patch releases must remain additive: no wire-protocol breaking changes, no new paid feature launch, and no Registry API Backend unless the 500-agent or IssueOps-bottleneck trigger fires.
 
@@ -366,7 +366,7 @@ Patch releases must remain additive: no wire-protocol breaking changes, no new p
 - **Previous major release**: [prd-v2.1-ecosystem.md](./prd-v2.1-ecosystem.md)
 - **Shipped v2.4.0**: [prd-v2.4.0-edge-ai-discovery.md](./prd-v2.4.0-edge-ai-discovery.md)
 - **Shipped v2.4.1**: [prd-v2.4.1-security-hardening.md](./prd-v2.4.1-security-hardening.md)
-- **Next train (v2.5.x)**: [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md) — MCP Auth Bridge (v2.5.0), adoption (v2.5.1–2), formal spec (v2.5.3)
+- **Next train (v2.5.x)**: [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md) — MCP Auth Bridge (v2.5.0), quality/security patches (v2.5.1–2), adoption (v2.5.3–4), formal spec (v2.5.5)
 
 ### Engineering execution
 

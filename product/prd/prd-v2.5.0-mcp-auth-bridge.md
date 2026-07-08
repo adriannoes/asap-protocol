@@ -9,7 +9,7 @@
 >
 > **Parent train**: [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md)
 > **Predecessor**: [prd-v2.4.1-security-hardening.md](./prd-v2.4.1-security-hardening.md) (✅ shipped)
-> **Successor**: [prd-v2.5.1-adapter-lab-ii.md](./prd-v2.5.1-adapter-lab-ii.md)
+> **Successor**: [prd-v2.5.2-security-follow-up.md](./prd-v2.5.2-security-follow-up.md) (next ship); adoption continues at [prd-v2.5.3-adapter-lab-ii.md](./prd-v2.5.3-adapter-lab-ii.md)
 
 ---
 
@@ -43,9 +43,9 @@ Today MCP has no standard auth story for per-agent, scoped tool access. ASAP alr
 
 ### 1.4 Out of scope (v2.5.0)
 
-- Formal RFC specification → [prd-v2.5.3-formal-spec-interop.md](./prd-v2.5.3-formal-spec-interop.md)
-- A2A runtime bridge → v2.5.3
-- Framework adapters (Haystack, Letta…) → [prd-v2.5.1-adapter-lab-ii.md](./prd-v2.5.1-adapter-lab-ii.md)
+- Formal RFC specification → [prd-v2.5.5-formal-spec-interop.md](./prd-v2.5.5-formal-spec-interop.md)
+- A2A runtime bridge → v2.5.5
+- Framework adapters (Haystack, Letta…) → [prd-v2.5.3-adapter-lab-ii.md](./prd-v2.5.3-adapter-lab-ii.md)
 - MCP OAuth provider implementation (we **consume** Agent JWTs; Host mints tokens)
 - HTTP/SSE MCP transport in Python core (stdio first; HTTP auth patterns documented for TS)
 

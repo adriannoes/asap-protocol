@@ -74,7 +74,7 @@
 
 | Next | Status |
 |------|--------|
-| **v2.5.1** Adapter Lab II | Planned — [prd-v2.5.1-adapter-lab-ii.md](../../../product/prd/prd-v2.5.1-adapter-lab-ii.md) |
+| **v2.5.3** Adapter Lab II | Planned — [prd-v2.5.3-adapter-lab-ii.md](../../../product/prd/prd-v2.5.3-adapter-lab-ii.md) |
 | npm `@asap-protocol/mcp-auth` | Backlog — future patch tag TBD (not `v2.5.0.1`) |
 
 **v2.5.0 train: CLOSED** (2026-06-24).
