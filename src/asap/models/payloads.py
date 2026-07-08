@@ -24,9 +24,7 @@ from asap.models.types import (
 
 
 class TaskRequestConfig(ASAPBaseModel):
-    """TaskRequest.config (extra allowed)."""
-
-    model_config = ConfigDict(extra="allow")
+    """TaskRequest.config (unknown keys rejected)."""
 
     timeout_seconds: int | None = Field(
         default=None, ge=1, description="Maximum execution time in seconds"

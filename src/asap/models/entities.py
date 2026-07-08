@@ -24,7 +24,7 @@ from datetime import datetime
 from typing import Any
 
 from packaging.version import InvalidVersion, Version
-from pydantic import ConfigDict, Field, field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from asap.errors import UnsupportedAuthSchemeError
 from asap.models.base import ASAPBaseModel
@@ -57,9 +57,7 @@ from asap.models.types import (
 
 
 class CommonMetadata(ASAPBaseModel):
-    """Common metadata keys (extra allowed)."""
-
-    model_config = ConfigDict(extra="allow")
+    """Common metadata keys (unknown keys rejected)."""
 
     purpose: str | None = Field(default=None, description="Conversation purpose")
     ttl_hours: int | None = Field(default=None, ge=1, description="Time-to-live in hours")

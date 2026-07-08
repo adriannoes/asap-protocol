@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Ingress validation (#209)**: `TaskRequestConfig` and `CommonMetadata` now reject
+  unknown fields (`extra="forbid"`, inherited from `ASAPBaseModel`). Previously these
+  models allowed arbitrary extension keys; clients sending custom `config` or
+  `metadata` properties must use known fields only or nest extensions under
+  `TaskRequest.input` / envelope `extensions`. See
+  [migration guide](docs/migration.md#upgrading-from-v251).
+
 - **CLI legacy imports (#242)**: `DEFAULT_SCHEMAS_DIR`, `export_all_schemas`, and
   `_repl_namespace` are no longer re-exported from `asap.cli` root. Import from
   `asap.cli._compat` (shim) or the owning submodules (`asap.cli.schemas`,
@@ -31,7 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Follow-up (not in v2.5.1)
 
 - **Adapter Lab II** — new framework adapters (separate PRD: [prd-v2.5.1-adapter-lab-ii.md](product/prd/prd-v2.5.1-adapter-lab-ii.md)).
-- `extra="forbid"` on ingress payload models (`TaskRequestConfig`, `CommonMetadata`).
 - Redis-backed `JtiReplayCache` and distributed Next.js rate limits.
 - `@asap-protocol/mcp-auth` HTTP/SSE middleware (deferred from v2.5.0 — see [2.5.0] TypeScript note and [typescript-mcp-auth-spike.md](engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md)).
 - Collapse the dual `UsageMetrics`/`InMemoryMeteringStore` pair retained in S1 for API stability.

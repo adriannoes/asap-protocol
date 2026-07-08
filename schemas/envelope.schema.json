@@ -471,7 +471,7 @@
     },
     "TaskRequestConfig": {
       "additionalProperties": false,
-      "description": "TaskRequest.config (extra allowed).",
+      "description": "TaskRequest.config (unknown keys rejected).",
       "properties": {
         "timeout_seconds": {
           "anyOf": [
@@ -645,6 +645,53 @@
       "title": "TaskStatus",
       "type": "string"
     },
+    "TaskStream": {
+      "additionalProperties": false,
+      "description": "Chunk of streamed task output (SSE or WebSocket).\n\nUsed with Envelope payload_type ``TaskStream`` for incremental results\nfrom a streaming handler. The client correlates chunks via\n``Envelope.correlation_id`` matching the original ``TaskRequest``.\n\nAttributes:\n    chunk: Text fragment for this event (e.g. token or word).\n    progress: Optional completion ratio in ``[0, 1]``.\n    final: When True, no further chunks are expected for this task.\n    status: Optional task status (e.g. WORKING until final COMPLETED).",
+      "properties": {
+        "chunk": {
+          "default": "",
+          "description": "Streamed text fragment",
+          "title": "Chunk",
+          "type": "string"
+        },
+        "progress": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional progress from 0.0 to 1.0",
+          "title": "Progress"
+        },
+        "final": {
+          "default": false,
+          "description": "True when this is the last chunk",
+          "title": "Final",
+          "type": "boolean"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TaskStatus"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Task status hint (e.g. COMPLETED on final chunk)"
+        }
+      },
+      "title": "TaskStream",
+      "type": "object"
+    },
     "TaskUpdate": {
       "additionalProperties": false,
       "description": "Update on task execution progress or status.\n\nTaskUpdate provides real-time updates during task execution, including\nprogress information or requests for additional input.\n\nAttributes:\n    task_id: ID of the task being updated\n    update_type: Type of update (progress, input_required, etc.)\n    status: Current task status\n    progress: Optional progress information (percent, message, ETA)\n    input_request: Optional request for additional input from user",
@@ -764,6 +811,9 @@
       "anyOf": [
         {
           "$ref": "#/$defs/TaskRequest"
+        },
+        {
+          "$ref": "#/$defs/TaskStream"
         },
         {
           "$ref": "#/$defs/TaskResponse"

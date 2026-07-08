@@ -2,7 +2,7 @@
   "$defs": {
     "TaskRequestConfig": {
       "additionalProperties": false,
-      "description": "TaskRequest.config (extra allowed).",
+      "description": "TaskRequest.config (unknown keys rejected).",
       "properties": {
         "timeout_seconds": {
           "anyOf": [
