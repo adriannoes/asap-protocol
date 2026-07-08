@@ -35,6 +35,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `asap.schemas`, `asap.cli.repl`). The `_compat` shim is removed in v2.6.0
   ([#275](https://github.com/adriannoes/asap-protocol/issues/275)).
   See [migration guide](docs/migration.md#upgrading-from-v251).
+- **Web app (`apps/web`)**: Optional distributed rate limits via Upstash Redis
+  or Vercel KV when `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` (or
+  `KV_REST_API_URL` + `KV_REST_API_TOKEN`) are set; local dev without Redis
+  keeps the existing in-memory per-instance limiter
+  ([#209](https://github.com/adriannoes/asap-protocol/issues/209)).
 
 ### Fixed
 
@@ -44,7 +49,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Follow-up (not in v2.5.1)
 
 - **Adapter Lab II** — new framework adapters (separate PRD: [prd-v2.5.1-adapter-lab-ii.md](product/prd/prd-v2.5.1-adapter-lab-ii.md)).
-- Distributed Next.js rate limits (Upstash Redis).
 - `@asap-protocol/mcp-auth` HTTP/SSE middleware (deferred from v2.5.0 — see [2.5.0] TypeScript note and [typescript-mcp-auth-spike.md](engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md)).
 - Collapse the dual `UsageMetrics`/`InMemoryMeteringStore` pair retained in S1 for API stability.
 - Reduce the `asap.transport.client` package aggregate LOC below the S2 target.

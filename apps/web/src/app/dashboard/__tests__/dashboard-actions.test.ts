@@ -10,7 +10,7 @@ vi.mock('@/auth', () => ({
     auth: vi.fn(),
 }));
 vi.mock('@/lib/rate-limit', () => ({
-    checkRateLimit: vi.fn(() => true),
+    checkRateLimit: vi.fn(() => Promise.resolve(true)),
 }));
 
 vi.mock('next/cache', () => ({
@@ -40,7 +40,7 @@ describe('fetchUserRegistrationIssues', () => {
             accessToken: 'ghp_fake_token',
         } as never);
 
-        checkRateLimit.mockReturnValue(true);
+        checkRateLimit.mockResolvedValue(true);
     });
 
     it('returns error when not authenticated', async () => {
@@ -51,7 +51,7 @@ describe('fetchUserRegistrationIssues', () => {
     });
 
     it('returns error when rate limit exceeded', async () => {
-        checkRateLimit.mockReturnValue(false);
+        checkRateLimit.mockResolvedValue(false);
         const result = await fetchUserRegistrationIssues();
         expect(result.success).toBe(false);
         if (!result.success) expect(result.error).toContain('Too many requests');

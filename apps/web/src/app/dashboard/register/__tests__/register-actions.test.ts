@@ -11,7 +11,7 @@ vi.mock('@/lib/url-validator', () => ({
     isAllowedExternalUrl: vi.fn(),
 }));
 vi.mock('@/lib/rate-limit', () => ({
-    checkRateLimit: vi.fn(() => true),
+    checkRateLimit: vi.fn(() => Promise.resolve(true)),
 }));
 
 const auth = vi.mocked(authModule.auth);
@@ -38,7 +38,7 @@ describe('submitAgentRegistration', () => {
             user: { id: 'u1', username: 'testuser', name: 'Test' },
         } as never);
         isAllowedExternalUrl.mockResolvedValue({ valid: true });
-        checkRateLimit.mockReturnValue(true);
+        checkRateLimit.mockResolvedValue(true);
     });
 
     it('returns error when not authenticated', async () => {
@@ -56,7 +56,7 @@ describe('submitAgentRegistration', () => {
     });
 
     it('returns error when rate limit exceeded', async () => {
-        checkRateLimit.mockReturnValue(false);
+        checkRateLimit.mockResolvedValue(false);
         const result = await submitAgentRegistration(validForm);
         expect(result.success).toBe(false);
         expect(result.error).toContain('Too many registration attempts');

@@ -24,7 +24,7 @@ export async function submitAgentRegistration(values: unknown) {
         }
 
         const isE2E = process.env.ENABLE_FIXTURE_ROUTES === 'true' && username === 'e2e-tester';
-        if (!isE2E && !checkRateLimit(userId, 5, 60_000)) {
+        if (!isE2E && !(await checkRateLimit(userId, 5, 60_000))) {
             return { success: false, error: 'Too many registration attempts. Please try again in a minute.' };
         }
 
