@@ -109,6 +109,10 @@ CI runs `pip-audit` after a sync that **excludes** the optional extras `crewai` 
 
 **CVE-2026-48804 (python-socketio, locust stack)**: Resolved via override (`python-socketio>=5.16.2`).
 
+**PYSEC-2026-2132 (click)**: Resolved via override (`click>=8.3.3`) — transitive via typer / uvicorn / mkdocs stacks.
+
+**PYSEC-2026-2253–2257 (pillow)**: Resolved via override (`pillow>=12.3.0`; prior floor was `>=12.2.0` for CVE-2026-40192) — transitive via pdf/vision stacks.
+
 **CVE-2026-46678 (pydantic-ai, optional `[pydanticai]` extra)**: Resolved via `[pydanticai]` extra floor `pydantic-ai>=1.99.0` (1.102.0 in lock as of 2026-06).
 
 **CVE-2026-4963 / CVE-2026-2654 (smolagents, optional `[smolagents]` extra)**: OSV reports these against current PyPI releases with **no `fix_versions`/`fixed` range** yet. CI ignores them until Hugging Face publishes patched `smolagents` wheels; remove the flags when `pip-audit` is clean without them. The reference package does not import smolagents unless that extra is installed.
