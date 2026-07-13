@@ -1,0 +1,61 @@
+# NeMo Agent Toolkit ↔ ASAP Path A (experimental / local demo)
+#
+# NAT mcp_client (stdio) → ASAP protect_server (examples/nemo_agent_toolkit_asap/asap_mcp_server.py)
+#
+# Auth honesty:
+# - NAT does NOT send _meta.asap_agent_jwt
+# - ASAP child injects ASAP_AGENT_JWT at startup (dev-only allow_env_jwt_fallback)
+# - This is NOT NAT OAuth2 / Keycloak / mcp_oauth2
+#
+# Pin: nvidia-nat[mcp]==1.8.0, Python 3.13
+# Upstream pattern: NVIDIA/NeMo-Agent-Toolkit@v1.8.0 examples/MCP/simple_calculator_mcp
+#
+# Prerequisites (repo root):
+#   uv sync
+#   uv pip install 'nvidia-nat[mcp]==1.8.0'   # or: pip install -r examples/nemo_agent_toolkit_asap/requirements.txt
+#
+# ASAP-side smoke (no NAT / no NIM):
+#   uv run python examples/nemo_agent_toolkit_asap/smoke_asap_side.py --stdio
+#
+# Full NAT path (requires NIM / NVIDIA_API_KEY for react_agent):
+#   nat run --config_file examples/nemo_agent_toolkit_asap/configs/config-mcp-client-stdio.yml \
+#     --input "Call echo with message hello, then secure_action with action demo"
+
+function_groups:
+  asap_mcp:
+    _type: mcp_client
+    server:
+      transport: stdio
+      # Prefer `uv run` so the child uses the ASAP repo environment.
+      command: "uv"
+      args:
+        - "run"
+        - "python"
+        - "examples/nemo_agent_toolkit_asap/asap_mcp_server.py"
+      # Working directory must be the ASAP repo root when using relative args.
+      # If you launch `nat run` from another cwd, switch args to an absolute path
+      # or set env PYTHONPATH / use a wrapper script.
+    # Optional: restrict to known tools
+    # include:
+    #   - echo
+    #   - secure_action
+
+llms:
+  # Optional for full `nat run` react_agent path. Prefer ASAP smoke without NIM.
+  # Set NVIDIA_API_KEY in the environment when using NIM.
+  nim_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-nano-30b-a3b
+    temperature: 0.0
+    max_tokens: 1024
+    chat_template_kwargs:
+      enable_thinking: false
+
+workflow:
+  _type: react_agent
+  tool_names:
+    - asap_mcp
+  llm_name: nim_llm
+  verbose: true
+  retry_parsing_errors: true
+  max_retries: 3
