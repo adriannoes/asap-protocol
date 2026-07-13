@@ -18,8 +18,8 @@ Based on [PRD v2.5.3 Adapter Lab II](../../../product/prd/prd-v2.5.3-adapter-lab
 |--------|-------|-----|----------|--------|
 | **S0** | [Candidate lock & demand check](./sprint-S0-candidate-lock.md) | D1–D7, §6 gates | P0 | Done |
 | **S1** | [Workflow prototype (primary)](./sprint-S1-workflow-prototype.md) | LAB2-001, LAB2-002 | P0 | Done |
-| **S1b** | [Conditional SK / .NET spike](./sprint-S1b-semantic-kernel.md) | D2 | P0 if gate | Skipped (D2 no-go) |
-| **S1c** | [NeMo Agent Toolkit spike](./sprint-S1c-nemo-agent-toolkit.md) | D7 | P0 planned | Planned (D7 go) |
+| **S1b** | [Conditional SK / .NET spike](./sprint-S1b-semantic-kernel.md) | D2 | P0 if gate | Done (guide-only; 2b.3 skipped) |
+| **S1c** | [NeMo Agent Toolkit spike](./sprint-S1c-nemo-agent-toolkit.md) | D7 | P0 planned | Done |
 | **S2** | [Security guide & MCP patterns](./sprint-S2-security-docs.md) | LAB2-003, LAB2-006 | P0 | Planned |
 | **S3** | [Docs review, site routing & learnings](./sprint-S3-docs-review.md) | LAB2-004, LAB2-005 + docs surface | P0 | Planned |
 | **S4** | [Release v2.5.3](./sprint-S4-release.md) | DoD, metrics | P0 | Planned |
@@ -40,7 +40,7 @@ S0 (candidate lock)
                                             S4 (release)
 ```
 
-S1b / S1c never block S1/S2/S3/S4. If D2 fails, skip S1b. S1c defaults to **go** (D7); skip only with explicit maintainer no-go in the demand sheet.
+S1b / S1c never block S1/S2/S3/S4. S0 D2 was **no-go** on demand; **maintainer override (2026-07-13)** reopened S1b (guide-only). S1c defaults to **go** (D7); skip only with explicit maintainer no-go in the demand sheet. Combined spike branch: `feat/v2.5.3-s1b-s1c-spikes`.
 
 ## Parent tasks (high-level)
 
@@ -65,23 +65,24 @@ S1b / S1c never block S1/S2/S3/S4. If D2 fails, skip S1b. S1c defaults to **go**
     - [x] No protocol fork; transport lint clean
     - [x] LAB2-001 / LAB2-002 satisfied for the primary
 
-- [ ] **2b.0 Conditional Semantic Kernel spike (S1b)**
-  - **Trigger:** S0 D2 gate pass.
+- [x] **2b.0 Conditional Semantic Kernel spike (S1b)**
+  - **Trigger:** S0 D2 was no-go on demand; **maintainer override (2026-07-13)** reopened S1b for a research/experimental guide.
   - **Enables:** Optional second public guide; does not block release if incomplete.
-  - **Depends on:** Task 1.0 go decision.
+  - **Depends on:** Task 1.0; [demand-sheet.md](./demand-sheet.md) override; [research-semantic-kernel.md](./research-semantic-kernel.md).
   - **Acceptance criteria:**
-    - [ ] Interop note + .NET/guide path documented
-    - [ ] Explicit “maintained vs research” status in the guide
+    - [x] Interop note + .NET/guide path documented (`docs/integrations/microsoft-agent-framework.md`)
+    - [x] Explicit “maintained vs research” status in the guide
+  - **Note:** 2b.3 C# sample **skipped / N/A** (guide-only per 2b.1). MkDocs nav/index deferred to S3.
 
-- [ ] **2c.0 NeMo Agent Toolkit spike (S1c)**
+- [x] **2c.0 NeMo Agent Toolkit spike (S1c)**
   - **Trigger:** S0 D7 default go (or explicit no-go skip).
   - **Enables:** NVIDIA-stack guide + optional MCP bridge demo; feeds v2.5.5 Agent Card mapping.
   - **Depends on:** Task 1.0; [research-nemo-agent-toolkit.md](./research-nemo-agent-toolkit.md).
   - **Acceptance criteria:**
-    - [ ] Research pin refreshed; auth/transport gap tables written
-    - [ ] `docs/integrations/nemo-agent-toolkit.md` published (honest limits)
-    - [ ] Path A demo **or** documented blocker + follow-up (no fake native claim)
-    - [ ] Third-party NAT plugin deferred (Path C)
+    - [x] Research pin refreshed; auth/transport gap tables written
+    - [x] `docs/integrations/nemo-agent-toolkit.md` published (honest limits)
+    - [x] Path A demo **or** documented blocker + follow-up (no fake native claim)
+    - [x] Third-party NAT plugin deferred (Path C)
 
 - [ ] **3.0 Security & MCP docs (S2)**
   - **Trigger:** S1 example shape known.
@@ -142,9 +143,10 @@ S1b / S1c never block S1/S2/S3/S4. If D2 fails, skip S1b. S1c defaults to **go**
 - `docs/guides/automation-connector-security.md` — LAB2-003
 - `engineering/tasks/v2.5.3/learnings-open-vs-hosted.md` — LAB2-005
 - [docs-review-checklist.md](./docs-review-checklist.md) — S3 nav/index/cross-link gate
-- Optional: `docs/integrations/semantic-kernel.md` — only if S1b runs
+- Optional: `docs/integrations/microsoft-agent-framework.md` — S1b (guide-only; see research note)
 - Optional: `docs/integrations/nemo-agent-toolkit.md` + `examples/nemo_agent_toolkit_asap/` — S1c
 - [research-nemo-agent-toolkit.md](./research-nemo-agent-toolkit.md) — upstream map for S1c
+- [research-semantic-kernel.md](./research-semantic-kernel.md) — S1b naming + guide-only lock
 
 ### Likely modify
 
@@ -170,3 +172,5 @@ S1b / S1c never block S1/S2/S3/S4. If D2 fails, skip S1b. S1c defaults to **go**
 | 2026-07-12 | **S3 docs review**: [sprint-S3-docs-review.md](./sprint-S3-docs-review.md) + [docs-review-checklist.md](./docs-review-checklist.md); replaces S3 site-learnings-only |
 | 2026-07-13 | **S0 Done**: [demand-sheet.md](./demand-sheet.md); D1 workflow primary (no swap); D2 S1b skipped; D7 S1c planned; kickoff ACTIVE |
 | 2026-07-13 | **S1 Done**: workflow example + [workflow-connectors.md](../../../docs/integrations/workflow-connectors.md); MkDocs nav deferred to S3 |
+| 2026-07-13 | **S1b Done**: MAF guide-only ([microsoft-agent-framework.md](../../../docs/integrations/microsoft-agent-framework.md)); 2b.3 C# sample skipped/N/A |
+| 2026-07-13 | **S1c Done**: Path A example + [nemo-agent-toolkit.md](../../../docs/integrations/nemo-agent-toolkit.md); Path C out of ship; NAT optional in CI |
