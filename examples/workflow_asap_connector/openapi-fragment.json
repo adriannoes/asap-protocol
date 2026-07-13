@@ -1,0 +1,138 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Workflow connector fragment (n8n/Activepieces-style mock)",
+    "version": "1.0.0",
+    "description": "Minimal OpenAPI for LAB2 workflow → ASAP capability demo. Not a live SaaS."
+  },
+  "servers": [
+    {
+      "url": "http://workflow.mock/api/v1"
+    }
+  ],
+  "paths": {
+    "/workflows": {
+      "get": {
+        "operationId": "listWorkflows",
+        "summary": "List workflows",
+        "responses": {
+          "200": {
+            "description": "Workflow list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "workflows": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/WorkflowSummary"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workflows/{workflowId}": {
+      "get": {
+        "operationId": "getWorkflow",
+        "summary": "Get one workflow by id",
+        "parameters": [
+          {
+            "name": "workflowId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Workflow detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workflows/{workflowId}/trigger": {
+      "post": {
+        "operationId": "triggerWorkflow",
+        "summary": "Trigger / execute a workflow run",
+        "parameters": [
+          {
+            "name": "workflowId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "payload": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "description": "Optional webhook-style input payload"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Execution accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowExecution"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "WorkflowSummary": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "active": { "type": "boolean" }
+        }
+      },
+      "WorkflowExecution": {
+        "type": "object",
+        "required": ["executionId", "status"],
+        "properties": {
+          "executionId": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["running", "queued", "completed", "failed"]
+          }
+        }
+      }
+    }
+  }
+}
