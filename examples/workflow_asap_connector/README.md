@@ -55,6 +55,10 @@ uv run python examples/workflow_asap_connector/main.py --live-base-url https://y
 
 Equivalent: `ASAP_WORKFLOW_BASE_URL=https://your-host.example/api/v1`.
 
+`.env.example` may show `ASAP_WORKFLOW_BEARER_TOKEN` as an **illustrative** placeholder only —
+this demo does **not** read it. Live auth via `resolve_headers` is deferred to the S2
+security guide; setting the env var alone will not avoid upstream 401s.
+
 ## What a remote agent sees
 
 | Skill id | Upstream |

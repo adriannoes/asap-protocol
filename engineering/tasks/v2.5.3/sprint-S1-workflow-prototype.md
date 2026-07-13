@@ -66,8 +66,8 @@ Ship **one** runnable prototype that turns workflow/automation (or a stand-in wo
 
 | Date | Tier | Verdict | Report |
 |------|------|---------|--------|
-| 2026-07-13 | T2 | Approved with caveats | [review-v2.5.3-S0-S1-workflow-20260713-r2.md](../../../code-review/private/review-v2.5.3-S0-S1-workflow-20260713-r2.md) |
-| 2026-07-13 | T2 | Rejected | [review-v2.5.3-S0-S1-workflow-20260713.md](../../../code-review/private/review-v2.5.3-S0-S1-workflow-20260713.md) |
+| 2026-07-13 | T2 | Approved with caveats | [review-v2.5.3-S0-S1-workflow-20260713-r2.md](../../code-review/private/review-v2.5.3-S0-S1-workflow-20260713-r2.md) |
+| 2026-07-13 | T2 | Rejected | [review-v2.5.3-S0-S1-workflow-20260713.md](../../code-review/private/review-v2.5.3-S0-S1-workflow-20260713.md) |
 
 ## Relevant files
 

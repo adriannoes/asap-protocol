@@ -12,8 +12,9 @@ from typing import Any
 import httpx
 import pytest
 from _pytest.capture import CaptureFixture
+from fastapi import FastAPI
 
-from asap.adapters.openapi import create_from_openapi
+from asap.adapters.openapi import OpenAPIAdapterBundle, create_from_openapi
 from asap.economics.audit import InMemoryAuditStore
 from asap.models.enums import TaskStatus
 from asap.models.envelope import Envelope
@@ -69,19 +70,63 @@ def _workflows_from_task_result(result: dict[str, Any] | None) -> list[Any]:
     )
 
 
-def _list_workflows_envelope(recipient: str) -> Envelope:
-    """Build a task.request envelope for the listWorkflows skill."""
+def _skill_envelope(
+    recipient: str,
+    *,
+    skill_id: str,
+    skill_input: dict[str, Any],
+    conversation_id: str,
+) -> Envelope:
+    """Build a task.request envelope for a workflow skill."""
     return Envelope(
         asap_version="0.1",
         sender="urn:asap:agent:workflow-test-client",
         recipient=recipient,
         payload_type="task.request",
         payload=TaskRequest(
-            conversation_id="conv-workflow-e2e",
-            skill_id="listWorkflows",
-            input={},
+            conversation_id=conversation_id,
+            skill_id=skill_id,
+            input=skill_input,
         ).model_dump(),
     )
+
+
+async def _build_e2e_app(
+    http: httpx.AsyncClient,
+) -> tuple[OpenAPIAdapterBundle, FastAPI]:
+    """Create OpenAPI bundle + ASAP app with test rate limiter."""
+    built = await create_from_openapi(
+        spec_path=_FRAGMENT,
+        http_client=http,
+        default_capabilities="all",
+        manifest_id="urn:asap:agent:workflow-connector-e2e",
+        asap_endpoint="http://test/asap",
+    )
+    app = create_app(
+        built.manifest,
+        built.registry,
+        audit_store=InMemoryAuditStore(),
+        rate_limit="999999/minute",
+    )
+    app.state.limiter = create_test_limiter()
+    return built, app
+
+
+async def _invoke_skill(
+    app: FastAPI,
+    envelope: Envelope,
+) -> TaskResponse:
+    """Send one skill envelope through ASAPClient over ASGITransport."""
+    async with ASAPClient(
+        "http://testserver",
+        transport=httpx.ASGITransport(app=app),
+        require_https=False,
+    ) as client:
+        response = await client.send(envelope)
+    assert response.payload_type == "task.response"
+    task_response = TaskResponse.model_validate(response.payload_dict)
+    assert task_response.status == TaskStatus.COMPLETED
+    return task_response
 
 
 class TestWorkflowAsapConnectorExample(NoRateLimitTestBase):
@@ -89,7 +134,7 @@ class TestWorkflowAsapConnectorExample(NoRateLimitTestBase):
 
     @pytest.mark.asyncio
     async def test_fragment_maps_expected_skill_ids(self) -> None:
-        """create_from_openapi exposes listWorkflows, getWorkflow, triggerWorkflow."""
+        """create_from_openapi exposes exactly the three fragment operationIds."""
         assert _FRAGMENT.is_file(), f"missing fixture: {_FRAGMENT}"
         mock_fn = _mock_workflow_upstream()
         transport = httpx.MockTransport(mock_fn)
@@ -103,9 +148,9 @@ class TestWorkflowAsapConnectorExample(NoRateLimitTestBase):
             )
 
         skill_ids = {skill.id for skill in bundle.manifest.capabilities.skills}
-        assert skill_ids >= _EXPECTED_SKILL_IDS
+        assert skill_ids == _EXPECTED_SKILL_IDS
         mapped_ids = {cap.skill.id for cap in bundle.capabilities}
-        assert mapped_ids >= _EXPECTED_SKILL_IDS
+        assert mapped_ids == _EXPECTED_SKILL_IDS
 
     @pytest.mark.asyncio
     async def test_list_workflows_skill_via_asap_app(self) -> None:
@@ -114,34 +159,68 @@ class TestWorkflowAsapConnectorExample(NoRateLimitTestBase):
         mock_fn = _mock_workflow_upstream()
         transport = httpx.MockTransport(mock_fn)
         async with httpx.AsyncClient(transport=transport, timeout=30.0) as http:
-            built = await create_from_openapi(
-                spec_path=_FRAGMENT,
-                http_client=http,
-                default_capabilities="all",
-                manifest_id="urn:asap:agent:workflow-connector-e2e",
-                asap_endpoint="http://test/asap",
+            built, app = await _build_e2e_app(http)
+            task_response = await _invoke_skill(
+                app,
+                _skill_envelope(
+                    built.manifest.id,
+                    skill_id="listWorkflows",
+                    skill_input={},
+                    conversation_id="conv-workflow-list",
+                ),
             )
-            app = create_app(
-                built.manifest,
-                built.registry,
-                audit_store=InMemoryAuditStore(),
-                rate_limit="999999/minute",
-            )
-            app.state.limiter = create_test_limiter()
-            async with ASAPClient(
-                "http://testserver",
-                transport=httpx.ASGITransport(app=app),
-                require_https=False,
-            ) as client:
-                response = await client.send(_list_workflows_envelope(built.manifest.id))
 
-        assert response.payload_type == "task.response"
-        task_response = TaskResponse.model_validate(response.payload_dict)
-        assert task_response.status == TaskStatus.COMPLETED
         workflows = _workflows_from_task_result(task_response.result)
         assert len(workflows) >= 1
         assert isinstance(workflows[0], dict)
         assert workflows[0].get("id") == "wf-demo"
+
+    @pytest.mark.asyncio
+    async def test_get_workflow_skill_via_asap_app(self) -> None:
+        """Invoke getWorkflow with workflowId path param against the mock."""
+        assert _FRAGMENT.is_file(), f"missing fixture: {_FRAGMENT}"
+        mock_fn = _mock_workflow_upstream()
+        transport = httpx.MockTransport(mock_fn)
+        async with httpx.AsyncClient(transport=transport, timeout=30.0) as http:
+            built, app = await _build_e2e_app(http)
+            task_response = await _invoke_skill(
+                app,
+                _skill_envelope(
+                    built.manifest.id,
+                    skill_id="getWorkflow",
+                    skill_input={"workflowId": "wf-demo"},
+                    conversation_id="conv-workflow-get",
+                ),
+            )
+
+        assert task_response.result is not None
+        assert task_response.result.get("id") == "wf-demo"
+        assert task_response.result.get("name") == "Demo Workflow"
+
+    @pytest.mark.asyncio
+    async def test_trigger_workflow_skill_via_asap_app(self) -> None:
+        """Invoke triggerWorkflow (POST + path param + optional body) against mock."""
+        assert _FRAGMENT.is_file(), f"missing fixture: {_FRAGMENT}"
+        mock_fn = _mock_workflow_upstream()
+        transport = httpx.MockTransport(mock_fn)
+        async with httpx.AsyncClient(transport=transport, timeout=30.0) as http:
+            built, app = await _build_e2e_app(http)
+            task_response = await _invoke_skill(
+                app,
+                _skill_envelope(
+                    built.manifest.id,
+                    skill_id="triggerWorkflow",
+                    skill_input={
+                        "workflowId": "wf-demo",
+                        "payload": {"source": "asap-e2e"},
+                    },
+                    conversation_id="conv-workflow-trigger",
+                ),
+            )
+
+        assert task_response.result is not None
+        assert task_response.result.get("executionId") == "exec-1"
+        assert task_response.result.get("status") == "running"
 
     def test_example_main_is_importable(self) -> None:
         """examples/workflow_asap_connector/main.py must import without side effects."""
@@ -155,7 +234,7 @@ class TestWorkflowAsapConnectorExample(NoRateLimitTestBase):
         self,
         capsys: CaptureFixture[str],
     ) -> None:
-        """Await main._run(live_base_url=None) and confirm skills + completion."""
+        """Await main._run(live_base_url=None) and confirm skills + harness."""
         assert _MAIN_PATH.is_file(), f"missing example entrypoint: {_MAIN_PATH}"
         module = _load_example_module("workflow_asap_connector_main_run", _MAIN_PATH)
         await module._run(live_base_url=None)
@@ -163,3 +242,4 @@ class TestWorkflowAsapConnectorExample(NoRateLimitTestBase):
         assert "listWorkflows" in captured.out
         assert "skills:" in captured.out
         assert "listWorkflows:" in captured.out
+        assert "12/12" in captured.out or "100%" in captured.out

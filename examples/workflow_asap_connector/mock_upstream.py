@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+import re
+
 import httpx
+
+# Exact one-segment workflow id (excludes /workflows/{id}/trigger).
+_GET_WORKFLOW_BY_ID = re.compile(r"^/api/v1/workflows/[^/]+$")
 
 
 def mock_workflow_upstream(request: httpx.Request) -> httpx.Response:
@@ -14,8 +19,8 @@ def mock_workflow_upstream(request: httpx.Request) -> httpx.Response:
         async with httpx.AsyncClient(transport=transport) as http:
             ...
     """
-    path = request.url.path
-    if request.method == "GET" and path.rstrip("/").endswith("/workflows"):
+    path = request.url.path.rstrip("/") or "/"
+    if request.method == "GET" and path.endswith("/workflows"):
         return httpx.Response(
             200,
             json={
@@ -24,13 +29,13 @@ def mock_workflow_upstream(request: httpx.Request) -> httpx.Response:
                 ],
             },
         )
-    if request.method == "GET" and "/workflows/" in path:
-        workflow_id = path.rstrip("/").rsplit("/", 1)[-1]
+    if request.method == "GET" and _GET_WORKFLOW_BY_ID.match(path):
+        workflow_id = path.rsplit("/", 1)[-1]
         return httpx.Response(
             200,
             json={"id": workflow_id, "name": "Demo Workflow", "active": True},
         )
-    if request.method == "POST" and path.rstrip("/").endswith("/trigger"):
+    if request.method == "POST" and path.endswith("/trigger"):
         return httpx.Response(
             200,
             json={"executionId": "exec-1", "status": "running"},

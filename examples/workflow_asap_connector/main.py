@@ -52,22 +52,16 @@ async def _build_bundle(
     upstream_base_url: str | None = None,
 ) -> OpenAPIAdapterBundle:
     """Build the OpenAPI→ASAP bundle with a shared open httpx client."""
+    kwargs: dict[str, Any] = {
+        "spec_path": _FRAGMENT,
+        "http_client": http,
+        "default_capabilities": "all",
+        "manifest_id": _MANIFEST_ID,
+        "asap_endpoint": "http://127.0.0.1:8000/asap",
+    }
     if upstream_base_url is not None:
-        return await create_from_openapi(
-            spec_path=_FRAGMENT,
-            http_client=http,
-            upstream_base_url=upstream_base_url.rstrip("/"),
-            default_capabilities="all",
-            manifest_id=_MANIFEST_ID,
-            asap_endpoint="http://127.0.0.1:8000/asap",
-        )
-    return await create_from_openapi(
-        spec_path=_FRAGMENT,
-        http_client=http,
-        default_capabilities="all",
-        manifest_id=_MANIFEST_ID,
-        asap_endpoint="http://127.0.0.1:8000/asap",
-    )
+        kwargs["upstream_base_url"] = upstream_base_url.rstrip("/")
+    return await create_from_openapi(**kwargs)
 
 
 async def _run(*, live_base_url: str | None) -> None:
