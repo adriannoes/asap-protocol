@@ -63,11 +63,15 @@ No maintainer-logged partner asks recorded in-repo for Semantic Kernel / MAF, Ha
 
 ## S1b go/no-go (D2) — Semantic Kernel
 
-**Decision: no-go** → skip [sprint-S1b-semantic-kernel.md](./sprint-S1b-semantic-kernel.md).
+**Original S0 decision (2026-07-13): no-go** — evidence below is unchanged.
 
-**Rationale:** Gate requires ≥1 credible Azure/.NET partner ask, ≥3 `adapter-request` issues for SK/MAF, or maintainer override. There is no `adapter-request` label; keyword search found **0** SK/MAF issues; no in-repo partner asks. Maintainer LGTM: **no-go**.
+**Rationale (S0):** Gate requires ≥1 credible Azure/.NET partner ask, ≥3 `adapter-request` issues for SK/MAF, or maintainer override. There is no `adapter-request` label; keyword search found **0** SK/MAF issues; no in-repo partner asks. Initial maintainer LGTM at S0: **no-go**.
 
-**Not this release:** Semantic Kernel / Microsoft Agent Framework will not receive an Adapter Lab II spike or public interop guide in v2.5.3. Revisit only if credible Azure/.NET demand appears (issues, partner ask, or explicit maintainer override) in a later lab cycle.
+**Maintainer override (2026-07-13): go** → run [sprint-S1b-semantic-kernel.md](./sprint-S1b-semantic-kernel.md) despite zero GitHub demand.
+
+**Override rationale:** Explicit LGTM to pursue a **research / experimental** interop guide in v2.5.3 as part of the combined Lab II **S1b + S1c** initiative on branch `feat/v2.5.3-s1b-s1c-spikes`. Demand evidence remains zero; this is not a promotion to a maintained .NET SDK or NuGet surface. Prefer **guide-only** (see [research-semantic-kernel.md](./research-semantic-kernel.md)).
+
+**In this release (override):** research/experimental Microsoft Agent Framework / Semantic Kernel interop guide only. No protocol fork; no NuGet publish.
 
 ---
 
@@ -95,7 +99,7 @@ No maintainer-logged partner asks recorded in-repo for Semantic Kernel / MAF, Ha
 |-----------|--------|
 | Counts + method documented | Done |
 | Primary (D1) locked, no swap | Done |
-| S1b (D2) no-go + “not this release” note | Done |
+| S1b (D2) no-go + “not this release” note | Superseded: original no-go kept; **override go** recorded 2026-07-13 |
 | S1c (D7) go + research map + Path intent | Done |
 | P1/P2 parking recorded | Done |
 | `release/2.5.3` on origin | Confirmed (`261e53b…`) |
