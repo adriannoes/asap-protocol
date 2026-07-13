@@ -10,6 +10,7 @@ import importlib.util
 import os
 import subprocess
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 from types import ModuleType
 
@@ -27,15 +28,22 @@ _ENV_JWT_KEY = "ASAP_AGENT_JWT"
 
 
 @pytest.fixture(autouse=True)
-def _isolate_asap_agent_jwt_env(monkeypatch: MonkeyPatch) -> None:
+def _isolate_asap_agent_jwt_env() -> Iterator[None]:
     """Keep ``ASAP_AGENT_JWT`` from leaking across example tests.
 
-    Provenance (S1c C.7 / T3 review): ``build_and_prepare_server(inject_env_jwt=True)``
-    writes ``os.environ`` directly. Without isolation, reversed collection order
-    contaminates ``test_mcp_auth_bridge_example.py`` (stale JWT → bad_signature /
-    stdout JSON-RPC corruption when the sibling server inherits the env).
+    Provenance (S1c C.7 / T3 / PR #289): ``inject_demo_jwt_env`` writes
+    ``os.environ`` directly. ``monkeypatch.delenv`` alone is insufficient when the
+    key was already absent — pytest records no undo, so a later ``os.environ``
+    set survives teardown and contaminates ``test_mcp_auth_bridge_example.py``.
     """
-    monkeypatch.delenv(_ENV_JWT_KEY, raising=False)
+    previous = os.environ.pop(_ENV_JWT_KEY, None)
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop(_ENV_JWT_KEY, None)
+        else:
+            os.environ[_ENV_JWT_KEY] = previous
 
 
 def _load_asap_mcp_server() -> ModuleType:
@@ -144,6 +152,35 @@ class TestNemoAsapMcpServer:
         )
         assert secure.get("isError") is not True
         assert "executed: granted" in str(secure["content"][0]["text"])
+
+    @pytest.mark.asyncio
+    async def test_inject_env_jwt_true_sets_env_without_printing_token(
+        self,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """``inject_env_jwt=True`` uses ``inject_demo_jwt_env``; no JWT on stderr.
+
+        Provenance (PR #289): covers the inject path in-process (smoke covers
+        subprocess). ``print_instructions`` defaults False so CI logs stay clean.
+        """
+        module = _load_asap_mcp_server()
+        server, identity = await module.build_and_prepare_server(
+            inject_env_jwt=True,
+            print_instructions=False,
+        )
+        assert os.environ.get(_ENV_JWT_KEY) == identity.demo_jwt
+
+        secure = await server._handle_tools_call(
+            {"name": "secure_action", "arguments": {"action": "inject-path"}},
+        )
+        assert secure.get("isError") is not True
+        assert "executed: inject-path" in str(secure["content"][0]["text"])
+
+        captured = capsys.readouterr()
+        assert identity.demo_jwt not in captured.err
+        assert identity.demo_jwt not in captured.out
+        assert "eyJ" not in captured.err
+        assert "eyJ" not in captured.out
 
     @pytest.mark.asyncio
     async def test_without_env_jwt_meta_still_works(

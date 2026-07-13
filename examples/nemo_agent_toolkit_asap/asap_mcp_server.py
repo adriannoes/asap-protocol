@@ -99,15 +99,60 @@ def inject_demo_jwt_env(demo_jwt: str) -> None:
     os.environ[_ENV_JWT_KEY] = demo_jwt
 
 
+def _print_path_a_startup_banner(identity: Any, *, inject_env_jwt: bool) -> None:
+    """Print Path A warnings on stderr without dumping the minted JWT.
+
+    Provenance (PR #289 review): the mcp_auth_bridge helper
+    ``_print_startup_instructions`` prints the live Agent JWT. Calling it from
+    ``build_and_prepare_server`` leaked tokens into pytest/smoke captured stderr
+    (and into CI logs when assertions concatenate stderr). Keep a local banner
+    for interactive stdio only — never print ``identity.demo_jwt``.
+
+    Args:
+        identity: Demo identity from mcp_auth_bridge (agent_id for operators).
+        inject_env_jwt: Whether this process injects ``ASAP_AGENT_JWT``.
+    """
+    agent_id = getattr(
+        getattr(identity, "agent_session", None),
+        "agent_id",
+        "<unknown>",
+    )
+    if inject_env_jwt:
+        print(
+            f"WARNING: {_ENV_JWT_KEY} injected for NAT Path A (dev-only env JWT fallback). "
+            "Do not deploy / do not use in multi-tenant production. "
+            "NAT OAuth2/Keycloak is not used.",
+            file=sys.stderr,
+            flush=True,
+        )
+    else:
+        print(
+            f"WARNING: --no-env-jwt: {_ENV_JWT_KEY} not injected. "
+            "Protected tools require _meta.asap_agent_jwt or a pre-set env JWT.",
+            file=sys.stderr,
+            flush=True,
+        )
+    print(
+        f"ASAP Path A MCP server ready (agent_id={agent_id}). "
+        "Demo JWT is held in-process only — not printed.",
+        file=sys.stderr,
+        flush=True,
+    )
+
+
 async def build_and_prepare_server(
     *,
     inject_env_jwt: bool = True,
+    print_instructions: bool = False,
 ) -> tuple[Any, Any]:
     """Build the protected MCP server and optionally inject ``ASAP_AGENT_JWT``.
 
     Args:
         inject_env_jwt: When True (default), set ``ASAP_AGENT_JWT`` from the
             minted demo token so NAT stdio clients need no ``_meta``.
+        print_instructions: When True, print a stderr banner (stdio ``main`` /
+            ``_run_stdio`` only). Default False so in-process pytest/smoke do
+            not dump operator noise or risk leaking tokens into CI logs.
 
     Returns:
         ``(protected_server, demo_identity)`` from mcp_auth_bridge.
@@ -119,27 +164,18 @@ async def build_and_prepare_server(
     server, identity = await module.build_protected_server()
     if inject_env_jwt:
         inject_demo_jwt_env(identity.demo_jwt)
-        print(
-            f"WARNING: {_ENV_JWT_KEY} injected for NAT Path A (dev-only env JWT fallback). "
-            "Not production. NAT OAuth2/Keycloak is not used.",
-            file=sys.stderr,
-            flush=True,
-        )
-    else:
-        print(
-            f"WARNING: --no-env-jwt: {_ENV_JWT_KEY} not injected. "
-            "Protected tools require _meta.asap_agent_jwt or a pre-set env JWT.",
-            file=sys.stderr,
-            flush=True,
-        )
-    module._print_startup_instructions(identity)
+    if print_instructions:
+        _print_path_a_startup_banner(identity, inject_env_jwt=inject_env_jwt)
     return server, identity
 
 
 async def _run_stdio(*, inject_env_jwt: bool) -> None:
     """Start the protected MCP server on stdio."""
     route_observability_logs_to_stderr()
-    server, _identity = await build_and_prepare_server(inject_env_jwt=inject_env_jwt)
+    server, _identity = await build_and_prepare_server(
+        inject_env_jwt=inject_env_jwt,
+        print_instructions=True,
+    )
     await server.run_stdio()
 
 

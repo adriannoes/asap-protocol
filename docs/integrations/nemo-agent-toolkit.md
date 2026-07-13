@@ -4,7 +4,7 @@ How [NVIDIA NeMo Agent Toolkit (NAT)](https://docs.nvidia.com/nemo/agent-toolkit
 
 !!! warning "Experimental — Path A demo exists; not a maintained adapter"
 
-    This page is **interop guidance** from Adapter Lab II (v2.5.3). A reproducible **Path A** stdio demo lives under [`examples/nemo_agent_toolkit_asap/`](https://github.com/adriannoes/asap-protocol/tree/main/examples/nemo_agent_toolkit_asap). It remains **experimental** until a maintained promotion decision — there is **no** first-class ASAP↔NAT adapter package, **no** published `nemo-agent-toolkit-asap` plugin, and **no** claim of native NAT↔ASAP protocol support. Treat recommendations as research notes — they may change without a deprecation cycle.
+    This page is **interop guidance** from Adapter Lab II (v2.5.3). A reproducible **Path A** stdio demo lives under [`examples/nemo_agent_toolkit_asap/`](../../examples/nemo_agent_toolkit_asap/). It remains **experimental** until a maintained promotion decision — there is **no** first-class ASAP↔NAT adapter package, **no** published `nemo-agent-toolkit-asap` plugin, and **no** claim of native NAT↔ASAP protocol support. Treat recommendations as research notes — they may change without a deprecation cycle.
 
 !!! note "Site navigation (Sprint S3)"
 
@@ -71,6 +71,10 @@ Identity in ASAP is URN-based (`urn:asap:agent:*`) with structured skill schemas
 
 These models are **complementary**, not interchangeable. Do not wire Keycloak as a stand-in for ASAP grants, and do not claim NAT `mcp_oauth2` talks to ASAP.
 
+!!! danger "Production hard-stop (env JWT fallback)"
+
+    Path A’s `ASAP_AGENT_JWT` env fallback is **dev-only** and **unsafe for multi-tenant production**. **Do not deploy** the Path A example unchanged, and **do not** use env JWT fallback as a production auth carriage. Prefer in-band `_meta.asap_agent_jwt` (or a future HTTP Auth Bridge) for real deployments. Same stance as [MCP Auth Bridge](../adapters/mcp-auth-bridge.md) and the example README.
+
 ## Transport honesty (Path A)
 
 | Transport | Path A for ASAP Auth Bridge? |
@@ -123,7 +127,7 @@ nat run --config_file examples/nemo_agent_toolkit_asap/configs/config-mcp-client
 
 Or: `./examples/nemo_agent_toolkit_asap/run_demo.sh nat` (exits with a clear skip if `nat` is missing — does not fail ASAP CI).
 
-Example README (same commands): [`examples/nemo_agent_toolkit_asap/README.md`](https://github.com/adriannoes/asap-protocol/tree/main/examples/nemo_agent_toolkit_asap).
+Example README (same commands): [`examples/nemo_agent_toolkit_asap/README.md`](../../examples/nemo_agent_toolkit_asap/README.md).
 
 ## Adjacent edge story (ShellClaw / CUDA)
 
@@ -142,7 +146,7 @@ NAT’s NIM / CUDA LLM path is **out of band** for this interop guide. For edge 
 ## Related
 
 - Spike map: [`engineering/tasks/v2.5.3/research-nemo-agent-toolkit.md`](../../engineering/tasks/v2.5.3/research-nemo-agent-toolkit.md)
-- Runnable Path A: [`examples/nemo_agent_toolkit_asap/`](https://github.com/adriannoes/asap-protocol/tree/main/examples/nemo_agent_toolkit_asap)
+- Runnable Path A: [`examples/nemo_agent_toolkit_asap/`](../../examples/nemo_agent_toolkit_asap/)
 - [MCP Auth Bridge](../adapters/mcp-auth-bridge.md) · [MCP integration](../mcp-integration.md)
 - [Security](../security.md) — Agent JWT / Host identity
 - [Capabilities](../capabilities/index.md)

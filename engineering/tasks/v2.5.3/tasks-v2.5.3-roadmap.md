@@ -1,6 +1,6 @@
 # Tasks: v2.5.3 Adapter Lab II — Sprint Index
 
-**Status: ACTIVE (kickoff started 2026-07-13)** — `release/2.5.3` on origin; working branch `feat/v2.5.3-s0-s1-workflow`. Demand sheet: [demand-sheet.md](./demand-sheet.md).
+**Status: ACTIVE (kickoff started 2026-07-13)** — `release/2.5.3` on origin; current spike branch `feat/v2.5.3-s1b-s1c-spikes` (S0+S1 merged via `feat/v2.5.3-s0-s1-workflow`). Demand sheet: [demand-sheet.md](./demand-sheet.md).
 
 Based on [PRD v2.5.3 Adapter Lab II](../../../product/prd/prd-v2.5.3-adapter-lab-ii.md). Each sprint merges into **`release/2.5.3`** (see [BRANCHING.md](./BRANCHING.md)); merge to `main` only after S4.
 

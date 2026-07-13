@@ -13,7 +13,7 @@
 
 ## Goal
 
-Produce an **interop spike + .NET-oriented guide** showing how ASAP identity/capabilities sit beside Microsoft Agent Framework / Semantic Kernel. Prefer guide + thin sample over a full .NET SDK in this release.
+Ship a **research / experimental interop guide** (guide-only) showing how ASAP identity/capabilities sit beside **Microsoft Agent Framework**, with Semantic Kernel called out only as legacy/migration. No C# sample, no NuGet, and no full .NET SDK in this release.
 
 If the spike exceeds ~1 week or needs protocol changes: stop, publish research notes, mark **not maintained**.
 

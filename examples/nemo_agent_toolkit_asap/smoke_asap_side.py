@@ -24,6 +24,9 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
+from asap.mcp.auth.errors import AUTH_REQUIRED
+from asap.mcp.client import MCPClient
+
 _EXAMPLE_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _EXAMPLE_DIR.parents[1]
 _SERVER_SCRIPT = _EXAMPLE_DIR / "asap_mcp_server.py"
@@ -58,8 +61,6 @@ async def run_inprocess_smoke() -> None:
     Example:
         await run_inprocess_smoke()
     """
-    from asap.mcp.auth.errors import AUTH_REQUIRED
-
     module = _load_asap_mcp_server()
 
     # Negative: no env JWT, no _meta → asap:auth_required
@@ -113,8 +114,6 @@ async def run_stdio_client_smoke() -> None:
     Example:
         await run_stdio_client_smoke()
     """
-    from asap.mcp.client import MCPClient
-
     server_command = [sys.executable, str(_SERVER_SCRIPT)]
     client = MCPClient(
         server_command,
