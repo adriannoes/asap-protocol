@@ -9,7 +9,7 @@
 **ASAP Protocol** (Async Simple Agent Protocol) is a production-ready standard for agent-to-agent communication.
 - **Stack**: Python 3.13+, FastAPI, Pydantic v2.
 - **Transport**: JSON-RPC 2.0 over HTTP/WebSocket.
-- **Status**: **v2.5.2** on `release/2.5.2` (security & correctness follow-up — pending merge/tag). **Current versions:** `pyproject.toml` **2.5.2** · PyPI `asap-protocol` **2.5.1** (2.5.2 pending tag) · PyPI `asap-compliance` **1.3.0** (tag [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1)) · npm `@asap-protocol/client` **2.4.1**. Scope: [prd-v2.5.2-security-follow-up.md](product/prd/prd-v2.5.2-security-follow-up.md). Next adoption: Adapter Lab II → **v2.5.3**; Distribution Loop → **v2.5.4**; Formal Spec → **v2.5.5**. See `CHANGELOG.md` `[2.5.2]` and `docs/migration.md#upgrading-from-v251`.
+- **Status**: v2.5.2 shipped on `main` (2026-07-08). **Current versions:** `pyproject.toml` **2.5.2** · PyPI `asap-protocol` **2.5.2** (tag [`v2.5.2`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.2)) · PyPI `asap-compliance` **1.3.0** (tag [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1)) · npm `@asap-protocol/client` **2.4.1**. Scope: [prd-v2.5.2-security-follow-up.md](product/prd/prd-v2.5.2-security-follow-up.md). Next adoption: Adapter Lab II → **v2.5.3**; Distribution Loop → **v2.5.4**; Formal Spec → **v2.5.5**. See `CHANGELOG.md` `[2.5.2]` and `docs/migration.md#upgrading-from-v251`.
 - **Framework Integrations**: LangChain, CrewAI, PydanticAI, LlamaIndex, SmolAgents, Vercel AI SDK, MCP (envelope + **MCP Auth Bridge** v2.5.0), OpenClaw, A2H.
 - **npm (TypeScript)**: The official client is **`@asap-protocol/client`** (scoped, **public** on npm for v2.4.x). Maintainer workflow: `.github/workflows/publish-typescript.yml`; context: `docs/maintainers/npm-publishing.md`.
 - **General contact** (humans coordinating on the protocol; not security): [info@asap-protocol.com](mailto:info@asap-protocol.com) — vulnerabilities: [SECURITY.md](SECURITY.md).
@@ -36,7 +36,7 @@ For coverage and pre-push gates, see [`.cursor/README.md`](.cursor/README.md#can
 | Commit or push | `git-commits.mdc` (always on) |
 | Frontend (`apps/web/`) | `frontend-best-practices.mdc` |
 | Security audit | `skills/security-review/SKILL.md` |
-| Security PR review (high-confidence) | `.cursor/commands/security-pr-review.md` |
+| Security PR review (high-confidence) | `.cursor/commands/security-pr-review.md` (local-only when present) |
 | Code quality review | `skills/code-quality-review/SKILL.md` |
 
 **Precedence:** user rules → always-on rules → scoped/requestable rules → skills → commands → docs. Details in [`.cursor/README.md`](.cursor/README.md).
@@ -44,7 +44,7 @@ For coverage and pre-push gates, see [`.cursor/README.md`](.cursor/README.md#can
 ## Knowledge Map
 
 ### 1. Product & Architecture (Read First)
-- **Vision & Roadmap**: ADRs and PRDs (`product/decision-records/`, `product/prd/`). Narrative vision files under `product/strategy/` are **local-only** (ignored on the remote).
+- **Vision & Roadmap**: ADRs and PRDs (`product/decision-records/`, `product/prd/`). Narrative vision files under `product/strategy/` are **local-only** (ignored on the remote); when present, start at `product/strategy/roadmap.md`.
 - **Feature Specs (PRDs)**: `product/prd/`
 - **Arch Decisions (ADRs)**: `product/decision-records/`
 - **Documentation checkpoints** (post-release PRD follow-up): `product/checkpoints.md`
@@ -52,8 +52,8 @@ For coverage and pre-push gates, see [`.cursor/README.md`](.cursor/README.md#can
 - **MCP Auth Bridge**: `asap.adapters.mcp` (`protect_server`, `MCPAuthConfig`) — [docs/adapters/mcp-auth-bridge.md](docs/adapters/mcp-auth-bridge.md)
 
 ### 2. Development Status
-- **Active Sprint**: `engineering/tasks/`
-- **Adoption Roadmap**: v2.5.2 **security follow-up** pending tag; v2.5.1 **code quality patch** shipped (2026-06-26); v2.5.0 **MCP Auth Bridge** shipped (2026-06-24); `asap-compliance` **1.3.0** on PyPI (tag `v2.5.0.1`); **next adoption:** Adapter Lab II (**v2.5.3**); `@asap-protocol/mcp-auth` (HTTP/SSE) still deferred.
+- **Active Sprint**: [engineering/tasks/v2.5.3/](engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md) — Adapter Lab II (**ready for kickoff**)
+- **Adoption Roadmap**: v2.5.2 **security follow-up** shipped (2026-07-08, tag `v2.5.2`); v2.5.1 **code quality patch** shipped (2026-06-26); v2.5.0 **MCP Auth Bridge** shipped (2026-06-24); `asap-compliance` **1.3.0** on PyPI (tag `v2.5.0.1`); **next adoption:** Adapter Lab II (**v2.5.3** — [PRD](product/prd/prd-v2.5.3-adapter-lab-ii.md), [tasks](engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md)); `@asap-protocol/mcp-auth` (HTTP/SSE) still deferred.
 - **Code Reviews**: `engineering/code-review/`
 
 ## Organization
@@ -74,7 +74,7 @@ src/asap/
 ### AI Toolbox (Available Capabilities)
 - **Agent index**: [`.cursor/README.md`](.cursor/README.md) — start here for rules, skills, and commands
 - **Rules**: `.cursor/rules/*.mdc` (auto-loaded or requestable by glob)
-- **Commands**: `.cursor/commands/` (Workflows like `create-prd`, `generate-tasks`, `security-pr-review`)
+- **Commands**: `.cursor/commands/` — slash workflows (`create-prd`, `generate-tasks`, `security-pr-review`); **local-only** (gitignored), same class as `product/strategy/`
 - **Skills**: `.cursor/skills/` (Security review, code quality, rate-limit testing)
 - **Web E2E**: `apps/web/docs/playwright-e2e.md` — Playwright browser path troubleshooting
 

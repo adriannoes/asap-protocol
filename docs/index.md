@@ -2,7 +2,7 @@
 
 **ASAP (Async Simple Agent Protocol)** is a streamlined protocol for agent-to-agent communication, designed to be simpler than existing alternatives while maintaining modern standards functionality.
 
-**Latest reference implementation:** **v2.5.2** pending tag ([CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#252---2026-07-08), [PRD](../product/prd/prd-v2.5.2-security-follow-up.md)); PyPI still **2.5.1** until publish. **v2.5.2** is the security & correctness follow-up — see [Migration (v2.5.1 → v2.5.2)](migration.md#upgrading-from-v251). **v2.5.0 MCP Auth Bridge** — opt-in Agent JWT + capability grants for native stdio MCP (`protect_server`); see [MCP Auth Bridge](adapters/mcp-auth-bridge.md). **v2.5.1** is a behavior-preserving code quality patch; see [Migration (v2.5.0 → v2.5.1)](migration.md#upgrading-from-v250-to-v251). **`asap-compliance` 1.3.0** on PyPI (tag [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1)). **TypeScript npm line: v2.4.1** — [`@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client), [`@asap-protocol/mastra`](integrations/mastra.md), [`@asap-protocol/openai-agents`](integrations/openai-agents.md) (`@asap-protocol/mcp-auth` still deferred). Adoption continues at **v2.5.3** (Adapter Lab II) → **v2.5.4** (Distribution Loop) → **v2.5.5** (Formal Spec). Upgrade: [v2.5.1 → v2.5.2](migration.md#upgrading-from-v251) · [v2.5.0 → v2.5.1](migration.md#upgrading-from-v250-to-v251) · [v2.4.1 → v2.5.0](migration.md#upgrading-from-v241-to-v250) · [v2.4.0 → v2.4.1](migration.md#upgrading-from-v240-to-v241).
+**Latest reference implementation:** **v2.5.2** on PyPI ([CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#252---2026-07-08), [PyPI](https://pypi.org/project/asap-protocol/), [PRD](../product/prd/prd-v2.5.2-security-follow-up.md)). **v2.5.2** is the security & correctness follow-up — see [Migration (v2.5.1 → v2.5.2)](migration.md#upgrading-from-v251). **v2.5.0 MCP Auth Bridge** — opt-in Agent JWT + capability grants for native stdio MCP (`protect_server`); see [MCP Auth Bridge](adapters/mcp-auth-bridge.md). **v2.5.1** is a behavior-preserving code quality patch; see [Migration (v2.5.0 → v2.5.1)](migration.md#upgrading-from-v250-to-v251). **`asap-compliance` 1.3.0** on PyPI (tag [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1)). **TypeScript npm line: v2.4.1** — [`@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client), [`@asap-protocol/mastra`](integrations/mastra.md), [`@asap-protocol/openai-agents`](integrations/openai-agents.md) (`@asap-protocol/mcp-auth` still deferred). Adoption continues at **v2.5.3** (Adapter Lab II) → **v2.5.4** (Distribution Loop) → **v2.5.5** (Formal Spec). Upgrade: [v2.5.1 → v2.5.2](migration.md#upgrading-from-v251) · [v2.5.0 → v2.5.1](migration.md#upgrading-from-v250-to-v251) · [v2.4.1 → v2.5.0](migration.md#upgrading-from-v241-to-v250) · [v2.4.0 → v2.4.1](migration.md#upgrading-from-v240-to-v241).
 
 ## Features
 
@@ -23,10 +23,10 @@
 uv add asap-protocol
 
 # Using pip (pin for reproducible upgrades)
-pip install asap-protocol==2.5.1
+pip install asap-protocol==2.5.2
 ```
 
-📦 **Available on [PyPI](https://pypi.org/project/asap-protocol/)** (`asap-protocol` **2.5.1**; **`asap-compliance` 1.3.0** via tag [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1)). TypeScript `@asap-protocol/*` packages remain at **2.4.1** — see [Migration (v2.5.0 → v2.5.1)](migration.md#upgrading-from-v250-to-v251).
+📦 **Available on [PyPI](https://pypi.org/project/asap-protocol/)** (`asap-protocol` **2.5.2**; **`asap-compliance` 1.3.0** via tag [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1)). TypeScript `@asap-protocol/*` packages remain at **2.4.1** — see [Migration (v2.5.1 → v2.5.2)](migration.md#upgrading-from-v251).
 
 ## Quick Start
 
