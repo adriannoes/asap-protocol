@@ -32,6 +32,10 @@ This section lists the most frequent errors you may encounter, with cause and so
 | 18 | **Pydantic ValidationError** | Envelope or model validation failed when building/serializing. | Fix field types and required fields; use `model_dump()`/`model_validate()` and handle validation in code. |
 | 19 | **Connection refused / OSError** | TCP connection to host:port failed (e.g. nothing listening). | Start the agent; confirm host and port; check firewall and security groups. |
 | 20 | **Path traversal / security** | Invalid or suspicious `FilePart` URI (e.g. `../` outside allowed base). | Use only allowed URIs; ensure server validates paths and rejects traversal attempts. |
+| 21 | **Unknown `config` / `metadata` key** | `TaskRequest.config` or `CommonMetadata` rejects extra fields (`extra="forbid"`, v2.5.2). | Use allowed fields only; move extensions to `TaskRequest.input` or envelope `extensions`. |
+| 22 | **Operator API 401/403** | `/usage`, `/sla`, or `/audit` with `require_operator_auth=True`. | Send Bearer JWT with ``asap:admin`` **and** identity binding (custom claim = `manifest.id`). |
+| 23 | **ProtocolCorrelationError** | Stream/response `correlation_id` ≠ request envelope `id`. | Echo `request_envelope.id` on every `TaskStream` / response chunk. |
+| 24 | **Host JWT jti replay on status** | Token already consumed by register/revoke/rotate-key. | Mint a new Host JWT for `/asap/agent/status` polling after mutating routes. |
 
 ### Connector auth and MCP grant denials
 
@@ -375,6 +379,12 @@ A: No handler is registered for that payload type. Register one with `HandlerReg
 
 **Q: What does ThreadPoolExhaustedError mean?**  
 A: All server worker threads are busy. Increase `max_threads` or optimize/use async handlers.
+
+**Q: What does ProtocolCorrelationError mean?**  
+A: A response or `TaskStream` chunk’s `correlation_id` did not equal the request envelope `id`. Fix the server handler to echo the request id. See [Error Handling](error-handling.md#protocolcorrelationerror).
+
+**Q: Why does `/usage` (or `/sla` / `/audit`) return 403 with a valid admin token?**  
+A: Operator routes need both scope ``asap:admin`` and identity binding (custom claim = server `manifest.id`, or `sub` in `ASAP_AUTH_SUBJECT_MAP`). See [migration](migration.md#opt-in-operator-api-auth-209).
 
 **Q: How do I know if the failure is network or agent?**  
 A: Use the table [Is it the network or the agent?](#is-it-the-network-or-the-agent) in Chaos Failure Modes and correlate logs with `trace_id`/`correlation_id`.

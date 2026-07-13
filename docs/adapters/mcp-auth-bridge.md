@@ -1,6 +1,9 @@
 # MCP Auth Bridge adapter (Python)
 
-The `asap.adapters.mcp` package adds **opt-in** Agent JWT and capability enforcement to a native **stdio MCP** server (`MCPServer`). Call `protect_server` to wrap an existing server without forking the JSON-RPC protocol loop (Mode A).
+The `asap.mcp.auth` package adds **opt-in** Agent JWT and capability enforcement to a native **stdio MCP** server (`MCPServer`). Call `protect_server` to wrap an existing server without forking the JSON-RPC protocol loop (Mode A).
+
+> **Import path (v2.5.1+):** Prefer `from asap.mcp.auth import ...`. The legacy
+> `asap.adapters.mcp` package remains a deprecation shim until **v2.6.0**.
 
 **Default behavior:** Unprotected `MCPServer` usage remains valid. Protection is explicit (MCP-DOC-004).
 
@@ -60,7 +63,7 @@ Wire identity stores, register capabilities and grants, register MCP tools, then
 import asyncio
 from datetime import datetime, timezone
 
-from asap.adapters.mcp import MCPAuthConfig, protect_server
+from asap.mcp.auth import MCPAuthConfig, protect_server
 from asap.auth.capabilities import (
     CapabilityDefinition,
     CapabilityGrant,
@@ -132,6 +135,27 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
+### Multi-worker JTI replay (v2.5.2)
+
+Share JWT `jti` state across processes with the same Redis-backed cache used by
+HTTP `create_app`:
+
+```python
+from asap.auth.jti_replay_cache import RedisJtiReplayCache
+from asap.mcp.auth import MCPAuthConfig, protect_server
+
+jti_cache = RedisJtiReplayCache.from_url("redis://localhost:6379/0")
+config = MCPAuthConfig(
+    host_store=host_store,
+    agent_store=agent_store,
+    capability_registry=registry,
+    jti_replay_cache=jti_cache,
+)
+```
+
+Requires `pip install 'asap-protocol[redis]'`. Redis connection errors propagate
+(no fail-soft). See [Security — Multi-instance JWT replay](../security.md#multi-instance-jwt-replay-v252).
+
 ### Passing the Agent JWT
 
 Clients attach the token on each protected `tools/call` in MCP `_meta`:
@@ -166,7 +190,7 @@ For single-agent local testing, set `allow_env_jwt_fallback=True` on `MCPAuthCon
 | `validate_tools_at_startup` | `bool` | `False` | When `True`, `protect_server` fails fast if any registered tool resolves to an unknown capability (MCP-MAP-003). |
 | `jwt_extractor` | `Callable[[CallToolRequestParams], str \| None] \| None` | `None` | Custom JWT extractor; when `None`, middleware uses `resolve_jwt_extractor`. |
 | `allow_env_jwt_fallback` | `bool` | `False` | When `True`, read `ASAP_AGENT_JWT` if `_meta.asap_agent_jwt` is absent. **Dev only.** |
-| `jti_replay_cache` | `JtiReplayCache \| None` | `None` | Optional replay protection for JWT `jti` claims. |
+| `jti_replay_cache` | `JtiReplayCacheProtocol \| None` | `None` | Optional replay protection for JWT `jti` claims. Multi-worker: inject `RedisJtiReplayCache` (same instance as `create_app(identity_jti_cache=...)`). Redis errors propagate. |
 | `expected_audience` | `str \| list[str] \| None` | `None` | Expected JWT `aud` passed to `verify_agent_jwt`. |
 | `manifest_url` | `str \| None` | `None` | Optional HTTPS URL to the agent manifest for discovery alignment (see [Discovery](#discovery)). |
 
@@ -174,10 +198,10 @@ For single-agent local testing, set `allow_env_jwt_fallback=True` on `MCPAuthCon
 
 | Function | Module | Description |
 |:---------|:-------|:------------|
-| `protect_server(server, config)` | `asap.adapters.mcp` | Return a `ProtectedMCPServer` that enforces auth on `tools/call`. Input server is not mutated. |
-| `resolve_jwt_extractor(config)` | `asap.adapters.mcp.config` | Return the effective JWT extractor (custom `config.jwt_extractor` or `default_jwt_extractor` with `allow_env_jwt_fallback`). **Middleware must use this** — do not call a `None` extractor. |
-| `resolve_capability(tool_name, config, *, server=None)` | `asap.adapters.mcp.capability_map` | Resolve MCP tool name → ASAP capability. Order: `tool_capability_map` → register-time metadata on `server` → identity (`tool_name`). |
-| `default_jwt_extractor(params, *, allow_env_fallback=False)` | `asap.adapters.mcp.jwt_extractor` | Read `params.meta["asap_agent_jwt"]`; optional `ASAP_AGENT_JWT` env when `allow_env_fallback=True`. |
+| `protect_server(server, config)` | `asap.mcp.auth` | Return a `ProtectedMCPServer` that enforces auth on `tools/call`. Input server is not mutated. |
+| `resolve_jwt_extractor(config)` | `asap.mcp.auth.config` | Return the effective JWT extractor (custom `config.jwt_extractor` or `default_jwt_extractor` with `allow_env_jwt_fallback`). **Middleware must use this** — do not call a `None` extractor. |
+| `resolve_capability(tool_name, config, *, server=None)` | `asap.mcp.auth.capability_map` | Resolve MCP tool name → ASAP capability. Order: `tool_capability_map` → register-time metadata on `server` → identity (`tool_name`). |
+| `default_jwt_extractor(params, *, allow_env_fallback=False)` | `asap.mcp.auth.jwt_extractor` | Read `params.meta["asap_agent_jwt"]`; optional `ASAP_AGENT_JWT` env when `allow_env_fallback=True`. |
 
 ### Register-time capability metadata
 
@@ -197,18 +221,18 @@ Resolution still honors `tool_capability_map` overrides first.
 
 ### Public exports
 
-Package root (`asap.adapters.mcp`) exposes the primary integration surface:
+Package root (`asap.mcp.auth`) exposes the primary integration surface:
 
 ```python
-from asap.adapters.mcp import MCPAuthConfig, ProtectedMCPServer, protect_server, resolve_jwt_extractor
+from asap.mcp.auth import MCPAuthConfig, ProtectedMCPServer, protect_server, resolve_jwt_extractor
 ```
 
 Advanced helpers and error constants live in submodules:
 
 ```python
-from asap.adapters.mcp.config import resolve_jwt_extractor
-from asap.adapters.mcp.capability_map import resolve_capability
-from asap.adapters.mcp.errors import (
+from asap.mcp.auth.config import resolve_jwt_extractor
+from asap.mcp.auth.capability_map import resolve_capability
+from asap.mcp.auth.errors import (
     AUTH_REQUIRED,
     CAPABILITY_DENIED,
     CONSTRAINT_VIOLATION,
@@ -218,7 +242,7 @@ from asap.adapters.mcp.errors import (
 
 ## Error codes
 
-Protected `tools/call` failures return a `CallToolResult` with `isError: true`. The text content uses ASAP-namespaced codes from `asap.adapters.mcp.errors`:
+Protected `tools/call` failures return a `CallToolResult` with `isError: true`. The text content uses ASAP-namespaced codes from `asap.mcp.auth.errors`:
 
 | Code | When | Typical detail |
 |:-----|:-----|:---------------|

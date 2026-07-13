@@ -4,6 +4,12 @@ ASAP v2.2+ can record **append-only, hash-chained** audit entries when the trans
 
 Implementation: `asap.economics.audit` (`AuditEntry`, `InMemoryAuditStore`, `SQLiteAuditStore`, `compute_entry_hash`).
 
+Pass `audit_store=...` to `create_app` to mount the **`/audit`** REST router. That
+surface is **unauthenticated by default**. When exposing it beyond localhost,
+set `require_operator_auth=True` with `oauth2_config` (scope ``asap:admin`` +
+identity binding). See [Security — Operator REST APIs](security.md#operator-rest-apis-v252)
+and [migration](migration.md#opt-in-operator-api-auth-209).
+
 ## `AuditEntry` model
 
 | Field | Role |
@@ -60,4 +66,5 @@ Without `--verify-chain`, the CLI still prints rows (which may be internally inc
 ## Related
 
 - [CLI reference](cli.md) — `audit export` option table and exit codes.
+- [Security — Operator REST APIs](security.md#operator-rest-apis-v252) — protect `/audit` with OAuth2.
 - [CHANGELOG](../CHANGELOG.md) — release notes when audit or CLI behaviour changes.

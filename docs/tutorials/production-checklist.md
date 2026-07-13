@@ -25,12 +25,13 @@ Use this checklist before deploying ASAP agents to production. Covers security, 
 - [ ] Store tokens in environment variables (never hardcode)
 - [ ] Rotate tokens regularly; use short-lived tokens (15–60 min)
 - [ ] Ensure clients send `Authorization` header (Bearer or Basic)
+- [ ] If mounting `/usage`, `/sla`, or `/audit` beyond localhost: `require_operator_auth=True` + `oauth2_config`
 
 ### Rate Limiting
 
 - [ ] Configure rate limits via `ASAP_RATE_LIMIT` or `rate_limit` in `create_app()`
 - [ ] Tune limits for your workload (e.g. `10/second;100/minute`)
-- [ ] For multi-instance deployments, use Redis-backed rate limiting (slowapi)
+- [ ] For multi-instance deployments, set `ASAP_RATE_LIMIT_BACKEND=redis://...` (requires `pip install 'asap-protocol[redis]'`; transport uses the `limits` library)
 - [ ] Monitor `asap_rate_limit_exceeded_total` (or equivalent) for abuse
 
 ### Request Size Limits
@@ -42,6 +43,7 @@ Use this checklist before deploying ASAP agents to production. Covers security, 
 ### Handler Security
 
 - [ ] Validate all payloads with Pydantic models (e.g. `TaskRequest`)
+- [ ] Do not send unknown keys on `TaskRequest.config` / `CommonMetadata` (forbidden since v2.5.2)
 - [ ] Use `FilePart` (or equivalent) for file URIs; block path traversal (`../`)
 - [ ] Use `sanitize_for_logging()` before logging envelope/payload
 - [ ] Never log secrets or PII
@@ -52,6 +54,7 @@ Use this checklist before deploying ASAP agents to production. Covers security, 
 - [ ] Keep timestamp validation enabled (default)
 - [ ] Consider `require_nonce=True` for high-security flows
 - [ ] Use a shared nonce store (Redis, DB) for multi-instance deployments
+- [ ] Multi-worker Host/Agent JWT: inject `RedisJtiReplayCache` via `identity_jti_cache` (and MCP `jti_replay_cache`)
 
 ---
 
