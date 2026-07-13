@@ -1,6 +1,6 @@
 # Tasks: v2.5.3 Adapter Lab II — Sprint Index
 
-**Status: PLANNED (READY FOR KICKOFF)** — create `release/2.5.3` at S0 start.
+**Status: ACTIVE (kickoff started 2026-07-13)** — `release/2.5.3` on origin; working branch `feat/v2.5.3-s0-s1-workflow`. Demand sheet: [demand-sheet.md](./demand-sheet.md).
 
 Based on [PRD v2.5.3 Adapter Lab II](../../../product/prd/prd-v2.5.3-adapter-lab-ii.md). Each sprint merges into **`release/2.5.3`** (see [BRANCHING.md](./BRANCHING.md)); merge to `main` only after S4.
 
@@ -10,16 +10,16 @@ Based on [PRD v2.5.3 Adapter Lab II](../../../product/prd/prd-v2.5.3-adapter-lab
 - [x] v2.5.0 MCP Auth Bridge in tree (`asap.adapters.mcp.protect_server`)
 - [x] v2.3.0 OpenAPI adapter + v2.3.1 Mastra / OpenAI Agents adapters shipped
 - [x] `scripts/lint_no_transport_growth.py` CI-enforced (Lab I D4)
-- [ ] Maintainer opens kickoff (this folder + `release/2.5.3` branch)
+- [x] Maintainer opens kickoff (this folder + `release/2.5.3` branch)
 
 ## Sprint plan
 
 | Sprint | Focus | PRD | Priority | Status |
 |--------|-------|-----|----------|--------|
-| **S0** | [Candidate lock & demand check](./sprint-S0-candidate-lock.md) | D1–D7, §6 gates | P0 | Planned |
-| **S1** | [Workflow prototype (primary)](./sprint-S1-workflow-prototype.md) | LAB2-001, LAB2-002 | P0 | Planned |
-| **S1b** | [Conditional SK / .NET spike](./sprint-S1b-semantic-kernel.md) | D2 | P0 if gate | Optional |
-| **S1c** | [NeMo Agent Toolkit spike](./sprint-S1c-nemo-agent-toolkit.md) | D7 | P0 planned | Optional (non-blocking) |
+| **S0** | [Candidate lock & demand check](./sprint-S0-candidate-lock.md) | D1–D7, §6 gates | P0 | Done |
+| **S1** | [Workflow prototype (primary)](./sprint-S1-workflow-prototype.md) | LAB2-001, LAB2-002 | P0 | Done |
+| **S1b** | [Conditional SK / .NET spike](./sprint-S1b-semantic-kernel.md) | D2 | P0 if gate | Skipped (D2 no-go) |
+| **S1c** | [NeMo Agent Toolkit spike](./sprint-S1c-nemo-agent-toolkit.md) | D7 | P0 planned | Planned (D7 go) |
 | **S2** | [Security guide & MCP patterns](./sprint-S2-security-docs.md) | LAB2-003, LAB2-006 | P0 | Planned |
 | **S3** | [Docs review, site routing & learnings](./sprint-S3-docs-review.md) | LAB2-004, LAB2-005 + docs surface | P0 | Planned |
 | **S4** | [Release v2.5.3](./sprint-S4-release.md) | DoD, metrics | P0 | Planned |
@@ -44,26 +44,26 @@ S1b / S1c never block S1/S2/S3/S4. If D2 fails, skip S1b. S1c defaults to **go**
 
 ## Parent tasks (high-level)
 
-- [ ] **1.0 Candidate lock (S0)**
+- [x] **1.0 Candidate lock (S0)**
   - **Trigger:** Maintainer kickoff after v2.5.2.
   - **Enables:** S1 primary path; optional S1b; planned S1c.
   - **Depends on:** PRD D1–D7; GitHub `adapter-request` label / issues.
   - **Acceptance criteria:**
-    - [ ] Demand sheet filled (SK / Haystack / Letta / n8n / NeMo Agent Toolkit counts)
-    - [ ] Primary confirmed: workflow connector **or** explicit swap documented
-    - [ ] S1b go/no-go recorded
-    - [ ] S1c go/no-go recorded (**default go** per D7)
-    - [ ] `release/2.5.3` branch exists
+    - [x] Demand sheet filled (SK / Haystack / Letta / n8n / NeMo Agent Toolkit counts)
+    - [x] Primary confirmed: workflow connector **or** explicit swap documented
+    - [x] S1b go/no-go recorded
+    - [x] S1c go/no-go recorded (**default go** per D7)
+    - [x] `release/2.5.3` branch exists
 
-- [ ] **2.0 Workflow prototype (S1)**
+- [x] **2.0 Workflow prototype (S1)**
   - **Trigger:** S0 primary = workflow (default).
   - **Enables:** S2 security guide against a real example; S3 site links.
   - **Depends on:** Task 1.0; OpenAPI adapter and/or capability grant APIs in tree.
   - **Acceptance criteria:**
-    - [ ] Runnable example under `examples/` (or `apps/`) maps workflow/API actions → ASAP capabilities
-    - [ ] Guide under `docs/integrations/` (or `docs/adapters/`)
-    - [ ] No protocol fork; transport lint clean
-    - [ ] LAB2-001 / LAB2-002 satisfied for the primary
+    - [x] Runnable example under `examples/` (or `apps/`) maps workflow/API actions → ASAP capabilities
+    - [x] Guide under `docs/integrations/` (or `docs/adapters/`)
+    - [x] No protocol fork; transport lint clean
+    - [x] LAB2-001 / LAB2-002 satisfied for the primary
 
 - [ ] **2b.0 Conditional Semantic Kernel spike (S1b)**
   - **Trigger:** S0 D2 gate pass.
@@ -168,3 +168,5 @@ S1b / S1c never block S1/S2/S3/S4. If D2 fails, skip S1b. S1c defaults to **go**
 | 2026-07-11 | Initial sprint index from revised PRD (D1–D6); S0–S4 + optional S1b |
 | 2026-07-11 | **D7 / S1c**: NeMo Agent Toolkit spike + [research-nemo-agent-toolkit.md](./research-nemo-agent-toolkit.md) |
 | 2026-07-12 | **S3 docs review**: [sprint-S3-docs-review.md](./sprint-S3-docs-review.md) + [docs-review-checklist.md](./docs-review-checklist.md); replaces S3 site-learnings-only |
+| 2026-07-13 | **S0 Done**: [demand-sheet.md](./demand-sheet.md); D1 workflow primary (no swap); D2 S1b skipped; D7 S1c planned; kickoff ACTIVE |
+| 2026-07-13 | **S1 Done**: workflow example + [workflow-connectors.md](../../../docs/integrations/workflow-connectors.md); MkDocs nav deferred to S3 |
