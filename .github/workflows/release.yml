@@ -88,7 +88,7 @@ jobs:
           fetch-depth: 0  # Fetch full history for changelog generation
 
       - name: Install uv
-        uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3  # v8.3.0
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990  # v8.3.2
         with:
           enable-cache: true
 
@@ -160,7 +160,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b  # v2
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228  # v2
         with:
           tag_name: ${{ github.ref_name }}
           name: "v${{ steps.tag_version.outputs.VERSION }}"
