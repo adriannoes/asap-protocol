@@ -17,7 +17,7 @@ ASAP (Agent State and Action Protocol) builds upon concepts from both A2A and MC
 | **Message Format** | JSON | JSON-RPC | JSON-RPC + Envelope |
 | **Discovery** | Agent Card | Server info | Manifest |
 | **Task Lifecycle** | Basic | N/A | Full state machine |
-| **Streaming** | SSE | Stdio/SSE | WebSocket (planned) |
+| **Streaming** | SSE + WebSocket (`/asap/stream`, `/asap/ws`) | Stdio/SSE | SSE + WebSocket |
 
 ---
 
@@ -769,7 +769,7 @@ without `protect_server` behave exactly as in v2.4.1.
 
 #### What changed
 
-- **MCP Auth Bridge (opt-in)**: `asap.adapters.mcp.protect_server` wraps a native
+- **MCP Auth Bridge (opt-in)**: `asap.mcp.auth.protect_server` wraps a native
   stdio `MCPServer` with Agent JWT verification and capability enforcement on
   `tools/call`. Unprotected MCP usage remains valid (MCP-DOC-004).
 - **Compliance**: `asap-compliance` adds an `mcp-auth-bridge` profile for stdio
@@ -1017,6 +1017,64 @@ The Redis backend uses a **fixed window** aligned with the in-memory fallback.
 If Redis is unreachable, the app falls back to per-instance in-memory limits
 (weaker on multi-instance deploys); set both URL and token from the same
 provider family (Upstash **or** Vercel KV) to avoid misconfiguration.
+
+#### Other v2.5.2 correctness fixes
+
+| Fix | Impact |
+|-----|--------|
+| **Streaming correlation (#247)** | SSE/WebSocket `TaskStream` chunks must set `correlation_id` to the **request envelope `id`**. Mismatched or missing binding raises client-side `ProtocolCorrelationError`. |
+| **Agent status JTI (#249)** | `GET /asap/agent/status` rejects Host JWTs whose `jti` was already consumed by register/revoke/rotate-key (read-only replay check; polling may still reuse a fresh token). |
+| **Registry signed envelopes (#224)** | Auto-registration accepts `{manifest, signature}` envelopes and unwraps before validation. |
+| **Registry validation → 400 (#227)** | `ManifestValidationError` maps to HTTP **400** (was 500). |
+| **SQLite write lock (#245)** | Shared `asyncio.Lock` on `AsyncSqliteRepository.execute()` for concurrent writers. |
+
+Allowed `TaskRequest.config` fields (unknown keys rejected):
+`timeout_seconds`, `priority`, `idempotency_key`, `streaming`, `persist_state`,
+`model`, `temperature`.
+
+Allowed `CommonMetadata` fields: `purpose`, `ttl_hours`, `source`, `timestamp`,
+`tags`.
+
+#### Backward compatibility
+
+- **Opt-in**: operator auth, Redis JTI, web distributed rate limits — unchanged
+  defaults when you do nothing.
+- **Breaking for clients**: unknown keys on `TaskRequest.config` /
+  `Conversation.metadata` now fail validation.
+- **Wire protocol / manifest schema**: otherwise unchanged.
+- **CLI**: root re-exports of three legacy names removed; use `_compat` or
+  canonical modules (shim removed in v2.6.0).
+
+#### Migration checklist
+
+- [ ] Bump to `asap-protocol>=2.5.2`
+- [ ] Scan clients for unknown `config` / `metadata` keys; move extensions to
+      `TaskRequest.input` or envelope `extensions`
+- [ ] If exposing `/usage`, `/sla`, or `/audit` beyond localhost: set
+      `require_operator_auth=True` + `oauth2_config` and mint ``asap:admin``
+      tokens with identity binding
+- [ ] Multi-worker HTTP: `identity_jti_cache=RedisJtiReplayCache.from_url(...)`
+      and `ASAP_RATE_LIMIT_BACKEND=redis://...`
+- [ ] Multi-worker MCP Auth Bridge: same cache via `MCPAuthConfig.jti_replay_cache`
+- [ ] Multi-instance `apps/web`: set Upstash or Vercel KV REST URL + token
+- [ ] Custom stream handlers: ensure `TaskStream.correlation_id == request.id`
+- [ ] Registry integrators: expect HTTP 400 on manifest validation failures;
+      signed envelope JSON is accepted
+- [ ] Re-run compliance harness / CI gate after upgrade
+
+#### Troubleshooting (v2.5.2)
+
+| Symptom | Likely cause | Fix |
+|---------|--------------|-----|
+| Pydantic `ValidationError` on `config` / `metadata` | Unknown keys (`extra="forbid"`) | Use allowed fields only; nest custom data under `input` / `extensions` |
+| Operator API **401** | Missing/invalid Bearer JWT | Configure IdP JWKS; send `Authorization: Bearer ...` |
+| Operator API **403** with ``asap:admin`` | Identity binding failed, or scope missing | Set custom claim = `manifest.id` or map `sub` via `ASAP_AUTH_SUBJECT_MAP` |
+| `ProtocolCorrelationError` on stream | Chunk `correlation_id` ≠ request envelope `id` | Echo `request_envelope.id` on every streamed chunk |
+| Host JWT rejected on `/asap/agent/status` | `jti` already recorded by a mutating route | Mint a new Host JWT for polling after register/revoke/rotate |
+| Redis JTI / rate-limit errors on HTTP | Redis unreachable | Redis errors **propagate** for JTI and transport rate limits — monitor Redis health |
+
+See also [Troubleshooting Guide](troubleshooting.md) and
+[Security — Operator REST APIs](security.md#operator-rest-apis-v252).
 
 ---
 

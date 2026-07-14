@@ -82,7 +82,8 @@ A successful submission returns a **registration receipt** (Pydantic model `Regi
 | Condition | Typical HTTP | Notes |
 |-----------|--------------|--------|
 | Missing or invalid Bearer token | 401 | Check JWKS, expiry, issuer/audience |
-| Manifest URL unreachable or invalid | 422 / 502 | SSRF protections apply per transport policy |
+| Manifest URL unreachable or invalid | 400 / 502 | SSRF protections apply; fetch/network failures may be 502 |
+| Manifest schema / signature validation failed | **400** | `ManifestValidationError` (v2.5.2 #227); signed `{manifest, signature}` envelopes are accepted (#224) |
 | Compliance Harness v2 **score < 1.0** | 422 | Response includes score and failed checks |
 | **Rate limit** (per token, e.g. 5/hour when enabled) | 429 | Retry after window |
 | Idempotent replay | 200 | Same `manifest_url` may return the same receipt |

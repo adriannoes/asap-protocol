@@ -95,7 +95,7 @@ See [CLI reference](cli.md) (all commands, exit codes, `compliance-check`, `audi
 ## Documentation
 
 - [OpenAPI adapter](adapters/openapi.md) — derive ASAP skills and an upstream proxy from OpenAPI 3.x (`asap.adapters.openapi`)
-- [MCP Auth Bridge](adapters/mcp-auth-bridge.md) — opt-in Agent JWT + capability enforcement for native stdio `MCPServer` (`asap.adapters.mcp.protect_server`)
+- [MCP Auth Bridge](adapters/mcp-auth-bridge.md) — opt-in Agent JWT + capability enforcement for native stdio `MCPServer` (`asap.mcp.auth.protect_server`)
 - [Workflow connectors](integrations/workflow-connectors.md) — n8n / Activepieces-style workflow HTTP APIs → ASAP skills via OpenAPI (Adapter Lab II)
 - [Automation connector security](guides/automation-connector-security.md) — secrets, TLS, webhooks, grants, and MCP Path A notes for connectors
 - [Microsoft Agent Framework](integrations/microsoft-agent-framework.md) — research / experimental MAF ↔ ASAP interop (no .NET SDK)
@@ -120,7 +120,7 @@ See [CLI reference](cli.md) (all commands, exit codes, `compliance-check`, `audi
 | Feature | Description | Where |
 |:--------|:-------------|:------|
 | **OAuth2 / Custom Claims** | Server and client auth; identity binding via JWT claims | [Transport](transport.md), [Security](security.md), examples: `auth_patterns` |
-| **WebSocket** | Real-time transport; MessageAck for reliability (see [Q16 — WebSocket Message Ack](https://github.com/adriannoes/asap-protocol/blob/main/product/decision-records/02-protocol.md#question-16-websocket-message-acknowledgment)) | [Transport](transport.md), `asap.transport.websocket`, examples: `websocket_concept` |
+| **WebSocket** | Real-time transport; MessageAck for reliability (see [Q16 — WebSocket Message Ack](https://github.com/adriannoes/asap-protocol/blob/main/product/decision-records/02-protocol.md#question-16-websocket-message-acknowledgment)) | [Transport](transport.md), `asap.transport.ws`, examples: `websocket_concept` |
 | **Webhooks** | Signed POST callbacks to URLs; SSRF checks, retry, DLQ | [API Reference](api-reference.md) (`asap.transport`), `WebhookDelivery`, `WebhookRetryManager` |
 | **Discovery** | Well-known manifest, Lite Registry, health endpoint | [Transport](transport.md), `asap.discovery` |
 | **State Storage** | SQLite backend, env-based backend selection | [State Management](state-management.md), [Best Practices: Failover](best-practices/agent-failover-migration.md), examples: `storage_backends`, `state_migration` |

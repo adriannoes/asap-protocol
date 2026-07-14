@@ -24,6 +24,33 @@ Examples:
 - `TaskNotFoundError`: task lookup failures
 - `TaskAlreadyCompletedError`: attempted updates to terminal tasks
 
+### ProtocolCorrelationError
+
+Client-side fatal error (`asap.transport.errors.ProtocolCorrelationError`) raised
+when a peer returns a well-formed envelope whose `correlation_id` does **not**
+bind to the in-flight request envelope `id`. Taxonomy code:
+`asap:protocol/malformed_envelope`.
+
+| Transport path | Bound payload types |
+|----------------|---------------------|
+| Unary `send()` / `batch()` / WS recv | `TaskResponse`, `McpToolResult`, `McpResourceData` |
+| SSE / WebSocket streaming | Above **plus** `TaskStream` |
+
+```python
+from asap.transport.errors import ProtocolCorrelationError
+
+try:
+    async for chunk in client.stream(request_envelope):
+        ...
+except ProtocolCorrelationError as exc:
+    # exc.request_id — expected request envelope id
+    # exc.correlation_id — value on the bad chunk
+    ...
+```
+
+Server stream handlers must set `correlation_id = request_envelope.id` on every
+chunk. See [Transport — streaming correlation](transport.md#streaming-correlation-binding-v252).
+
 ## Usage Example
 
 ```python
