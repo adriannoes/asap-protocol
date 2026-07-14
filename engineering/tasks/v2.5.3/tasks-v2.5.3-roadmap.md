@@ -122,7 +122,7 @@ S1b / S1c never block S1/S2/S3/S4. S0 D2 was **no-go** on demand; **maintainer o
 - [x] LAB2-005 — open vs hosted learnings captured
 - [x] LAB2-006 — Auth Bridge referenced if MCP exposed (or N/A documented)
 - [ ] Transport growth lint clean across v2.5.3 PRs
-- [ ] [release-checklist.md](./release-checklist.md) complete
+- [ ] [release-checklist.md](./release-checklist.md) complete — **S4 gate** (Product DoD §2.0 boxes stay unchecked until the release sprint signs them; roadmap LAB2-003–006 above means content landed in S1–S3, not that S4 checklist is done)
 
 ## Out of scope (defer)
 

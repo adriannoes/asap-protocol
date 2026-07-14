@@ -21,6 +21,8 @@
 
 ## 2.0 Product DoD
 
+> **S4 owns this section.** Roadmap may mark LAB2-003–006 content as landed after S2/S3; leave these boxes unchecked until the release sprint verifies and signs off.
+
 - [ ] LAB2-001 — no protocol fork
 - [ ] LAB2-002 — ≥1 workflow/enterprise example
 - [ ] LAB2-003 — security guide published

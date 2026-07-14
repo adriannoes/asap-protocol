@@ -69,7 +69,7 @@ uv sync --extra openapi
 uv run python examples/workflow_asap_connector/main.py
 ```
 
-Runs Compliance Harness v2 (expects score **1.0**), then invokes `listWorkflows` against a **mocked** upstream (no SaaS credentials). Spike notes and skill table: [`examples/workflow_asap_connector/`](https://github.com/adriannoes/asap-protocol/tree/main/examples/workflow_asap_connector).
+Runs Compliance Harness v2 (expects score **1.0**), then invokes `listWorkflows` against a **mocked** upstream (no SaaS credentials). Spike notes and skill table: [`examples/workflow_asap_connector/`](https://github.com/adriannoes/asap-protocol/tree/release/2.5.3/examples/workflow_asap_connector).
 
 Optional live upstream (HTTPS recommended; keep secrets in env only):
 
@@ -140,5 +140,5 @@ Identity / approval for production: configure `FreshSessionConfig` and optional 
 - [OpenAPI adapter](../adapters/openapi.md) — mapper, upstream proxy, approval / headers
 - [Mastra integration](./mastra.md) — Lab I: ASAP capabilities → framework tools
 - [OpenAI Agents SDK integration](./openai-agents.md) — Lab I: ASAP capabilities → Agents SDK tools
-- Runnable example: [`examples/workflow_asap_connector/`](https://github.com/adriannoes/asap-protocol/tree/main/examples/workflow_asap_connector)
+- Runnable example: [`examples/workflow_asap_connector/`](https://github.com/adriannoes/asap-protocol/tree/release/2.5.3/examples/workflow_asap_connector)
 - Error codes: [Error handling](../error-handling.md)

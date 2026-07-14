@@ -761,6 +761,47 @@ For deployments that enforce self-authorization prevention with real passkeys:
 See [Self-authorization prevention](security/self-authorization-prevention.md)
 (**Real WebAuthn**) for the threat model and ceremony flow.
 
+### Upgrading from v2.4.1 to v2.5.0
+
+v2.5.0 is an **additive, backward-compatible** minor release. JSON-RPC envelopes,
+OAuth2, capability grants, and existing manifests are unchanged. MCP servers
+without `protect_server` behave exactly as in v2.4.1.
+
+#### What changed
+
+- **MCP Auth Bridge (opt-in)**: `asap.adapters.mcp.protect_server` wraps a native
+  stdio `MCPServer` with Agent JWT verification and capability enforcement on
+  `tools/call`. Unprotected MCP usage remains valid (MCP-DOC-004).
+- **Compliance**: `asap-compliance` adds an `mcp-auth-bridge` profile for stdio
+  MCP auth, grants, constraints, and manifest alignment.
+- **Deferred**: `initialize` session-token handshake, `hide_unauthorized_tools`
+  (MAP-004), and `@asap-protocol/mcp-auth` HTTP/SSE middleware (v2.5.0.1).
+
+#### Upgrade steps
+
+1. **Bump Python dependency**:
+   ```bash
+   pip install --upgrade asap-protocol==2.5.0
+   # or
+   uv add asap-protocol==2.5.0
+   ```
+   TypeScript consumers: no npm bump required for v2.5.0 — `@asap-protocol/*`
+   packages remain at **2.4.1** until the v2.5.0.1 middleware release.
+
+2. **Optional — protect an MCP server**: See
+   [MCP Auth Bridge adapter](adapters/mcp-auth-bridge.md) and
+   `examples/mcp_auth_bridge/server.py`.
+
+3. **Re-run Compliance Harness v2** if you ship MCP tools
+   (`asap compliance-check --exit-on-fail`).
+
+#### Backward compatibility
+
+- **Wire protocol**: Unchanged from v2.4.1.
+- **Breaking changes**: None. `protect_server` is opt-in.
+
+---
+
 ### Upgrading from v2.5.0 to v2.5.1
 
 v2.5.1 is a **code quality patch**. JSON-RPC envelopes, OAuth2, capability grants,
@@ -1016,47 +1057,6 @@ envelope, JWT, or capability grant semantics relative to v2.5.2.
 
 - **Wire protocol**: Unchanged from v2.5.2.
 - **Breaking changes**: None expected for Lab II scope (docs / examples).
-
----
-
-### Upgrading from v2.4.1 to v2.5.0
-
-v2.5.0 is an **additive, backward-compatible** minor release. JSON-RPC envelopes,
-OAuth2, capability grants, and existing manifests are unchanged. MCP servers
-without `protect_server` behave exactly as in v2.4.1.
-
-#### What changed
-
-- **MCP Auth Bridge (opt-in)**: `asap.adapters.mcp.protect_server` wraps a native
-  stdio `MCPServer` with Agent JWT verification and capability enforcement on
-  `tools/call`. Unprotected MCP usage remains valid (MCP-DOC-004).
-- **Compliance**: `asap-compliance` adds an `mcp-auth-bridge` profile for stdio
-  MCP auth, grants, constraints, and manifest alignment.
-- **Deferred**: `initialize` session-token handshake, `hide_unauthorized_tools`
-  (MAP-004), and `@asap-protocol/mcp-auth` HTTP/SSE middleware (v2.5.0.1).
-
-#### Upgrade steps
-
-1. **Bump Python dependency**:
-   ```bash
-   pip install --upgrade asap-protocol==2.5.0
-   # or
-   uv add asap-protocol==2.5.0
-   ```
-   TypeScript consumers: no npm bump required for v2.5.0 — `@asap-protocol/*`
-   packages remain at **2.4.1** until the v2.5.0.1 middleware release.
-
-2. **Optional — protect an MCP server**: See
-   [MCP Auth Bridge adapter](adapters/mcp-auth-bridge.md) and
-   `examples/mcp_auth_bridge/server.py`.
-
-3. **Re-run Compliance Harness v2** if you ship MCP tools
-   (`asap compliance-check --exit-on-fail`).
-
-#### Backward compatibility
-
-- **Wire protocol**: Unchanged from v2.4.1.
-- **Breaking changes**: None. `protect_server` is opt-in.
 
 ---
 

@@ -1,10 +1,11 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
-import { ArrowRight, Terminal, Braces, Route, ShieldCheck, GitMerge, Workflow, Beaker } from 'lucide-react';
+import { ArrowRight, Terminal, Braces, Route, ShieldCheck, GitMerge, Workflow, Beaker, Lock } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BackgroundPaths } from '@/components/ui/background-paths';
 import Link from 'next/link';
+import { DEVELOPER_EXPERIENCE_CTA_IDS } from '@/lib/telemetry/homepage-cta-ids';
 
 export const metadata: Metadata = {
     title: 'Developer Experience | ASAP Protocol',
@@ -20,6 +21,8 @@ type FrameworkEntry = {
     LucideIcon?: LucideIcon;
     /** Optional docs URL (GitHub blob on release/2.5.3 for Lab II preview). */
     docsHref?: string;
+    /** Stable `data-cta` for Vercel / site telemetry when the card is a docs link. */
+    dataCta?: string;
 };
 
 const FRAMEWORKS: FrameworkEntry[] = [
@@ -47,6 +50,15 @@ const FRAMEWORKS: FrameworkEntry[] = [
         desc: 'Expose n8n-/Activepieces-style workflow HTTP APIs as ASAP skills via the OpenAPI adapter.',
         docsHref:
             'https://github.com/adriannoes/asap-protocol/blob/release/2.5.3/docs/integrations/workflow-connectors.md',
+        dataCta: DEVELOPER_EXPERIENCE_CTA_IDS.docsWorkflowConnectors,
+    },
+    {
+        name: 'Automation connector security',
+        LucideIcon: Lock,
+        desc: 'Hardening baseline for OpenAPI-backed workflow connectors (secrets, TLS, least privilege, MCP when exposed).',
+        docsHref:
+            'https://github.com/adriannoes/asap-protocol/blob/release/2.5.3/docs/guides/automation-connector-security.md',
+        dataCta: DEVELOPER_EXPERIENCE_CTA_IDS.docsAutomationConnectorSecurity,
     },
     {
         name: 'Microsoft Agent Framework',
@@ -54,6 +66,7 @@ const FRAMEWORKS: FrameworkEntry[] = [
         desc: 'Experimental research notes for MAF / Semantic Kernel–lineage patterns.',
         docsHref:
             'https://github.com/adriannoes/asap-protocol/blob/release/2.5.3/docs/integrations/microsoft-agent-framework.md',
+        dataCta: DEVELOPER_EXPERIENCE_CTA_IDS.docsMicrosoftAgentFramework,
     },
     {
         name: 'NeMo Agent Toolkit',
@@ -61,6 +74,7 @@ const FRAMEWORKS: FrameworkEntry[] = [
         desc: 'Experimental guide: ASAP alongside NVIDIA NeMo Agent Toolkit / A2A / MCP.',
         docsHref:
             'https://github.com/adriannoes/asap-protocol/blob/release/2.5.3/docs/integrations/nemo-agent-toolkit.md',
+        dataCta: DEVELOPER_EXPERIENCE_CTA_IDS.docsNemoAgentToolkit,
     },
 ];
 
@@ -233,6 +247,7 @@ export default function DeveloperExperiencePage() {
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className={cardClassName}
+                                        data-cta={fw.dataCta}
                                     >
                                         {cardBody}
                                     </a>

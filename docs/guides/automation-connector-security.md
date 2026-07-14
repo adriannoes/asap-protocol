@@ -12,9 +12,9 @@ Security baseline for **OpenAPI-backed workflow / automation connectors** that e
 | Capability grants for connector skills | Replacing [Security Guide](../security.md) (Agent JWT, envelopes, nonce) |
 | MCP Auth Bridge **when** a connector exposes MCP | Inventing HTTP/SSE MCP Auth Bridge |
 
-**Primary example (OpenAPI only):** [`examples/workflow_asap_connector/`](https://github.com/adriannoes/asap-protocol/tree/main/examples/workflow_asap_connector) — see [Workflow connectors](../integrations/workflow-connectors.md).
+**Primary example (OpenAPI only):** [`examples/workflow_asap_connector/`](https://github.com/adriannoes/asap-protocol/tree/release/2.5.3/examples/workflow_asap_connector) — see [Workflow connectors](../integrations/workflow-connectors.md).
 
-**MCP Path A demo (separate):** [`examples/nemo_agent_toolkit_asap/`](https://github.com/adriannoes/asap-protocol/tree/main/examples/nemo_agent_toolkit_asap) — see [NeMo Agent Toolkit interop](../integrations/nemo-agent-toolkit.md).
+**MCP Path A demo (separate):** [`examples/nemo_agent_toolkit_asap/`](https://github.com/adriannoes/asap-protocol/tree/release/2.5.3/examples/nemo_agent_toolkit_asap) — see [NeMo Agent Toolkit interop](../integrations/nemo-agent-toolkit.md).
 
 ## 1. Secrets: environment only
 
@@ -100,7 +100,7 @@ Skill descriptions and JSON Schemas should describe **shape**, not credentials.
 
 ### Workflow primary example — N/A
 
-[`examples/workflow_asap_connector/`](https://github.com/adriannoes/asap-protocol/tree/main/examples/workflow_asap_connector) is **OpenAPI-only**. It does **not** expose an MCP server or MCP tools. MCP Auth Bridge guidance does **not** apply to that example.
+[`examples/workflow_asap_connector/`](https://github.com/adriannoes/asap-protocol/tree/release/2.5.3/examples/workflow_asap_connector) is **OpenAPI-only**. It does **not** expose an MCP server or MCP tools. MCP Auth Bridge guidance does **not** apply to that example.
 
 ### Mode A vs Mode B
 
@@ -111,7 +111,7 @@ Skill descriptions and JSON Schemas should describe **shape**, not credentials.
 
 ### NeMo Path A (uses Mode A)
 
-[`examples/nemo_agent_toolkit_asap/`](https://github.com/adriannoes/asap-protocol/tree/main/examples/nemo_agent_toolkit_asap) demonstrates Mode A: NAT `mcp_client` stdio → ASAP `protect_server`.
+[`examples/nemo_agent_toolkit_asap/`](https://github.com/adriannoes/asap-protocol/tree/release/2.5.3/examples/nemo_agent_toolkit_asap) demonstrates Mode A: NAT `mcp_client` stdio → ASAP `protect_server`.
 
 !!! warning "Env JWT fallback is dev-only"
 
@@ -129,7 +129,7 @@ Skill descriptions and JSON Schemas should describe **shape**, not credentials.
 
 ## Related
 
-- Runnable OpenAPI example: [`examples/workflow_asap_connector/`](https://github.com/adriannoes/asap-protocol/tree/main/examples/workflow_asap_connector)
+- Runnable OpenAPI example: [`examples/workflow_asap_connector/`](https://github.com/adriannoes/asap-protocol/tree/release/2.5.3/examples/workflow_asap_connector)
 - [Workflow connectors](../integrations/workflow-connectors.md)
 - [OpenAPI adapter](../adapters/openapi.md)
 - [Security Guide](../security.md) — transport TLS, rate limits, Agent JWT

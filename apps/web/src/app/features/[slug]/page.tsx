@@ -3,25 +3,11 @@ import type { Metadata } from 'next';
 import { ArrowLeft, Database, ShieldCheck, Zap, Activity, Globe, Lock, Code, Fingerprint, KeySquare, Radio, Clock, GaugeCircle, Layers, Waypoints, FileCode, Braces, CloudUpload, Bot, Sparkles } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid';
+import { LANDING_FEATURE_SLUGS } from '@/lib/telemetry/homepage-cta-ids';
 import { LAB2_FEATURE_PAGES, type FeaturePageContent } from '../lab2-feature-pages';
 
 export function generateStaticParams() {
-    return [
-        { slug: 'openapi-adapter' },
-        { slug: 'workflow-connectors' },
-        { slug: 'automation-connector-security' },
-        { slug: 'typescript-sdk' },
-        { slug: 'mastra-adapter' },
-        { slug: 'openai-agents-adapter' },
-        { slug: 'auto-registration' },
-        { slug: 'lite-registry' },
-        { slug: 'verified-trust' },
-        { slug: '1-click-integration' },
-        { slug: 'full-observability' },
-        { slug: 'per-agent-identity' },
-        { slug: 'scoped-capabilities' },
-        { slug: 'streaming-responses' },
-    ];
+    return LANDING_FEATURE_SLUGS.map((slug) => ({ slug }));
 }
 
 const FEATURE_CONTENT: Record<string, FeaturePageContent> = {
