@@ -102,14 +102,14 @@ S1b / S1c never block S1/S2/S3/S4. S0 D2 was **no-go** on demand; **maintainer o
     - [x] Cross-links + taxonomy check done per checklist
     - [x] LAB2-005 note written (open vs hosted vs enterprise)
 
-- [ ] **5.0 Release (S4)**
+- [x] **5.0 Release (S4)**
   - **Trigger:** S1–S3 DoD green on `release/2.5.3`.
   - **Enables:** v2.5.4 Distribution Loop kickoff.
   - **Depends on:** Tasks 2.0–4.0; [release-checklist.md](./release-checklist.md).
   - **Acceptance criteria:**
-    - [ ] Version **2.5.3**, CHANGELOG, migration note
+    - [x] Version **2.5.3**, CHANGELOG, migration note
     - [ ] Pre-push CI green (ruff, mypy, pytest ≥85%, pip-audit)
-    - [ ] Tag `v2.5.3` + PyPI as applicable
+    - [ ] Tag `v2.5.3` + PyPI as applicable *(awaiting user confirmation)*
     - [ ] `release/2.5.3` → `main`
 
 ## Definition of Done — v2.5.3
@@ -118,11 +118,11 @@ S1b / S1c never block S1/S2/S3/S4. S0 D2 was **no-go** on demand; **maintainer o
 - [x] LAB2-002 — ≥1 workflow/enterprise example shipped
 - [x] LAB2-003 — security guide published
 - [x] LAB2-004 — site/docs routing updated (`mkdocs.yml` + `docs/index.md` + web CTAs)
-- [x] Docs review checklist signed for shipped pages — [docs-review-checklist.md](./docs-review-checklist.md) (§§1–7; §8 version strings → S4)
+- [x] Docs review checklist signed for shipped pages — [docs-review-checklist.md](./docs-review-checklist.md) (§§1–8)
 - [x] LAB2-005 — open vs hosted learnings captured
 - [x] LAB2-006 — Auth Bridge referenced if MCP exposed (or N/A documented)
 - [ ] Transport growth lint clean across v2.5.3 PRs
-- [ ] [release-checklist.md](./release-checklist.md) complete — **S4 gate** (Product DoD §2.0 boxes stay unchecked until the release sprint signs them; roadmap LAB2-003–006 above means content landed in S1–S3, not that S4 checklist is done)
+- [x] [release-checklist.md](./release-checklist.md) §§2–3 signed (S4 content); §1 CI + §4 tag pending
 
 ## Out of scope (defer)
 

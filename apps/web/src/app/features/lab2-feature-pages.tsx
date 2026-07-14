@@ -5,13 +5,13 @@ import { Clock, FileCode, Globe, KeySquare, Lock, ShieldCheck, Workflow } from '
 const DOCS_LINK =
   'rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300 underline-offset-2 hover:underline';
 
-// Lab II docs/examples on release/2.5.3 until S4 merges to main.
+// Lab II docs/examples on main (v2.5.3).
 const DOCS_WORKFLOW_CONNECTORS =
-  'https://github.com/adriannoes/asap-protocol/blob/release/2.5.3/docs/integrations/workflow-connectors.md';
+  'https://github.com/adriannoes/asap-protocol/blob/main/docs/integrations/workflow-connectors.md';
 const DOCS_AUTOMATION_CONNECTOR_SECURITY =
-  'https://github.com/adriannoes/asap-protocol/blob/release/2.5.3/docs/guides/automation-connector-security.md';
+  'https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/automation-connector-security.md';
 const EXAMPLE_WORKFLOW_CONNECTOR =
-  'https://github.com/adriannoes/asap-protocol/tree/release/2.5.3/examples/workflow_asap_connector';
+  'https://github.com/adriannoes/asap-protocol/tree/main/examples/workflow_asap_connector';
 
 export type FeatureCapability = { title: string; description: string; icon: LucideIcon };
 

@@ -7,18 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Security (deps)
+### Follow-up (planned v2.5.4+)
 
-- Override `setuptools>=83.0.0` for **PYSEC-2026-3447** (full `[2.5.3]` notes in S4).
-
-### Follow-up (planned v2.5.3+)
-
-- **Adapter Lab II** — enterprise/workflow adapters ([prd-v2.5.3-adapter-lab-ii.md](product/prd/prd-v2.5.3-adapter-lab-ii.md)).
 - **Distribution Loop** — homepage, templates, metrics ([prd-v2.5.4-distribution-loop.md](product/prd/prd-v2.5.4-distribution-loop.md)).
 - **Formal Spec & Interop** — RFC spec, introspection, privacy ([prd-v2.5.5-formal-spec-interop.md](product/prd/prd-v2.5.5-formal-spec-interop.md)).
 - `@asap-protocol/mcp-auth` HTTP/SSE middleware (deferred from v2.5.0 — see [2.5.0] TypeScript note and [typescript-mcp-auth-spike.md](engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md)).
 - Collapse the dual `UsageMetrics`/`InMemoryMeteringStore` pair retained in S1 for API stability.
 - Reduce the `asap.transport.client` package aggregate LOC below the S2 target.
+
+---
+
+## [2.5.3] - 2026-07-14
+
+**Adapter Lab II** — workflow / enterprise adapters as **docs + examples** (no wire-format
+change). Scope: [prd-v2.5.3-adapter-lab-ii.md](product/prd/prd-v2.5.3-adapter-lab-ii.md).
+npm `@asap-protocol/*` packages remain at **2.4.1**.
+
+### Added
+
+- **Workflow connectors**: OpenAPI → ASAP skills for n8n-/Activepieces-shaped workflow
+  HTTP APIs — [guide](docs/integrations/workflow-connectors.md) +
+  `examples/workflow_asap_connector/` (Compliance Harness v2 score **1.0**).
+- **Automation connector security**: production baseline for OpenAPI-backed connectors
+  ([guide](docs/guides/automation-connector-security.md)).
+- **Microsoft Agent Framework**: research / experimental interop guide
+  ([guide](docs/integrations/microsoft-agent-framework.md)); no .NET SDK / NuGet sample.
+- **NeMo Agent Toolkit**: experimental Path A stdio demo
+  ([guide](docs/integrations/nemo-agent-toolkit.md),
+  `examples/nemo_agent_toolkit_asap/`); Path C third-party plugin remains deferred.
+- **Docs / web surface**: MkDocs Adapters + Lab II nav; marketplace WhatsNew ribbon and
+  developer-experience CTAs for Lab II guides.
+
+### Fixed
+
+- **Invalid envelope JSON-RPC errors**: URN / structure validation failures return
+  JSON-safe `-32602` with `validation_errors` (no longer escalate to `-32603` when
+  Pydantic embeds `ValueError` in `ctx`).
+- **MCP Auth Bridge example client**: self-contained path captures the demo Agent JWT
+  from the spawned child stderr (cross-process paste no longer required).
+- **`ASAPClient.health_check`**: `base_url` defaults to the client's HTTP base URL.
+
+### Security (deps)
+
+- Override `setuptools>=83.0.0` for **PYSEC-2026-3447** (transitive build/tooling path).
+  See [SECURITY.md](SECURITY.md).
+
+### Migration
+
+- **v2.5.2 → v2.5.3**: See [migration guide](docs/migration.md#upgrading-from-v252-to-v253).
+  No breaking wire-protocol changes; adopt new guides/examples as needed.
 
 ---
 

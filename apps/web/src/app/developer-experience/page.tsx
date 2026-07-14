@@ -19,7 +19,7 @@ type FrameworkEntry = {
     icon?: string;
     /** Lucide fallback when no SVG asset exists (do not invent broken `/icons/*.svg` paths). */
     LucideIcon?: LucideIcon;
-    /** Optional docs URL (GitHub blob on release/2.5.3 for Lab II preview). */
+    /** Optional docs URL (GitHub blob on main). */
     docsHref?: string;
     /** Stable `data-cta` for Vercel / site telemetry when the card is a docs link. */
     dataCta?: string;
@@ -49,7 +49,7 @@ const FRAMEWORKS: FrameworkEntry[] = [
         LucideIcon: Workflow,
         desc: 'Expose n8n-/Activepieces-style workflow HTTP APIs as ASAP skills via the OpenAPI adapter.',
         docsHref:
-            'https://github.com/adriannoes/asap-protocol/blob/release/2.5.3/docs/integrations/workflow-connectors.md',
+            'https://github.com/adriannoes/asap-protocol/blob/main/docs/integrations/workflow-connectors.md',
         dataCta: DEVELOPER_EXPERIENCE_CTA_IDS.docsWorkflowConnectors,
     },
     {
@@ -57,7 +57,7 @@ const FRAMEWORKS: FrameworkEntry[] = [
         LucideIcon: Lock,
         desc: 'Hardening baseline for OpenAPI-backed workflow connectors (secrets, TLS, least privilege, MCP when exposed).',
         docsHref:
-            'https://github.com/adriannoes/asap-protocol/blob/release/2.5.3/docs/guides/automation-connector-security.md',
+            'https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/automation-connector-security.md',
         dataCta: DEVELOPER_EXPERIENCE_CTA_IDS.docsAutomationConnectorSecurity,
     },
     {
@@ -65,7 +65,7 @@ const FRAMEWORKS: FrameworkEntry[] = [
         LucideIcon: Beaker,
         desc: 'Experimental research notes for MAF / Semantic Kernel–lineage patterns.',
         docsHref:
-            'https://github.com/adriannoes/asap-protocol/blob/release/2.5.3/docs/integrations/microsoft-agent-framework.md',
+            'https://github.com/adriannoes/asap-protocol/blob/main/docs/integrations/microsoft-agent-framework.md',
         dataCta: DEVELOPER_EXPERIENCE_CTA_IDS.docsMicrosoftAgentFramework,
     },
     {
@@ -73,7 +73,7 @@ const FRAMEWORKS: FrameworkEntry[] = [
         LucideIcon: Beaker,
         desc: 'Experimental guide: ASAP alongside NVIDIA NeMo Agent Toolkit / A2A / MCP.',
         docsHref:
-            'https://github.com/adriannoes/asap-protocol/blob/release/2.5.3/docs/integrations/nemo-agent-toolkit.md',
+            'https://github.com/adriannoes/asap-protocol/blob/main/docs/integrations/nemo-agent-toolkit.md',
         dataCta: DEVELOPER_EXPERIENCE_CTA_IDS.docsNemoAgentToolkit,
     },
 ];

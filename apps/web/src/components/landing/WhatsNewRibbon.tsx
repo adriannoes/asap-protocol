@@ -11,6 +11,7 @@ import {
   BookOpen,
   Workflow,
   Lock,
+  Beaker,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -24,52 +25,26 @@ type Pill = {
 };
 
 const CHANGELOG_URL =
-  'https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#252---2026-07-08';
+  'https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#253---2026-07-14';
+const DOCS_MIGRATION_253 =
+  'https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md#upgrading-from-v252-to-v253';
 const DOCS_MCP_AUTH_BRIDGE =
   'https://github.com/adriannoes/asap-protocol/blob/main/docs/adapters/mcp-auth-bridge.md';
-const DOCS_MCP_INTEGRATION =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/mcp-integration.md';
-const DOCS_MIGRATION_252 =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md#upgrading-from-v251';
 const EXAMPLE_MCP_AUTH_BRIDGE =
   'https://github.com/adriannoes/asap-protocol/tree/main/examples/mcp_auth_bridge';
 const DOCS_TS_SDK =
   'https://github.com/adriannoes/asap-protocol/blob/main/docs/sdks/typescript.md';
-// Lab II docs live on the release train until S4 → main; preview links use release/2.5.3.
+// Lab II docs ship with v2.5.3 on main.
 const DOCS_WORKFLOW_CONNECTORS =
-  'https://github.com/adriannoes/asap-protocol/blob/release/2.5.3/docs/integrations/workflow-connectors.md';
+  'https://github.com/adriannoes/asap-protocol/blob/main/docs/integrations/workflow-connectors.md';
 const DOCS_AUTOMATION_CONNECTOR_SECURITY =
-  'https://github.com/adriannoes/asap-protocol/blob/release/2.5.3/docs/guides/automation-connector-security.md';
+  'https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/automation-connector-security.md';
+const DOCS_MICROSOFT_AGENT_FRAMEWORK =
+  'https://github.com/adriannoes/asap-protocol/blob/main/docs/integrations/microsoft-agent-framework.md';
+const DOCS_NEMO_AGENT_TOOLKIT =
+  'https://github.com/adriannoes/asap-protocol/blob/main/docs/integrations/nemo-agent-toolkit.md';
 
 const PILLS: Pill[] = [
-  {
-    label: 'Operator auth',
-    href: DOCS_MIGRATION_252,
-    icon: ShieldCheck,
-    external: true,
-    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsMigration250,
-  },
-  {
-    label: 'MCP Auth Bridge',
-    href: DOCS_MCP_AUTH_BRIDGE,
-    icon: KeySquare,
-    external: true,
-    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsMcpAuthBridge,
-  },
-  {
-    label: 'MCP modes',
-    href: DOCS_MCP_INTEGRATION,
-    icon: BookOpen,
-    external: true,
-    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsMcpIntegration,
-  },
-  {
-    label: 'Example',
-    href: EXAMPLE_MCP_AUTH_BRIDGE,
-    icon: Sparkles,
-    external: true,
-    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsMcpAuthExample,
-  },
   {
     label: 'Workflow connectors',
     href: DOCS_WORKFLOW_CONNECTORS,
@@ -83,6 +58,41 @@ const PILLS: Pill[] = [
     icon: Lock,
     external: true,
     dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsAutomationConnectorSecurity,
+  },
+  {
+    label: 'Migration',
+    href: DOCS_MIGRATION_253,
+    icon: ShieldCheck,
+    external: true,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsMigration250,
+  },
+  {
+    label: 'MCP Auth Bridge',
+    href: DOCS_MCP_AUTH_BRIDGE,
+    icon: KeySquare,
+    external: true,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsMcpAuthBridge,
+  },
+  {
+    label: 'Example',
+    href: EXAMPLE_MCP_AUTH_BRIDGE,
+    icon: Sparkles,
+    external: true,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsMcpAuthExample,
+  },
+  {
+    label: 'MAF (research)',
+    href: DOCS_MICROSOFT_AGENT_FRAMEWORK,
+    icon: BookOpen,
+    external: true,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsMicrosoftAgentFramework,
+  },
+  {
+    label: 'NeMo (experimental)',
+    href: DOCS_NEMO_AGENT_TOOLKIT,
+    icon: Beaker,
+    external: true,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsNemoAgentToolkit,
   },
   {
     label: 'Identity',
@@ -115,7 +125,7 @@ const PILLS: Pill[] = [
 export function WhatsNewRibbon() {
   return (
     <aside
-      aria-label="What's new in ASAP Protocol v2.5.2"
+      aria-label="What's new in ASAP Protocol v2.5.3"
       className="w-full border-y border-zinc-900 bg-zinc-950"
     >
       <div className="container mx-auto flex max-w-5xl flex-col gap-4 px-4 py-8 md:flex-row md:items-center md:gap-4 md:px-6 md:py-10">
@@ -123,10 +133,10 @@ export function WhatsNewRibbon() {
           <Sparkles className="h-4 w-4 shrink-0 text-indigo-400" aria-hidden />
           <div className="flex flex-col">
             <span className="font-mono text-xs uppercase tracking-wider text-indigo-400">
-              What&apos;s new in v2.5.2
+              What&apos;s new in v2.5.3
             </span>
             <span className="text-xs text-zinc-500">
-              Security follow-up · Adapter Lab II docs preview
+              Adapter Lab II · workflow connectors &amp; interop guides
             </span>
           </div>
         </div>

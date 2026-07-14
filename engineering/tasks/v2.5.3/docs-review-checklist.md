@@ -108,7 +108,7 @@ Keep the split clear for readers:
 | Role | Sign-off |
 |------|----------|
 | S3 owner | ☑ Docs checklist §§1–7 complete for shipped pages (web §6 done in 4.4); §8 version strings deferred to S4 |
-| S4 owner | ☐ Version strings + migration section match tag `v2.5.3` |
+| S4 owner | ☑ Version strings + migration section match tag `v2.5.3` (2026-07-14; tag publish pending) |
 
 ---
 
@@ -119,3 +119,4 @@ Keep the split clear for readers:
 | 2026-07-12 | Initial checklist from `docs/` + `mkdocs.yml` audit for Lab II |
 | 2026-07-13 | S3 docs half: inventory marked shipped; MkDocs Adapters + Lab II nav; cross-links; migration stub; learnings + demand snapshot |
 | 2026-07-13 | S3 task 4.4: web CTAs / feature cards / DX ecosystem entries for Lab II guides; §6 signed; S3 owner §§1–7 |
+| 2026-07-14 | S4: version strings 2.5.3, migration finalized, public URLs → `main`, §8 signed |

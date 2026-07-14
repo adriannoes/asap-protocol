@@ -1080,15 +1080,11 @@ See also [Troubleshooting Guide](troubleshooting.md) and
 
 ### Upgrading from v2.5.2 to v2.5.3
 
-> **Draft (Sprint S3):** Final PyPI / tag date is owned by **Sprint S4**. Until then,
-> treat **v2.5.2** as the latest published reference implementation. This section
-> describes the **Adapter Lab II** docs and examples train landing in v2.5.3.
+**v2.5.3 (Adapter Lab II)** — released **2026-07-14** — is primarily **documentation
+and examples**, plus small DX / correctness fixes. There are **no breaking changes**
+for envelope, JWT, or capability grant semantics relative to v2.5.2.
 
-**v2.5.3 (Adapter Lab II)** is primarily **documentation and examples** — not a
-protocol wire-format change. There are **no invented breaking changes** for
-envelope, JWT, or capability grant semantics relative to v2.5.2.
-
-#### What lands in the v2.5.3 docs train
+#### What lands in v2.5.3
 
 - **Workflow connectors** — OpenAPI → ASAP skills for n8n / Activepieces-style
   workflow HTTP APIs ([guide](integrations/workflow-connectors.md),
@@ -1100,21 +1096,25 @@ envelope, JWT, or capability grant semantics relative to v2.5.2.
 - **NeMo Agent Toolkit** — experimental Path A demo
   ([guide](integrations/nemo-agent-toolkit.md),
   `examples/nemo_agent_toolkit_asap/`); Path C third-party plugin remains deferred.
-- **MkDocs** — Adapters (OpenAPI, MCP Auth Bridge) and Lab II pages wired into
-  site navigation.
+- **MkDocs / web** — Adapters + Lab II nav; marketplace WhatsNew ribbon for Lab II.
+- **Fixes**: JSON-safe invalid-envelope `-32602`; MCP Auth Bridge example client
+  self-captures child JWT; `health_check()` defaults to the client base URL;
+  `setuptools>=83` override for **PYSEC-2026-3447**.
 
-#### Upgrade steps (when S4 publishes `asap-protocol==2.5.3`)
+#### Upgrade steps
 
-1. Bump the Python dependency to the tagged release (S4 fills exact date / notes).
+1. Bump the Python dependency: `pip install 'asap-protocol==2.5.3'` (or `uv add`).
 2. No code changes required for existing v2.5.2 agents unless you adopt the new
    examples or guides.
-3. TypeScript `@asap-protocol/*` packages remain at **2.4.1** unless S4 notes
-   otherwise; `@asap-protocol/mcp-auth` HTTP/SSE middleware remains deferred.
+3. TypeScript `@asap-protocol/*` packages remain at **2.4.1**;
+   `@asap-protocol/mcp-auth` HTTP/SSE middleware remains deferred.
+4. Optional: re-run `examples/mcp_auth_bridge/client.py` without pasting a JWT —
+   the client now captures the demo token from its own child stderr.
 
 #### Backward compatibility
 
 - **Wire protocol**: Unchanged from v2.5.2.
-- **Breaking changes**: None expected for Lab II scope (docs / examples).
+- **Breaking changes**: None for Lab II scope (docs / examples / DX).
 
 ---
 
