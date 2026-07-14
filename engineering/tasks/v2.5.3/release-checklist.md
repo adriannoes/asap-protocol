@@ -49,7 +49,7 @@
 
 ## 4.0 Tag, publish, verify
 
-- [ ] Merge `release/2.5.3` → `main`
+- [ ] Merge `release/2.5.3` → `main` — PR [#291](https://github.com/adriannoes/asap-protocol/pull/291) OPEN
 - [ ] `git tag -a v2.5.3` + push
 - [ ] GitHub Release notes (Adapter Lab II)
 - [ ] PyPI / Docker workflow green (if Python version bumped)

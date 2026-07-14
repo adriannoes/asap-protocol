@@ -32,7 +32,7 @@
   - [x] MkDocs build if docs/nav changed (`mkdocs build` / project-documented command)
 
 - [ ] **5.4 Tag & publish** *(requires explicit user confirmation)*
-  - [ ] PR `release/2.5.3` → `main`
+  - [ ] PR `release/2.5.3` → `main` — [#291](https://github.com/adriannoes/asap-protocol/pull/291) **OPEN** (merge not done)
   - [ ] Tag `v2.5.3` + GitHub Release
   - [ ] Confirm PyPI/Docker workflows as applicable
 

@@ -14,7 +14,9 @@ export const WHATS_NEW_RIBBON_CTA_IDS = {
   docsMcpAuthBridge: 'docs-mcp-auth-bridge',
   docsMcpIntegration: 'docs-mcp-integration',
   docsMcpAuthExample: 'docs-mcp-auth-example',
-  docsMigration250: 'docs-migration-250',
+  docsMigration250: 'docs-migration-250', // retained for historical CTR dashboards
+  /** v2.5.3 migration pill (WhatsNewRibbon). */
+  docsMigration253: 'docs-migration-253',
   docsOpenapi: 'docs-openapi',
   docsTypescript: 'docs-typescript',
   docsWorkflowConnectors: 'docs-workflow-connectors',
@@ -64,7 +66,7 @@ export const HOMEPAGE_CTA_IDS = [
   WHATS_NEW_RIBBON_CTA_IDS.docsMcpAuthBridge,
   WHATS_NEW_RIBBON_CTA_IDS.docsMcpIntegration,
   WHATS_NEW_RIBBON_CTA_IDS.docsMcpAuthExample,
-  WHATS_NEW_RIBBON_CTA_IDS.docsMigration250,
+  WHATS_NEW_RIBBON_CTA_IDS.docsMigration253,
   WHATS_NEW_RIBBON_CTA_IDS.docsTypescript,
   WHATS_NEW_RIBBON_CTA_IDS.docsWorkflowConnectors,
   WHATS_NEW_RIBBON_CTA_IDS.docsAutomationConnectorSecurity,

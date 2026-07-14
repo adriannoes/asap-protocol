@@ -7,6 +7,9 @@ child's stderr, then calls ``echo`` (public) and ``secure_action`` (JWT via
 Keys are minted in the child process — a JWT pasted from another terminal
 will fail signature checks. Prefer the default self-contained path.
 
+``ASAP_AGENT_JWT`` in the shell is **not** read automatically (stale exports
+would skip stderr capture). Pass ``--jwt`` only for an explicit override.
+
 Run from any directory (server path is resolved relative to this file)::
 
     uv run python examples/mcp_auth_bridge/client.py
@@ -17,6 +20,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import os
+import re
 import sys
 from contextlib import suppress
 from pathlib import Path
@@ -28,6 +32,8 @@ _SERVER_SCRIPT = Path(__file__).resolve().parent / "server.py"
 _JWT_MARKER = "Minted demo Agent JWT"
 _STDERR_POLL_INTERVAL_S = 0.05
 _DEFAULT_JWT_WAIT_S = 30.0
+# Compact JWTs start with base64url header ``eyJ`` — redact before logging.
+_JWT_LINE_RE = re.compile(r"^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$")
 
 
 def _text_content(result: dict[str, Any]) -> str:
@@ -44,8 +50,33 @@ def _looks_like_jwt(token: str) -> bool:
     return token.count(".") == 2 and token.startswith("eyJ")
 
 
+def redact_jwt_from_text(text: str) -> str:
+    """Replace compact JWT lines/tokens in ``text`` so logs never leak demo JWTs.
+
+    Example::
+
+        safe = redact_jwt_from_text(child_stderr)
+    """
+    redacted_lines: list[str] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if _looks_like_jwt(stripped) or _JWT_LINE_RE.match(stripped):
+            redacted_lines.append("[REDACTED_JWT]")
+        else:
+            redacted_lines.append(line)
+    joined = "\n".join(redacted_lines)
+    # Also scrub inline compact JWTs that share a line with other text.
+    return re.sub(
+        r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+",
+        "[REDACTED_JWT]",
+        joined,
+    )
+
+
 def parse_demo_jwt_from_stderr(stderr_text: str) -> str:
     """Extract the minted demo Agent JWT from the example server stderr banner.
+
+    Only lines **after** the mint marker are considered (no global ``eyJ`` scan).
 
     Example::
 
@@ -60,15 +91,11 @@ def parse_demo_jwt_from_stderr(stderr_text: str) -> str:
             if _looks_like_jwt(stripped):
                 return stripped
 
-    for line in lines:
-        stripped = line.strip()
-        if _looks_like_jwt(stripped):
-            return stripped
-
+    preview = redact_jwt_from_text(stderr_text[:500])
     raise RuntimeError(
         "MCP Auth Bridge server stderr did not include a demo Agent JWT "
-        f"(expected a line after {_JWT_MARKER!r} or a compact JWT starting with 'eyJ'). "
-        f"stderr preview: {stderr_text[:500]!r}"
+        f"(expected a compact JWT on a line after {_JWT_MARKER!r}). "
+        f"stderr preview: {preview!r}"
     )
 
 
@@ -101,9 +128,10 @@ async def _await_demo_jwt(chunks: list[bytes], *, timeout_seconds: float) -> str
             return parse_demo_jwt_from_stderr(_stderr_text(chunks))
         except RuntimeError:
             await asyncio.sleep(_STDERR_POLL_INTERVAL_S)
+    preview = redact_jwt_from_text(_stderr_text(chunks)[:500])
     raise RuntimeError(
         "Timed out waiting for demo Agent JWT on MCP server stderr within "
-        f"{timeout_seconds}s; stderr preview: {_stderr_text(chunks)[:500]!r}"
+        f"{timeout_seconds}s; stderr preview: {preview!r}"
     )
 
 
@@ -115,8 +143,9 @@ async def _connect_and_resolve_jwt(
 ) -> tuple[str, asyncio.Task[None]]:
     """Connect, drain stderr, and resolve the Agent JWT for ``secure_action``.
 
-    Provenance (v2.5.3 Phase 1.2): auto-capture from the child this client
-    spawned — cross-process paste fails ``bad_signature``.
+    Provenance (v2.5.3 Phase 1.2 / PR #291 review): auto-capture from the child
+    this client spawned — cross-process paste fails ``bad_signature``. Stale
+    ``ASAP_AGENT_JWT`` exports are ignored unless ``--jwt`` is passed.
     """
     stderr_chunks: list[bytes] = []
     connect_task = asyncio.create_task(client.connect())
@@ -138,7 +167,7 @@ async def _run(*, jwt_override: str | None, jwt_wait_seconds: float) -> int:
     """Spawn the example server, resolve JWT, exercise public and protected tools."""
     server_command = [sys.executable, str(_SERVER_SCRIPT)]
     env = os.environ.copy()
-    # Stdio MCP uses stdout for JSON-RPC; keep logs off the wire.
+    # Prefer server-side stderr routing; keep CRITICAL as a belt-and-suspenders default.
     env.setdefault("ASAP_LOG_LEVEL", "CRITICAL")
 
     client = MCPClient(
@@ -200,11 +229,11 @@ def main() -> None:
     )
     parser.add_argument(
         "--jwt",
-        default=os.environ.get("ASAP_AGENT_JWT"),
+        default=None,
         help=(
             "Optional Agent JWT override for secure_action _meta "
-            "(must be minted by this client's child server; default: capture from stderr). "
-            "Also reads ASAP_AGENT_JWT."
+            "(must be minted by this client's child server). "
+            "Default: capture from child stderr. Does not read ASAP_AGENT_JWT."
         ),
     )
     parser.add_argument(

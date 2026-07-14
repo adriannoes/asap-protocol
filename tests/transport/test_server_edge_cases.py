@@ -277,6 +277,48 @@ class TestInvalidEnvelope(NoRateLimitTestBase):
         # Response body must remain JSON-round-trippable (no raw Exception in ctx).
         assert response.json() == data
 
+    def test_task_response_missing_correlation_id_returns_invalid_params_not_internal_error(
+        self, client: TestClient
+    ) -> None:
+        """``task.response`` without ``correlation_id`` returns JSON-safe -32602.
+
+        Envelope ``model_validator`` raises ValueError into Pydantic ``ctx`` —
+        the same JSON serialization bug class as invalid URNs (PR #291 review).
+        """
+        response = client.post(
+            "/asap",
+            json={
+                "jsonrpc": "2.0",
+                "method": ASAP_METHOD,
+                "params": {
+                    "envelope": {
+                        "asap_version": "0.1",
+                        "sender": "urn:asap:agent:worker",
+                        "recipient": "urn:asap:agent:client",
+                        "payload_type": "task.response",
+                        "payload": {
+                            "task_id": "task_01TESTRESPONSE000000000000",
+                            "status": "completed",
+                            "result": {"ok": True},
+                        },
+                        "timestamp": "2020-01-01T00:00:00Z",
+                    }
+                },
+                "id": "missing-correlation",
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == INVALID_PARAMS
+        assert data["error"]["code"] != INTERNAL_ERROR
+        error_data = data["error"].get("data") or {}
+        assert error_data.get("error") == "Invalid envelope structure"
+        validation_errors = error_data.get("validation_errors")
+        assert isinstance(validation_errors, list)
+        assert len(validation_errors) >= 1
+        assert response.json() == data
+
 
 class TestHandlerNotFound(NoRateLimitTestBase):
     """Tests for unknown payload type (HandlerNotFoundError)."""

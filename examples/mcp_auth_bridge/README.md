@@ -31,9 +31,17 @@ cd examples/mcp_auth_bridge
 uv run python client.py
 ```
 
-Do **not** paste a JWT from another terminal into `--jwt` / `ASAP_AGENT_JWT` for this client — each server process mints its own keys, so a foreign token fails signature verification (`bad_signature`).
+Do **not** paste a JWT from another terminal into `--jwt` for this client — each
+server process mints its own keys, so a foreign token fails signature verification
+(`bad_signature`).
 
-Optional override (`--jwt` or `ASAP_AGENT_JWT`) is only for a token minted by **this** client's child server (or for deliberate negative tests with an invalid token).
+The client does **not** read `ASAP_AGENT_JWT` from the shell (a stale export used
+to skip stderr capture and cause confusing `bad_signature` failures). Pass
+`--jwt` only for an explicit override of a token minted by **this** client's
+child server (or for deliberate negative tests with an invalid token).
+
+`ASAP_AGENT_JWT` remains meaningful only for the **server** middleware
+(`allow_env_jwt_fallback=True`) when calling tools without `_meta` — see §3.
 
 ## Run the server alone
 

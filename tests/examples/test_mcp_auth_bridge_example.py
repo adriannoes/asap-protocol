@@ -11,6 +11,7 @@ import importlib.util
 import os
 import subprocess
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 from types import ModuleType
 
@@ -23,6 +24,24 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _EXAMPLE_DIR = _REPO_ROOT / "examples" / "mcp_auth_bridge"
 _SERVER_SCRIPT = _EXAMPLE_DIR / "server.py"
 _CLIENT_SCRIPT = _EXAMPLE_DIR / "client.py"
+_ENV_JWT_KEY = "ASAP_AGENT_JWT"
+
+
+@pytest.fixture(autouse=True)
+def _isolate_asap_agent_jwt_env() -> Iterator[None]:
+    """Keep ``ASAP_AGENT_JWT`` from leaking across example tests (C.7 / PR #291).
+
+    Mirrors ``test_nemo_agent_toolkit_asap.py`` so reversed collection order
+    cannot contaminate sibling example modules.
+    """
+    previous = os.environ.pop(_ENV_JWT_KEY, None)
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop(_ENV_JWT_KEY, None)
+        else:
+            os.environ[_ENV_JWT_KEY] = previous
 
 
 def _load_server_module() -> ModuleType:
@@ -51,6 +70,16 @@ def _load_client_module() -> ModuleType:
     return module
 
 
+def _assert_client_subprocess_ok(result: subprocess.CompletedProcess[str]) -> None:
+    """Assert client subprocess success without dumping minted JWTs on failure."""
+    client = _load_client_module()
+    redacted_stderr = client.redact_jwt_from_text(result.stderr)
+    assert result.returncode == 0, (
+        f"returncode={result.returncode}\nstdout:\n{result.stdout}\n"
+        f"stderr (redacted):\n{redacted_stderr}"
+    )
+
+
 class TestMcpAuthBridgeExampleImport:
     """Import smoke for the standalone example server module."""
 
@@ -65,6 +94,7 @@ class TestMcpAuthBridgeExampleImport:
         assert module.DEMO_AUDIENCE == "urn:asap:agent:mcp-auth-bridge"
         assert callable(module.build_protected_server)
         assert callable(module.main)
+        assert callable(module.route_observability_logs_to_stderr)
 
 
 class TestMcpAuthBridgeExampleCli:
@@ -160,23 +190,61 @@ class TestParseDemoJwtFromStderr:
         )
         assert client.parse_demo_jwt_from_stderr(stderr) == token
 
-    def test_parse_demo_jwt_missing_raises(self) -> None:
-        """Parser raises when stderr has no JWT-shaped line."""
+    def test_parse_ignores_jwt_before_marker(self) -> None:
+        """Global ``eyJ`` lines before the mint marker are ignored."""
         client = _load_client_module()
-        with pytest.raises(RuntimeError, match="did not include a demo Agent JWT"):
-            client.parse_demo_jwt_from_stderr("no token here\n")
+        decoy = "eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJkZWNveSJ9.signature"
+        real = "eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJkZW1vIn0.signature"
+        stderr = f"{decoy}\nMinted demo Agent JWT (60s TTL):\n{real}\n"
+        assert client.parse_demo_jwt_from_stderr(stderr) == real
+
+    def test_parse_demo_jwt_missing_raises_without_leaking_token(self) -> None:
+        """Parser raises when stderr has no post-marker JWT; preview is redacted."""
+        client = _load_client_module()
+        token = "eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJkZW1vIn0.signature"
+        with pytest.raises(RuntimeError, match="did not include a demo Agent JWT") as exc:
+            client.parse_demo_jwt_from_stderr(f"noise\n{token}\n")
+        assert token not in str(exc.value)
+        assert "[REDACTED_JWT]" in str(exc.value) or "eyJ" not in str(exc.value)
+
+    def test_redact_jwt_from_text(self) -> None:
+        """Redactor replaces compact JWT lines for safe failure messages."""
+        client = _load_client_module()
+        token = "eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJkZW1vIn0.signature"
+        assert token not in client.redact_jwt_from_text(f"before\n{token}\nafter")
 
 
 class TestMcpAuthBridgeClientSubprocess:
     """Subprocess smoke for the self-contained example client."""
 
     def test_client_subprocess_without_external_jwt_succeeds(self) -> None:
-        """``client.py`` without ``--jwt`` / env captures child JWT and passes tools.
+        """``client.py`` without ``--jwt`` captures child JWT and passes tools.
 
         Provenance (v2.5.3 Phase 1.2): cross-process pasted JWTs fail signature
         checks; the canonical path is auto-capture from the spawned child stderr.
         """
-        env = {key: value for key, value in os.environ.items() if key != "ASAP_AGENT_JWT"}
+        result = subprocess.run(
+            [
+                "uv",
+                "run",
+                "python",
+                "examples/mcp_auth_bridge/client.py",
+            ],
+            cwd=_REPO_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=90,
+            check=False,
+        )
+        _assert_client_subprocess_ok(result)
+        assert "echo:" in result.stdout
+        assert "secure_action:" in result.stdout
+        assert "executed: demo" in result.stdout
+
+    def test_client_ignores_stale_asap_agent_jwt_env(self) -> None:
+        """Stale ``ASAP_AGENT_JWT`` must not skip stderr capture (PR #291 Should Fix)."""
+        env = os.environ.copy()
+        env[_ENV_JWT_KEY] = "eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJzdGFsZSJ9.signature"
         result = subprocess.run(
             [
                 "uv",
@@ -191,14 +259,12 @@ class TestMcpAuthBridgeClientSubprocess:
             timeout=90,
             check=False,
         )
-        assert result.returncode == 0, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
-        assert "echo:" in result.stdout
+        _assert_client_subprocess_ok(result)
         assert "secure_action:" in result.stdout
         assert "executed: demo" in result.stdout
 
     def test_client_subprocess_from_example_dir_without_jwt(self) -> None:
         """``client.py`` resolves ``server.py`` relative to its file (any cwd)."""
-        env = {key: value for key, value in os.environ.items() if key != "ASAP_AGENT_JWT"}
         result = subprocess.run(
             [
                 "uv",
@@ -207,13 +273,12 @@ class TestMcpAuthBridgeClientSubprocess:
                 "client.py",
             ],
             cwd=_EXAMPLE_DIR,
-            env=env,
             capture_output=True,
             text=True,
             timeout=90,
             check=False,
         )
-        assert result.returncode == 0, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        _assert_client_subprocess_ok(result)
         assert "echo:" in result.stdout
         assert "secure_action:" in result.stdout
 

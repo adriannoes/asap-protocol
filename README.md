@@ -73,7 +73,7 @@ Or with pip:
 pip install asap-protocol
 ```
 
-**TypeScript** (npm, **`2.4.1`** — unchanged for v2.5.2; `@asap-protocol/mcp-auth` HTTP middleware still deferred):
+**TypeScript** (npm, **`2.4.1`** — unchanged for v2.5.3; `@asap-protocol/mcp-auth` HTTP middleware still deferred):
 
 - [`@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client) — [SDK docs](docs/sdks/typescript.md)
 - [`@asap-protocol/mastra`](https://www.npmjs.com/package/@asap-protocol/mastra) — [docs](docs/integrations/mastra.md) · [demo](apps/example-mastra/README.md)
