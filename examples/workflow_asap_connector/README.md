@@ -46,8 +46,8 @@ Exact harness summary text may vary; score must be **1.0** (non-zero exit if not
 ## Optional live upstream
 
 Point the fragment’s operations at a real workflow HTTP base URL (requires
-connectivity; auth is your responsibility — use env placeholders, never commit
-secrets):
+connectivity). Use **HTTPS** for production upstreams and callbacks. Keep secrets
+in the environment only — never commit tokens (see `.env.example` placeholders).
 
 ```bash
 uv run python examples/workflow_asap_connector/main.py --live-base-url https://your-host.example/api/v1
@@ -55,9 +55,15 @@ uv run python examples/workflow_asap_connector/main.py --live-base-url https://y
 
 Equivalent: `ASAP_WORKFLOW_BASE_URL=https://your-host.example/api/v1`.
 
-`.env.example` may show `ASAP_WORKFLOW_BEARER_TOKEN` as an **illustrative** placeholder only —
-this demo does **not** read it. Live auth via `resolve_headers` is deferred to the S2
-security guide; setting the env var alone will not avoid upstream 401s.
+`.env.example` shows `ASAP_WORKFLOW_BEARER_TOKEN` and `ASAP_WORKFLOW_WEBHOOK_SECRET`
+as **illustrative** placeholders only — this demo does **not** read them. Setting
+those env vars alone will not avoid upstream 401s. Wire live auth with
+`resolve_headers` (Bearer / API key from env) as documented in
+[automation connector security](../../docs/guides/automation-connector-security.md)
+and [OpenAPI adapter — upstream auth](../../docs/adapters/openapi.md#upstream-auth-oa-009).
+
+**MCP:** This example is OpenAPI-only and does **not** expose MCP. Auth Bridge
+guidance is **N/A** here — see the security guide §7.
 
 ## What a remote agent sees
 
@@ -81,3 +87,6 @@ in `main.py` and must score **1.0** on the happy path.
 - Reuses `asap.adapters.openapi` only (LAB2-001); no dedicated workflow adapter package.
 - Identity / approval: this example does not configure `FreshSessionConfig`; see
   `docs/adapters/openapi.md` and `src/asap/adapters/openapi/approval.py` for production wiring.
+- Security baseline (secrets, TLS, webhooks, rate limits, manifests):
+  [docs/guides/automation-connector-security.md](../../docs/guides/automation-connector-security.md).
+- Integration guide: [docs/integrations/workflow-connectors.md](../../docs/integrations/workflow-connectors.md).

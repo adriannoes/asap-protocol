@@ -129,5 +129,6 @@ ASAP `protect_server` is **stdio Mode A**. NAT OAuth examples use **streamable-h
 
 - Public interop guide: [`docs/integrations/nemo-agent-toolkit.md`](../../docs/integrations/nemo-agent-toolkit.md)
 - Reference server/client: [`examples/mcp_auth_bridge/`](../mcp_auth_bridge/)
-- Adapter guide: [`docs/adapters/mcp-auth-bridge.md`](../../docs/adapters/mcp-auth-bridge.md)
+- Adapter guide (Mode A): [`docs/adapters/mcp-auth-bridge.md`](../../docs/adapters/mcp-auth-bridge.md)
+- Security (connectors + Mode A/B): [`docs/guides/automation-connector-security.md`](../../docs/guides/automation-connector-security.md)
 - Sprint: [`engineering/tasks/v2.5.3/sprint-S1c-nemo-agent-toolkit.md`](../../engineering/tasks/v2.5.3/sprint-S1c-nemo-agent-toolkit.md)
