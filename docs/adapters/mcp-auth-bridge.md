@@ -349,6 +349,8 @@ This adapter protects **native stdio `MCPServer`** (Mode A). MCP invoked inside 
 ## Related documentation
 
 - [MCP integration](../mcp-integration.md) — Mode A vs Mode B, migration notes
+- [NeMo Agent Toolkit](../integrations/nemo-agent-toolkit.md) — experimental Path A demo using `protect_server`
+- [Automation connector security](../guides/automation-connector-security.md) — secrets, TLS, grants; Mode A vs Mode B for connectors
 - [Security](../security.md) — Agent JWT, Host/Agent identity
 - [Self-authorization prevention](../security/self-authorization-prevention.md) — grants and approval flows
 - [Transport](../transport.md) — manifest discovery, `create_app`

@@ -979,6 +979,46 @@ provider family (Upstash **or** Vercel KV) to avoid misconfiguration.
 
 ---
 
+### Upgrading from v2.5.2 to v2.5.3
+
+> **Draft (Sprint S3):** Final PyPI / tag date is owned by **Sprint S4**. Until then,
+> treat **v2.5.2** as the latest published reference implementation. This section
+> describes the **Adapter Lab II** docs and examples train landing in v2.5.3.
+
+**v2.5.3 (Adapter Lab II)** is primarily **documentation and examples** — not a
+protocol wire-format change. There are **no invented breaking changes** for
+envelope, JWT, or capability grant semantics relative to v2.5.2.
+
+#### What lands in the v2.5.3 docs train
+
+- **Workflow connectors** — OpenAPI → ASAP skills for n8n / Activepieces-style
+  workflow HTTP APIs ([guide](integrations/workflow-connectors.md),
+  `examples/workflow_asap_connector/`).
+- **Automation connector security** — production baseline for OpenAPI-backed
+  connectors ([guide](guides/automation-connector-security.md)).
+- **Microsoft Agent Framework** — research / experimental interop guide only
+  ([guide](integrations/microsoft-agent-framework.md)); no .NET SDK / NuGet.
+- **NeMo Agent Toolkit** — experimental Path A demo
+  ([guide](integrations/nemo-agent-toolkit.md),
+  `examples/nemo_agent_toolkit_asap/`); Path C third-party plugin remains deferred.
+- **MkDocs** — Adapters (OpenAPI, MCP Auth Bridge) and Lab II pages wired into
+  site navigation.
+
+#### Upgrade steps (when S4 publishes `asap-protocol==2.5.3`)
+
+1. Bump the Python dependency to the tagged release (S4 fills exact date / notes).
+2. No code changes required for existing v2.5.2 agents unless you adopt the new
+   examples or guides.
+3. TypeScript `@asap-protocol/*` packages remain at **2.4.1** unless S4 notes
+   otherwise; `@asap-protocol/mcp-auth` HTTP/SSE middleware remains deferred.
+
+#### Backward compatibility
+
+- **Wire protocol**: Unchanged from v2.5.2.
+- **Breaking changes**: None expected for Lab II scope (docs / examples).
+
+---
+
 ### Upgrading from v2.4.1 to v2.5.0
 
 v2.5.0 is an **additive, backward-compatible** minor release. JSON-RPC envelopes,

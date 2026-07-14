@@ -56,8 +56,8 @@ ASAP meets agents where they run — optional Python extras, npm tool bridges, a
 
 | Runtime | Integrations | Docs |
 | --- | --- | --- |
-| **Python** | LangChain, CrewAI, LlamaIndex, PydanticAI, SmolAgents, OpenClaw (`pip install "asap-protocol[extra]"`); Vercel AI SDK router; MCP; MCP Auth Bridge; A2H | [OpenClaw](docs/guides/openclaw-integration.md) · [Vercel AI SDK](docs/guides/vercel-ai-sdk.md) · [MCP](docs/mcp-integration.md) · [MCP Auth Bridge](docs/adapters/mcp-auth-bridge.md) |
-| **TypeScript** (npm) | `@asap-protocol/client` (Vercel AI / OpenAI / Anthropic adapters), `@asap-protocol/mastra`, `@asap-protocol/openai-agents` | [TypeScript SDK](docs/sdks/typescript.md) · [Mastra](docs/integrations/mastra.md) · [OpenAI Agents](docs/integrations/openai-agents.md) |
+| **Python** | LangChain, CrewAI, LlamaIndex, PydanticAI, SmolAgents, OpenClaw (`pip install "asap-protocol[extra]"`); Vercel AI SDK router; MCP; MCP Auth Bridge; A2H; OpenAPI workflow connectors (Lab II) | [OpenClaw](docs/guides/openclaw-integration.md) · [Vercel AI SDK](docs/guides/vercel-ai-sdk.md) · [MCP](docs/mcp-integration.md) · [MCP Auth Bridge](docs/adapters/mcp-auth-bridge.md) · [Workflow connectors](docs/integrations/workflow-connectors.md) · [NeMo Agent Toolkit](docs/integrations/nemo-agent-toolkit.md) (experimental) |
+| **TypeScript** (npm) | `@asap-protocol/client` (Vercel AI / OpenAI / Anthropic adapters), `@asap-protocol/mastra`, `@asap-protocol/openai-agents` | [TypeScript SDK](docs/sdks/typescript.md) · [Mastra](docs/integrations/mastra.md) · [OpenAI Agents](docs/integrations/openai-agents.md) · [Microsoft Agent Framework](docs/integrations/microsoft-agent-framework.md) (research) |
 
 ## Installation
 
