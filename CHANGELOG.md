@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security (deps)
+
+- Override `setuptools>=83.0.0` for **PYSEC-2026-3447** (full `[2.5.3]` notes in S4).
+
 ### Follow-up (planned v2.5.3+)
 
 - **Adapter Lab II** — enterprise/workflow adapters ([prd-v2.5.3-adapter-lab-ii.md](product/prd/prd-v2.5.3-adapter-lab-ii.md)).

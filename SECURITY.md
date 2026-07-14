@@ -129,6 +129,8 @@ CI runs `pip-audit` after a sync that **excludes** the optional extras `crewai` 
 
 **pip**: `tool.uv.override-dependencies` requires `pip>=26.1` so **CVE-2026-3219** (GHSA affecting pip ≤26.0.1) no longer requires a `pip-audit` ignore.
 
+**PYSEC-2026-3447 (setuptools)**: Resolved via override (`setuptools>=83.0.0`) — transitive build/tooling path; `82.0.0` is the last vulnerable release listed by OSV.
+
 If you install `[crewai]` or `[llamaindex]`, run `pip-audit` separately on that environment and expect possible advisories until upstream publishes patched releases. Integration tests for those extras still run in CI with the full dependency tree.
 
 **Optional `[telemetry]` extra**: Weekly PyPI stats use `pypistats`, declared under `[telemetry]` in `pyproject.toml` so default installs avoid that dependency graph. The composite `.github/actions/setup-python` step runs `uv sync --frozen --all-extras --dev`, which installs `[telemetry]` for workflows that use it (including the weekly telemetry job). When auditing **without** `--all-extras`, refresh an environment that includes telemetry before judging related CVEs:
