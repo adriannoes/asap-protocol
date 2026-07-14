@@ -237,6 +237,46 @@ class TestInvalidEnvelope(NoRateLimitTestBase):
         assert data["error"]["code"] == INVALID_PARAMS
         assert "validation_errors" in data["error"].get("data", {})
 
+    def test_invalid_envelope_urns_return_invalid_params_not_internal_error(
+        self, client: TestClient
+    ) -> None:
+        """Invalid sender/recipient URNs return -32602 with JSON-safe validation_errors.
+
+        Field validators raise ValueError; raw ``ValidationError.errors()`` embeds
+        that exception in ``ctx``, which used to break JSONResponse encoding and
+        surface as JSON-RPC -32603 Internal error.
+        """
+        response = client.post(
+            "/asap",
+            json={
+                "jsonrpc": "2.0",
+                "method": ASAP_METHOD,
+                "params": {
+                    "envelope": {
+                        "asap_version": "0.1",
+                        "sender": "not-a-urn",
+                        "recipient": "also-bad",
+                        "payload_type": "Echo",
+                        "payload": {},
+                        "timestamp": "2020-01-01T00:00:00Z",
+                    }
+                },
+                "id": "invalid-urns",
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == INVALID_PARAMS
+        assert data["error"]["code"] != INTERNAL_ERROR
+        error_data = data["error"].get("data") or {}
+        assert error_data.get("error") == "Invalid envelope structure"
+        validation_errors = error_data.get("validation_errors")
+        assert isinstance(validation_errors, list)
+        assert len(validation_errors) >= 1
+        # Response body must remain JSON-round-trippable (no raw Exception in ctx).
+        assert response.json() == data
+
 
 class TestHandlerNotFound(NoRateLimitTestBase):
     """Tests for unknown payload type (HandlerNotFoundError)."""

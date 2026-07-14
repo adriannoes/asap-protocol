@@ -79,7 +79,38 @@ T = TypeVar("T")
 HandlerResult = tuple[T | None, JSONResponse | None]
 EnvelopeOrError = Union[JSONResponse, tuple[Envelope, str]]
 
-__all__ = ["ASAPRequestHandler", "_audit_log_operation", "_fallback_context"]
+__all__ = [
+    "ASAPRequestHandler",
+    "_audit_log_operation",
+    "_fallback_context",
+    "json_safe_validation_errors",
+]
+
+
+def json_safe_validation_errors(exc: ValidationError) -> list[dict[str, Any]]:
+    """Return Pydantic validation errors that are JSON-serializable.
+
+    ``ValidationError.errors()`` may embed non-JSON types in ``ctx`` (e.g. a
+    raw ``ValueError`` from a field validator). Putting that into
+    ``JSONResponse`` raises during Starlette encoding and the client sees
+    JSON-RPC ``-32603`` instead of ``-32602``.
+
+    Uses ``exc.json()`` so ``ctx`` values are stringified while locations and
+    messages stay intact.
+
+    Example:
+        >>> from pydantic import BaseModel, ValidationError
+        >>> class M(BaseModel):
+        ...     x: int
+        >>> try:
+        ...     M(x="bad")
+        ... except ValidationError as err:
+        ...     errs = json_safe_validation_errors(err)
+        >>> isinstance(errs[0]["loc"], list)
+        True
+    """
+    loaded: list[dict[str, Any]] = json.loads(exc.json())
+    return loaded
 
 
 def _fallback_context(start_time: float) -> RequestContext:
@@ -309,9 +340,10 @@ class ASAPRequestHandler:
             payload_type = envelope.payload_type
             return envelope, payload_type
         except ValidationError as e:
+            validation_errors = json_safe_validation_errors(e)
             log_data: dict[str, Any] = {
                 "error": "Invalid envelope structure",
-                "validation_errors": e.errors(),
+                "validation_errors": validation_errors,
             }
             if not is_debug_mode():
                 log_data = sanitize_for_logging(log_data)
@@ -322,7 +354,7 @@ class ASAPRequestHandler:
                 INVALID_PARAMS,
                 data={
                     "error": "Invalid envelope structure",
-                    "validation_errors": e.errors(),
+                    "validation_errors": validation_errors,
                 },
                 request_id=ctx.request_id,
             )
@@ -820,22 +852,22 @@ class ASAPRequestHandler:
             error_code = INVALID_REQUEST
             error_message = "Invalid JSON-RPC structure"
             if isinstance(e, ValidationError):
-                errors = e.errors()
+                validation_errors = json_safe_validation_errors(e)
                 # If params validation failed with dict_type error, use INVALID_PARAMS
-                for error in errors:
-                    if error.get("loc") == ("params",) and error.get("type") == "dict_type":
+                for error in validation_errors:
+                    if error.get("loc") == ["params"] and error.get("type") == "dict_type":
                         error_code = INVALID_PARAMS
                         error_message = "JSON-RPC 'params' must be an object"
                         break
+            else:
+                validation_errors = [
+                    {"type": "type_error", "loc": [], "msg": str(e), "input": None}
+                ]
 
             log_struct: dict[str, Any] = {
                 "error": error_message,
                 "error_type": type(e).__name__,
-                "validation_errors": (
-                    e.errors()
-                    if isinstance(e, ValidationError)
-                    else [{"type": "type_error", "loc": (), "msg": str(e), "input": None}]
-                ),
+                "validation_errors": validation_errors,
             }
             if not is_debug_mode():
                 log_struct = sanitize_for_logging(log_struct)
@@ -844,11 +876,7 @@ class ASAPRequestHandler:
                 error_code,
                 data={
                     "error": error_message,
-                    "validation_errors": (
-                        e.errors()
-                        if isinstance(e, ValidationError)
-                        else [{"type": "type_error", "loc": (), "msg": str(e), "input": None}]
-                    ),
+                    "validation_errors": validation_errors,
                 },
                 request_id=body.get("id") if isinstance(body, dict) else None,
             )
