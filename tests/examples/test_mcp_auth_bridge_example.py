@@ -1,12 +1,14 @@
-"""Smoke tests for examples/mcp_auth_bridge/server.py (S3).
+"""Smoke tests for examples/mcp_auth_bridge (server + self-contained client).
 
 Verifies the reference MCP Auth Bridge example loads, exposes CLI help,
-and rejects protected tool calls without a JWT (in-process, no network).
+rejects protected tool calls without a JWT (in-process), and that
+``client.py`` succeeds without an external JWT (v2.5.3 Phase 1.2).
 """
 
 from __future__ import annotations
 
 import importlib.util
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -18,7 +20,9 @@ from pytest import MonkeyPatch
 from asap.mcp.auth.errors import AUTH_REQUIRED
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_SERVER_SCRIPT = _REPO_ROOT / "examples" / "mcp_auth_bridge" / "server.py"
+_EXAMPLE_DIR = _REPO_ROOT / "examples" / "mcp_auth_bridge"
+_SERVER_SCRIPT = _EXAMPLE_DIR / "server.py"
+_CLIENT_SCRIPT = _EXAMPLE_DIR / "client.py"
 
 
 def _load_server_module() -> ModuleType:
@@ -26,6 +30,19 @@ def _load_server_module() -> ModuleType:
     spec = importlib.util.spec_from_file_location(
         "mcp_auth_bridge_server",
         _SERVER_SCRIPT,
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_client_module() -> ModuleType:
+    """Import the example client module from its file path."""
+    spec = importlib.util.spec_from_file_location(
+        "mcp_auth_bridge_client",
+        _CLIENT_SCRIPT,
     )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -128,12 +145,80 @@ class TestMcpAuthBridgeProtectedTool:
         assert "executed: env-demo" in str(result["content"][0]["text"])
 
 
-class TestMcpAuthBridgeClientSubprocess:
-    """Subprocess smoke for the optional example client."""
+class TestParseDemoJwtFromStderr:
+    """Unit checks for client-side stderr JWT capture."""
 
-    def test_client_subprocess_from_example_dir(self) -> None:
+    def test_parse_demo_jwt_from_banner(self) -> None:
+        """Parser reads the compact JWT after the minted-banner marker."""
+        client = _load_client_module()
+        token = "eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJkZW1vIn0.signature"
+        stderr = (
+            "=== MCP Auth Bridge example ===\n"
+            "Minted demo Agent JWT (60s TTL, capabilities=['secure_action']):\n"
+            f"{token}\n"
+            "Pass JWT on tools/call:\n"
+        )
+        assert client.parse_demo_jwt_from_stderr(stderr) == token
+
+    def test_parse_demo_jwt_missing_raises(self) -> None:
+        """Parser raises when stderr has no JWT-shaped line."""
+        client = _load_client_module()
+        with pytest.raises(RuntimeError, match="did not include a demo Agent JWT"):
+            client.parse_demo_jwt_from_stderr("no token here\n")
+
+
+class TestMcpAuthBridgeClientSubprocess:
+    """Subprocess smoke for the self-contained example client."""
+
+    def test_client_subprocess_without_external_jwt_succeeds(self) -> None:
+        """``client.py`` without ``--jwt`` / env captures child JWT and passes tools.
+
+        Provenance (v2.5.3 Phase 1.2): cross-process pasted JWTs fail signature
+        checks; the canonical path is auto-capture from the spawned child stderr.
+        """
+        env = {key: value for key, value in os.environ.items() if key != "ASAP_AGENT_JWT"}
+        result = subprocess.run(
+            [
+                "uv",
+                "run",
+                "python",
+                "examples/mcp_auth_bridge/client.py",
+            ],
+            cwd=_REPO_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=90,
+            check=False,
+        )
+        assert result.returncode == 0, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        assert "echo:" in result.stdout
+        assert "secure_action:" in result.stdout
+        assert "executed: demo" in result.stdout
+
+    def test_client_subprocess_from_example_dir_without_jwt(self) -> None:
         """``client.py`` resolves ``server.py`` relative to its file (any cwd)."""
-        client_dir = _REPO_ROOT / "examples" / "mcp_auth_bridge"
+        env = {key: value for key, value in os.environ.items() if key != "ASAP_AGENT_JWT"}
+        result = subprocess.run(
+            [
+                "uv",
+                "run",
+                "python",
+                "client.py",
+            ],
+            cwd=_EXAMPLE_DIR,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=90,
+            check=False,
+        )
+        assert result.returncode == 0, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        assert "echo:" in result.stdout
+        assert "secure_action:" in result.stdout
+
+    def test_client_invalid_jwt_override_fails_secure_action(self) -> None:
+        """``--jwt`` override with a foreign token fails ``secure_action`` auth."""
         result = subprocess.run(
             [
                 "uv",
@@ -141,15 +226,14 @@ class TestMcpAuthBridgeClientSubprocess:
                 "python",
                 "client.py",
                 "--jwt",
-                "invalid-token-for-path-smoke",
+                "invalid-token-for-negative-path",
             ],
-            cwd=client_dir,
+            cwd=_EXAMPLE_DIR,
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=90,
             check=False,
         )
-        # echo succeeds before secure_action auth fails — server subprocess was found
         assert "echo:" in result.stdout
         assert "secure_action failed" in result.stderr
         assert result.returncode == 1
