@@ -20,8 +20,8 @@ Based on [PRD v2.5.3 Adapter Lab II](../../../product/prd/prd-v2.5.3-adapter-lab
 | **S1** | [Workflow prototype (primary)](./sprint-S1-workflow-prototype.md) | LAB2-001, LAB2-002 | P0 | Done |
 | **S1b** | [Conditional SK / .NET spike](./sprint-S1b-semantic-kernel.md) | D2 | P0 if gate | Done (guide-only; 2b.3 skipped) |
 | **S1c** | [NeMo Agent Toolkit spike](./sprint-S1c-nemo-agent-toolkit.md) | D7 | P0 planned | Done |
-| **S2** | [Security guide & MCP patterns](./sprint-S2-security-docs.md) | LAB2-003, LAB2-006 | P0 | Planned |
-| **S3** | [Docs review, site routing & learnings](./sprint-S3-docs-review.md) | LAB2-004, LAB2-005 + docs surface | P0 | Planned |
+| **S2** | [Security guide & MCP patterns](./sprint-S2-security-docs.md) | LAB2-003, LAB2-006 | P0 | Done |
+| **S3** | [Docs review, site routing & learnings](./sprint-S3-docs-review.md) | LAB2-004, LAB2-005 + docs surface | P0 | Done |
 | **S4** | [Release v2.5.3](./sprint-S4-release.md) | DoD, metrics | P0 | Planned |
 
 ## Dependency graph
@@ -84,23 +84,23 @@ S1b / S1c never block S1/S2/S3/S4. S0 D2 was **no-go** on demand; **maintainer o
     - [x] Path A demo **or** documented blocker + follow-up (no fake native claim)
     - [x] Third-party NAT plugin deferred (Path C)
 
-- [ ] **3.0 Security & MCP docs (S2)**
+- [x] **3.0 Security & MCP docs (S2)**
   - **Trigger:** S1 example shape known.
   - **Enables:** Safe public adoption; S4 DoD for LAB2-003/006.
   - **Depends on:** Task 2.0.
   - **Acceptance criteria:**
-    - [ ] Security guide published (secrets, least privilege, HTTPS/TLS)
-    - [ ] If example exposes MCP: Auth Bridge pattern referenced (LAB2-006)
+    - [x] Security guide published (secrets, least privilege, HTTPS/TLS)
+    - [x] If example exposes MCP: Auth Bridge pattern referenced (LAB2-006) — workflow OpenAPI-only N/A; NeMo Path A Mode A documented
 
-- [ ] **4.0 Docs review, site & learnings (S3)**
+- [x] **4.0 Docs review, site & learnings (S3)**
   - **Trigger:** Guides from S1/S2/(S1b)/(S1c) merged to release branch.
   - **Enables:** S4 public surface; discoverable MkDocs + homepage.
   - **Depends on:** Tasks 2.0–3.0; [docs-review-checklist.md](./docs-review-checklist.md).
   - **Acceptance criteria:**
-    - [ ] Homepage/docs CTAs route to new guides (LAB2-004)
-    - [ ] `mkdocs.yml` includes Adapters + shipped Lab II pages; build/nav clean
-    - [ ] Cross-links + taxonomy check done per checklist
-    - [ ] LAB2-005 note written (open vs hosted vs enterprise)
+    - [x] Homepage/docs CTAs route to new guides (LAB2-004)
+    - [x] `mkdocs.yml` includes Adapters + shipped Lab II pages; build/nav clean
+    - [x] Cross-links + taxonomy check done per checklist
+    - [x] LAB2-005 note written (open vs hosted vs enterprise)
 
 - [ ] **5.0 Release (S4)**
   - **Trigger:** S1–S3 DoD green on `release/2.5.3`.
@@ -114,13 +114,13 @@ S1b / S1c never block S1/S2/S3/S4. S0 D2 was **no-go** on demand; **maintainer o
 
 ## Definition of Done — v2.5.3
 
-- [ ] LAB2-001 — no protocol fork; reuse existing adapter interfaces
-- [ ] LAB2-002 — ≥1 workflow/enterprise example shipped
-- [ ] LAB2-003 — security guide published
-- [ ] LAB2-004 — site/docs routing updated (`mkdocs.yml` + `docs/index.md` + web CTAs)
-- [ ] Docs review checklist signed for shipped pages — [docs-review-checklist.md](./docs-review-checklist.md)
-- [ ] LAB2-005 — open vs hosted learnings captured
-- [ ] LAB2-006 — Auth Bridge referenced if MCP exposed (or N/A documented)
+- [x] LAB2-001 — no protocol fork; reuse existing adapter interfaces
+- [x] LAB2-002 — ≥1 workflow/enterprise example shipped
+- [x] LAB2-003 — security guide published
+- [x] LAB2-004 — site/docs routing updated (`mkdocs.yml` + `docs/index.md` + web CTAs)
+- [x] Docs review checklist signed for shipped pages — [docs-review-checklist.md](./docs-review-checklist.md) (§§1–7; §8 version strings → S4)
+- [x] LAB2-005 — open vs hosted learnings captured
+- [x] LAB2-006 — Auth Bridge referenced if MCP exposed (or N/A documented)
 - [ ] Transport growth lint clean across v2.5.3 PRs
 - [ ] [release-checklist.md](./release-checklist.md) complete
 
@@ -174,3 +174,4 @@ S1b / S1c never block S1/S2/S3/S4. S0 D2 was **no-go** on demand; **maintainer o
 | 2026-07-13 | **S1 Done**: workflow example + [workflow-connectors.md](../../../docs/integrations/workflow-connectors.md); MkDocs nav deferred to S3 |
 | 2026-07-13 | **S1b Done**: MAF guide-only ([microsoft-agent-framework.md](../../../docs/integrations/microsoft-agent-framework.md)); 2b.3 C# sample skipped/N/A |
 | 2026-07-13 | **S1c Done**: Path A example + [nemo-agent-toolkit.md](../../../docs/integrations/nemo-agent-toolkit.md); Path C out of ship; NAT optional in CI |
+| 2026-07-14 | **S2+S3 Done**: security guide + MCP N/A/Path A docs; MkDocs/nav/web CTAs; learnings note; docs checklist §§1–7 signed (T2 review blockers pending re-review) |
