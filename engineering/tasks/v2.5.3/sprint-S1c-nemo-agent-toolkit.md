@@ -1,7 +1,7 @@
 # Sprint S1c: NeMo Agent Toolkit ↔ ASAP (v2.5.3)
 
 **PRD**: D7, §3 (NeMo Agent Toolkit)  
-**Branch**: `feat/v2.5.3-s1c-nemo-agent-toolkit` → **`release/2.5.3`**  
+**Branch**: `feat/v2.5.3-s1b-s1c-spikes` → **`release/2.5.3`**  
 **Depends on**: [S0](./sprint-S0-candidate-lock.md) records S1c = **go** (default for Lab II)  
 **Research map**: [research-nemo-agent-toolkit.md](./research-nemo-agent-toolkit.md)
 
@@ -31,56 +31,67 @@ Prove a **careful, honest** integration story: NeMo Agent Toolkit already speaks
 
 ## Tasks
 
-- [ ] **2c.1 Refresh upstream pin**
-  - [ ] Run refresh commands in research note §9; update pin line if needed
-  - [ ] Skim protected MCP/A2A example READMEs for auth/transport changes
+- [x] **2c.1 Refresh upstream pin**
+  - [x] Run refresh commands in research note §9; update pin line if needed
+  - [x] Skim protected MCP/A2A example READMEs for auth/transport changes
 
-- [ ] **2c.2 Transport & auth gap analysis (write first)**
-  - [ ] Table: NAT MCP transports (stdio / streamable-http / SSE) vs ASAP Auth Bridge carriage
-  - [ ] Table: OAuth2 user JWT (NAT protected examples) vs Host/Agent JWT + capability grants
-  - [ ] Decide Path A demo shape: stdio bridge **or** document blocker + HTTP follow-up (mcp-auth backlog)
-  - [ ] Append conclusions to research note (do not invent compatibility)
+- [x] **2c.2 Transport & auth gap analysis (write first)**
+  - [x] Table: NAT MCP transports (stdio / streamable-http / SSE) vs ASAP Auth Bridge carriage
+  - [x] Table: OAuth2 user JWT (NAT protected examples) vs Host/Agent JWT + capability grants
+  - [x] Decide Path A demo shape: stdio bridge **or** document blocker + HTTP follow-up (mcp-auth backlog)
+  - [x] Append conclusions to research note (do not invent compatibility)
 
-- [ ] **2c.3 Path A spike (if transport allows)**
-  - [ ] ASAP side: minimal protected MCP server (reuse `examples/mcp_auth_bridge/` patterns)
-  - [ ] NAT side: workflow YAML using `nvidia-nat[mcp]` client against that server
-  - [ ] Example folder: `examples/nemo_agent_toolkit_asap/` with README, `.env.example`, pin versions
-  - [ ] Happy path without committing secrets; `NVIDIA_API_KEY` only if NIM is used (optional)
+- [x] **2c.3 Path A spike (if transport allows)**
+  - [x] ASAP side: minimal protected MCP server (reuse `examples/mcp_auth_bridge/` patterns)
+  - [x] NAT side: workflow YAML using `nvidia-nat[mcp]` client against that server
+  - [x] Example folder: `examples/nemo_agent_toolkit_asap/` with README, `.env.example`, pin versions
+  - [x] Happy path without committing secrets; `NVIDIA_API_KEY` only if NIM is used (optional)
 
-- [ ] **2c.4 Path B docs (always)**
-  - [ ] `docs/integrations/nemo-agent-toolkit.md`
-  - [ ] Sections: what NAT is; A2A vs MCP vs ASAP; Agent Card → Manifest sketch; auth contrast; link ShellClaw/CUDA only as adjacent edge story
-  - [ ] Status banner: **experimental** until Path A demo is green
-  - [ ] Leave MkDocs nav + home index to **S3**
+- [x] **2c.4 Path B docs (always)**
+  - [x] `docs/integrations/nemo-agent-toolkit.md`
+  - [x] Sections: what NAT is; A2A vs MCP vs ASAP; Agent Card → Manifest sketch; auth contrast; link ShellClaw/CUDA only as adjacent edge story
+  - [x] Status banner: **experimental** — Path A demo under `examples/nemo_agent_toolkit_asap/`; still experimental until maintained promotion
+  - [x] Leave MkDocs nav + home index to **S3**
 
-- [ ] **2c.5 Path C feasibility (optional, short)**
-  - [ ] One page in research note or guide appendix: third-party plugin naming (`nat.plugins.asap`), ownership, CI matrix
-  - [ ] Explicit **out of ship** for v2.5.3
+- [x] **2c.5 Path C feasibility (short)**
+  - [x] Appendix in public guide: third-party plugin naming (`nat.plugins.asap`, `nemo-agent-toolkit-asap`), ownership, CI matrix
+  - [x] Explicit **out of ship** for v2.5.3 (research note §6 updated)
 
-- [ ] **2c.6 Tests / smoke**
-  - [ ] Document exact commands; if demo exists, add smoke test or CI-skippable script with clear deps
-  - [ ] Do not fail main CI if `nvidia-nat` is optional extra — keep NAT as optional/dev path
+- [x] **2c.6 Tests / smoke**
+  - [x] Exact commands documented in public guide + example README
+  - [x] ASAP-side pytest always runs; optional NAT import skips when `nvidia-nat` absent (main CI does not require NAT)
+  - [x] Smoke: `smoke_asap_side.py` / `run_demo.sh`; NAT path optional via `run_demo.sh nat`
 
 ---
 
 ## Acceptance criteria
 
-- [ ] Research note updated with spike-time pin + gap tables
-- [ ] Public guide published (`docs/integrations/nemo-agent-toolkit.md`) with honest auth/transport limits
-- [ ] Either: Path A runnable example **or** written blocker + follow-up issue/backlog pointer (no fake “native support” claim)
-- [ ] Path C deferred explicitly
-- [ ] Does not block S4 if only the guide ships
+- [x] Research note updated with spike-time pin + gap tables
+- [x] Public guide published (`docs/integrations/nemo-agent-toolkit.md`) with honest auth/transport limits
+- [x] Either: Path A runnable example **or** written blocker + follow-up issue/backlog pointer (no fake “native support” claim)
+- [x] Path C deferred explicitly
+- [x] Does not block S4 if only the guide ships
 
 ## Relevant files
 
-### New
+### New / shipped
 
-- `docs/integrations/nemo-agent-toolkit.md`
-- `examples/nemo_agent_toolkit_asap/` (if Path A proceeds)
-- Updates to [research-nemo-agent-toolkit.md](./research-nemo-agent-toolkit.md)
+| Path | Role |
+|------|------|
+| [`docs/integrations/nemo-agent-toolkit.md`](../../../docs/integrations/nemo-agent-toolkit.md) | Public interop guide (2c.4) + Path C appendix (2c.5) |
+| [`examples/nemo_agent_toolkit_asap/`](../../../examples/nemo_agent_toolkit_asap/) | Path A stdio demo (2c.3) |
+| [`tests/examples/test_nemo_agent_toolkit_asap.py`](../../../tests/examples/test_nemo_agent_toolkit_asap.py) | ASAP-side smoke; NAT optional skip (2c.6) |
+| [research-nemo-agent-toolkit.md](./research-nemo-agent-toolkit.md) | Pin, §10 gap analysis, §6 Path C |
 
 ### Reference
 
 - `examples/mcp_auth_bridge/`
 - `docs/adapters/mcp-auth-bridge.md`
+- [backlog-mcp-auth-typescript.md](../v2.5.0/backlog-mcp-auth-typescript.md) — HTTP/streamable-http follow-up
 - Upstream: `examples/MCP/simple_calculator_mcp_protected/`, `examples/A2A/math_assistant_a2a_protected/`
+
+## Reviews
+
+| Date | Tier | Verdict | Report |
+|------|------|---------|--------|
+| 2026-07-13 | T3 | Approved with caveats | [review-v2.5.3-S1b-S1c-spikes-20260713.md](../../code-review/private/review-v2.5.3-S1b-S1c-spikes-20260713.md) |

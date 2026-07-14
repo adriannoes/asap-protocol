@@ -1,0 +1,6 @@
+# Optional NeMo Agent Toolkit pin for Path A (stdio mcp_client → ASAP protect_server).
+# Do NOT add this to the main ASAP pyproject required dependencies.
+# Install from repo root: uv pip install -r examples/nemo_agent_toolkit_asap/requirements.txt
+#
+# Python: 3.13 only for this joint example (intersection with ASAP).
+nvidia-nat[mcp]==1.8.0
