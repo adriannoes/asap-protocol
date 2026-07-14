@@ -26,6 +26,10 @@
 | Rate Limiting | Enabled (default) | `rate_limit` parameter or `ASAP_RATE_LIMIT` env var |
 | Request Size Limits | Enabled (default) | `max_request_size` parameter or `ASAP_MAX_REQUEST_SIZE` env var |
 
+For **OpenAPI-backed workflow / automation connectors**, see
+[Automation connector security](guides/automation-connector-security.md)
+(secrets, TLS, webhooks, grants, MCP Path A notes).
+
 ---
 
 ## Overview
@@ -1301,3 +1305,5 @@ def validate_payload(envelope: Envelope) -> TaskRequest:
 - [Error Handling](error-handling.md) - ASAP error taxonomy
 - [Transport](transport.md) - HTTP/JSON-RPC binding details
 - [Observability](observability.md) - Logging and tracing
+- [Automation connector security](guides/automation-connector-security.md) - OpenAPI workflow connectors
+- [MCP Auth Bridge](adapters/mcp-auth-bridge.md) - Mode A JWT + grants on stdio MCP

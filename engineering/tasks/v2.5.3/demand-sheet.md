@@ -93,6 +93,20 @@ No maintainer-logged partner asks recorded in-repo for Semantic Kernel / MAF, Ha
 
 ---
 
+## Post-S1 demand snapshot (2026-07-13)
+
+Re-checked in-repo demand during Sprint S3 docs wiring (same method as S0: issue keyword search; no `adapter-request` label).
+
+| Signal | Result |
+|--------|--------|
+| New GitHub issues for Lab II candidates (n8n, Activepieces, MAF/SK, NAT, Zapier/Make, Haystack, Letta) | **None** found blocking ship |
+| New maintainer-logged Discord / email / partner asks in-repo | **None** recorded since S0 |
+| Ship blocker from external demand | **No** — Lab II docs/examples proceed on PRD + maintainer defaults |
+
+S1 / S1b / S1c / S2 content pages and examples remain demand-light (maintainer-driven). This snapshot does **not** invent partner asks.
+
+---
+
 ## Acceptance checklist (S0)
 
 | Criterion | Status |

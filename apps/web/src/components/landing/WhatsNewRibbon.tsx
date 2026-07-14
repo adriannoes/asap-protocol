@@ -9,6 +9,8 @@ import {
   ArrowUpRight,
   Code,
   BookOpen,
+  Workflow,
+  Lock,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -33,6 +35,11 @@ const EXAMPLE_MCP_AUTH_BRIDGE =
   'https://github.com/adriannoes/asap-protocol/tree/main/examples/mcp_auth_bridge';
 const DOCS_TS_SDK =
   'https://github.com/adriannoes/asap-protocol/blob/main/docs/sdks/typescript.md';
+// Lab II docs live on the release train until S4 → main; preview links use release/2.5.3.
+const DOCS_WORKFLOW_CONNECTORS =
+  'https://github.com/adriannoes/asap-protocol/blob/release/2.5.3/docs/integrations/workflow-connectors.md';
+const DOCS_AUTOMATION_CONNECTOR_SECURITY =
+  'https://github.com/adriannoes/asap-protocol/blob/release/2.5.3/docs/guides/automation-connector-security.md';
 
 const PILLS: Pill[] = [
   {
@@ -62,6 +69,20 @@ const PILLS: Pill[] = [
     icon: Sparkles,
     external: true,
     dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsMcpAuthExample,
+  },
+  {
+    label: 'Workflow connectors',
+    href: DOCS_WORKFLOW_CONNECTORS,
+    icon: Workflow,
+    external: true,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsWorkflowConnectors,
+  },
+  {
+    label: 'Connector security',
+    href: DOCS_AUTOMATION_CONNECTOR_SECURITY,
+    icon: Lock,
+    external: true,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsAutomationConnectorSecurity,
   },
   {
     label: 'Identity',
@@ -105,7 +126,7 @@ export function WhatsNewRibbon() {
               What&apos;s new in v2.5.2
             </span>
             <span className="text-xs text-zinc-500">
-              Security follow-up — July 2026
+              Security follow-up · Adapter Lab II docs preview
             </span>
           </div>
         </div>

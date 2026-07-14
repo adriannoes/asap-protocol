@@ -48,6 +48,12 @@ nav:
   - Integrations:
       - Mastra: integrations/mastra.md
       - OpenAI Agents SDK: integrations/openai-agents.md
+      - Workflow connectors: integrations/workflow-connectors.md
+      - Microsoft Agent Framework: integrations/microsoft-agent-framework.md
+      - NeMo Agent Toolkit: integrations/nemo-agent-toolkit.md
+  - Adapters:
+      - OpenAPI: adapters/openapi.md
+      - MCP Auth Bridge: adapters/mcp-auth-bridge.md
   - Tutorials:
       - Building Your First Agent: tutorials/first-agent.md
       - Stateful Workflows: tutorials/stateful-workflows.md
@@ -79,6 +85,7 @@ nav:
       - Migration v1.1 → v1.2: guides/migration-v1.1-to-v1.2.md
       - Lite Registry auto-registration: registry/auto-registration.md
       - Security: security.md
+      - Automation connector security: guides/automation-connector-security.md
       - State Management: state-management.md
       - Transport: transport.md
       - Metrics: metrics.md

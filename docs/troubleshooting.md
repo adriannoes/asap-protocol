@@ -33,6 +33,16 @@ This section lists the most frequent errors you may encounter, with cause and so
 | 19 | **Connection refused / OSError** | TCP connection to host:port failed (e.g. nothing listening). | Start the agent; confirm host and port; check firewall and security groups. |
 | 20 | **Path traversal / security** | Invalid or suspicious `FilePart` URI (e.g. `../` outside allowed base). | Use only allowed URIs; ensure server validates paths and rejects traversal attempts. |
 
+### Connector auth and MCP grant denials
+
+When using **OpenAPI workflow connectors** or **MCP Auth Bridge** (Mode A):
+
+| Symptom | Likely cause | What to check |
+|---------|--------------|---------------|
+| Upstream **401 / 403** from the workflow host | Missing or wrong Bearer / API token in `resolve_headers` / env | [Workflow connectors](integrations/workflow-connectors.md) troubleshooting; secrets only in env — [Automation connector security](guides/automation-connector-security.md) |
+| MCP `tools/call` rejected / grant denied | Agent JWT missing, expired, or skill not in grant | [MCP Auth Bridge](adapters/mcp-auth-bridge.md); Path A demo notes in [NeMo Agent Toolkit](integrations/nemo-agent-toolkit.md) |
+| Env JWT works locally but must not ship | `allow_env_jwt_fallback=True` | Dev-only — prefer `_meta.asap_agent_jwt`; see automation security § Mode A |
+
 ### Example stack traces
 
 **InvalidTransitionError** (state machine):

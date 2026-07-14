@@ -17,6 +17,10 @@ export const WHATS_NEW_RIBBON_CTA_IDS = {
   docsMigration250: 'docs-migration-250',
   docsOpenapi: 'docs-openapi',
   docsTypescript: 'docs-typescript',
+  docsWorkflowConnectors: 'docs-workflow-connectors',
+  docsAutomationConnectorSecurity: 'docs-automation-connector-security',
+  docsMicrosoftAgentFramework: 'docs-microsoft-agent-framework',
+  docsNemoAgentToolkit: 'docs-nemo-agent-toolkit',
   docsMastraIntegration: 'docs-mastra-integration',
   docsOpenaiAgentsIntegration: 'docs-openai-agents-integration',
   docsAutoRegistration: 'docs-auto-registration',
@@ -26,9 +30,19 @@ export const WHATS_NEW_RIBBON_CTA_IDS = {
   releaseChangelogGithub: 'release-changelog-github',
 } as const;
 
+/** Lab II docs CTAs on `/developer-experience` (reuse ribbon ids where shared). */
+export const DEVELOPER_EXPERIENCE_CTA_IDS = {
+  docsWorkflowConnectors: WHATS_NEW_RIBBON_CTA_IDS.docsWorkflowConnectors,
+  docsAutomationConnectorSecurity: WHATS_NEW_RIBBON_CTA_IDS.docsAutomationConnectorSecurity,
+  docsMicrosoftAgentFramework: WHATS_NEW_RIBBON_CTA_IDS.docsMicrosoftAgentFramework,
+  docsNemoAgentToolkit: WHATS_NEW_RIBBON_CTA_IDS.docsNemoAgentToolkit,
+} as const;
+
 /** Slugs from `/features/[slug]` cards — order matches the homepage grid. */
 export const LANDING_FEATURE_SLUGS = [
   'openapi-adapter',
+  'workflow-connectors',
+  'automation-connector-security',
   'typescript-sdk',
   'mastra-adapter',
   'openai-agents-adapter',
@@ -52,6 +66,10 @@ export const HOMEPAGE_CTA_IDS = [
   WHATS_NEW_RIBBON_CTA_IDS.docsMcpAuthExample,
   WHATS_NEW_RIBBON_CTA_IDS.docsMigration250,
   WHATS_NEW_RIBBON_CTA_IDS.docsTypescript,
+  WHATS_NEW_RIBBON_CTA_IDS.docsWorkflowConnectors,
+  WHATS_NEW_RIBBON_CTA_IDS.docsAutomationConnectorSecurity,
+  WHATS_NEW_RIBBON_CTA_IDS.docsMicrosoftAgentFramework,
+  WHATS_NEW_RIBBON_CTA_IDS.docsNemoAgentToolkit,
   ...LANDING_FEATURE_SLUGS.map((slug) => `feature-${slug}` as const),
   WHATS_NEW_RIBBON_CTA_IDS.releaseChangelogGithub,
 ] as const;

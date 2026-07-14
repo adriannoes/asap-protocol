@@ -177,6 +177,8 @@ Upstream **`text/event-stream`** is detected for metadata, but the default **`ta
 
 ## Related documentation
 
+- [Workflow connectors](../integrations/workflow-connectors.md) — reuse this adapter for n8n / Activepieces-style workflow HTTP APIs
+- [Automation connector security](../guides/automation-connector-security.md) — production baseline for OpenAPI-backed connectors
 - [Transport](../transport.md) — HTTP JSON-RPC, `create_app`
 - [Security](../security.md) — auth schemes at the ASAP layer
 - [Self-authorization prevention](../security/self-authorization-prevention.md) — `FreshSessionConfig`, WebAuthn

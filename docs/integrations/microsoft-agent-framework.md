@@ -6,10 +6,6 @@ How [Microsoft Agent Framework (MAF)](https://learn.microsoft.com/en-us/agent-fr
 
     This page is **interop guidance** from Adapter Lab II (v2.5.3). It is **not** a first-class ASAP adapter like [Mastra](./mastra.md) or [OpenAI Agents](./openai-agents.md): there is **no** ASAP .NET SDK, **no** NuGet package, and **no** in-repo C# sample under `examples/`. Treat recommendations as research notes — they may change without a deprecation cycle.
 
-!!! note "Site navigation (Sprint S3)"
-
-    MkDocs nav and the **`docs/index.md`** CTA are finished in **Sprint S3**. Until then, discover this page via `docs/integrations/microsoft-agent-framework.md`.
-
 ## Purpose
 
 Use this when a .NET (or Python MAF) agent already speaks MAF tools / MCP and you need ASAP identity and authorization to remain the source of truth for remote capability execution.

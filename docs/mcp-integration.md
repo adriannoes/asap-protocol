@@ -28,6 +28,8 @@ ASAP supports two complementary ways to combine MCP with agent communication. Pi
 
 Use `asap.mcp.MCPServer` when a host application starts your process and speaks MCP over stdin/stdout. To enforce Agent JWT and capability grants on protected tools, wrap the server with `protect_server` from `asap.adapters.mcp` — see the **[MCP Auth Bridge adapter guide](adapters/mcp-auth-bridge.md)** for architecture, `MCPAuthConfig`, error codes, and a runnable example.
 
+**Lab II Path A (experimental):** [NeMo Agent Toolkit](integrations/nemo-agent-toolkit.md) demonstrates NAT `mcp_client` (stdio) calling an ASAP-protected MCP server — see also [Automation connector security](guides/automation-connector-security.md) (§ Mode A vs Mode B). Workflow connectors that stay on OpenAPI/HTTP do not require MCP; see [Workflow connectors](integrations/workflow-connectors.md).
+
 **Opt-in migration (MCP-DOC-004):** Unprotected `MCPServer` usage remains fully valid. Protection is explicit: call `protect_server` only when you want JWT + grant checks on `tools/call`. Existing deployments do not need to change until operators opt in.
 
 **Deferred in v2.5.0:** An MCP `initialize` session-token handshake (negotiating a token once at connect instead of per-call `_meta`) is **not shipped** in this release — see [design lock §3](../engineering/tasks/v2.5.0/design-lock-mcp-auth-bridge.md). Clients must pass the Agent JWT on each protected `tools/call` via `_meta.asap_agent_jwt` until a future release adds session tokens.
@@ -136,3 +138,10 @@ The demo uses `MCPClient` to start `asap.mcp.server_runner` as a subprocess, per
 ## Protocol version
 
 This implementation follows **MCP 2025-11-25**. For a short reference of the types and messages used, see [mcp-specs.md](../engineering/references/mcp-specs.md) in the repo.
+
+## Related
+
+- [MCP Auth Bridge](adapters/mcp-auth-bridge.md) — Mode A `protect_server`
+- [NeMo Agent Toolkit](integrations/nemo-agent-toolkit.md) — experimental Path A (NAT → ASAP-protected MCP)
+- [Automation connector security](guides/automation-connector-security.md) — connector secrets / TLS / grants when MCP is involved
+- [Workflow connectors](integrations/workflow-connectors.md) — OpenAPI path (no MCP required)

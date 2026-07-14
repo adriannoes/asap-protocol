@@ -4,11 +4,7 @@ How [NVIDIA NeMo Agent Toolkit (NAT)](https://docs.nvidia.com/nemo/agent-toolkit
 
 !!! warning "Experimental — Path A demo exists; not a maintained adapter"
 
-    This page is **interop guidance** from Adapter Lab II (v2.5.3). A reproducible **Path A** stdio demo lives under [`examples/nemo_agent_toolkit_asap/`](../../examples/nemo_agent_toolkit_asap/). It remains **experimental** until a maintained promotion decision — there is **no** first-class ASAP↔NAT adapter package, **no** published `nemo-agent-toolkit-asap` plugin, and **no** claim of native NAT↔ASAP protocol support. Treat recommendations as research notes — they may change without a deprecation cycle.
-
-!!! note "Site navigation (Sprint S3)"
-
-    MkDocs nav and the **`docs/index.md`** CTA are finished in **Sprint S3**. Until then, discover this page via `docs/integrations/nemo-agent-toolkit.md`.
+    This page is **interop guidance** from Adapter Lab II (v2.5.3). A reproducible **Path A** stdio demo lives under [`examples/nemo_agent_toolkit_asap/`](https://github.com/adriannoes/asap-protocol/tree/release/2.5.3/examples/nemo_agent_toolkit_asap). It remains **experimental** until a maintained promotion decision — there is **no** first-class ASAP↔NAT adapter package, **no** published `nemo-agent-toolkit-asap` plugin, and **no** claim of native NAT↔ASAP protocol support. Treat recommendations as research notes — they may change without a deprecation cycle.
 
 ## Purpose
 
@@ -127,7 +123,7 @@ nat run --config_file examples/nemo_agent_toolkit_asap/configs/config-mcp-client
 
 Or: `./examples/nemo_agent_toolkit_asap/run_demo.sh nat` (exits with a clear skip if `nat` is missing — does not fail ASAP CI).
 
-Example README (same commands): [`examples/nemo_agent_toolkit_asap/README.md`](../../examples/nemo_agent_toolkit_asap/README.md).
+Example README (same commands): [`examples/nemo_agent_toolkit_asap/README.md`](https://github.com/adriannoes/asap-protocol/blob/release/2.5.3/examples/nemo_agent_toolkit_asap/README.md).
 
 ## Adjacent edge story (ShellClaw / CUDA)
 
@@ -146,8 +142,9 @@ NAT’s NIM / CUDA LLM path is **out of band** for this interop guide. For edge 
 ## Related
 
 - Spike map: [`engineering/tasks/v2.5.3/research-nemo-agent-toolkit.md`](../../engineering/tasks/v2.5.3/research-nemo-agent-toolkit.md)
-- Runnable Path A: [`examples/nemo_agent_toolkit_asap/`](../../examples/nemo_agent_toolkit_asap/)
-- [MCP Auth Bridge](../adapters/mcp-auth-bridge.md) · [MCP integration](../mcp-integration.md)
+- Runnable Path A: [`examples/nemo_agent_toolkit_asap/`](https://github.com/adriannoes/asap-protocol/tree/release/2.5.3/examples/nemo_agent_toolkit_asap)
+- [MCP Auth Bridge](../adapters/mcp-auth-bridge.md) (Mode A `protect_server`) · [MCP integration](../mcp-integration.md) (Mode B envelopes)
+- [Automation connector security](../guides/automation-connector-security.md) — Mode A vs Mode B; env JWT fallback is **dev-only**
 - [Security](../security.md) — Agent JWT / Host identity
 - [Capabilities](../capabilities/index.md)
 - [Workflow connectors](./workflow-connectors.md) · [Microsoft Agent Framework](./microsoft-agent-framework.md)

@@ -4,9 +4,7 @@ Map **n8n / Activepieces-style workflow HTTP APIs** into ASAP **capabilities** b
 
 **Stack:** OpenAPI 3.0/3.1 fragment or full spec → `create_from_openapi` → `create_app` (same pattern as the PetStore demo). **No dedicated workflow adapter package.**
 
-!!! note "Site navigation (Sprint S3)"
-
-    This guide ships with Adapter Lab II (v2.5.3). **MkDocs nav** and the **`docs/index.md` CTA** are finished in **Sprint S3** (docs-review checklist). Until then, discover the page via the repo path `docs/integrations/workflow-connectors.md` or the runnable example below.
+**Status:** Maintained integration guide (Adapter Lab II). Also listed under MkDocs **Integrations** and on the [docs home](../index.md).
 
 ## Purpose
 
@@ -71,7 +69,7 @@ uv sync --extra openapi
 uv run python examples/workflow_asap_connector/main.py
 ```
 
-Runs Compliance Harness v2 (expects score **1.0**), then invokes `listWorkflows` against a **mocked** upstream (no SaaS credentials). Spike notes and skill table: [`examples/workflow_asap_connector/`](https://github.com/adriannoes/asap-protocol/tree/main/examples/workflow_asap_connector).
+Runs Compliance Harness v2 (expects score **1.0**), then invokes `listWorkflows` against a **mocked** upstream (no SaaS credentials). Spike notes and skill table: [`examples/workflow_asap_connector/`](https://github.com/adriannoes/asap-protocol/tree/release/2.5.3/examples/workflow_asap_connector).
 
 Optional live upstream (HTTPS recommended; keep secrets in env only):
 
@@ -138,8 +136,9 @@ Identity / approval for production: configure `FreshSessionConfig` and optional 
 
 ## Related
 
+- [Automation connector security](../guides/automation-connector-security.md) — secrets, TLS, webhooks, rate limits, manifests (MCP **N/A** for this OpenAPI example)
 - [OpenAPI adapter](../adapters/openapi.md) — mapper, upstream proxy, approval / headers
 - [Mastra integration](./mastra.md) — Lab I: ASAP capabilities → framework tools
 - [OpenAI Agents SDK integration](./openai-agents.md) — Lab I: ASAP capabilities → Agents SDK tools
-- Runnable example: [`examples/workflow_asap_connector/`](https://github.com/adriannoes/asap-protocol/tree/main/examples/workflow_asap_connector)
+- Runnable example: [`examples/workflow_asap_connector/`](https://github.com/adriannoes/asap-protocol/tree/release/2.5.3/examples/workflow_asap_connector)
 - Error codes: [Error handling](../error-handling.md)

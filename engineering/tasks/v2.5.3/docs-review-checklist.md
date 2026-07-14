@@ -10,11 +10,12 @@
 
 | Page | Producer sprint | Status |
 |------|-----------------|--------|
-| `docs/integrations/workflow-connectors.md` (or `n8n.md`) | S1 | ☐ |
-| `docs/guides/automation-connector-security.md` | S2 | ☐ |
-| `docs/integrations/nemo-agent-toolkit.md` | S1c (default go) | ☐ / skip |
-| `docs/integrations/semantic-kernel.md` (or MAF name) | S1b (if D2 go) | ☐ / skip |
-| Example READMEs under `examples/workflow_*`, `examples/nemo_agent_toolkit_asap/` | S1 / S1c | ☐ |
+| `docs/integrations/workflow-connectors.md` | S1 | ✅ shipped S1 |
+| `docs/guides/automation-connector-security.md` | S2 | ✅ shipped S2 |
+| `docs/integrations/nemo-agent-toolkit.md` | S1c (default go) | ✅ shipped S1c (experimental) |
+| `docs/integrations/microsoft-agent-framework.md` (not `semantic-kernel.md`) | S1b (D2 go / research) | ✅ shipped S1b (research/experimental) |
+| Example READMEs under `examples/workflow_asap_connector/`, `examples/nemo_agent_toolkit_asap/` | S1 / S1c | ✅ shipped |
+| `docs/adapters/openapi.md`, `docs/adapters/mcp-auth-bridge.md` | pre–Lab II | ✅ exist (wired in S3 nav) |
 
 Each new page MUST: English, HTTPS/TLS note where network is involved, link to security guide when automation/MCP is involved, and an explicit **status** (maintained / experimental / research).
 
@@ -22,29 +23,29 @@ Each new page MUST: English, HTTPS/TLS note where network is involved, link to s
 
 ## 2. MkDocs nav (`mkdocs.yml`)
 
-Current gap (as of 2026-07-12): **Integrations** only lists Mastra + OpenAI Agents; **Adapters** (OpenAPI, MCP Auth Bridge) are missing from `nav` even though files exist under `docs/adapters/`.
+**Resolved in S3 (2026-07-14):** `mkdocs.yml` now lists **Adapters** (OpenAPI, MCP Auth Bridge) and Lab II **Integrations** / **Guides**. Pre-S3 gap (Mastra + OpenAI Agents only) is closed.
 
-- [ ] Add **Adapters** section (or nest under Integrations):
-  - [ ] `adapters/openapi.md`
-  - [ ] `adapters/mcp-auth-bridge.md`
-- [ ] Extend **Integrations**:
-  - [ ] Keep Mastra + OpenAI Agents
-  - [ ] Add workflow connectors (S1)
-  - [ ] Add NeMo Agent Toolkit if S1c shipped
-  - [ ] Add Semantic Kernel if S1b shipped
-- [ ] Extend **Guides**:
-  - [ ] `guides/automation-connector-security.md`
-  - [ ] Confirm MCP / OpenAPI still reachable (via Adapters or Guides)
-- [ ] Smoke: `uv run mkdocs build --strict` (or project’s documented MkDocs command) — fix broken nav paths
+- [x] Add **Adapters** section (or nest under Integrations):
+  - [x] `adapters/openapi.md`
+  - [x] `adapters/mcp-auth-bridge.md`
+- [x] Extend **Integrations**:
+  - [x] Keep Mastra + OpenAI Agents
+  - [x] Add workflow connectors (S1)
+  - [x] Add NeMo Agent Toolkit if S1c shipped
+  - [x] Add Microsoft Agent Framework (S1b shipped; page name `microsoft-agent-framework.md`)
+- [x] Extend **Guides**:
+  - [x] `guides/automation-connector-security.md`
+  - [x] Confirm MCP / OpenAPI still reachable (via Adapters or Guides)
+- [x] Smoke: `uv run mkdocs build --strict` — Lab II / Adapters nav targets resolve; site builds with `uv run mkdocs build`. **`--strict` still aborts** on pre-existing warnings (missing `api/*` + `contributing.md` nav stubs; out-of-docs link warnings) — not introduced by Lab II pages.
 
 ---
 
 ## 3. Docs home (`docs/index.md`)
 
-- [ ] Bump “Latest reference implementation” blurb for **v2.5.3** when releasing (S4 may own final version string; S3 can draft)
-- [ ] Features / Documentation lists: link new Lab II pages
-- [ ] Keep MCP Auth Bridge + OpenAPI + Lab I adapters accurate (no stale “next is v2.5.3” after ship)
-- [ ] Mention NeMo / workflow only if pages exist
+- [x] Bump “Latest reference implementation” blurb for **v2.5.3** when releasing (S4 may own final version string; S3 can draft) — **S3**: keep **v2.5.2** as latest PyPI; mention Lab II docs train + draft migration stub
+- [x] Features / Documentation lists: link new Lab II pages
+- [x] Keep MCP Auth Bridge + OpenAPI + Lab I adapters accurate (no stale “next is v2.5.3” after ship)
+- [x] Mention NeMo / workflow only if pages exist
 
 ---
 
@@ -52,18 +53,18 @@ Current gap (as of 2026-07-12): **Integrations** only lists Mastra + OpenAI Agen
 
 Update only where Lab II changes the story; avoid drive-by rewrites.
 
-| File | What to check |
-|------|----------------|
-| `docs/mcp-integration.md` | Point to Auth Bridge; if NAT/workflow examples use MCP, link them |
-| `docs/adapters/mcp-auth-bridge.md` | “See also” → NAT guide + automation security (if Path A) |
-| `docs/adapters/openapi.md` | “See also” → workflow connectors (OpenAPI reuse path) |
-| `docs/integrations/mastra.md` | Optional footer: sibling integrations index / Lab II pages |
-| `docs/integrations/openai-agents.md` | Same |
-| `docs/migration.md` | Section **Upgrading from v2.5.2 → v2.5.3** (S4 finalizes; S3 can stub) |
-| `docs/troubleshooting.md` | One stub for connector auth / MCP grant denials if examples introduce new failure modes |
-| `docs/security.md` | Link automation-connector-security if it belongs in the security TOC |
-| `docs/tutorials/multi-agent.md` | Only if multi-agent narrative should mention NAT/workflow (optional) |
-| `README.md` (repo root) | Short pointer to new integrations if README lists them today |
+| File | What to check | S3 |
+|------|----------------|-----|
+| `docs/mcp-integration.md` | Point to Auth Bridge; if NAT/workflow examples use MCP, link them | ✅ |
+| `docs/adapters/mcp-auth-bridge.md` | “See also” → NAT guide + automation security (if Path A) | ✅ |
+| `docs/adapters/openapi.md` | “See also” → workflow connectors (OpenAPI reuse path) | ✅ |
+| `docs/integrations/mastra.md` | Optional footer: sibling integrations index / Lab II pages | ✅ |
+| `docs/integrations/openai-agents.md` | Same | ✅ |
+| `docs/migration.md` | Section **Upgrading from v2.5.2 → v2.5.3** (S4 finalizes; S3 can stub) | ✅ draft |
+| `docs/troubleshooting.md` | One stub for connector auth / MCP grant denials if examples introduce new failure modes | ✅ |
+| `docs/security.md` | Link automation-connector-security if it belongs in the security TOC | ✅ |
+| `docs/tutorials/multi-agent.md` | Only if multi-agent narrative should mention NAT/workflow (optional) | skipped (optional) |
+| `README.md` (repo root) | Short pointer to new integrations if README lists them today | ✅ |
 
 ---
 
@@ -74,29 +75,31 @@ Keep the split clear for readers:
 | Folder | Use for |
 |--------|---------|
 | `docs/adapters/` | First-party ASAP packages (`asap.adapters.*`) — OpenAPI, MCP Auth Bridge |
-| `docs/integrations/` | Framework / ecosystem guides (Mastra, OpenAI Agents, workflow, NAT, SK) |
+| `docs/integrations/` | Framework / ecosystem guides (Mastra, OpenAI Agents, workflow, NAT, MAF) |
 | `docs/guides/` | Cross-cutting how-tos (security, ShellClaw, compliance) |
 
-- [ ] New Lab II pages follow this split (do not put NAT under `adapters/` unless we ship `asap.adapters.nat`)
-- [ ] Titles use sentence case; status banner on experimental pages
+- [x] New Lab II pages follow this split (do not put NAT under `adapters/` unless we ship `asap.adapters.nat`)
+- [x] Titles use sentence case; status banner on experimental pages (MAF / NAT kept)
 
 ---
 
 ## 6. Web app / CTAs (LAB2-004)
 
-- [ ] `apps/web` developer-experience / FeaturesSection / WhatsNewRibbon: cards or links for shipped Lab II guides
-- [ ] Telemetry CTA ids if new docs CTAs are added (`homepage-cta-ids.ts` pattern)
-- [ ] No Distribution Loop hero rewrite (v2.5.4)
+- [x] `apps/web` developer-experience / FeaturesSection / WhatsNewRibbon: cards or links for shipped Lab II guides
+- [x] Telemetry CTA ids if new docs CTAs are added (`homepage-cta-ids.ts` pattern)
+- [x] No Distribution Loop hero rewrite (v2.5.4)
+
+*(Owned by task 4.4 — complete.)*
 
 ---
 
 ## 7. Consistency / quality gate
 
-- [ ] No broken relative links among new + touched pages
-- [ ] No secrets / Keycloak default passwords copied into ASAP docs (link upstream NAT examples instead)
-- [ ] NAT docs: ASAP complements A2A/MCP — never “ASAP replaces A2A in NeMo”
-- [ ] `@asap-protocol/mcp-auth` still described as deferred where HTTP MCP middleware is mentioned
-- [ ] English only in committed docs
+- [x] No broken relative links among new + touched pages
+- [x] No secrets / Keycloak default passwords copied into ASAP docs (link upstream NAT examples instead)
+- [x] NAT docs: ASAP complements A2A/MCP — never “ASAP replaces A2A in NeMo”
+- [x] `@asap-protocol/mcp-auth` still described as deferred where HTTP MCP middleware is mentioned
+- [x] English only in committed docs
 
 ---
 
@@ -104,7 +107,7 @@ Keep the split clear for readers:
 
 | Role | Sign-off |
 |------|----------|
-| S3 owner | ☐ Docs checklist complete for pages that shipped |
+| S3 owner | ☑ Docs checklist §§1–7 complete for shipped pages (web §6 done in 4.4); §8 version strings deferred to S4 |
 | S4 owner | ☐ Version strings + migration section match tag `v2.5.3` |
 
 ---
@@ -114,3 +117,5 @@ Keep the split clear for readers:
 | Date | Change |
 |------|--------|
 | 2026-07-12 | Initial checklist from `docs/` + `mkdocs.yml` audit for Lab II |
+| 2026-07-13 | S3 docs half: inventory marked shipped; MkDocs Adapters + Lab II nav; cross-links; migration stub; learnings + demand snapshot |
+| 2026-07-13 | S3 task 4.4: web CTAs / feature cards / DX ecosystem entries for Lab II guides; §6 signed; S3 owner §§1–7 |
