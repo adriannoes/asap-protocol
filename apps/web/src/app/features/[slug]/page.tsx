@@ -1,13 +1,15 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import type { LucideIcon } from 'lucide-react';
 import { ArrowLeft, Database, ShieldCheck, Zap, Activity, Globe, Lock, Code, Fingerprint, KeySquare, Radio, Clock, GaugeCircle, Layers, Waypoints, FileCode, Braces, CloudUpload, Bot, Sparkles } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid';
+import { LAB2_FEATURE_PAGES, type FeaturePageContent } from '../lab2-feature-pages';
 
 export function generateStaticParams() {
     return [
         { slug: 'openapi-adapter' },
+        { slug: 'workflow-connectors' },
+        { slug: 'automation-connector-security' },
         { slug: 'typescript-sdk' },
         { slug: 'mastra-adapter' },
         { slug: 'openai-agents-adapter' },
@@ -22,18 +24,8 @@ export function generateStaticParams() {
     ];
 }
 
-type FeatureCapability = { title: string; description: string; icon: LucideIcon };
-
-const FEATURE_CONTENT: Record<
-    string,
-    {
-        title: string;
-        description: string;
-        icon: React.ComponentType<{ className?: string }>;
-        content: React.ReactNode;
-        capabilities: FeatureCapability[];
-    }
-> = {
+const FEATURE_CONTENT: Record<string, FeaturePageContent> = {
+    ...LAB2_FEATURE_PAGES,
     'lite-registry': {
         title: 'Lite Registry',
         description: 'Zero database overhead. Pure speed and resilience.',

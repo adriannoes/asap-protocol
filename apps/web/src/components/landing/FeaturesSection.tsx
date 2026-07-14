@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LANDING_FEATURE_SLUGS } from '@/lib/telemetry/homepage-cta-ids';
-import { Database, ShieldCheck, Zap, Activity, ArrowRight, Fingerprint, KeySquare, Radio, FileCode, Braces, CloudUpload, Bot, Sparkles } from 'lucide-react';
+import { Database, ShieldCheck, Zap, Activity, ArrowRight, Fingerprint, KeySquare, Radio, FileCode, Braces, CloudUpload, Bot, Sparkles, Workflow, Lock } from 'lucide-react';
 
 const INLINE_CODE = 'rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300';
 
@@ -23,6 +23,20 @@ const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
       'Generate ASAP capabilities from an OpenAPI 3.x document so existing HTTP APIs become agent-callable with minimal glue code.',
     icon: FileCode,
     className: 'md:col-span-2',
+  },
+  'workflow-connectors': {
+    title: 'Workflow Connectors',
+    description:
+      'Expose n8n-/Activepieces-style workflow HTTP APIs as ASAP skills via the OpenAPI adapter — remote agents invoke skills that proxy to the workflow host.',
+    icon: Workflow,
+    className: 'md:col-span-1',
+  },
+  'automation-connector-security': {
+    title: 'Automation Connector Security',
+    description:
+      'Hardening guide for OpenAPI-backed workflow connectors: secrets, least privilege, HTTPS/TLS. MCP Auth Bridge applies when a connector exposes MCP (e.g. NeMo Path A).',
+    icon: Lock,
+    className: 'md:col-span-1',
   },
   'typescript-sdk': {
     title: 'TypeScript SDK',

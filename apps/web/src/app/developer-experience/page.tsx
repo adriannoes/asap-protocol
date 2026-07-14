@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
-import { ArrowRight, Terminal, Braces, Route, ShieldCheck, GitMerge } from 'lucide-react';
+import { ArrowRight, Terminal, Braces, Route, ShieldCheck, GitMerge, Workflow, Beaker } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BackgroundPaths } from '@/components/ui/background-paths';
 import Link from 'next/link';
@@ -9,6 +10,59 @@ export const metadata: Metadata = {
     title: 'Developer Experience | ASAP Protocol',
     description: 'Learn how to build autonomous agents easily with the ASAP Protocol standard and IssueOps marketplace.',
 };
+
+type FrameworkEntry = {
+    name: string;
+    desc: string;
+    /** Filename under `/public/icons/` without `.svg`. Prefer when an asset exists. */
+    icon?: string;
+    /** Lucide fallback when no SVG asset exists (do not invent broken `/icons/*.svg` paths). */
+    LucideIcon?: LucideIcon;
+    /** Optional docs URL (GitHub blob on release/2.5.3 for Lab II preview). */
+    docsHref?: string;
+};
+
+const FRAMEWORKS: FrameworkEntry[] = [
+    { name: 'LangChain', icon: 'langchain', desc: 'Auto-discover ASAP agents as standard LangChain tools.' },
+    { name: 'CrewAI', icon: 'crewai', desc: 'Securely orchestrate multi-agent workflows with ASAP support.' },
+    { name: 'PydanticAI', icon: 'pydantic', desc: 'Strict type-safe agent definitions powered by Pydantic.' },
+    { name: 'LlamaIndex', icon: 'llamaindex', desc: 'Data-to-agent pipelines with ASAP-compliant tool calling.' },
+    { name: 'MCP', icon: 'anthropic', desc: 'Connect ASAP agents directly to Claude Desktop & IDEs.' },
+    { name: 'SmolAgents', icon: 'huggingface', desc: 'Minimalist, high-performance agentic logic integration.' },
+    { name: 'OpenClaw', icon: 'openclaw', desc: 'Interoperable chat-based agent patterns.' },
+    { name: 'Vercel AI SDK', icon: 'vercel', desc: 'Bridge ASAP agents into Next.js/React apps with native tool-calling support.' },
+    {
+        name: 'Mastra',
+        icon: 'mastra',
+        desc: 'ASAP capabilities as Mastra createTool definitions (`@asap-protocol/mastra` + `@mastra/core`).',
+    },
+    {
+        name: 'OpenAI Agents',
+        icon: 'openai-agents',
+        desc: 'ASAP capability tools for the OpenAI Agents SDK (`@asap-protocol/openai-agents`; separate from the Chat Completions adapter in `@asap-protocol/client`).',
+    },
+    {
+        name: 'Workflow connectors',
+        LucideIcon: Workflow,
+        desc: 'Expose n8n-/Activepieces-style workflow HTTP APIs as ASAP skills via the OpenAPI adapter.',
+        docsHref:
+            'https://github.com/adriannoes/asap-protocol/blob/release/2.5.3/docs/integrations/workflow-connectors.md',
+    },
+    {
+        name: 'Microsoft Agent Framework',
+        LucideIcon: Beaker,
+        desc: 'Experimental research notes for MAF / Semantic Kernel–lineage patterns.',
+        docsHref:
+            'https://github.com/adriannoes/asap-protocol/blob/release/2.5.3/docs/integrations/microsoft-agent-framework.md',
+    },
+    {
+        name: 'NeMo Agent Toolkit',
+        LucideIcon: Beaker,
+        desc: 'Experimental guide: ASAP alongside NVIDIA NeMo Agent Toolkit / A2A / MCP.',
+        docsHref:
+            'https://github.com/adriannoes/asap-protocol/blob/release/2.5.3/docs/integrations/nemo-agent-toolkit.md',
+    },
+];
 
 export default function DeveloperExperiencePage() {
     return (
@@ -143,44 +197,53 @@ export default function DeveloperExperiencePage() {
                     </div>
 
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                        {[
-                            { name: 'LangChain', icon: 'langchain', desc: 'Auto-discover ASAP agents as standard LangChain tools.' },
-                            { name: 'CrewAI', icon: 'crewai', desc: 'Securely orchestrate multi-agent workflows with ASAP support.' },
-                            { name: 'PydanticAI', icon: 'pydantic', desc: 'Strict type-safe agent definitions powered by Pydantic.' },
-                            { name: 'LlamaIndex', icon: 'llamaindex', desc: 'Data-to-agent pipelines with ASAP-compliant tool calling.' },
-                            { name: 'MCP', icon: 'anthropic', desc: 'Connect ASAP agents directly to Claude Desktop & IDEs.' },
-                            { name: 'SmolAgents', icon: 'huggingface', desc: 'Minimalist, high-performance agentic logic integration.' },
-                            { name: 'OpenClaw', icon: 'openclaw', desc: 'Interoperable chat-based agent patterns.' },
-                            { name: 'Vercel AI SDK', icon: 'vercel', desc: 'Bridge ASAP agents into Next.js/React apps with native tool-calling support.' },
-                            {
-                                name: 'Mastra',
-                                icon: 'mastra',
-                                desc: 'ASAP capabilities as Mastra createTool definitions (`@asap-protocol/mastra` + `@mastra/core`).',
-                            },
-                            {
-                                name: 'OpenAI Agents',
-                                icon: 'openai-agents',
-                                desc: 'ASAP capability tools for the OpenAI Agents SDK (`@asap-protocol/openai-agents`; separate from the Chat Completions adapter in `@asap-protocol/client`).',
-                            },
-                        ].map((fw) => (
-                            <div key={fw.name} className="p-5 rounded-lg border border-zinc-800 bg-zinc-900/20 hover:bg-zinc-900/40 transition-all group">
-                                <div className="flex items-center gap-3 mb-3">
-                                    <div className="w-8 h-8 rounded border border-zinc-800 bg-zinc-950 flex items-center justify-center shrink-0 group-hover:border-zinc-700 transition-colors overflow-hidden relative">
-                                        <Image
-                                            src={`/icons/${fw.icon}.svg`}
-                                            alt={fw.name}
-                                            width={32}
-                                            height={32}
-                                            className="object-contain p-1 opacity-70 group-hover:opacity-100 transition-opacity"
-                                        />
+                        {FRAMEWORKS.map((fw) => {
+                            const FallbackIcon = fw.LucideIcon;
+                            const cardClassName =
+                                'p-5 rounded-lg border border-zinc-800 bg-zinc-900/20 hover:bg-zinc-900/40 transition-all group block h-full';
+                            const cardBody = (
+                                <>
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="w-8 h-8 rounded border border-zinc-800 bg-zinc-950 flex items-center justify-center shrink-0 group-hover:border-zinc-700 transition-colors overflow-hidden relative">
+                                            {fw.icon ? (
+                                                <Image
+                                                    src={`/icons/${fw.icon}.svg`}
+                                                    alt={fw.name}
+                                                    width={32}
+                                                    height={32}
+                                                    className="object-contain p-1 opacity-70 group-hover:opacity-100 transition-opacity"
+                                                />
+                                            ) : FallbackIcon ? (
+                                                <FallbackIcon
+                                                    className="h-4 w-4 text-zinc-500 opacity-70 group-hover:opacity-100 group-hover:text-zinc-300 transition-opacity"
+                                                    aria-hidden
+                                                />
+                                            ) : null}
+                                        </div>
+                                        <h3 className="text-white font-bold text-sm tracking-tight">{fw.name}</h3>
                                     </div>
-                                    <h3 className="text-white font-bold text-sm tracking-tight">{fw.name}</h3>
+                                    <p className="text-zinc-500 text-xs leading-relaxed">{fw.desc}</p>
+                                </>
+                            );
+                            if (fw.docsHref) {
+                                return (
+                                    <a
+                                        key={fw.name}
+                                        href={fw.docsHref}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={cardClassName}
+                                    >
+                                        {cardBody}
+                                    </a>
+                                );
+                            }
+                            return (
+                                <div key={fw.name} className={cardClassName}>
+                                    {cardBody}
                                 </div>
-                                <p className="text-zinc-500 text-xs leading-relaxed">
-                                    {fw.desc}
-                                </p>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             </section>
