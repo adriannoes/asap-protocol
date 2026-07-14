@@ -108,7 +108,7 @@ S1b / S1c never block S1/S2/S3/S4. S0 D2 was **no-go** on demand; **maintainer o
   - **Depends on:** Tasks 2.0–4.0; [release-checklist.md](./release-checklist.md).
   - **Acceptance criteria:**
     - [x] Version **2.5.3**, CHANGELOG, migration note
-    - [ ] Pre-push CI green (ruff, mypy, pytest ≥85%, pip-audit)
+    - [x] Pre-push CI green (ruff, mypy, pytest ≥85%, pip-audit)
     - [ ] Tag `v2.5.3` + PyPI as applicable *(awaiting user confirmation)*
     - [ ] `release/2.5.3` → `main`
 
@@ -121,8 +121,8 @@ S1b / S1c never block S1/S2/S3/S4. S0 D2 was **no-go** on demand; **maintainer o
 - [x] Docs review checklist signed for shipped pages — [docs-review-checklist.md](./docs-review-checklist.md) (§§1–8)
 - [x] LAB2-005 — open vs hosted learnings captured
 - [x] LAB2-006 — Auth Bridge referenced if MCP exposed (or N/A documented)
-- [ ] Transport growth lint clean across v2.5.3 PRs
-- [x] [release-checklist.md](./release-checklist.md) §§2–3 signed (S4 content); §1 CI + §4 tag pending
+- [x] Transport growth lint clean across v2.5.3 PRs
+- [x] [release-checklist.md](./release-checklist.md) §§1–3 signed (S4 content + CI); §4 tag pending
 
 ## Out of scope (defer)
 

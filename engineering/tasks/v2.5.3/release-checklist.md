@@ -10,12 +10,12 @@
 
 | Step | Command | Status |
 |------|---------|--------|
-| Lint | `uv run ruff check .` | ☐ (Phase 5) |
-| Format | `uv run ruff format --check .` | ☐ (Phase 5) |
-| Types | `uv run mypy src/ scripts/ tests/` | ☐ (Phase 5) |
-| Python tests | `uv run pytest --tb=short --cov=asap --cov-report=xml --cov-fail-under=85` | ☐ (Phase 5) |
-| pip-audit | per `SECURITY.md` | ☐ (Phase 5) |
-| Web (if touched) | `npm run lint` / `npx tsc --noEmit` / `npx vitest run` / `npm run build` in `apps/web/` | ☐ (Phase 5) |
+| Lint | `uv run ruff check .` | ☑ |
+| Format | `uv run ruff format --check .` | ☑ |
+| Types | `uv run mypy src/ scripts/ tests/` | ☑ |
+| Python tests | `uv run pytest --tb=short --cov=asap --cov-report=xml --cov-fail-under=85` | ☑ (94.46%) |
+| pip-audit | per `SECURITY.md` | ☑ |
+| Web (if touched) | `npm run lint` / `npx tsc --noEmit` / `npx vitest run` / `npm run build` in `apps/web/` | ☑ |
 
 ---
 

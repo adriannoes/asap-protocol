@@ -22,14 +22,14 @@
   - [x] Update `AGENTS.md`, `product/README.md`, `docs/index.md` version blurb, checkpoints
   - [x] Confirm [docs-review-checklist.md](./docs-review-checklist.md) §8 version-string sign-off
 
-- [ ] **5.3 Pre-push CI** (run in Phase 5 / before merge)
-  - [ ] `uv run ruff check .`
-  - [ ] `uv run ruff format --check .`
-  - [ ] `uv run mypy src/ scripts/ tests/`
-  - [ ] `uv run pytest --tb=short --cov=asap --cov-report=xml --cov-fail-under=85`
-  - [ ] pip-audit per `SECURITY.md` / `git-commits.mdc`
-  - [ ] If `apps/web/` changed: lint, `tsc`, vitest, build
-  - [ ] MkDocs build if docs/nav changed (`mkdocs build` / project-documented command)
+- [x] **5.3 Pre-push CI** (Phase 5 green 2026-07-14)
+  - [x] `uv run ruff check .`
+  - [x] `uv run ruff format --check .`
+  - [x] `uv run mypy src/ scripts/ tests/`
+  - [x] `uv run pytest --tb=short --cov=asap --cov-report=xml --cov-fail-under=85`
+  - [x] pip-audit per `SECURITY.md` / `git-commits.mdc`
+  - [x] If `apps/web/` changed: lint, `tsc`, vitest, build
+  - [x] MkDocs build if docs/nav changed (`mkdocs build` / project-documented command)
 
 - [ ] **5.4 Tag & publish** *(requires explicit user confirmation)*
   - [ ] PR `release/2.5.3` → `main`
