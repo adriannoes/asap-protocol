@@ -37,11 +37,11 @@ You should see lines similar to:
 
 ```text
 skills: ['getWorkflow', 'listWorkflows', 'triggerWorkflow']
-Compliance Harness v2: ...
+12/12 checks passed (100%)
 listWorkflows: 1 workflow(s) via 'workflows'
 ```
 
-Exact harness summary text may vary; score must be **1.0** (non-zero exit if not).
+Harness summary must be **12/12 checks passed (100%)** (score **1.0**; non-zero exit if not).
 
 ## Optional live upstream
 

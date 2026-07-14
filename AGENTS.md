@@ -81,7 +81,7 @@ src/asap/
 ## Key Architectural Patterns
 
 1.  **Envelope Protocol**: All messages wrapped in `Envelope[T]` (`models/envelope.py`).
-2.  **State Machine**: Tasks strictly follow `PENDING → RUNNING → COMPLETED` (`models/files.py`).
+2.  **State Machine**: Tasks strictly follow `submitted → working → completed` (`models/enums.py`).
 3.  **Circuit Breaker**: Transport reliability logic (`transport/http_client.py`).
 4.  **Agent Identity**: Per-runtime Ed25519 identity with Host/Agent JWT (`auth/agent_jwt.py`).
 5.  **Capability AuthZ**: Constraint-based capability grants (`auth/capabilities.py`).

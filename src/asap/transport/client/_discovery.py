@@ -418,7 +418,7 @@ class _DiscoveryMixin:
                     url=sanitize_url(url),
                 ) from e
 
-    async def health_check(self, base_url: str) -> HealthStatus:
+    async def health_check(self, base_url: str | None = None) -> HealthStatus:
         """Check agent health/liveness at the given base URL.
 
         Fetches GET {base_url}/.well-known/asap/health and parses the
@@ -426,6 +426,7 @@ class _DiscoveryMixin:
 
         Args:
             base_url: Agent base URL (e.g. "https://agent.example.com").
+                Defaults to this client's HTTP base URL when omitted.
 
         Returns:
             HealthStatus with status, agent_id, version, uptime_seconds, etc.
@@ -437,10 +438,11 @@ class _DiscoveryMixin:
 
         Example:
             >>> async with ASAPClient("http://localhost:8000") as client:
-            ...     health = await client.health_check("https://other-agent.example.com")
+            ...     health = await client.health_check()
             ...     print(health.status, health.uptime_seconds)
         """
-        health_url = base_url.rstrip("/") + WELLKNOWN_HEALTH_PATH
+        resolved = self._http_base_url if base_url is None else base_url
+        health_url = resolved.rstrip("/") + WELLKNOWN_HEALTH_PATH
         if not self._client:
             raise ASAPConnectionError(
                 "Client not connected. Use 'async with' context.",
