@@ -8,7 +8,8 @@ Keys are minted in the child process — a JWT pasted from another terminal
 will fail signature checks. Prefer the default self-contained path.
 
 ``ASAP_AGENT_JWT`` in the shell is **not** read automatically (stale exports
-would skip stderr capture). Pass ``--jwt`` only for an explicit override.
+would skip stderr capture). Do **not** pass a real JWT on the CLI (argv
+leaks secrets). Use ``--invalid-jwt`` only for deliberate negative tests.
 
 Run from any directory (server path is resolved relative to this file)::
 
@@ -91,7 +92,9 @@ def parse_demo_jwt_from_stderr(stderr_text: str) -> str:
             if _looks_like_jwt(stripped):
                 return stripped
 
-    preview = redact_jwt_from_text(stderr_text[:500])
+    # Redact the full stream first — truncating before redact can leave a
+    # cut JWT prefix that no longer matches the compact-token regex.
+    preview = redact_jwt_from_text(stderr_text)[:500]
     raise RuntimeError(
         "MCP Auth Bridge server stderr did not include a demo Agent JWT "
         f"(expected a compact JWT on a line after {_JWT_MARKER!r}). "
@@ -128,24 +131,22 @@ async def _await_demo_jwt(chunks: list[bytes], *, timeout_seconds: float) -> str
             return parse_demo_jwt_from_stderr(_stderr_text(chunks))
         except RuntimeError:
             await asyncio.sleep(_STDERR_POLL_INTERVAL_S)
-    preview = redact_jwt_from_text(_stderr_text(chunks)[:500])
+    preview = redact_jwt_from_text(_stderr_text(chunks))[:500]
     raise RuntimeError(
         "Timed out waiting for demo Agent JWT on MCP server stderr within "
         f"{timeout_seconds}s; stderr preview: {preview!r}"
     )
 
 
-async def _connect_and_resolve_jwt(
-    client: MCPClient,
-    *,
-    jwt_override: str | None,
-    jwt_wait_seconds: float,
-) -> tuple[str, asyncio.Task[None]]:
-    """Connect, drain stderr, and resolve the Agent JWT for ``secure_action``.
+_INVALID_JWT_PLACEHOLDER = "invalid-token-for-negative-path"
 
-    Provenance (v2.5.3 Phase 1.2 / PR #291 review): auto-capture from the child
-    this client spawned — cross-process paste fails ``bad_signature``. Stale
-    ``ASAP_AGENT_JWT`` exports are ignored unless ``--jwt`` is passed.
+
+async def _spawn_client_with_stderr_drain(
+    client: MCPClient,
+) -> tuple[list[bytes], asyncio.Task[None]]:
+    """Connect the MCP client and start draining child stderr.
+
+    Returns the shared chunk buffer and the background drain task.
     """
     stderr_chunks: list[bytes] = []
     connect_task = asyncio.create_task(client.connect())
@@ -156,14 +157,26 @@ async def _connect_and_resolve_jwt(
 
     drain_task = asyncio.create_task(_drain_stderr(client, stderr_chunks))
     await connect_task
+    return stderr_chunks, drain_task
 
-    if jwt_override:
-        return jwt_override, drain_task
-    jwt = await _await_demo_jwt(stderr_chunks, timeout_seconds=jwt_wait_seconds)
+
+async def _connect_and_resolve_jwt(
+    client: MCPClient,
+    *,
+    jwt_wait_seconds: float,
+) -> tuple[str, asyncio.Task[None]]:
+    """Connect, drain stderr, and capture the demo Agent JWT for ``secure_action``.
+
+    Provenance (v2.5.3 Phase 1.2 / PR #291 review): auto-capture from the child
+    this client spawned — cross-process paste fails ``bad_signature``. Stale
+    ``ASAP_AGENT_JWT`` exports are ignored; real JWTs must not be passed via argv.
+    """
+    chunks, drain_task = await _spawn_client_with_stderr_drain(client)
+    jwt = await _await_demo_jwt(chunks, timeout_seconds=jwt_wait_seconds)
     return jwt, drain_task
 
 
-async def _run(*, jwt_override: str | None, jwt_wait_seconds: float) -> int:
+async def _run(*, invalid_jwt: bool, jwt_wait_seconds: float) -> int:
     """Spawn the example server, resolve JWT, exercise public and protected tools."""
     server_command = [sys.executable, str(_SERVER_SCRIPT)]
     env = os.environ.copy()
@@ -178,12 +191,16 @@ async def _run(*, jwt_override: str | None, jwt_wait_seconds: float) -> int:
     drain_task: asyncio.Task[None] | None = None
 
     try:
-        jwt, drain_task = await _connect_and_resolve_jwt(
-            client,
-            jwt_override=jwt_override,
-            jwt_wait_seconds=jwt_wait_seconds,
-        )
-        if jwt_override is None:
+        if invalid_jwt:
+            # Connect for echo; never capture/pass a real token via argv.
+            _chunks, drain_task = await _spawn_client_with_stderr_drain(client)
+            jwt = _INVALID_JWT_PLACEHOLDER
+            print("Using deliberate invalid JWT for negative secure_action path.")
+        else:
+            jwt, drain_task = await _connect_and_resolve_jwt(
+                client,
+                jwt_wait_seconds=jwt_wait_seconds,
+            )
             print("Using demo Agent JWT captured from child server stderr.")
 
         tools = await client.list_tools()
@@ -228,12 +245,11 @@ def main() -> None:
         ),
     )
     parser.add_argument(
-        "--jwt",
-        default=None,
+        "--invalid-jwt",
+        action="store_true",
         help=(
-            "Optional Agent JWT override for secure_action _meta "
-            "(must be minted by this client's child server). "
-            "Default: capture from child stderr. Does not read ASAP_AGENT_JWT."
+            "Deliberate invalid Agent JWT for negative secure_action tests "
+            "(never a real token; do not pass secrets on argv)."
         ),
     )
     parser.add_argument(
@@ -246,7 +262,7 @@ def main() -> None:
     raise SystemExit(
         asyncio.run(
             _run(
-                jwt_override=args.jwt,
+                invalid_jwt=args.invalid_jwt,
                 jwt_wait_seconds=args.jwt_wait_seconds,
             )
         )

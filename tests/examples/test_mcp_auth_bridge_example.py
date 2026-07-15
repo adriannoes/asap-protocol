@@ -113,6 +113,7 @@ class TestMcpAuthBridgeExampleCli:
             cwd=_REPO_ROOT,
             capture_output=True,
             text=True,
+            timeout=30,
             check=False,
         )
         assert result.returncode == 0, result.stderr
@@ -213,12 +214,32 @@ class TestParseDemoJwtFromStderr:
         token = "eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJkZW1vIn0.signature"
         assert token not in client.redact_jwt_from_text(f"before\n{token}\nafter")
 
+    def test_redact_before_truncate_does_not_leak_jwt_prefix(self) -> None:
+        """Truncating a long JWT before redact must not leave an ``eyJ`` prefix.
+
+        Provenance (PR #291 hardening): ``redact_jwt_from_text(text[:500])`` can
+        cut the compact token so the remainder no longer matches the regex.
+        """
+        client = _load_client_module()
+        # Compact JWT longer than the 500-char preview window.
+        payload = "a" * 520
+        token = f"eyJhbGciOiJFZERTQSJ9.{payload}.signature"
+        stderr = f"noise\n{token}\nmore"
+        # Correct order: redact full stream, then truncate.
+        preview = client.redact_jwt_from_text(stderr)[:500]
+        assert "eyJ" not in preview
+        assert token[:40] not in preview
+        assert "[REDACTED_JWT]" in preview or "signature" not in preview
+        # Wrong order (truncate first) would leak — document the regression shape.
+        wrong = client.redact_jwt_from_text(stderr[:500])
+        assert "eyJ" in wrong, "sanity: truncate-before-redact leaves a JWT prefix"
+
 
 class TestMcpAuthBridgeClientSubprocess:
     """Subprocess smoke for the self-contained example client."""
 
     def test_client_subprocess_without_external_jwt_succeeds(self) -> None:
-        """``client.py`` without ``--jwt`` captures child JWT and passes tools.
+        """``client.py`` without JWT args captures child JWT and passes tools.
 
         Provenance (v2.5.3 Phase 1.2): cross-process pasted JWTs fail signature
         checks; the canonical path is auto-capture from the spawned child stderr.
@@ -240,6 +261,8 @@ class TestMcpAuthBridgeClientSubprocess:
         assert "echo:" in result.stdout
         assert "secure_action:" in result.stdout
         assert "executed: demo" in result.stdout
+        assert "eyJ" not in result.stdout
+        assert "eyJ" not in result.stderr
 
     def test_client_ignores_stale_asap_agent_jwt_env(self) -> None:
         """Stale ``ASAP_AGENT_JWT`` must not skip stderr capture (PR #291 Should Fix)."""
@@ -283,15 +306,14 @@ class TestMcpAuthBridgeClientSubprocess:
         assert "secure_action:" in result.stdout
 
     def test_client_invalid_jwt_override_fails_secure_action(self) -> None:
-        """``--jwt`` override with a foreign token fails ``secure_action`` auth."""
+        """``--invalid-jwt`` exercises the negative ``secure_action`` path."""
         result = subprocess.run(
             [
                 "uv",
                 "run",
                 "python",
                 "client.py",
-                "--jwt",
-                "invalid-token-for-negative-path",
+                "--invalid-jwt",
             ],
             cwd=_EXAMPLE_DIR,
             capture_output=True,
@@ -302,3 +324,5 @@ class TestMcpAuthBridgeClientSubprocess:
         assert "echo:" in result.stdout
         assert "secure_action failed" in result.stderr
         assert result.returncode == 1
+        assert "eyJ" not in result.stdout
+        assert "eyJ" not in result.stderr

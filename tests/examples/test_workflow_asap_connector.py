@@ -243,3 +243,69 @@ class TestWorkflowAsapConnectorExample(NoRateLimitTestBase):
         assert "skills:" in captured.out
         assert "listWorkflows:" in captured.out
         assert "12/12" in captured.out or "100%" in captured.out
+
+
+class TestWorkflowMockUpstreamStrictPaths:
+    """Strict path and body validation for the offline workflow mock."""
+
+    def test_rejects_suffix_spoofed_list_path(self) -> None:
+        """``endswith``-style spoofing of ``/api/v1/workflows`` must 404."""
+        mock_fn = _mock_workflow_upstream()
+        request = httpx.Request("GET", "https://mock.test/evil/api/v1/workflows")
+        response = mock_fn(request)
+        assert response.status_code == 404
+
+    def test_rejects_prefix_spoofed_get_path(self) -> None:
+        """Extra path segments after workflow id must 404."""
+        mock_fn = _mock_workflow_upstream()
+        request = httpx.Request(
+            "GET",
+            "https://mock.test/api/v1/workflows/wf-demo/extra",
+        )
+        response = mock_fn(request)
+        assert response.status_code == 404
+
+    def test_rejects_non_object_trigger_body(self) -> None:
+        """Trigger body that is valid JSON but not an object returns 400."""
+        mock_fn = _mock_workflow_upstream()
+        request = httpx.Request(
+            "POST",
+            "https://mock.test/api/v1/workflows/wf-demo/trigger",
+            content=b'["not-an-object"]',
+            headers={"content-type": "application/json"},
+        )
+        response = mock_fn(request)
+        assert response.status_code == 400
+        assert b"expected JSON object" in response.content
+
+    def test_rejects_invalid_json_trigger_body(self) -> None:
+        """Malformed JSON on trigger returns 400."""
+        mock_fn = _mock_workflow_upstream()
+        request = httpx.Request(
+            "POST",
+            "https://mock.test/api/v1/workflows/wf-demo/trigger",
+            content=b"{not-json",
+            headers={"content-type": "application/json"},
+        )
+        response = mock_fn(request)
+        assert response.status_code == 400
+        assert b"invalid JSON" in response.content
+
+    def test_canonical_paths_still_succeed(self) -> None:
+        """Exact canonical paths continue to return 200."""
+        mock_fn = _mock_workflow_upstream()
+        list_resp = mock_fn(httpx.Request("GET", "https://mock.test/api/v1/workflows"))
+        get_resp = mock_fn(
+            httpx.Request("GET", "https://mock.test/api/v1/workflows/wf-demo"),
+        )
+        trigger_resp = mock_fn(
+            httpx.Request(
+                "POST",
+                "https://mock.test/api/v1/workflows/wf-demo/trigger",
+                content=b'{"payload":{"ok":true}}',
+                headers={"content-type": "application/json"},
+            ),
+        )
+        assert list_resp.status_code == 200
+        assert get_resp.status_code == 200
+        assert trigger_resp.status_code == 200

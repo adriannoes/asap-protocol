@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import re
 import subprocess
 import sys
 from collections.abc import Iterator
@@ -25,6 +26,7 @@ _SERVER_SCRIPT = _EXAMPLE_DIR / "asap_mcp_server.py"
 _SMOKE_SCRIPT = _EXAMPLE_DIR / "smoke_asap_side.py"
 _CONFIG_YAML = _EXAMPLE_DIR / "configs" / "config-mcp-client-stdio.yml"
 _ENV_JWT_KEY = "ASAP_AGENT_JWT"
+_COMPACT_JWT_RE = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
 
 
 @pytest.fixture(autouse=True)
@@ -44,6 +46,23 @@ def _isolate_asap_agent_jwt_env() -> Iterator[None]:
             os.environ.pop(_ENV_JWT_KEY, None)
         else:
             os.environ[_ENV_JWT_KEY] = previous
+
+
+def _redact_compact_jwt(text: str) -> str:
+    """Replace compact JWT substrings so failure dumps stay safe."""
+    return _COMPACT_JWT_RE.sub("[REDACTED_JWT]", text)
+
+
+def _assert_smoke_ok(result: subprocess.CompletedProcess[str]) -> None:
+    """Assert smoke success without dumping minted JWTs on failure."""
+    redacted_out = _redact_compact_jwt(result.stdout)
+    redacted_err = _redact_compact_jwt(result.stderr)
+    assert result.returncode == 0, (
+        f"returncode={result.returncode}\nstdout (redacted):\n{redacted_out}\n"
+        f"stderr (redacted):\n{redacted_err}"
+    )
+    assert "eyJ" not in result.stdout
+    assert "eyJ" not in result.stderr
 
 
 def _load_asap_mcp_server() -> ModuleType:
@@ -109,9 +128,10 @@ class TestNemoAsapMcpServer:
             cwd=_REPO_ROOT,
             capture_output=True,
             text=True,
+            timeout=30,
             check=False,
         )
-        assert result.returncode == 0, result.stderr
+        assert result.returncode == 0, _redact_compact_jwt(result.stderr)
         assert "Path A" in result.stdout or "mcp_client" in result.stdout
 
     @pytest.mark.asyncio
@@ -228,7 +248,7 @@ class TestNemoAsapSmokeScript:
             timeout=120,
             check=False,
         )
-        assert result.returncode == 0, result.stderr + result.stdout
+        _assert_smoke_ok(result)
         assert "ASAP-side Path A smoke passed" in result.stdout
 
     def test_smoke_asap_side_stdio_exits_zero(self) -> None:
@@ -247,7 +267,7 @@ class TestNemoAsapSmokeScript:
             timeout=120,
             check=False,
         )
-        assert result.returncode == 0, result.stderr + result.stdout
+        _assert_smoke_ok(result)
         assert "stdio secure_action via server-injected ASAP_AGENT_JWT" in result.stdout
 
 

@@ -31,14 +31,13 @@ cd examples/mcp_auth_bridge
 uv run python client.py
 ```
 
-Do **not** paste a JWT from another terminal into `--jwt` for this client — each
+Do **not** pass a real JWT on the client CLI (`argv` leaks secrets). Each
 server process mints its own keys, so a foreign token fails signature verification
 (`bad_signature`).
 
 The client does **not** read `ASAP_AGENT_JWT` from the shell (a stale export used
-to skip stderr capture and cause confusing `bad_signature` failures). Pass
-`--jwt` only for an explicit override of a token minted by **this** client's
-child server (or for deliberate negative tests with an invalid token).
+to skip stderr capture and cause confusing `bad_signature` failures). Use
+`--invalid-jwt` only for deliberate negative tests of `secure_action`.
 
 `ASAP_AGENT_JWT` remains meaningful only for the **server** middleware
 (`allow_env_jwt_fallback=True`) when calling tools without `_meta` — see §3.
@@ -106,10 +105,11 @@ The middleware reads `ASAP_AGENT_JWT` when `_meta.asap_agent_jwt` is absent. **D
 
 1. `uv run python examples/mcp_auth_bridge/server.py --help` → exit 0.
 2. `uv run python examples/mcp_auth_bridge/client.py` (no JWT args) → `echo` + `secure_action` succeed.
-3. Start server alone; inspect demo JWT on stderr (do not paste into a second unrelated server).
-4. Call `echo` without JWT → succeeds.
-5. Call `secure_action` without JWT → `asap:auth_required`.
-6. Call `secure_action` with `_meta.asap_agent_jwt` from **that** server's stderr (or `ASAP_AGENT_JWT` in the same process) → `executed: ...`.
+3. `uv run python examples/mcp_auth_bridge/client.py --invalid-jwt` → `echo` succeeds; `secure_action` fails.
+4. Start server alone; inspect demo JWT on stderr (do not paste into a second unrelated server).
+5. Call `echo` without JWT → succeeds.
+6. Call `secure_action` without JWT → `asap:auth_required`.
+7. Call `secure_action` with `_meta.asap_agent_jwt` from **that** server's stderr (or `ASAP_AGENT_JWT` in the same process) → `executed: ...`.
 
 ## Compliance
 
