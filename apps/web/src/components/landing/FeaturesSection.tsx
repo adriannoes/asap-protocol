@@ -2,7 +2,23 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LANDING_FEATURE_SLUGS } from '@/lib/telemetry/homepage-cta-ids';
-import { Database, ShieldCheck, Zap, Activity, ArrowRight, Fingerprint, KeySquare, Radio, FileCode, Braces, CloudUpload, Bot, Sparkles, Workflow, Lock } from 'lucide-react';
+import {
+  Database,
+  ShieldCheck,
+  Zap,
+  Activity,
+  ArrowRight,
+  Fingerprint,
+  KeySquare,
+  Radio,
+  FileCode,
+  Braces,
+  CloudUpload,
+  Bot,
+  Sparkles,
+  Workflow,
+  Lock,
+} from 'lucide-react';
 
 const INLINE_CODE = 'rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300';
 
@@ -42,8 +58,8 @@ const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
     title: 'TypeScript SDK',
     description: (
       <>
-        Official <code className={INLINE_CODE}>@asap-protocol/client</code> on npm — discovery, envelopes, streaming, plus optional
-        Vercel AI, OpenAI, and Anthropic adapters.
+        Official <code className={INLINE_CODE}>@asap-protocol/client</code> on npm — discovery,
+        envelopes, streaming, plus optional Vercel AI, OpenAI, and Anthropic adapters.
       </>
     ),
     icon: Braces,
@@ -53,8 +69,9 @@ const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
     title: 'Mastra Adapter',
     description: (
       <>
-        <code className={INLINE_CODE}>@asap-protocol/mastra</code> exposes ASAP capabilities as Mastra{' '}
-        <code className={INLINE_CODE}>createTool</code> definitions with streaming bridge support.
+        <code className={INLINE_CODE}>@asap-protocol/mastra</code> exposes ASAP capabilities as
+        Mastra <code className={INLINE_CODE}>createTool</code> definitions with streaming bridge
+        support.
       </>
     ),
     icon: Bot,
@@ -64,8 +81,9 @@ const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
     title: 'OpenAI Agents Adapter',
     description: (
       <>
-        <code className={INLINE_CODE}>@asap-protocol/openai-agents</code> maps capabilities to OpenAI Agents SDK{' '}
-        <code className={INLINE_CODE}>tool()</code> definitions and remote-agent handoffs.
+        <code className={INLINE_CODE}>@asap-protocol/openai-agents</code> maps capabilities to
+        OpenAI Agents SDK <code className={INLINE_CODE}>tool()</code> definitions and remote-agent
+        handoffs.
       </>
     ),
     icon: Sparkles,
@@ -75,8 +93,9 @@ const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
     title: 'Auto-Registration',
     description: (
       <>
-        <code className={INLINE_CODE}>POST /registry/agents</code> with Compliance Harness gating — shrink the time from
-        &quot;working agent&quot; to &quot;listed in the Lite Registry&quot; without manual PR steps.
+        <code className={INLINE_CODE}>POST /registry/agents</code> with Compliance Harness gating —
+        shrink the time from &quot;working agent&quot; to &quot;listed in the Lite Registry&quot;
+        without manual PR steps.
       </>
     ),
     icon: CloudUpload,
@@ -147,7 +166,9 @@ export function FeaturesSection() {
             Protocol Features
           </h2>
           <p className="mx-auto max-w-[600px] text-zinc-400">
-            Everything you need to orchestrate complex multi-agent systems reliably — MCP Auth Bridge (v2.5.0), identity, capabilities, streaming, edge-AI discovery, and framework adapters (Mastra, OpenAI Agents SDK).
+            Everything you need to orchestrate complex multi-agent systems reliably — MCP Auth
+            Bridge (v2.5.0), identity, capabilities, streaming, edge-AI discovery, and framework
+            adapters (Mastra, OpenAI Agents SDK).
           </p>
         </div>
 

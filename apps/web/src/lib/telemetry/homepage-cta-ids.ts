@@ -20,6 +20,8 @@ export const WHATS_NEW_RIBBON_CTA_IDS = {
   docsOpenapi: 'docs-openapi',
   docsTypescript: 'docs-typescript',
   docsWorkflowConnectors: 'docs-workflow-connectors',
+  /** Runnable sample under examples/workflow_asap_connector (feature DocsLink). */
+  docsWorkflowConnectorExample: 'docs-workflow-connector-example',
   docsAutomationConnectorSecurity: 'docs-automation-connector-security',
   docsMicrosoftAgentFramework: 'docs-microsoft-agent-framework',
   docsNemoAgentToolkit: 'docs-nemo-agent-toolkit',

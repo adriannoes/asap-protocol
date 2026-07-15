@@ -1,6 +1,10 @@
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Clock, FileCode, Globe, KeySquare, Lock, ShieldCheck, Workflow } from 'lucide-react';
+
+import { EXTERNAL_LINK_FOCUS_CLASS, OpensInNewTabHint } from '@/components/links/opens-in-new-tab';
+import { WHATS_NEW_RIBBON_CTA_IDS } from '@/lib/telemetry/homepage-cta-ids';
+import { cn } from '@/lib/utils';
 
 const DOCS_LINK =
   'rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300 underline-offset-2 hover:underline';
@@ -18,15 +22,29 @@ export type FeatureCapability = { title: string; description: string; icon: Luci
 export type FeaturePageContent = {
   title: string;
   description: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: ComponentType<{ className?: string }>;
   content: ReactNode;
   capabilities: FeatureCapability[];
 };
 
-function DocsLink({ href, children }: { href: string; children: ReactNode }) {
+type DocsLinkProps = {
+  href: string;
+  /** Stable id for Vercel / site→docs CTR (required — avoids mute outbound links). */
+  dataCta: string;
+  children: ReactNode;
+};
+
+function DocsLink({ href, dataCta, children }: DocsLinkProps) {
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className={DOCS_LINK}>
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      data-cta={dataCta}
+      className={cn(DOCS_LINK, EXTERNAL_LINK_FOCUS_CLASS)}
+    >
       {children}
+      <OpensInNewTabHint />
     </a>
   );
 }
@@ -64,32 +82,45 @@ export const LAB2_FEATURE_PAGES: Record<
       <>
         <p className="mb-6">
           Workflow platforms already expose HTTPS APIs. The workflow connectors guide shows how to
-          turn those OpenAPI operations into ASAP skills so remote agents can invoke them — envelopes,
-          auth headers, and retry patterns — without forking the protocol. Agents call ASAP; the
-          connector proxies to the workflow host (n8n, Activepieces, and similar).
+          turn those OpenAPI operations into ASAP skills so remote agents can invoke them —
+          envelopes, auth headers, and retry patterns — without forking the protocol. Agents call
+          ASAP; the connector proxies to the workflow host (n8n, Activepieces, and similar).
         </p>
         <p className="mb-6">
-          Docs: <DocsLink href={DOCS_WORKFLOW_CONNECTORS}>docs/integrations/workflow-connectors.md</DocsLink>
+          Docs:{' '}
+          <DocsLink
+            href={DOCS_WORKFLOW_CONNECTORS}
+            dataCta={WHATS_NEW_RIBBON_CTA_IDS.docsWorkflowConnectors}
+          >
+            docs/integrations/workflow-connectors.md
+          </DocsLink>
           . Runnable sample:{' '}
-          <DocsLink href={EXAMPLE_WORKFLOW_CONNECTOR}>examples/workflow_asap_connector/</DocsLink>.
+          <DocsLink
+            href={EXAMPLE_WORKFLOW_CONNECTOR}
+            dataCta={WHATS_NEW_RIBBON_CTA_IDS.docsWorkflowConnectorExample}
+          >
+            examples/workflow_asap_connector/
+          </DocsLink>
+          .
         </p>
       </>
     ),
   },
   'automation-connector-security': {
     title: 'Automation Connector Security',
-    description:
-      'Harden OpenAPI-backed workflow connectors: secrets, least privilege, TLS.',
+    description: 'Harden OpenAPI-backed workflow connectors: secrets, least privilege, TLS.',
     icon: Lock,
     capabilities: [
       {
         title: 'Secrets hygiene',
-        description: 'Store tokens in env / secret stores — never hardcode in OpenAPI or manifests.',
+        description:
+          'Store tokens in env / secret stores — never hardcode in OpenAPI or manifests.',
         icon: KeySquare,
       },
       {
         title: 'Least privilege',
-        description: 'Scope capability grants for connector skills to the minimum required surface.',
+        description:
+          'Scope capability grants for connector skills to the minimum required surface.',
         icon: ShieldCheck,
       },
       {
@@ -103,18 +134,27 @@ export const LAB2_FEATURE_PAGES: Record<
       <>
         <p className="mb-6">
           OpenAPI-backed workflow connectors move credentials and upstream calls across boundaries.
-          This guide covers secrets management, least-privilege capability grants, HTTPS/TLS for live
-          upstreams and webhooks, and rate limits. The primary workflow example is OpenAPI-only; use
-          the MCP Auth Bridge when a connector exposes MCP tools (for example NeMo Path A), not as
-          the default workflow pattern.
+          This guide covers secrets management, least-privilege capability grants, HTTPS/TLS for
+          live upstreams and webhooks, and rate limits. The primary workflow example is
+          OpenAPI-only; use the MCP Auth Bridge when a connector exposes MCP tools (for example NeMo
+          Path A), not as the default workflow pattern.
         </p>
         <p className="mb-6">
           Docs:{' '}
-          <DocsLink href={DOCS_AUTOMATION_CONNECTOR_SECURITY}>
+          <DocsLink
+            href={DOCS_AUTOMATION_CONNECTOR_SECURITY}
+            dataCta={WHATS_NEW_RIBBON_CTA_IDS.docsAutomationConnectorSecurity}
+          >
             docs/guides/automation-connector-security.md
           </DocsLink>
           . Pair with{' '}
-          <DocsLink href={DOCS_WORKFLOW_CONNECTORS}>docs/integrations/workflow-connectors.md</DocsLink>.
+          <DocsLink
+            href={DOCS_WORKFLOW_CONNECTORS}
+            dataCta={WHATS_NEW_RIBBON_CTA_IDS.docsWorkflowConnectors}
+          >
+            docs/integrations/workflow-connectors.md
+          </DocsLink>
+          .
         </p>
       </>
     ),
