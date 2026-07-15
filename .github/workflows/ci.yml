@@ -88,16 +88,28 @@ jobs:
       - name: Install dependencies
         run: npm ci
         working-directory: apps/web
-      - name: Format check (PR-touched TS/TSX only)
+      - name: Format check (changed TS/TSX only)
         working-directory: apps/web
         run: |
           set -euo pipefail
+          NULL_SHA="0000000000000000000000000000000000000000"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Diff vs PR base so only newly introduced drift is gated.
             BASE="${{ github.event.pull_request.base.sha }}"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            # github.event.before is the tip before this push. Do NOT use
+            # merge-base(HEAD, origin/main): on a push to main that equals HEAD
+            # and yields an empty diff (Bugbot #291).
+            BEFORE="${{ github.event.before }}"
+            if [ -n "${BEFORE}" ] && [ "${BEFORE}" != "${NULL_SHA}" ]; then
+              BASE="${BEFORE}"
+            else
+              BASE="$(git rev-parse HEAD^)"
+            fi
           else
-            git fetch --no-tags origin main:refs/remotes/origin/main 2>/dev/null || true
-            BASE="$(git merge-base HEAD origin/main 2>/dev/null || git rev-parse HEAD^)"
+            BASE="$(git rev-parse HEAD^)"
           fi
+          echo "Prettier base=${BASE} head=$(git rev-parse HEAD) event=${{ github.event_name }}"
           mapfile -t FILES < <(
             git -C "${GITHUB_WORKSPACE}" diff --name-only --diff-filter=ACMR "${BASE}...HEAD" -- \
               'apps/web/**/*.ts' 'apps/web/**/*.tsx' \

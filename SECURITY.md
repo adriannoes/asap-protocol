@@ -115,7 +115,7 @@ npm audit --audit-level=high
 
 If a PostCSS (or similar) override breaks `next build`, stop and report — do not silently adopt a preview/canary Next.
 
-**Prettier**: CI also runs `npm run format:check` only on TS/TSX files changed in the PR diff vs base (`fetch-depth: 0`). Full-tree Prettier is intentionally not gated (historical drift). Pass paths locally: `npm run format:check -- <files>`.
+**Prettier**: CI also runs `npm run format:check` only on changed TS/TSX under `apps/web/` (`fetch-depth: 0`). On pull requests the base is the PR base SHA; on pushes it is `github.event.before` (the tip before the push), not `merge-base(HEAD, origin/main)` — that merge-base equals `HEAD` on `main` and would skip the check. Full-tree Prettier is intentionally not gated (historical drift). Pass paths locally: `npm run format:check -- <files>`.
 
 CI runs `pip-audit` after a sync that **excludes** the optional extras `crewai` and `llamaindex`, because those graphs currently pull transitive packages (`diskcache`, `nltk`) that OSV still lists with no fixed release on PyPI. To match the security job locally:
 
