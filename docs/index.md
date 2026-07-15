@@ -2,7 +2,7 @@
 
 **ASAP (Async Simple Agent Protocol)** is a streamlined protocol for agent-to-agent communication, designed to be simpler than existing alternatives while maintaining modern standards functionality.
 
-**Latest reference implementation:** **v2.5.3** ([CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#253---2026-07-14), [PRD](../product/prd/prd-v2.5.3-adapter-lab-ii.md)). **v2.5.3** is Adapter Lab II (workflow connectors, automation security, experimental MAF / NAT guides) plus small DX fixes — see [Migration (v2.5.2 → v2.5.3)](migration.md#upgrading-from-v252-to-v253). **v2.5.2** is the security & correctness follow-up — see [Migration (v2.5.1 → v2.5.2)](migration.md#upgrading-from-v251). **v2.5.0 MCP Auth Bridge** — opt-in Agent JWT + capability grants for native stdio MCP (`protect_server`); see [MCP Auth Bridge](adapters/mcp-auth-bridge.md). **v2.5.1** is a behavior-preserving code quality patch; see [Migration (v2.5.0 → v2.5.1)](migration.md#upgrading-from-v250-to-v251). **`asap-compliance` 1.3.0** on PyPI (tag [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1)). **TypeScript npm line: v2.4.1** — [`@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client), [`@asap-protocol/mastra`](integrations/mastra.md), [`@asap-protocol/openai-agents`](integrations/openai-agents.md) (`@asap-protocol/mcp-auth` still deferred). Adoption continues at **v2.5.4** (Distribution Loop) → **v2.5.5** (Formal Spec). Upgrade: [v2.5.2 → v2.5.3](migration.md#upgrading-from-v252-to-v253) · [v2.5.1 → v2.5.2](migration.md#upgrading-from-v251) · [v2.5.0 → v2.5.1](migration.md#upgrading-from-v250-to-v251) · [v2.4.1 → v2.5.0](migration.md#upgrading-from-v241-to-v250) · [v2.4.0 → v2.4.1](migration.md#upgrading-from-v240-to-v241).
+**Latest available on PyPI:** **v2.5.2** ([CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#252---2026-07-08)). **v2.5.3** (Adapter Lab II) is **merge-ready** on `release/2.5.3` and **pending tag/publish** ([CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#253---2026-07-14), [PRD](https://github.com/adriannoes/asap-protocol/blob/main/product/prd/prd-v2.5.3-adapter-lab-ii.md)) — workflow connectors, automation security, experimental MAF / NAT guides, plus small DX fixes; see [Migration (v2.5.2 → v2.5.3)](migration.md#upgrading-from-v252-to-v253). **v2.5.2** is the security & correctness follow-up — see [Migration (v2.5.1 → v2.5.2)](migration.md#upgrading-from-v251). **v2.5.0 MCP Auth Bridge** — opt-in Agent JWT + capability grants for native stdio MCP (`protect_server`); see [MCP Auth Bridge](adapters/mcp-auth-bridge.md). **v2.5.1** is a behavior-preserving code quality patch; see [Migration (v2.5.0 → v2.5.1)](migration.md#upgrading-from-v250-to-v251). **`asap-compliance` 1.3.0** on PyPI (tag [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1)). **TypeScript npm line: v2.4.1** — [`@asap-protocol/client`](https://www.npmjs.com/package/@asap-protocol/client), [`@asap-protocol/mastra`](integrations/mastra.md), [`@asap-protocol/openai-agents`](integrations/openai-agents.md) (`@asap-protocol/mcp-auth` still deferred). Adoption continues at **v2.5.4** (Distribution Loop) → **v2.5.5** (Formal Spec). Upgrade: [v2.5.2 → v2.5.3](migration.md#upgrading-from-v252-to-v253) · [v2.5.1 → v2.5.2](migration.md#upgrading-from-v251) · [v2.5.0 → v2.5.1](migration.md#upgrading-from-v250-to-v251) · [v2.4.1 → v2.5.0](migration.md#upgrading-from-v241-to-v250) · [v2.4.0 → v2.4.1](migration.md#upgrading-from-v240-to-v241).
 
 ## Features
 
@@ -20,14 +20,14 @@
 ## Installation
 
 ```bash
-# Using uv (recommended)
+# Using uv (recommended) — installs latest on PyPI (currently 2.5.2)
 uv add asap-protocol
 
 # Using pip (pin for reproducible upgrades)
-pip install asap-protocol==2.5.3
+pip install asap-protocol==2.5.2
 ```
 
-📦 **Available on [PyPI](https://pypi.org/project/asap-protocol/)** (`asap-protocol` **2.5.3** after tag/publish; **`asap-compliance` 1.3.0** via tag [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1)). TypeScript `@asap-protocol/*` packages remain at **2.4.1** — see [Migration (v2.5.2 → v2.5.3)](migration.md#upgrading-from-v252-to-v253).
+📦 **Available on [PyPI](https://pypi.org/project/asap-protocol/):** `asap-protocol` **2.5.2**. **v2.5.3** is merge-ready and **pending tag/publish** — do not pin `==2.5.3` until it appears on PyPI. **`asap-compliance` 1.3.0** via tag [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1). TypeScript `@asap-protocol/*` packages remain at **2.4.1** — see [Migration (v2.5.2 → v2.5.3)](migration.md#upgrading-from-v252-to-v253).
 
 ## Quick Start
 
@@ -130,4 +130,4 @@ See [CLI reference](cli.md) (all commands, exit codes, `compliance-check`, `audi
 
 **General inquiries** about the protocol or project: [info@asap-protocol.com](mailto:info@asap-protocol.com).
 
-For vulnerability reports, use **[SECURITY.md](../SECURITY.md)** (GitHub Private Vulnerability Reporting), not email. Technical questions work well via [GitHub Discussions](https://github.com/adriannoes/asap-protocol/discussions) or [Issues](https://github.com/adriannoes/asap-protocol/issues).
+For vulnerability reports, use **[SECURITY.md](https://github.com/adriannoes/asap-protocol/blob/main/SECURITY.md)** (GitHub Private Vulnerability Reporting), not email. Technical questions work well via [GitHub Discussions](https://github.com/adriannoes/asap-protocol/discussions) or [Issues](https://github.com/adriannoes/asap-protocol/issues).

@@ -1,8 +1,8 @@
 site_name: ASAP Protocol
 site_description: A streamlined protocol for agent-to-agent communication
-site_url: https://asap-protocol.org
-repo_url: https://github.com/asap-protocol/asap-protocol
-repo_name: asap-protocol/asap-protocol
+site_url: https://adriannoes.github.io/asap-protocol/
+repo_url: https://github.com/adriannoes/asap-protocol
+repo_name: adriannoes/asap-protocol
 
 theme:
   name: material
@@ -40,6 +40,12 @@ plugins:
           options:
             show_root_heading: true
             show_source: true
+
+# Material admonitions (!!! warning / !!! danger) require these extensions.
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
 
 nav:
   - Home: index.md

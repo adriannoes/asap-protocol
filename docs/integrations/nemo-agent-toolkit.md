@@ -30,7 +30,7 @@ NeMo Agent Toolkit (formerly AgentIQ / AIQ) is a **framework-agnostic conductor*
 | Auth on protected examples | OAuth2 + Keycloak (user JWT, scopes, JWKS) | Host/Agent JWT + `CapabilityRegistry` grants |
 | Discovery | A2A Agent Card `/.well-known/agent-card.json` | ASAP manifest / Lite Registry / well-known |
 
-Upstream docs: [docs.nvidia.com/nemo/agent-toolkit](https://docs.nvidia.com/nemo/agent-toolkit/latest/). Spike map: [`research-nemo-agent-toolkit.md`](../../engineering/tasks/v2.5.3/research-nemo-agent-toolkit.md).
+Upstream docs: [docs.nvidia.com/nemo/agent-toolkit](https://docs.nvidia.com/nemo/agent-toolkit/latest/). Spike map: [`research-nemo-agent-toolkit.md`](https://github.com/adriannoes/asap-protocol/blob/main/engineering/tasks/v2.5.3/research-nemo-agent-toolkit.md).
 
 ## A2A vs MCP vs ASAP
 
@@ -44,7 +44,7 @@ Do **not** present ASAP as “A2A but better.” When NAT already uses A2A betwe
 
 ## Agent Card → Manifest (sketch)
 
-Path B for Lab II is **docs-only**. A light field sketch (feeds [v2.5.5 Formal Spec / A2A interop](../../product/prd/prd-v2.5.5-formal-spec-interop.md)); not a runtime bridge:
+Path B for Lab II is **docs-only**. A light field sketch (feeds [v2.5.5 Formal Spec / A2A interop](https://github.com/adriannoes/asap-protocol/blob/main/product/prd/prd-v2.5.5-formal-spec-interop.md)); not a runtime bridge:
 
 | A2A Agent Card (typical) | ASAP Manifest |
 |--------------------------|---------------|
@@ -78,9 +78,9 @@ These models are **complementary**, not interchangeable. Do not wire Keycloak as
 | **stdio** | **Yes** — NAT `mcp_client` spawns ASAP `protect_server` child; demo uses server-side `ASAP_AGENT_JWT` env fallback because NAT does not pass `_meta.asap_agent_jwt` |
 | **streamable-http** / **SSE** | **Blocked** this release — ASAP has no shipped HTTP/SSE Auth Bridge |
 
-HTTP/SSE follow-up: [backlog-mcp-auth-typescript.md](../../engineering/tasks/v2.5.0/backlog-mcp-auth-typescript.md) (`@asap-protocol/mcp-auth`). Do not invent a Python HTTP protect path in Lab II.
+HTTP/SSE follow-up: [backlog-mcp-auth-typescript.md](https://github.com/adriannoes/asap-protocol/blob/main/engineering/tasks/v2.5.0/backlog-mcp-auth-typescript.md) (`@asap-protocol/mcp-auth`). Do not invent a Python HTTP protect path in Lab II.
 
-Full matrices: [research note §10](../../engineering/tasks/v2.5.3/research-nemo-agent-toolkit.md#10-spike-gap-analysis-2026-07-13).
+Full matrices: [research note §10](https://github.com/adriannoes/asap-protocol/blob/main/engineering/tasks/v2.5.3/research-nemo-agent-toolkit.md#10-spike-gap-analysis-2026-07-13).
 
 ## Requirements
 
@@ -141,7 +141,7 @@ NAT’s NIM / CUDA LLM path is **out of band** for this interop guide. For edge 
 
 ## Related
 
-- Spike map: [`engineering/tasks/v2.5.3/research-nemo-agent-toolkit.md`](../../engineering/tasks/v2.5.3/research-nemo-agent-toolkit.md)
+- Spike map: [`engineering/tasks/v2.5.3/research-nemo-agent-toolkit.md`](https://github.com/adriannoes/asap-protocol/blob/main/engineering/tasks/v2.5.3/research-nemo-agent-toolkit.md)
 - Runnable Path A: [`examples/nemo_agent_toolkit_asap/`](https://github.com/adriannoes/asap-protocol/tree/main/examples/nemo_agent_toolkit_asap)
 - [MCP Auth Bridge](../adapters/mcp-auth-bridge.md) (Mode A `protect_server`) · [MCP integration](../mcp-integration.md) (Mode B envelopes)
 - [Automation connector security](../guides/automation-connector-security.md) — Mode A vs Mode B; env JWT fallback is **dev-only**
@@ -167,4 +167,4 @@ Upstream encourages provider-owned packages ([third-party plugins](https://docs.
 
 **CI matrix sketch (post–v2.5.3):** Python **3.11–3.13** × pinned `nvidia-nat==1.8.0` (joint Path A examples stay on **3.13** only). Optional extra — must not become a required ASAP core dep.
 
-**Explicit out of ship for v2.5.3:** do **not** publish `nemo-agent-toolkit-asap`, register `nat.plugins.asap`, or claim a Public Plugin API integration in this release. Path C remains a feasibility note until Path A is promoted and maintainership is decided. Checklist: [research note §6](../../engineering/tasks/v2.5.3/research-nemo-agent-toolkit.md#6-third-party-plugin-feasibility-checklist-spike).
+**Explicit out of ship for v2.5.3:** do **not** publish `nemo-agent-toolkit-asap`, register `nat.plugins.asap`, or claim a Public Plugin API integration in this release. Path C remains a feasibility note until Path A is promoted and maintainership is decided. Checklist: [research note §6](https://github.com/adriannoes/asap-protocol/blob/main/engineering/tasks/v2.5.3/research-nemo-agent-toolkit.md#6-third-party-plugin-feasibility-checklist-spike).

@@ -4,6 +4,10 @@
 #
 # Uses peaceiris/actions-gh-pages (no ghp-import) for reliable pushes.
 # We inject vercel.json into site/ so Vercel skips deploying gh-pages.
+#
+# GitHub Pages: Settings → Pages → Source = Deploy from a branch →
+# Branch = `gh-pages` / folder = `/ (root)`. Canonical URL after first
+# successful deploy: https://adriannoes.github.io/asap-protocol/
 name: Docs
 
 on:
@@ -35,7 +39,7 @@ jobs:
           if [ -f vercel.json ]; then cp vercel.json site/vercel.json; fi
 
       - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453  # v4.1.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./site

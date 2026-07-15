@@ -1,6 +1,6 @@
 # Microsoft Agent Framework ↔ ASAP (interop)
 
-How [Microsoft Agent Framework (MAF)](https://learn.microsoft.com/en-us/agent-framework/overview/overview) tool surfaces (in-process **`AIFunction`** / **`AITool`**, MCP) sit beside ASAP **Host/Agent JWT** and **capability grants**. Naming and packages below are accurate as of **2026-07-13** (MAF **1.0** GA).
+How [Microsoft Agent Framework (MAF)](https://learn.microsoft.com/en-us/agent-framework/overview/) tool surfaces (in-process **`AIFunction`** / **`AITool`**, MCP) sit beside ASAP **Host/Agent JWT** and **capability grants**. Naming and packages below are accurate as of **2026-07-13** (MAF **1.0** GA).
 
 !!! warning "Research / experimental — not maintained"
 
@@ -110,9 +110,9 @@ If you need a maintained TypeScript path today, use [Mastra](./mastra.md) or [Op
 
 ## Related
 
-- Spike lock: [`engineering/tasks/v2.5.3/research-semantic-kernel.md`](../../engineering/tasks/v2.5.3/research-semantic-kernel.md)
+- Spike lock: [`engineering/tasks/v2.5.3/research-semantic-kernel.md`](https://github.com/adriannoes/asap-protocol/blob/main/engineering/tasks/v2.5.3/research-semantic-kernel.md)
 - [Security](../security.md) — Agent JWT / Host identity
 - [Capabilities](../capabilities/index.md) · [Escalation](../capabilities/escalation.md)
 - [MCP Auth Bridge](../adapters/mcp-auth-bridge.md) · [MCP integration](../mcp-integration.md)
 - [Mastra](./mastra.md) · [OpenAI Agents](./openai-agents.md) — maintained Lab I adapters
-- MAF overview: [learn.microsoft.com/agent-framework](https://learn.microsoft.com/en-us/agent-framework/overview/overview)
+- MAF overview: [learn.microsoft.com/agent-framework](https://learn.microsoft.com/en-us/agent-framework/overview/)
