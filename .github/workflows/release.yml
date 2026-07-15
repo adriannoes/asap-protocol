@@ -129,38 +129,57 @@ jobs:
         run: |
           VERSION="${{ steps.tag_version.outputs.VERSION }}"
           python3 << 'PYTHON_SCRIPT'
-          import re
           import os
-          
-          version = os.environ.get('VERSION', '')
-          repo = os.environ.get('GITHUB_REPOSITORY', '')
-          
-          with open('CHANGELOG.md', 'r') as f:
+          import re
+          import subprocess
+
+          version = os.environ.get("VERSION", "")
+          repo = os.environ.get("GITHUB_REPOSITORY", "")
+          current_tag = f"v{version}"
+
+          def previous_tag(current: str) -> str:
+              """Return the prior v* tag from git history (version-sorted)."""
+              raw = subprocess.check_output(
+                  ["git", "tag", "-l", "v*", "--sort=-version:refname"],
+                  text=True,
+              )
+              tags = [t.strip() for t in raw.splitlines() if t.strip()]
+              if current in tags:
+                  idx = tags.index(current)
+                  if idx + 1 < len(tags):
+                      return tags[idx + 1]
+              for tag in tags:
+                  if tag != current:
+                      return tag
+              return "v0.1.0"
+
+          prev = previous_tag(current_tag)
+
+          with open("CHANGELOG.md", encoding="utf-8") as f:
               content = f.read()
-          
+
           # Find the section for this version (from ## [VERSION] to next ## or end)
-          pattern = rf'^## \[{re.escape(version)}\](.*?)(?=^## \[|\Z)'
+          pattern = rf"^## \[{re.escape(version)}\](.*?)(?=^## \[|\Z)"
           match = re.search(pattern, content, re.MULTILINE | re.DOTALL)
-          
+          compare = f"https://github.com/{repo}/compare/{prev}...{current_tag}"
+
           if match:
               notes = match.group(1).strip()
-              notes += '\n\n---\n\n'
-              notes += f'**Full Changelog**: https://github.com/{repo}/compare/v0.1.0...v{version}'
-              
-              with open('release_notes.md', 'w') as out:
+              notes += "\n\n---\n\n"
+              notes += f"**Full Changelog**: {compare}"
+              with open("release_notes.md", "w", encoding="utf-8") as out:
                   out.write(notes)
           else:
-              # Fallback: create basic release notes
-              with open('release_notes.md', 'w') as out:
-                  out.write(f'Release v{version}\n\n')
-                  out.write(f'**Full Changelog**: https://github.com/{repo}/compare/v0.1.0...v{version}')
+              with open("release_notes.md", "w", encoding="utf-8") as out:
+                  out.write(f"Release {current_tag}\n\n")
+                  out.write(f"**Full Changelog**: {compare}")
           PYTHON_SCRIPT
         env:
           VERSION: ${{ steps.tag_version.outputs.VERSION }}
           GITHUB_REPOSITORY: ${{ github.repository }}
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228  # v2
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228  # v3.0.2
         with:
           tag_name: ${{ github.ref_name }}
           name: "v${{ steps.tag_version.outputs.VERSION }}"
