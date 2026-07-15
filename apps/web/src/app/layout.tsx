@@ -7,6 +7,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Analytics } from '@vercel/analytics/next';
+import { CtaClickTracker } from '@/components/telemetry/cta-click-tracker';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -21,7 +22,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: 'ASAP Protocol | The Marketplace for Autonomous Agents',
-  description: 'Discover, verify, and integrate specialized AI agents into your workflows using the open ASAP Protocol standard.',
+  description:
+    'Discover, verify, and integrate specialized AI agents into your workflows using the open ASAP Protocol standard.',
 };
 
 export default function RootLayout({
@@ -31,18 +33,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-indigo-500/30`}>
+      <body
+        suppressHydrationWarning
+        className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-indigo-500/30`}
+      >
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <TooltipProvider>
-          <div className="relative flex min-h-screen flex-col bg-background">
-            <Header />
-            <div className="flex-1">{children}</div>
-            <Footer />
-          </div>
+            <div className="bg-background relative flex min-h-screen flex-col">
+              <Header />
+              <div className="flex-1">{children}</div>
+              <Footer />
+            </div>
           </TooltipProvider>
         </ThemeProvider>
         <SpeedInsights />
         <Analytics />
+        <CtaClickTracker />
       </body>
     </html>
   );

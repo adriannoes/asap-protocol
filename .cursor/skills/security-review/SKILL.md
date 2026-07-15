@@ -15,14 +15,14 @@ Strictly enforce:
 - `.cursor/rules/security-standards.mdc` (always-on policy)
 - `.cursor/README.md` (agent index and precedence)
 
-## When to use this skill vs the PR command
+## When to use this skill vs a local PR command
 
 | Goal | Use |
 |------|-----|
 | General security audit of changes or a module | This skill |
-| PR review focused on high-confidence exploitable vulns only | `.cursor/commands/security-pr-review.md` |
+| PR review focused on high-confidence exploitable vulns only | Optional local slash command under `.cursor/commands/` (gitignored; not committed) |
 
-The PR command **excludes** DoS, rate limiting, secrets-on-disk, and theoretical findings. This skill follows `security-standards.mdc` without those exclusions.
+A local PR command (when present) **excludes** DoS, rate limiting, secrets-on-disk, and theoretical findings. This skill follows `security-standards.mdc` without those exclusions.
 
 ## Review checklist
 

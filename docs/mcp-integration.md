@@ -21,12 +21,14 @@ ASAP supports two complementary ways to combine MCP with agent communication. Pi
 |:--|:------------------------------|:------------------------------------|
 | **Wire** | MCP JSON-RPC over stdio (`MCPServer` / `MCPClient`) | ASAP `Envelope` with `payload_type` `mcp_tool_call` / `mcp_tool_result` |
 | **Typical use** | IDE hosts (Claude Desktop, Cursor) launch your server as a subprocess | A2A agents invoke MCP tools on a remote peer via HTTP/WebSocket |
-| **Auth (v2.5.0)** | Opt-in via [`asap.adapters.mcp.protect_server`](adapters/mcp-auth-bridge.md) — Agent JWT + capability grants on each `tools/call` | Existing ASAP transport auth (Host/Agent JWT, capability grants on the HTTP server) |
+| **Auth (v2.5.0)** | Opt-in via [`asap.mcp.auth.protect_server`](adapters/mcp-auth-bridge.md) — Agent JWT + capability grants on each `tools/call` | Existing ASAP transport auth (Host/Agent JWT, capability grants on the HTTP server) |
 | **Reference** | [`examples/mcp_auth_bridge/`](../examples/mcp_auth_bridge/) | [`src/asap/examples/mcp_integration.py`](../src/asap/examples/mcp_integration.py) (`McpToolCall` / `mcp_tool_call`) |
 
 ### Mode A: native stdio MCP + Auth Bridge
 
-Use `asap.mcp.MCPServer` when a host application starts your process and speaks MCP over stdin/stdout. To enforce Agent JWT and capability grants on protected tools, wrap the server with `protect_server` from `asap.adapters.mcp` — see the **[MCP Auth Bridge adapter guide](adapters/mcp-auth-bridge.md)** for architecture, `MCPAuthConfig`, error codes, and a runnable example.
+Use `asap.mcp.MCPServer` when a host application starts your process and speaks MCP over stdin/stdout. To enforce Agent JWT and capability grants on protected tools, wrap the server with `protect_server` from `asap.mcp.auth` — see the **[MCP Auth Bridge adapter guide](adapters/mcp-auth-bridge.md)** for architecture, `MCPAuthConfig`, error codes, and a runnable example.
+
+**Lab II Path A (experimental):** [NeMo Agent Toolkit](integrations/nemo-agent-toolkit.md) demonstrates NAT `mcp_client` (stdio) calling an ASAP-protected MCP server — see also [Automation connector security](guides/automation-connector-security.md) (§ Mode A vs Mode B). Workflow connectors that stay on OpenAPI/HTTP do not require MCP; see [Workflow connectors](integrations/workflow-connectors.md).
 
 **Opt-in migration (MCP-DOC-004):** Unprotected `MCPServer` usage remains fully valid. Protection is explicit: call `protect_server` only when you want JWT + grant checks on `tools/call`. Existing deployments do not need to change until operators opt in.
 
@@ -136,3 +138,10 @@ The demo uses `MCPClient` to start `asap.mcp.server_runner` as a subprocess, per
 ## Protocol version
 
 This implementation follows **MCP 2025-11-25**. For a short reference of the types and messages used, see [mcp-specs.md](../engineering/references/mcp-specs.md) in the repo.
+
+## Related
+
+- [MCP Auth Bridge](adapters/mcp-auth-bridge.md) — Mode A `protect_server`
+- [NeMo Agent Toolkit](integrations/nemo-agent-toolkit.md) — experimental Path A (NAT → ASAP-protected MCP)
+- [Automation connector security](guides/automation-connector-security.md) — connector secrets / TLS / grants when MCP is involved
+- [Workflow connectors](integrations/workflow-connectors.md) — OpenAPI path (no MCP required)

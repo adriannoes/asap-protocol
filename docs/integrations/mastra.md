@@ -156,3 +156,5 @@ in **`packages/typescript/mastra`** runs **agadoo** on the built ESM entry to gu
 
 - [TypeScript client SDK](../sdks/typescript.md)
 - [@mastra/core](https://npmjs.com/package/@mastra/core) (**^1.5.0**)
+- [OpenAI Agents SDK adapter](./openai-agents.md) — sibling Lab I npm bridge
+- [Workflow connectors](./workflow-connectors.md) · [Microsoft Agent Framework](./microsoft-agent-framework.md) · [NeMo Agent Toolkit](./nemo-agent-toolkit.md) — Adapter Lab II

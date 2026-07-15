@@ -3,7 +3,7 @@
 > **Product Requirements Document**
 >
 > **Version**: 2.5.2
-> **Status**: RELEASE PENDING (`release/2.5.2`; tag after merge)
+> **Status**: ✅ **SHIPPED** (2026-07-08) — tag [`v2.5.2`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.2); PyPI `asap-protocol` **2.5.2**
 > **Created**: 2026-07-08
 > **Parent train**: [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md)
 > **Predecessor**: v2.5.1 code quality patch ([CHANGELOG](../../CHANGELOG.md#251---2026-06-25); execution in `engineering/tasks/private/v2.5.1/`)
@@ -89,8 +89,8 @@ Wire protocol and manifest schema are otherwise unchanged.
 | All #209 scope bullets merged | ✅ PRs #277–#280 |
 | v2.5.1 follow-ups #245–#249 closed | ✅ |
 | CHANGELOG `[2.5.2]` + migration notes | ✅ |
-| `pyproject.toml` → `2.5.2`; tag `v2.5.2` | Pending merge + tag |
-| Close umbrella [#209](https://github.com/adriannoes/asap-protocol/issues/209) | Pending after tag |
+| `pyproject.toml` → `2.5.2`; tag `v2.5.2` | ✅ |
+| Close umbrella [#209](https://github.com/adriannoes/asap-protocol/issues/209) | ✅ |
 
 ---
 

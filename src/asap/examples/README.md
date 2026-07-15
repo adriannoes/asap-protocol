@@ -8,7 +8,7 @@ Examples cover:
 
 - **Core flow**: Echo agent, coordinator, and a full demo (run_demo).
 - **Advanced patterns**: Multi-agent orchestration, long-running tasks with checkpoints, error recovery, MCP integration, state migration, auth, rate limiting.
-- **Concepts**: WebSocket (not implemented), streaming responses, multi-step workflows.
+- **Concepts**: WebSocket (`/asap/ws` on `create_app`), streaming responses (`streaming_agent`), multi-step workflows.
 
 Run any example from the repository root with:
 
@@ -97,16 +97,17 @@ Run agents individually:
 | **auth_patterns** | Bearer auth, custom token validators, OAuth2 concept (manifest + create_app) | `uv run python -m asap.examples.auth_patterns` |
 | **rate_limiting** | Per-sender and per-endpoint rate limit patterns (create_limiter, ASAP_RATE_LIMIT) | `uv run python -m asap.examples.rate_limiting` |
 
-### Concepts (no full implementation)
+### Concepts
 
 | Module | Description | Usage |
 |--------|-------------|--------|
-| **websocket_concept** | How WebSocket would work with ASAP (comments/pseudocode only) | `uv run python -m asap.examples.websocket_concept` |
+| **websocket_concept** | Educational notes; live transport is WebSocket `/asap/ws` (see `docs/transport.md`) | `uv run python -m asap.examples.websocket_concept` |
 
 ### Streaming and workflows
 
 | Module | Description | Usage |
 |--------|-------------|--------|
+| **streaming_agent** | Live agent with SSE `TaskStream` chunks over HTTP | `uv run python -m asap.examples.streaming_agent` |
 | **streaming_response** | Stream TaskUpdate progress chunks (simulated streaming) | `uv run python -m asap.examples.streaming_response [--chunks N]` |
 | **multi_step_workflow** | Multi-step pipeline: fetch → transform → summarize (WorkflowState, run_workflow) | `uv run python -m asap.examples.multi_step_workflow` |
 

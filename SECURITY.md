@@ -88,8 +88,34 @@ We aim to review and merge security updates according to the following target ti
 
 We continuously monitor dependencies using:
 - **Dependabot**: Automated security updates and alerts
-- **pip-audit**: Integrated into CI pipeline for vulnerability scanning
+- **pip-audit**: Integrated into CI pipeline for vulnerability scanning (Python)
+- **npm audit**: Blocking steps on the `quality (web)` CI job for `apps/web/`
 - **GitHub Security Advisories**: Public database of known vulnerabilities
+
+### npm audit policy (`apps/web/`)
+
+CI (`quality-web`) runs both of the following after `npm ci` and treats failures as blocking:
+
+```bash
+cd apps/web
+npm audit --omit=dev --audit-level=moderate
+npm audit --audit-level=high
+```
+
+- **Production graph** (`--omit=dev`): moderate and above must be clean.
+- **Full graph** (including devDependencies): high and above must be clean.
+- Prefer range-compatible updates via `npm install` / `npm audit fix` (never `npm audit fix --force`).
+- Do **not** downgrade `next` to satisfy transitive advisories. For Next **16.2.10**, pin a fixed PostCSS via npm overrides:
+
+```json
+"overrides": {
+  "next@16.2.10": { "postcss": "8.5.10" }
+}
+```
+
+If a PostCSS (or similar) override breaks `next build`, stop and report — do not silently adopt a preview/canary Next.
+
+**Prettier**: CI also runs `npm run format:check` only on changed TS/TSX under `apps/web/` (`fetch-depth: 0`). On pull requests the base is the PR base SHA; on pushes it is `github.event.before` (the tip before the push), not `merge-base(HEAD, origin/main)` — that merge-base equals `HEAD` on `main` and would skip the check. Full-tree Prettier is intentionally not gated (historical drift). Pass paths locally: `npm run format:check -- <files>`.
 
 CI runs `pip-audit` after a sync that **excludes** the optional extras `crewai` and `llamaindex`, because those graphs currently pull transitive packages (`diskcache`, `nltk`) that OSV still lists with no fixed release on PyPI. To match the security job locally:
 
@@ -109,6 +135,10 @@ CI runs `pip-audit` after a sync that **excludes** the optional extras `crewai` 
 
 **CVE-2026-48804 (python-socketio, locust stack)**: Resolved via override (`python-socketio>=5.16.2`).
 
+**PYSEC-2026-2132 (click)**: Resolved via override (`click>=8.3.3`) — transitive via typer / uvicorn / mkdocs stacks.
+
+**PYSEC-2026-2253–2257 (pillow)**: Resolved via override (`pillow>=12.3.0`; prior floor was `>=12.2.0` for CVE-2026-40192) — transitive via pdf/vision stacks.
+
 **CVE-2026-46678 (pydantic-ai, optional `[pydanticai]` extra)**: Resolved via `[pydanticai]` extra floor `pydantic-ai>=1.99.0` (1.102.0 in lock as of 2026-06).
 
 **CVE-2026-4963 / CVE-2026-2654 (smolagents, optional `[smolagents]` extra)**: OSV reports these against current PyPI releases with **no `fix_versions`/`fixed` range** yet. CI ignores them until Hugging Face publishes patched `smolagents` wheels; remove the flags when `pip-audit` is clean without them. The reference package does not import smolagents unless that extra is installed.
@@ -124,6 +154,8 @@ CI runs `pip-audit` after a sync that **excludes** the optional extras `crewai` 
 **PYSEC-2024-271 (flask-cors, transitive via `locust` in dev/benchmarks)**: CI uses `--ignore-vuln PYSEC-2024-271` — log-injection when debug logging is enabled; **6.0.2 is latest on PyPI** with no fixed release listed. Not on the runtime agent-server path.
 
 **pip**: `tool.uv.override-dependencies` requires `pip>=26.1` so **CVE-2026-3219** (GHSA affecting pip ≤26.0.1) no longer requires a `pip-audit` ignore.
+
+**PYSEC-2026-3447 (setuptools)**: Resolved via override (`setuptools>=83.0.0`) — transitive build/tooling path; `82.0.0` is the last vulnerable release listed by OSV.
 
 If you install `[crewai]` or `[llamaindex]`, run `pip-audit` separately on that environment and expect possible advisories until upstream publishes patched releases. Integration tests for those extras still run in CI with the full dependency tree.
 

@@ -162,6 +162,44 @@ Content-Type: application/json
 }
 ```
 
+### Operator REST surfaces (v2.5.2)
+
+These are **REST** routes (not JSON-RPC). They mount only when the matching store
+is passed to `create_app`, and stay **open by default**. Protect them in
+production with `require_operator_auth=True` (requires `oauth2_config` and scope
+``asap:admin``). See [Security — Operator REST APIs](security.md#operator-rest-apis-v252).
+
+| Prefix | Mounted when | Purpose |
+|--------|--------------|---------|
+| `/usage` | `metering_storage=...` | Usage / metering queries |
+| `/sla` | `sla_storage=...` | SLA metrics |
+| `/audit` | `audit_store=...` | Tamper-evident audit export |
+
+Streaming transports (also not operator REST):
+
+| Endpoint | Transport | Notes |
+|----------|-----------|-------|
+| `/asap/stream` | SSE | Task streaming |
+| `/asap/ws` | WebSocket (`asap.transport.ws`) | Real-time envelopes; OAuth2 enforced when configured |
+
+### Streaming correlation binding (v2.5.2)
+
+SSE and WebSocket clients bind each streamed chunk to the **request envelope
+`id`**. For `TaskStream`, `TaskResponse`, `McpToolResult`, and `McpResourceData`
+payloads, `correlation_id` must equal that request `id`. A mismatch raises
+`ProtocolCorrelationError` (`asap:protocol/malformed_envelope`) on the client.
+
+Server handlers that emit `TaskStream` chunks must set:
+
+```python
+stream_envelope.correlation_id = request_envelope.id
+```
+
+Do not invent a separate correlation value. Unary `send()` / `batch()` apply the
+same binding for response payloads (without requiring `TaskStream`). Details:
+[Error Handling](error-handling.md#protocolcorrelationerror) and
+[migration #247](migration.md#other-v252-correctness-fixes).
+
 ---
 
 ## JSON-RPC 2.0 Specification
@@ -343,6 +381,19 @@ app = create_app(manifest, registry)
 
 # Run with: uvicorn my_module:app --host 0.0.0.0 --port 8000
 ```
+
+#### Notable `create_app` parameters (v2.5.x)
+
+| Parameter | Default | Purpose |
+|-----------|---------|---------|
+| `oauth2_config` | `None` | JWKS / OIDC for Bearer JWT validation |
+| `require_operator_auth` | `False` | Protect `/usage`, `/sla`, `/audit` with ``asap:admin`` |
+| `identity_jti_cache` | in-memory | Host/Agent JWT `jti` replay; use `RedisJtiReplayCache` multi-worker |
+| `metering_storage` / `sla_storage` / `audit_store` | `None` | Mount the matching operator REST router when set |
+| `rate_limit` | env / built-in | Burst + sustained limits; pair with `ASAP_RATE_LIMIT_BACKEND` |
+
+Full operator and Redis wiring: [migration v2.5.2](migration.md#upgrading-from-v251)
+and [Security](security.md).
 
 ### Creating a Client
 
@@ -697,7 +748,9 @@ curl -I http://localhost:8000/.well-known/asap/manifest.json
 
 ## Related Documentation
 
-- [Security](security.md) - Authentication and TLS
-- [Error Handling](error-handling.md) - Error taxonomy
+- [Security](security.md) - Authentication, operator APIs, TLS, Redis JTI
+- [Error Handling](error-handling.md) - Error taxonomy (`ProtocolCorrelationError`)
+- [Audit log](audit.md) - Hash-chained audit store and `/audit` export
 - [Observability](observability.md) - Logging and tracing
 - [API Reference](api-reference.md) - Complete API documentation
+- [Migration](migration.md#upgrading-from-v251) - v2.5.2 transport hardening

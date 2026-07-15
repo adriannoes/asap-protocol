@@ -374,11 +374,12 @@ Patch releases must remain additive: no wire-protocol breaking changes, no new p
 
 ### Strategy narrative (`product/strategy/`)
 
-Long-form vision, roadmap sequencing, and deferred-feature triggers:
+Long-form vision, living private roadmap, and literature notes:
 
-- **Deferred backlog**: [deferred-backlog.md](../strategy/deferred-backlog.md)
+- **Strategic roadmap (living)**: [roadmap.md](../strategy/roadmap.md)
 - **Vision**: [vision-agent-marketplace.md](../strategy/vision-agent-marketplace.md)
-- **Roadmap**: [roadmap-to-marketplace.md](../strategy/roadmap-to-marketplace.md)
+- **Historical path**: [roadmap-to-marketplace.md](../strategy/roadmap-to-marketplace.md)
+- **Literature**: [taxonomy-gap-analysis-sander-2026.md](../strategy/taxonomy-gap-analysis-sander-2026.md), [governance-gap-analysis-kang-2026.md](../strategy/governance-gap-analysis-kang-2026.md)
 
 > [!NOTE]
 > Paths under `product/strategy/` are **gitignored** for the public remote (see [.gitignore](../../.gitignore)); links resolve for contributors with a **local** checkout. For **always-public** decisions, use [Decision records](../decision-records/README.md) and [Product README](../README.md).
@@ -397,3 +398,4 @@ Tactical follow-ups live under `product/prd/private/` when present locally (igno
 | 2026-03-20 | 0.2.0 | **Expanded scope**: Added §4.4 TypeScript SDK, §4.5 Intent-Based Search, §4.6 Delegated/Autonomous Modes, §4.7 Capability Escalation, §4.8 Capability-Aware Introspection, §4.9 ASAP Challenge, §4.10 Privacy Considerations. |
 | 2026-04-17 | 0.3.0 | **Rescoped to "Adoption Multiplier"** after v2.2.0 audit confirmed 120/500 agents (trigger unmet). Pulled OpenAPI Adapter forward from v2.4 §4.1. Kept TypeScript SDK, Auto-Registration, Capability Escalation, ASAP Challenge. **Deferred** Registry API Backend, Intent-Based Search, Orchestration Primitives, Delegated/Autonomous Mode formalization, Capability-Aware Introspection, Privacy spec, DeepEval — each with explicit return-trigger. |
 | 2026-04-28 | 0.4.1 | **Related docs**: Fixed §9 links (engineering sprint index, strategy paths); aligned **Last Updated** with changelog; documented gitignore behavior for `product/strategy/`. |
+| 2026-07-11 | 0.4.2 | Strategy links: deferred backlog → living [roadmap.md](../strategy/roadmap.md); added Kang/Sander literature pointers. |

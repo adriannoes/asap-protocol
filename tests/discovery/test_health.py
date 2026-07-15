@@ -125,6 +125,23 @@ class TestClientHealthCheck:
         assert status.uptime_seconds >= 0
 
     @pytest.mark.asyncio
+    async def test_health_check_defaults_to_client_base_url(
+        self, sample_manifest: Manifest
+    ) -> None:
+        """health_check without base_url uses the client's HTTP base URL."""
+        app = create_app(sample_manifest, rate_limit="999999/minute")
+        transport = httpx.ASGITransport(app=app)
+        async with ASAPClient(
+            "http://testserver",
+            transport=transport,
+            require_https=False,
+        ) as client:
+            status = await client.health_check()
+
+        assert status.status == "healthy"
+        assert status.agent_id == sample_manifest.id
+
+    @pytest.mark.asyncio
     async def test_health_check_http_error_raises(self, sample_manifest: Manifest) -> None:
         """health_check raises ASAPConnectionError on HTTP 404."""
         from asap.transport.client import ASAPConnectionError

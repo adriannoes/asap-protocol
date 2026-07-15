@@ -17,7 +17,7 @@ ASAP (Agent State and Action Protocol) builds upon concepts from both A2A and MC
 | **Message Format** | JSON | JSON-RPC | JSON-RPC + Envelope |
 | **Discovery** | Agent Card | Server info | Manifest |
 | **Task Lifecycle** | Basic | N/A | Full state machine |
-| **Streaming** | SSE | Stdio/SSE | WebSocket (planned) |
+| **Streaming** | SSE + WebSocket (`/asap/stream`, `/asap/ws`) | Stdio/SSE | SSE + WebSocket |
 
 ---
 
@@ -761,6 +761,47 @@ For deployments that enforce self-authorization prevention with real passkeys:
 See [Self-authorization prevention](security/self-authorization-prevention.md)
 (**Real WebAuthn**) for the threat model and ceremony flow.
 
+### Upgrading from v2.4.1 to v2.5.0
+
+v2.5.0 is an **additive, backward-compatible** minor release. JSON-RPC envelopes,
+OAuth2, capability grants, and existing manifests are unchanged. MCP servers
+without `protect_server` behave exactly as in v2.4.1.
+
+#### What changed
+
+- **MCP Auth Bridge (opt-in)**: `asap.mcp.auth.protect_server` wraps a native
+  stdio `MCPServer` with Agent JWT verification and capability enforcement on
+  `tools/call`. Unprotected MCP usage remains valid (MCP-DOC-004).
+- **Compliance**: `asap-compliance` adds an `mcp-auth-bridge` profile for stdio
+  MCP auth, grants, constraints, and manifest alignment.
+- **Deferred**: `initialize` session-token handshake, `hide_unauthorized_tools`
+  (MAP-004), and `@asap-protocol/mcp-auth` HTTP/SSE middleware (v2.5.0.1).
+
+#### Upgrade steps
+
+1. **Bump Python dependency**:
+   ```bash
+   pip install --upgrade asap-protocol==2.5.0
+   # or
+   uv add asap-protocol==2.5.0
+   ```
+   TypeScript consumers: no npm bump required for v2.5.0 — `@asap-protocol/*`
+   packages remain at **2.4.1** until the v2.5.0.1 middleware release.
+
+2. **Optional — protect an MCP server**: See
+   [MCP Auth Bridge adapter](adapters/mcp-auth-bridge.md) and
+   `examples/mcp_auth_bridge/server.py`.
+
+3. **Re-run Compliance Harness v2** if you ship MCP tools
+   (`asap compliance-check --exit-on-fail`).
+
+#### Backward compatibility
+
+- **Wire protocol**: Unchanged from v2.4.1.
+- **Breaking changes**: None. `protect_server` is opt-in.
+
+---
+
 ### Upgrading from v2.5.0 to v2.5.1
 
 v2.5.1 is a **code quality patch**. JSON-RPC envelopes, OAuth2, capability grants,
@@ -977,46 +1018,106 @@ If Redis is unreachable, the app falls back to per-instance in-memory limits
 (weaker on multi-instance deploys); set both URL and token from the same
 provider family (Upstash **or** Vercel KV) to avoid misconfiguration.
 
----
+#### Other v2.5.2 correctness fixes
 
-### Upgrading from v2.4.1 to v2.5.0
+| Fix | Impact |
+|-----|--------|
+| **Streaming correlation (#247)** | SSE/WebSocket `TaskStream` chunks must set `correlation_id` to the **request envelope `id`**. Mismatched or missing binding raises client-side `ProtocolCorrelationError`. |
+| **Agent status JTI (#249)** | `GET /asap/agent/status` rejects Host JWTs whose `jti` was already consumed by register/revoke/rotate-key (read-only replay check; polling may still reuse a fresh token). |
+| **Registry signed envelopes (#224)** | Auto-registration accepts `{manifest, signature}` envelopes and unwraps before validation. |
+| **Registry validation → 400 (#227)** | `ManifestValidationError` maps to HTTP **400** (was 500). |
+| **SQLite write lock (#245)** | Shared `asyncio.Lock` on `AsyncSqliteRepository.execute()` for concurrent writers. |
 
-v2.5.0 is an **additive, backward-compatible** minor release. JSON-RPC envelopes,
-OAuth2, capability grants, and existing manifests are unchanged. MCP servers
-without `protect_server` behave exactly as in v2.4.1.
+Allowed `TaskRequest.config` fields (unknown keys rejected):
+`timeout_seconds`, `priority`, `idempotency_key`, `streaming`, `persist_state`,
+`model`, `temperature`.
 
-#### What changed
-
-- **MCP Auth Bridge (opt-in)**: `asap.adapters.mcp.protect_server` wraps a native
-  stdio `MCPServer` with Agent JWT verification and capability enforcement on
-  `tools/call`. Unprotected MCP usage remains valid (MCP-DOC-004).
-- **Compliance**: `asap-compliance` adds an `mcp-auth-bridge` profile for stdio
-  MCP auth, grants, constraints, and manifest alignment.
-- **Deferred**: `initialize` session-token handshake, `hide_unauthorized_tools`
-  (MAP-004), and `@asap-protocol/mcp-auth` HTTP/SSE middleware (v2.5.0.1).
-
-#### Upgrade steps
-
-1. **Bump Python dependency**:
-   ```bash
-   pip install --upgrade asap-protocol==2.5.0
-   # or
-   uv add asap-protocol==2.5.0
-   ```
-   TypeScript consumers: no npm bump required for v2.5.0 — `@asap-protocol/*`
-   packages remain at **2.4.1** until the v2.5.0.1 middleware release.
-
-2. **Optional — protect an MCP server**: See
-   [MCP Auth Bridge adapter](adapters/mcp-auth-bridge.md) and
-   `examples/mcp_auth_bridge/server.py`.
-
-3. **Re-run Compliance Harness v2** if you ship MCP tools
-   (`asap compliance-check --exit-on-fail`).
+Allowed `CommonMetadata` fields: `purpose`, `ttl_hours`, `source`, `timestamp`,
+`tags`.
 
 #### Backward compatibility
 
-- **Wire protocol**: Unchanged from v2.4.1.
-- **Breaking changes**: None. `protect_server` is opt-in.
+- **Opt-in**: operator auth, Redis JTI, web distributed rate limits — unchanged
+  defaults when you do nothing.
+- **Breaking for clients**: unknown keys on `TaskRequest.config` /
+  `Conversation.metadata` now fail validation.
+- **Wire protocol / manifest schema**: otherwise unchanged.
+- **CLI**: root re-exports of three legacy names removed; use `_compat` or
+  canonical modules (shim removed in v2.6.0).
+
+#### Migration checklist
+
+- [ ] Bump to `asap-protocol>=2.5.2`
+- [ ] Scan clients for unknown `config` / `metadata` keys; move extensions to
+      `TaskRequest.input` or envelope `extensions`
+- [ ] If exposing `/usage`, `/sla`, or `/audit` beyond localhost: set
+      `require_operator_auth=True` + `oauth2_config` and mint ``asap:admin``
+      tokens with identity binding
+- [ ] Multi-worker HTTP: `identity_jti_cache=RedisJtiReplayCache.from_url(...)`
+      and `ASAP_RATE_LIMIT_BACKEND=redis://...`
+- [ ] Multi-worker MCP Auth Bridge: same cache via `MCPAuthConfig.jti_replay_cache`
+- [ ] Multi-instance `apps/web`: set Upstash or Vercel KV REST URL + token
+- [ ] Custom stream handlers: ensure `TaskStream.correlation_id == request.id`
+- [ ] Registry integrators: expect HTTP 400 on manifest validation failures;
+      signed envelope JSON is accepted
+- [ ] Re-run compliance harness / CI gate after upgrade
+
+#### Troubleshooting (v2.5.2)
+
+| Symptom | Likely cause | Fix |
+|---------|--------------|-----|
+| Pydantic `ValidationError` on `config` / `metadata` | Unknown keys (`extra="forbid"`) | Use allowed fields only; nest custom data under `input` / `extensions` |
+| Operator API **401** | Missing/invalid Bearer JWT | Configure IdP JWKS; send `Authorization: Bearer ...` |
+| Operator API **403** with ``asap:admin`` | Identity binding failed, or scope missing | Set custom claim = `manifest.id` or map `sub` via `ASAP_AUTH_SUBJECT_MAP` |
+| `ProtocolCorrelationError` on stream | Chunk `correlation_id` ≠ request envelope `id` | Echo `request_envelope.id` on every streamed chunk |
+| Host JWT rejected on `/asap/agent/status` | `jti` already recorded by a mutating route | Mint a new Host JWT for polling after register/revoke/rotate |
+| Redis JTI / rate-limit errors on HTTP | Redis unreachable | Redis errors **propagate** for JTI and transport rate limits — monitor Redis health |
+
+See also [Troubleshooting Guide](troubleshooting.md) and
+[Security — Operator REST APIs](security.md#operator-rest-apis-v252).
+
+---
+
+### Upgrading from v2.5.2 to v2.5.3
+
+**v2.5.3 (Adapter Lab II)** — **merge-ready** **2026-07-14**; **pending tag/publish** — is primarily **documentation
+and examples**, plus small DX / correctness fixes. There are **no breaking changes**
+for envelope, JWT, or capability grant semantics relative to v2.5.2. Until the
+`v2.5.3` tag lands on PyPI, keep installing **`asap-protocol==2.5.2`** (or unpinned
+latest from PyPI).
+
+#### What lands in v2.5.3
+
+- **Workflow connectors** — OpenAPI → ASAP skills for n8n / Activepieces-style
+  workflow HTTP APIs ([guide](integrations/workflow-connectors.md),
+  `examples/workflow_asap_connector/`).
+- **Automation connector security** — production baseline for OpenAPI-backed
+  connectors ([guide](guides/automation-connector-security.md)).
+- **Microsoft Agent Framework** — research / experimental interop guide only
+  ([guide](integrations/microsoft-agent-framework.md)); no .NET SDK / NuGet.
+- **NeMo Agent Toolkit** — experimental Path A demo
+  ([guide](integrations/nemo-agent-toolkit.md),
+  `examples/nemo_agent_toolkit_asap/`); Path C third-party plugin remains deferred.
+- **MkDocs / web** — Adapters + Lab II nav; marketplace WhatsNew ribbon for Lab II.
+- **Fixes**: JSON-safe invalid-envelope `-32602`; MCP Auth Bridge example client
+  self-captures child JWT; `health_check()` defaults to the client base URL;
+  `setuptools>=83` override for **PYSEC-2026-3447**.
+
+#### Upgrade steps
+
+1. **After** `v2.5.3` is on PyPI: bump with `pip install 'asap-protocol==2.5.3'`
+   (or `uv add`). Until then, stay on **`asap-protocol==2.5.2`**.
+2. No code changes required for existing v2.5.2 agents unless you adopt the new
+   examples or guides.
+3. TypeScript `@asap-protocol/*` packages remain at **2.4.1**;
+   `@asap-protocol/mcp-auth` HTTP/SSE middleware remains deferred.
+4. Optional: re-run `examples/mcp_auth_bridge/client.py` without pasting a JWT —
+   the client now captures the demo token from its own child stderr.
+
+#### Backward compatibility
+
+- **Wire protocol**: Unchanged from v2.5.2.
+- **Breaking changes**: None for Lab II scope (docs / examples / DX).
 
 ---
 

@@ -44,9 +44,9 @@ Full requirement tables: `product/prd/private/prd-v2.4.1-security-hardening.md` 
 
 | Item | Target | Status (2026-07-08) |
 |------|--------|---------------------|
-| `extra="forbid"` on ingress models | **v2.5.2** (was v2.5.4) | ✅ on `main` — [prd-v2.5.2-security-follow-up.md](./prd-v2.5.2-security-follow-up.md) |
-| Operator API auth (`/usage`, `/sla`, `/audit`) | **v2.5.2** | ✅ on `main` |
-| Redis-backed `JtiReplayCache` (+ web distributed rate limits) | **v2.5.2** | ✅ on `main` |
+| `extra="forbid"` on ingress models | **v2.5.2** (was v2.5.4) | ✅ shipped — [prd-v2.5.2-security-follow-up.md](./prd-v2.5.2-security-follow-up.md) |
+| Operator API auth (`/usage`, `/sla`, `/audit`) | **v2.5.2** | ✅ shipped |
+| Redis-backed `JtiReplayCache` (+ web distributed rate limits) | **v2.5.2** | ✅ shipped |
 | MCP Auth Bridge | **v2.5.0** | ✅ shipped 2026-06-24 |
 | Formal RFC spec | **v2.5.5** (was v2.5.3) | Planned — [prd-v2.5.5-formal-spec-interop.md](./prd-v2.5.5-formal-spec-interop.md) |
 
@@ -67,5 +67,5 @@ Full requirement tables: `product/prd/private/prd-v2.4.1-security-hardening.md` 
 
 | Date | Change |
 |------|--------|
-| 2026-07-08 | §4: security follow-ups retargeted to **v2.5.2**; Formal Spec → **v2.5.5** |
+| 2026-07-08 | §4: security follow-ups retargeted to **v2.5.2** and **shipped** (tag `v2.5.2`; #209 closed); Formal Spec → **v2.5.5** |
 | 2026-06-22 | Public retrospective PRD; private PRD remains detailed source |

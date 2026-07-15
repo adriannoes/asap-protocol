@@ -177,6 +177,8 @@ cython_debug/
 
 # Project specific
 !/.cursor/
+# Local Cursor slash-command workflows (dev process; keep on disk, do not commit)
+.cursor/commands/
 /drafts/
 /.claude/
 # Local agent state / tooling (ignore everywhere, not only repo root)

@@ -26,6 +26,10 @@
 | Rate Limiting | Enabled (default) | `rate_limit` parameter or `ASAP_RATE_LIMIT` env var |
 | Request Size Limits | Enabled (default) | `max_request_size` parameter or `ASAP_MAX_REQUEST_SIZE` env var |
 
+For **OpenAPI-backed workflow / automation connectors**, see
+[Automation connector security](guides/automation-connector-security.md)
+(secrets, TLS, webhooks, grants, MCP Path A notes).
+
 ---
 
 ## Overview
@@ -1103,6 +1107,78 @@ nonce_store = RedisNonceStore(redis_client)
 5. **Monitor Rejections**: Track `InvalidTimestampError` and `InvalidNonceError` to detect potential attacks
 6. **Host JWT polling**: `GET /asap/agent/status` performs a read-only `jti` replay check so polling can reuse one Host JWT, but any token already consumed by register, revoke, or rotate-key is rejected.
 
+### Multi-instance JWT replay (v2.5.2)
+
+Single-process deployments keep the default in-memory
+`asap.auth.agent_jwt.JtiReplayCache`. Multi-worker or multi-instance hosts must
+share replay state so a JWT `jti` consumed on one replica is rejected on every
+other replica.
+
+```python
+from asap.auth.jti_replay_cache import RedisJtiReplayCache
+from asap.transport.server import create_app
+
+# Requires: pip install 'asap-protocol[redis]'
+jti_cache = RedisJtiReplayCache.from_url("redis://localhost:6379/0")
+app = create_app(manifest, identity_jti_cache=jti_cache, ...)
+```
+
+Constraints:
+
+| Item | Behavior |
+|------|----------|
+| Default TTL | 90 seconds per `(partition_key, jti)` key |
+| Key shape | `{prefix}:{partition_key}:{jti}` (default prefix `asap:jti-replay`) |
+| Recording routes | Register / revoke / rotate-key call `check_and_record` |
+| Status polling | `GET /asap/agent/status` uses `record_jti=False` (read-only `contains`) |
+| Redis errors | **Propagate** to callers — not fail-soft (unlike web app rate limits) |
+| MCP Auth Bridge | Pass the same instance via `MCPAuthConfig(jti_replay_cache=jti_cache)` |
+
+Install the optional extra with `pip install 'asap-protocol[redis]'` (or
+`uv sync --extra redis`). Pair this with `ASAP_RATE_LIMIT_BACKEND` and a shared
+nonce store when running more than one worker. See
+[migration — Redis JTI](migration.md#redis-backed-jti-replay-cache-209).
+
+---
+
+## Operator REST APIs (v2.5.2)
+
+`/usage`, `/sla`, and `/audit` are **operator REST surfaces** (not JSON-RPC).
+They are mounted when the corresponding stores are passed to `create_app`, and
+remain **unauthenticated by default** for local/operator ergonomics. The server
+logs a startup warning when any of these routes are exposed without auth.
+
+### Enable OAuth2 protection
+
+```python
+from asap.auth import OAuth2Config
+from asap.transport.server import create_app
+
+app = create_app(
+    manifest,
+    oauth2_config=OAuth2Config(jwks_uri="https://idp.example.com/jwks.json"),
+    metering_storage=...,  # mounts /usage
+    sla_storage=...,       # mounts /sla
+    audit_store=...,       # mounts /audit
+    require_operator_auth=True,
+)
+```
+
+When `require_operator_auth=True`:
+
+- Paths under `/usage`, `/sla`, and `/audit` require a Bearer JWT.
+- Route dependency enforces scope ``asap:admin`` (``asap:execute`` alone → 403).
+- Identity binding still applies (custom claim = `manifest.id`, or `sub` in
+  `ASAP_AUTH_SUBJECT_MAP`) — same rule as `/asap`.
+- `oauth2_config` is required or `create_app` raises `ValueError`.
+- `OAuth2Config.required_scope` for `/asap` is **not** applied to operator
+  routes; those enforce only ``asap:admin``.
+
+Do **not** expose metering, SLA, or audit beyond localhost without
+`require_operator_auth=True`. Full token examples and IdP pitfalls:
+[migration — operator API auth](migration.md#opt-in-operator-api-auth-209) and
+[Configuring Custom Claims](security/v1.1-security-model.md#configuring-custom-claims).
+
 ---
 
 ## HTTPS Enforcement
@@ -1279,12 +1355,14 @@ def validate_payload(envelope: Envelope) -> TaskRequest:
 - [ ] Valid SSL certificates (not self-signed)
 - [ ] HSTS headers configured
 - [ ] Authentication required for all endpoints
-- [ ] Rate limiting enabled and configured appropriately
+- [ ] Operator REST (`/usage`, `/sla`, `/audit`): `require_operator_auth=True` when exposed beyond localhost
+- [ ] Multi-worker: shared `RedisJtiReplayCache` via `identity_jti_cache` (+ MCP `jti_replay_cache` if used)
+- [ ] Rate limiting enabled and configured appropriately (`ASAP_RATE_LIMIT_BACKEND` for multi-instance)
 - [ ] Request size limits configured (default: 10MB)
 - [ ] Request signing implemented
 - [ ] Audit logging enabled
 - [ ] Secrets stored in environment variables
-- [ ] Input validation on all payloads
+- [ ] Input validation on all payloads (no unknown `TaskRequest.config` / `CommonMetadata` keys)
 - [ ] Certificate rotation process defined
 
 ### Development Environment
@@ -1301,3 +1379,5 @@ def validate_payload(envelope: Envelope) -> TaskRequest:
 - [Error Handling](error-handling.md) - ASAP error taxonomy
 - [Transport](transport.md) - HTTP/JSON-RPC binding details
 - [Observability](observability.md) - Logging and tracing
+- [Automation connector security](guides/automation-connector-security.md) - OpenAPI workflow connectors
+- [MCP Auth Bridge](adapters/mcp-auth-bridge.md) - Mode A JWT + grants on stdio MCP

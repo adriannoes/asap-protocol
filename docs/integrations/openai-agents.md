@@ -161,3 +161,9 @@ This mirrors Mastra **`asapStreamToMastraTextStream`** but emits **`OpenAIAgents
 Runnable CLI demo: [`apps/example-openai-agents/README.md`](https://github.com/adriannoes/asap-protocol/tree/main/apps/example-openai-agents).
 
 Compliance Harness: `pnpm --filter example-openai-agents run compliance`.
+
+## Related
+
+- [TypeScript client SDK](../sdks/typescript.md)
+- [Mastra adapter](./mastra.md) — sibling Lab I npm bridge
+- [Workflow connectors](./workflow-connectors.md) · [Microsoft Agent Framework](./microsoft-agent-framework.md) · [NeMo Agent Toolkit](./nemo-agent-toolkit.md) — Adapter Lab II

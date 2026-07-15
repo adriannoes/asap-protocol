@@ -18,7 +18,33 @@ From the repository root:
 uv sync
 ```
 
-## Run the server
+## Quick start (recommended)
+
+The example **client** is self-contained: it spawns `server.py`, reads the minted demo Agent JWT from the **child** stderr, then calls `echo` and `secure_action`.
+
+```bash
+uv run python examples/mcp_auth_bridge/client.py
+```
+
+```bash
+cd examples/mcp_auth_bridge
+uv run python client.py
+```
+
+Do **not** pass a real JWT on the client CLI (`argv` leaks secrets). Each
+server process mints its own keys, so a foreign token fails signature verification
+(`bad_signature`).
+
+The client does **not** read `ASAP_AGENT_JWT` from the shell (a stale export used
+to skip stderr capture and cause confusing `bad_signature` failures). Use
+`--invalid-jwt` only for deliberate negative tests of `secure_action`.
+
+`ASAP_AGENT_JWT` remains meaningful only for the **server** middleware
+(`allow_env_jwt_fallback=True`) when calling tools without `_meta` — see §3.
+
+## Run the server alone
+
+Useful for manual MCP clients, compliance probes, or reviewing the stderr banner:
 
 ```bash
 uv run python examples/mcp_auth_bridge/server.py
@@ -42,11 +68,11 @@ In production the **host** signs Agent JWTs with its Ed25519 private key after t
 2. Register `AgentSession` in `InMemoryAgentStore`.
 3. Mint with `create_agent_jwt(agent_sk, host_thumbprint=..., agent_id=..., aud=..., capabilities=[...])`.
 
-The demo server prints one minted token on stderr for local testing.
+The demo server prints one minted token on stderr for local inspection. The bundled `client.py` captures that token from the **same** child process automatically.
 
 ### 2. Pass JWT on `tools/call`
 
-MCP clients should attach the token under `_meta`:
+MCP clients should attach the token under `_meta` (must be the JWT minted by **that** server process):
 
 ```json
 {
@@ -56,7 +82,7 @@ MCP clients should attach the token under `_meta`:
   "params": {
     "name": "secure_action",
     "arguments": {"action": "ping"},
-    "_meta": {"asap_agent_jwt": "<paste-token-from-stderr>"}
+    "_meta": {"asap_agent_jwt": "<token-from-this-server-stderr>"}
   }
 }
 ```
@@ -68,34 +94,22 @@ MCP clients should attach the token under `_meta`:
 When `MCPAuthConfig.allow_env_jwt_fallback=True` (enabled in this example for local docs only):
 
 ```bash
-export ASAP_AGENT_JWT='<paste-token-from-stderr>'
+# Only valid when ASAP_AGENT_JWT is the JWT minted by *this* server process
+# (e.g. injected into the same child env — not a paste from another terminal).
+export ASAP_AGENT_JWT='<token-from-this-server-stderr>'
 ```
 
 The middleware reads `ASAP_AGENT_JWT` when `_meta.asap_agent_jwt` is absent. **Do not enable in production.**
 
-## Optional client
-
-Minimal stdio caller that lists tools, calls `echo`, then `secure_action` with `_meta`.
-The client resolves `server.py` relative to its own file, so it works from the repo root
-or from this directory:
-
-```bash
-export ASAP_AGENT_JWT='<paste-token-from-server-stderr>'
-uv run python examples/mcp_auth_bridge/client.py
-```
-
-```bash
-cd examples/mcp_auth_bridge
-uv run python client.py --jwt '<token>'
-```
-
 ## Reviewer checklist
 
 1. `uv run python examples/mcp_auth_bridge/server.py --help` → exit 0.
-2. Start server; copy demo JWT from stderr.
-3. Call `echo` without JWT → succeeds.
-4. Call `secure_action` without JWT → `asap:auth_required`.
-5. Call `secure_action` with `_meta.asap_agent_jwt` (or `ASAP_AGENT_JWT`) → `executed: ...`.
+2. `uv run python examples/mcp_auth_bridge/client.py` (no JWT args) → `echo` + `secure_action` succeed.
+3. `uv run python examples/mcp_auth_bridge/client.py --invalid-jwt` → `echo` succeeds; `secure_action` fails.
+4. Start server alone; inspect demo JWT on stderr (do not paste into a second unrelated server).
+5. Call `echo` without JWT → succeeds.
+6. Call `secure_action` without JWT → `asap:auth_required`.
+7. Call `secure_action` with `_meta.asap_agent_jwt` from **that** server's stderr (or `ASAP_AGENT_JWT` in the same process) → `executed: ...`.
 
 ## Compliance
 

@@ -13,25 +13,23 @@ export function HeroSection() {
 
       <div className="relative z-10 container mx-auto px-4 md:px-6">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-8">
-          <div
-            className="flex flex-col justify-center space-y-8 text-center lg:text-left animate-in fade-in slide-in-from-bottom-5 duration-700 ease-out"
-          >
+          <div className="animate-in fade-in slide-in-from-bottom-5 flex flex-col justify-center space-y-8 text-center duration-700 ease-out lg:text-left">
             <div className="space-y-4">
               <Link
-                href="https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#252---2026-07-08"
+                href="https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#253---2026-07-14"
                 target="_blank"
                 rel="noopener noreferrer"
                 data-cta={HOMEPAGE_HERO_CTA_IDS.releaseBadge}
-                aria-label="View ASAP Protocol v2.5.2 changelog on GitHub"
+                aria-label="View ASAP Protocol v2.5.3 changelog on GitHub (merge-ready, pending publish)"
               >
                 <div className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-sm font-medium text-indigo-300 backdrop-blur-sm transition-colors hover:border-indigo-500/60 hover:bg-indigo-500/15">
                   <span className="mr-2 flex h-2 w-2 animate-pulse rounded-full bg-indigo-500"></span>
-                  v2.5.2 — Security follow-up
+                  v2.5.3 — Adapter Lab II · pending publish
                 </div>
               </Link>
               <AnimatedText
                 text="The Marketplace for Autonomous Agents"
-                className="text-4xl font-bold tracking-tighter leading-tight sm:text-5xl xl:text-6xl/none bg-clip-text text-transparent bg-gradient-to-r from-white to-white/80"
+                className="bg-gradient-to-r from-white to-white/80 bg-clip-text text-4xl leading-tight font-bold tracking-tighter text-transparent sm:text-5xl xl:text-6xl/none"
               />
               <AnimatedText
                 text="Discover, verify, and integrate specialized AI agents into your workflows using the open ASAP Protocol standard."

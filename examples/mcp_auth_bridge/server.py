@@ -14,6 +14,7 @@ import argparse
 import asyncio
 import base64
 import json
+import logging
 import os
 import sys
 from dataclasses import dataclass
@@ -23,7 +24,6 @@ from typing import Any
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from asap.mcp.auth import MCPAuthConfig, protect_server
 from asap.auth.agent_jwt import create_agent_jwt
 from asap.auth.capabilities import CapabilityDefinition, CapabilityRegistry
 from asap.auth.identity import (
@@ -33,8 +33,10 @@ from asap.auth.identity import (
     InMemoryHostStore,
     jwk_thumbprint_sha256,
 )
+from asap.mcp.auth import MCPAuthConfig, protect_server
 from asap.mcp.auth.config import MCP_COMPLIANCE_ENV_VAR as COMPLIANCE_ENV_VAR
 from asap.mcp.server import MCPServer
+from asap.observability.logging import configure_logging
 
 DEMO_HOST_ID = "mcp-auth-bridge-host"
 DEMO_AGENT_ID = "urn:asap:agent:mcp-auth-bridge-demo"
@@ -226,7 +228,30 @@ def _print_startup_instructions(identity: DemoIdentity) -> None:
         print(f"ASAP_COMPLIANCE_JSON:{json.dumps(payload)}", file=sys.stderr, flush=True)
 
 
+def route_observability_logs_to_stderr() -> None:
+    """Send ASAP structlog to stderr so MCP stdout stays JSON-RPC-only.
+
+    Provenance (PR #291 review / NeMo Path A): ``ProtectedMCPServer`` may emit
+    auth log lines via the default ``StreamHandler(sys.stdout)``, which corrupts
+    stdio MCP framing for clients that share the pipe.
+
+    Example::
+
+        route_observability_logs_to_stderr()
+        await server.run_stdio()
+    """
+    configure_logging(force=True)
+    root = logging.getLogger()
+    formatter = root.handlers[0].formatter if root.handlers else None
+    root.handlers.clear()
+    handler = logging.StreamHandler(sys.stderr)
+    if formatter is not None:
+        handler.setFormatter(formatter)
+    root.addHandler(handler)
+
+
 async def _run_stdio() -> None:
+    route_observability_logs_to_stderr()
     server, identity = await build_protected_server()
     _print_startup_instructions(identity)
     await server.run_stdio()

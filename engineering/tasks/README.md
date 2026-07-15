@@ -8,8 +8,7 @@ Sprint roadmaps and release checklists per protocol version. Pair each folder wi
 
 | Folder | PRD | Status |
 |--------|-----|--------|
-| `release/2.5.2` (no task folder — release PR) | [prd-v2.5.2-security-follow-up.md](../../product/prd/prd-v2.5.2-security-follow-up.md) | **RELEASE PENDING** |
-| *(next — start `v2.5.3/` when Adapter Lab II kicks off)* | [prd-v2.5.3-adapter-lab-ii.md](../../product/prd/prd-v2.5.3-adapter-lab-ii.md) | **PLANNED** (after v2.5.2 tag) |
+| [v2.5.3/](./v2.5.3/tasks-v2.5.3-roadmap.md) | [prd-v2.5.3-adapter-lab-ii.md](../../product/prd/prd-v2.5.3-adapter-lab-ii.md) | **S4 MERGE-READY** — PR `release/2.5.3` → `main`; tag pending confirmation |
 
 ---
 
@@ -42,11 +41,10 @@ Sprint roadmaps and release checklists per protocol version. Pair each folder wi
 
 | Version | PRD | Blocked by |
 |---------|-----|------------|
-| v2.5.3 | [prd-v2.5.3-adapter-lab-ii.md](../../product/prd/prd-v2.5.3-adapter-lab-ii.md) | v2.5.2 tag |
 | v2.5.4 | [prd-v2.5.4-distribution-loop.md](../../product/prd/prd-v2.5.4-distribution-loop.md) | v2.5.3 |
 | v2.5.5 | [prd-v2.5.5-formal-spec-interop.md](../../product/prd/prd-v2.5.5-formal-spec-interop.md) | v2.5.4 (soft) |
 
-Create `engineering/tasks/v2.5.3/` etc. when each adoption release starts.
+Create `engineering/tasks/v2.5.4/` etc. when each adoption release starts.
 
 ---
 
