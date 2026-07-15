@@ -59,6 +59,9 @@
     "minimatch": "^10.2.1",
     "micromatch": {
       "picomatch": "^2.3.2"
+    },
+    "next@16.2.10": {
+      "postcss": "8.5.10"
     }
   },
   "devDependencies": {
