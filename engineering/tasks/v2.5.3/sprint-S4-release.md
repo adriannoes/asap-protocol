@@ -8,6 +8,8 @@
 **Enables:** v2.5.4 Distribution Loop.  
 **Depends on:** [release-checklist.md](./release-checklist.md).
 
+**Release sequence (do not reorder):** **merge → tag → publish → handoff**.
+
 ---
 
 ## Tasks
@@ -21,6 +23,7 @@
   - [x] `docs/migration.md` → upgrading from v2.5.2 (finalize S3 stub)
   - [x] Update `AGENTS.md`, `product/README.md`, `docs/index.md` version blurb, checkpoints
   - [x] Confirm [docs-review-checklist.md](./docs-review-checklist.md) §8 version-string sign-off
+  - [x] Public copy: **2.5.2** on PyPI; **2.5.3** merge-ready / **pending tag/publish** (no `pip install ==2.5.3` until PyPI)
 
 - [x] **5.3 Pre-push CI** (Phase 5 green 2026-07-14)
   - [x] `uv run ruff check .`
@@ -31,12 +34,13 @@
   - [x] If `apps/web/` changed: lint, `tsc`, vitest, build
   - [x] MkDocs build if docs/nav changed (`mkdocs build` / project-documented command)
 
-- [ ] **5.4 Tag & publish** *(requires explicit user confirmation)*
-  - [ ] PR `release/2.5.3` → `main` — [#291](https://github.com/adriannoes/asap-protocol/pull/291) **OPEN** (merge not done)
-  - [ ] Tag `v2.5.3` + GitHub Release
-  - [ ] Confirm PyPI/Docker workflows as applicable
+- [ ] **5.4 Merge → tag → publish** *(requires explicit user confirmation)*
+  - [ ] **Merge** PR `release/2.5.3` → `main` — [#291](https://github.com/adriannoes/asap-protocol/pull/291) **OPEN**
+  - [ ] **Tag** `v2.5.3` + push (triggers release workflow)
+  - [ ] **Publish** — confirm PyPI `asap-protocol==2.5.3`, Docker/GHCR, and GitHub Release are green
+  - [ ] Only after publish: run [post-publish checklist](./release-checklist.md#60-post-publish-swap-pending--shipped)
 
-- [ ] **5.5 Handoff** *(after tag)*
+- [ ] **5.5 Handoff** *(after publish)*
   - [ ] Mark this roadmap SHIPPED
   - [ ] Point next work at [prd-v2.5.4-distribution-loop.md](../../../product/prd/prd-v2.5.4-distribution-loop.md)
   - [ ] Remind: `@asap-protocol/mcp-auth` still on [v2.5.0 backlog](../v2.5.0/backlog-mcp-auth-typescript.md)
@@ -47,4 +51,4 @@
 
 - [x] [release-checklist.md](./release-checklist.md) §§1–3 content gates prepared (CI boxes filled after Phase 5)
 - [x] All LAB2-001..006 DoD items closed or N/A
-- [ ] Train handoff to v2.5.4 documented *(after tag)*
+- [ ] Train handoff to v2.5.4 documented *(after tag/publish)*

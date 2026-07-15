@@ -3,7 +3,7 @@
 > **Purpose**: Formal review points to update documentation with learnings (product follow-up after releases).
 > **Location**: Lives under **`product/`** because it drives PRD updates and retros, not day-to-day engineering execution.
 > **Created**: 2026-02-06
-> **Updated**: 2026-07-14 — **v2.5.3 merge-ready** on `release/2.5.3` (tag pending confirmation); train next: Distribution Loop → **v2.5.4**; Formal Spec → **v2.5.5**.
+> **Updated**: 2026-07-14 — **v2.5.3 merge-ready** on `release/2.5.3` (**pending tag/publish**); PyPI remains **2.5.2**. Train next: Distribution Loop → **v2.5.4**; Formal Spec → **v2.5.5**.
 
 ---
 
@@ -13,7 +13,7 @@ Use this section first; the checkpoint sections below add detail or archive.
 
 **Evidence snapshot** (refresh with `git log` and [`pyproject.toml`](../pyproject.toml)):
 - **Shipped on `main` (2026-07-08):** `pyproject.toml` was **`2.5.2`**. Tag [`v2.5.2`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.2) (security & correctness follow-up, merge [#281](https://github.com/adriannoes/asap-protocol/pull/281)); PyPI `asap-protocol` **2.5.2**. Umbrella [#209](https://github.com/adriannoes/asap-protocol/issues/209) closed. Scope: [prd-v2.5.2-security-follow-up.md](./prd/prd-v2.5.2-security-follow-up.md).
-- **Merge-ready (2026-07-14):** `pyproject.toml` **`version = "2.5.3"`** on `release/2.5.3` (Adapter Lab II). Tag `v2.5.3` pending explicit confirmation. Scope: [prd-v2.5.3-adapter-lab-ii.md](./prd/prd-v2.5.3-adapter-lab-ii.md).
+- **Merge-ready (2026-07-14):** `pyproject.toml` **`version = "2.5.3"`** on `release/2.5.3` (Adapter Lab II). Tag `v2.5.3` / PyPI publish **pending**. Install from PyPI remains **`asap-protocol==2.5.2`**. Scope: [prd-v2.5.3-adapter-lab-ii.md](./prd/prd-v2.5.3-adapter-lab-ii.md).
 - **Prior:** [`v2.5.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.1) code quality patch (2026-06-26); [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0) MCP Auth Bridge; [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1) compliance-only → `asap-compliance` **1.3.0**. npm `@asap-protocol/*` **2.4.1**.
 - **v2.4.1** security hardening patch shipped **2026-06-14** (tag [`v2.4.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.4.1)).
 - **v2.4.0** edge-AI discovery shipped **2026-05-24** ([`CHANGELOG.md`](../CHANGELOG.md#240---2026-05-24)).
@@ -30,7 +30,7 @@ Use this section first; the checkpoint sections below add detail or archive.
 | **v2.5.0 — MCP Auth Bridge** | **Released** **2026-06-24** — `asap.adapters.mcp` (`protect_server`), stdio JWT carriage, compliance profile `mcp-auth-bridge`, [adapter guide](../docs/adapters/mcp-auth-bridge.md) ([`CHANGELOG.md`](../CHANGELOG.md#250---2026-06-24), [migration](../docs/migration.md#upgrading-from-v241-to-v250), [PRD](./prd/prd-v2.5.0-mcp-auth-bridge.md)). Tag **v2.5.0**; PyPI/Docker via [sprint-S5-release.md](../engineering/tasks/v2.5.0/sprint-S5-release.md). | **`asap-compliance` 1.3.0** on PyPI (tag **v2.5.0.1**); `@asap-protocol/mcp-auth` ([backlog](../engineering/tasks/v2.5.0/backlog-mcp-auth-typescript.md)). |
 | **v2.5.1 — Code quality patch** | **Released** **2026-06-26** — behavior-preserving refactor + six P0 fixes. PR [#244](https://github.com/adriannoes/asap-protocol/pull/244). Tag **v2.5.1**. ([`CHANGELOG.md`](../CHANGELOG.md#251---2026-06-25), [migration](../docs/migration.md#upgrading-from-v250-to-v251)). | Follow-ups #245–#249 **closed** in v2.5.2; Adapter Lab II → **v2.5.3**. |
 | **v2.5.2 — Security follow-up** | **Released** **2026-07-08** — #209 (operator auth, `extra="forbid"`, Redis JTI, web rate limits) + CR #245–#249 + registry #224/#227 + deps #258. PR [#281](https://github.com/adriannoes/asap-protocol/pull/281); tag **v2.5.2**; PyPI **2.5.2**. [PRD](./prd/prd-v2.5.2-security-follow-up.md), [`CHANGELOG`](../CHANGELOG.md#252---2026-07-08), [migration](../docs/migration.md#upgrading-from-v251). | CP-7 for 2.5.2. |
-| **v2.5.3 — Adapter Lab II** | **Merge-ready** **2026-07-14** — workflow connectors, automation security, experimental MAF / NAT guides, DX fixes. [PRD](./prd/prd-v2.5.3-adapter-lab-ii.md), [`CHANGELOG`](../CHANGELOG.md#253---2026-07-14), [migration](../docs/migration.md#upgrading-from-v252-to-v253); tasks [tasks-v2.5.3-roadmap.md](../engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md). | Tag/publish pending confirmation; next **v2.5.4**. |
+| **v2.5.3 — Adapter Lab II** | **Merge-ready** **2026-07-14** — workflow connectors, automation security, experimental MAF / NAT guides, DX fixes. [PRD](./prd/prd-v2.5.3-adapter-lab-ii.md), [`CHANGELOG`](../CHANGELOG.md#253---2026-07-14), [migration](../docs/migration.md#upgrading-from-v252-to-v253); tasks [tasks-v2.5.3-roadmap.md](../engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md). | **Pending tag/publish**; PyPI still **2.5.2**; next **v2.5.4**. |
 | **After v2.5.3** | Train: Distribution Loop → **v2.5.4**, Formal Spec → **v2.5.5**. | Kickoff [prd-v2.5.4-distribution-loop.md](./prd/prd-v2.5.4-distribution-loop.md) when ready. |
 
 **Sources of truth for current execution**: [prd-v2.5-roadmap.md](./prd/prd-v2.5-roadmap.md), [prd-v2.5.3-adapter-lab-ii.md](./prd/prd-v2.5.3-adapter-lab-ii.md), [tasks-v2.5.3-roadmap.md](../engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md), [AGENTS.md](../AGENTS.md).

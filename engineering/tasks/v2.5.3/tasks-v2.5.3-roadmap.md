@@ -1,8 +1,8 @@
 # Tasks: v2.5.3 Adapter Lab II — Sprint Index
 
-**Status: ACTIVE (kickoff started 2026-07-13)** — `release/2.5.3` on origin; current spike branch `feat/v2.5.3-s1b-s1c-spikes` (S0+S1 merged via `feat/v2.5.3-s0-s1-workflow`). Demand sheet: [demand-sheet.md](./demand-sheet.md).
+**Status: MERGE-READY (pending tag/publish)** — `release/2.5.3` on origin; S0–S3 Done; S4 content/CI green. Public install remains **`asap-protocol==2.5.2`** on PyPI until sequence **merge → tag → publish → handoff** completes. Demand sheet: [demand-sheet.md](./demand-sheet.md).
 
-Based on [PRD v2.5.3 Adapter Lab II](../../../product/prd/prd-v2.5.3-adapter-lab-ii.md). Each sprint merges into **`release/2.5.3`** (see [BRANCHING.md](./BRANCHING.md)); merge to `main` only after S4.
+Based on [PRD v2.5.3 Adapter Lab II](../../../product/prd/prd-v2.5.3-adapter-lab-ii.md). Each sprint merges into **`release/2.5.3`** (see [BRANCHING.md](./BRANCHING.md)); merge to `main` only after S4 content gates, then tag/publish.
 
 ## Prerequisites
 
@@ -22,7 +22,7 @@ Based on [PRD v2.5.3 Adapter Lab II](../../../product/prd/prd-v2.5.3-adapter-lab
 | **S1c** | [NeMo Agent Toolkit spike](./sprint-S1c-nemo-agent-toolkit.md) | D7 | P0 planned | Done |
 | **S2** | [Security guide & MCP patterns](./sprint-S2-security-docs.md) | LAB2-003, LAB2-006 | P0 | Done |
 | **S3** | [Docs review, site routing & learnings](./sprint-S3-docs-review.md) | LAB2-004, LAB2-005 + docs surface | P0 | Done |
-| **S4** | [Release v2.5.3](./sprint-S4-release.md) | DoD, metrics | P0 | Planned |
+| **S4** | [Release v2.5.3](./sprint-S4-release.md) | DoD, metrics | P0 | Merge-ready · pending tag/publish |
 
 ## Dependency graph
 
@@ -106,11 +106,15 @@ S1b / S1c never block S1/S2/S3/S4. S0 D2 was **no-go** on demand; **maintainer o
   - **Trigger:** S1–S3 DoD green on `release/2.5.3`.
   - **Enables:** v2.5.4 Distribution Loop kickoff.
   - **Depends on:** Tasks 2.0–4.0; [release-checklist.md](./release-checklist.md).
+  - **Sequence:** **merge → tag → publish → handoff** (do not mark SHIPPED before publish).
   - **Acceptance criteria:**
     - [x] Version **2.5.3**, CHANGELOG, migration note
     - [x] Pre-push CI green (ruff, mypy, pytest ≥85%, pip-audit)
-    - [ ] Tag `v2.5.3` + PyPI as applicable *(awaiting user confirmation)*
-    - [ ] `release/2.5.3` → `main`
+    - [x] Public copy: PyPI **2.5.2** available; **2.5.3** pending tag/publish
+    - [ ] Merge `release/2.5.3` → `main`
+    - [ ] Tag `v2.5.3` + PyPI / Docker / GitHub Release green
+    - [ ] Post-publish swap pending → shipped ([release-checklist §6](./release-checklist.md#60-post-publish-swap-pending--shipped))
+    - [ ] Handoff to v2.5.4
 
 ## Definition of Done — v2.5.3
 
@@ -122,7 +126,7 @@ S1b / S1c never block S1/S2/S3/S4. S0 D2 was **no-go** on demand; **maintainer o
 - [x] LAB2-005 — open vs hosted learnings captured
 - [x] LAB2-006 — Auth Bridge referenced if MCP exposed (or N/A documented)
 - [x] Transport growth lint clean across v2.5.3 PRs
-- [x] [release-checklist.md](./release-checklist.md) §§1–3 signed (S4 content + CI); §4 tag pending
+- [x] [release-checklist.md](./release-checklist.md) §§1–3 signed (S4 content + CI); §§4–6 merge/tag/publish/handoff pending
 
 ## Out of scope (defer)
 
@@ -175,3 +179,4 @@ S1b / S1c never block S1/S2/S3/S4. S0 D2 was **no-go** on demand; **maintainer o
 | 2026-07-13 | **S1b Done**: MAF guide-only ([microsoft-agent-framework.md](../../../docs/integrations/microsoft-agent-framework.md)); 2b.3 C# sample skipped/N/A |
 | 2026-07-13 | **S1c Done**: Path A example + [nemo-agent-toolkit.md](../../../docs/integrations/nemo-agent-toolkit.md); Path C out of ship; NAT optional in CI |
 | 2026-07-14 | **S2+S3 Done**: security guide + MCP N/A/Path A docs; MkDocs/nav/web CTAs; learnings note; docs checklist §§1–7 signed (T2 review blockers pending re-review) |
+| 2026-07-14 | **S4 merge-ready**: public copy pending tag/publish; sequence merge → tag → publish → handoff; do not mark SHIPPED until PyPI/Docker/Release green |
