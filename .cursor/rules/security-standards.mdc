@@ -8,7 +8,6 @@ alwaysApply: true
 layer: policy
 seeAlso:
   - .cursor/skills/security-review/SKILL.md
-  - .cursor/commands/security-pr-review.md
   - SECURITY.md
 ---
 

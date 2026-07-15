@@ -10,7 +10,7 @@ When instructions conflict, follow this order:
 2. **Always-on rules** (`alwaysApply: true` in `.cursor/rules/`)
 3. **Scoped / requestable rules** (loaded by glob or on demand)
 4. **Skills** (`.cursor/skills/*/SKILL.md` — procedural workflows)
-5. **Commands** (`.cursor/commands/` — slash workflows with fixed output; **gitignored / local-only**)
+5. **Commands** (optional `.cursor/commands/` — slash workflows with fixed output; **gitignored / local-only**, not required in-repo)
 6. **Docs** (`docs/`, `AGENTS.md`, `CONTRIBUTING.md`)
 
 ## Rules vs skills vs commands
@@ -19,7 +19,7 @@ When instructions conflict, follow this order:
 |------|----------|---------|
 | **Rules** | `.cursor/rules/*.mdc` | Constraints and standards (auto-loaded or requestable) |
 | **Skills** | `.cursor/skills/*/SKILL.md` | Deep procedural knowledge for a specific task |
-| **Commands** | `.cursor/commands/*.md` | Slash-command workflows (e.g. PR security review); **not committed** — keep locally |
+| **Commands** | `.cursor/commands/*.md` (optional) | Local slash-command workflows; **not committed** — keep locally if you use them |
 
 **Bridge pattern:** A thin rule points to a skill when the topic needs detail. Example: `testing-rate-limiting.mdc` → `skills/testing-rate-limiting/SKILL.md`.
 
@@ -55,7 +55,7 @@ Web app changes (`apps/web/`): also run `npm run lint`, `npx tsc --noEmit`, `npx
 | Rate-limited endpoints / flaky 429 | `testing-rate-limiting.mdc` → `skills/testing-rate-limiting/SKILL.md` |
 | Frontend (`apps/web/`) | `frontend-best-practices.mdc` |
 | Security audit (general) | `skills/security-review/SKILL.md` |
-| Security PR review (high-confidence only) | command `security-pr-review.md` |
+| Security PR review (high-confidence only) | Optional local command under `.cursor/commands/` when present |
 | Code quality review | `skills/code-quality-review/SKILL.md` |
 
 ## Rules inventory
