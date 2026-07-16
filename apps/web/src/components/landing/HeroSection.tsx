@@ -16,15 +16,15 @@ export function HeroSection() {
           <div className="animate-in fade-in slide-in-from-bottom-5 flex flex-col justify-center space-y-8 text-center duration-700 ease-out lg:text-left">
             <div className="space-y-4">
               <Link
-                href="https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#253---2026-07-14"
+                href="https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3"
                 target="_blank"
                 rel="noopener noreferrer"
                 data-cta={HOMEPAGE_HERO_CTA_IDS.releaseBadge}
-                aria-label="View ASAP Protocol v2.5.3 changelog on GitHub (merged, pending publish)"
+                aria-label="View ASAP Protocol v2.5.3 release on GitHub"
               >
                 <div className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-sm font-medium text-indigo-300 backdrop-blur-sm transition-colors hover:border-indigo-500/60 hover:bg-indigo-500/15">
                   <span className="mr-2 flex h-2 w-2 animate-pulse rounded-full bg-indigo-500"></span>
-                  v2.5.3 — Adapter Lab II · pending publish
+                  v2.5.3 — Adapter Lab II
                 </div>
               </Link>
               <AnimatedText

@@ -1080,11 +1080,10 @@ See also [Troubleshooting Guide](troubleshooting.md) and
 
 ### Upgrading from v2.5.2 to v2.5.3
 
-**v2.5.3 (Adapter Lab II)** — **merged to `main`** ([#291](https://github.com/adriannoes/asap-protocol/pull/291), **2026-07-15**); **pending tag/publish** — is primarily **documentation
+**v2.5.3 (Adapter Lab II)** — **shipped** ([tag `v2.5.3`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3),
+[#291](https://github.com/adriannoes/asap-protocol/pull/291)) — is primarily **documentation
 and examples**, plus small DX / correctness fixes. There are **no breaking changes**
-for envelope, JWT, or capability grant semantics relative to v2.5.2. Until the
-`v2.5.3` tag lands on PyPI, keep installing **`asap-protocol==2.5.2`** (or unpinned
-latest from PyPI).
+for envelope, JWT, or capability grant semantics relative to v2.5.2.
 
 #### What lands in v2.5.3
 
@@ -1105,8 +1104,7 @@ latest from PyPI).
 
 #### Upgrade steps
 
-1. **After** `v2.5.3` is on PyPI: bump with `pip install 'asap-protocol==2.5.3'`
-   (or `uv add`). Until then, stay on **`asap-protocol==2.5.2`**.
+1. Bump with `pip install 'asap-protocol==2.5.3'` (or `uv add asap-protocol`).
 2. No code changes required for existing v2.5.2 agents unless you adopt the new
    examples or guides.
 3. TypeScript `@asap-protocol/*` packages remain at **2.4.1**;

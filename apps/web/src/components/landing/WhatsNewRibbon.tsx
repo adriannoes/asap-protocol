@@ -35,7 +35,7 @@ const DOCS_MCP_AUTH_BRIDGE =
 const EXAMPLE_MCP_AUTH_BRIDGE =
   'https://github.com/adriannoes/asap-protocol/tree/main/examples/mcp_auth_bridge';
 const DOCS_TS_SDK = 'https://github.com/adriannoes/asap-protocol/blob/main/docs/sdks/typescript.md';
-// Lab II docs ship with v2.5.3 (merged to main; pending tag/publish).
+// Lab II docs ship with v2.5.3.
 const DOCS_WORKFLOW_CONNECTORS =
   'https://github.com/adriannoes/asap-protocol/blob/main/docs/integrations/workflow-connectors.md';
 const DOCS_AUTOMATION_CONNECTOR_SECURITY =
@@ -126,7 +126,7 @@ const PILLS: Pill[] = [
 export function WhatsNewRibbon() {
   return (
     <aside
-      aria-label="What's new in ASAP Protocol v2.5.3 (merged, pending publish)"
+      aria-label="What's new in ASAP Protocol v2.5.3"
       className="w-full border-y border-zinc-900 bg-zinc-950"
     >
       <div className="container mx-auto flex max-w-5xl flex-col gap-4 px-4 py-8 md:flex-row md:items-center md:gap-4 md:px-6 md:py-10">
@@ -137,7 +137,7 @@ export function WhatsNewRibbon() {
               What&apos;s new in v2.5.3
             </span>
             <span className="text-xs text-zinc-500">
-              Adapter Lab II · merged · pending tag/publish
+              Adapter Lab II · workflow connectors &amp; interop guides
             </span>
           </div>
         </div>

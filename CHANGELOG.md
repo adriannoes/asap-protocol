@@ -19,13 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.5.3] - 2026-07-14
 
-> **Status:** merged to `main` ([#291](https://github.com/adriannoes/asap-protocol/pull/291), 2026-07-15);
-> **pending tag/publish**. PyPI still serves **2.5.2** until `v2.5.3` is tagged and the
-> release workflow completes.
-
 **Adapter Lab II** — workflow / enterprise adapters as **docs + examples** (no wire-format
 change). Scope: [prd-v2.5.3-adapter-lab-ii.md](product/prd/prd-v2.5.3-adapter-lab-ii.md).
-npm `@asap-protocol/*` packages remain at **2.4.1**.
+npm `@asap-protocol/*` packages remain at **2.4.1**. Tag [`v2.5.3`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3) · PyPI `asap-protocol==2.5.3`.
 
 ### Added
 

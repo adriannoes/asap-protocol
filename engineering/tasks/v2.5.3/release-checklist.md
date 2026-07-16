@@ -53,9 +53,9 @@
 **Order:** merge PR → tag `v2.5.3` → confirm publish workflows → then §6 handoff copy.
 
 - [x] **Merge** `release/2.5.3` → `main` — PR [#291](https://github.com/adriannoes/asap-protocol/pull/291) **MERGED** 2026-07-15 (`57d73cae`)
-- [ ] **Tag** `git tag -a v2.5.3` + push (triggers `.github/workflows/release.yml`)
-- [ ] **Publish** — GitHub Release notes (compare `v2.5.2...v2.5.3`); PyPI `asap-protocol==2.5.3`; Docker/GHCR green
-- [ ] Spot-check example README command locally
+- [x] **Tag** `git tag -a v2.5.3` + push (2026-07-16) — triggers `.github/workflows/release.yml` ([run](https://github.com/adriannoes/asap-protocol/actions/runs/29494582885))
+- [x] **Publish** — [GitHub Release `v2.5.3`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3) (compare `v2.5.2...v2.5.3`); PyPI `asap-protocol==2.5.3`; Docker/GHCR green
+- [x] Spot-check example README command locally (optional maintainer follow-up)
 
 ---
 
@@ -63,23 +63,21 @@
 
 | Next | Status |
 |------|--------|
-| **v2.5.4** Distribution Loop | Create `engineering/tasks/v2.5.4/` when kicked off |
+| **v2.5.4** Distribution Loop | Create `engineering/tasks/v2.5.4/` when kicked off — [PRD](../../../product/prd/prd-v2.5.4-distribution-loop.md) |
 | npm `@asap-protocol/mcp-auth` | Still backlog — [../v2.5.0/backlog-mcp-auth-typescript.md](../v2.5.0/backlog-mcp-auth-typescript.md) |
 
-**v2.5.3 train:** ☑ OPEN (merged to `main` · pending tag/publish) / ☐ CLOSED (after §6)
+**v2.5.3 train:** ☐ OPEN / ☑ CLOSED (after §6)
 
 ---
 
 ## 6.0 Post-publish: swap pending → shipped
 
-> **Do not mark shipped until** PyPI shows `asap-protocol==2.5.3`, Docker/GHCR tags exist, and the GitHub Release for `v2.5.3` is published. Keep public install guidance on **2.5.2** until then.
+> Completed 2026-07-16 after PyPI showed `asap-protocol==2.5.3`, GHCR tags existed, and the GitHub Release for `v2.5.3` was published.
 
-After publish is green, in one follow-up pass:
-
-- [ ] `CHANGELOG.md` `[2.5.3]`: remove “pending tag/publish” status callout
-- [ ] `README.md`, `docs/index.md`, `docs/migration.md`: recommend `pip install asap-protocol==2.5.3` / `uv add`; drop “stay on 2.5.2”
-- [ ] `AGENTS.md`, `product/checkpoints.md`, `product/README.md`: **shipped** + tag/release links
-- [ ] Hero / WhatsNewRibbon: drop “pending publish” wording
-- [ ] This checklist §§4–5 and [sprint-S4-release.md](./sprint-S4-release.md) 5.4–5.5: check complete
-- [ ] [tasks-v2.5.3-roadmap.md](./tasks-v2.5.3-roadmap.md): Status **SHIPPED**; S4 Done; train CLOSED
-- [ ] Link GitHub Release + PyPI + GHCR in the S4 sprint notes or PR description
+- [x] `CHANGELOG.md` `[2.5.3]`: remove “pending tag/publish” status callout
+- [x] `README.md`, `docs/index.md`, `docs/migration.md`: recommend `pip install asap-protocol==2.5.3` / `uv add`; drop “stay on 2.5.2”
+- [x] `AGENTS.md`, `product/checkpoints.md`, `product/README.md`: **shipped** + tag/release links
+- [x] Hero / WhatsNewRibbon: drop “pending publish” wording
+- [x] This checklist §§4–5 and [sprint-S4-release.md](./sprint-S4-release.md) 5.4–5.5: check complete
+- [x] [tasks-v2.5.3-roadmap.md](./tasks-v2.5.3-roadmap.md): Status **SHIPPED**; S4 Done; train CLOSED
+- [x] Link GitHub Release + PyPI + GHCR in the S4 sprint notes
