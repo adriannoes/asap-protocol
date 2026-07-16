@@ -5,7 +5,7 @@
 > **Version**: 2.5.x
 > **Status**: ACTIVE
 > **Created**: 2026-06-22
-> **Last Updated**: 2026-07-08
+> **Last Updated**: 2026-07-16
 >
 > **Predecessor**: [prd-v2.4.1-security-hardening.md](./prd-v2.4.1-security-hardening.md) (✅ shipped 2026-06-14)
 > **Successor (long-term)**: [prd-v3.0-economy.md](./prd-v3.0-economy.md)
@@ -41,11 +41,11 @@ Between **v2.4.1** (security patch) and **v3.0** (economy), the project needs a 
 | **v2.5.0** | MCP Auth Bridge | ASAP Agent JWT + capabilities em MCP `tools/call` | [prd-v2.5.0-mcp-auth-bridge.md](./prd-v2.5.0-mcp-auth-bridge.md) | **✅ Shipped** 2026-06-24 — tag [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0) |
 | **v2.5.1** | Code quality patch | Thermo-nuclear audit S0–S3 + P0 correctness/security fixes | *(execution: `engineering/tasks/private/v2.5.1/`)* | **✅ Shipped** 2026-06-26 — tag [`v2.5.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.1) |
 | **v2.5.2** | Security & correctness follow-up | #209 (operator auth, `extra="forbid"`, Redis JTI, web rate limits) + CR #245–#249 + registry fixes | [prd-v2.5.2-security-follow-up.md](./prd-v2.5.2-security-follow-up.md) | **✅ Shipped** 2026-07-08 — tag [`v2.5.2`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.2) |
-| **v2.5.3** | Adapter Lab II | Enterprise/workflow adapters (ex v2.3.2) | [prd-v2.5.3-adapter-lab-ii.md](./prd-v2.5.3-adapter-lab-ii.md) | Ready for kickoff — [tasks](../../engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md) |
-| **v2.5.4** | Distribution Loop | Homepage, templates, métricas (ex v2.3.3) | [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md) | Planned (after 2.5.3) |
+| **v2.5.3** | Adapter Lab II | Enterprise/workflow adapters (ex v2.3.2) | [prd-v2.5.3-adapter-lab-ii.md](./prd-v2.5.3-adapter-lab-ii.md) | **✅ Shipped** 2026-07-16 — tag [`v2.5.3`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3) · [tasks](../../engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md) |
+| **v2.5.4** | Distribution Loop | Homepage, templates, métricas (ex v2.3.3) | [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md) | **Ready for kickoff** |
 | **v2.5.5** | Formal Spec & Interop | RFC spec, introspection, privacy, cross-protocol | [prd-v2.5.5-formal-spec-interop.md](./prd-v2.5.5-formal-spec-interop.md) | Planned |
 
-**Execution rule:** **v2.5.0**, **v2.5.1**, and **v2.5.2** shipped. **v2.5.3+** start when maintainers open the next adoption train. **v2.5.5** may overlap docs-only work.
+**Execution rule:** **v2.5.0–v2.5.3** shipped. **v2.5.4** is next (Distribution Loop). **v2.5.5** may overlap docs-only work.
 
 **Patch tags (not minor releases):** [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1) republished **`asap-compliance` 1.3.0** only; `pyproject.toml` remained **2.5.0**. **`@asap-protocol/mcp-auth`** (npm) is still deferred — future npm patch TBD (do not confuse with tag `v2.5.0.1`).
 
@@ -108,6 +108,7 @@ Narrativa pública: **ASAP não substitui MCP** — fornece a camada de identida
 | 2026-07-08 | Rescope: v2.5.2 = security follow-up; Adapter Lab II → v2.5.3; Distribution Loop → v2.5.4; Formal Spec → v2.5.5; document v2.5.1 as quality patch |
 | 2026-07-08 | **v2.5.2 shipped** — tag `v2.5.2`; PyPI 2.5.2; umbrella #209 closed |
 | 2026-07-11 | v2.5.3 status → Ready for kickoff; linked [tasks-v2.5.3-roadmap.md](../../engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md) |
+| 2026-07-16 | **v2.5.3 shipped** — tag `v2.5.3`; PyPI 2.5.3; v2.5.4 → Ready for kickoff |
 | 2026-06-22 | Creation; tasks 1.0–5.0 added to sprint index |
 | 2026-06-24 | Sprint sub-tasks S0–S5 finalized; v2.5.0 marked ready for implementation |
 | 2026-06-24 | v2.5.0 S0–S4 merged on `release/2.5.0`; TS `@asap-protocol/mcp-auth` deferred |

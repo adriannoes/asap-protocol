@@ -3,9 +3,9 @@
 > **Product Requirements Document**
 >
 > **Version**: 2.5.3
-> **Status**: READY FOR KICKOFF (v2.5.2 shipped 2026-07-08)
+> **Status**: SHIPPED (tag [`v2.5.3`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3), 2026-07-16)
 > **Created**: 2026-04-28 (as v2.3.2); **renumbered**: 2026-06-22 → v2.5.1; **2026-07-08 → v2.5.3**
-> **Last Updated**: 2026-07-11
+> **Last Updated**: 2026-07-16
 > **Parent train**: [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md)
 > **Predecessor**: [prd-v2.5.2-security-follow-up.md](./prd-v2.5.2-security-follow-up.md)
 > **Successor**: [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md)

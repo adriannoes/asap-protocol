@@ -3,8 +3,9 @@
 > **Product Requirements Document**
 >
 > **Version**: 2.5.4
-> **Status**: PLANNED (blocked until v2.5.3 Adapter Lab II ships)
+> **Status**: READY FOR KICKOFF (v2.5.3 Adapter Lab II shipped 2026-07-16)
 > **Created**: 2026-04-28 (as v2.3.3); **renumbered**: 2026-06-22 → v2.5.2; **2026-07-08 → v2.5.4**
+> **Last Updated**: 2026-07-16
 > **Parent train**: [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md)
 > **Predecessor**: [prd-v2.5.3-adapter-lab-ii.md](./prd-v2.5.3-adapter-lab-ii.md)
 > **Successor**: [prd-v2.5.5-formal-spec-interop.md](./prd-v2.5.5-formal-spec-interop.md)
@@ -64,5 +65,6 @@ v2.5.4 turns adoption work from v2.3.0–v2.5.3 into a **repeatable distribution
 
 | Date | Change |
 |------|--------|
+| 2026-07-16 | Status → **READY FOR KICKOFF** (v2.5.3 shipped) |
 | 2026-07-08 | Renumbered v2.5.2 → **v2.5.4** (v2.5.2 = security follow-up) |
 | 2026-06-22 | Renumbered v2.3.3 → v2.5.2 |

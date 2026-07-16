@@ -11,8 +11,7 @@ Index of versioned PRDs. **Shipped** releases have retrospective PRDs; **planned
 | Version | File | Status |
 |---------|------|--------|
 | **v2.5.x train** | [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md) | Index |
-| v2.5.3 Adapter Lab II | [prd-v2.5.3-adapter-lab-ii.md](./prd-v2.5.3-adapter-lab-ii.md) · [tasks](../../engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md) | Ready for kickoff |
-| v2.5.4 Distribution Loop | [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md) | Planned |
+| v2.5.4 Distribution Loop | [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md) | Ready for kickoff |
 | v2.5.5 Formal Spec & Interop | [prd-v2.5.5-formal-spec-interop.md](./prd-v2.5.5-formal-spec-interop.md) | Planned |
 | v3.0 Economy | [prd-v3.0-economy.md](./prd-v3.0-economy.md) | Vision |
 
@@ -22,6 +21,7 @@ Index of versioned PRDs. **Shipped** releases have retrospective PRDs; **planned
 
 | Version | File | Shipped |
 |---------|------|---------|
+| v2.5.3 | [prd-v2.5.3-adapter-lab-ii.md](./prd-v2.5.3-adapter-lab-ii.md) · [tasks](../../engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md) | 2026-07-16 — tag [`v2.5.3`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3) |
 | v2.5.2 | [prd-v2.5.2-security-follow-up.md](./prd-v2.5.2-security-follow-up.md) | 2026-07-08 |
 | v2.5.1 | *(code quality patch — no public PRD; see `engineering/tasks/private/v2.5.1/`)* | 2026-06-26 |
 | v2.5.0 | [prd-v2.5.0-mcp-auth-bridge.md](./prd-v2.5.0-mcp-auth-bridge.md) | 2026-06-24 |
