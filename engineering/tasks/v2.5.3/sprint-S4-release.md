@@ -23,7 +23,7 @@
   - [x] `docs/migration.md` → upgrading from v2.5.2 (finalize S3 stub)
   - [x] Update `AGENTS.md`, `product/README.md`, `docs/index.md` version blurb, checkpoints
   - [x] Confirm [docs-review-checklist.md](./docs-review-checklist.md) §8 version-string sign-off
-  - [x] Public copy: **2.5.2** on PyPI; **2.5.3** merge-ready / **pending tag/publish** (no `pip install ==2.5.3` until PyPI)
+  - [x] Public copy: **2.5.2** on PyPI; **2.5.3** merged to `main` / **pending tag/publish** (no `pip install ==2.5.3` until PyPI)
 
 - [x] **5.3 Pre-push CI** (Phase 5 green 2026-07-14)
   - [x] `uv run ruff check .`
@@ -34,8 +34,8 @@
   - [x] If `apps/web/` changed: lint, `tsc`, vitest, build
   - [x] MkDocs build if docs/nav changed (`mkdocs build` / project-documented command)
 
-- [ ] **5.4 Merge → tag → publish** *(requires explicit user confirmation)*
-  - [ ] **Merge** PR `release/2.5.3` → `main` — [#291](https://github.com/adriannoes/asap-protocol/pull/291) **OPEN**
+- [ ] **5.4 Merge → tag → publish** *(requires explicit user confirmation for tag/publish)*
+  - [x] **Merge** PR `release/2.5.3` → `main` — [#291](https://github.com/adriannoes/asap-protocol/pull/291) **MERGED** 2026-07-15 (`57d73cae`)
   - [ ] **Tag** `v2.5.3` + push (triggers release workflow)
   - [ ] **Publish** — confirm PyPI `asap-protocol==2.5.3`, Docker/GHCR, and GitHub Release are green
   - [ ] Only after publish: run [post-publish checklist](./release-checklist.md#60-post-publish-swap-pending--shipped)

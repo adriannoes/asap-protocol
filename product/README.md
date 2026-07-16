@@ -46,7 +46,7 @@ product/
 | **v2.5.0 — MCP Auth Bridge** | **✅ Released (2026-06-24)** | `prd-v2.5.0-mcp-auth-bridge.md` + [tasks-v2.5.0-roadmap.md](../engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md) | `asap.adapters.mcp`, compliance `mcp-auth-bridge`; tag [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0) |
 | **v2.5.1 — Code quality patch** | **✅ Released (2026-06-26)** | `engineering/tasks/private/v2.5.1/` | Thermo-nuclear audit S0–S3 + P0 fixes; Adapter Lab II slipped |
 | **v2.5.2 — Security follow-up** | **✅ Released (2026-07-08)** | `prd-v2.5.2-security-follow-up.md` | #209 + CR #245–#249 + registry fixes (ex planned v2.5.4); tag [`v2.5.2`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.2) |
-| **v2.5.3 — Adapter Lab II** | **✅ Merge-ready (2026-07-14)** · pending tag/publish | `prd-v2.5.3-adapter-lab-ii.md` + [tasks](../engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md) | Workflow connectors, automation security, experimental MAF / NAT; PyPI still 2.5.2 |
+| **v2.5.3 — Adapter Lab II** | **✅ Merged (2026-07-15)** · pending tag/publish | `prd-v2.5.3-adapter-lab-ii.md` + [tasks](../engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md) | Workflow connectors, automation security, experimental MAF / NAT; PyPI still 2.5.2; [#291](https://github.com/adriannoes/asap-protocol/pull/291) |
 | v2.5.4 — Distribution Loop | 🔭 Planned (after 2.5.3) | `prd-v2.5.4-distribution-loop.md` | Homepage, templates, metrics (ex v2.3.3) |
 | v2.5.5 — Formal Spec & Interop | 🔭 Planned | `prd-v2.5.5-formal-spec-interop.md` | RFC spec, introspection, privacy, cross-protocol |
 | v2.5.x train index | Active | `prd-v2.5-roadmap.md` | Full schedule + rescope log |

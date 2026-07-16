@@ -8,7 +8,7 @@ Sprint roadmaps and release checklists per protocol version. Pair each folder wi
 
 | Folder | PRD | Status |
 |--------|-----|--------|
-| [v2.5.3/](./v2.5.3/tasks-v2.5.3-roadmap.md) | [prd-v2.5.3-adapter-lab-ii.md](../../product/prd/prd-v2.5.3-adapter-lab-ii.md) | **S4 MERGE-READY** — PR `release/2.5.3` → `main`; tag pending confirmation |
+| [v2.5.3/](./v2.5.3/tasks-v2.5.3-roadmap.md) | [prd-v2.5.3-adapter-lab-ii.md](../../product/prd/prd-v2.5.3-adapter-lab-ii.md) | **S4 MERGED** — [#291](https://github.com/adriannoes/asap-protocol/pull/291) on `main`; pending tag/publish |
 
 ---
 

@@ -16,6 +16,7 @@ release/2.5.3
 2. Branch from `release/2.5.3`: `feat/v2.5.3-s0-candidate-lock`, `feat/v2.5.3-s1-workflow`, `feat/v2.5.3-s3-docs-review`, etc.
 3. Open PR **into `release/2.5.3`** (not `main`).
 4. After S4 checklist passes on `release/2.5.3`, open **one** PR: `release/2.5.3` → `main` (tag `v2.5.3`).
+5. **Status (2026-07-15):** [#291](https://github.com/adriannoes/asap-protocol/pull/291) **merged** to `main`. Remaining: tag `v2.5.3` → publish → handoff ([sprint-S4-release.md](./sprint-S4-release.md) §5.4–5.5).
 
 ## Merge order
 

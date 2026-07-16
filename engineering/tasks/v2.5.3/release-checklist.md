@@ -52,7 +52,7 @@
 
 **Order:** merge PR → tag `v2.5.3` → confirm publish workflows → then §6 handoff copy.
 
-- [ ] **Merge** `release/2.5.3` → `main` — PR [#291](https://github.com/adriannoes/asap-protocol/pull/291) OPEN
+- [x] **Merge** `release/2.5.3` → `main` — PR [#291](https://github.com/adriannoes/asap-protocol/pull/291) **MERGED** 2026-07-15 (`57d73cae`)
 - [ ] **Tag** `git tag -a v2.5.3` + push (triggers `.github/workflows/release.yml`)
 - [ ] **Publish** — GitHub Release notes (compare `v2.5.2...v2.5.3`); PyPI `asap-protocol==2.5.3`; Docker/GHCR green
 - [ ] Spot-check example README command locally
@@ -66,7 +66,7 @@
 | **v2.5.4** Distribution Loop | Create `engineering/tasks/v2.5.4/` when kicked off |
 | npm `@asap-protocol/mcp-auth` | Still backlog — [../v2.5.0/backlog-mcp-auth-typescript.md](../v2.5.0/backlog-mcp-auth-typescript.md) |
 
-**v2.5.3 train:** ☑ OPEN (merge-ready · pending tag/publish) / ☐ CLOSED (after §6)
+**v2.5.3 train:** ☑ OPEN (merged to `main` · pending tag/publish) / ☐ CLOSED (after §6)
 
 ---
 

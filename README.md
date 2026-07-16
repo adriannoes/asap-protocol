@@ -7,9 +7,9 @@
 
 > A production-ready protocol for agent-to-agent communication and task coordination.
 
-**Quick Info**: [`v2.5.3`](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#253---2026-07-14) (merge-ready · pending tag/publish) · PyPI [`v2.5.2`](https://pypi.org/project/asap-protocol/) | `Apache 2.0` | `Python 3.13+` | [Documentation](docs/index.md) | [Changelog](CHANGELOG.md)
+**Quick Info**: [`v2.5.3`](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#253---2026-07-14) (merged · pending tag/publish) · PyPI [`v2.5.2`](https://pypi.org/project/asap-protocol/) | `Apache 2.0` | `Python 3.13+` | [Documentation](docs/index.md) | [Changelog](CHANGELOG.md)
 
-> 📦 **Install** — [`asap-protocol` **2.5.2** on PyPI](https://pypi.org/project/asap-protocol/) (Python; **2.5.3** pending tag/publish) · [`@asap-protocol/client` on npm](https://www.npmjs.com/package/@asap-protocol/client) (TypeScript)
+> 📦 **Install** — [`asap-protocol` **2.5.2** on PyPI](https://pypi.org/project/asap-protocol/) (Python; **2.5.3** merged to `main`, pending tag/publish) · [`@asap-protocol/client` on npm](https://www.npmjs.com/package/@asap-protocol/client) (TypeScript)
 
 🚀 **Live now** our [**agentic marketplace**](https://asap-protocol.com/) — browse agents, register yours, request verification.
 
@@ -85,7 +85,7 @@ npm install @asap-protocol/mastra@2.4.1 @asap-protocol/client @mastra/core zod
 npm install @asap-protocol/openai-agents@2.4.1 @asap-protocol/client @openai/agents zod
 ```
 
-**Python v2.5.3** (Adapter Lab II) is **merge-ready** and **pending tag/publish** — stay on `asap-protocol==2.5.2` from PyPI until the release is published; then see [Migration (v2.5.2 → v2.5.3)](docs/migration.md#upgrading-from-v252-to-v253).
+**Python v2.5.3** (Adapter Lab II) is **merged to `main`** and **pending tag/publish** — stay on `asap-protocol==2.5.2` from PyPI until the release is published; then see [Migration (v2.5.2 → v2.5.3)](docs/migration.md#upgrading-from-v252-to-v253).
 
 ## Quick Start
 
@@ -173,7 +173,7 @@ High-level only — see **[Changelog](https://github.com/adriannoes/asap-protoco
 
 | Version | What shipped |
 | :-- | :-- |
-| **v2.5.3** | **Adapter Lab II** — **merge-ready · pending tag/publish**. Workflow OpenAPI connectors + security guide, experimental MAF / NeMo guides, JSON-safe `-32602`, MCP example client DX. PyPI still **2.5.2**. See [CHANGELOG](CHANGELOG.md#253---2026-07-14), [PRD](product/prd/prd-v2.5.3-adapter-lab-ii.md), and [Migration (v2.5.2 → v2.5.3)](docs/migration.md#upgrading-from-v252-to-v253) |
+| **v2.5.3** | **Adapter Lab II** — **merged · pending tag/publish**. Workflow OpenAPI connectors + security guide, experimental MAF / NeMo guides, JSON-safe `-32602`, MCP example client DX. PyPI still **2.5.2**. See [CHANGELOG](CHANGELOG.md#253---2026-07-14), [PRD](product/prd/prd-v2.5.3-adapter-lab-ii.md), and [Migration (v2.5.2 → v2.5.3)](docs/migration.md#upgrading-from-v252-to-v253) |
 | **v2.5.2** | **Security & correctness follow-up** — opt-in operator API auth, `extra="forbid"` ingress, Redis JTI replay, web distributed rate limits, v2.5.1 CR follow-ups (#245–#249), registry signed-manifest/400 fixes. See [CHANGELOG](CHANGELOG.md#252---2026-07-08), [PRD](product/prd/prd-v2.5.2-security-follow-up.md), and [Migration (v2.5.1 → v2.5.2)](docs/migration.md#upgrading-from-v251) |
 | **v2.5.1** | **Code quality patch** — behavior-preserving refactor (transport/server, client, websocket, SQLite storage, auth, integrations) + six correctness/security fixes (atomic `revoke_cascade`, `usage_events` DDL, unified Host-JWT verifier, **WS now enforces OAuth2**, OpenAPI handler cleanup, client `correlation_id` binding). Deprecated import paths removed in v2.6.0. See [CHANGELOG](CHANGELOG.md#251---2026-06-25) and [Migration (v2.5.0 → v2.5.1)](docs/migration.md#upgrading-from-v250-to-v251) |
 | **v2.5.0.1** | **Compliance publish** — **[GitHub Release `v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1)** · PyPI **`asap-compliance` 1.3.0** (`mcp-auth-bridge` profile; requires `asap-protocol>=2.5.0`). No `asap-protocol` API change. See [CHANGELOG](CHANGELOG.md#2501---2026-06-24) |
