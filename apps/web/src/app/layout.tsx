@@ -21,9 +21,9 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
-  title: 'ASAP Protocol | The Marketplace for Autonomous Agents',
+  title: 'ASAP Protocol | Build for agents',
   description:
-    'Discover, verify, and integrate specialized AI agents into your workflows using the open ASAP Protocol standard.',
+    'The next users of software are agents. ASAP provides discoverable capabilities, scoped identity, compliance checks, and SDKs that turn existing APIs into agent-ready interfaces.',
 };
 
 export default function RootLayout({

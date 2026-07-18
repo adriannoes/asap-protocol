@@ -1,9 +1,13 @@
 import { AnimatedText } from '@/components/ui/animated-text';
 import { Button } from '@/components/ui/button';
 import { BackgroundPaths } from '@/components/ui/background-paths';
+import { DistLoopPrimaryCtas } from '@/components/landing/DistLoopPrimaryCtas';
 import { HeroTerminal } from '@/components/landing/HeroTerminal';
 import Link from 'next/link';
 import { HOMEPAGE_HERO_CTA_IDS } from '@/lib/telemetry/homepage-cta-ids';
+import { BUILD_FOR_AGENTS_GUIDE_URL } from '@/lib/landing/dist-loop-links';
+import { EXTERNAL_LINK_FOCUS_CLASS, OpensInNewTabHint } from '@/components/links/opens-in-new-tab';
+import { cn } from '@/lib/utils';
 
 export function HeroSection() {
   return (
@@ -16,34 +20,42 @@ export function HeroSection() {
           <div className="animate-in fade-in slide-in-from-bottom-5 flex flex-col justify-center space-y-8 text-center duration-700 ease-out lg:text-left">
             <div className="space-y-4">
               <Link
-                href="https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3"
+                href={BUILD_FOR_AGENTS_GUIDE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                data-cta={HOMEPAGE_HERO_CTA_IDS.releaseBadge}
-                aria-label="View ASAP Protocol v2.5.3 release on GitHub"
+                data-cta={HOMEPAGE_HERO_CTA_IDS.distLoopBadge}
+                aria-label="Read the Build for agents guide on GitHub"
+                className={cn('inline-flex', EXTERNAL_LINK_FOCUS_CLASS)}
               >
                 <div className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-sm font-medium text-indigo-300 backdrop-blur-sm transition-colors hover:border-indigo-500/60 hover:bg-indigo-500/15">
                   <span className="mr-2 flex h-2 w-2 animate-pulse rounded-full bg-indigo-500"></span>
-                  v2.5.3 — Adapter Lab II
+                  Distribution Loop — Build for agents
+                  <OpensInNewTabHint />
                 </div>
               </Link>
               <AnimatedText
-                text="The Marketplace for Autonomous Agents"
+                text="The next users of software are agents"
                 className="bg-gradient-to-r from-white to-white/80 bg-clip-text text-4xl leading-tight font-bold tracking-tighter text-transparent sm:text-5xl xl:text-6xl/none"
               />
               <AnimatedText
-                text="Discover, verify, and integrate specialized AI agents into your workflows using the open ASAP Protocol standard."
+                text="ASAP gives them the machine-readable foundation they need: discoverable capabilities, scoped identity, compliance checks, and SDKs that turn existing APIs into agent-ready interfaces."
                 as="p"
                 delay={0.3}
                 className="mx-auto max-w-[600px] text-zinc-400 md:text-xl lg:mx-0"
               />
             </div>
 
-            <div className="flex flex-col justify-center gap-4 min-[400px]:flex-row lg:justify-start">
+            <div className="flex flex-col justify-center gap-4 min-[400px]:flex-row min-[400px]:flex-wrap lg:justify-start">
+              <DistLoopPrimaryCtas
+                buildForAgentsCtaId={HOMEPAGE_HERO_CTA_IDS.buildForAgents}
+                viewStartersCtaId={HOMEPAGE_HERO_CTA_IDS.viewStarters}
+                className="contents"
+              />
               <Button
                 asChild
                 size="lg"
-                className="w-full bg-white text-black hover:bg-zinc-200 min-[400px]:w-auto"
+                variant="outline"
+                className="w-full border-zinc-800 text-zinc-300 hover:bg-zinc-900 hover:text-white min-[400px]:w-auto"
               >
                 <Link href="/browse" data-cta={HOMEPAGE_HERO_CTA_IDS.exploreAgents}>
                   Explore Agents

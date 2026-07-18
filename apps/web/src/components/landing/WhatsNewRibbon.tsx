@@ -1,5 +1,13 @@
 import Link from 'next/link';
 import { WHATS_NEW_RIBBON_CTA_IDS } from '@/lib/telemetry/homepage-cta-ids';
+import {
+  BUILD_FOR_AGENTS_GUIDE_URL,
+  CHANGELOG_254_URL,
+  DOCS_MIGRATION_254_URL,
+  GITHUB_BLOB_MAIN,
+  GITHUB_TREE_MAIN,
+  STARTERS_URL,
+} from '@/lib/landing/dist-loop-links';
 import { EXTERNAL_LINK_FOCUS_CLASS, OpensInNewTabHint } from '@/components/links/opens-in-new-tab';
 import { cn } from '@/lib/utils';
 import {
@@ -26,26 +34,30 @@ type Pill = {
   dataCta: string;
 };
 
-const CHANGELOG_URL =
-  'https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#253---2026-07-14';
-const DOCS_MIGRATION_253 =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md#upgrading-from-v252-to-v253';
-const DOCS_MCP_AUTH_BRIDGE =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/adapters/mcp-auth-bridge.md';
-const EXAMPLE_MCP_AUTH_BRIDGE =
-  'https://github.com/adriannoes/asap-protocol/tree/main/examples/mcp_auth_bridge';
-const DOCS_TS_SDK = 'https://github.com/adriannoes/asap-protocol/blob/main/docs/sdks/typescript.md';
+const DOCS_MCP_AUTH_BRIDGE = `${GITHUB_BLOB_MAIN}/docs/adapters/mcp-auth-bridge.md`;
+const EXAMPLE_MCP_AUTH_BRIDGE = `${GITHUB_TREE_MAIN}/examples/mcp_auth_bridge`;
+const DOCS_TS_SDK = `${GITHUB_BLOB_MAIN}/docs/sdks/typescript.md`;
 // Lab II docs ship with v2.5.3.
-const DOCS_WORKFLOW_CONNECTORS =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/integrations/workflow-connectors.md';
-const DOCS_AUTOMATION_CONNECTOR_SECURITY =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/automation-connector-security.md';
-const DOCS_MICROSOFT_AGENT_FRAMEWORK =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/integrations/microsoft-agent-framework.md';
-const DOCS_NEMO_AGENT_TOOLKIT =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/integrations/nemo-agent-toolkit.md';
+const DOCS_WORKFLOW_CONNECTORS = `${GITHUB_BLOB_MAIN}/docs/integrations/workflow-connectors.md`;
+const DOCS_AUTOMATION_CONNECTOR_SECURITY = `${GITHUB_BLOB_MAIN}/docs/guides/automation-connector-security.md`;
+const DOCS_MICROSOFT_AGENT_FRAMEWORK = `${GITHUB_BLOB_MAIN}/docs/integrations/microsoft-agent-framework.md`;
+const DOCS_NEMO_AGENT_TOOLKIT = `${GITHUB_BLOB_MAIN}/docs/integrations/nemo-agent-toolkit.md`;
 
 const PILLS: Pill[] = [
+  {
+    label: 'Build for agents',
+    href: BUILD_FOR_AGENTS_GUIDE_URL,
+    icon: BookOpen,
+    external: true,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsBuildForAgents,
+  },
+  {
+    label: 'Starters',
+    href: STARTERS_URL,
+    icon: Sparkles,
+    external: true,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsStarters,
+  },
   {
     label: 'Workflow connectors',
     href: DOCS_WORKFLOW_CONNECTORS,
@@ -62,10 +74,10 @@ const PILLS: Pill[] = [
   },
   {
     label: 'Migration',
-    href: DOCS_MIGRATION_253,
+    href: DOCS_MIGRATION_254_URL,
     icon: ShieldCheck,
     external: true,
-    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsMigration253,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.docsMigration254,
   },
   {
     label: 'MCP Auth Bridge',
@@ -116,17 +128,17 @@ const PILLS: Pill[] = [
   },
   {
     label: 'Changelog',
-    href: CHANGELOG_URL,
+    href: CHANGELOG_254_URL,
     icon: GitBranch,
     external: true,
-    dataCta: WHATS_NEW_RIBBON_CTA_IDS.releaseChangelogGithub,
+    dataCta: WHATS_NEW_RIBBON_CTA_IDS.releaseChangelog254,
   },
 ];
 
 export function WhatsNewRibbon() {
   return (
     <aside
-      aria-label="What's new in ASAP Protocol v2.5.3"
+      aria-label="What's new in ASAP Protocol Distribution Loop"
       className="w-full border-y border-zinc-900 bg-zinc-950"
     >
       <div className="container mx-auto flex max-w-5xl flex-col gap-4 px-4 py-8 md:flex-row md:items-center md:gap-4 md:px-6 md:py-10">
@@ -134,10 +146,10 @@ export function WhatsNewRibbon() {
           <Sparkles className="h-4 w-4 shrink-0 text-indigo-400" aria-hidden />
           <div className="flex flex-col">
             <span className="font-mono text-xs tracking-wider text-indigo-400 uppercase">
-              What&apos;s new in v2.5.3
+              What&apos;s new
             </span>
             <span className="text-xs text-zinc-500">
-              Adapter Lab II · workflow connectors &amp; interop guides
+              Distribution Loop · Build for agents + Lab II docs
             </span>
           </div>
         </div>

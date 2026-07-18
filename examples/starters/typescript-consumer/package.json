@@ -1,0 +1,16 @@
+{
+  "name": "@asap-protocol/starter-typescript-consumer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Thin Node CLI smoke for @asap-protocol/client (v2.5.4 DIST-003)",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@asap-protocol/client": "workspace:*"
+  },
+  "scripts": {
+    "smoke": "node ./smoke.mjs"
+  }
+}

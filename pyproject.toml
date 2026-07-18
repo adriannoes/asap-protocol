@@ -1,6 +1,6 @@
 [project]
 name = "asap-protocol"
-version = "2.5.3"
+version = "2.5.4"
 description = "Async Simple Agent Protocol - A streamlined protocol for agent-to-agent communication"
 authors = [
     {name = "ASAP Protocol Contributors"}
@@ -84,7 +84,8 @@ webauthn = [
 ]
 # Framework integrations (Sprint E3 — PKG-003).
 mcp = [
-    "mcp>=1.0.0",
+    # Floor 1.28.1 for CVE-2026-52869 / CVE-2026-52870 / CVE-2026-59950.
+    "mcp>=1.28.1",
 ]
 langchain = [
     "langchain-core>=1.3.3",

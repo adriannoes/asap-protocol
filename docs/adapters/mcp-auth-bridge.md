@@ -372,6 +372,7 @@ This adapter protects **native stdio `MCPServer`** (Mode A). MCP invoked inside 
 
 ## Related documentation
 
+- [MCP Auth Bridge starter](../../examples/starters/mcp-auth-bridge/) — thin smoke wrapper (`examples/starters/mcp-auth-bridge/`)
 - [MCP integration](../mcp-integration.md) — Mode A vs Mode B, migration notes
 - [NeMo Agent Toolkit](../integrations/nemo-agent-toolkit.md) — experimental Path A demo using `protect_server`
 - [Automation connector security](../guides/automation-connector-security.md) — secrets, TLS, grants; Mode A vs Mode B for connectors

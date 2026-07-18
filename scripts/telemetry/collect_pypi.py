@@ -21,7 +21,10 @@ from typing import Any
 
 import pypistats
 
-DEFAULT_PYPI_PACKAGE = "asap-protocol"
+# DIST-004: cover the protocol package and the compliance validator on PyPI.
+DEFAULT_PYPI_PACKAGES: tuple[str, ...] = ("asap-protocol", "asap-compliance")
+# Backward-compatible alias for callers that still expect a single default name.
+DEFAULT_PYPI_PACKAGE = DEFAULT_PYPI_PACKAGES[0]
 _RECENT_KEYS = ("last_day", "last_week", "last_month")
 
 
@@ -99,7 +102,10 @@ def main(argv: list[str] | None = None) -> int:
         action="append",
         dest="packages",
         metavar="NAME",
-        help=("PyPI project name (repeatable). Defaults to asap-protocol when omitted."),
+        help=(
+            "PyPI project name (repeatable). Defaults to asap-protocol and "
+            "asap-compliance when omitted."
+        ),
     )
     parser.add_argument(
         "-o",
@@ -108,7 +114,7 @@ def main(argv: list[str] | None = None) -> int:
         help="Write JSON to this path instead of stdout",
     )
     args = parser.parse_args(argv)
-    pkgs: tuple[str, ...] = tuple(args.packages) if args.packages else (DEFAULT_PYPI_PACKAGE,)
+    pkgs: tuple[str, ...] = tuple(args.packages) if args.packages else DEFAULT_PYPI_PACKAGES
 
     report = collect_pypi_recent(pkgs)
     text = json.dumps(report, indent=2, sort_keys=True) + "\n"

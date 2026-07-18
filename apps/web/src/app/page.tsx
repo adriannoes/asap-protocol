@@ -7,13 +7,13 @@ import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
 import { fetchRegistry } from '@/lib/registry';
 
 export const metadata: Metadata = {
-  title: 'ASAP Protocol | The Marketplace for Autonomous Agents',
+  title: 'ASAP Protocol | Build for agents',
   description:
-    'Discover, verify, and integrate specialized AI agents using the open ASAP Protocol — v2.5.0 MCP Auth Bridge for scoped native MCP tools/call; identity, capabilities, edge-AI discovery, and framework adapters.',
+    'The next users of software are agents. ASAP provides discoverable capabilities, scoped identity, compliance checks, and SDKs that turn existing APIs into agent-ready interfaces.',
   openGraph: {
-    title: 'ASAP Protocol | The Marketplace for Autonomous Agents',
+    title: 'ASAP Protocol | Build for agents',
     description:
-      'Discover, verify, and integrate specialized AI agents using the open ASAP Protocol — v2.5.0 MCP Auth Bridge for scoped native MCP tools/call; identity, capabilities, edge-AI discovery, and framework adapters.',
+      'The next users of software are agents. ASAP provides discoverable capabilities, scoped identity, compliance checks, and SDKs that turn existing APIs into agent-ready interfaces.',
     type: 'website',
   },
 };

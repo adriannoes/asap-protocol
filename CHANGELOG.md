@@ -7,13 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Follow-up (planned v2.5.4+)
+### Follow-up (planned v2.5.5+)
 
-- **Distribution Loop** — homepage, templates, metrics ([prd-v2.5.4-distribution-loop.md](product/prd/prd-v2.5.4-distribution-loop.md)).
 - **Formal Spec & Interop** — RFC spec, introspection, privacy ([prd-v2.5.5-formal-spec-interop.md](product/prd/prd-v2.5.5-formal-spec-interop.md)).
 - `@asap-protocol/mcp-auth` HTTP/SSE middleware (deferred from v2.5.0 — see [2.5.0] TypeScript note and [typescript-mcp-auth-spike.md](engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md)).
 - Collapse the dual `UsageMetrics`/`InMemoryMeteringStore` pair retained in S1 for API stability.
 - Reduce the `asap.transport.client` package aggregate LOC below the S2 target.
+
+---
+
+## [2.5.4] - 2026-07-18
+
+> **Status:** pending tag `v2.5.4` / PyPI publish (S5 prep). Merge → tag → publish runs after this train lands on `main` via `release/2.5.4`.
+
+**Distribution Loop** — homepage, thin starters, Build for agents guide, and maintainer
+telemetry ops (no public metrics UI). Scope:
+[prd-v2.5.4-distribution-loop.md](product/prd/prd-v2.5.4-distribution-loop.md).
+npm `@asap-protocol/*` packages remain at **2.4.1**.
+
+### Added
+
+- **Thin starters** under `examples/starters/`:
+  - `openapi-provider/` — OpenAPI → ASAP skills wrapper
+  - `typescript-consumer/` — `@asap-protocol/client` consumer smoke
+  - `mcp-auth-bridge/` — MCP Auth Bridge (`protect_server`) wrapper
+- **Build for agents guide** — [docs/guides/build-for-agents.md](docs/guides/build-for-agents.md)
+  (agent-first onboarding into the three starters).
+- **Homepage agent-first narrative** — hero / CTAs route to docs, starters, and
+  examples (marketplace browse/register remain secondary).
+- **Telemetry ops** — collector defaults expanded (npm ≥3 scoped packages,
+  PyPI ≥2); maintainer runbook; **no** public live metrics UI (PRD D4).
+
+### Security (deps)
+
+- Raise optional `[mcp]` floor to `mcp>=1.28.1` for **CVE-2026-52869**,
+  **CVE-2026-52870**, and **CVE-2026-59950**. See [SECURITY.md](SECURITY.md).
+
+### Migration
+
+- **v2.5.3 → v2.5.4**: See [migration guide](docs/migration.md#upgrading-from-v253-to-v254).
+  No breaking wire-protocol changes; adopt starters/guide as needed.
 
 ---
 

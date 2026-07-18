@@ -20,7 +20,12 @@ import httpx
 
 NPM_DOWNLOADS_RANGE_BASE = "https://api.npmjs.org/downloads/range"
 DEFAULT_PERIOD = "last-week"
-DEFAULT_PACKAGES: tuple[str, ...] = ("@asap-protocol/client",)
+# DIST-004: aggregate must cover all public scoped packages, not only the client.
+DEFAULT_PACKAGES: tuple[str, ...] = (
+    "@asap-protocol/client",
+    "@asap-protocol/mastra",
+    "@asap-protocol/openai-agents",
+)
 REQUEST_TIMEOUT_SECONDS = 30.0
 
 
@@ -112,7 +117,11 @@ def main(argv: list[str] | None = None) -> int:
         action="append",
         dest="packages",
         metavar="NAME",
-        help=("npm package name (repeatable). Defaults to @asap-protocol/client when omitted."),
+        help=(
+            "npm package name (repeatable). Defaults to "
+            "@asap-protocol/client, @asap-protocol/mastra, and "
+            "@asap-protocol/openai-agents when omitted."
+        ),
     )
     parser.add_argument(
         "-o",

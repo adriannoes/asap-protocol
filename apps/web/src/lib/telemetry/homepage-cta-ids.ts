@@ -1,22 +1,36 @@
 /**
  * Stable homepage `data-cta` ids for Vercel analytics and `/api/telemetry`.
  * Keep landing components aligned with these constants to avoid dashboard drift.
+ * Add new ids when CTAs are introduced; do not rename existing keys casually.
  */
 
 export const HOMEPAGE_HERO_CTA_IDS = {
+  /** Legacy release-tag badge id — retained for historical CTR dashboards. */
   releaseBadge: 'hero-release-badge',
+  /** Dist Loop hero badge → Build for agents guide (not a version tag). */
+  distLoopBadge: 'hero-dist-loop-badge',
+  /** Primary Dist Loop CTA → Build for agents guide (DIST-005 homepage half). */
+  buildForAgents: 'hero-build-for-agents',
+  /** Primary Dist Loop CTA → examples/starters. */
+  viewStarters: 'hero-view-starters',
   exploreAgents: 'hero-explore-agents',
   registerAgent: 'hero-register-agent',
 } as const;
 
 /** CTA ids used by the “What’s new” ribbon (subset also appears in {@link HOMEPAGE_CTA_IDS}). */
 export const WHATS_NEW_RIBBON_CTA_IDS = {
+  /** Dist Loop — Build for agents guide. */
+  docsBuildForAgents: 'docs-build-for-agents',
+  /** Dist Loop — thin starter pack. */
+  docsStarters: 'docs-starters',
   docsMcpAuthBridge: 'docs-mcp-auth-bridge',
   docsMcpIntegration: 'docs-mcp-integration',
   docsMcpAuthExample: 'docs-mcp-auth-example',
   docsMigration250: 'docs-migration-250', // retained for historical CTR dashboards
-  /** v2.5.3 migration pill (WhatsNewRibbon). */
+  /** v2.5.3 migration pill — retained for historical CTR dashboards. */
   docsMigration253: 'docs-migration-253',
+  /** v2.5.4 Dist Loop migration pill (WhatsNewRibbon). */
+  docsMigration254: 'docs-migration-254',
   docsOpenapi: 'docs-openapi',
   docsTypescript: 'docs-typescript',
   docsWorkflowConnectors: 'docs-workflow-connectors',
@@ -31,7 +45,16 @@ export const WHATS_NEW_RIBBON_CTA_IDS = {
   featurePerAgentIdentity: 'feature-per-agent-identity',
   featureScopedCapabilities: 'feature-scoped-capabilities',
   docsCapabilitiesEscalation: 'docs-capabilities-escalation',
+  /** Generic changelog pill id — retained for historical CTR dashboards. */
   releaseChangelogGithub: 'release-changelog-github',
+  /** v2.5.4 changelog pill (WhatsNewRibbon). */
+  releaseChangelog254: 'release-changelog-254',
+} as const;
+
+/** How it Works section primary CTAs (guide + starters). */
+export const HOW_IT_WORKS_CTA_IDS = {
+  buildForAgents: 'how-it-works-build-for-agents',
+  viewStarters: 'how-it-works-view-starters',
 } as const;
 
 /** Lab II docs CTAs on `/developer-experience` (reuse ribbon ids where shared). */
@@ -63,17 +86,26 @@ export const LANDING_FEATURE_SLUGS = [
 /** Ordered shell keys returned by `/api/telemetry` (`ctr_per_cta`). */
 export const HOMEPAGE_CTA_IDS = [
   HOMEPAGE_HERO_CTA_IDS.releaseBadge,
+  HOMEPAGE_HERO_CTA_IDS.distLoopBadge,
+  HOMEPAGE_HERO_CTA_IDS.buildForAgents,
+  HOMEPAGE_HERO_CTA_IDS.viewStarters,
   HOMEPAGE_HERO_CTA_IDS.exploreAgents,
   HOMEPAGE_HERO_CTA_IDS.registerAgent,
+  WHATS_NEW_RIBBON_CTA_IDS.docsBuildForAgents,
+  WHATS_NEW_RIBBON_CTA_IDS.docsStarters,
   WHATS_NEW_RIBBON_CTA_IDS.docsMcpAuthBridge,
   WHATS_NEW_RIBBON_CTA_IDS.docsMcpIntegration,
   WHATS_NEW_RIBBON_CTA_IDS.docsMcpAuthExample,
   WHATS_NEW_RIBBON_CTA_IDS.docsMigration253,
+  WHATS_NEW_RIBBON_CTA_IDS.docsMigration254,
   WHATS_NEW_RIBBON_CTA_IDS.docsTypescript,
   WHATS_NEW_RIBBON_CTA_IDS.docsWorkflowConnectors,
   WHATS_NEW_RIBBON_CTA_IDS.docsAutomationConnectorSecurity,
   WHATS_NEW_RIBBON_CTA_IDS.docsMicrosoftAgentFramework,
   WHATS_NEW_RIBBON_CTA_IDS.docsNemoAgentToolkit,
   ...LANDING_FEATURE_SLUGS.map((slug) => `feature-${slug}` as const),
+  HOW_IT_WORKS_CTA_IDS.buildForAgents,
+  HOW_IT_WORKS_CTA_IDS.viewStarters,
   WHATS_NEW_RIBBON_CTA_IDS.releaseChangelogGithub,
+  WHATS_NEW_RIBBON_CTA_IDS.releaseChangelog254,
 ] as const;

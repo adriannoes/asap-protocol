@@ -1078,6 +1078,47 @@ See also [Troubleshooting Guide](troubleshooting.md) and
 
 ---
 
+### Upgrading from v2.5.3 to v2.5.4
+
+**v2.5.4 (Distribution Loop)** — pending tag `v2.5.4` / PyPI publish (S5 prep) —
+turns adoption surfaces into a repeatable loop: homepage routing, thin starters,
+Build for agents guide, and maintainer telemetry ops. There are **no breaking
+changes** for envelope, JWT, or capability grant semantics relative to v2.5.3.
+Scope: [prd-v2.5.4-distribution-loop.md](../product/prd/prd-v2.5.4-distribution-loop.md).
+
+#### What lands in v2.5.4
+
+- **Thin starters** — `examples/starters/openapi-provider/`,
+  `typescript-consumer/`, and `mcp-auth-bridge/` (wrappers over existing examples).
+- **Build for agents** — [guide](guides/build-for-agents.md) as the agent-first
+  onboarding path into those starters.
+- **Homepage** — agent-first hero / CTA routing to docs, starters, and examples
+  (marketplace browse/register remain secondary).
+- **Telemetry ops** — npm collectors cover ≥3 scoped packages; PyPI aggregate
+  covers `asap-protocol` + `asap-compliance`; maintainer runbook; **no** public
+  live metrics UI.
+
+#### Upgrade steps
+
+1. Bump with `pip install 'asap-protocol==2.5.4'` (or `uv add asap-protocol`)
+   once PyPI publish completes; until then install from the release branch / tag.
+2. No code changes required for existing v2.5.3 agents unless you adopt the new
+   starters or guide.
+3. TypeScript `@asap-protocol/*` packages remain at **2.4.1**;
+   `@asap-protocol/mcp-auth` HTTP/SSE middleware remains deferred.
+4. Optional: start from [Build for agents](guides/build-for-agents.md) and run
+   one starter smoke from `examples/starters/README.md`.
+5. If you use the optional `[mcp]` extra, bump to `mcp>=1.28.1` (security floor
+   for CVE-2026-52869 / CVE-2026-52870 / CVE-2026-59950).
+
+#### Backward compatibility
+
+- **Wire protocol**: Unchanged from v2.5.3.
+- **Breaking changes**: None for Distribution Loop scope (docs / starters /
+  homepage / maintainer telemetry).
+
+---
+
 ### Upgrading from v2.5.2 to v2.5.3
 
 **v2.5.3 (Adapter Lab II)** — **shipped** ([tag `v2.5.3`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3),
