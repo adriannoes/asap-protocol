@@ -397,18 +397,23 @@ def render_dashboard(
             for v in npm_vals.values():
                 if isinstance(v, int):
                     npm_sum += v
-        pypi_week: str | int = "—"
+        pypi_sum = 0
+        pypi_found = False
         pypi_obj = raw_hist.get("pypi")
         if isinstance(pypi_obj, dict):
             pkgs = pypi_obj.get("packages")
             if isinstance(pkgs, dict):
-                first = next(iter(pkgs.values()), None)
-                if isinstance(first, dict):
-                    dl = first.get("downloads")
-                    if isinstance(dl, dict):
-                        lw = dl.get("last_week")
-                        if isinstance(lw, int):
-                            pypi_week = lw
+                for pkg_val in pkgs.values():
+                    if not isinstance(pkg_val, dict):
+                        continue
+                    dl = pkg_val.get("downloads")
+                    if not isinstance(dl, dict):
+                        continue
+                    lw = dl.get("last_week")
+                    if isinstance(lw, int):
+                        pypi_sum += lw
+                        pypi_found = True
+        pypi_week: str | int = pypi_sum if pypi_found else "—"
         gh_stars: str | int = "—"
         gh = raw_hist.get("github")
         if isinstance(gh, dict):

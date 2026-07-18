@@ -202,6 +202,39 @@ def test_render_dashboard_adapter_section_sorted() -> None:
     assert x_pos < m_pos < u_pos
 
 
+def test_render_dashboard_sums_pypi_last_week_across_packages(tmp_path: Path) -> None:
+    """Dashboard PyPI column must sum all packages (parity with npm Σ)."""
+    snap_path = tmp_path / "snapshot-2026-05-16.json"
+    snap_path.write_text(
+        json.dumps(
+            {
+                "npm": {"@asap-protocol/client": 4, "@asap-protocol/mastra": 6},
+                "pypi": {
+                    "packages": {
+                        "asap-protocol": {
+                            "downloads": {"last_day": 1, "last_week": 7, "last_month": 20},
+                        },
+                        "asap-compliance": {
+                            "downloads": {"last_day": 0, "last_week": 3, "last_month": 9},
+                        },
+                    },
+                    "source": "stub",
+                },
+                "github": {"repo": {"stargazers_count": 42}},
+                "registry": {"agent_count": 1},
+            },
+        ),
+        encoding="utf-8",
+    )
+    md = aggregate_mod.render_dashboard(
+        {},
+        [(date(2026, 5, 16), snap_path)],
+        weeks=12,
+    )
+    # npm 4+6=10, pypi 7+3=10 (not first-package-only 7)
+    assert "| 2026-05-16 | 10 | 10 | 42 | 1 |" in md
+
+
 def test_main_passes_expanded_package_defaults(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
