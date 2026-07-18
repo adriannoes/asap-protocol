@@ -1,9 +1,10 @@
 /**
  * Canonical Dist Loop public URLs for homepage CTAs (S3).
  *
- * Guide + starters already exist on `main`. Migration / changelog anchors for
- * v2.5.4 land with the S5 cut — until then point those two at `release/2.5.4`
- * so ribbon pills do not 404. Flip to `main` in S5 6.4 after merge.
+ * Guide + starters land on `main` with this release PR; `blob/main` /
+ * `tree/main` are the correct post-merge destinations (preview CTAs 404 on
+ * GitHub until merge). Migration / changelog stay on `release/2.5.4` until
+ * S5 6.4 flip so ribbon pills do not 404 pre-merge.
  */
 
 const GITHUB_BLOB_MAIN = 'https://github.com/adriannoes/asap-protocol/blob/main';
