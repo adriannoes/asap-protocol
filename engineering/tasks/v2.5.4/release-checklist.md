@@ -18,6 +18,29 @@
 | npm audit (web) | `cd apps/web && npm audit --omit=dev --audit-level=moderate` and `npm audit --audit-level=high` (blocking in CI `quality-web`; see `SECURITY.md`) | ☐ |
 | Web (if touched) | `npm run lint` / format check / `npx tsc --noEmit` / `npx vitest run` / `npm run build` in `apps/web/` | ☐ |
 | MkDocs (if docs/nav touched) | `uv run mkdocs build` | ☐ |
+| Starter smokes (DIST-003) | See §1.1 | ☐ |
+
+### 1.1 Starter smoke commands (DIST-003)
+
+Run from the repository root (each ≤60s headless):
+
+```bash
+# OpenAPI provider
+uv sync --extra openapi
+uv run python examples/starters/openapi-provider/run.py
+
+# MCP Auth Bridge
+uv sync
+uv run python examples/starters/mcp-auth-bridge/run.py
+
+# TypeScript consumer (fresh clone needs workspace install first)
+pnpm install
+pnpm --filter @asap-protocol/client run build
+npm install --prefix examples/starters/typescript-consumer
+node examples/starters/typescript-consumer/smoke.mjs
+```
+
+Optional CI: `.github/workflows/starters-smoke.yml` (path-filtered on `examples/starters/**`).
 
 ---
 
@@ -54,6 +77,7 @@
 - [ ] **Tag** `git tag -a v2.5.4` + push — triggers `.github/workflows/release.yml`
 - [ ] **Publish** — GitHub Release `v2.5.4`; PyPI `asap-protocol==2.5.4`; Docker/GHCR if applicable
 - [ ] Spot-check starter README smoke locally (optional maintainer follow-up)
+- [ ] **Public GitHub links** — after merge to `main`, confirm Dist Loop docs that use relative `examples/starters/` paths resolve on `main`; flip any remaining `tree/release/2.5.4/...` URLs to `tree/main/...` if introduced during the train
 
 ---
 

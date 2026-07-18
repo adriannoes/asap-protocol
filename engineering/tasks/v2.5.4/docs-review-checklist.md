@@ -42,9 +42,9 @@ Each new page MUST: English, HTTPS/TLS note where network is involved, explicit 
 |------|----------------|--------|
 | `docs/guides/build-for-agents.md` | Links to all three starters + key adapters/SDK | ☑ (S2) |
 | `examples/starters/README.md` | Links to guide + parent examples | ☑ (S1/S2) |
-| `docs/adapters/openapi.md` | Optional “See also” → OpenAPI starter | ☐ |
-| `docs/adapters/mcp-auth-bridge.md` | Optional “See also” → MCP starter | ☐ |
-| `docs/sdks/typescript.md` | Optional “See also” → TS consumer starter | ☐ |
+| `docs/adapters/openapi.md` | Optional “See also” → OpenAPI starter | ☑ |
+| `docs/adapters/mcp-auth-bridge.md` | Optional “See also” → MCP starter | ☑ |
+| `docs/sdks/typescript.md` | Optional “See also” → TS consumer starter | ☑ |
 | `docs/migration.md` | Section **Upgrading from v2.5.3 → v2.5.4** (S5 finalizes) | ☐ |
 | `README.md` (repo root) | Short pointer to starters/guide if README lists getting-started paths | ☐ |
 

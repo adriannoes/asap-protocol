@@ -7,6 +7,7 @@ The full browser demo stays at [`apps/example-nextjs/`](../../../apps/example-ne
 ## Prerequisites
 
 - Node.js **≥ 18**
+- Workspace install (`pnpm install` at the repo root) so `packages/typescript/client` has its build toolchain (e.g. `tshy`)
 - Built client package (`packages/typescript/client` → `dist/`)
 
 ## Smoke (offline, default)
@@ -14,14 +15,15 @@ The full browser demo stays at [`apps/example-nextjs/`](../../../apps/example-ne
 From the **repository root** (headless, ≤60s, no API keys, no live gateway):
 
 ```bash
+pnpm install
 pnpm --filter @asap-protocol/client run build
 npm install --prefix examples/starters/typescript-consumer
 node examples/starters/typescript-consumer/smoke.mjs
 ```
 
-Builds `@asap-protocol/client`, installs the starter’s `file:` dependency, then runs the identity smoke. Expect `typescript-consumer smoke: PASS`.
+Installs workspace deps (required on a fresh clone), builds `@asap-protocol/client`, installs the starter’s `file:` dependency, then runs the identity smoke. Expect `typescript-consumer smoke: PASS`.
 
-Or from this directory after the client is built:
+Or from this directory after the workspace install and client build:
 
 ```bash
 npm install && npm run smoke
@@ -34,6 +36,7 @@ Do **not** use bare `pnpm run smoke` here — this starter lives outside the pnp
 Set `ASAP_PROVIDER_URL` to a provider base URL to also call `discoverProvider` and `listCapabilities`. See [`.env.example`](./.env.example).
 
 ```bash
+pnpm install
 pnpm --filter @asap-protocol/client run build
 npm install --prefix examples/starters/typescript-consumer
 ASAP_PROVIDER_URL=https://provider.example.com \

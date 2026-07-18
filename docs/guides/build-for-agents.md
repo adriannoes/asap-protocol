@@ -20,7 +20,7 @@
 2. **Execute** — call skills over ASAP transport with typed envelopes and scoped identity.
 3. **Escalate** — request stronger approval or narrower grants when a capability needs it.
 
-Thin starters under `examples/starters/` wrap the canonical parent examples and apps. Prefer the starters for a fast smoke; use the parent paths for the full implementation. Starter index: [`examples/starters/`](https://github.com/adriannoes/asap-protocol/tree/main/examples/starters).
+Thin starters under [`examples/starters/`](../../examples/starters/) wrap the canonical parent examples and apps. Prefer the starters for a fast smoke; use the parent paths for the full implementation.
 
 ## Thin starters
 
@@ -32,8 +32,8 @@ Turn an OpenAPI 3.x fragment into ASAP skills and an upstream proxy.
 
 | | |
 |--|--|
-| Starter | [`examples/starters/openapi-provider/`](https://github.com/adriannoes/asap-protocol/tree/main/examples/starters/openapi-provider) |
-| Parent | [`examples/openapi_petstore/`](https://github.com/adriannoes/asap-protocol/tree/main/examples/openapi_petstore) |
+| Starter | [`examples/starters/openapi-provider/`](../../examples/starters/openapi-provider/) |
+| Parent | [`examples/openapi_petstore/`](../../examples/openapi_petstore/) |
 | Docs | [OpenAPI adapter](../adapters/openapi.md) |
 
 ```bash
@@ -49,11 +49,12 @@ Prove Host/Agent identity and consumer APIs with `@asap-protocol/client` without
 
 | | |
 |--|--|
-| Starter | [`examples/starters/typescript-consumer/`](https://github.com/adriannoes/asap-protocol/tree/main/examples/starters/typescript-consumer) |
-| Parent patterns | [`apps/example-nextjs/`](https://github.com/adriannoes/asap-protocol/tree/main/apps/example-nextjs) |
+| Starter | [`examples/starters/typescript-consumer/`](../../examples/starters/typescript-consumer/) |
+| Parent patterns | [`apps/example-nextjs/`](../../apps/example-nextjs/) |
 | Docs | [TypeScript SDK](../sdks/typescript.md) |
 
 ```bash
+pnpm install
 pnpm --filter @asap-protocol/client run build
 npm install --prefix examples/starters/typescript-consumer
 node examples/starters/typescript-consumer/smoke.mjs
@@ -67,8 +68,8 @@ Wrap a native stdio `MCPServer` with Agent JWT verification and capability grant
 
 | | |
 |--|--|
-| Starter | [`examples/starters/mcp-auth-bridge/`](https://github.com/adriannoes/asap-protocol/tree/main/examples/starters/mcp-auth-bridge) |
-| Parent | [`examples/mcp_auth_bridge/`](https://github.com/adriannoes/asap-protocol/tree/main/examples/mcp_auth_bridge) |
+| Starter | [`examples/starters/mcp-auth-bridge/`](../../examples/starters/mcp-auth-bridge/) |
+| Parent | [`examples/mcp_auth_bridge/`](../../examples/mcp_auth_bridge/) |
 | Docs | [MCP Auth Bridge](../adapters/mcp-auth-bridge.md) |
 
 ```bash
@@ -99,6 +100,6 @@ Do **not** pass JWTs on the CLI (`argv` leaks secrets). Prefer least-privilege g
 
 ## See also
 
-- [Starters index](https://github.com/adriannoes/asap-protocol/tree/main/examples/starters) (in-repo: `examples/starters/`)
+- [Starters index](../../examples/starters/) (`examples/starters/`)
 - [Docs home](../index.md)
 - [MCP integration overview](../mcp-integration.md)
