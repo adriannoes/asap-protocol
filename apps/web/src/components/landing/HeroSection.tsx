@@ -1,10 +1,11 @@
 import { AnimatedText } from '@/components/ui/animated-text';
 import { Button } from '@/components/ui/button';
 import { BackgroundPaths } from '@/components/ui/background-paths';
+import { DistLoopPrimaryCtas } from '@/components/landing/DistLoopPrimaryCtas';
 import { HeroTerminal } from '@/components/landing/HeroTerminal';
 import Link from 'next/link';
 import { HOMEPAGE_HERO_CTA_IDS } from '@/lib/telemetry/homepage-cta-ids';
-import { BUILD_FOR_AGENTS_GUIDE_URL, STARTERS_URL } from '@/lib/landing/dist-loop-links';
+import { BUILD_FOR_AGENTS_GUIDE_URL } from '@/lib/landing/dist-loop-links';
 import { EXTERNAL_LINK_FOCUS_CLASS, OpensInNewTabHint } from '@/components/links/opens-in-new-tab';
 import { cn } from '@/lib/utils';
 
@@ -45,38 +46,11 @@ export function HeroSection() {
             </div>
 
             <div className="flex flex-col justify-center gap-4 min-[400px]:flex-row min-[400px]:flex-wrap lg:justify-start">
-              <Button
-                asChild
-                size="lg"
-                className="w-full bg-white text-black hover:bg-zinc-200 min-[400px]:w-auto"
-              >
-                <Link
-                  href={BUILD_FOR_AGENTS_GUIDE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  data-cta={HOMEPAGE_HERO_CTA_IDS.buildForAgents}
-                  className={EXTERNAL_LINK_FOCUS_CLASS}
-                >
-                  Build for agents
-                  <OpensInNewTabHint />
-                </Link>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                className="w-full bg-white text-black hover:bg-zinc-200 min-[400px]:w-auto"
-              >
-                <Link
-                  href={STARTERS_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  data-cta={HOMEPAGE_HERO_CTA_IDS.viewStarters}
-                  className={EXTERNAL_LINK_FOCUS_CLASS}
-                >
-                  View starters
-                  <OpensInNewTabHint />
-                </Link>
-              </Button>
+              <DistLoopPrimaryCtas
+                buildForAgentsCtaId={HOMEPAGE_HERO_CTA_IDS.buildForAgents}
+                viewStartersCtaId={HOMEPAGE_HERO_CTA_IDS.viewStarters}
+                className="contents"
+              />
               <Button
                 asChild
                 size="lg"

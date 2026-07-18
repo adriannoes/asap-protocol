@@ -1,9 +1,6 @@
-import Link from 'next/link';
 import { Search, ShieldCheck, KeySquare, Cpu } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { DistLoopPrimaryCtas } from '@/components/landing/DistLoopPrimaryCtas';
 import { HOW_IT_WORKS_CTA_IDS } from '@/lib/telemetry/homepage-cta-ids';
-import { BUILD_FOR_AGENTS_GUIDE_URL, STARTERS_URL } from '@/lib/landing/dist-loop-links';
-import { EXTERNAL_LINK_FOCUS_CLASS, OpensInNewTabHint } from '@/components/links/opens-in-new-tab';
 
 const steps = [
   {
@@ -82,41 +79,12 @@ export function HowItWorksSection() {
           </div>
         </div>
 
-        <div className="mt-16 flex flex-col items-center justify-center gap-4 min-[400px]:flex-row">
-          <Button
-            asChild
-            size="lg"
-            className="w-full bg-white text-black hover:bg-zinc-200 min-[400px]:w-auto"
-          >
-            <Link
-              href={BUILD_FOR_AGENTS_GUIDE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-cta={HOW_IT_WORKS_CTA_IDS.buildForAgents}
-              className={EXTERNAL_LINK_FOCUS_CLASS}
-            >
-              Build for agents
-              <OpensInNewTabHint />
-            </Link>
-          </Button>
-          <Button
-            asChild
-            size="lg"
-            variant="outline"
-            className="w-full border-zinc-800 text-zinc-300 hover:bg-zinc-900 hover:text-white min-[400px]:w-auto"
-          >
-            <Link
-              href={STARTERS_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-cta={HOW_IT_WORKS_CTA_IDS.viewStarters}
-              className={EXTERNAL_LINK_FOCUS_CLASS}
-            >
-              View starters
-              <OpensInNewTabHint />
-            </Link>
-          </Button>
-        </div>
+        <DistLoopPrimaryCtas
+          buildForAgentsCtaId={HOW_IT_WORKS_CTA_IDS.buildForAgents}
+          viewStartersCtaId={HOW_IT_WORKS_CTA_IDS.viewStarters}
+          startersVariant="outline"
+          className="mt-16 items-center justify-center"
+        />
       </div>
     </section>
   );
