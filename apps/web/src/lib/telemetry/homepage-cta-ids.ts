@@ -5,7 +5,10 @@
  */
 
 export const HOMEPAGE_HERO_CTA_IDS = {
+  /** Legacy release-tag badge id — retained for historical CTR dashboards. */
   releaseBadge: 'hero-release-badge',
+  /** Dist Loop hero badge → Build for agents guide (not a version tag). */
+  distLoopBadge: 'hero-dist-loop-badge',
   /** Primary Dist Loop CTA → Build for agents guide (DIST-005 homepage half). */
   buildForAgents: 'hero-build-for-agents',
   /** Primary Dist Loop CTA → examples/starters. */
@@ -83,6 +86,7 @@ export const LANDING_FEATURE_SLUGS = [
 /** Ordered shell keys returned by `/api/telemetry` (`ctr_per_cta`). */
 export const HOMEPAGE_CTA_IDS = [
   HOMEPAGE_HERO_CTA_IDS.releaseBadge,
+  HOMEPAGE_HERO_CTA_IDS.distLoopBadge,
   HOMEPAGE_HERO_CTA_IDS.buildForAgents,
   HOMEPAGE_HERO_CTA_IDS.viewStarters,
   HOMEPAGE_HERO_CTA_IDS.exploreAgents,

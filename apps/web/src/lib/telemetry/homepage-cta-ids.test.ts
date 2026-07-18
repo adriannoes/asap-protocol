@@ -15,6 +15,7 @@ describe('homepage-cta-ids Dist Loop extensions', () => {
   });
 
   it('adds primary Dist Loop hero and section ids', () => {
+    expect(HOMEPAGE_HERO_CTA_IDS.distLoopBadge).toBe('hero-dist-loop-badge');
     expect(HOMEPAGE_HERO_CTA_IDS.buildForAgents).toBe('hero-build-for-agents');
     expect(HOMEPAGE_HERO_CTA_IDS.viewStarters).toBe('hero-view-starters');
     expect(WHATS_NEW_RIBBON_CTA_IDS.docsBuildForAgents).toBe('docs-build-for-agents');
@@ -27,6 +28,7 @@ describe('homepage-cta-ids Dist Loop extensions', () => {
 
   it('includes new Dist Loop ids in the /api/telemetry shell list', () => {
     const shell = new Set<string>(HOMEPAGE_CTA_IDS);
+    expect(shell.has('hero-dist-loop-badge')).toBe(true);
     expect(shell.has('hero-build-for-agents')).toBe(true);
     expect(shell.has('hero-view-starters')).toBe(true);
     expect(shell.has('docs-build-for-agents')).toBe(true);
@@ -36,6 +38,7 @@ describe('homepage-cta-ids Dist Loop extensions', () => {
     expect(shell.has('how-it-works-build-for-agents')).toBe(true);
     expect(shell.has('how-it-works-view-starters')).toBe(true);
     // Legacy ids must remain for dashboard continuity.
+    expect(shell.has('hero-release-badge')).toBe(true);
     expect(shell.has('hero-explore-agents')).toBe(true);
     expect(shell.has('hero-register-agent')).toBe(true);
     expect(shell.has('docs-migration-253')).toBe(true);

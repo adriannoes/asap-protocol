@@ -25,7 +25,7 @@ export function HeroSection() {
                 href={BUILD_FOR_AGENTS_GUIDE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                data-cta={HOMEPAGE_HERO_CTA_IDS.releaseBadge}
+                data-cta={HOMEPAGE_HERO_CTA_IDS.distLoopBadge}
                 aria-label="Read the Build for agents guide on GitHub"
                 className={cn('inline-flex', EXTERNAL_LINK_FOCUS_CLASS)}
               >
