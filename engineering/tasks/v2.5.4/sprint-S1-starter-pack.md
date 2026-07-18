@@ -57,7 +57,7 @@ Smoke evidence (2026-07-18, local):
 |---------|---------|--------|
 | OpenAPI | `uv run python examples/starters/openapi-provider/run.py` | PASS |
 | MCP Auth Bridge | `uv run python examples/starters/mcp-auth-bridge/run.py` | PASS |
-| TypeScript | `pnpm install` → `pnpm --filter @asap-protocol/client run build` → `npm install --prefix examples/starters/typescript-consumer` → `node …/smoke.mjs` | PASS |
+| TypeScript | `pnpm install` → `pnpm --filter @asap-protocol/client run build` → `pnpm --filter @asap-protocol/starter-typescript-consumer run smoke` | PASS (workspace member as of S5 quality pass) |
 DIST-006 grep on `examples/starters/`: no pricing/fundraising/GTM matches. Optional live: `ASAP_PROVIDER_URL` in `.env.example` only.
 
 ---

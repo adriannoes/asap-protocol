@@ -59,6 +59,4 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm --filter @asap-protocol/client run build
       - name: TypeScript consumer smoke
-        run: |
-          npm install --prefix examples/starters/typescript-consumer
-          node examples/starters/typescript-consumer/smoke.mjs
+        run: pnpm --filter @asap-protocol/starter-typescript-consumer run smoke

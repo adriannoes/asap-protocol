@@ -8,7 +8,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@asap-protocol/client": "file:../../../packages/typescript/client"
+    "@asap-protocol/client": "workspace:*"
   },
   "scripts": {
     "smoke": "node ./smoke.mjs"

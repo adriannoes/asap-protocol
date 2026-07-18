@@ -56,8 +56,7 @@ Prove Host/Agent identity and consumer APIs with `@asap-protocol/client` without
 ```bash
 pnpm install
 pnpm --filter @asap-protocol/client run build
-npm install --prefix examples/starters/typescript-consumer
-node examples/starters/typescript-consumer/smoke.mjs
+pnpm --filter @asap-protocol/starter-typescript-consumer run smoke
 ```
 
 Default smoke is **offline** (no API keys, no live gateway). Optional live discovery uses `ASAP_PROVIDER_URL` — set an **HTTPS** provider base URL for remote hosts; plain `http://` is acceptable only for local loopback. Do not commit real tokens; use env placeholders from the starter `.env.example`.

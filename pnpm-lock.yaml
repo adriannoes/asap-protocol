@@ -180,6 +180,12 @@ importers:
         specifier: 8.59.1
         version: 8.59.1(eslint@9.18.0(jiti@2.7.0))(typescript@5.9.3)
 
+  examples/starters/typescript-consumer:
+    dependencies:
+      '@asap-protocol/client':
+        specifier: workspace:*
+        version: link:../../../packages/typescript/client
+
   packages/typescript/client:
     dependencies:
       '@noble/ed25519':

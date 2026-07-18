@@ -36,8 +36,7 @@ uv run python examples/starters/mcp-auth-bridge/run.py
 # TypeScript consumer (fresh clone needs workspace install first)
 pnpm install
 pnpm --filter @asap-protocol/client run build
-npm install --prefix examples/starters/typescript-consumer
-node examples/starters/typescript-consumer/smoke.mjs
+pnpm --filter @asap-protocol/starter-typescript-consumer run smoke
 ```
 
 Optional CI: `.github/workflows/starters-smoke.yml` (path-filtered on `examples/starters/**`).
