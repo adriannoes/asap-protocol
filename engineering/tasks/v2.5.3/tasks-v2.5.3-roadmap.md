@@ -1,6 +1,6 @@
 # Tasks: v2.5.3 Adapter Lab II — Sprint Index
 
-**Status: SHIPPED** — tag [`v2.5.3`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3) (2026-07-16); PyPI `asap-protocol==2.5.3`; PR [#291](https://github.com/adriannoes/asap-protocol/pull/291). Demand sheet: [demand-sheet.md](./demand-sheet.md). **Next:** [prd-v2.5.4-distribution-loop.md](../../../product/prd/prd-v2.5.4-distribution-loop.md).
+**Status: SHIPPED** — tag [`v2.5.3`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3) (2026-07-16); PyPI `asap-protocol==2.5.3`; PR [#291](https://github.com/adriannoes/asap-protocol/pull/291). Demand sheet: [demand-sheet.md](./demand-sheet.md). **Successor Dist Loop shipped** ([`v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4)); **next:** [prd-v2.5.5-formal-spec-interop.md](../../../product/prd/prd-v2.5.5-formal-spec-interop.md).
 
 Based on [PRD v2.5.3 Adapter Lab II](../../../product/prd/prd-v2.5.3-adapter-lab-ii.md). Each sprint merged into **`release/2.5.3`** (see [BRANCHING.md](./BRANCHING.md)); release train closed on `main`.
 

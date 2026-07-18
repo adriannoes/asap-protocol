@@ -8,7 +8,7 @@
 > **Last Updated**: 2026-07-16
 > **Parent train**: [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md)
 > **Predecessor**: [prd-v2.5.2-security-follow-up.md](./prd-v2.5.2-security-follow-up.md)
-> **Successor**: [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md)
+> **Successor**: [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md) (✅ shipped 2026-07-18) → next [prd-v2.5.5-formal-spec-interop.md](./prd-v2.5.5-formal-spec-interop.md)
 > **Tasks**: [engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md](../../engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md)
 >
 > **Migration note**: Formerly `product/prd/private/prd-v2.3.2-enterprise-workflow-adapters.md` (v2.3.2), then `prd-v2.5.1-adapter-lab-ii.md`. v2.5.1 was consumed by the code quality patch (2026-06-26); this work slipped again when v2.5.2 absorbed the security follow-up train.

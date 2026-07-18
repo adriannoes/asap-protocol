@@ -335,8 +335,8 @@ The v2.3 line shipped **v2.3.0** (public) and **v2.3.1** (private). Further adop
 |---------|----------|--------|-----|
 | v2.3.0 | Adoption Core | ✅ Shipped | This PRD |
 | v2.3.1 | Adapter Lab I | ✅ Shipped | `private/prd-v2.3.1-adapter-lab.md` |
-| ~~v2.3.2~~ → ~~v2.5.1~~ → **v2.5.3** | Adapter Lab II | Planned | [prd-v2.5.3-adapter-lab-ii.md](./prd-v2.5.3-adapter-lab-ii.md) |
-| ~~v2.3.3~~ → ~~v2.5.2~~ → **v2.5.4** | Distribution Loop | Planned | [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md) |
+| ~~v2.3.2~~ → ~~v2.5.1~~ → **v2.5.3** | Adapter Lab II | ✅ Shipped | [prd-v2.5.3-adapter-lab-ii.md](./prd-v2.5.3-adapter-lab-ii.md) |
+| ~~v2.3.3~~ → ~~v2.5.2~~ → **v2.5.4** | Distribution Loop | ✅ Shipped | [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md) |
 
 Patch releases must remain additive: no wire-protocol breaking changes, no new paid feature launch, and no Registry API Backend unless the 500-agent or IssueOps-bottleneck trigger fires.
 

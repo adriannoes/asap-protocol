@@ -3,11 +3,11 @@
 > **Product Requirements Document**
 >
 > **Version**: 2.5.5
-> **Status**: PLANNED
+> **Status**: PLANNED — **next** after Dist Loop (soft inputs shipped 2026-07-18)
 > **Created**: 2026-03-20 (origin in `prd-v2.4-adoption.md`); **rescoped**: 2026-06-22 → v2.5.3; **2026-07-08 → v2.5.5**
 > **Last Updated**: 2026-07-18
 > **Parent train**: [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md)
-> **Predecessor**: [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md) (soft — narrative/examples)
+> **Predecessor**: [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md) (✅ shipped — soft narrative/examples)
 > **Successor**: [prd-v3.0-economy.md](./prd-v3.0-economy.md)
 
 ---

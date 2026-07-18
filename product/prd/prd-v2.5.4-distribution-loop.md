@@ -3,7 +3,7 @@
 > **Product Requirements Document**
 >
 > **Version**: 2.5.4
-> **Status**: IN PROGRESS (v2.5.3 Adapter Lab II shipped 2026-07-16; decisions locked 2026-07-18; S0–S2 producer done)
+> **Status**: ✅ **SHIPPED** (2026-07-18) — tag [`v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4); PyPI `asap-protocol==2.5.4`; PR [#294](https://github.com/adriannoes/asap-protocol/pull/294)
 > **Created**: 2026-04-28 (as v2.3.3); **renumbered**: 2026-06-22 → v2.5.2; **2026-07-08 → v2.5.4**
 > **Last Updated**: 2026-07-18
 > **Parent train**: [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md)
@@ -124,11 +124,11 @@ Lab II and prior trains already shipped much of the distribution surface. v2.5.4
 
 ## 8. Definition of Done
 
-- [ ] DIST-001 … DIST-003, DIST-005, DIST-006 green
-- [ ] DIST-004 green **or** explicit maintainer deferral recorded on the roadmap (SHOULD)
-- [ ] [docs-review-checklist](../../engineering/tasks/v2.5.4/docs-review-checklist.md) signed for shipped surface
-- [ ] [release-checklist](../../engineering/tasks/v2.5.4/release-checklist.md) §§1–6 complete (merge → tag → publish → handoff)
-- [ ] Public copy free of private GTM / pricing / fundraising
+- [x] DIST-001 … DIST-003, DIST-005, DIST-006 green
+- [x] DIST-004 green **or** explicit maintainer deferral recorded on the roadmap (SHOULD) — satisfied; secrets gap documented
+- [x] [docs-review-checklist](../../engineering/tasks/v2.5.4/docs-review-checklist.md) signed for shipped surface
+- [x] [release-checklist](../../engineering/tasks/v2.5.4/release-checklist.md) §§1–6 complete (merge → tag → publish → handoff)
+- [x] Public copy free of private GTM / pricing / fundraising
 
 ---
 
@@ -164,7 +164,7 @@ See [tasks-v2.5.4-roadmap.md](../../engineering/tasks/v2.5.4/tasks-v2.5.4-roadma
 
 ## 11. Handoff inputs for v2.5.5 (Formal Spec)
 
-> Fill/confirm at S5 after ship. Dist Loop is a **soft** input to Formal Spec (narrative + examples), not a hard implementation gate. Docs-only Spec work may overlap Dist per [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md).
+> **Confirmed at S5 ship (2026-07-18).** Dist Loop is a **soft** input to Formal Spec (narrative + examples), not a hard implementation gate.
 
 | Input | Locked path / value | Spec use |
 |-------|---------------------|----------|
@@ -187,6 +187,7 @@ See [tasks-v2.5.4-roadmap.md](../../engineering/tasks/v2.5.4/tasks-v2.5.4-roadma
 
 | Date | Change |
 |------|--------|
+| 2026-07-18 | **SHIPPED** — tag `v2.5.4`; PyPI 2.5.4; DoD + §11 handoff confirmed; train CLOSED |
 | 2026-07-18 | Status → **IN PROGRESS**; DIST-005 acceptance clarifies homepage link lands with S3 CTA routing |
 | 2026-07-18 | §11 handoff inputs for v2.5.5; train cross-links tightened before kickoff |
 | 2026-07-18 | **Decisions locked** (D1–D5); baseline inventory; falsifiable DIST criteria; out of scope; sprint mapping; status remains READY FOR KICKOFF |

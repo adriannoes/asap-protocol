@@ -42,10 +42,10 @@ Between **v2.4.1** (security patch) and **v3.0** (economy), the project needs a 
 | **v2.5.1** | Code quality patch | Thermo-nuclear audit S0–S3 + P0 correctness/security fixes | *(execution: `engineering/tasks/private/v2.5.1/`)* | **✅ Shipped** 2026-06-26 — tag [`v2.5.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.1) |
 | **v2.5.2** | Security & correctness follow-up | #209 (operator auth, `extra="forbid"`, Redis JTI, web rate limits) + CR #245–#249 + registry fixes | [prd-v2.5.2-security-follow-up.md](./prd-v2.5.2-security-follow-up.md) | **✅ Shipped** 2026-07-08 — tag [`v2.5.2`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.2) |
 | **v2.5.3** | Adapter Lab II | Enterprise/workflow adapters (ex v2.3.2) | [prd-v2.5.3-adapter-lab-ii.md](./prd-v2.5.3-adapter-lab-ii.md) | **✅ Shipped** 2026-07-16 — tag [`v2.5.3`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3) · [tasks](../../engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md) |
-| **v2.5.4** | Distribution Loop | Homepage, starters, métricas (ex v2.3.3) | [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md) · [tasks](../../engineering/tasks/v2.5.4/tasks-v2.5.4-roadmap.md) | **Active** (tasks ACTIVE; S0–S2 producer done) |
-| **v2.5.5** | Formal Spec & Interop | RFC spec, introspection, privacy, cross-protocol | [prd-v2.5.5-formal-spec-interop.md](./prd-v2.5.5-formal-spec-interop.md) | Planned (soft-block on Dist; docs-only may overlap) |
+| **v2.5.4** | Distribution Loop | Homepage, starters, métricas (ex v2.3.3) | [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md) · [tasks](../../engineering/tasks/v2.5.4/tasks-v2.5.4-roadmap.md) | **✅ Shipped** 2026-07-18 — tag [`v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4) |
+| **v2.5.5** | Formal Spec & Interop | RFC spec, introspection, privacy, cross-protocol | [prd-v2.5.5-formal-spec-interop.md](./prd-v2.5.5-formal-spec-interop.md) | **Next** (soft Dist inputs available; create `engineering/tasks/v2.5.5/` at kickoff) |
 
-**Execution rule:** **v2.5.0–v2.5.3** shipped. **v2.5.4** is next (Distribution Loop; `release/2.5.4` on origin). **v2.5.5** may overlap docs-only work. **v3.0** remains trigger-gated ([prd-v3.0-economy.md](./prd-v3.0-economy.md)).
+**Execution rule:** **v2.5.0–v2.5.4** shipped. **Next:** Formal Spec → **v2.5.5**. **v3.0** remains trigger-gated ([prd-v3.0-economy.md](./prd-v3.0-economy.md)).
 
 **Patch tags (not minor releases):** [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1) republished **`asap-compliance` 1.3.0** only; `pyproject.toml` remained **2.5.0**. **`@asap-protocol/mcp-auth`** (npm) is still deferred — future npm patch TBD (do not confuse with tag `v2.5.0.1`).
 
@@ -121,6 +121,7 @@ Narrativa pública: **ASAP não substitui MCP** — fornece a camada de identida
 
 | Date | Change |
 |------|--------|
+| 2026-07-18 | **v2.5.4 shipped** — tag `v2.5.4`; PyPI 2.5.4; next → Formal Spec **v2.5.5** |
 | 2026-07-18 | v2.5.4 status → **Active** (tasks ACTIVE; S0–S2 producer done) |
 | 2026-07-18 | Parked/orphan owners table; Dist→Spec→Economy handoff pointer; v2.5.5 soft-block clarified |
 | 2026-07-18 | v2.5.4 tasks pack created — [tasks-v2.5.4-roadmap.md](../../engineering/tasks/v2.5.4/tasks-v2.5.4-roadmap.md); PRD D1–D5 locked |

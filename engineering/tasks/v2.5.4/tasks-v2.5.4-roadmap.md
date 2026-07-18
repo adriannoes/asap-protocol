@@ -2,7 +2,7 @@
 
 **Status: SHIPPED** — tag [`v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4) (2026-07-18); PyPI `asap-protocol==2.5.4`; PR [#294](https://github.com/adriannoes/asap-protocol/pull/294); GHCR `ghcr.io/adriannoes/asap-protocol:v2.5.4`. **Next:** [prd-v2.5.5-formal-spec-interop.md](../../../product/prd/prd-v2.5.5-formal-spec-interop.md).
 
-Based on [PRD v2.5.4 Distribution Loop](../../../product/prd/prd-v2.5.4-distribution-loop.md). **Every** sprint PR merges into **`release/2.5.4`** (see [BRANCHING.md](./BRANCHING.md)); only S5 opens one PR to `main`.
+Based on [PRD v2.5.4 Distribution Loop](../../../product/prd/prd-v2.5.4-distribution-loop.md). Train closed on `main` (sprint PRs historically merged into `release/2.5.4`; see [BRANCHING.md](./BRANCHING.md)).
 
 ## Prerequisites
 
