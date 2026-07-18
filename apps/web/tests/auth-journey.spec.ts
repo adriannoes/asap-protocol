@@ -106,6 +106,15 @@ test.describe('Landing Page Animations', () => {
         await page.goto('/');
         const heading = page.getByRole('heading', { level: 1 });
         await expect(heading).toBeVisible({ timeout: 5000 });
-        await expect(heading).toContainText(/Marketplace|Agents/i);
+        await expect(heading).toContainText(/The next users of software are agents/i);
+
+        // Scope to the hero: a looser /Build for agents/i match hits the badge aria-label first.
+        const hero = page.locator('section').first();
+        await expect(
+            hero.getByRole('link', { name: /^Build for agents/i }),
+        ).toHaveAttribute('href', /docs\/guides\/build-for-agents\.md/);
+        await expect(
+            hero.getByRole('link', { name: /^View starters/i }),
+        ).toHaveAttribute('href', /examples\/starters/);
     });
 });

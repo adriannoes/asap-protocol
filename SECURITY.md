@@ -151,6 +151,8 @@ CI runs `pip-audit` after a sync that **excludes** the optional extras `crewai` 
 
 **PYSEC-2025-183 (pyjwt, transitive via `[mcp]`)**: CI uses `--ignore-vuln PYSEC-2025-183` — advisory is **disputed by the supplier** (minimum key length is application-defined); override already pins `pyjwt>=2.12.0,<3` for CVE-2026-32597.
 
+**CVE-2026-52869 / CVE-2026-52870 / CVE-2026-59950 (mcp, optional `[mcp]` extra)**: Resolved by raising the `[mcp]` floor to `mcp>=1.28.1` (lock 1.28.1 as of 2026-07-18).
+
 **PYSEC-2024-271 (flask-cors, transitive via `locust` in dev/benchmarks)**: CI uses `--ignore-vuln PYSEC-2024-271` — log-injection when debug logging is enabled; **6.0.2 is latest on PyPI** with no fixed release listed. Not on the runtime agent-server path.
 
 **pip**: `tool.uv.override-dependencies` requires `pip>=26.1` so **CVE-2026-3219** (GHSA affecting pip ≤26.0.1) no longer requires a `pip-audit` ignore.

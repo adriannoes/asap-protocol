@@ -3,16 +3,56 @@
 import { Terminal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+/**
+ * Dist Loop / Build for agents framing — path names and starter ids only.
+ * Do not invent fake JSON-RPC / SSE payloads here.
+ */
 const TERMINAL_LINES = [
-  { text: '[SYSTEM] ASAP Protocol v2.2.1 init — Protocol Hardening + real WebAuthn', color: 'text-zinc-400', delay: 400 },
-  { text: '[IDENTITY] Host authenticated · Agent Ed25519 key issued (typ: agent+jwt)', color: 'text-indigo-300', delay: 1000 },
-  { text: '-> POST /asap { "method": "capability.describe", "name": "transfer_funds" }', color: 'text-cyan-300', delay: 1800 },
-  { text: '<- RESP constraints: { amount: { max: 1000 }, currency: { in: ["USD","EUR"] } }', color: 'text-purple-300', delay: 2800 },
-  { text: '[APPROVAL] user_code AB-CD-34 via RFC 8628 Device Authorization', color: 'text-amber-300', delay: 3800 },
-  { text: '-> POST /asap/stream  Accept: text/event-stream  ASAP-Version: 2.2', color: 'text-indigo-300', delay: 4800 },
-  { text: 'event: task_stream  data: { chunk: "partial result...", progress: 0.5 }', color: 'text-emerald-300', delay: 6000 },
-  { text: 'event: task_stream  data: { final: true, status: "completed" }', color: 'text-emerald-300', delay: 7200 },
-  { text: '[AUDIT] 3 writes appended (hash chain verified) · latency 38ms', color: 'text-zinc-500', delay: 8200 },
+  {
+    text: '[TRAIN] ASAP Distribution Loop — Build for agents',
+    color: 'text-zinc-400',
+    delay: 400,
+  },
+  {
+    text: '[GUIDE] docs/guides/build-for-agents.md',
+    color: 'text-indigo-300',
+    delay: 1000,
+  },
+  {
+    text: '[STARTERS] openapi-provider · typescript-consumer · mcp-auth-bridge',
+    color: 'text-cyan-300',
+    delay: 1800,
+  },
+  {
+    text: '[FOUNDATION] discoverable capabilities · scoped identity · compliance',
+    color: 'text-purple-300',
+    delay: 2800,
+  },
+  {
+    text: '[ADAPTER] OpenAPI → agent-ready interface (examples/starters/openapi-provider)',
+    color: 'text-amber-300',
+    delay: 3800,
+  },
+  {
+    text: '[SDK] @asap-protocol/client · examples/starters/typescript-consumer',
+    color: 'text-indigo-300',
+    delay: 4800,
+  },
+  {
+    text: '[MCP] Auth Bridge starter · examples/starters/mcp-auth-bridge',
+    color: 'text-emerald-300',
+    delay: 6000,
+  },
+  {
+    text: '[MARKETPLACE] browse / register remain secondary proof',
+    color: 'text-zinc-500',
+    delay: 7200,
+  },
+  {
+    text: '[READY] primary CTAs → guide + starters',
+    color: 'text-emerald-300',
+    delay: 8200,
+  },
 ];
 
 const LOOP_RESET_DELAY = 11000;
@@ -40,9 +80,7 @@ export function HeroTerminal() {
   }, [tick]);
 
   return (
-    <div
-      className="mx-auto w-full max-w-[500px] lg:max-w-none animate-in fade-in zoom-in-95 duration-1000 delay-200 ease-out"
-    >
+    <div className="mx-auto w-full max-w-[500px] lg:max-w-none animate-in fade-in zoom-in-95 duration-1000 delay-200 ease-out">
       <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/50 border-white/10 backdrop-blur-xl">
         <div className="flex items-center border-b border-zinc-800 bg-zinc-900/50 px-4 py-3">
           <div className="flex gap-2">
@@ -52,7 +90,7 @@ export function HeroTerminal() {
           </div>
           <div className="flex flex-1 items-center justify-center gap-2 font-mono text-xs text-zinc-500">
             <Terminal size={14} />
-            <span>asap-orchestrator</span>
+            <span>asap-build-for-agents</span>
           </div>
         </div>
 

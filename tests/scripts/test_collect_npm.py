@@ -9,11 +9,26 @@ import httpx
 import pytest
 
 from scripts.telemetry.collect_npm import (
+    DEFAULT_PACKAGES,
     _downloads_url,
     collect_npm_weekly,
     fetch_last_week_downloads,
     sum_downloads_from_range_payload,
 )
+
+REQUIRED_DEFAULT_NPM_PACKAGES: frozenset[str] = frozenset(
+    {
+        "@asap-protocol/client",
+        "@asap-protocol/mastra",
+        "@asap-protocol/openai-agents",
+    }
+)
+
+
+class TestDefaultPackages:
+    def test_defaults_cover_scoped_adoption_packages(self) -> None:
+        assert len(DEFAULT_PACKAGES) >= 3
+        assert REQUIRED_DEFAULT_NPM_PACKAGES.issubset(DEFAULT_PACKAGES)
 
 
 class TestDownloadsUrl:

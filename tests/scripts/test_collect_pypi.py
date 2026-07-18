@@ -8,10 +8,24 @@ from unittest.mock import patch
 import pytest
 
 from scripts.telemetry.collect_pypi import (
+    DEFAULT_PYPI_PACKAGES,
     collect_pypi_recent,
     fetch_pypi_recent,
     normalize_recent_counts,
 )
+
+REQUIRED_DEFAULT_PYPI_PACKAGES: frozenset[str] = frozenset(
+    {
+        "asap-protocol",
+        "asap-compliance",
+    }
+)
+
+
+class TestDefaultPypiPackages:
+    def test_defaults_cover_protocol_and_compliance(self) -> None:
+        assert len(DEFAULT_PYPI_PACKAGES) >= 2
+        assert REQUIRED_DEFAULT_PYPI_PACKAGES.issubset(DEFAULT_PYPI_PACKAGES)
 
 
 class TestNormalizeRecentCounts:

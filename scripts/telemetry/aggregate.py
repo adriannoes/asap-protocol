@@ -44,7 +44,7 @@ from scripts.telemetry.collect_github import (
     collect_github_signals,
 )
 from scripts.telemetry.collect_npm import DEFAULT_PACKAGES, collect_npm_weekly
-from scripts.telemetry.collect_pypi import collect_pypi_recent
+from scripts.telemetry.collect_pypi import DEFAULT_PYPI_PACKAGES, collect_pypi_recent
 from scripts.telemetry.collect_registry import DEFAULT_REGISTRY_URL, collect_registry_snapshot
 from scripts.telemetry.collect_registry import fetch_registry_json
 from scripts.lib.safe_url import is_safe_http_url
@@ -397,18 +397,23 @@ def render_dashboard(
             for v in npm_vals.values():
                 if isinstance(v, int):
                     npm_sum += v
-        pypi_week: str | int = "—"
+        pypi_sum = 0
+        pypi_found = False
         pypi_obj = raw_hist.get("pypi")
         if isinstance(pypi_obj, dict):
             pkgs = pypi_obj.get("packages")
             if isinstance(pkgs, dict):
-                first = next(iter(pkgs.values()), None)
-                if isinstance(first, dict):
-                    dl = first.get("downloads")
-                    if isinstance(dl, dict):
-                        lw = dl.get("last_week")
-                        if isinstance(lw, int):
-                            pypi_week = lw
+                for pkg_val in pkgs.values():
+                    if not isinstance(pkg_val, dict):
+                        continue
+                    dl = pkg_val.get("downloads")
+                    if not isinstance(dl, dict):
+                        continue
+                    lw = dl.get("last_week")
+                    if isinstance(lw, int):
+                        pypi_sum += lw
+                        pypi_found = True
+        pypi_week: str | int = pypi_sum if pypi_found else "—"
         gh_stars: str | int = "—"
         gh = raw_hist.get("github")
         if isinstance(gh, dict):
@@ -538,7 +543,7 @@ def main(argv: list[str] | None = None) -> int:
     previous_registry_count = registry_count_from_snapshot(prev_path) if prev_path else None
 
     npm_report = cast(NpmWeeklyIngress, collect_npm_weekly(DEFAULT_PACKAGES))
-    pypi_report = cast(PyPiWeeklyIngress, collect_pypi_recent(("asap-protocol",)))
+    pypi_report = cast(PyPiWeeklyIngress, collect_pypi_recent(DEFAULT_PYPI_PACKAGES))
 
     allow_github_skip: bool = args.allow_github_skip
     github_report: GitHubTelemetryIngress

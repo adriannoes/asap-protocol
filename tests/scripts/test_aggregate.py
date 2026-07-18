@@ -202,6 +202,104 @@ def test_render_dashboard_adapter_section_sorted() -> None:
     assert x_pos < m_pos < u_pos
 
 
+def test_render_dashboard_sums_pypi_last_week_across_packages(tmp_path: Path) -> None:
+    """Dashboard PyPI column must sum all packages (parity with npm Σ)."""
+    snap_path = tmp_path / "snapshot-2026-05-16.json"
+    snap_path.write_text(
+        json.dumps(
+            {
+                "npm": {"@asap-protocol/client": 4, "@asap-protocol/mastra": 6},
+                "pypi": {
+                    "packages": {
+                        "asap-protocol": {
+                            "downloads": {"last_day": 1, "last_week": 7, "last_month": 20},
+                        },
+                        "asap-compliance": {
+                            "downloads": {"last_day": 0, "last_week": 3, "last_month": 9},
+                        },
+                    },
+                    "source": "stub",
+                },
+                "github": {"repo": {"stargazers_count": 42}},
+                "registry": {"agent_count": 1},
+            },
+        ),
+        encoding="utf-8",
+    )
+    md = aggregate_mod.render_dashboard(
+        {},
+        [(date(2026, 5, 16), snap_path)],
+        weeks=12,
+    )
+    # npm 4+6=10, pypi 7+3=10 (not first-package-only 7)
+    assert "| 2026-05-16 | 10 | 10 | 42 | 1 |" in md
+
+
+def test_main_passes_expanded_package_defaults(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Aggregate must collect the full npm/PyPI default sets (DIST-004)."""
+    captured: dict[str, tuple[str, ...]] = {}
+
+    def _capture_npm(packages: tuple[str, ...], **_k: object) -> dict[str, Any]:
+        captured["npm"] = packages
+        return {
+            "packages": {pkg: {"downloads": 1} for pkg in packages},
+        }
+
+    def _capture_pypi(packages: tuple[str, ...], **_k: object) -> dict[str, Any]:
+        captured["pypi"] = packages
+        return {
+            "packages": {
+                pkg: {
+                    "package": pkg,
+                    "downloads": {"last_day": 0, "last_week": 1, "last_month": 2},
+                }
+                for pkg in packages
+            },
+            "source": "stub",
+        }
+
+    monkeypatch.setattr(aggregate_mod, "collect_npm_weekly", _capture_npm)
+    monkeypatch.setattr(aggregate_mod, "collect_pypi_recent", _capture_pypi)
+    monkeypatch.setattr(
+        aggregate_mod,
+        "collect_github_or_placeholder",
+        lambda *_a, **_k: {
+            "source": "github_rest_api",
+            "adapter_requests": {"by_framework": {}, "open_count": 0},
+            "repo": {"stargazers_count": 0},
+        },
+    )
+    monkeypatch.setattr(
+        aggregate_mod,
+        "fetch_registry_json",
+        lambda _url: {"agents": [{"id": "a"}]},
+    )
+    monkeypatch.setattr(aggregate_mod, "update_latest_symlink", lambda *_a, **_k: None)
+
+    code = aggregate_mod.main(
+        [
+            "--output-dir",
+            str(tmp_path),
+            "--date",
+            "2026-05-16",
+            "--allow-github-skip",
+        ],
+    )
+    assert code == 0
+    assert set(captured["npm"]) >= {
+        "@asap-protocol/client",
+        "@asap-protocol/mastra",
+        "@asap-protocol/openai-agents",
+    }
+    assert set(captured["pypi"]) >= {"asap-protocol", "asap-compliance"}
+    snap = json.loads((tmp_path / "snapshot-2026-05-16.json").read_text(encoding="utf-8"))
+    assert "@asap-protocol/mastra" in snap["npm"]
+    assert "asap-compliance" in snap["pypi"]["packages"]
+
+
 def test_main_writes_files(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
