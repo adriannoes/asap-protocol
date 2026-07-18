@@ -106,6 +106,15 @@ test.describe('Landing Page Animations', () => {
         await page.goto('/');
         const heading = page.getByRole('heading', { level: 1 });
         await expect(heading).toBeVisible({ timeout: 5000 });
-        await expect(heading).toContainText(/Marketplace|Agents/i);
+        await expect(heading).toContainText(/The next users of software are agents/i);
+
+        const buildForAgents = page.getByRole('link', { name: /Build for agents/i }).first();
+        await expect(buildForAgents).toHaveAttribute(
+            'href',
+            /docs\/guides\/build-for-agents\.md/
+        );
+        // Hero + How it works both expose "View starters"; assert the primary (hero) CTA.
+        const viewStarters = page.getByRole('link', { name: /View starters/i }).first();
+        await expect(viewStarters).toHaveAttribute('href', /examples\/starters/);
     });
 });

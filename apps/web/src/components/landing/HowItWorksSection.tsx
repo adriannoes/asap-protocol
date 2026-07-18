@@ -1,16 +1,24 @@
+import Link from 'next/link';
 import { Search, ShieldCheck, KeySquare, Cpu } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { HOW_IT_WORKS_CTA_IDS } from '@/lib/telemetry/homepage-cta-ids';
+import {
+  BUILD_FOR_AGENTS_GUIDE_URL,
+  STARTERS_URL,
+} from '@/lib/landing/dist-loop-links';
+import { EXTERNAL_LINK_FOCUS_CLASS, OpensInNewTabHint } from '@/components/links/opens-in-new-tab';
 
 const steps = [
   {
     title: 'Discover',
     description:
-      'Browse the Lite Registry for agents matching your exact requirements, capabilities, and SLA needs.',
+      'Find agent-ready capabilities via manifests and the Lite Registry — or start from OpenAPI and adapters in the Build for agents guide.',
     icon: Search,
   },
   {
     title: 'Verify',
     description:
-      "Check the agent's operations badge, trust scores, and historical performance metrics before integration.",
+      'Run compliance checks and review trust signals before you wire an agent into production workflows.',
     icon: ShieldCheck,
   },
   {
@@ -22,7 +30,7 @@ const steps = [
   {
     title: 'Integrate',
     description:
-      'Connect over JSON-RPC 2.0 with version negotiation, batch requests and streaming responses (SSE). Standardized envelopes mean your code works with any agent.',
+      'Connect with official SDKs and thin starters (OpenAPI provider, TypeScript consumer, MCP Auth Bridge) so existing APIs become agent-ready interfaces.',
     icon: Cpu,
   },
 ];
@@ -34,7 +42,7 @@ export function HowItWorksSection() {
         <div className="mb-16 flex flex-col gap-4 text-center">
           <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">How it works</h2>
           <p className="mx-auto max-w-[600px] text-zinc-400">
-            Four simple steps to build robust, secure multi-agent swarms.
+            Four steps from agent-ready APIs to scoped, compliant multi-agent workflows.
           </p>
         </div>
 
@@ -49,7 +57,7 @@ export function HowItWorksSection() {
 
               return (
                 <div
-                  key={index}
+                  key={step.title}
                   className="relative flex flex-col items-center gap-8 md:flex-row md:gap-12"
                 >
                   {/* Left Column (Desktop) */}
@@ -75,6 +83,42 @@ export function HowItWorksSection() {
               );
             })}
           </div>
+        </div>
+
+        <div className="mt-16 flex flex-col items-center justify-center gap-4 min-[400px]:flex-row">
+          <Button
+            asChild
+            size="lg"
+            className="w-full bg-white text-black hover:bg-zinc-200 min-[400px]:w-auto"
+          >
+            <Link
+              href={BUILD_FOR_AGENTS_GUIDE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-cta={HOW_IT_WORKS_CTA_IDS.buildForAgents}
+              className={EXTERNAL_LINK_FOCUS_CLASS}
+            >
+              Build for agents
+              <OpensInNewTabHint />
+            </Link>
+          </Button>
+          <Button
+            asChild
+            size="lg"
+            variant="outline"
+            className="w-full border-zinc-800 text-zinc-300 hover:bg-zinc-900 hover:text-white min-[400px]:w-auto"
+          >
+            <Link
+              href={STARTERS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-cta={HOW_IT_WORKS_CTA_IDS.viewStarters}
+              className={EXTERNAL_LINK_FOCUS_CLASS}
+            >
+              View starters
+              <OpensInNewTabHint />
+            </Link>
+          </Button>
         </div>
       </div>
     </section>
