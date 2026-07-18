@@ -4,6 +4,8 @@ import {
   BUILD_FOR_AGENTS_GUIDE_URL,
   CHANGELOG_254_URL,
   DOCS_MIGRATION_254_URL,
+  GITHUB_BLOB_MAIN,
+  GITHUB_TREE_MAIN,
   STARTERS_URL,
 } from '@/lib/landing/dist-loop-links';
 import { EXTERNAL_LINK_FOCUS_CLASS, OpensInNewTabHint } from '@/components/links/opens-in-new-tab';
@@ -32,20 +34,14 @@ type Pill = {
   dataCta: string;
 };
 
-const DOCS_MCP_AUTH_BRIDGE =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/adapters/mcp-auth-bridge.md';
-const EXAMPLE_MCP_AUTH_BRIDGE =
-  'https://github.com/adriannoes/asap-protocol/tree/main/examples/mcp_auth_bridge';
-const DOCS_TS_SDK = 'https://github.com/adriannoes/asap-protocol/blob/main/docs/sdks/typescript.md';
+const DOCS_MCP_AUTH_BRIDGE = `${GITHUB_BLOB_MAIN}/docs/adapters/mcp-auth-bridge.md`;
+const EXAMPLE_MCP_AUTH_BRIDGE = `${GITHUB_TREE_MAIN}/examples/mcp_auth_bridge`;
+const DOCS_TS_SDK = `${GITHUB_BLOB_MAIN}/docs/sdks/typescript.md`;
 // Lab II docs ship with v2.5.3.
-const DOCS_WORKFLOW_CONNECTORS =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/integrations/workflow-connectors.md';
-const DOCS_AUTOMATION_CONNECTOR_SECURITY =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/automation-connector-security.md';
-const DOCS_MICROSOFT_AGENT_FRAMEWORK =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/integrations/microsoft-agent-framework.md';
-const DOCS_NEMO_AGENT_TOOLKIT =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/integrations/nemo-agent-toolkit.md';
+const DOCS_WORKFLOW_CONNECTORS = `${GITHUB_BLOB_MAIN}/docs/integrations/workflow-connectors.md`;
+const DOCS_AUTOMATION_CONNECTOR_SECURITY = `${GITHUB_BLOB_MAIN}/docs/guides/automation-connector-security.md`;
+const DOCS_MICROSOFT_AGENT_FRAMEWORK = `${GITHUB_BLOB_MAIN}/docs/integrations/microsoft-agent-framework.md`;
+const DOCS_NEMO_AGENT_TOOLKIT = `${GITHUB_BLOB_MAIN}/docs/integrations/nemo-agent-toolkit.md`;
 
 const PILLS: Pill[] = [
   {

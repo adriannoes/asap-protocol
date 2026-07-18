@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LANDING_FEATURE_SLUGS } from '@/lib/telemetry/homepage-cta-ids';
 import { EXTERNAL_LINK_FOCUS_CLASS, OpensInNewTabHint } from '@/components/links/opens-in-new-tab';
+import { GITHUB_BLOB_MAIN } from '@/lib/landing/dist-loop-links';
 import { cn } from '@/lib/utils';
 import {
   Database,
@@ -23,7 +24,6 @@ import {
 } from 'lucide-react';
 
 const INLINE_CODE = 'rounded bg-zinc-800 px-1 py-0.5 text-sm text-indigo-300';
-const GITHUB_BLOB = 'https://github.com/adriannoes/asap-protocol/blob/main';
 
 type FeatureCard = {
   title: string;
@@ -31,8 +31,8 @@ type FeatureCard = {
   description: ReactNode;
   icon: typeof Database;
   className: string;
-  /** Prefer concrete docs on `main` when present (DIST-002). */
-  docsHref?: string;
+  /** Concrete docs on `main` (DIST-002) — all feature cards are external. */
+  docsHref: string;
 };
 
 type FeatureSlug = (typeof LANDING_FEATURE_SLUGS)[number];
@@ -44,7 +44,7 @@ const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
       'Generate ASAP capabilities from an OpenAPI 3.x document so existing HTTP APIs become agent-callable with minimal glue code.',
     icon: FileCode,
     className: 'md:col-span-2',
-    docsHref: `${GITHUB_BLOB}/docs/adapters/openapi.md`,
+    docsHref: `${GITHUB_BLOB_MAIN}/docs/adapters/openapi.md`,
   },
   'workflow-connectors': {
     title: 'Workflow Connectors',
@@ -52,7 +52,7 @@ const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
       'Expose n8n-/Activepieces-style workflow HTTP APIs as ASAP skills via the OpenAPI adapter — remote agents invoke skills that proxy to the workflow host.',
     icon: Workflow,
     className: 'md:col-span-1',
-    docsHref: `${GITHUB_BLOB}/docs/integrations/workflow-connectors.md`,
+    docsHref: `${GITHUB_BLOB_MAIN}/docs/integrations/workflow-connectors.md`,
   },
   'automation-connector-security': {
     title: 'Automation Connector Security',
@@ -60,7 +60,7 @@ const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
       'Hardening guide for OpenAPI-backed workflow connectors: secrets, least privilege, HTTPS/TLS. MCP Auth Bridge applies when a connector exposes MCP (e.g. NeMo Path A).',
     icon: Lock,
     className: 'md:col-span-1',
-    docsHref: `${GITHUB_BLOB}/docs/guides/automation-connector-security.md`,
+    docsHref: `${GITHUB_BLOB_MAIN}/docs/guides/automation-connector-security.md`,
   },
   'typescript-sdk': {
     title: 'TypeScript SDK',
@@ -72,7 +72,7 @@ const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
     ),
     icon: Braces,
     className: 'md:col-span-1',
-    docsHref: `${GITHUB_BLOB}/docs/sdks/typescript.md`,
+    docsHref: `${GITHUB_BLOB_MAIN}/docs/sdks/typescript.md`,
   },
   'mastra-adapter': {
     title: 'Mastra Adapter',
@@ -85,7 +85,7 @@ const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
     ),
     icon: Bot,
     className: 'md:col-span-1',
-    docsHref: `${GITHUB_BLOB}/docs/integrations/mastra.md`,
+    docsHref: `${GITHUB_BLOB_MAIN}/docs/integrations/mastra.md`,
   },
   'openai-agents-adapter': {
     title: 'OpenAI Agents Adapter',
@@ -98,7 +98,7 @@ const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
     ),
     icon: Sparkles,
     className: 'md:col-span-1',
-    docsHref: `${GITHUB_BLOB}/docs/integrations/openai-agents.md`,
+    docsHref: `${GITHUB_BLOB_MAIN}/docs/integrations/openai-agents.md`,
   },
   'auto-registration': {
     title: 'Auto-Registration',
@@ -111,7 +111,7 @@ const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
     ),
     icon: CloudUpload,
     className: 'md:col-span-1',
-    docsHref: `${GITHUB_BLOB}/docs/registry/auto-registration.md`,
+    docsHref: `${GITHUB_BLOB_MAIN}/docs/registry/auto-registration.md`,
   },
   'lite-registry': {
     title: 'Lite Registry',
@@ -119,7 +119,7 @@ const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
       'Built for speed and resilience. Pull agent manifests directly from a statically served JSON registry with zero database overhead.',
     icon: Database,
     className: 'md:col-span-2',
-    docsHref: `${GITHUB_BLOB}/docs/raw-fetch.md`,
+    docsHref: `${GITHUB_BLOB_MAIN}/docs/raw-fetch.md`,
   },
   'verified-trust': {
     title: 'Verified Trust',
@@ -127,7 +127,7 @@ const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
       'Manual operations-based verification processes to ensure quality and safety across the ecosystem.',
     icon: ShieldCheck,
     className: 'md:col-span-1',
-    docsHref: `${GITHUB_BLOB}/docs/guides/registry-verification-review.md`,
+    docsHref: `${GITHUB_BLOB_MAIN}/docs/guides/registry-verification-review.md`,
   },
   '1-click-integration': {
     title: '1-Click Integration',
@@ -135,7 +135,7 @@ const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
       'Launch sub-agents through a standard protocol that orchestrates connections over WebSockets natively.',
     icon: Zap,
     className: 'md:col-span-1',
-    docsHref: `${GITHUB_BLOB}/docs/transport.md`,
+    docsHref: `${GITHUB_BLOB_MAIN}/docs/transport.md`,
   },
   'full-observability': {
     title: 'Full Observability',
@@ -143,7 +143,7 @@ const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
       'Real-time stream of agent events, state snapshots, and task updates standardized across the network.',
     icon: Activity,
     className: 'md:col-span-2',
-    docsHref: `${GITHUB_BLOB}/docs/observability.md`,
+    docsHref: `${GITHUB_BLOB_MAIN}/docs/observability.md`,
   },
   'per-agent-identity': {
     title: 'Per-Agent Identity',
@@ -151,7 +151,7 @@ const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
       'Every runtime agent gets its own Ed25519 keypair under a persistent Host. Audit, scope, and revoke individual sessions without touching the rest of your fleet.',
     icon: Fingerprint,
     className: 'md:col-span-1',
-    docsHref: `${GITHUB_BLOB}/docs/guides/identity-signing.md`,
+    docsHref: `${GITHUB_BLOB_MAIN}/docs/guides/identity-signing.md`,
   },
   'scoped-capabilities': {
     title: 'Scoped Capabilities',
@@ -159,7 +159,7 @@ const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
       'Fine-grained capabilities with constraint operators — transfer up to $1,000, only in USD, to one destination. Precise grants replace coarse OAuth scopes.',
     icon: KeySquare,
     className: 'md:col-span-1',
-    docsHref: `${GITHUB_BLOB}/docs/capabilities/index.md`,
+    docsHref: `${GITHUB_BLOB_MAIN}/docs/capabilities/index.md`,
   },
   'streaming-responses': {
     title: 'Streaming Responses',
@@ -167,7 +167,7 @@ const FEATURE_DEFINITIONS: Record<FeatureSlug, Omit<FeatureCard, 'slug'>> = {
       'TaskStream chunks over Server-Sent Events. Show partial results and progress in real time instead of blocking until completion.',
     icon: Radio,
     className: 'md:col-span-1',
-    docsHref: `${GITHUB_BLOB}/docs/transport.md`,
+    docsHref: `${GITHUB_BLOB_MAIN}/docs/transport.md`,
   },
 };
 
@@ -193,17 +193,14 @@ export function FeaturesSection() {
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
           {features.map((feature) => {
             const Icon = feature.icon;
-            const isExternal = Boolean(feature.docsHref);
-            const href = feature.docsHref ?? `/features/${feature.slug}`;
             return (
               <Link
                 key={feature.slug}
-                href={href}
+                href={feature.docsHref}
                 data-cta={`feature-${feature.slug}`}
-                {...(isExternal
-                  ? { target: '_blank' as const, rel: 'noopener noreferrer' as const }
-                  : {})}
-                className={cn('group', feature.className, isExternal && EXTERNAL_LINK_FOCUS_CLASS)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn('group', feature.className, EXTERNAL_LINK_FOCUS_CLASS)}
               >
                 <Card
                   className={`relative h-full overflow-hidden border-zinc-800 bg-zinc-950 transition-all duration-300 hover:border-indigo-500/50`}
@@ -220,8 +217,8 @@ export function FeaturesSection() {
                       {feature.description}
                     </CardDescription>
                     <div className="mt-auto flex items-center pt-4 text-sm font-medium text-indigo-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                      {isExternal ? 'Read docs' : 'Explore feature'}
-                      {isExternal ? <OpensInNewTabHint /> : null}
+                      Read docs
+                      <OpensInNewTabHint />
                       <ArrowRight className="ml-1 h-4 w-4" />
                     </div>
                   </CardContent>
