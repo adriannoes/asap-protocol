@@ -33,9 +33,11 @@ def main() -> None:
             timeout=_SMOKE_TIMEOUT_SEC,
         )
     except subprocess.TimeoutExpired:
+        # Log script path only — argv may carry secrets if callers forward flags.
         print(
             f"OpenAPI starter smoke exceeded {_SMOKE_TIMEOUT_SEC}s limit "
-            f"(DIST-003 headless bound). Command: {cmd!r}",
+            f"(DIST-003 headless bound). Script: {_PARENT.name} "
+            f"(arguments omitted)",
             file=sys.stderr,
         )
         sys.exit(124)

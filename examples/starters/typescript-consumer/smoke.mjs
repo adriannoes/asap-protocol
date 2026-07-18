@@ -15,6 +15,24 @@ import {
   listCapabilities,
 } from "@asap-protocol/client";
 
+/** Live-path bound matching Python starter subprocess timeouts (DIST-003). */
+const LIVE_TIMEOUT_MS = 60_000;
+
+/**
+ * Redact Bearer credentials and compact JWTs before logging (live-path hygiene).
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function redactSecretsForLog(text) {
+  return text
+    .replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/giu, "Bearer [REDACTED]")
+    .replace(
+      /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/gu,
+      "[REDACTED_JWT]",
+    );
+}
+
 /**
  * Require https: for remote hosts; allow http: only for loopback.
  *
@@ -68,7 +86,8 @@ async function runOptionalLive(agent) {
 
   assertHttpsOrLoopback(raw, "ASAP_PROVIDER_URL");
 
-  const manifest = await discoverProvider(raw);
+  const signal = AbortSignal.timeout(LIVE_TIMEOUT_MS);
+  const manifest = await discoverProvider(raw, { signal });
   const asapEndpoint = manifest.endpoints?.asap;
   if (typeof asapEndpoint !== "string" || asapEndpoint.length === 0) {
     throw new Error(
@@ -80,7 +99,7 @@ async function runOptionalLive(agent) {
     "manifest.endpoints.asap",
   );
   const agentJwt = await agent.signAgentJwt({ aud: provider.origin });
-  const listed = await listCapabilities(provider, { agentJwt });
+  const listed = await listCapabilities(provider, { agentJwt, signal });
   return {
     providerId: manifest.id,
     providerName: manifest.name,
@@ -107,7 +126,9 @@ async function main() {
 }
 
 main().catch((err) => {
-  const msg = err instanceof Error ? err.message : String(err);
-  console.error(`typescript-consumer smoke: FAIL — ${msg}`);
+  const raw = err instanceof Error ? err.message : String(err);
+  console.error(
+    `typescript-consumer smoke: FAIL — ${redactSecretsForLog(raw)}`,
+  );
   process.exit(1);
 });
