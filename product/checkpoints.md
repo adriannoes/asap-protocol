@@ -3,7 +3,7 @@
 > **Purpose**: Formal review points to update documentation with learnings (product follow-up after releases).
 > **Location**: Lives under **`product/`** because it drives PRD updates and retros, not day-to-day engineering execution.
 > **Created**: 2026-02-06
-> **Updated**: 2026-07-16 — **v2.5.3 shipped** (tag [`v2.5.3`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3)); PyPI **2.5.3**. Train next: Distribution Loop → **v2.5.4**; Formal Spec → **v2.5.5**.
+> **Updated**: 2026-07-18 — **v2.5.3 shipped**; next execution = **v2.5.4** Distribution Loop ([tasks](../engineering/tasks/v2.5.4/tasks-v2.5.4-roadmap.md), `release/2.5.4` on origin). Soft successor = **v2.5.5** Formal Spec; long-term = **v3.0** Economy (trigger-gated).
 
 ---
 
@@ -30,10 +30,11 @@ Use this section first; the checkpoint sections below add detail or archive.
 | **v2.5.0 — MCP Auth Bridge** | **Released** **2026-06-24** — `asap.adapters.mcp` (`protect_server`), stdio JWT carriage, compliance profile `mcp-auth-bridge`, [adapter guide](../docs/adapters/mcp-auth-bridge.md) ([`CHANGELOG.md`](../CHANGELOG.md#250---2026-06-24), [migration](../docs/migration.md#upgrading-from-v241-to-v250), [PRD](./prd/prd-v2.5.0-mcp-auth-bridge.md)). Tag **v2.5.0**; PyPI/Docker via [sprint-S5-release.md](../engineering/tasks/v2.5.0/sprint-S5-release.md). | **`asap-compliance` 1.3.0** on PyPI (tag **v2.5.0.1**); `@asap-protocol/mcp-auth` ([backlog](../engineering/tasks/v2.5.0/backlog-mcp-auth-typescript.md)). |
 | **v2.5.1 — Code quality patch** | **Released** **2026-06-26** — behavior-preserving refactor + six P0 fixes. PR [#244](https://github.com/adriannoes/asap-protocol/pull/244). Tag **v2.5.1**. ([`CHANGELOG.md`](../CHANGELOG.md#251---2026-06-25), [migration](../docs/migration.md#upgrading-from-v250-to-v251)). | Follow-ups #245–#249 **closed** in v2.5.2; Adapter Lab II → **v2.5.3**. |
 | **v2.5.2 — Security follow-up** | **Released** **2026-07-08** — #209 (operator auth, `extra="forbid"`, Redis JTI, web rate limits) + CR #245–#249 + registry #224/#227 + deps #258. PR [#281](https://github.com/adriannoes/asap-protocol/pull/281); tag **v2.5.2**; PyPI **2.5.2**. [PRD](./prd/prd-v2.5.2-security-follow-up.md), [`CHANGELOG`](../CHANGELOG.md#252---2026-07-08), [migration](../docs/migration.md#upgrading-from-v251). | CP-7 for 2.5.2. |
-| **v2.5.3 — Adapter Lab II** | **Merge-ready** **2026-07-14** — workflow connectors, automation security, experimental MAF / NAT guides, DX fixes. [PRD](./prd/prd-v2.5.3-adapter-lab-ii.md), [`CHANGELOG`](../CHANGELOG.md#253---2026-07-14), [migration](../docs/migration.md#upgrading-from-v252-to-v253); tasks [tasks-v2.5.3-roadmap.md](../engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md). | **Pending tag/publish**; PyPI still **2.5.2**; next **v2.5.4**. |
-| **After v2.5.3** | Train: Distribution Loop → **v2.5.4**, Formal Spec → **v2.5.5**. | Kickoff [prd-v2.5.4-distribution-loop.md](./prd/prd-v2.5.4-distribution-loop.md) when ready. |
+| **v2.5.3 — Adapter Lab II** | **Released** **2026-07-16** — workflow connectors, automation security, experimental MAF / NAT guides, DX fixes. Tag [`v2.5.3`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3); PyPI **2.5.3**; PR [#291](https://github.com/adriannoes/asap-protocol/pull/291). [PRD](./prd/prd-v2.5.3-adapter-lab-ii.md), [`CHANGELOG`](../CHANGELOG.md#253---2026-07-14), [migration](../docs/migration.md#upgrading-from-v252-to-v253); tasks [tasks-v2.5.3-roadmap.md](../engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md). | Optional Lab II retro; fourth starter not required. |
+| **v2.5.4 — Distribution Loop** | **In progress** — decisions D1–D5 locked; S0–S2 producer done; tasks [tasks-v2.5.4-roadmap.md](../engineering/tasks/v2.5.4/tasks-v2.5.4-roadmap.md) **ACTIVE**; `release/2.5.4` on origin; PRD [prd-v2.5.4-distribution-loop.md](./prd/prd-v2.5.4-distribution-loop.md) (§11 handoff → Spec). | Execute S3–S5; ship tag `v2.5.4`. |
+| **After Dist Loop** | Soft: Formal Spec → **v2.5.5**. Long-term: Economy → **v3.0** (triggers). | Create `engineering/tasks/v2.5.5/` at Spec kickoff; do not start Economy without triggers. |
 
-**Sources of truth for current execution**: [prd-v2.5-roadmap.md](./prd/prd-v2.5-roadmap.md), [prd-v2.5.3-adapter-lab-ii.md](./prd/prd-v2.5.3-adapter-lab-ii.md), [tasks-v2.5.3-roadmap.md](../engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md), [AGENTS.md](../AGENTS.md).
+**Sources of truth for current execution**: [prd-v2.5-roadmap.md](./prd/prd-v2.5-roadmap.md), [prd-v2.5.4-distribution-loop.md](./prd/prd-v2.5.4-distribution-loop.md), [tasks-v2.5.4-roadmap.md](../engineering/tasks/v2.5.4/tasks-v2.5.4-roadmap.md), [BRANCHING.md](../engineering/tasks/v2.5.4/BRANCHING.md), [AGENTS.md](../AGENTS.md).
 
 ---
 
@@ -245,13 +246,14 @@ Track actual vs estimated to improve future planning:
 
 ## Related Documents
 
-- [PRD v2.0 — Marketplace roadmap](./prd/prd-v2.0-roadmap.md)
-- [PRD v2.3 — Adoption multiplier](./prd/prd-v2.3-scale.md)
 - [PRD v2.5.x train](./prd/prd-v2.5-roadmap.md)
+- [PRD v2.5.4 — Distribution Loop](./prd/prd-v2.5.4-distribution-loop.md) · [tasks](../engineering/tasks/v2.5.4/tasks-v2.5.4-roadmap.md)
+- [PRD v2.5.5 — Formal Spec](./prd/prd-v2.5.5-formal-spec-interop.md)
+- [PRD v3.0 — Economy](./prd/prd-v3.0-economy.md)
 - [PRD v2.5.0 — MCP Auth Bridge](./prd/prd-v2.5.0-mcp-auth-bridge.md)
-- [Tasks v2.5.0 roadmap](../engineering/tasks/v2.5.0/tasks-v2.5.0-roadmap.md)
+- [PRD v2.3 — Adoption multiplier](./prd/prd-v2.3-scale.md)
+- [PRD v2.0 — Marketplace roadmap](./prd/prd-v2.0-roadmap.md)
 - [Product strategy ADRs (deferrals & pivots)](./decision-records/05-product-strategy.md)
-- [v2.0-marketplace-usage-foundation.md](../engineering/tasks/v2.0.0/v2.0-marketplace-usage-foundation.md) — Usage storage & control for v2.0
 - [lessons-learned/](../engineering/lessons-learned/)
 
 ---
@@ -274,4 +276,5 @@ Track actual vs estimated to improve future planning:
 | 2026-06-26 | **v2.5.1 ship + doc sync**: Status roll-up for the code quality patch (thermo-nuclear audit S0–S3 + six P0 fixes); README, `docs/index.md`, `docs/migration.md`, AGENTS.md, `apps/web` WhatsNewRibbon, `engineering/tasks/README.md` aligned with **2.5.1**; Adapter Lab II slipped to v2.5.2; follow-ups filed (#245–#249); velocity row for v2.5.1 added. |
 | 2026-07-08 | **Train rescope**: v2.5.2 = security follow-up; Adapter Lab II → v2.5.3; Distribution Loop → v2.5.4; Formal Spec → v2.5.5; PRDs renamed; [prd-v2.5.2-security-follow-up.md](./prd/prd-v2.5.2-security-follow-up.md) created. |
 | 2026-07-08 | **v2.5.2 ship**: tag [`v2.5.2`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.2); PyPI **2.5.2**; [#209](https://github.com/adriannoes/asap-protocol/issues/209) closed; status roll-up flipped to Released. |
+| 2026-07-18 | **Pre–v2.5.4 kickoff sync**: roll-up v2.5.3 → Released; v2.5.4 Ready + tasks; sources of truth → Dist Loop; Dist→Spec→Economy handoff documented in PRDs |
 | 2026-07-11 | **v2.5.3 task plan**: [tasks-v2.5.3-roadmap.md](../engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md) + PRD READY FOR KICKOFF (D1–D6). |

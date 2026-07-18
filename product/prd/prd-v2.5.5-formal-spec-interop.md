@@ -5,8 +5,9 @@
 > **Version**: 2.5.5
 > **Status**: PLANNED
 > **Created**: 2026-03-20 (origin in `prd-v2.4-adoption.md`); **rescoped**: 2026-06-22 → v2.5.3; **2026-07-08 → v2.5.5**
+> **Last Updated**: 2026-07-18
 > **Parent train**: [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md)
-> **Predecessor**: [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md)
+> **Predecessor**: [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md) (soft — narrative/examples)
 > **Successor**: [prd-v3.0-economy.md](./prd-v3.0-economy.md)
 
 ---
@@ -74,7 +75,7 @@ v2.5.5 closes the **standards-track loop** deferred since v2.3: formal RFC-style
 
 ### 3.5 TypeScript OpenAPI Adapter (P3 — conditional)
 
-Ship only if `@asap-protocol/openapi` did not land in v2.3:
+Ship only if demand at Spec kickoff **and** `@asap-protocol/openapi` still does not exist. **Default: defer** (Python OpenAPI adapter + Dist OpenAPI starter already cover the path).
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
@@ -87,22 +88,38 @@ Ship only if `@asap-protocol/openapi` did not land in v2.3:
 
 Same as v2.5 train — economy, federated registry, gRPC. MCP Auth Bridge is **not** in this PRD (shipped in v2.5.0). Security follow-ups from v2.4.1 §8 shipped in **v2.5.2**.
 
+Also **not** this PRD: Distribution Loop homepage rewrite, starter pack, public metrics UI, `create-asap` CLI, `@asap-protocol/mcp-auth` npm (see Dist OOS + v2.5.0 backlog). Do not absorb Dist OOS as Spec MUST.
+
 ---
 
 ## 5. Prerequisites
 
-| Prerequisite | Source |
-|-------------|--------|
-| v2.5.0 MCP Auth Bridge shipped | Stable MCP adapter API for SPEC-009 |
-| v2.5.3/v2.5.4 adoption learnings | Optional narrative inputs for spec examples |
-| Identity/capability model stable | v2.2+ |
+| Prerequisite | Kind | Source |
+|--------------|------|--------|
+| v2.5.0 MCP Auth Bridge shipped | **Hard** (SPEC-009) | Stable MCP adapter API |
+| Identity/capability model stable | **Hard** | v2.2+ |
+| v2.5.4 Distribution Loop (or equivalent narrative + starters) | **Soft** | Optional examples — [PRD §11 handoff](./prd-v2.5.4-distribution-loop.md#11-handoff-inputs-for-v255-formal-spec) |
+| v2.5.3 Adapter Lab II guides | **Soft** | Optional workflow / NAT / MAF narrative |
+
+**Kickoff rule:** Docs-only Spec work **may overlap** Dist Loop. Implementation that needs Dist starter URLs should wait for Dist ship **or** cite Lab II parent examples temporarily.
+
+**Expected Dist inputs (when available):**
+
+| Artifact | Path |
+|----------|------|
+| Guide | `docs/guides/build-for-agents.md` |
+| Starters | `examples/starters/{openapi-provider,typescript-consumer,mcp-auth-bridge}/` |
+| Narrative | Dist PRD §6 / D1 |
 
 ---
 
 ## 6. Related documents
 
+- **Distribution Loop (predecessor, soft):** [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md)
 - **MCP Auth Bridge**: [prd-v2.5.0-mcp-auth-bridge.md](./prd-v2.5.0-mcp-auth-bridge.md)
 - **Security follow-up**: [prd-v2.5.2-security-follow-up.md](./prd-v2.5.2-security-follow-up.md)
+- **Train index**: [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md)
+- **Economy (successor, trigger-gated):** [prd-v3.0-economy.md](./prd-v3.0-economy.md)
 - **Legacy**: [prd-v2.4-adoption.md](./prd-v2.4-adoption.md)
 
 ---
@@ -111,5 +128,6 @@ Same as v2.5 train — economy, federated registry, gRPC. MCP Auth Bridge is **n
 
 | Date | Change |
 |------|--------|
+| 2026-07-18 | Hard vs soft prerequisites; Dist handoff paths; TSOA default defer; non-goals vs Dist OOS |
 | 2026-07-08 | Renumbered v2.5.3 → **v2.5.5** (train shift after v2.5.2 security ship) |
 | 2026-06-22 | Split from `prd-v2.4-adoption.md` §4.2–4.6; renumbered to v2.5.3 |
