@@ -44,7 +44,7 @@ from scripts.telemetry.collect_github import (
     collect_github_signals,
 )
 from scripts.telemetry.collect_npm import DEFAULT_PACKAGES, collect_npm_weekly
-from scripts.telemetry.collect_pypi import collect_pypi_recent
+from scripts.telemetry.collect_pypi import DEFAULT_PYPI_PACKAGES, collect_pypi_recent
 from scripts.telemetry.collect_registry import DEFAULT_REGISTRY_URL, collect_registry_snapshot
 from scripts.telemetry.collect_registry import fetch_registry_json
 from scripts.lib.safe_url import is_safe_http_url
@@ -538,7 +538,7 @@ def main(argv: list[str] | None = None) -> int:
     previous_registry_count = registry_count_from_snapshot(prev_path) if prev_path else None
 
     npm_report = cast(NpmWeeklyIngress, collect_npm_weekly(DEFAULT_PACKAGES))
-    pypi_report = cast(PyPiWeeklyIngress, collect_pypi_recent(("asap-protocol",)))
+    pypi_report = cast(PyPiWeeklyIngress, collect_pypi_recent(DEFAULT_PYPI_PACKAGES))
 
     allow_github_skip: bool = args.allow_github_skip
     github_report: GitHubTelemetryIngress
