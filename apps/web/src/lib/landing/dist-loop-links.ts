@@ -45,3 +45,6 @@ export const DOCS_MIGRATION_254_URL = githubBlobMain(
 
 /** Changelog anchor for [2.5.4]. */
 export const CHANGELOG_254_URL = githubBlobMain('CHANGELOG.md#254---2026-07-18');
+
+/** GitHub Release for v2.5.4 Distribution Loop. */
+export const RELEASE_254_URL = 'https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4';

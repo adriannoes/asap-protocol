@@ -32,7 +32,7 @@ Each new page MUST: English, HTTPS/TLS note where network is involved, explicit 
 
 - [x] Mention Distribution Loop / Build for agents when guide ships (See also)
 - [ ] Link `examples/starters/` or guide as executable entry
-- [x] Keep version blurb accurate for train state (S5 owns final **2.5.4** string; pending PyPI until §6)
+- [x] Keep version blurb accurate for train state (S5 owns final **2.5.4** string; shipped)
 
 ---
 
@@ -94,8 +94,8 @@ Each new page MUST: English, HTTPS/TLS note where network is involved, explicit 
 
 | Item | Owner | Status |
 |------|-------|--------|
-| `docs/index.md` / README / migration version strings → **2.5.4** | S5 | ☑ prep done 2026-07-18 (pending tag/PyPI callouts) |
-| Post-publish swap pending → shipped | S5 | ☐ (after 6.4) |
+| `docs/index.md` / README / migration version strings → **2.5.4** | S5 | ☑ shipped 2026-07-18 |
+| Post-publish swap pending → shipped | S5 | ☑ (2026-07-18) |
 
-**Sign-off date:** 2026-07-18 (version-string prep only)
-**Signer:** S5 prep (post-publish §6 still open)
+**Sign-off date:** 2026-07-18 (shipped)
+**Signer:** S5 post-publish

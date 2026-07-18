@@ -15,9 +15,7 @@ release/2.5.4
 | Only path to `main` | **One** PR at S5: `release/2.5.4` → `main` (then tag `v2.5.4`) |
 | Rebase policy | Rebase each sprint branch on latest `release/2.5.4` before merge |
 
-**Status (2026-07-18):** `release/2.5.4` exists on origin (created at kickoff). Do **not** recreate it.
-
-**Do not** land sprint PRs directly on `main` until the full v2.5.4 release is ready.
+**Status (2026-07-18):** Train **CLOSED** — merged to `main` via [#294](https://github.com/adriannoes/asap-protocol/pull/294); tag [`v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4).
 
 ## Per-sprint workflow
 

@@ -8,7 +8,7 @@ Sprint roadmaps and release checklists per protocol version. Pair each folder wi
 
 | Folder | PRD | Status |
 |--------|-----|--------|
-| [v2.5.4/](./v2.5.4/tasks-v2.5.4-roadmap.md) | [prd-v2.5.4-distribution-loop.md](../../product/prd/prd-v2.5.4-distribution-loop.md) | **ACTIVE** — `release/2.5.4` on origin; all sprint PRs merge into it ([BRANCHING.md](./v2.5.4/BRANCHING.md)) |
+| _(none)_ — create [v2.5.5/](./v2.5.5/) at Formal Spec kickoff | [prd-v2.5.5-formal-spec-interop.md](../../product/prd/prd-v2.5.5-formal-spec-interop.md) | **NEXT** |
 
 ---
 
@@ -16,6 +16,7 @@ Sprint roadmaps and release checklists per protocol version. Pair each folder wi
 
 | Folder | PRD | Shipped |
 |--------|-----|---------|
+| [v2.5.4/](./v2.5.4/tasks-v2.5.4-roadmap.md) | [prd-v2.5.4-distribution-loop.md](../../product/prd/prd-v2.5.4-distribution-loop.md) | 2026-07-18 — tag [`v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4) |
 | [v2.5.3/](./v2.5.3/tasks-v2.5.3-roadmap.md) | [prd-v2.5.3-adapter-lab-ii.md](../../product/prd/prd-v2.5.3-adapter-lab-ii.md) | 2026-07-16 — tag [`v2.5.3`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3) |
 | [v2.5.0/](./v2.5.0/tasks-v2.5.0-roadmap.md) | [prd-v2.5.0-mcp-auth-bridge.md](../../product/prd/prd-v2.5.0-mcp-auth-bridge.md) | 2026-06-24 — [release-checklist.md](./v2.5.0/release-checklist.md) |
 | [v2.4.0/](./v2.4.0/tasks-v2.4.0-roadmap.md) | [prd-v2.4.0-edge-ai-discovery.md](../../product/prd/prd-v2.4.0-edge-ai-discovery.md) | 2026-05-24 |

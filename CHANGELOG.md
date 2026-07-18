@@ -18,12 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.5.4] - 2026-07-18
 
-> **Status:** pending tag `v2.5.4` / PyPI publish (S5 prep). Merge → tag → publish runs after this train lands on `main` via `release/2.5.4`.
-
 **Distribution Loop** — homepage, thin starters, Build for agents guide, and maintainer
 telemetry ops (no public metrics UI). Scope:
 [prd-v2.5.4-distribution-loop.md](product/prd/prd-v2.5.4-distribution-loop.md).
-npm `@asap-protocol/*` packages remain at **2.4.1**.
+npm `@asap-protocol/*` packages remain at **2.4.1**. Tag [`v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4) · PyPI `asap-protocol==2.5.4`.
 
 ### Added
 

@@ -138,7 +138,7 @@ const PILLS: Pill[] = [
 export function WhatsNewRibbon() {
   return (
     <aside
-      aria-label="What's new in ASAP Protocol Distribution Loop"
+      aria-label="What's new in ASAP Protocol v2.5.4 Distribution Loop"
       className="w-full border-y border-zinc-900 bg-zinc-950"
     >
       <div className="container mx-auto flex max-w-5xl flex-col gap-4 px-4 py-8 md:flex-row md:items-center md:gap-4 md:px-6 md:py-10">
@@ -146,10 +146,10 @@ export function WhatsNewRibbon() {
           <Sparkles className="h-4 w-4 shrink-0 text-indigo-400" aria-hidden />
           <div className="flex flex-col">
             <span className="font-mono text-xs tracking-wider text-indigo-400 uppercase">
-              What&apos;s new
+              What&apos;s new in v2.5.4
             </span>
             <span className="text-xs text-zinc-500">
-              Distribution Loop · Build for agents + Lab II docs
+              Distribution Loop · starters + Build for agents
             </span>
           </div>
         </div>

@@ -53,7 +53,7 @@ Optional CI: `.github/workflows/starters-smoke.yml` (path-filtered on `examples/
 - [x] DIST-004 — telemetry ops green **or** deferred on roadmap (satisfied; secrets gap documented)
 - [x] DIST-005 — `docs/guides/build-for-agents.md` shipped
 - [x] DIST-006 — public copy gate passed
-- [ ] [docs-review-checklist.md](./docs-review-checklist.md) §§1–8 complete for shipped scope (version-string prep done; residual MkDocs/quality items + post-publish swap remain)
+- [x] [docs-review-checklist.md](./docs-review-checklist.md) §§1–8 complete for shipped scope (post-publish swap 2026-07-18)
 
 ---
 
@@ -72,11 +72,11 @@ Optional CI: `.github/workflows/starters-smoke.yml` (path-filtered on `examples/
 
 **Order:** merge PR → tag `v2.5.4` → confirm publish workflows → then §6 handoff copy.
 
-- [ ] **Merge** `release/2.5.4` → `main` — PR #____
-- [ ] **Tag** `git tag -a v2.5.4` + push — triggers `.github/workflows/release.yml`
-- [ ] **Publish** — GitHub Release `v2.5.4`; PyPI `asap-protocol==2.5.4`; Docker/GHCR if applicable
-- [ ] Spot-check starter README smoke locally (optional maintainer follow-up)
-- [ ] **Public GitHub links** — after merge to `main`, confirm Dist Loop docs that use relative `examples/starters/` paths resolve on `main`; flip any remaining `tree/release/2.5.4/...` URLs to `tree/main/...` if introduced during the train
+- [x] **Merge** `release/2.5.4` → `main` — PR [#294](https://github.com/adriannoes/asap-protocol/pull/294)
+- [x] **Tag** `git tag -a v2.5.4` + push — triggers `.github/workflows/release.yml` ([run](https://github.com/adriannoes/asap-protocol/actions/runs/29650003126))
+- [x] **Publish** — [GitHub Release `v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4); PyPI `asap-protocol==2.5.4`; GHCR `ghcr.io/adriannoes/asap-protocol:v2.5.4`
+- [x] Spot-check starter README smoke locally (optional maintainer follow-up) — CI starters-smoke green on merge
+- [x] **Public GitHub links** — Dist Loop CTAs use `blob/main` / `tree/main` (no remaining `release/2.5.4` deep links)
 
 ---
 
@@ -92,18 +92,18 @@ Optional CI: `.github/workflows/starters-smoke.yml` (path-filtered on `examples/
 
 Mirror of [PRD §11](../../../product/prd/prd-v2.5.4-distribution-loop.md#11-handoff-inputs-for-v255-formal-spec). Soft inputs only.
 
-- [ ] Narrative D1 + `docs/guides/build-for-agents.md` linked from Spec kickoff notes
-- [ ] Three starter paths documented:
-  - [ ] `examples/starters/openapi-provider/`
-  - [ ] `examples/starters/typescript-consumer/`
-  - [ ] `examples/starters/mcp-auth-bridge/`
-- [ ] DIST-004 status: green **or** deferred (note on roadmap)
-- [ ] OOS reminder: no CLI scaffold, no public metrics UI, no pricing/GTM in Spec kickoff copy
-- [ ] Orphans unchanged: `mcp-auth` npm backlog; TSOA defer-unless-demand; fourth workflow starter not canonical
-- [ ] Point [prd-v2.5.5-formal-spec-interop.md](../../../product/prd/prd-v2.5.5-formal-spec-interop.md) / train index at shipped Dist artifacts
-- [ ] Optional: one-line Dist metrics → v3.0 trigger proxies (if S4 ran)
+- [x] Narrative D1 + `docs/guides/build-for-agents.md` linked from Spec kickoff notes
+- [x] Three starter paths documented:
+  - [x] `examples/starters/openapi-provider/`
+  - [x] `examples/starters/typescript-consumer/`
+  - [x] `examples/starters/mcp-auth-bridge/`
+- [x] DIST-004 status: green **or** deferred (note on roadmap) — satisfied; secrets gap documented
+- [x] OOS reminder: no CLI scaffold, no public metrics UI, no pricing/GTM in Spec kickoff copy
+- [x] Orphans unchanged: `mcp-auth` npm backlog; TSOA defer-unless-demand; fourth workflow starter not canonical
+- [x] Point [prd-v2.5.5-formal-spec-interop.md](../../../product/prd/prd-v2.5.5-formal-spec-interop.md) / train index at shipped Dist artifacts
+- [x] Optional: one-line Dist metrics → v3.0 trigger proxies (if S4 ran) — S4 collectors/runbook ready; cron gated on secrets
 
-**v2.5.4 train:** ☑ OPEN / ☐ CLOSED (after §6)
+**v2.5.4 train:** ☐ OPEN / ☑ CLOSED (after §6)
 
 ---
 
@@ -111,10 +111,10 @@ Mirror of [PRD §11](../../../product/prd/prd-v2.5.4-distribution-loop.md#11-han
 
 > Complete only after PyPI shows `asap-protocol==2.5.4` and the GitHub Release for `v2.5.4` is published.
 
-- [ ] `CHANGELOG.md` `[2.5.4]`: remove “pending tag/publish” status callout if used
-- [ ] `README.md`, `docs/index.md`, `docs/migration.md`: recommend `asap-protocol==2.5.4`
-- [ ] `AGENTS.md`, `product/checkpoints.md`, `product/README.md`: **shipped** + tag/release links
-- [ ] Hero / WhatsNew: drop “pending publish” wording if any
-- [ ] This checklist §§4–5 and [sprint-S5-release.md](./sprint-S5-release.md): check complete
-- [ ] [tasks-v2.5.4-roadmap.md](./tasks-v2.5.4-roadmap.md): Status **SHIPPED**; S5 Done; train CLOSED
-- [ ] Link GitHub Release + PyPI (+ GHCR) in the S5 sprint notes
+- [x] `CHANGELOG.md` `[2.5.4]`: remove “pending tag/publish” status callout if used
+- [x] `README.md`, `docs/index.md`, `docs/migration.md`: recommend `asap-protocol==2.5.4`
+- [x] `AGENTS.md`, `product/checkpoints.md`, `product/README.md`: **shipped** + tag/release links
+- [x] Hero / WhatsNew: drop “pending publish” wording if any — hero badge `v2.5.4 — Distribution Loop` → release
+- [x] This checklist §§4–5 and [sprint-S5-release.md](./sprint-S5-release.md): check complete
+- [x] [tasks-v2.5.4-roadmap.md](./tasks-v2.5.4-roadmap.md): Status **SHIPPED**; S5 Done; train CLOSED
+- [x] Link GitHub Release + PyPI (+ GHCR) in the S5 sprint notes

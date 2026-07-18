@@ -1,6 +1,6 @@
 # Tasks: v2.5.4 Distribution Loop — Sprint Index
 
-**Status: ACTIVE** — PRD decisions locked 2026-07-18; S0 scope lock done; **`release/2.5.4` exists on origin** (all sprint branches merge into it). **Predecessor:** [v2.5.3](../v2.5.3/tasks-v2.5.3-roadmap.md) SHIPPED. **Next after ship:** [prd-v2.5.5-formal-spec-interop.md](../../../product/prd/prd-v2.5.5-formal-spec-interop.md).
+**Status: SHIPPED** — tag [`v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4) (2026-07-18); PyPI `asap-protocol==2.5.4`; PR [#294](https://github.com/adriannoes/asap-protocol/pull/294); GHCR `ghcr.io/adriannoes/asap-protocol:v2.5.4`. **Next:** [prd-v2.5.5-formal-spec-interop.md](../../../product/prd/prd-v2.5.5-formal-spec-interop.md).
 
 Based on [PRD v2.5.4 Distribution Loop](../../../product/prd/prd-v2.5.4-distribution-loop.md). **Every** sprint PR merges into **`release/2.5.4`** (see [BRANCHING.md](./BRANCHING.md)); only S5 opens one PR to `main`.
 
@@ -21,7 +21,7 @@ Based on [PRD v2.5.4 Distribution Loop](../../../product/prd/prd-v2.5.4-distribu
 | **S2** | [Build for agents guide](./sprint-S2-build-for-agents-guide.md) | DIST-005 | P0 | Done |
 | **S3** | [Homepage narrative & CTA routing](./sprint-S3-homepage-routing.md) | DIST-001, DIST-002, DIST-005 (homepage link), DIST-006 | P0 | Done |
 | **S4** | [Telemetry operations](./sprint-S4-telemetry-operations.md) | DIST-004 | P1 (SHOULD) | Done (secrets gap: dispatch until TELEMETRY_GITHUB_TOKEN) |
-| **S5** | [Release v2.5.4](./sprint-S5-release.md) | DoD, D5 | P0 | Prep (6.1–6.3 done; 6.4–6.5 after merge) |
+| **S5** | [Release v2.5.4](./sprint-S5-release.md) | DoD, D5 | P0 | Done (shipped) |
 
 ## Dependency graph
 
@@ -99,7 +99,7 @@ S1 and S4 may run in parallel after S0. S2 needs starter paths from S1. S3 needs
     - [x] **No** new public metrics UI
     - [x] DIST-004 satisfied **or** explicit defer on roadmap
 
-- [ ] **6.0 Release (S5)**
+- [x] **6.0 Release (S5)**
   - **Trigger:** MUST sprints green on `release/2.5.4`.
   - **Enables:** v2.5.5 Formal Spec kickoff.
   - **Depends on:** Tasks 2.0–4.0; Task 5.0 or documented deferral; [release-checklist.md](./release-checklist.md).
@@ -107,10 +107,10 @@ S1 and S4 may run in parallel after S0. S2 needs starter paths from S1. S3 needs
   - **Acceptance criteria:**
     - [x] Version **2.5.4**, CHANGELOG, migration note (S5 prep 2026-07-18)
     - [x] Pre-push CI green (ruff, mypy, pytest ≥85%, pip-audit; web gates if touched) — see [sprint-S5-release.md](./sprint-S5-release.md) 6.3
-    - [ ] Merge `release/2.5.4` → `main`
-    - [ ] Tag `v2.5.4` + PyPI / GitHub Release green
-    - [ ] Post-publish swap pending → shipped
-    - [ ] Handoff to v2.5.5
+    - [x] Merge `release/2.5.4` → `main` ([#294](https://github.com/adriannoes/asap-protocol/pull/294))
+    - [x] Tag `v2.5.4` + PyPI / GitHub Release green
+    - [x] Post-publish swap pending → shipped
+    - [x] Handoff to v2.5.5
 
 ## Definition of Done — v2.5.4
 
@@ -120,8 +120,8 @@ S1 and S4 may run in parallel after S0. S2 needs starter paths from S1. S3 needs
 - [x] DIST-004 — telemetry ops documented/runnable **or** deferred (satisfied; GitHub secret gap documented)
 - [x] DIST-005 — `docs/guides/build-for-agents.md` shipped (+ homepage primary CTA)
 - [x] DIST-006 — no private GTM/pricing/fundraising in public copy
-- [ ] [docs-review-checklist.md](./docs-review-checklist.md) signed (S3 web/CTA done; S5 version-string prep done; residual MkDocs/index checks + post-publish swap pending)
-- [ ] [release-checklist.md](./release-checklist.md) §§1–6 complete
+- [x] [docs-review-checklist.md](./docs-review-checklist.md) signed (S3 web/CTA done; S5 version-string + post-publish swap done)
+- [x] [release-checklist.md](./release-checklist.md) §§1–6 complete
 
 ## Out of scope (defer)
 
@@ -178,3 +178,4 @@ S1 and S4 may run in parallel after S0. S2 needs starter paths from S1. S3 needs
 | 2026-07-18 | S3 complete: homepage D1 narrative + primary CTAs → guide/starters; section docsHref routing; Dist Loop `data-cta` ids |
 | 2026-07-18 | C.7 review feedback: DIST-005 ownership clarified; TypeScript smoke package-boundary + HTTPS enforce |
 | 2026-07-18 | S5 prep (6.1–6.3): version **2.5.4**, CHANGELOG/migration, version-string docs; CI gates recorded in sprint-S5 |
+| 2026-07-18 | **SHIPPED**: tag `v2.5.4`; PyPI `asap-protocol==2.5.4`; GHCR; post-publish swap; train CLOSED; handoff → Spec |

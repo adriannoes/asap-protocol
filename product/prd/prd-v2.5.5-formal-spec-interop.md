@@ -98,18 +98,18 @@ Also **not** this PRD: Distribution Loop homepage rewrite, starter pack, public 
 |--------------|------|--------|
 | v2.5.0 MCP Auth Bridge shipped | **Hard** (SPEC-009) | Stable MCP adapter API |
 | Identity/capability model stable | **Hard** | v2.2+ |
-| v2.5.4 Distribution Loop (or equivalent narrative + starters) | **Soft** | Optional examples — [PRD §11 handoff](./prd-v2.5.4-distribution-loop.md#11-handoff-inputs-for-v255-formal-spec) |
+| v2.5.4 Distribution Loop (or equivalent narrative + starters) | **Soft** (shipped) | [tag `v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4) — [PRD §11 handoff](./prd-v2.5.4-distribution-loop.md#11-handoff-inputs-for-v255-formal-spec) |
 | v2.5.3 Adapter Lab II guides | **Soft** | Optional workflow / NAT / MAF narrative |
 
-**Kickoff rule:** Docs-only Spec work **may overlap** Dist Loop. Implementation that needs Dist starter URLs should wait for Dist ship **or** cite Lab II parent examples temporarily.
+**Kickoff rule:** Dist Loop **shipped** (2026-07-18). Spec kickoff may cite the Dist artifacts below as soft narrative examples.
 
-**Expected Dist inputs (when available):**
+**Expected Dist inputs (shipped):**
 
 | Artifact | Path |
 |----------|------|
-| Guide | `docs/guides/build-for-agents.md` |
+| Guide | [`docs/guides/build-for-agents.md`](../../docs/guides/build-for-agents.md) |
 | Starters | `examples/starters/{openapi-provider,typescript-consumer,mcp-auth-bridge}/` |
-| Narrative | Dist PRD §6 / D1 |
+| Narrative | Dist PRD §6 / D1 · homepage CTAs on `asap-protocol.com` |
 
 ---
 
@@ -128,6 +128,7 @@ Also **not** this PRD: Distribution Loop homepage rewrite, starter pack, public 
 
 | Date | Change |
 |------|--------|
+| 2026-07-18 | Dist Loop **shipped** (tag `v2.5.4`); soft Dist inputs marked available for Spec kickoff |
 | 2026-07-18 | Hard vs soft prerequisites; Dist handoff paths; TSOA default defer; non-goals vs Dist OOS |
 | 2026-07-08 | Renumbered v2.5.3 → **v2.5.5** (train shift after v2.5.2 security ship) |
 | 2026-06-22 | Split from `prd-v2.4-adoption.md` §4.2–4.6; renumbered to v2.5.3 |

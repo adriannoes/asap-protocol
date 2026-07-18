@@ -3,7 +3,7 @@
 **PRD**: Definition of Done / D5  
 **Branch**: work on **`release/2.5.4`** → PR to **`main`**  
 **Depends on**: S1–S3 MUST green; S4 green **or** deferred on roadmap  
-**Status**: Prep in progress (6.1–6.3); 6.4–6.5 after PR merges to `release/2.5.4` → `main`
+**Status**: **Done (shipped)** — tag [`v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4); PyPI `asap-protocol==2.5.4`; workflow [29650003126](https://github.com/adriannoes/asap-protocol/actions/runs/29650003126)
 
 **Trigger:** Distribution Loop MUST items complete on the release branch.  
 **Enables:** v2.5.5 Formal Spec kickoff.  
@@ -36,19 +36,17 @@
 
   **CI results (2026-07-18, S5 prep):** all gates above green. Note: full pytest run after `uv sync --frozen --all-extras --dev --no-extra crewai --no-extra llamaindex`; mcp smoke re-verified post-bump (120 passed).
 
-- [ ] **6.4 Merge → tag → publish**
-  > Runs **after** this PR merges into `release/2.5.4`, then via a separate `release/2.5.4` → `main` PR.
-  - [ ] **Merge** PR `release/2.5.4` → `main`
-  - [ ] **Tag** `v2.5.4` + push (triggers release workflow)
-  - [ ] **Publish** — GitHub Release + PyPI `asap-protocol==2.5.4` (+ Docker/GHCR if applicable)
-  - [ ] Post-publish checklist ([release-checklist §6](./release-checklist.md#60-post-publish-swap-pending--shipped))
+- [x] **6.4 Merge → tag → publish**
+  - [x] **Merge** PR `release/2.5.4` → `main` — [#294](https://github.com/adriannoes/asap-protocol/pull/294)
+  - [x] **Tag** `v2.5.4` + push — [Release workflow](https://github.com/adriannoes/asap-protocol/actions/runs/29650003126)
+  - [x] **Publish** — [GitHub Release `v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4); PyPI `asap-protocol==2.5.4`; GHCR `ghcr.io/adriannoes/asap-protocol:v2.5.4`
+  - [x] Post-publish checklist ([release-checklist §6](./release-checklist.md#60-post-publish-swap-pending--shipped))
 
-- [ ] **6.5 Handoff**
-  > Runs **after** 6.4 publish succeeds.
-  - [ ] Mark this roadmap SHIPPED
-  - [ ] Complete [release-checklist §5.1](./release-checklist.md#51-handoff-inputs-for-v255-confirm-at-s5) (starter paths, guide, OOS, orphans)
-  - [ ] Point next work at [prd-v2.5.5-formal-spec-interop.md](../../../product/prd/prd-v2.5.5-formal-spec-interop.md)
-  - [ ] Remind: `@asap-protocol/mcp-auth` still on [v2.5.0 backlog](../v2.5.0/backlog-mcp-auth-typescript.md); Economy remains trigger-gated ([prd-v3.0-economy.md](../../../product/prd/prd-v3.0-economy.md))
+- [x] **6.5 Handoff**
+  - [x] Mark this roadmap SHIPPED
+  - [x] Complete [release-checklist §5.1](./release-checklist.md#51-handoff-inputs-for-v255-confirm-at-s5) (starter paths, guide, OOS, orphans)
+  - [x] Point next work at [prd-v2.5.5-formal-spec-interop.md](../../../product/prd/prd-v2.5.5-formal-spec-interop.md)
+  - [x] Remind: `@asap-protocol/mcp-auth` still on [v2.5.0 backlog](../v2.5.0/backlog-mcp-auth-typescript.md); Economy remains trigger-gated ([prd-v3.0-economy.md](../../../product/prd/prd-v3.0-economy.md))
 
 ---
 
@@ -60,6 +58,6 @@
 
 ## Acceptance criteria
 
-- [ ] [release-checklist.md](./release-checklist.md) §§1–6 complete
-- [ ] All DIST MUST items closed; DIST-004 closed or deferred
-- [ ] Train handoff to v2.5.5 documented
+- [x] [release-checklist.md](./release-checklist.md) §§1–6 complete
+- [x] All DIST MUST items closed; DIST-004 closed or deferred
+- [x] Train handoff to v2.5.5 documented

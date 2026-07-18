@@ -7,9 +7,9 @@
 
 > A production-ready protocol for agent-to-agent communication and task coordination.
 
-**Quick Info**: [`v2.5.3`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3) on PyPI · in-tree **v2.5.4** pending tag · PyPI [`asap-protocol`](https://pypi.org/project/asap-protocol/) | `Apache 2.0` | `Python 3.13+` | [Documentation](docs/index.md) | [Changelog](CHANGELOG.md)
+**Quick Info**: [`v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4) · PyPI [`asap-protocol`](https://pypi.org/project/asap-protocol/) | `Apache 2.0` | `Python 3.13+` | [Documentation](docs/index.md) | [Changelog](CHANGELOG.md)
 
-> 📦 **Install** — [`asap-protocol` **2.5.3** on PyPI](https://pypi.org/project/asap-protocol/) (Python; **2.5.4** pending publish) · [`@asap-protocol/client` on npm](https://www.npmjs.com/package/@asap-protocol/client) (TypeScript)
+> 📦 **Install** — [`asap-protocol` **2.5.4** on PyPI](https://pypi.org/project/asap-protocol/) (Python) · [`@asap-protocol/client` on npm](https://www.npmjs.com/package/@asap-protocol/client) (TypeScript)
 
 🚀 **Live now** our [**agentic marketplace**](https://asap-protocol.com/) — browse agents, register yours, request verification.
 
@@ -64,13 +64,13 @@ ASAP meets agents where they run — optional Python extras, npm tool bridges, a
 We recommend using [uv](https://github.com/astral-sh/uv) for dependency management:
 
 ```bash
-uv add asap-protocol  # latest on PyPI (currently 2.5.3; in-tree 2.5.4 pending publish)
+uv add asap-protocol  # latest on PyPI (currently 2.5.4)
 ```
 
 Or with pip:
 
 ```bash
-pip install asap-protocol==2.5.3
+pip install asap-protocol==2.5.4
 ```
 
 **TypeScript** (npm, **`2.4.1`** — unchanged for v2.5.4; `@asap-protocol/mcp-auth` HTTP middleware still deferred):
@@ -85,7 +85,7 @@ npm install @asap-protocol/mastra@2.4.1 @asap-protocol/client @mastra/core zod
 npm install @asap-protocol/openai-agents@2.4.1 @asap-protocol/client @openai/agents zod
 ```
 
-**Python v2.5.4** (Distribution Loop) is **pending tag/PyPI** — see [Migration (v2.5.3 → v2.5.4)](docs/migration.md#upgrading-from-v253-to-v254). Start here: [Build for agents](docs/guides/build-for-agents.md) · [starters](examples/starters/README.md).
+**Python v2.5.4** (Distribution Loop) is **shipped** — see [Migration (v2.5.3 → v2.5.4)](docs/migration.md#upgrading-from-v253-to-v254). Start here: [Build for agents](docs/guides/build-for-agents.md) · [starters](examples/starters/README.md).
 
 ## Quick Start
 
@@ -173,7 +173,7 @@ High-level only — see **[Changelog](https://github.com/adriannoes/asap-protoco
 
 | Version | What shipped |
 | :-- | :-- |
-| **v2.5.4** | **Distribution Loop** — pending tag/PyPI · thin starters (`examples/starters/`), [Build for agents](docs/guides/build-for-agents.md), homepage agent-first CTAs, telemetry ops (no public metrics UI). See [CHANGELOG](CHANGELOG.md#254---2026-07-18), [PRD](product/prd/prd-v2.5.4-distribution-loop.md), and [Migration (v2.5.3 → v2.5.4)](docs/migration.md#upgrading-from-v253-to-v254) |
+| **v2.5.4** | **Distribution Loop** — **[GitHub Release `v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4)** · thin starters (`examples/starters/`), [Build for agents](docs/guides/build-for-agents.md), homepage agent-first CTAs, telemetry ops (no public metrics UI). See [CHANGELOG](CHANGELOG.md#254---2026-07-18), [PRD](product/prd/prd-v2.5.4-distribution-loop.md), and [Migration (v2.5.3 → v2.5.4)](docs/migration.md#upgrading-from-v253-to-v254) |
 | **v2.5.3** | **Adapter Lab II** — **[GitHub Release `v2.5.3`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3)** · workflow OpenAPI connectors + security guide, experimental MAF / NeMo guides, JSON-safe `-32602`, MCP example client DX. See [CHANGELOG](CHANGELOG.md#253---2026-07-14), [PRD](product/prd/prd-v2.5.3-adapter-lab-ii.md), and [Migration (v2.5.2 → v2.5.3)](docs/migration.md#upgrading-from-v252-to-v253) |
 | **v2.5.2** | **Security & correctness follow-up** — opt-in operator API auth, `extra="forbid"` ingress, Redis JTI replay, web distributed rate limits, v2.5.1 CR follow-ups (#245–#249), registry signed-manifest/400 fixes. See [CHANGELOG](CHANGELOG.md#252---2026-07-08), [PRD](product/prd/prd-v2.5.2-security-follow-up.md), and [Migration (v2.5.1 → v2.5.2)](docs/migration.md#upgrading-from-v251) |
 | **v2.5.1** | **Code quality patch** — behavior-preserving refactor (transport/server, client, websocket, SQLite storage, auth, integrations) + six correctness/security fixes (atomic `revoke_cascade`, `usage_events` DDL, unified Host-JWT verifier, **WS now enforces OAuth2**, OpenAPI handler cleanup, client `correlation_id` binding). Deprecated import paths removed in v2.6.0. See [CHANGELOG](CHANGELOG.md#251---2026-06-25) and [Migration (v2.5.0 → v2.5.1)](docs/migration.md#upgrading-from-v250-to-v251) |

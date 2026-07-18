@@ -1080,7 +1080,8 @@ See also [Troubleshooting Guide](troubleshooting.md) and
 
 ### Upgrading from v2.5.3 to v2.5.4
 
-**v2.5.4 (Distribution Loop)** — pending tag `v2.5.4` / PyPI publish (S5 prep) —
+**v2.5.4 (Distribution Loop)** — **shipped** ([tag `v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4),
+[#294](https://github.com/adriannoes/asap-protocol/pull/294)) —
 turns adoption surfaces into a repeatable loop: homepage routing, thin starters,
 Build for agents guide, and maintainer telemetry ops. There are **no breaking
 changes** for envelope, JWT, or capability grant semantics relative to v2.5.3.
@@ -1100,8 +1101,7 @@ Scope: [prd-v2.5.4-distribution-loop.md](../product/prd/prd-v2.5.4-distribution-
 
 #### Upgrade steps
 
-1. Bump with `pip install 'asap-protocol==2.5.4'` (or `uv add asap-protocol`)
-   once PyPI publish completes; until then install from the release branch / tag.
+1. Bump with `pip install 'asap-protocol==2.5.4'` (or `uv add asap-protocol`).
 2. No code changes required for existing v2.5.3 agents unless you adopt the new
    starters or guide.
 3. TypeScript `@asap-protocol/*` packages remain at **2.4.1**;
