@@ -94,6 +94,8 @@ See [CLI reference](cli.md) (all commands, exit codes, `compliance-check`, `audi
 
 ## Documentation
 
+**See also:** [Build for agents](guides/build-for-agents.md) — agent-first onboarding into the three thin starters (OpenAPI provider, TypeScript consumer, MCP Auth Bridge).
+
 - [OpenAPI adapter](adapters/openapi.md) — derive ASAP skills and an upstream proxy from OpenAPI 3.x (`asap.adapters.openapi`)
 - [MCP Auth Bridge](adapters/mcp-auth-bridge.md) — opt-in Agent JWT + capability enforcement for native stdio `MCPServer` (`asap.mcp.auth.protect_server`)
 - [Workflow connectors](integrations/workflow-connectors.md) — n8n / Activepieces-style workflow HTTP APIs → ASAP skills via OpenAPI (Adapter Lab II)
