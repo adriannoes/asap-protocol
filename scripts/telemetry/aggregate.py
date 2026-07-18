@@ -361,6 +361,54 @@ def collect_github_or_placeholder(
         )
 
 
+def sum_npm_weekly_downloads(raw_hist: Mapping[str, Any]) -> int:
+    """Sum integer weekly download counts from a snapshot ``npm`` map.
+
+    Example:
+        >>> sum_npm_weekly_downloads({"npm": {"@asap-protocol/client": 4}})
+        4
+    """
+    npm_vals = raw_hist.get("npm")
+    total = 0
+    if isinstance(npm_vals, dict):
+        for v in npm_vals.values():
+            if isinstance(v, int):
+                total += v
+    return total
+
+
+def sum_pypi_last_week(raw_hist: Mapping[str, Any]) -> int | None:
+    """Sum ``downloads.last_week`` across PyPI packages in a snapshot row.
+
+    Returns ``None`` when no integer ``last_week`` values are present (dashboard
+    renders an em dash). Provenance: thermo-nuclear Nice-to-Have — keep
+    ``render_dashboard`` free of inline sum loops.
+
+    Example:
+        >>> sum_pypi_last_week({"pypi": {"packages": {"asap-protocol": {"downloads": {"last_week": 7}}}}})
+        7
+    """
+    pypi_obj = raw_hist.get("pypi")
+    if not isinstance(pypi_obj, dict):
+        return None
+    pkgs = pypi_obj.get("packages")
+    if not isinstance(pkgs, dict):
+        return None
+    total = 0
+    found = False
+    for pkg_val in pkgs.values():
+        if not isinstance(pkg_val, dict):
+            continue
+        dl = pkg_val.get("downloads")
+        if not isinstance(dl, dict):
+            continue
+        lw = dl.get("last_week")
+        if isinstance(lw, int):
+            total += lw
+            found = True
+    return total if found else None
+
+
 def render_dashboard(
     snapshot: dict[str, Any],
     history_paths: list[tuple[date, Path]],
@@ -391,29 +439,9 @@ def render_dashboard(
             continue
         if not isinstance(raw_hist, dict):
             continue
-        npm_vals = raw_hist.get("npm")
-        npm_sum = 0
-        if isinstance(npm_vals, dict):
-            for v in npm_vals.values():
-                if isinstance(v, int):
-                    npm_sum += v
-        pypi_sum = 0
-        pypi_found = False
-        pypi_obj = raw_hist.get("pypi")
-        if isinstance(pypi_obj, dict):
-            pkgs = pypi_obj.get("packages")
-            if isinstance(pkgs, dict):
-                for pkg_val in pkgs.values():
-                    if not isinstance(pkg_val, dict):
-                        continue
-                    dl = pkg_val.get("downloads")
-                    if not isinstance(dl, dict):
-                        continue
-                    lw = dl.get("last_week")
-                    if isinstance(lw, int):
-                        pypi_sum += lw
-                        pypi_found = True
-        pypi_week: str | int = pypi_sum if pypi_found else "—"
+        npm_sum = sum_npm_weekly_downloads(raw_hist)
+        pypi_total = sum_pypi_last_week(raw_hist)
+        pypi_week: str | int = pypi_total if pypi_total is not None else "—"
         gh_stars: str | int = "—"
         gh = raw_hist.get("github")
         if isinstance(gh, dict):

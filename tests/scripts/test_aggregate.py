@@ -188,6 +188,36 @@ def test_fetch_site_ctr_success_and_degraded_payloads() -> None:
     assert degraded3.get("fetch_error") is True
 
 
+def test_sum_pypi_last_week_sums_packages_and_skips_empty() -> None:
+    """sum_pypi_last_week is the dashboard Σ helper (thermo-nuclear Nice-to-Have)."""
+    assert (
+        aggregate_mod.sum_pypi_last_week(
+            {
+                "pypi": {
+                    "packages": {
+                        "asap-protocol": {"downloads": {"last_week": 7}},
+                        "asap-compliance": {"downloads": {"last_week": 3}},
+                        "skip": {"downloads": {"last_week": "nope"}},
+                    },
+                },
+            },
+        )
+        == 10
+    )
+    assert aggregate_mod.sum_pypi_last_week({}) is None
+    assert aggregate_mod.sum_pypi_last_week({"pypi": {"packages": {}}}) is None
+
+
+def test_sum_npm_weekly_downloads_ignores_non_int() -> None:
+    assert (
+        aggregate_mod.sum_npm_weekly_downloads(
+            {"npm": {"@a": 4, "@b": 6, "@bad": "x"}},
+        )
+        == 10
+    )
+    assert aggregate_mod.sum_npm_weekly_downloads({}) == 0
+
+
 def test_render_dashboard_adapter_section_sorted() -> None:
     snap: dict[str, Any] = {
         "adapter_requests": {"mastra": 2, "x": 5, "_unparsed": 1},
