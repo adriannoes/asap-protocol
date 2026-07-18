@@ -2,10 +2,7 @@ import Link from 'next/link';
 import { Search, ShieldCheck, KeySquare, Cpu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { HOW_IT_WORKS_CTA_IDS } from '@/lib/telemetry/homepage-cta-ids';
-import {
-  BUILD_FOR_AGENTS_GUIDE_URL,
-  STARTERS_URL,
-} from '@/lib/landing/dist-loop-links';
+import { BUILD_FOR_AGENTS_GUIDE_URL, STARTERS_URL } from '@/lib/landing/dist-loop-links';
 import { EXTERNAL_LINK_FOCUS_CLASS, OpensInNewTabHint } from '@/components/links/opens-in-new-tab';
 
 const steps = [

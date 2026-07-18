@@ -203,11 +203,7 @@ export function FeaturesSection() {
                 {...(isExternal
                   ? { target: '_blank' as const, rel: 'noopener noreferrer' as const }
                   : {})}
-                className={cn(
-                  'group',
-                  feature.className,
-                  isExternal && EXTERNAL_LINK_FOCUS_CLASS
-                )}
+                className={cn('group', feature.className, isExternal && EXTERNAL_LINK_FOCUS_CLASS)}
               >
                 <Card
                   className={`relative h-full overflow-hidden border-zinc-800 bg-zinc-950 transition-all duration-300 hover:border-indigo-500/50`}

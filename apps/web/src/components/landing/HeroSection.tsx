@@ -4,10 +4,7 @@ import { BackgroundPaths } from '@/components/ui/background-paths';
 import { HeroTerminal } from '@/components/landing/HeroTerminal';
 import Link from 'next/link';
 import { HOMEPAGE_HERO_CTA_IDS } from '@/lib/telemetry/homepage-cta-ids';
-import {
-  BUILD_FOR_AGENTS_GUIDE_URL,
-  STARTERS_URL,
-} from '@/lib/landing/dist-loop-links';
+import { BUILD_FOR_AGENTS_GUIDE_URL, STARTERS_URL } from '@/lib/landing/dist-loop-links';
 import { EXTERNAL_LINK_FOCUS_CLASS, OpensInNewTabHint } from '@/components/links/opens-in-new-tab';
 import { cn } from '@/lib/utils';
 

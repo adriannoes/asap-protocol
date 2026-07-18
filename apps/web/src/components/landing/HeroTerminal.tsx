@@ -80,8 +80,8 @@ export function HeroTerminal() {
   }, [tick]);
 
   return (
-    <div className="mx-auto w-full max-w-[500px] lg:max-w-none animate-in fade-in zoom-in-95 duration-1000 delay-200 ease-out">
-      <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/50 border-white/10 backdrop-blur-xl">
+    <div className="animate-in fade-in zoom-in-95 mx-auto w-full max-w-[500px] delay-200 duration-1000 ease-out lg:max-w-none">
+      <div className="overflow-hidden rounded-xl border border-white/10 border-zinc-800 bg-zinc-950/50 backdrop-blur-xl">
         <div className="flex items-center border-b border-zinc-800 bg-zinc-900/50 px-4 py-3">
           <div className="flex gap-2">
             <div className="h-3 w-3 rounded-full bg-red-500/80" />
@@ -94,21 +94,21 @@ export function HeroTerminal() {
           </div>
         </div>
 
-        <div className="h-[320px] overflow-y-auto overflow-x-auto p-6 font-mono text-sm leading-relaxed">
+        <div className="h-[320px] overflow-x-auto overflow-y-auto p-6 font-mono text-sm leading-relaxed">
           <div className="flex flex-col space-y-2">
             {TERMINAL_LINES.map((line, index) => (
               <div
                 key={index}
                 className={`${line.color} transition-all duration-200 ${
                   visibleLines.includes(index)
-                    ? 'opacity-100 translate-x-0'
-                    : 'opacity-0 -translate-x-2.5'
+                    ? 'translate-x-0 opacity-100'
+                    : '-translate-x-2.5 opacity-0'
                 }`}
               >
                 {line.text}
               </div>
             ))}
-            <div className="mt-1 h-4 w-2 bg-indigo-400 animate-[caret-blink_0.8s_ease-in-out_infinite]" />
+            <div className="mt-1 h-4 w-2 animate-[caret-blink_0.8s_ease-in-out_infinite] bg-indigo-400" />
           </div>
         </div>
       </div>

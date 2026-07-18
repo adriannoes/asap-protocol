@@ -9,8 +9,7 @@
 const GITHUB_BLOB_MAIN = 'https://github.com/adriannoes/asap-protocol/blob/main';
 const GITHUB_TREE_MAIN = 'https://github.com/adriannoes/asap-protocol/tree/main';
 /** Pre-merge branch for headings not yet on origin/main. */
-const GITHUB_BLOB_RELEASE_254 =
-  'https://github.com/adriannoes/asap-protocol/blob/release/2.5.4';
+const GITHUB_BLOB_RELEASE_254 = 'https://github.com/adriannoes/asap-protocol/blob/release/2.5.4';
 
 /** Build for agents guide (DIST-005 homepage primary). */
 export const BUILD_FOR_AGENTS_GUIDE_URL = `${GITHUB_BLOB_MAIN}/docs/guides/build-for-agents.md`;
