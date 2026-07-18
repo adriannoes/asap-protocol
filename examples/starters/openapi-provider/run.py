@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
-import subprocess
 import sys
 from pathlib import Path
 
+# Ensure examples/starters is importable when this file is run as a script.
+_STARTERS_DIR = Path(__file__).resolve().parents[1]
+if str(_STARTERS_DIR) not in sys.path:
+    sys.path.insert(0, str(_STARTERS_DIR))
+
+from _forward_smoke import forward_parent  # noqa: E402
+
 # examples/starters/openapi-provider → examples/
 _PARENT = Path(__file__).resolve().parents[2] / "openapi_petstore" / "main.py"
-_SMOKE_TIMEOUT_SEC = 60
 
 
 def main() -> None:
@@ -18,30 +23,11 @@ def main() -> None:
 
         uv run python examples/starters/openapi-provider/run.py
     """
-    if not _PARENT.is_file():
-        print(
-            f"Parent example not found at {_PARENT} "
-            f"(expected examples/openapi_petstore/main.py relative to repo).",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    cmd = [sys.executable, str(_PARENT), *sys.argv[1:]]
-    try:
-        completed = subprocess.run(
-            cmd,
-            check=False,
-            timeout=_SMOKE_TIMEOUT_SEC,
-        )
-    except subprocess.TimeoutExpired:
-        # Log script path only — argv may carry secrets if callers forward flags.
-        print(
-            f"OpenAPI starter smoke exceeded {_SMOKE_TIMEOUT_SEC}s limit "
-            f"(DIST-003 headless bound). Script: {_PARENT.name} "
-            f"(arguments omitted)",
-            file=sys.stderr,
-        )
-        sys.exit(124)
-    sys.exit(completed.returncode)
+    forward_parent(
+        _PARENT,
+        label="OpenAPI",
+        expected_relpath="examples/openapi_petstore/main.py",
+    )
 
 
 if __name__ == "__main__":
