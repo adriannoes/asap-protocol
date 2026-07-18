@@ -5,7 +5,7 @@
 > **Version**: 2.5.x
 > **Status**: ACTIVE
 > **Created**: 2026-06-22
-> **Last Updated**: 2026-07-16
+> **Last Updated**: 2026-07-18
 >
 > **Predecessor**: [prd-v2.4.1-security-hardening.md](./prd-v2.4.1-security-hardening.md) (✅ shipped 2026-06-14)
 > **Successor (long-term)**: [prd-v3.0-economy.md](./prd-v3.0-economy.md)
@@ -42,12 +42,25 @@ Between **v2.4.1** (security patch) and **v3.0** (economy), the project needs a 
 | **v2.5.1** | Code quality patch | Thermo-nuclear audit S0–S3 + P0 correctness/security fixes | *(execution: `engineering/tasks/private/v2.5.1/`)* | **✅ Shipped** 2026-06-26 — tag [`v2.5.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.1) |
 | **v2.5.2** | Security & correctness follow-up | #209 (operator auth, `extra="forbid"`, Redis JTI, web rate limits) + CR #245–#249 + registry fixes | [prd-v2.5.2-security-follow-up.md](./prd-v2.5.2-security-follow-up.md) | **✅ Shipped** 2026-07-08 — tag [`v2.5.2`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.2) |
 | **v2.5.3** | Adapter Lab II | Enterprise/workflow adapters (ex v2.3.2) | [prd-v2.5.3-adapter-lab-ii.md](./prd-v2.5.3-adapter-lab-ii.md) | **✅ Shipped** 2026-07-16 — tag [`v2.5.3`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3) · [tasks](../../engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md) |
-| **v2.5.4** | Distribution Loop | Homepage, templates, métricas (ex v2.3.3) | [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md) | **Ready for kickoff** |
-| **v2.5.5** | Formal Spec & Interop | RFC spec, introspection, privacy, cross-protocol | [prd-v2.5.5-formal-spec-interop.md](./prd-v2.5.5-formal-spec-interop.md) | Planned |
+| **v2.5.4** | Distribution Loop | Homepage, starters, métricas (ex v2.3.3) | [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md) · [tasks](../../engineering/tasks/v2.5.4/tasks-v2.5.4-roadmap.md) | **Active** (tasks ACTIVE; S0–S2 producer done) |
+| **v2.5.5** | Formal Spec & Interop | RFC spec, introspection, privacy, cross-protocol | [prd-v2.5.5-formal-spec-interop.md](./prd-v2.5.5-formal-spec-interop.md) | Planned (soft-block on Dist; docs-only may overlap) |
 
-**Execution rule:** **v2.5.0–v2.5.3** shipped. **v2.5.4** is next (Distribution Loop). **v2.5.5** may overlap docs-only work.
+**Execution rule:** **v2.5.0–v2.5.3** shipped. **v2.5.4** is next (Distribution Loop; `release/2.5.4` on origin). **v2.5.5** may overlap docs-only work. **v3.0** remains trigger-gated ([prd-v3.0-economy.md](./prd-v3.0-economy.md)).
 
 **Patch tags (not minor releases):** [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1) republished **`asap-compliance` 1.3.0** only; `pyproject.toml` remained **2.5.0**. **`@asap-protocol/mcp-auth`** (npm) is still deferred — future npm patch TBD (do not confuse with tag `v2.5.0.1`).
+
+### Parked / orphan owners (not Dist MUST)
+
+| Item | Owner | Rule |
+|------|-------|------|
+| `@asap-protocol/mcp-auth` (npm) | [v2.5.0 backlog](../../engineering/tasks/v2.5.0/backlog-mcp-auth-typescript.md) | npm patch TBD — not v2.5.4 / not Spec MUST |
+| `@asap-protocol/openapi` (TSOA) | [prd-v2.5.5](./prd-v2.5.5-formal-spec-interop.md) §3.5 | **Default defer** unless demand at Spec kickoff |
+| Fourth starter (workflow) | Optional post–Dist | Lab II `examples/workflow_asap_connector/` already public |
+| Registry API (PostgreSQL) | Trigger: 500 agents / IssueOps bottleneck | Deferred; not a v2.5.x or v3.0 silent prereq |
+| Design System Revamp | Separate design track | Out of Dist |
+| `create-asap` / scaffold CLI | Post–v2.5.4 if demanded | Out of Dist |
+| Public metrics dashboard UI | — | Out of Dist (D4); maintainer telemetry only |
+| G5/G6 governance product | After Formal Spec (local strategy) | Do not schedule as v2.5.x MUST |
 
 ---
 
@@ -83,11 +96,13 @@ Narrativa pública: **ASAP não substitui MCP** — fornece a camada de identida
 
 | Feature | When |
 |---------|------|
-| Economy / billing | v3.0 |
+| Economy / billing | v3.0 (trigger-gated) |
 | Federated registry | v3.x+ |
 | gRPC binding | TBD |
 | Schema negotiation runtime (Agora-style) | Out of scope |
 | Registry API backend (PostgreSQL) | Deferred until 500-agent trigger |
+
+**Handoff chain:** Dist Loop §11 → Formal Spec soft inputs → Economy §8 proxies. See [prd-v2.5.4 §11](./prd-v2.5.4-distribution-loop.md#11-handoff-inputs-for-v255-formal-spec).
 
 ---
 
@@ -98,6 +113,7 @@ Narrativa pública: **ASAP não substitui MCP** — fornece a camada de identida
 - **Adoption foundation**: [prd-v2.3-scale.md](./prd-v2.3-scale.md)
 - **Legacy redirect**: [prd-v2.4-adoption.md](./prd-v2.4-adoption.md)
 - **Tasks**: [engineering/tasks/README.md](../../engineering/tasks/README.md)
+- **Economy (long-term)**: [prd-v3.0-economy.md](./prd-v3.0-economy.md)
 
 ---
 
@@ -105,6 +121,9 @@ Narrativa pública: **ASAP não substitui MCP** — fornece a camada de identida
 
 | Date | Change |
 |------|--------|
+| 2026-07-18 | v2.5.4 status → **Active** (tasks ACTIVE; S0–S2 producer done) |
+| 2026-07-18 | Parked/orphan owners table; Dist→Spec→Economy handoff pointer; v2.5.5 soft-block clarified |
+| 2026-07-18 | v2.5.4 tasks pack created — [tasks-v2.5.4-roadmap.md](../../engineering/tasks/v2.5.4/tasks-v2.5.4-roadmap.md); PRD D1–D5 locked |
 | 2026-07-08 | Rescope: v2.5.2 = security follow-up; Adapter Lab II → v2.5.3; Distribution Loop → v2.5.4; Formal Spec → v2.5.5; document v2.5.1 as quality patch |
 | 2026-07-08 | **v2.5.2 shipped** — tag `v2.5.2`; PyPI 2.5.2; umbrella #209 closed |
 | 2026-07-11 | v2.5.3 status → Ready for kickoff; linked [tasks-v2.5.3-roadmap.md](../../engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md) |

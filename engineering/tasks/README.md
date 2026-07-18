@@ -8,7 +8,7 @@ Sprint roadmaps and release checklists per protocol version. Pair each folder wi
 
 | Folder | PRD | Status |
 |--------|-----|--------|
-| *(none yet)* | [prd-v2.5.4-distribution-loop.md](../../product/prd/prd-v2.5.4-distribution-loop.md) | **Next** — create `engineering/tasks/v2.5.4/` at kickoff |
+| [v2.5.4/](./v2.5.4/tasks-v2.5.4-roadmap.md) | [prd-v2.5.4-distribution-loop.md](../../product/prd/prd-v2.5.4-distribution-loop.md) | **ACTIVE** — `release/2.5.4` on origin; all sprint PRs merge into it ([BRANCHING.md](./v2.5.4/BRANCHING.md)) |
 
 ---
 
@@ -42,10 +42,10 @@ Sprint roadmaps and release checklists per protocol version. Pair each folder wi
 
 | Version | PRD | Blocked by |
 |---------|-----|------------|
-| v2.5.4 | [prd-v2.5.4-distribution-loop.md](../../product/prd/prd-v2.5.4-distribution-loop.md) | v2.5.3 |
-| v2.5.5 | [prd-v2.5.5-formal-spec-interop.md](../../product/prd/prd-v2.5.5-formal-spec-interop.md) | v2.5.4 (soft) |
+| v2.5.5 | [prd-v2.5.5-formal-spec-interop.md](../../product/prd/prd-v2.5.5-formal-spec-interop.md) | v2.5.4 soft (docs-only may overlap); hard: v2.5.0 + identity model |
+| v3.0 | [prd-v3.0-economy.md](../../product/prd/prd-v3.0-economy.md) | Launch triggers (not Dist ship) |
 
-Create `engineering/tasks/v2.5.4/` etc. when each adoption release starts.
+Create `engineering/tasks/v{X}/` when each adoption release starts. Dist handoff checklist: [v2.5.4/release-checklist.md §5.1](./v2.5.4/release-checklist.md#51-handoff-inputs-for-v255-confirm-at-s5).
 
 ---
 

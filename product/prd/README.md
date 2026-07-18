@@ -11,9 +11,9 @@ Index of versioned PRDs. **Shipped** releases have retrospective PRDs; **planned
 | Version | File | Status |
 |---------|------|--------|
 | **v2.5.x train** | [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md) | Index |
-| v2.5.4 Distribution Loop | [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md) | Ready for kickoff |
-| v2.5.5 Formal Spec & Interop | [prd-v2.5.5-formal-spec-interop.md](./prd-v2.5.5-formal-spec-interop.md) | Planned |
-| v3.0 Economy | [prd-v3.0-economy.md](./prd-v3.0-economy.md) | Vision |
+| v2.5.4 Distribution Loop | [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md) · [tasks](../../engineering/tasks/v2.5.4/tasks-v2.5.4-roadmap.md) | Active (tasks ACTIVE; `release/2.5.4` on origin) |
+| v2.5.5 Formal Spec & Interop | [prd-v2.5.5-formal-spec-interop.md](./prd-v2.5.5-formal-spec-interop.md) | Planned (soft-block on Dist; handoff in Dist §11) |
+| v3.0 Economy | [prd-v3.0-economy.md](./prd-v3.0-economy.md) | Vision draft (trigger-gated; Dist metrics = proxies) |
 
 ---
 

@@ -145,7 +145,7 @@ uv sync --extra openapi
 uv run python examples/openapi_petstore/main.py
 ```
 
-See also [Compliance testing](../guides/compliance-testing.md) and [CI compliance gate](../ci-compliance.md).
+See also [Compliance testing](../guides/compliance-testing.md), [CI compliance gate](../ci-compliance.md), and the thin [OpenAPI provider starter](../../examples/starters/openapi-provider/) (`examples/starters/openapi-provider/`).
 
 ## Common pitfalls
 

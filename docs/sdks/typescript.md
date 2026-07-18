@@ -185,6 +185,8 @@ The **[`apps/example-nextjs`](https://github.com/adriannoes/asap-protocol/tree/m
 
 ## See also
 
+- [TypeScript consumer starter](../../examples/starters/typescript-consumer/) — thin Node identity smoke (`examples/starters/typescript-consumer/`)
 - [Transport overview](../transport.md) — HTTP/SSE endpoints and versioning
 - [Error handling (Python-centric)](../error-handling.md) — taxonomy and JSON-RPC mapping
 - [Vercel AI SDK (Python gateway)](../guides/vercel-ai-sdk.md) — complementary server-side tools router
+- [Build for agents](../guides/build-for-agents.md) — Dist Loop onboarding guide

@@ -47,10 +47,10 @@ product/
 | **v2.5.1 — Code quality patch** | **✅ Released (2026-06-26)** | `engineering/tasks/private/v2.5.1/` | Thermo-nuclear audit S0–S3 + P0 fixes; Adapter Lab II slipped |
 | **v2.5.2 — Security follow-up** | **✅ Released (2026-07-08)** | `prd-v2.5.2-security-follow-up.md` | #209 + CR #245–#249 + registry fixes (ex planned v2.5.4); tag [`v2.5.2`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.2) |
 | **v2.5.3 — Adapter Lab II** | **✅ Released (2026-07-16)** | `prd-v2.5.3-adapter-lab-ii.md` + [tasks](../engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md) | Workflow connectors, automation security, experimental MAF / NAT; tag [`v2.5.3`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3) |
-| v2.5.4 — Distribution Loop | 🔭 Planned (after 2.5.3) | `prd-v2.5.4-distribution-loop.md` | Homepage, templates, metrics (ex v2.3.3) |
-| v2.5.5 — Formal Spec & Interop | 🔭 Planned | `prd-v2.5.5-formal-spec-interop.md` | RFC spec, introspection, privacy, cross-protocol |
-| v2.5.x train index | Active | `prd-v2.5-roadmap.md` | Full schedule + rescope log |
-| v3.0 — Economy | 🔭 Long-term | `prd-v3.0-economy.md` | Settlement, billing |
+| v2.5.4 — Distribution Loop | 🚧 Active (In progress) | `prd-v2.5.4-distribution-loop.md` + [tasks](../engineering/tasks/v2.5.4/tasks-v2.5.4-roadmap.md) | Homepage, starters, metrics ops; handoff → Spec §11; `release/2.5.4` on origin |
+| v2.5.5 — Formal Spec & Interop | 🔭 Planned | `prd-v2.5.5-formal-spec-interop.md` | RFC spec, introspection, privacy, cross-protocol (soft Dist inputs) |
+| v2.5.x train index | Active | `prd-v2.5-roadmap.md` | Full schedule + orphan owners + rescope log |
+| v3.0 — Economy | 🔭 Long-term (triggers) | `prd-v3.0-economy.md` | Settlement, billing; ADR-21 free badge until launch |
 
 > **Strategic note**: Registry API Backend (PostgreSQL), Intent-Based Search, Orchestration Primitives, Delegated/Autonomous Mode formalization, and DeepEval remain deferred until their triggers materialize. **Adoption continuation** (Adapter Lab II, Distribution Loop) lives in the **v2.5.3–v2.5.4** train after the v2.5.2 security follow-up. Local strategy hub (when present): [strategy/roadmap.md](./strategy/roadmap.md). Public train: [prd/README.md](./prd/README.md).
 

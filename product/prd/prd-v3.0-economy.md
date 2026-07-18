@@ -5,7 +5,8 @@
 > **Version**: 3.0.0
 > **Status**: VISION DRAFT
 > **Created**: 2026-02-25
-> **Last Updated**: 2026-03-20
+> **Last Updated**: 2026-07-18
+> **Predecessor train**: [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md) (through Formal Spec [v2.5.5](./prd-v2.5.5-formal-spec-interop.md))
 
 ---
 
@@ -223,17 +224,23 @@ Before launching economy features:
 
 ## 8. Prerequisites from v2.x
 
-| Prerequisite | Source |
-|-------------|--------|
-| ASAP OAuth2 infrastructure | v1.1+ |
-| Per-runtime-agent identity & capabilities | v2.2 |
-| Registry API Backend (PostgreSQL) | v2.3 |
-| Audit Logging | v2.2 |
-| TypeScript SDK | v2.3 |
-| OpenAPI adapter (for easy service onboarding) | v2.4 |
-| Consumer SDK (credits API) | v2.1 (extended in v3.0) |
-| Usage Metering (`MeteringStore`) | v1.3+ |
-| 100+ Verified agent candidates | Growth trigger |
+| Prerequisite | Source | Notes (2026-07-18) |
+|-------------|--------|---------------------|
+| ASAP OAuth2 infrastructure | v1.1+ | Shipped |
+| Per-runtime-agent identity & capabilities | v2.2 | Shipped |
+| Audit Logging | v2.2 | Shipped |
+| Usage Metering (`MeteringStore`) | v1.3+ | Shipped |
+| TypeScript SDK | v2.3 | Shipped (`@asap-protocol/client`) |
+| OpenAPI adapter (provider onboarding) | **v2.3.0** (not v2.4) | Shipped; Dist thin starter under `examples/starters/openapi-provider/` |
+| Consumer / agent-first distribution | **v2.5.4** Distribution Loop | Soft: narrative + starters + metric proxies — [PRD](./prd-v2.5.4-distribution-loop.md) |
+| Formal Spec / interop narrative | **v2.5.5** (soft successor) | Standards-track; not a hard Economy gate |
+| Registry API Backend (PostgreSQL) | Deferred | **Not shipped.** Still gated by 500-agent / IssueOps trigger ([prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md) non-goals). Credit ledger in §6.1 must not assume it exists yet. |
+| 100+ Verified agent candidates | Growth trigger | Candidate **proxies** from Dist DIST-004: registry count, npm/PyPI installs, site→docs CTR — not a substitute for the paid-badge trigger itself |
+| Legal/tax infrastructure | §6.4 | Required with revenue triggers |
+
+### 8.1 ADR-21 vs paid Verified Badge
+
+Until Economy launch triggers fire, public trust remains **merit-based / free** per ADR-21 ([05-product-strategy.md](../decision-records/05-product-strategy.md)). The **$49/mo** badge in this PRD is a **future** product change; do not preview pricing in v2.5.x public copy (Dist DIST-006).
 
 ---
 
@@ -248,11 +255,13 @@ Before launching economy features:
 
 ## 10. Related Documents
 
+- **v2.5.x train**: [prd-v2.5-roadmap.md](./prd-v2.5-roadmap.md)
+- **Distribution Loop (adoption metrics / narrative)**: [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md)
+- **Formal Spec (predecessor minor)**: [prd-v2.5.5-formal-spec-interop.md](./prd-v2.5.5-formal-spec-interop.md)
 - **Vision**: [prd-v2.0-roadmap.md](./prd-v2.0-roadmap.md) §3 (Economy Layer) and §5.3 (Pricing Strategy)
-- **Deferred scope (original backlog sections)**: [05-product-strategy.md](../decision-records/05-product-strategy.md) (see Questions 10, 15, 21–22 for deferrals)
-- **Previous Version**: [prd-v2.4-adoption.md](./prd-v2.4-adoption.md)
+- **Deferred scope (original backlog sections)**: [05-product-strategy.md](../decision-records/05-product-strategy.md) (see Questions 10, 15, 21–22 for deferrals; ADR-21 Verified Badge free until Economy)
+- **Legacy adoption redirect**: [prd-v2.4-adoption.md](./prd-v2.4-adoption.md)
 - **Crypto settlement extension**: [§6.2 Pluggable Settlement Architecture](#62-pluggable-settlement-architecture)
-- **Marketplace roadmap arc**: [prd-v2.0-roadmap.md](./prd-v2.0-roadmap.md)
 
 ---
 
@@ -260,6 +269,7 @@ Before launching economy features:
 
 | Date | Version | Change |
 |------|---------|--------|
+| 2026-07-18 | 0.3.1 | Prerequisites corrected (OpenAPI = v2.3; Registry API deferred); Dist metrics as trigger proxies; ADR-21 vs paid badge note; cross-links to v2.5.4/v2.5.5 |
 | 2026-02-25 | 0.1.0 | Vision DRAFT — consolidates deferred-backlog §4, §5 and vision-agent-marketplace §3 |
 | 2026-03-13 | 0.2.0 | Added §6.2 Pluggable Settlement Architecture (SettlementBackend Protocol). Q4 resolved: crypto settlement planned as v4.0+ in separate repo. Non-Goals updated. |
 | 2026-03-20 | 0.3.0 | Updated prerequisites: Registry API Backend is v2.3 (not v2.2). Added v2.2 identity/capabilities, v2.3 TypeScript SDK, v2.4 OpenAPI adapter as prerequisites. Updated previous version link to v2.4. |
