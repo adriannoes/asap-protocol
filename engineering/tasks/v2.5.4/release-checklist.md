@@ -10,15 +10,15 @@
 
 | Step | Command | Status |
 |------|---------|--------|
-| Lint | `uv run ruff check .` | ☐ |
-| Format | `uv run ruff format --check .` | ☐ |
-| Types | `uv run mypy src/ scripts/ tests/` | ☐ |
-| Python tests | `uv run pytest --tb=short --cov=asap --cov-report=xml --cov-fail-under=85` | ☐ |
-| pip-audit | per `SECURITY.md` | ☐ |
-| npm audit (web) | `cd apps/web && npm audit --omit=dev --audit-level=moderate` and `npm audit --audit-level=high` (blocking in CI `quality-web`; see `SECURITY.md`) | ☐ |
-| Web (if touched) | `npm run lint` / format check / `npx tsc --noEmit` / `npx vitest run` / `npm run build` in `apps/web/` | ☐ |
-| MkDocs (if docs/nav touched) | `uv run mkdocs build` | ☐ |
-| Starter smokes (DIST-003) | See §1.1 | ☐ |
+| Lint | `uv run ruff check .` | ☑ PASS (2026-07-18 S5 prep) |
+| Format | `uv run ruff format --check .` | ☑ PASS |
+| Types | `uv run mypy src/ scripts/ tests/` | ☑ PASS |
+| Python tests | `uv run pytest --tb=short --cov=asap --cov-report=xml --cov-fail-under=85` | ☑ PASS (94.46%) |
+| pip-audit | per `SECURITY.md` | ☑ PASS (`mcp>=1.28.1`) |
+| npm audit (web) | `cd apps/web && npm audit --omit=dev --audit-level=moderate` and `npm audit --audit-level=high` (blocking in CI `quality-web`; see `SECURITY.md`) | ☑ PASS (0 vulns) |
+| Web (if touched) | `npm run lint` / format check / `npx tsc --noEmit` / `npx vitest run` / `npm run build` in `apps/web/` | ☑ PASS |
+| MkDocs (if docs/nav touched) | `uv run mkdocs build` | ☑ PASS (pre-existing warnings) |
+| Starter smokes (DIST-003) | See §1.1 | ☐ (optional maintainer follow-up; not blocking S5 prep) |
 
 ### 1.1 Starter smoke commands (DIST-003)
 
@@ -48,24 +48,24 @@ Optional CI: `.github/workflows/starters-smoke.yml` (path-filtered on `examples/
 
 > **S5 owns this section.** Fill when MUST surface is merge-ready.
 
-- [ ] DIST-001 — homepage agent-first (D1)
-- [ ] DIST-002 — CTAs → docs/starters/examples
-- [ ] DIST-003 — three thin starters at locked paths
-- [ ] DIST-004 — telemetry ops green **or** deferred on roadmap
-- [ ] DIST-005 — `docs/guides/build-for-agents.md` shipped
-- [ ] DIST-006 — public copy gate passed
-- [ ] [docs-review-checklist.md](./docs-review-checklist.md) §§1–8 complete for shipped scope
+- [x] DIST-001 — homepage agent-first (D1)
+- [x] DIST-002 — CTAs → docs/starters/examples
+- [x] DIST-003 — three thin starters at locked paths
+- [x] DIST-004 — telemetry ops green **or** deferred on roadmap (satisfied; secrets gap documented)
+- [x] DIST-005 — `docs/guides/build-for-agents.md` shipped
+- [x] DIST-006 — public copy gate passed
+- [ ] [docs-review-checklist.md](./docs-review-checklist.md) §§1–8 complete for shipped scope (version-string prep done; residual MkDocs/quality items + post-publish swap remain)
 
 ---
 
 ## 3.0 Version & changelog gates
 
-- [ ] `pyproject.toml` → `version = "2.5.4"`
-- [ ] `src/asap/__init__.py` → `__version__ = "2.5.4"`
-- [ ] `CHANGELOG.md` → `## [2.5.4]`
-- [ ] `docs/migration.md` → v2.5.3 → v2.5.4
-- [ ] `README.md`, `docs/index.md`, `AGENTS.md`, `product/README.md`, `product/checkpoints.md`
-- [ ] npm `@asap-protocol/*` unchanged unless a package was intentionally bumped
+- [x] `pyproject.toml` → `version = "2.5.4"`
+- [x] `src/asap/__init__.py` → `__version__ = "2.5.4"`
+- [x] `CHANGELOG.md` → `## [2.5.4]`
+- [x] `docs/migration.md` → v2.5.3 → v2.5.4
+- [x] `README.md`, `docs/index.md`, `AGENTS.md`, `product/README.md`, `product/checkpoints.md`
+- [x] npm `@asap-protocol/*` unchanged unless a package was intentionally bumped (**left at 2.4.1**)
 
 ---
 
