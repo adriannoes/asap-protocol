@@ -9,8 +9,8 @@ image:
   repository: asap-protocol
   tag: latest
   pullPolicy: IfNotPresent
-  # Override for registry: ghcr.io/adriannoes/asap-protocol
-  # repository: ghcr.io/adriannoes/asap-protocol
+  # Override for registry: ghcr.io/asap-protocol/asap-protocol
+  # repository: ghcr.io/asap-protocol/asap-protocol
 
 # ASAP server configuration (env vars)
 config:

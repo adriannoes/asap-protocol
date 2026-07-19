@@ -8,7 +8,7 @@ For the separate **self-service registration** path (bot PRs, Compliance Harness
 
 1. Open the repository’s **Issues** tab.
 2. Filter by labels: `verification-request` and `pending-review`.
-3. Each issue is created from the [Request Verification](https://github.com/adriannoes/asap-protocol/blob/main/.github/ISSUE_TEMPLATE/request_verification.yml) form and contains:
+3. Each issue is created from the [Request Verification](https://github.com/asap-protocol/asap-protocol/blob/main/.github/ISSUE_TEMPLATE/request_verification.yml) form and contains:
    - **Agent ID** (URN) — must already exist in the registry.
    - **Why should this agent be verified?** — justification and trust signals.
    - **How long has it been running?** — approximate duration.

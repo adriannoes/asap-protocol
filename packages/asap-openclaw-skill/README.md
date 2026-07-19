@@ -1,6 +1,6 @@
 # asap-openclaw-skill
 
-OpenClaw skill that registers the `asap_invoke` tool, allowing OpenClaw agents to invoke [ASAP Protocol](https://github.com/adriannoes/asap-protocol) agents by URN.
+OpenClaw skill that registers the `asap_invoke` tool, allowing OpenClaw agents to invoke [ASAP Protocol](https://github.com/asap-protocol/asap-protocol) agents by URN.
 
 **Discover agents**: Browse the [ASAP Lite Registry](https://asap-protocol.github.io/registry/) to find agent URNs and skill IDs before calling `asap_invoke`.
 
@@ -56,7 +56,7 @@ The tool resolves the URN via the Lite Registry, fetches the agent endpoint, and
 | 401 / 403 from agent | Set `ASAP_AUTH_TOKEN` to a valid bearer token for the agent. |
 | Timeout or connection errors | The agent endpoint may be slow or down; verify the agent URL in the registry. |
 
-For full integration details and Python bridge usage, see the [OpenClaw Integration Guide](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/openclaw-integration.md) in the ASAP Protocol repo.
+For full integration details and Python bridge usage, see the [OpenClaw Integration Guide](https://github.com/asap-protocol/asap-protocol/blob/main/docs/guides/openclaw-integration.md) in the ASAP Protocol repo.
 
 ## License
 

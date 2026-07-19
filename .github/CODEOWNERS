@@ -1,0 +1,13 @@
+# Default owner for the whole repository.
+# CODEOWNERS reviews are required when the main ruleset enables
+# require_code_owner_review. Repository admins and @adriannoes can bypass
+# the ruleset when needed (see docs/maintainers/github-organization.md).
+*       @adriannoes
+
+# Critical paths (explicit for clarity; same owner as default).
+/.github/       @adriannoes
+/src/           @adriannoes
+/apps/web/      @adriannoes
+/packages/      @adriannoes
+/helm/          @adriannoes
+/k8s/           @adriannoes

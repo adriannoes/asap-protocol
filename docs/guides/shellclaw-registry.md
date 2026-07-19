@@ -10,8 +10,8 @@ For maintainer review of Verified badge requests, see [Registry verification rev
 
 The literal ShellClaw v1.0 entry is valid for `RegistryEntry` and `scripts/validate_registry.py`. A copy lives in the repo as a test fixture:
 
-- **Fixture:** [`tests/fixtures/registry/shellclaw-v1.0-entry.json`](https://github.com/adriannoes/asap-protocol/blob/main/tests/fixtures/registry/shellclaw-v1.0-entry.json)
-- **Test:** `test_shellclaw_v1_fixture_validates` in [`tests/discovery/test_registry.py`](https://github.com/adriannoes/asap-protocol/blob/main/tests/discovery/test_registry.py)
+- **Fixture:** [`tests/fixtures/registry/shellclaw-v1.0-entry.json`](https://github.com/asap-protocol/asap-protocol/blob/main/tests/fixtures/registry/shellclaw-v1.0-entry.json)
+- **Test:** `test_shellclaw_v1_fixture_validates` in [`tests/discovery/test_registry.py`](https://github.com/asap-protocol/asap-protocol/blob/main/tests/discovery/test_registry.py)
 
 | Field | Status |
 |-------|--------|
@@ -70,7 +70,7 @@ Read-only audit of `apps/web` (2026-05-24). Seeded registry entries already use 
 
 | Path | Static manifest only | Notes |
 |------|----------------------|--------|
-| **IssueOps** ([Register Agent](https://github.com/adriannoes/asap-protocol/issues/new?template=register_agent.yml)) | **Recommended** | Maintainer validates JSON; no live endpoint required when `online_check: false` |
+| **IssueOps** ([Register Agent](https://github.com/asap-protocol/asap-protocol/issues/new?template=register_agent.yml)) | **Recommended** | Maintainer validates JSON; no live endpoint required when `online_check: false` |
 | **Auto-registration** (`POST /registry/agents`) | **Not recommended** | Harness expects reachable manifest/agent surface |
 
 ---
@@ -177,7 +177,7 @@ Runs the ShellClaw fixture regression test.
 Copy into the shellclaw planning issue or PR when starting marketplace registration:
 
 ```text
-ASAP upstream §5 answered (v2.4 S0): https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/shellclaw-registry.md
+ASAP upstream §5 answered (v2.4 S0): https://github.com/asap-protocol/asap-protocol/blob/main/docs/guides/shellclaw-registry.md
 
 - §5.1 Registry entry §4: YES (use IssueOps; online_check: false; do not tag self-signed)
 - §5.2 built_with: ShellClaw added to issue template; Other still valid

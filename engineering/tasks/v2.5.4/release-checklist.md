@@ -72,9 +72,9 @@ Optional CI: `.github/workflows/starters-smoke.yml` (path-filtered on `examples/
 
 **Order:** merge PR → tag `v2.5.4` → confirm publish workflows → then §6 handoff copy.
 
-- [x] **Merge** `release/2.5.4` → `main` — PR [#294](https://github.com/adriannoes/asap-protocol/pull/294)
-- [x] **Tag** `git tag -a v2.5.4` + push — triggers `.github/workflows/release.yml` ([run](https://github.com/adriannoes/asap-protocol/actions/runs/29650003126))
-- [x] **Publish** — [GitHub Release `v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4); PyPI `asap-protocol==2.5.4`; GHCR `ghcr.io/adriannoes/asap-protocol:v2.5.4`
+- [x] **Merge** `release/2.5.4` → `main` — PR [#294](https://github.com/asap-protocol/asap-protocol/pull/294)
+- [x] **Tag** `git tag -a v2.5.4` + push — triggers `.github/workflows/release.yml` ([run](https://github.com/asap-protocol/asap-protocol/actions/runs/29650003126))
+- [x] **Publish** — [GitHub Release `v2.5.4`](https://github.com/asap-protocol/asap-protocol/releases/tag/v2.5.4); PyPI `asap-protocol==2.5.4`; GHCR `ghcr.io/asap-protocol/asap-protocol:v2.5.4`
 - [x] Spot-check starter README smoke locally (optional maintainer follow-up) — CI starters-smoke green on merge
 - [x] **Public GitHub links** — Dist Loop CTAs use `blob/main` / `tree/main` (no remaining `release/2.5.4` deep links)
 

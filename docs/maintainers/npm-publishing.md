@@ -4,6 +4,7 @@ Maintainer guide for scoped package bootstrap, Trusted Publishing (OIDC), and re
 
 ## Maintainer cross-links
 
+- **GitHub org cutover**: [github-organization.md](./github-organization.md) — Trusted Publisher owner/repo, secrets, Pages, GHCR after transfer to `asap-protocol`.
 - **Release checklist (npm gate)**: [engineering/tasks/v2.3.0/release-checklist.md](../../engineering/tasks/v2.3.0/release-checklist.md) — §**4.3** (verify install after publish).
 - **Hotfix runbook**: [hotfix.md](./hotfix.md) — adapter-only `2.3.1-hotfix.N` vs protocol patch `2.3.2`, branching, cherry-pick, emergency publish.
 - **Sprint notes (historical)**: [engineering/tasks/private/v2.3.1/sprint-S0-unblock-npm.md](../../engineering/tasks/private/v2.3.1/sprint-S0-unblock-npm.md) — first-publish / OIDC troubleshooting narrative.
@@ -46,7 +47,7 @@ npm view @asap-protocol/client version
 
 1. Open [Package access — @asap-protocol/client](https://www.npmjs.com/package/@asap-protocol/client/access).
 2. Under **Trusted Publishers** → **GitHub Actions**, register:
-   - **Repository**: `adriannoes/asap-protocol`
+   - **Repository**: `asap-protocol/asap-protocol`
    - **Workflow file**: `.github/workflows/publish-typescript.yml`
    - **Environment** (if used on GitHub): match the workflow (often none; if you add a `release` environment later, it must match here).
 

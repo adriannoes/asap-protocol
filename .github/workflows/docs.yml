@@ -7,7 +7,7 @@
 #
 # GitHub Pages: Settings → Pages → Source = Deploy from a branch →
 # Branch = `gh-pages` / folder = `/ (root)`. Canonical URL after first
-# successful deploy: https://adriannoes.github.io/asap-protocol/
+# successful deploy: https://asap-protocol.github.io/asap-protocol/
 name: Docs
 
 on:

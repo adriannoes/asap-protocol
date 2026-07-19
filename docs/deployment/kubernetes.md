@@ -6,18 +6,18 @@ This guide walks through testing and deploying an ASAP Protocol agent on Kuberne
 
 On each release (git tag `v*`), the project builds and pushes a Docker image to GitHub Container Registry:
 
-- **Image**: `ghcr.io/adriannoes/asap-protocol`
+- **Image**: `ghcr.io/asap-protocol/asap-protocol`
 - **Tags**: `latest`, `v1.0.0`, `v1.0`, `v1` (for release v1.0.0; other releases get `latest` and semver tags)
 
 To use the published image with Helm (no local build):
 
 ```bash
 helm install asap-agent ./helm/asap-agent \
-  --set image.repository=ghcr.io/adriannoes/asap-protocol \
+  --set image.repository=ghcr.io/asap-protocol/asap-protocol \
   --set image.tag=v1.0.0
 ```
 
-To pull locally: `docker pull ghcr.io/adriannoes/asap-protocol:latest`
+To pull locally: `docker pull ghcr.io/asap-protocol/asap-protocol:latest`
 
 ## Prerequisites
 

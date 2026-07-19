@@ -33,7 +33,7 @@ We take the security of ASAP Protocol seriously. If you have found a security vu
 
 We use GitHub's **Private Vulnerability Reporting**. If you have found a security vulnerability, please report it privately using the "Report a vulnerability" button in the **Security** tab of this repository.
 
-Direct link: [Report a vulnerability](https://github.com/adriannoes/asap-protocol/security/advisories/new)
+Direct link: [Report a vulnerability](https://github.com/asap-protocol/asap-protocol/security/advisories/new)
 
 If for some reason you cannot use the GitHub reporting tool, please open an issue asking for a private communication channel without disclosing the vulnerability details.
 
@@ -80,9 +80,9 @@ We aim to review and merge security updates according to the following target ti
 
 ### Security Advisories
 
-- **GitHub Security Advisories**: [View all advisories](https://github.com/adriannoes/asap-protocol/security/advisories)
-- **Dependabot Alerts**: [View dependency alerts](https://github.com/adriannoes/asap-protocol/security/dependabot)
-- **Dependency Graph**: [View dependency insights](https://github.com/adriannoes/asap-protocol/network/dependencies)
+- **GitHub Security Advisories**: [View all advisories](https://github.com/asap-protocol/asap-protocol/security/advisories)
+- **Dependabot Alerts**: [View dependency alerts](https://github.com/asap-protocol/asap-protocol/security/dependabot)
+- **Dependency Graph**: [View dependency insights](https://github.com/asap-protocol/asap-protocol/network/dependencies)
 
 ### Monitoring
 

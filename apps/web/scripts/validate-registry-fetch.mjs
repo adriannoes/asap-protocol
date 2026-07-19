@@ -6,7 +6,7 @@
  */
 const url =
   process.env.REGISTRY_URL ||
-  'https://raw.githubusercontent.com/adriannoes/asap-protocol/main/registry.json';
+  'https://raw.githubusercontent.com/asap-protocol/asap-protocol/main/registry.json';
 
 console.log('Fetching:', url);
 

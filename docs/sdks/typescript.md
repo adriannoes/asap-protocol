@@ -34,7 +34,7 @@ Tree-shake adapters by importing **subpaths** (see [Adapters](#adapters)) so unu
 
 ## Identity and storage
 
-Hosts and agents use **Ed25519** keys and short-lived **JWTs** (`jose`). Keys must be persisted with a [`Storage`](https://github.com/adriannoes/asap-protocol/blob/main/packages/typescript/client/src/storage-local.ts)-compatible backend.
+Hosts and agents use **Ed25519** keys and short-lived **JWTs** (`jose`). Keys must be persisted with a [`Storage`](https://github.com/asap-protocol/asap-protocol/blob/main/packages/typescript/client/src/storage-local.ts)-compatible backend.
 
 ```ts
 import {
@@ -87,7 +87,7 @@ const result = await executeCapability(provider, "my.skill", { foo: "bar" }, {
 });
 ```
 
-Use [`connectAgent`](https://github.com/adriannoes/asap-protocol/blob/main/packages/typescript/client/src/connection.ts) for registration, approval, disconnect, and capability requests against a live provider.
+Use [`connectAgent`](https://github.com/asap-protocol/asap-protocol/blob/main/packages/typescript/client/src/connection.ts) for registration, approval, disconnect, and capability requests against a live provider.
 
 ## Streaming (SSE)
 
@@ -172,7 +172,7 @@ await callWithRecoverableRetry(() => doRpcCall(), { maxRetries: 3 });
 await callWithRecoverableRetry(() => doRpcCall(), { fallbackBackoffMs: 500 });
 ```
 
-For wire-level JSON helpers, see **`remoteRpcErrorFromJson`** and related exports in [`errors.ts`](https://github.com/adriannoes/asap-protocol/blob/main/packages/typescript/client/src/errors.ts).
+For wire-level JSON helpers, see **`remoteRpcErrorFromJson`** and related exports in [`errors.ts`](https://github.com/asap-protocol/asap-protocol/blob/main/packages/typescript/client/src/errors.ts).
 
 ## Security
 
@@ -181,7 +181,7 @@ For wire-level JSON helpers, see **`remoteRpcErrorFromJson`** and related export
 
 ## Reference app
 
-The **[`apps/example-nextjs`](https://github.com/adriannoes/asap-protocol/tree/main/apps/example-nextjs)** App Router demo registers a host in **`LocalStorage`**, connects an agent, and wires **`asapToolsForVercel`** into a chat UI. Copy patterns from `.env.example` for provider URL and API keys.
+The **[`apps/example-nextjs`](https://github.com/asap-protocol/asap-protocol/tree/main/apps/example-nextjs)** App Router demo registers a host in **`LocalStorage`**, connects an agent, and wires **`asapToolsForVercel`** into a chat UI. Copy patterns from `.env.example` for provider URL and API keys.
 
 ## See also
 

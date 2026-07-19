@@ -2,7 +2,7 @@
 
 ## ⚠️ This is **not** `@asap-protocol/client/adapters/openai`
 
-[`@asap-protocol/client/adapters/openai`](https://github.com/adriannoes/asap-protocol/tree/main/packages/typescript/client/src/adapters/openai.ts) exposes **`asapToolsForOpenAI`**, producing **static `ChatCompletionTool[]`** for the **OpenAI Chat Completions API** (`openai` npm package, no Agents runtime).
+[`@asap-protocol/client/adapters/openai`](https://github.com/asap-protocol/asap-protocol/tree/main/packages/typescript/client/src/adapters/openai.ts) exposes **`asapToolsForOpenAI`**, producing **static `ChatCompletionTool[]`** for the **OpenAI Chat Completions API** (`openai` npm package, no Agents runtime).
 
 **`@asap-protocol/openai-agents`** integrates with the **`@openai/agents` SDK** (`Agent`, `tool()`, handoffs, `run()`). Different consumer and lifecycle — **both packages coexist**.
 

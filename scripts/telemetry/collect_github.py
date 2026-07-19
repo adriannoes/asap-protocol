@@ -30,7 +30,7 @@ import httpx
 
 GITHUB_API_BASE = "https://api.github.com"
 GITHUB_API_VERSION = "2022-11-28"
-DEFAULT_OWNER = "adriannoes"
+DEFAULT_OWNER = "asap-protocol"
 DEFAULT_REPO = "asap-protocol"
 DEFAULT_TOKEN_ENV = "GITHUB_TOKEN"
 DEFAULT_ADAPTER_LABEL = "adapter-request"

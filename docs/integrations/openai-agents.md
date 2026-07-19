@@ -158,7 +158,7 @@ This mirrors Mastra **`asapStreamToMastraTextStream`** but emits **`OpenAIAgents
 | **`client.agentJwt is scoped to …`** on handoff | **`providerUrl`** differs from **`client.provider`** — supply **`remoteAgentJwt`** scoped to the remote gateway. |
 | Streaming stalls | Confirm SSE **`Accept: text/event-stream`** gateway compatibility (`streamTaskStreamEnvelopes`). |
 
-Runnable CLI demo: [`apps/example-openai-agents/README.md`](https://github.com/adriannoes/asap-protocol/tree/main/apps/example-openai-agents).
+Runnable CLI demo: [`apps/example-openai-agents/README.md`](https://github.com/asap-protocol/asap-protocol/tree/main/apps/example-openai-agents).
 
 Compliance Harness: `pnpm --filter example-openai-agents run compliance`.
 

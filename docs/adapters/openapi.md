@@ -183,4 +183,4 @@ Upstream **`text/event-stream`** is detected for metadata, but the default **`ta
 - [Security](../security.md) — auth schemes at the ASAP layer
 - [Self-authorization prevention](../security/self-authorization-prevention.md) — `FreshSessionConfig`, WebAuthn
 - [Error handling](../error-handling.md) — `FatalError`, `RecoverableError` from upstream proxying
-- [PRD v2.3 OpenAPI adapter](https://github.com/adriannoes/asap-protocol/blob/main/product/prd/prd-v2.3-scale.md) — OA-* requirements (source of truth for scope)
+- [PRD v2.3 OpenAPI adapter](https://github.com/asap-protocol/asap-protocol/blob/main/product/prd/prd-v2.3-scale.md) — OA-* requirements (source of truth for scope)

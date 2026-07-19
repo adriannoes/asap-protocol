@@ -2,12 +2,12 @@
 
 *✨ From **agents**, for **agents**. Delivering reliability, **as soon as possible.***
 
-![ASAP Protocol Banner](https://raw.githubusercontent.com/adriannoes/asap-protocol/main/.github/assets/asap-protocol-banner.png)
+![ASAP Protocol Banner](https://raw.githubusercontent.com/asap-protocol/asap-protocol/main/.github/assets/asap-protocol-banner.png)
 
 
 > A production-ready protocol for agent-to-agent communication and task coordination.
 
-**Quick Info**: [`v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4) · PyPI [`asap-protocol`](https://pypi.org/project/asap-protocol/) | `Apache 2.0` | `Python 3.13+` | [Documentation](docs/index.md) | [Changelog](CHANGELOG.md)
+**Quick Info**: [`v2.5.4`](https://github.com/asap-protocol/asap-protocol/releases/tag/v2.5.4) · PyPI [`asap-protocol`](https://pypi.org/project/asap-protocol/) | `Apache 2.0` | `Python 3.13+` | [Documentation](docs/index.md) | [Changelog](CHANGELOG.md)
 
 > 📦 **Install** — [`asap-protocol` **2.5.4** on PyPI](https://pypi.org/project/asap-protocol/) (Python) · [`@asap-protocol/client` on npm](https://www.npmjs.com/package/@asap-protocol/client) (TypeScript)
 
@@ -111,7 +111,7 @@ With coverage (separate run — do not combine with `-n auto`):
 uv run pytest --tb=short --cov=asap --cov-report=term-missing --cov-fail-under=85
 ```
 
-[Testing Guide](https://github.com/adriannoes/asap-protocol/blob/main/docs/testing.md) (structure, fixtures, property/load/chaos tests). [Contributing](https://github.com/adriannoes/asap-protocol/blob/main/CONTRIBUTING.md) (dev setup, CI).
+[Testing Guide](https://github.com/asap-protocol/asap-protocol/blob/main/docs/testing.md) (structure, fixtures, property/load/chaos tests). [Contributing](https://github.com/asap-protocol/asap-protocol/blob/main/CONTRIBUTING.md) (dev setup, CI).
 
 ### Compliance Harness
 
@@ -122,9 +122,9 @@ uv add "asap-compliance>=1.3.0"
 pytest --asap-agent-url https://your-agent.example.com -m asap_compliance
 ```
 
-For **MCP Auth Bridge** stdio gates (`mcp-auth-bridge` profile), use **`asap-compliance` 1.3.0+** with **`asap-protocol` 2.5.0+** — published on PyPI via tag [`v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1).
+For **MCP Auth Bridge** stdio gates (`mcp-auth-bridge` profile), use **`asap-compliance` 1.3.0+** with **`asap-protocol` 2.5.0+** — published on PyPI via tag [`v2.5.0.1`](https://github.com/asap-protocol/asap-protocol/releases/tag/v2.5.0.1).
 
-See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/compliance-testing.md) for handshake, schema and state machine validation.
+See [Compliance Testing Guide](https://github.com/asap-protocol/asap-protocol/blob/main/docs/guides/compliance-testing.md) for handshake, schema and state machine validation.
 
 ## Documentation
 
@@ -132,23 +132,23 @@ See [Compliance Testing Guide](https://github.com/adriannoes/asap-protocol/blob/
 - [Docs](docs/index.md) | [API Reference](docs/api-reference.md)
 - [MCP Auth Bridge](docs/adapters/mcp-auth-bridge.md) — v2.5.0 opt-in JWT + capability grants for native stdio MCP
 - [TypeScript client SDK](docs/sdks/typescript.md) — `@asap-protocol/client` (identity, capabilities, streaming, adapters)
-- [Tutorials](https://github.com/adriannoes/asap-protocol/tree/main/docs/tutorials) — First agent to production checklist
-- [Migration from A2A/MCP](https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md)
-- [Raw Fetch (non-Python)](https://github.com/adriannoes/asap-protocol/blob/main/docs/raw-fetch.md) — Fetch registry.json and revoked_agents.json with curl/fetch; implement your own client.
+- [Tutorials](https://github.com/asap-protocol/asap-protocol/tree/main/docs/tutorials) — First agent to production checklist
+- [Migration from A2A/MCP](https://github.com/asap-protocol/asap-protocol/blob/main/docs/migration.md)
+- [Raw Fetch (non-Python)](https://github.com/asap-protocol/asap-protocol/blob/main/docs/raw-fetch.md) — Fetch registry.json and revoked_agents.json with curl/fetch; implement your own client.
 
 **Deep Dive**
-- [State Management](https://github.com/adriannoes/asap-protocol/blob/main/docs/state-management.md) | [Best Practices: Failover & Migration](https://github.com/adriannoes/asap-protocol/blob/main/docs/best-practices/agent-failover-migration.md) | [Error Handling](https://github.com/adriannoes/asap-protocol/blob/main/docs/error-handling.md)
-- [Transport](https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md) | [Security](https://github.com/adriannoes/asap-protocol/blob/main/docs/security.md) | [Security Model](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/v1.1-security-model.md) (OAuth2 trust, Custom Claims)
-- [Identity Signing](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/identity-signing.md) | [Compliance Testing](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/compliance-testing.md) | [Migration v1.1 to v1.2](https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/migration-v1.1-to-v1.2.md) | [mTLS](https://github.com/adriannoes/asap-protocol/blob/main/docs/security/mtls.md)
-- [Observability](https://github.com/adriannoes/asap-protocol/blob/main/docs/observability.md) | [Testing](https://github.com/adriannoes/asap-protocol/blob/main/docs/testing.md)
+- [State Management](https://github.com/asap-protocol/asap-protocol/blob/main/docs/state-management.md) | [Best Practices: Failover & Migration](https://github.com/asap-protocol/asap-protocol/blob/main/docs/best-practices/agent-failover-migration.md) | [Error Handling](https://github.com/asap-protocol/asap-protocol/blob/main/docs/error-handling.md)
+- [Transport](https://github.com/asap-protocol/asap-protocol/blob/main/docs/transport.md) | [Security](https://github.com/asap-protocol/asap-protocol/blob/main/docs/security.md) | [Security Model](https://github.com/asap-protocol/asap-protocol/blob/main/docs/security/v1.1-security-model.md) (OAuth2 trust, Custom Claims)
+- [Identity Signing](https://github.com/asap-protocol/asap-protocol/blob/main/docs/guides/identity-signing.md) | [Compliance Testing](https://github.com/asap-protocol/asap-protocol/blob/main/docs/guides/compliance-testing.md) | [Migration v1.1 to v1.2](https://github.com/asap-protocol/asap-protocol/blob/main/docs/guides/migration-v1.1-to-v1.2.md) | [mTLS](https://github.com/asap-protocol/asap-protocol/blob/main/docs/security/mtls.md)
+- [Observability](https://github.com/asap-protocol/asap-protocol/blob/main/docs/observability.md) | [Testing](https://github.com/asap-protocol/asap-protocol/blob/main/docs/testing.md)
 
 **Decisions & Operations**
-- [ADRs](https://github.com/adriannoes/asap-protocol/tree/main/docs/adr) — 19 Architecture Decision Records
-- [Tech Stack](https://github.com/adriannoes/asap-protocol/blob/main/engineering/architecture/tech-stack-decisions.md) — Rationale for Python, Pydantic, Next.js choices
-- [Deployment](https://github.com/adriannoes/asap-protocol/blob/main/docs/deployment/kubernetes.md) | [Troubleshooting](https://github.com/adriannoes/asap-protocol/blob/main/docs/troubleshooting.md)
+- [ADRs](https://github.com/asap-protocol/asap-protocol/tree/main/docs/adr) — 19 Architecture Decision Records
+- [Tech Stack](https://github.com/asap-protocol/asap-protocol/blob/main/engineering/architecture/tech-stack-decisions.md) — Rationale for Python, Pydantic, Next.js choices
+- [Deployment](https://github.com/asap-protocol/asap-protocol/blob/main/docs/deployment/kubernetes.md) | [Troubleshooting](https://github.com/asap-protocol/asap-protocol/blob/main/docs/troubleshooting.md)
 
 **Release**
-- [Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md) | **[PyPI listing](https://pypi.org/project/asap-protocol/)** — `https://pypi.org/project/asap-protocol/` (install: `pip install asap-protocol`)
+- [Changelog](https://github.com/asap-protocol/asap-protocol/blob/main/CHANGELOG.md) | **[PyPI listing](https://pypi.org/project/asap-protocol/)** — `https://pypi.org/project/asap-protocol/` (install: `pip install asap-protocol`)
 
 ## CLI
 
@@ -169,27 +169,27 @@ See [docs/cli.md](docs/cli.md) for delegation tokens, schema validation, trace v
 
 ## Version History
 
-High-level only — see **[Changelog](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md)** and the **[docs index](https://github.com/adriannoes/asap-protocol/blob/main/docs/index.md#v11-features-api-reference--guides)** for full notes.
+High-level only — see **[Changelog](https://github.com/asap-protocol/asap-protocol/blob/main/CHANGELOG.md)** and the **[docs index](https://github.com/asap-protocol/asap-protocol/blob/main/docs/index.md#v11-features-api-reference--guides)** for full notes.
 
 | Version | What shipped |
 | :-- | :-- |
-| **v2.5.4** | **Distribution Loop** — **[GitHub Release `v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4)** · thin starters (`examples/starters/`), [Build for agents](docs/guides/build-for-agents.md), homepage agent-first CTAs, telemetry ops (no public metrics UI). See [CHANGELOG](CHANGELOG.md#254---2026-07-18), [PRD](product/prd/prd-v2.5.4-distribution-loop.md), and [Migration (v2.5.3 → v2.5.4)](docs/migration.md#upgrading-from-v253-to-v254) |
-| **v2.5.3** | **Adapter Lab II** — **[GitHub Release `v2.5.3`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3)** · workflow OpenAPI connectors + security guide, experimental MAF / NeMo guides, JSON-safe `-32602`, MCP example client DX. See [CHANGELOG](CHANGELOG.md#253---2026-07-14), [PRD](product/prd/prd-v2.5.3-adapter-lab-ii.md), and [Migration (v2.5.2 → v2.5.3)](docs/migration.md#upgrading-from-v252-to-v253) |
+| **v2.5.4** | **Distribution Loop** — **[GitHub Release `v2.5.4`](https://github.com/asap-protocol/asap-protocol/releases/tag/v2.5.4)** · thin starters (`examples/starters/`), [Build for agents](docs/guides/build-for-agents.md), homepage agent-first CTAs, telemetry ops (no public metrics UI). See [CHANGELOG](CHANGELOG.md#254---2026-07-18), [PRD](product/prd/prd-v2.5.4-distribution-loop.md), and [Migration (v2.5.3 → v2.5.4)](docs/migration.md#upgrading-from-v253-to-v254) |
+| **v2.5.3** | **Adapter Lab II** — **[GitHub Release `v2.5.3`](https://github.com/asap-protocol/asap-protocol/releases/tag/v2.5.3)** · workflow OpenAPI connectors + security guide, experimental MAF / NeMo guides, JSON-safe `-32602`, MCP example client DX. See [CHANGELOG](CHANGELOG.md#253---2026-07-14), [PRD](product/prd/prd-v2.5.3-adapter-lab-ii.md), and [Migration (v2.5.2 → v2.5.3)](docs/migration.md#upgrading-from-v252-to-v253) |
 | **v2.5.2** | **Security & correctness follow-up** — opt-in operator API auth, `extra="forbid"` ingress, Redis JTI replay, web distributed rate limits, v2.5.1 CR follow-ups (#245–#249), registry signed-manifest/400 fixes. See [CHANGELOG](CHANGELOG.md#252---2026-07-08), [PRD](product/prd/prd-v2.5.2-security-follow-up.md), and [Migration (v2.5.1 → v2.5.2)](docs/migration.md#upgrading-from-v251) |
 | **v2.5.1** | **Code quality patch** — behavior-preserving refactor (transport/server, client, websocket, SQLite storage, auth, integrations) + six correctness/security fixes (atomic `revoke_cascade`, `usage_events` DDL, unified Host-JWT verifier, **WS now enforces OAuth2**, OpenAPI handler cleanup, client `correlation_id` binding). Deprecated import paths removed in v2.6.0. See [CHANGELOG](CHANGELOG.md#251---2026-06-25) and [Migration (v2.5.0 → v2.5.1)](docs/migration.md#upgrading-from-v250-to-v251) |
-| **v2.5.0.1** | **Compliance publish** — **[GitHub Release `v2.5.0.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0.1)** · PyPI **`asap-compliance` 1.3.0** (`mcp-auth-bridge` profile; requires `asap-protocol>=2.5.0`). No `asap-protocol` API change. See [CHANGELOG](CHANGELOG.md#2501---2026-06-24) |
-| **v2.5.0** | **MCP Auth Bridge** — **[GitHub Release `v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0)** · opt-in `protect_server` for stdio MCP; Agent JWT + capability grants; reference example `examples/mcp_auth_bridge/`. See [CHANGELOG](CHANGELOG.md#250---2026-06-24) and [Migration (v2.4.1 → v2.5.0)](docs/migration.md#upgrading-from-v241-to-v250) |
+| **v2.5.0.1** | **Compliance publish** — **[GitHub Release `v2.5.0.1`](https://github.com/asap-protocol/asap-protocol/releases/tag/v2.5.0.1)** · PyPI **`asap-compliance` 1.3.0** (`mcp-auth-bridge` profile; requires `asap-protocol>=2.5.0`). No `asap-protocol` API change. See [CHANGELOG](CHANGELOG.md#2501---2026-06-24) |
+| **v2.5.0** | **MCP Auth Bridge** — **[GitHub Release `v2.5.0`](https://github.com/asap-protocol/asap-protocol/releases/tag/v2.5.0)** · opt-in `protect_server` for stdio MCP; Agent JWT + capability grants; reference example `examples/mcp_auth_bridge/`. See [CHANGELOG](CHANGELOG.md#250---2026-06-24) and [Migration (v2.4.1 → v2.5.0)](docs/migration.md#upgrading-from-v241-to-v250) |
 | **v2.4.1** | **Security hardening** — OAuth2 `iss`/`aud`, fail-closed identity binding, web SSRF/redirect fixes, dependency bumps. See [CHANGELOG](CHANGELOG.md#241---2026-06-14) and [Migration (v2.4.0 → v2.4.1)](docs/migration.md#upgrading-from-v240-to-v241) |
 | **v2.4.0** | **Edge-AI discovery** — optional `hardware` / `inference` manifest fields, registry mirror, marketplace filters, **`@asap-protocol/client@2.4.0`**, ShellClaw onboarding docs. See [CHANGELOG](CHANGELOG.md#240---2026-05-24) and [Migration (v2.3.x → v2.4.0)](docs/migration.md#upgrading-from-v23x-to-v240) |
-| **v2.3.1** | **npm TS patch** — **[GitHub Release `v2.3.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.3.1)** · **`@asap-protocol/mastra`**, **`@asap-protocol/openai-agents`**, **`@asap-protocol/client@2.3.1`** (additive adapter exports). Python **2.3.0** unchanged. See [CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#231---2026-05-20) and [Migration (v2.3.0 → v2.3.1)](https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md#upgrading-from-v230-to-v231) |
-| **v2.3.0** | **OpenAPI Adapter** (`[openapi]`) · **TypeScript client** (`@asap-protocol/client`) · **Auto-Registration** · **Capability escalation** · **ASAP HTTP challenge** — see [CHANGELOG](https://github.com/adriannoes/asap-protocol/blob/main/CHANGELOG.md#230---2026-05-04) and [Migration](https://github.com/adriannoes/asap-protocol/blob/main/docs/migration.md#upgrading-from-v22x-to-v230) |
-| **v2.2.1** | Opt-in **WebAuthn** (`asap-protocol[webauthn]`) · `asap compliance-check` & `asap audit export` · stricter `ResolvedAgent.run()` · `AuditChainBroken` · [pinned security deps](https://github.com/adriannoes/asap-protocol/blob/main/SECURITY.md#dependency-policy) |
+| **v2.3.1** | **npm TS patch** — **[GitHub Release `v2.3.1`](https://github.com/asap-protocol/asap-protocol/releases/tag/v2.3.1)** · **`@asap-protocol/mastra`**, **`@asap-protocol/openai-agents`**, **`@asap-protocol/client@2.3.1`** (additive adapter exports). Python **2.3.0** unchanged. See [CHANGELOG](https://github.com/asap-protocol/asap-protocol/blob/main/CHANGELOG.md#231---2026-05-20) and [Migration (v2.3.0 → v2.3.1)](https://github.com/asap-protocol/asap-protocol/blob/main/docs/migration.md#upgrading-from-v230-to-v231) |
+| **v2.3.0** | **OpenAPI Adapter** (`[openapi]`) · **TypeScript client** (`@asap-protocol/client`) · **Auto-Registration** · **Capability escalation** · **ASAP HTTP challenge** — see [CHANGELOG](https://github.com/asap-protocol/asap-protocol/blob/main/CHANGELOG.md#230---2026-05-04) and [Migration](https://github.com/asap-protocol/asap-protocol/blob/main/docs/migration.md#upgrading-from-v22x-to-v230) |
+| **v2.2.1** | Opt-in **WebAuthn** (`asap-protocol[webauthn]`) · `asap compliance-check` & `asap audit export` · stricter `ResolvedAgent.run()` · `AuditChainBroken` · [pinned security deps](https://github.com/asap-protocol/asap-protocol/blob/main/SECURITY.md#dependency-policy) |
 | **v2.2** | Per-runtime identity & capability auth · SSE `POST /asap/stream` · `ASAP-Version` · JSON-RPC batch · tamper-evident audit · async state stores · Compliance Harness v2 |
 | **v2.1.1** | Patch: JWT allowlist · SQLite async bridge · optional Redis rate limits · web SSRF hardening |
 | **v2.1** | `MarketClient` · framework extras (LangChain, CrewAI, LlamaIndex, …) · registry UX |
 | **v2.0** | Marketplace web app · Lite Registry (GitHub Pages) · IssueOps · OAuth · verification flow |
 | **v1.3** | `asap delegation create` / `revoke` |
-| **v1.2** | Ed25519 manifests · trust levels · optional mTLS · [Compliance Harness](https://github.com/adriannoes/asap-protocol/blob/main/asap-compliance/README.md) |
+| **v1.2** | Ed25519 manifests · trust levels · optional mTLS · [Compliance Harness](https://github.com/asap-protocol/asap-protocol/blob/main/asap-compliance/README.md) |
 | **v1.1** | OAuth2 · WebSocket · discovery (well-known + Lite Registry) · SQLite state · webhooks |
 
 ## 🔭 What's Next?
@@ -200,7 +200,7 @@ The [agentic marketplace](https://asap-protocol.com/) and Lite Registry are live
 - **`@asap-protocol/mcp-auth`** (npm) — HTTP/SSE MCP middleware
 - **Formal spec track** (v2.5.5) — introspection, privacy, cross-protocol interop on the path to v3.0 economy
 
-See the [v2.5 roadmap PRD](https://github.com/adriannoes/asap-protocol/blob/main/product/prd/prd-v2.5-roadmap.md) and [ADR index](https://github.com/adriannoes/asap-protocol/blob/main/product/decision-records/README.md).
+See the [v2.5 roadmap PRD](https://github.com/asap-protocol/asap-protocol/blob/main/product/prd/prd-v2.5-roadmap.md) and [ADR index](https://github.com/asap-protocol/asap-protocol/blob/main/product/decision-records/README.md).
 
 ## Contributing
 
@@ -208,13 +208,13 @@ See the [v2.5 roadmap PRD](https://github.com/adriannoes/asap-protocol/blob/main
 
 Every contribution, from bug reports to feature suggestions, documentation improvements and code contributions, makes a real difference.
 
-Check out our [contributing guidelines](https://github.com/adriannoes/asap-protocol/blob/main/CONTRIBUTING.md) to get started. It's easier than you think! 🚀
+Check out our [contributing guidelines](https://github.com/asap-protocol/asap-protocol/blob/main/CONTRIBUTING.md) to get started. It's easier than you think! 🚀
 
 ## Contact
 
 | Channel | Use for |
 | --- | --- |
-| [GitHub Discussions](https://github.com/adriannoes/asap-protocol/discussions) or [Issues](https://github.com/adriannoes/asap-protocol/issues) | Public questions, bugs, and feature ideas |
+| [GitHub Discussions](https://github.com/asap-protocol/asap-protocol/discussions) or [Issues](https://github.com/asap-protocol/asap-protocol/issues) | Public questions, bugs, and feature ideas |
 | [info@asap-protocol.com](mailto:info@asap-protocol.com) | Private coordination — protocol, marketplace, partnerships, press |
 | [SECURITY.md](SECURITY.md) | Security vulnerabilities only — **do not** use email or public issues |
 
@@ -224,7 +224,7 @@ See [PRIVACY.md](PRIVACY.md) for how the public site and maintainer telemetry us
 
 ## License
 
-This project is licensed under the Apache 2.0 License - see the [license](https://github.com/adriannoes/asap-protocol/blob/main/LICENSE) file for details.
+This project is licensed under the Apache 2.0 License - see the [license](https://github.com/asap-protocol/asap-protocol/blob/main/LICENSE) file for details.
 
 ---
 

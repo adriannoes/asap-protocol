@@ -3,7 +3,7 @@
 **PRD**: Definition of Done / D5  
 **Branch**: work on **`release/2.5.4`** → PR to **`main`**  
 **Depends on**: S1–S3 MUST green; S4 green **or** deferred on roadmap  
-**Status**: **Done (shipped)** — tag [`v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4); PyPI `asap-protocol==2.5.4`; workflow [29650003126](https://github.com/adriannoes/asap-protocol/actions/runs/29650003126)
+**Status**: **Done (shipped)** — tag [`v2.5.4`](https://github.com/asap-protocol/asap-protocol/releases/tag/v2.5.4); PyPI `asap-protocol==2.5.4`; workflow [29650003126](https://github.com/asap-protocol/asap-protocol/actions/runs/29650003126)
 
 **Trigger:** Distribution Loop MUST items complete on the release branch.  
 **Enables:** v2.5.5 Formal Spec kickoff.  
@@ -37,9 +37,9 @@
   **CI results (2026-07-18, S5 prep):** all gates above green. Note: full pytest run after `uv sync --frozen --all-extras --dev --no-extra crewai --no-extra llamaindex`; mcp smoke re-verified post-bump (120 passed).
 
 - [x] **6.4 Merge → tag → publish**
-  - [x] **Merge** PR `release/2.5.4` → `main` — [#294](https://github.com/adriannoes/asap-protocol/pull/294)
-  - [x] **Tag** `v2.5.4` + push — [Release workflow](https://github.com/adriannoes/asap-protocol/actions/runs/29650003126)
-  - [x] **Publish** — [GitHub Release `v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4); PyPI `asap-protocol==2.5.4`; GHCR `ghcr.io/adriannoes/asap-protocol:v2.5.4`
+  - [x] **Merge** PR `release/2.5.4` → `main` — [#294](https://github.com/asap-protocol/asap-protocol/pull/294)
+  - [x] **Tag** `v2.5.4` + push — [Release workflow](https://github.com/asap-protocol/asap-protocol/actions/runs/29650003126)
+  - [x] **Publish** — [GitHub Release `v2.5.4`](https://github.com/asap-protocol/asap-protocol/releases/tag/v2.5.4); PyPI `asap-protocol==2.5.4`; GHCR `ghcr.io/asap-protocol/asap-protocol:v2.5.4`
   - [x] Post-publish checklist ([release-checklist §6](./release-checklist.md#60-post-publish-swap-pending--shipped))
 
 - [x] **6.5 Handoff**
