@@ -2,7 +2,7 @@
 #
 # Deploy: kubectl apply -f k8s/deployment.yaml
 # Requires: Docker image built (e.g. asap-protocol:latest) or from registry
-#           ghcr.io/adriannoes/asap-protocol
+#           ghcr.io/asap-protocol/asap-protocol
 #
 # Health probes: /health (liveness), /ready (readiness)
 ---
@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
         - name: asap-agent
-          # Use your built image or ghcr.io/adriannoes/asap-protocol:latest
+          # Use your built image or ghcr.io/asap-protocol/asap-protocol:latest
           image: asap-protocol:latest
           imagePullPolicy: IfNotPresent
           ports:

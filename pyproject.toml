@@ -114,10 +114,10 @@ telemetry = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/adriannoes/asap-protocol"
-Documentation = "https://adriannoes.github.io/asap-protocol"
-Repository = "https://github.com/adriannoes/asap-protocol"
-Issues = "https://github.com/adriannoes/asap-protocol/issues"
+Homepage = "https://github.com/asap-protocol/asap-protocol"
+Documentation = "https://asap-protocol.github.io/asap-protocol"
+Repository = "https://github.com/asap-protocol/asap-protocol"
+Issues = "https://github.com/asap-protocol/asap-protocol/issues"
 "PyPI" = "https://pypi.org/project/asap-protocol/"
 
 # Override transitive dependencies for security fixes:

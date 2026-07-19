@@ -75,7 +75,7 @@ export async function fetchUserRegistrationIssues() {
             return { success: false, error: 'Missing GitHub credentials' };
         }
 
-        const owner = process.env.GITHUB_REGISTRY_OWNER || 'adriannoes';
+        const owner = process.env.GITHUB_REGISTRY_OWNER || 'asap-protocol';
         const repo = process.env.GITHUB_REGISTRY_REPO || 'asap-protocol';
 
         const cacheTag = `${CACHE_TAG_PREFIX}-${userId}`;

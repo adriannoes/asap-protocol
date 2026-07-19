@@ -26,7 +26,7 @@ import httpx
 from scripts.lib.safe_url import is_safe_http_url
 
 DEFAULT_REGISTRY_URL = (
-    "https://raw.githubusercontent.com/adriannoes/asap-protocol/main/registry.json"
+    "https://raw.githubusercontent.com/asap-protocol/asap-protocol/main/registry.json"
 )
 REQUEST_TIMEOUT_SECONDS = 30.0
 

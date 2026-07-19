@@ -53,8 +53,8 @@ FROM python:3.13-slim AS runtime
 # Labels for container metadata
 LABEL org.opencontainers.image.title="ASAP Protocol"
 LABEL org.opencontainers.image.description="Async Simple Agent Protocol - Agent-to-agent communication"
-LABEL org.opencontainers.image.url="https://github.com/adriannoes/asap-protocol"
-LABEL org.opencontainers.image.source="https://github.com/adriannoes/asap-protocol"
+LABEL org.opencontainers.image.url="https://github.com/asap-protocol/asap-protocol"
+LABEL org.opencontainers.image.source="https://github.com/asap-protocol/asap-protocol"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 # Prevent Python from writing pyc files and buffering stdout/stderr

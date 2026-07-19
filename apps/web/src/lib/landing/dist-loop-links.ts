@@ -7,10 +7,10 @@
  */
 
 /** GitHub `blob/main` base — reuse for docs links across Dist Loop surfaces. */
-export const GITHUB_BLOB_MAIN = 'https://github.com/adriannoes/asap-protocol/blob/main';
+export const GITHUB_BLOB_MAIN = 'https://github.com/asap-protocol/asap-protocol/blob/main';
 
 /** GitHub `tree/main` base — reuse for directory links (starters, examples). */
-export const GITHUB_TREE_MAIN = 'https://github.com/adriannoes/asap-protocol/tree/main';
+export const GITHUB_TREE_MAIN = 'https://github.com/asap-protocol/asap-protocol/tree/main';
 
 /**
  * Build a canonical `blob/main` URL for a repo-relative path.
@@ -47,4 +47,4 @@ export const DOCS_MIGRATION_254_URL = githubBlobMain(
 export const CHANGELOG_254_URL = githubBlobMain('CHANGELOG.md#254---2026-07-18');
 
 /** GitHub Release for v2.5.4 Distribution Loop. */
-export const RELEASE_254_URL = 'https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4';
+export const RELEASE_254_URL = 'https://github.com/asap-protocol/asap-protocol/releases/tag/v2.5.4';

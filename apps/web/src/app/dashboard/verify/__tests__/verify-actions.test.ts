@@ -56,7 +56,7 @@ describe('submitVerificationRequest', () => {
         expect(result.success).toBe(true);
         const url = (result as { issueUrl: string }).issueUrl;
 
-        const owner = process.env.GITHUB_REGISTRY_OWNER || 'adriannoes';
+        const owner = process.env.GITHUB_REGISTRY_OWNER || 'asap-protocol';
         const repo = process.env.GITHUB_REGISTRY_REPO || 'asap-protocol';
         const expectedUrl = buildVerificationRequestIssueUrl(validFormValues, { owner, repo });
         expect(url).toBe(expectedUrl);

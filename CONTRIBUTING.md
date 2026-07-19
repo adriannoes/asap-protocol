@@ -6,7 +6,7 @@ Thanks for helping out! Here's how to get started quickly.
 
 1.  **Setup**: You need `uv` installed. Use `--dev` so that dev dependencies (pytest-xdist, ruff, mypy, etc.) are installed and local test runs match CI (including `pytest -n auto`).
     ```bash
-    git clone https://github.com/adriannoes/asap-protocol.git
+    git clone https://github.com/asap-protocol/asap-protocol.git
     cd asap-protocol
     uv sync --all-extras --dev
     ```
@@ -144,7 +144,7 @@ Understanding the "why" behind our code is crucial. Please review:
 
 ## Need Help?
 
-Check [Discussions](https://github.com/adriannoes/asap-protocol/discussions) or open an [Issue](https://github.com/adriannoes/asap-protocol/issues).
+Check [Discussions](https://github.com/asap-protocol/asap-protocol/discussions) or open an [Issue](https://github.com/asap-protocol/asap-protocol/issues).
 
 For **general, non-security inquiries** (coordination, integrations, press), you can reach maintainers at **[info@asap-protocol.com](mailto:info@asap-protocol.com)**. **Do not** use this address for vulnerability reports — follow [SECURITY.md](SECURITY.md) instead.
 

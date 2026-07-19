@@ -49,7 +49,7 @@ export default async function SignInPage({ searchParams }: PageProps) {
                 <p className="text-xs text-zinc-500">
                     By signing in, you agree to our{' '}
                     <a
-                        href="https://github.com/adriannoes/asap-protocol/blob/main/LICENSE"
+                        href="https://github.com/asap-protocol/asap-protocol/blob/main/LICENSE"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-zinc-400 hover:text-indigo-400 underline underline-offset-2"
@@ -58,7 +58,7 @@ export default async function SignInPage({ searchParams }: PageProps) {
                     </a>{' '}
                     and{' '}
                     <a
-                        href="https://github.com/adriannoes/asap-protocol/blob/main/SECURITY.md"
+                        href="https://github.com/asap-protocol/asap-protocol/blob/main/SECURITY.md"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-zinc-400 hover:text-indigo-400 underline underline-offset-2"

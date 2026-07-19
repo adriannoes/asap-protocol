@@ -28,7 +28,7 @@ export async function submitVerificationRequest(
     }
 
     const data = parsed.data;
-    const owner = process.env.GITHUB_REGISTRY_OWNER || 'adriannoes';
+    const owner = process.env.GITHUB_REGISTRY_OWNER || 'asap-protocol';
     const repo = process.env.GITHUB_REGISTRY_REPO || 'asap-protocol';
 
     try {

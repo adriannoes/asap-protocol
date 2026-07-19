@@ -26,7 +26,7 @@ export const REGISTRY_REVALIDATE_SECONDS = process.env.REGISTRY_REVALIDATE_SECON
 export async function fetchRevokedUrns(): Promise<Set<string>> {
   const REVOKED_URL =
     process.env.REVOKED_URL ||
-    'https://raw.githubusercontent.com/adriannoes/asap-protocol/main/revoked_agents.json';
+    'https://raw.githubusercontent.com/asap-protocol/asap-protocol/main/revoked_agents.json';
 
   try {
     const res = await fetch(REVOKED_URL, {
@@ -73,7 +73,7 @@ function normalizeRegistryAgent(agent: RegistryAgentValidated): RegistryAgent {
 }
 
 const DEFAULT_REGISTRY_URL =
-  'https://raw.githubusercontent.com/adriannoes/asap-protocol/main/registry.json';
+  'https://raw.githubusercontent.com/asap-protocol/asap-protocol/main/registry.json';
 
 /**
  * In development, `.env` often pins REGISTRY_URL to `http://127.0.0.1:3000/registry.json`

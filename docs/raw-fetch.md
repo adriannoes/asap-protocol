@@ -7,7 +7,7 @@ This document describes how to fetch **registry.json** and **revoked_agents.json
 | Resource | URL | Notes |
 |----------|-----|--------|
 | **Lite Registry** | `https://asap-protocol.github.io/registry/registry.json` | Canonical; GitHub Pages. Caching (e.g. 5 min) is recommended (ADR-25). |
-| **Revoked agents** | `https://raw.githubusercontent.com/adriannoes/asap-protocol/main/revoked_agents.json` | GitHub raw. **Do not cache** — check before every agent run. |
+| **Revoked agents** | `https://raw.githubusercontent.com/asap-protocol/asap-protocol/main/revoked_agents.json` | GitHub raw. **Do not cache** — check before every agent run. |
 
 Override URLs via env (Python SDK): `ASAP_REGISTRY_CACHE_TTL`, `ASAP_REVOKED_AGENTS_URL`.
 
@@ -79,13 +79,13 @@ const registry = await res.json();
 **curl:**
 
 ```bash
-curl -sS "https://raw.githubusercontent.com/adriannoes/asap-protocol/main/revoked_agents.json"
+curl -sS "https://raw.githubusercontent.com/asap-protocol/asap-protocol/main/revoked_agents.json"
 ```
 
 **JavaScript (fetch):**
 
 ```javascript
-const res = await fetch('https://raw.githubusercontent.com/adriannoes/asap-protocol/main/revoked_agents.json');
+const res = await fetch('https://raw.githubusercontent.com/asap-protocol/asap-protocol/main/revoked_agents.json');
 const data = await res.json();
 // data.revoked, data.version — check if your agent URN is in data.revoked[].urn
 ```

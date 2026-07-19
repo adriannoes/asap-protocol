@@ -5,7 +5,7 @@ Plain Kubernetes manifests for deploying ASAP agents (no Helm).
 ## Prerequisites
 
 - `kubectl` configured for your cluster
-- Docker image: build locally (`docker build -t asap-protocol:latest .`) or use the published image `ghcr.io/adriannoes/asap-protocol` (tags: `latest`, `v1.0.0`, `v1.0`, `v1` on release)
+- Docker image: build locally (`docker build -t asap-protocol:latest .`) or use the published image `ghcr.io/asap-protocol/asap-protocol` (tags: `latest`, `v1.0.0`, `v1.0`, `v1` on release)
 
 ## Deploy
 

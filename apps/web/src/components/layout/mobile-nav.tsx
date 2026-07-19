@@ -55,7 +55,7 @@ export function MobileNav({ session }: { session: Session | null }) {
                         Developer Experience
                     </Link>
                     <Link
-                        href="https://github.com/adriannoes/asap-protocol/tree/main/docs"
+                        href="https://github.com/asap-protocol/asap-protocol/tree/main/docs"
                         target="_blank"
                         rel="noreferrer"
                         onClick={() => setOpen(false)}

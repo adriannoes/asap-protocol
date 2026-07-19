@@ -11,11 +11,11 @@ const DOCS_LINK =
 
 // Lab II docs/examples on main (v2.5.3).
 const DOCS_WORKFLOW_CONNECTORS =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/integrations/workflow-connectors.md';
+  'https://github.com/asap-protocol/asap-protocol/blob/main/docs/integrations/workflow-connectors.md';
 const DOCS_AUTOMATION_CONNECTOR_SECURITY =
-  'https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/automation-connector-security.md';
+  'https://github.com/asap-protocol/asap-protocol/blob/main/docs/guides/automation-connector-security.md';
 const EXAMPLE_WORKFLOW_CONNECTOR =
-  'https://github.com/adriannoes/asap-protocol/tree/main/examples/workflow_asap_connector';
+  'https://github.com/asap-protocol/asap-protocol/tree/main/examples/workflow_asap_connector';
 
 export type FeatureCapability = { title: string; description: string; icon: LucideIcon };
 

@@ -12,7 +12,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 DEFAULT_REVOKED_URL = (
-    "https://raw.githubusercontent.com/adriannoes/asap-protocol/main/revoked_agents.json"
+    "https://raw.githubusercontent.com/asap-protocol/asap-protocol/main/revoked_agents.json"
 )
 
 

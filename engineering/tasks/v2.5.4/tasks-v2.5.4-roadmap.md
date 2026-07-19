@@ -1,6 +1,6 @@
 # Tasks: v2.5.4 Distribution Loop — Sprint Index
 
-**Status: SHIPPED** — tag [`v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4) (2026-07-18); PyPI `asap-protocol==2.5.4`; PR [#294](https://github.com/adriannoes/asap-protocol/pull/294); GHCR `ghcr.io/adriannoes/asap-protocol:v2.5.4`. **Next:** [prd-v2.5.5-formal-spec-interop.md](../../../product/prd/prd-v2.5.5-formal-spec-interop.md).
+**Status: SHIPPED** — tag [`v2.5.4`](https://github.com/asap-protocol/asap-protocol/releases/tag/v2.5.4) (2026-07-18); PyPI `asap-protocol==2.5.4`; PR [#294](https://github.com/asap-protocol/asap-protocol/pull/294); GHCR `ghcr.io/asap-protocol/asap-protocol:v2.5.4`. **Next:** [prd-v2.5.5-formal-spec-interop.md](../../../product/prd/prd-v2.5.5-formal-spec-interop.md).
 
 Based on [PRD v2.5.4 Distribution Loop](../../../product/prd/prd-v2.5.4-distribution-loop.md). Train closed on `main` (sprint PRs historically merged into `release/2.5.4`; see [BRANCHING.md](./BRANCHING.md)).
 
@@ -107,7 +107,7 @@ S1 and S4 may run in parallel after S0. S2 needs starter paths from S1. S3 needs
   - **Acceptance criteria:**
     - [x] Version **2.5.4**, CHANGELOG, migration note (S5 prep 2026-07-18)
     - [x] Pre-push CI green (ruff, mypy, pytest ≥85%, pip-audit; web gates if touched) — see [sprint-S5-release.md](./sprint-S5-release.md) 6.3
-    - [x] Merge `release/2.5.4` → `main` ([#294](https://github.com/adriannoes/asap-protocol/pull/294))
+    - [x] Merge `release/2.5.4` → `main` ([#294](https://github.com/asap-protocol/asap-protocol/pull/294))
     - [x] Tag `v2.5.4` + PyPI / GitHub Release green
     - [x] Post-publish swap pending → shipped
     - [x] Handoff to v2.5.5

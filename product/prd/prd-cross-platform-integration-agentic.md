@@ -125,12 +125,12 @@ Replace the entire marketplace page with an ASAP Registry browser:
 
 **Data Source**: Fetch `registry.json` directly from GitHub:
 ```
-https://raw.githubusercontent.com/adriannoes/asap-protocol/main/registry.json
+https://raw.githubusercontent.com/asap-protocol/asap-protocol/main/registry.json
 ```
 
 Also fetch revoked agents:
 ```
-https://raw.githubusercontent.com/adriannoes/asap-protocol/main/revoked_agents.json
+https://raw.githubusercontent.com/asap-protocol/asap-protocol/main/revoked_agents.json
 ```
 
 **Implementation approach**:
@@ -264,8 +264,8 @@ callbacks: {
 | Variable | Default Value | Purpose |
 |----------|--------------|---------|
 | `NEXT_PUBLIC_ASAP_PROTOCOL_URL` | `https://asap-protocol.com` | Back-navigation links |
-| `NEXT_PUBLIC_REGISTRY_URL` | `https://raw.githubusercontent.com/adriannoes/asap-protocol/main/registry.json` | Registry data source |
-| `NEXT_PUBLIC_REVOKED_URL` | `https://raw.githubusercontent.com/adriannoes/asap-protocol/main/revoked_agents.json` | Revoked agents list |
+| `NEXT_PUBLIC_REGISTRY_URL` | `https://raw.githubusercontent.com/asap-protocol/asap-protocol/main/registry.json` | Registry data source |
+| `NEXT_PUBLIC_REVOKED_URL` | `https://raw.githubusercontent.com/asap-protocol/asap-protocol/main/revoked_agents.json` | Revoked agents list |
 | `AUTH_GITHUB_ID` | (shared with ASAP Protocol) | SSO |
 | `AUTH_GITHUB_SECRET` | (shared with ASAP Protocol) | SSO |
 

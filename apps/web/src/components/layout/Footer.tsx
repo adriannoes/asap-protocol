@@ -12,7 +12,7 @@ export function Footer() {
             <h4 className="font-semibold text-white tracking-tight">Protocol</h4>
             <div className="flex flex-col gap-3">
               <Link
-                href="https://github.com/adriannoes/asap-protocol"
+                href="https://github.com/asap-protocol/asap-protocol"
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-2 text-sm transition-colors hover:text-white"
@@ -21,7 +21,7 @@ export function Footer() {
                 <span>GitHub Repository</span>
               </Link>
               <Link
-                href="https://github.com/adriannoes/asap-protocol/tree/main/docs"
+                href="https://github.com/asap-protocol/asap-protocol/tree/main/docs"
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-2 text-sm transition-colors hover:text-white"
@@ -63,7 +63,7 @@ export function Footer() {
                 Terms of Service
               </Link>
               <Link
-                href="https://github.com/adriannoes/asap-protocol/blob/main/LICENSE"
+                href="https://github.com/asap-protocol/asap-protocol/blob/main/LICENSE"
                 target="_blank"
                 rel="noreferrer"
                 className="text-sm transition-colors hover:text-white"

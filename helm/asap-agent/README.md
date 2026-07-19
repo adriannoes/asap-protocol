@@ -6,7 +6,7 @@ Helm chart for deploying ASAP Protocol agents to Kubernetes.
 
 - Kubernetes cluster
 - Helm 3.x
-- Docker image: build locally (`docker build -t asap-protocol:latest .`) or use the [published image](https://github.com/adriannoes/asap-protocol/pkgs/container/asap-protocol) `ghcr.io/adriannoes/asap-protocol` (tags: `latest`, `v1.0.0`, `v1.0`, `v1` on release)
+- Docker image: build locally (`docker build -t asap-protocol:latest .`) or use the [published image](https://github.com/asap-protocol/asap-protocol/pkgs/container/asap-protocol) `ghcr.io/asap-protocol/asap-protocol` (tags: `latest`, `v1.0.0`, `v1.0`, `v1` on release)
 
 ## Install
 
@@ -16,7 +16,7 @@ helm install asap-agent ./helm/asap-agent
 
 # Install with custom image
 helm install asap-agent ./helm/asap-agent \
-  --set image.repository=ghcr.io/adriannoes/asap-protocol \
+  --set image.repository=ghcr.io/asap-protocol/asap-protocol \
   --set image.tag=v1.0.0
 
 # Install with custom values file

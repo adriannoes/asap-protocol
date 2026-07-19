@@ -110,7 +110,7 @@ If you need a maintained TypeScript path today, use [Mastra](./mastra.md) or [Op
 
 ## Related
 
-- Spike lock: [`engineering/tasks/v2.5.3/research-semantic-kernel.md`](https://github.com/adriannoes/asap-protocol/blob/main/engineering/tasks/v2.5.3/research-semantic-kernel.md)
+- Spike lock: [`engineering/tasks/v2.5.3/research-semantic-kernel.md`](https://github.com/asap-protocol/asap-protocol/blob/main/engineering/tasks/v2.5.3/research-semantic-kernel.md)
 - [Security](../security.md) — Agent JWT / Host identity
 - [Capabilities](../capabilities/index.md) · [Escalation](../capabilities/escalation.md)
 - [MCP Auth Bridge](../adapters/mcp-auth-bridge.md) · [MCP integration](../mcp-integration.md)

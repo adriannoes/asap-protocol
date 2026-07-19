@@ -78,7 +78,7 @@ export function HeaderContent({ session }: HeaderContentProps) {
               Developers
             </Link>
             <Link
-              href="https://github.com/adriannoes/asap-protocol/tree/main/docs"
+              href="https://github.com/asap-protocol/asap-protocol/tree/main/docs"
               target="_blank"
               rel="noreferrer"
               className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"

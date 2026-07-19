@@ -6,7 +6,7 @@ import { buildRegisterAgentIssueUrl } from '@/lib/github-issues';
 import { isAllowedExternalUrl } from '@/lib/url-validator';
 import { checkRateLimit } from '@/lib/rate-limit';
 
-const DEFAULT_OWNER = 'adriannoes';
+const DEFAULT_OWNER = 'asap-protocol';
 const DEFAULT_REPO = 'asap-protocol';
 
 export async function submitAgentRegistration(values: unknown) {

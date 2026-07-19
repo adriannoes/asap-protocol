@@ -106,7 +106,7 @@ manifest = Manifest(
                             <p className="text-zinc-500 text-xs leading-relaxed">
                                 Canonical JSON Schema:{' '}
                                 <a
-                                    href="https://github.com/adriannoes/asap-protocol/blob/main/schemas/entities/manifest.schema.json"
+                                    href="https://github.com/asap-protocol/asap-protocol/blob/main/schemas/entities/manifest.schema.json"
                                     className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2"
                                     target="_blank"
                                     rel="noopener noreferrer"
@@ -115,7 +115,7 @@ manifest = Manifest(
                                 </a>
                                 . Example snippet:{' '}
                                 <a
-                                    href="https://github.com/adriannoes/asap-protocol/blob/main/schemas/examples/shellclaw-jetson-capabilities.json"
+                                    href="https://github.com/asap-protocol/asap-protocol/blob/main/schemas/examples/shellclaw-jetson-capabilities.json"
                                     className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2"
                                     target="_blank"
                                     rel="noopener noreferrer"
@@ -129,7 +129,7 @@ manifest = Manifest(
                                 (e.g. <code className="font-mono text-zinc-400">cuda</code>,{' '}
                                 <code className="font-mono text-zinc-400">jetson</code>):{' '}
                                 <a
-                                    href="https://github.com/adriannoes/asap-protocol/blob/main/docs/transport.md#hardware-and-inference-capabilities-v24"
+                                    href="https://github.com/asap-protocol/asap-protocol/blob/main/docs/transport.md#hardware-and-inference-capabilities-v24"
                                     className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2"
                                     target="_blank"
                                     rel="noopener noreferrer"
@@ -212,7 +212,7 @@ app = create_app(manifest, registry)`}</code>
                             <p className="text-zinc-400 text-sm leading-relaxed">
                                 Optional on registration. Use the same values in the{' '}
                                 <a
-                                    href="https://github.com/adriannoes/asap-protocol/blob/main/.github/ISSUE_TEMPLATE/register_agent.yml"
+                                    href="https://github.com/asap-protocol/asap-protocol/blob/main/.github/ISSUE_TEMPLATE/register_agent.yml"
                                     className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2"
                                     target="_blank"
                                     rel="noopener noreferrer"
@@ -230,7 +230,7 @@ app = create_app(manifest, registry)`}</code>
                                 <code className="text-indigo-400 bg-indigo-500/10 px-1 rounded">online_check: false</code>
                                 . See{' '}
                                 <a
-                                    href="https://github.com/adriannoes/asap-protocol/blob/main/docs/guides/shellclaw-registry.md"
+                                    href="https://github.com/asap-protocol/asap-protocol/blob/main/docs/guides/shellclaw-registry.md"
                                     className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2"
                                     target="_blank"
                                     rel="noopener noreferrer"
@@ -262,7 +262,7 @@ app = create_app(manifest, registry)`}</code>
                                     Alternatively, you can open a GitHub Issue manually. Our CI pipeline will parse the template, validate the agent manifest, and merge it into the Lite Registry.
                                 </p>
                                 <Button asChild variant="secondary" className="w-full bg-zinc-800 hover:bg-zinc-700 text-white">
-                                    <a href="https://github.com/adriannoes/asap-protocol/issues/new/choose" target="_blank" rel="noopener noreferrer">
+                                    <a href="https://github.com/asap-protocol/asap-protocol/issues/new/choose" target="_blank" rel="noopener noreferrer">
                                         Open Registration Issue <ArrowRight className="ml-2 w-4 h-4" />
                                     </a>
                                 </Button>

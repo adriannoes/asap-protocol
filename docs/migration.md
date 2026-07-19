@@ -879,7 +879,7 @@ unknown `config` / `metadata` keys) without changing the JSON-RPC envelope wire 
 The v2.5.1 S3 CLI split moved command groups into submodules but kept three
 legacy names on `asap.cli` root for compatibility. Those root re-exports are
 removed; use `asap.cli._compat` or canonical modules until **v2.6.0**
-([#275](https://github.com/adriannoes/asap-protocol/issues/275)):
+([#275](https://github.com/asap-protocol/asap-protocol/issues/275)):
 
 ```python
 # Before (no longer works)
@@ -1080,8 +1080,8 @@ See also [Troubleshooting Guide](troubleshooting.md) and
 
 ### Upgrading from v2.5.3 to v2.5.4
 
-**v2.5.4 (Distribution Loop)** — **shipped** ([tag `v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4),
-[#294](https://github.com/adriannoes/asap-protocol/pull/294)) —
+**v2.5.4 (Distribution Loop)** — **shipped** ([tag `v2.5.4`](https://github.com/asap-protocol/asap-protocol/releases/tag/v2.5.4),
+[#294](https://github.com/asap-protocol/asap-protocol/pull/294)) —
 turns adoption surfaces into a repeatable loop: homepage routing, thin starters,
 Build for agents guide, and maintainer telemetry ops. There are **no breaking
 changes** for envelope, JWT, or capability grant semantics relative to v2.5.3.
@@ -1121,8 +1121,8 @@ Scope: [prd-v2.5.4-distribution-loop.md](../product/prd/prd-v2.5.4-distribution-
 
 ### Upgrading from v2.5.2 to v2.5.3
 
-**v2.5.3 (Adapter Lab II)** — **shipped** ([tag `v2.5.3`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3),
-[#291](https://github.com/adriannoes/asap-protocol/pull/291)) — is primarily **documentation
+**v2.5.3 (Adapter Lab II)** — **shipped** ([tag `v2.5.3`](https://github.com/asap-protocol/asap-protocol/releases/tag/v2.5.3),
+[#291](https://github.com/asap-protocol/asap-protocol/pull/291)) — is primarily **documentation
 and examples**, plus small DX / correctness fixes. There are **no breaking changes**
 for envelope, JWT, or capability grant semantics relative to v2.5.2.
 
@@ -1257,7 +1257,7 @@ or `capabilities.inference` remain valid.
 
 - **Wire protocol**: Unchanged from v2.3.x.
 - **Breaking changes**: None.
-- **Community feedback**: Enum extensions tracked on [#176](https://github.com/adriannoes/asap-protocol/issues/176).
+- **Community feedback**: Enum extensions tracked on [#176](https://github.com/asap-protocol/asap-protocol/issues/176).
 
 ---
 
@@ -1348,7 +1348,7 @@ explicit `create_app` flags and optional extras.
 - **Security posture**: Treat auto-registration tokens, escalation approvals,
   and discovery URLs as security-sensitive configuration (rate limits, HTTPS,
   manifest integrity). See PRD
-  [`prd-v2.3-scale.md`](https://github.com/adriannoes/asap-protocol/blob/main/product/prd/prd-v2.3-scale.md).
+  [`prd-v2.3-scale.md`](https://github.com/asap-protocol/asap-protocol/blob/main/product/prd/prd-v2.3-scale.md).
 
 ---
 

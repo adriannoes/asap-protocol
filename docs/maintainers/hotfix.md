@@ -91,7 +91,7 @@ Register **each** published package on npm → **Trusted Publishers** → **GitH
 
 | Field | Value |
 |-------|--------|
-| Repository | `adriannoes/asap-protocol` |
+| Repository | `asap-protocol/asap-protocol` |
 | Workflow file | `.github/workflows/hotfix-release.yml` |
 | Environment | (none, unless you add a `release` environment later) |
 

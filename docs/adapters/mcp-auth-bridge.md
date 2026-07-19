@@ -380,4 +380,4 @@ This adapter protects **native stdio `MCPServer`** (Mode A). MCP invoked inside 
 - [Self-authorization prevention](../security/self-authorization-prevention.md) — grants and approval flows
 - [Transport](../transport.md) — manifest discovery, `create_app`
 - [Design lock: MCP Auth Bridge](../../engineering/tasks/v2.5.0/design-lock-mcp-auth-bridge.md) — hook strategy, deferred features
-- [PRD v2.5.0 MCP Auth Bridge](https://github.com/adriannoes/asap-protocol/blob/main/product/prd/prd-v2.5.0-mcp-auth-bridge.md) — MCP-AUTH-* / MCP-DISC-* requirements
+- [PRD v2.5.0 MCP Auth Bridge](https://github.com/asap-protocol/asap-protocol/blob/main/product/prd/prd-v2.5.0-mcp-auth-bridge.md) — MCP-AUTH-* / MCP-DISC-* requirements
