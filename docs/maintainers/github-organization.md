@@ -77,6 +77,56 @@ git remote set-url origin https://github.com/asap-protocol/asap-protocol.git
 
 This points the local remote at the organization repository.
 
+## Branch protections / CODEOWNERS
+
+### CODEOWNERS
+
+File: [`.github/CODEOWNERS`](../../.github/CODEOWNERS)
+
+- Default owner for the whole repo: **`@adriannoes`**
+- Critical paths are listed explicitly (`.github/`, `src/`, `apps/web/`, `packages/`, `helm/`, `k8s/`) with the same owner
+
+When the **Protect main** ruleset has `require_code_owner_review` enabled, PRs that touch owned paths need an approving review from a code owner (unless bypassed).
+
+### Repository rulesets (preferred)
+
+Configured via the Rulesets API on `asap-protocol/asap-protocol` (not classic branch protection alone). Classic branch protection may still exist from before the org transfer; rulesets are the source of truth going forward.
+
+| Ruleset | ID | Target | Enforcement |
+|---------|----|--------|-------------|
+| **Protect main** | `19162403` | `refs/heads/main` | active |
+| **Protect release tags** | `19162405` | `refs/tags/v*` | active |
+
+**Protect main** rules:
+
+- Require a pull request before merging
+- Require at least **1** approving review
+- Require **code owner** review
+- Dismiss stale reviews on new pushes
+- Block force pushes (`non_fast_forward`)
+- Restrict branch deletion
+- Required status checks (strict): `quality (python)`, `quality (web)`, `test (python)`, `test (web)`, `coverage`, `security` (job names from `.github/workflows/ci.yml`)
+
+**Bypass actors** (can bypass ruleset rules when needed):
+
+- **Repository admins** (`RepositoryRole` admin, actor_id `5`) — bypass mode `always`
+- **User `@adriannoes`** (user id `10134911`) — bypass mode `always`
+
+UI: [Rules](https://github.com/asap-protocol/asap-protocol/rules) · API: `GET /repos/asap-protocol/asap-protocol/rulesets`
+
+### Org member privileges (console)
+
+Prefer these org defaults (Settings → Member privileges / Authentication security):
+
+| Setting | Target |
+|---------|--------|
+| Base permissions | **Read** |
+| Repository creation | **Owners only** (disable member create) |
+| Repository deletion | **Owners only** (disable member delete) |
+| Two-factor authentication | **Required** for org members |
+
+API note: with a Free org plan and typical `gh` scopes, some fields (`members_can_delete_repositories`, `two_factor_requirement_enabled`) may not stick via `PATCH /orgs/{org}`. Confirm in the UI if the checklist still shows them open.
+
 ## Smoke after cutover
 
 1. CI green on a PR under the org
@@ -84,3 +134,4 @@ This points the local remote at the organization repository.
 3. Pages deploy reachable at `asap-protocol.github.io`
 4. `docker pull ghcr.io/asap-protocol/asap-protocol:latest` (after next release image)
 5. Web IssueOps “Register agent” opens issues on `asap-protocol/asap-protocol`
+6. Rulesets list shows **Protect main** (and release tags); CODEOWNERS present under `.github/`
