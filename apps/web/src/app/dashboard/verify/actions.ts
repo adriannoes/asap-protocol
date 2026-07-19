@@ -1,41 +1,41 @@
 'use server';
 
 import { auth } from '@/auth';
-import {
-    buildVerificationRequestIssueUrl,
-    VerificationSchema,
-} from '@/lib/github-issues';
+import { buildVerificationRequestIssueUrl, VerificationSchema } from '@/lib/github-issues';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function submitVerificationRequest(
-    values: unknown
+  values: unknown
 ): Promise<{ success: boolean; issueUrl?: string; error?: string }> {
-    const session = await auth();
-    if (!session?.user) {
-        return { success: false, error: 'Unauthorized' };
-    }
+  const session = await auth();
+  if (!session?.user) {
+    return { success: false, error: 'Unauthorized' };
+  }
 
-    const userId = (session.user as { id?: string }).id ?? 'anonymous';
-    const username = (session.user as { username?: string }).username || session.user.name;
-    const isE2E = process.env.ENABLE_FIXTURE_ROUTES === 'true' && username === 'e2e-tester';
-    if (!isE2E && !(await checkRateLimit(userId, 5, 60_000))) {
-        return { success: false, error: 'Too many verification attempts. Please try again in a minute.' };
-    }
+  const userId = (session.user as { id?: string }).id ?? 'anonymous';
+  const username = (session.user as { username?: string }).username || session.user.name;
+  const isE2E = process.env.ENABLE_FIXTURE_ROUTES === 'true' && username === 'e2e-tester';
+  if (!isE2E && !(await checkRateLimit(userId, 5, 60_000))) {
+    return {
+      success: false,
+      error: 'Too many verification attempts. Please try again in a minute.',
+    };
+  }
 
-    const parsed = VerificationSchema.safeParse(values);
-    if (!parsed.success) {
-        return { success: false, error: 'Invalid form data.' };
-    }
+  const parsed = VerificationSchema.safeParse(values);
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid form data.' };
+  }
 
-    const data = parsed.data;
-    const owner = process.env.GITHUB_REGISTRY_OWNER || 'asap-protocol';
-    const repo = process.env.GITHUB_REGISTRY_REPO || 'asap-protocol';
+  const data = parsed.data;
+  const owner = process.env.GITHUB_REGISTRY_OWNER || 'asap-protocol';
+  const repo = process.env.GITHUB_REGISTRY_REPO || 'asap-protocol';
 
-    try {
-        const issueUrl = buildVerificationRequestIssueUrl(data, { owner, repo });
-        return { success: true, issueUrl };
-    } catch (error) {
-        console.error('Verification request URL build failed:', error);
-        return { success: false, error: 'Failed to build verification issue URL.' };
-    }
+  try {
+    const issueUrl = buildVerificationRequestIssueUrl(data, { owner, repo });
+    return { success: true, issueUrl };
+  } catch (error) {
+    console.error('Verification request URL build failed:', error);
+    return { success: false, error: 'Failed to build verification issue URL.' };
+  }
 }

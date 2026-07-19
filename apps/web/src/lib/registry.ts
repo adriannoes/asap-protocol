@@ -1,9 +1,6 @@
 import { z } from 'zod';
 import type { RegistryAgent } from '../types/registry';
-import {
-  RegistryResponseSchema,
-  type RegistryAgentValidated,
-} from './registry-schema';
+import { RegistryResponseSchema, type RegistryAgentValidated } from './registry-schema';
 
 const RevokedResponseSchema = z.object({
   revoked: z.array(z.object({ urn: z.string() })).default([]),
@@ -88,8 +85,7 @@ export function resolveRegistryFetchUrl(explicitUrl?: string): string {
 
   try {
     const parsed = new URL(url);
-    const isLocalHost =
-      parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost';
+    const isLocalHost = parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost';
     const isRegistryJson = parsed.pathname.endsWith('/registry.json');
 
     if (!isLocalHost || !isRegistryJson) {

@@ -5,11 +5,10 @@ export function Footer() {
   return (
     <footer className="w-full border-t border-zinc-900 bg-zinc-950 py-16 text-zinc-400">
       <div className="container mx-auto px-4 md:px-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-8 justify-between">
-
+        <div className="grid grid-cols-1 justify-between gap-12 md:grid-cols-2 md:gap-8">
           {/* Protocol Column */}
           <div className="flex flex-col gap-4">
-            <h4 className="font-semibold text-white tracking-tight">Protocol</h4>
+            <h4 className="font-semibold tracking-tight text-white">Protocol</h4>
             <div className="flex flex-col gap-3">
               <Link
                 href="https://github.com/asap-protocol/asap-protocol"
@@ -48,7 +47,7 @@ export function Footer() {
 
           {/* Legal Column */}
           <div className="flex flex-col gap-4">
-            <h4 className="font-semibold text-white tracking-tight">Legal & Compliance</h4>
+            <h4 className="font-semibold tracking-tight text-white">Legal & Compliance</h4>
             <div className="flex flex-col gap-3">
               <Link
                 href="/legal/privacy-policy"
@@ -72,10 +71,9 @@ export function Footer() {
               </Link>
             </div>
           </div>
-
         </div>
 
-        <div className="mt-16 pt-8 border-t border-zinc-900 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-zinc-600">
+        <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-zinc-900 pt-8 text-xs text-zinc-600 md:flex-row">
           <p>© {new Date().getFullYear()} ASAP Protocol contributors.</p>
           <div className="flex items-center gap-4">
             <span>From agents, for agents. Delivering reliability, as soon as possible.</span>
