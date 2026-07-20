@@ -5,7 +5,32 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from asap.client.revocation import RevokedAgentsList, is_revoked
+from asap.client.revocation import DEFAULT_REVOKED_URL, RevokedAgentsList, is_revoked
+
+
+def test_default_revoked_url_points_at_asap_protocol_org() -> None:
+    assert DEFAULT_REVOKED_URL == (
+        "https://raw.githubusercontent.com/asap-protocol/asap-protocol/main/revoked_agents.json"
+    )
+    assert "adriannoes" not in DEFAULT_REVOKED_URL
+
+
+@pytest.mark.asyncio
+async def test_is_revoked_uses_default_url_when_unset(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("ASAP_REVOKED_AGENTS_URL", raising=False)
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"revoked": [], "version": "1.0"}
+    mock_response.raise_for_status = MagicMock()
+    mock_client = AsyncMock()
+    mock_client.get = AsyncMock(return_value=mock_response)
+    mock_client.aclose = AsyncMock()
+
+    with patch("asap.client.revocation.httpx.AsyncClient", return_value=mock_client):
+        result = await is_revoked("urn:asap:agent:any", revoked_url=None, http_client=None)
+
+    assert result is False
+    mock_client.get.assert_called_once_with(DEFAULT_REVOKED_URL)
+    mock_client.aclose.assert_called_once()
 
 
 def test_revoked_agents_list_parses_valid_json() -> None:

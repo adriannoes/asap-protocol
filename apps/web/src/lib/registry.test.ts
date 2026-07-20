@@ -13,7 +13,9 @@ describe('resolveRegistryFetchUrl', () => {
   });
 
   it('uses GitHub default when REGISTRY_URL is unset', () => {
-    expect(resolveRegistryFetchUrl()).toContain('raw.githubusercontent.com');
+    expect(resolveRegistryFetchUrl()).toBe(
+      'https://raw.githubusercontent.com/asap-protocol/asap-protocol/main/registry.json'
+    );
   });
 
   it('rewrites localhost registry.json to process.env.PORT in development', () => {
