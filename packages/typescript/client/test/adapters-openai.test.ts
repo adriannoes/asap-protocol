@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { asapToolsForOpenAI } from "../src/adapters/openai.js";
 
-describe("adapters / OpenAI Chat Completions tools (TS-007)", () => {
+describe("adapters / OpenAI Chat Completions tools", () => {
   it("produces ChatCompletion-style tools with function names and JSON Schema parameters", () => {
     const tools = asapToolsForOpenAI(
       { capabilities: ["urn:asap:cap:echo"] },

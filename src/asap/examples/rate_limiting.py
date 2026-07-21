@@ -37,7 +37,7 @@ def get_server_rate_limit_config() -> str:
 
 
 def per_sender_key_concept(sender_urn: str | None, client_ip: str) -> str:
-    """Build a rate limit key for per-sender strategy (concept).
+    """Build a rate limit key for a per-sender strategy.
 
     When the envelope sender is known (e.g. after auth or body parse), key by sender
     so each agent has its own quota. Otherwise fall back to client IP.
@@ -57,7 +57,7 @@ def per_sender_key_concept(sender_urn: str | None, client_ip: str) -> str:
 
 
 def per_endpoint_limits_concept() -> dict[str, str]:
-    """Return example per-endpoint limit strings (concept).
+    """Return example per-endpoint limit strings.
 
     Different routes can have different limits, e.g. strict for /asap and
     looser for read-only /.well-known/asap/manifest.json.
@@ -84,7 +84,7 @@ def run_demo() -> None:
         env_var="ASAP_RATE_LIMIT",
     )
 
-    # Per-sender: key concept (sender URN vs IP fallback)
+    # Per-sender key: sender URN vs IP fallback.
     key_sender = per_sender_key_concept("urn:asap:agent:client-a", "192.168.1.1")
     key_ip = per_sender_key_concept(None, "192.168.1.1")
     logger.info(

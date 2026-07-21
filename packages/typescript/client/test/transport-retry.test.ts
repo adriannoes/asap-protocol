@@ -8,7 +8,7 @@ import {
 } from "../src/errors.js";
 import { callWithRecoverableRetry } from "../src/transport.js";
 
-describe("transport retry (TS-011)", () => {
+describe("transport retry", () => {
   it("retries after local RecoverableError when retryAfterMs is defined", async () => {
     let calls = 0;
     const op = vi.fn().mockImplementation(async () => {

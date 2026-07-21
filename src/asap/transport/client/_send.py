@@ -1,9 +1,8 @@
-"""Send-path concern of :class:`asap.transport.client.ASAPClient`.
+"""Send path for :class:`asap.transport.client.ASAPClient`.
 
-Houses the ``send`` orchestration plus the per-status response handlers and
-retry/backoff helpers extracted during the v2.5.1 thermo-nuclear decomposition
-(S2 Task 2.3). Mixed into ``ASAPClient`` (see ``client/_core.py``); not meant
-to be instantiated standalone.
+This mixin owns ``send`` orchestration, response status handling, retry/backoff
+behavior, WebSocket forwarding, compression, streaming, and send-path metrics.
+It is mixed into ``ASAPClient`` and is not intended to be instantiated directly.
 
 The mixin declares the subset of ``ASAPClient`` attributes it relies on as
 class-level annotations so static type-checking sees them without importing

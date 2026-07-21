@@ -116,7 +116,7 @@ export async function fetchRegistry(): Promise<RegistryAgent[]> {
 
     if (!res.ok) {
       if (res.status === 404) {
-        // Return empty if registry not founded yet
+        // Return empty if the registry is not available yet.
         return [];
       }
       throw new Error(`Failed to fetch registry: ${res.statusText}`);

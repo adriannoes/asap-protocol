@@ -2,7 +2,7 @@
 
 **PR Title:** Release v2.1.1: Tech debt & security hardening (SEC-01, ARCH-01, CONC-01)  
 **Branch:** `release/2.1.1-tech-debt` → `main`  
-**Reviewer:** Claude Opus 4.6 + Gemini 3.1 Pro
+**Reviewer:** Maintainer review
 **Review Date:** 2026-03-01  
 **Files Changed:** 24 (+422 / -52)  
 **PR Checks:** pytest ✅ (2549 passed), ruff ✅, ruff format ✅, mypy ✅

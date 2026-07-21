@@ -1,8 +1,7 @@
 """Connection pool for :class:`asap.transport.ws.client.WebSocketTransport`.
 
-Split out of ``ws/client.py`` so each module in the ``ws/`` package stays
-under the 400-LOC ceiling mandated by the v2.5.1 thermo-nuclear patch. The
-pool reuses connections to a single WebSocket URL with idle eviction.
+The pool reuses WebSocket connections to a single URL and evicts idle or closed
+transports before handing them to callers.
 
 Example:
     >>> async with WebSocketConnectionPool("ws://localhost:8080/asap/ws") as pool:

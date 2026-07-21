@@ -1,7 +1,7 @@
 # ASAP Protocol v2.1.0 — Red-Team Code Review
 
 **Review Date:** 2026-03-01  
-**Reviewer:** Claude Opus 4.6 + Gemini 3.1 Pro
+**Reviewer:** Maintainer review
 **Methodology:** Static analysis, anti-pattern scanning, architecture drift review, concurrency/security deep-dive  
 **Quality Gates Passed:** `ruff check` ✅ `ruff format --check` ✅ `mypy src/` ✅ `pytest tests/ — 2532 passed, 5 skipped` ✅
 

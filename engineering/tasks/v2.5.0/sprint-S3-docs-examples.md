@@ -10,43 +10,31 @@
 
 ---
 
-## Parallel Execution (Agent Workstreams)
+## Execution notes
 
 > **Status:** S3 ready — S2 merged on `release/2.5.0` (commit `8352936`).
 > **Branch:** `feat/v2.5.0-s3-docs-examples` → PR into `release/2.5.0`.
-> **Rule:** Interactive dev in this chat — one sub-task at a time; parallel agents only where noted below.
-> **Commits:** Hold until user approves a batch (no drive-by commits on this branch).
 
 ### Dependency phases
 
 ```text
 Phase 1 (parallel)              Phase 2 (parallel)           Phase 3 (gate)
 ──────────────────              ──────────────────           ──────────────
-A: 1.1 server.py        ──────► A: 1.2 README
-B: 2.1 + 2.2 adapter guide      E: smoke test (after 1.1)  C: 2.3 mcp-integration + index link
-D: 3.1 __all__ audit            D: 2.4 AGENTS.md           Final verify + acceptance checklist
+1.1 server.py          ──────► 1.2 README
+2.1 + 2.2 adapter guide      smoke test (after 1.1)  2.3 mcp-integration + index link
+3.1 __all__ audit            2.4 AGENTS.md           Final verify + acceptance checklist
 ```
-
-### Agent boundaries
-
-| Agent | Owns | Tasks | Depends on | Can parallelize with |
-|-------|------|-------|------------|----------------------|
-| **A — Reference example** | `examples/mcp_auth_bridge/` | 1.1, 1.2 (+ optional `client.py`) | S2 on `release/2.5.0` | B, D (Phase 1) |
-| **B — Adapter guide** | `docs/adapters/mcp-auth-bridge.md` | 2.1, 2.2 (Discovery §) | S0 design lock + `MCPAuthConfig` API | A, D (Phase 1) |
-| **C — Integration docs** | `docs/mcp-integration.md`, `docs/index.md` | 2.3 + index link | B doc path stable (cross-links) | D (Phase 3) |
-| **D — Knowledge map + API** | `AGENTS.md`, `src/asap/adapters/mcp/__init__.py` | 2.4, 3.1 | S2 exports landed | A, B (Phase 1); 2.4 after B draft |
-| **E — Example smoke test** | `tests/examples/test_mcp_auth_bridge_example.py` | (acceptance) | 1.1 `server.py` exists | 1.2 README (Phase 2) |
 
 ### Sequential vs parallel summary
 
 | Must be sequential | Safe to parallelize |
 |--------------------|---------------------|
-| **1.1 → 1.2** (README documents the server) | **A ∥ B ∥ D (3.1)** on Phase 1 |
-| **1.1 → E** (smoke test imports/runs server) | **E ∥ 1.2** after 1.1 lands |
-| **B → C** (`mcp-integration.md` links to adapter guide) | **C ∥ D (2.4)** once `docs/adapters/mcp-auth-bridge.md` exists |
+| **1.1 → 1.2** (README documents the server) | Adapter guide and `__all__` audit can proceed in Phase 1 |
+| **1.1 → smoke test** (smoke test imports/runs server) | Smoke test and README can proceed after 1.1 lands |
+| **Adapter guide → integration docs** (`mcp-integration.md` links to adapter guide) | Integration docs and AGENTS update can proceed once `docs/adapters/mcp-auth-bridge.md` exists |
 | **All → acceptance** (example runs + docs indexed) | — |
 
-### Notes for sub-agents
+### Implementation notes
 
 - **S2 is done:** Use `protect_server`, `MCPAuthConfig`, `resolve_capability`, grant seeding — mirror `tests/adapters/mcp/conftest.py` (not a test import; copy the setup pattern into the example).
 - **Example tools:** `echo` = `public_tools`; `secure_action` = protected, requires grant + JWT with `capabilities` claim.
@@ -58,32 +46,15 @@ D: 3.1 __all__ audit            D: 2.4 AGENTS.md           Final verify + accept
 - **No secrets:** Example keys generated at runtime; if env vars needed, add `examples/mcp_auth_bridge/.env.example` only.
 - **Verify gate:** `uv run python examples/mcp_auth_bridge/server.py --help` (or short-timeout start); `uv run pytest tests/examples/test_mcp_auth_bridge_example.py -v`; docs link check in `docs/index.md`.
 
-### Sub-agent prompt templates
-
-**Agent A (1.1 + 1.2):**
-> Create `examples/mcp_auth_bridge/server.py`: register `echo` (public) and `secure_action` (protected); wire `protect_server` with in-memory host/agent stores and `CapabilityRegistry` (register capability defs + grant for demo agent). Print startup instructions (how to mint JWT, pass `_meta.asap_agent_jwt`). Follow `examples/openapi_petstore/main.py` argparse/`main()` pattern; entry runs `asyncio.run(server.run_stdio())` only when executed directly. Add `examples/mcp_auth_bridge/README.md` with reproducible JWT flow. Optional: minimal `client.py` using `MCPClient` + `_meta`. Verify: `uv run python examples/mcp_auth_bridge/server.py --help`.
-
-**Agent B (2.1 + 2.2):**
-> Create `docs/adapters/mcp-auth-bridge.md` following `docs/adapters/openapi.md` structure: architecture diagram (stdio MCP → JWT extract → verify → capability grant → handler), `MCPAuthConfig` / `protect_server` reference, error code table (`asap:auth_required`, `asap:invalid_token`, `asap:capability_denied`, `asap:constraint_violation`), security notes (never log JWT). Add § Discovery: `manifest_url`, manifest snippet with `skills[].id` matching mapped MCP tools (MCP-DISC-001/002). Cross-link registry docs if applicable.
-
-**Agent C (2.3 + index):**
-> Update `docs/mcp-integration.md`: distinguish Mode A (native MCP + auth bridge) vs Mode B (MCP-over-ASAP envelope); opt-in migration — unprotected servers remain valid. State `initialize` session-token is **deferred** (design-lock §3). Link to `docs/adapters/mcp-auth-bridge.md`. Add one-line link under Adoption tools in `docs/index.md`.
-
-**Agent D (2.4 + 3.1):**
-> Add `asap.adapters.mcp` to `AGENTS.md` integrations/knowledge map pointing to `docs/adapters/mcp-auth-bridge.md` (single mention, no conflicting MCP guidance). Audit `src/asap/adapters/mcp/__init__.py` `__all__` — export only supported public symbols. Verify import one-liner.
-
-**Agent E (smoke test):**
-> After 1.1, add `tests/examples/test_mcp_auth_bridge_example.py`: subprocess or import smoke — server module loads, `--help` exits 0, or protected path returns expected error without JWT. Pattern: `tests/examples/test_examples_dx.py`. No network, no committed keys.
-
 ---
 
 ## Relevant Files
 
 ### New
 - `docs/adapters/mcp-auth-bridge.md` — adapter guide (2.1 + 2.2 Discovery §)
-- `examples/mcp_auth_bridge/README.md` — Agent A (S3, task 1.2)
-- `examples/mcp_auth_bridge/server.py` — Agent A (S3, task 1.1)
-- `examples/mcp_auth_bridge/client.py` — Agent A (S3, optional minimal caller)
+- `examples/mcp_auth_bridge/README.md` — reference example docs (S3, task 1.2)
+- `examples/mcp_auth_bridge/server.py` — reference example server (S3, task 1.1)
+- `examples/mcp_auth_bridge/client.py` — optional reference client
 - `tests/examples/test_mcp_auth_bridge_example.py` — smoke import or subprocess
 
 ### Modify

@@ -404,7 +404,7 @@ class TestJsonRpcErrorInterop:
         assert str(err) == "Verify service availability before retrying."
 
     def test_deprecated_remote_aliases_remain_isinstance_compatible(self) -> None:
-        """Deprecated twin aliases stay constructible and isinstance-compatible (S3 collapse)."""
+        """Deprecated twin aliases stay constructible and isinstance-compatible."""
         fatal = RemoteFatalRPCError(-32603, "fatal", {"foo": "bar"})
         recoverable = RemoteRecoverableRPCError(-32033, "retryable", {"retry_after_ms": 250})
 

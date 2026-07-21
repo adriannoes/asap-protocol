@@ -22,7 +22,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-# Ensure scripts/lib and src are on path when run from repo root (e.g. in CI)
+# Add repo scripts/lib and src to sys.path when run from the repo root.
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT / "scripts") not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT / "scripts"))

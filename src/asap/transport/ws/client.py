@@ -1,30 +1,10 @@
-"""WebSocket client transport for ASAP (JSON-RPC 2.0 over WebSocket).
+"""Client-side WebSocket transport for ASAP JSON-RPC 2.0 traffic.
 
-Owns the client-side connection/send/receive orchestration split out of the
-original ``websocket.py``:
-
-- :class:`WebSocketTransport` — connect/reconnect, send wrappers, lifecycle.
-- :func:`_reconnect_delay` — exponential backoff helper.
-
-The receive-loop dispatch lives in :mod:`asap.transport.ws._recv`
-(:class:`_RecvDispatch`), the ADR-16 ack-retransmit layer in
-:mod:`asap.transport.ws._ack` (:class:`_AckRetransmit`), the peer error type in
-:mod:`asap.transport.ws._errors`, and the connection pool in
-:mod:`asap.transport.ws.pool`. :class:`WebSocketTransport` composes the two
-mixins; everything is re-exported from :mod:`asap.transport.ws`. These splits
-keep each ``ws/`` module under the 400-LOC ceiling mandated by the v2.5.1
-thermo-nuclear patch.
-
-The four send preambles (``send`` / ``send_and_receive`` /
-``send_and_receive_stream`` / ``_send_envelope_only``) were collapsed onto
-:meth:`WebSocketTransport._send_frame`; each public send method is now a thin
-wrapper.
-
-Patchability note: tests patch ``asap.transport.websocket.websockets.connect`` and
-``asap.transport.websocket.encode_envelope_frame``. To keep those patches
-effective across the module boundary, this module reads both through the
-``asap.transport.websocket`` shim (``_shim.websockets`` /
-``_shim.encode_envelope_frame``) at call time rather than binding them locally.
+:class:`WebSocketTransport` manages connection lifecycle, reconnect behavior,
+send/receive helpers, ADR-16 acknowledgement tracking, and inbound frame routing.
+Tests can patch ``asap.transport.websocket.websockets.connect`` and
+``asap.transport.websocket.encode_envelope_frame`` because this module reads
+those attributes through the compatibility shim at call time.
 """
 
 from __future__ import annotations
@@ -55,13 +35,8 @@ from asap.transport.ws.codecs import (
 if TYPE_CHECKING:
     from websockets.legacy.client import WebSocketClientProtocol
 
-# Shim alias for patch seams. Deferred-by-construction circular import:
-# ``asap.transport.websocket`` binds ``websockets`` and ``encode_envelope_frame``
-# (the names read through ``_shim`` below) BEFORE it imports ``asap.transport.ws``,
-# so by the time this module is imported those attributes already exist on the
-# partially-initialized shim. Reading them at call time keeps test patches on the
-# ``asap.transport.websocket`` path effective (matches the ``_server.logger``
-# patchability pattern used by ``_request_handler``).
+# Shim alias used for test patching. The compatibility module binds the names
+# read through ``_shim`` before importing ``asap.transport.ws``.
 from asap.transport import websocket as _shim
 
 logger = get_logger(__name__)
@@ -296,10 +271,9 @@ class WebSocketTransport(_RecvDispatch, _AckRetransmit):
     async def _send_frame(self, envelope: Envelope, *, register_ack: bool) -> str:
         """Encode *envelope* and send one JSON-RPC text frame; return the request id.
 
-        Collapsed send preamble shared by ``send`` / ``send_and_receive`` /
-        ``send_and_receive_stream`` / ``_send_envelope_only`` (3.3). Reads
-        ``encode_envelope_frame`` off the shim so test patches on the
-        ``asap.transport.websocket`` path stay effective.
+        Shared by ``send``, ``send_and_receive``, ``send_and_receive_stream``,
+        and the retransmit path. Reads ``encode_envelope_frame`` off the shim so
+        tests can patch ``asap.transport.websocket.encode_envelope_frame``.
         """
         if self._ws is None:
             raise RuntimeError("WebSocket not connected; call connect(url) first")
@@ -389,8 +363,6 @@ class WebSocketTransport(_RecvDispatch, _AckRetransmit):
         return Envelope.model_validate(result["envelope"])
 
 
-# Re-export so ``from asap.transport.ws.client import json`` style probes and
-# downstream static analysis see the framing helper used by send_and_receive_stream.
 __all__ = [
     "OnMessageCallback",
     "PendingAck",

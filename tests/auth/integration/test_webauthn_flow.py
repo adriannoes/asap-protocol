@@ -1,4 +1,4 @@
-"""Integration smoke: registration + assertion ceremonies (Sprint S1 Relevant Files).
+"""Integration smoke: registration + assertion ceremonies.
 
 The published py_webauthn NONE registration and EC2 assertion fixtures use different
 credential keys. This module still runs both ceremonies against one

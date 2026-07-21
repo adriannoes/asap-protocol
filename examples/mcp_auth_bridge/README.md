@@ -153,4 +153,4 @@ Adapter semantics and error codes: [`docs/adapters/mcp-auth-bridge.md`](../../do
 
 - Adapter guide: [`docs/adapters/mcp-auth-bridge.md`](../../docs/adapters/mcp-auth-bridge.md)
 - Mode B (MCP-over-ASAP envelope): `src/asap/examples/mcp_integration.py`
-- `initialize` session-token carriage: **deferred** (design-lock §3)
+- `initialize` session-token carriage: not implemented in this stdio example

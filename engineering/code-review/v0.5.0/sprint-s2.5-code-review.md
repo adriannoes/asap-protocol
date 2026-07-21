@@ -1,7 +1,7 @@
 # Code Review: PR #18 - Test Infrastructure Refactoring & Issue #17 Resolution
 
 **PR Link:** https://github.com/adriannoes/asap-protocol/pull/18  
-**Reviewer:** Opus 4.5
+**Reviewer:** Maintainer review
 **Review Date:** 2026-01-26  
 **Status:** Open
 
@@ -440,5 +440,5 @@ This PR demonstrates excellent engineering judgment in diagnosing and solving a 
 ---
 
 **Signature:**  
-Reviewed by: Antigravity AI (Principal Software Engineer Mode)  
+Reviewed by: Maintainer review
 Date: 2026-01-26T19:33:02-03:00

@@ -62,7 +62,7 @@ def test_hide_unauthorized_tools_true_logs_noop_warning(
 
 
 @pytest.mark.skip(
-    reason="MCP-MAP-004 deferred: stdio tools/list lacks JWT carriage — see design-lock §6"
+    reason="MCP-MAP-004 deferred: stdio tools/list lacks JWT carriage for per-agent filtering"
 )
 @pytest.mark.asyncio
 async def test_hide_unauthorized_tools_filters_unauthorized_when_enabled(

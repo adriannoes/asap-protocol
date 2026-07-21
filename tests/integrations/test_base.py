@@ -2,11 +2,11 @@
 
 The four framework wrappers (langchain/crewai/llamaindex/smolagents) and the
 function-based integrations (pydanticai/openclaw/vercel_ai) exercise this module
-indirectly, but the misleading-error-string fix (S2 Task 5.0), the URN-scoped
-resolve cache, the resolve-vs-run error split, and the loop-detection invariant
-deserve explicit regression assertions so a future change cannot silently
-re-collapse the distinct error messages, regress the re-entrant-resolve guard,
-or re-introduce the URN-agnostic cache (S2 PR-review HIGH finding).
+indirectly, but the misleading-error-string fix, the URN-scoped resolve cache,
+the resolve-vs-run error split, and the loop-detection invariant deserve
+explicit regression assertions so a future change cannot silently re-collapse
+the distinct error messages, regress the re-entrant-resolve guard, or
+re-introduce the URN-agnostic cache.
 """
 
 from __future__ import annotations
@@ -37,9 +37,9 @@ def _run(coro: Any) -> Any:
 class TestFormatInvokeError:
     """``format_invoke_error`` must emit a distinct, truthful prefix per type.
 
-    Regression for the S2 Task 5.0 bug: the shared ``"Agent revoked or invalid
-    input"`` string fired for plain ``ValueError`` as well as genuine
-    revocations, hiding the real cause from callers.
+    The shared ``"Agent revoked or invalid input"`` string previously fired for
+    plain ``ValueError`` as well as genuine revocations, hiding the real cause
+    from callers.
     """
 
     def test_agent_revoked_exception_gets_revoked_prefix(self) -> None:

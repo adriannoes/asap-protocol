@@ -405,10 +405,6 @@ class TestWebSocketTransportCorrelation(NoRateLimitTestBase):
     @pytest.mark.asyncio
     async def test_send_and_receive_timeout_when_no_response(self) -> None:
         """send_and_receive() raises asyncio.TimeoutError when server does not respond."""
-        # Use a URL that connects but never sends a response (no real server)
-        # We use a real server that accepts then closes without replying - hard.
-        # Instead: use a very short timeout and a server that sleeps forever before replying.
-        # Simpler: just check that timeout is passed through (unit test with mock).
         transport = WebSocketTransport(receive_timeout=0.01)
         # Not connected - send_and_receive should raise RuntimeError
         with pytest.raises(RuntimeError, match="not connected"):
@@ -1605,7 +1601,6 @@ class TestWebSocketServerRateLimit(NoRateLimitTestBase):
 
         client = TestClient(app_instance)
         with client.websocket_connect("/asap/ws") as websocket:
-            # First message should pass (bucket has tokens)
             websocket.send_text(
                 json.dumps(
                     {
@@ -1617,20 +1612,8 @@ class TestWebSocketServerRateLimit(NoRateLimitTestBase):
                 )
             )
 
-            # Receive response (echo or whatever) - wait for it
-            # The server logic puts the response in `body`.
-            # If we send a valid legacy format or just a valid frame, it processes.
-            # To trigger rate limit, we just need to send frames fast.
-            # Receive response (echo or whatever) - wait for it
-            # The server logic puts the response in `body`.
-            # If we send a valid legacy format or just a valid frame, it processes.
-            # To trigger rate limit, we just need to send frames fast.
             with contextlib.suppress(Exception):
                 _ = websocket.receive_text()
-
-            # Second message immediately might be rate limited if burst is 1.
-            # If burst is 1, and we consume 1, now empty.
-            # Next consume fails until token refill (1 sec).
 
             websocket.send_text(
                 json.dumps(
@@ -1657,9 +1640,6 @@ class TestWebSocketServerRateLimit(NoRateLimitTestBase):
             assert "error" in data
             assert data["error"]["code"] == -32001  # Rate limit exceeded
 
-            # Connection should be closed by server with policy violation
-            # TestClient websocket checks state on simple interaction?
-            # or verify we can't send/receive anymore?
             from fastapi.websockets import WebSocketDisconnect
 
             with pytest.raises(
@@ -1888,9 +1868,7 @@ class TestDoConnect:
         """If _ws is already set, _do_connect returns immediately (line 232)."""
         transport = WebSocketTransport()
         transport._ws = _mock_ws()
-        # Should not raise or try to connect again
         await transport._do_connect("ws://localhost:8080")
-        # Still the same ws
         assert transport._ws is not None
 
     @pytest.mark.asyncio
@@ -2073,7 +2051,6 @@ class TestRecvLoopBranches:
         task.cancel()
         with suppress(asyncio.CancelledError):
             await task
-        # Should not raise; just logs warning
 
     @pytest.mark.asyncio
     async def test_recv_loop_error_frame_sets_pending_exception(self) -> None:
@@ -2154,7 +2131,6 @@ class TestRecvLoopBranches:
         task.cancel()
         with suppress(asyncio.CancelledError):
             await task
-        # Should not raise
 
     @pytest.mark.asyncio
     async def test_recv_loop_missing_result_envelope(self) -> None:
@@ -2268,7 +2244,6 @@ class TestRecvLoopBranches:
         task.cancel()
         with suppress(asyncio.CancelledError):
             await task
-        # Should not raise, error is caught
 
     @pytest.mark.asyncio
     async def test_recv_loop_generic_exception_sets_all_pending(self) -> None:
@@ -2342,7 +2317,6 @@ class TestSendEnvelopeOnly:
         transport = WebSocketTransport()
         transport._ws = None
         env = _sample_envelope_cov()
-        # Should not raise
         await transport._send_envelope_only(env)
 
 

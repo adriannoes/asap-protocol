@@ -196,7 +196,7 @@ Pre-release: Release materials (CHANGELOG, README, AGENTS.md, secure_agent examp
 - [ ] Escalation + `WWW-Authenticate` challenge path — observability and support burden?
 - [ ] Coverage / quality bar met for new modules (Python + TS) per Definition of Done?
 - [ ] Time taken vs estimated (S1–S5); parallelism assumptions validated?
-- [ ] **v2.5.1 thermo-nuclear patch**: did the audit-driven refactor hold up under the PR #244 code review? Follow-ups #245–#249 closed in **v2.5.2** — any residual debt?
+- [ ] **v2.5.1 code-quality patch**: did the audit-driven refactor hold up under the PR #244 code review? Follow-ups #245–#249 closed in **v2.5.2** — any residual debt?
 - [ ] **v2.5.2 security follow-up**: did #209 + registry fixes land cleanly? Close umbrella #209 after tag.
 
 **Update**:
@@ -238,7 +238,7 @@ Track actual vs estimated to improve future planning:
 | v2.4.0 | — | — | Shipped 2026-05-24 |
 | v2.4.1 | — | ~0.5 day (S2) | Shipped 2026-06-14 (security patch) |
 | v2.5.0 | — | — | Shipped 2026-06-24 (MCP Auth Bridge; S0–S5) |
-| v2.5.1 | 0.5 day (S4 est.) | ~1.5 days (S4 + code review fixes) | Shipped 2026-06-26 (code quality patch; thermo-nuclear audit S0–S3 + P0 fixes + PR #244 review) |
+| v2.5.1 | 0.5 day (S4 est.) | ~1.5 days (S4 + code review fixes) | Shipped 2026-06-26 (code quality patch; code-quality audit S0–S3 + P0 fixes + PR #244 review) |
 
 > [!NOTE]
 > Estimates updated after Lean Marketplace pivot: v1.2 reduced (6→4 sprints), v1.3 reduced (4→3 sprints), v2.0 reduced (6→4 sprints). Fill **Actual** when you reconcile from sprint notes.
@@ -274,7 +274,7 @@ Track actual vs estimated to improve future planning:
 | 2026-05-02 | **Archive checklists**: All CP-1–CP-6 items set to **`[x]`** (milestone closed); CP-7 remains **`[ ]`** until post–v2.3.0 review. |
 | 2026-06-22 | **v2.5.x PRD train**: Rescoped adoption PRD → v2.5.0–v2.5.3; v2.3.2/2.3.3 → v2.5.1/2.5.2; deprecated `prd-v2.4-adoption.md`. |
 | 2026-06-24 | **v2.5.0 ship + doc sync**: Status roll-up for MCP Auth Bridge; README, `docs/index.md`, AGENTS.md aligned with **2.5.0**; CP-7 partial closure updated. |
-| 2026-06-26 | **v2.5.1 ship + doc sync**: Status roll-up for the code quality patch (thermo-nuclear audit S0–S3 + six P0 fixes); README, `docs/index.md`, `docs/migration.md`, AGENTS.md, `apps/web` WhatsNewRibbon, `engineering/tasks/README.md` aligned with **2.5.1**; Adapter Lab II slipped to v2.5.2; follow-ups filed (#245–#249); velocity row for v2.5.1 added. |
+| 2026-06-26 | **v2.5.1 ship + doc sync**: Status roll-up for the code-quality patch (code-quality audit S0–S3 + six P0 fixes); README, `docs/index.md`, `docs/migration.md`, AGENTS.md, `apps/web` WhatsNewRibbon, `engineering/tasks/README.md` aligned with **2.5.1**; Adapter Lab II slipped to v2.5.2; follow-ups filed (#245–#249); velocity row for v2.5.1 added. |
 | 2026-07-08 | **Train rescope**: v2.5.2 = security follow-up; Adapter Lab II → v2.5.3; Distribution Loop → v2.5.4; Formal Spec → v2.5.5; PRDs renamed; [prd-v2.5.2-security-follow-up.md](./prd/prd-v2.5.2-security-follow-up.md) created. |
 | 2026-07-08 | **v2.5.2 ship**: tag [`v2.5.2`](https://github.com/asap-protocol/asap-protocol/releases/tag/v2.5.2); PyPI **2.5.2**; [#209](https://github.com/asap-protocol/asap-protocol/issues/209) closed; status roll-up flipped to Released. |
 | 2026-07-18 | **Pre–v2.5.4 kickoff sync**: roll-up v2.5.3 → Released; v2.5.4 Ready + tasks; sources of truth → Dist Loop; Dist→Spec→Economy handoff documented in PRDs |

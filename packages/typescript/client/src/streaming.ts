@@ -1,5 +1,5 @@
 /**
- * HTTP SSE consumer for POST `/asap/stream` (TS-010, task 4.2).
+ * HTTP SSE consumer for POST `/asap/stream`.
  *
  * Wire format matches Python `ASAPRequestHandler.handle_stream`: each SSE event is
  * `data: <json envelope>\n\n` (see `src/asap/transport/server.py`).
@@ -222,8 +222,8 @@ export interface AsapStreamClient {
 }
 
 /**
- * Creates a minimal HTTP streaming client (no connection pool). For full JSON-RPC
- * batching and retries, combine with transport helpers in later tasks.
+ * Creates a minimal HTTP streaming client (no connection pool). Compose with
+ * transport helpers when callers need JSON-RPC batching and retries.
  */
 export function createAsapStreamClient(config: AsapStreamClientConfig): AsapStreamClient {
   const fetchFn = config.fetch ?? globalThis.fetch.bind(globalThis);

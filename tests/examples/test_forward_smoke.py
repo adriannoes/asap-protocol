@@ -1,4 +1,4 @@
-"""Unit tests for starter smoke forwarder (DIST-003)."""
+"""Unit tests for starter smoke forwarder."""
 
 from __future__ import annotations
 

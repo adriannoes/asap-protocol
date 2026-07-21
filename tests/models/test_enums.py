@@ -258,7 +258,7 @@ class TestEdgeAiEnums:
     """v2.4 edge-AI enums used by ShellClaw manifests and registry filters."""
 
     def test_hardware_class_values(self) -> None:
-        """Sprint S1 hardware classes are defined with stable string values."""
+        """Hardware classes are defined with stable string values."""
         assert HardwareClass.EDGE_ACCELERATOR.value == "edge_accelerator"
         assert HardwareClass.SBC.value == "sbc"
         with pytest.raises(ValueError):

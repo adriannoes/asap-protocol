@@ -1,4 +1,4 @@
-"""End-to-end stdio integration tests for protected MCPServer (S4 task 3.2).
+"""End-to-end stdio integration tests for protected MCPServer.
 
 Exercises the full JSON-RPC stdio path (initialize → tools/call) against a
 ``protect_server``-wrapped server using runtime-minted Agent JWTs in

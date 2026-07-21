@@ -391,7 +391,7 @@ class TestE2EApprovalProvider:
 
     @pytest.mark.asyncio
     async def test_notify_then_approve_combined_flow(self, client: A2HClient) -> None:
-        """Realistic pattern: notify human first, then request approval (PRD US-1 + US-2)."""
+        """Realistic pattern: notify human first, then request approval."""
         provider = A2HApprovalProvider(client)
 
         notify_id = await provider.notify(

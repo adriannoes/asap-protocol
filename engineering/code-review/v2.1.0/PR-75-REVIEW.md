@@ -29,7 +29,7 @@ Verification: `pytest` (39 passed) and `npm run build` completed successfully.
 | **Security** | ⚠️ | `unsafe-eval` in CSP weakens XSS mitigation; `fetchRevokedUrns` trusts JSON shape |
 | **Tests** | ⚠️ | Zero test coverage for new `category`/`tags` fields in both Python and frontend |
 
-> **General Feedback:** Solid PR overall — the Browse filters, revoked badge, and usage snippets all align well with Sprint E4 tasks. The main blockers are a logic bug in agent detail (revoked check before null guard), missing test coverage for the new schema fields, and a CSP that permits `unsafe-eval`. These should be addressed before merge.
+> **General Feedback:** Solid PR overall — the Browse filters, revoked badge, and usage snippets all align well with the registry UX work. The main blockers are a logic bug in agent detail (revoked check before null guard), missing test coverage for the new schema fields, and a CSP that permits `unsafe-eval`. These should be addressed before merge.
 
 ---
 

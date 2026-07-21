@@ -241,7 +241,7 @@ class TestMcpAuthSubprocessIntegration:
 
     @pytest.mark.asyncio
     async def test_subprocess_example_server_passes_profile(self) -> None:
-        """Full ``mcp-auth-bridge`` profile passes against the S3 example server."""
+        """Full ``mcp-auth-bridge`` profile passes against the example server."""
         config = McpAuthComplianceConfig()
         result = await validate_mcp_auth_async(config)
         assert result.profile == "mcp-auth-bridge"

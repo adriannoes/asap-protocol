@@ -20,7 +20,7 @@ import httpx
 
 NPM_DOWNLOADS_RANGE_BASE = "https://api.npmjs.org/downloads/range"
 DEFAULT_PERIOD = "last-week"
-# DIST-004: aggregate must cover all public scoped packages, not only the client.
+# Aggregate all public scoped packages, not only the client.
 DEFAULT_PACKAGES: tuple[str, ...] = (
     "@asap-protocol/client",
     "@asap-protocol/mastra",

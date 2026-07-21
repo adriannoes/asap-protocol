@@ -520,14 +520,14 @@ class TestSQLiteDelegationStorageCoverage:
 
 
 # ---------------------------------------------------------------------------
-# Task 1.0 (B1) — Atomic cascade revocation regression tests
+# Atomic cascade revocation regression tests
 # ---------------------------------------------------------------------------
 
 
 class TestRevokeCascadeAtomic:
     """Atomic cascade revocation: SQLite rollback + InMemory lock parity.
 
-    Covers the two regression scenarios from the v2.5.1 Thermo-Nuclear Patch:
+    Covers two regression scenarios:
     1. SQLite mid-cascade crash must roll back atomically (no partial state).
     2. InMemory concurrent ``register_issued`` during a cascade must not lose a
        newly-issued child (cascade holds an ``asyncio.Lock``).

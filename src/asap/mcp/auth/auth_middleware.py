@@ -19,8 +19,7 @@ def protect_server(server: MCPServer, config: MCPAuthConfig) -> ProtectedMCPServ
     ``from_server`` copies register-time capability metadata onto the protected instance
     without mutating ``config``.
 
-    See PRD v2.5.0 MCP Auth Bridge (``product/prd/prd-v2.5.0-mcp-auth-bridge.md``)
-    and design lock ADR (``engineering/tasks/v2.5.0/design-lock-mcp-auth-bridge.md``).
+    See PRD v2.5.0 MCP Auth Bridge (``product/prd/prd-v2.5.0-mcp-auth-bridge.md``).
 
     Args:
         server: Native MCP server with registered tools.

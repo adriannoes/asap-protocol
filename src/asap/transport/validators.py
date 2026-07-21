@@ -74,7 +74,6 @@ def validate_envelope_timestamp(envelope: Envelope) -> None:
     if timestamp.tzinfo is None:
         timestamp = timestamp.replace(tzinfo=timezone.utc)
     else:
-        # Convert to UTC if needed
         timestamp = timestamp.astimezone(timezone.utc)
 
     # Calculate age in seconds

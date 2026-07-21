@@ -181,7 +181,7 @@ async def build_protected_server() -> tuple[MCPServer, DemoIdentity]:
 
 
 def _print_startup_instructions(identity: DemoIdentity) -> None:
-    """Print reviewer-facing JWT and ``tools/call`` guidance on stderr."""
+    """Print demo JWT and ``tools/call`` guidance on stderr."""
     print(
         "WARNING: allow_env_jwt_fallback=True — this demo reads ASAP_AGENT_JWT from the "
         "process environment. Do not deploy this example unchanged in production.",
@@ -231,9 +231,9 @@ def _print_startup_instructions(identity: DemoIdentity) -> None:
 def route_observability_logs_to_stderr() -> None:
     """Send ASAP structlog to stderr so MCP stdout stays JSON-RPC-only.
 
-    Provenance (PR #291 review / NeMo Path A): ``ProtectedMCPServer`` may emit
-    auth log lines via the default ``StreamHandler(sys.stdout)``, which corrupts
-    stdio MCP framing for clients that share the pipe.
+    ``ProtectedMCPServer`` may emit auth log lines via the default
+    ``StreamHandler(sys.stdout)``, which corrupts stdio MCP framing for clients
+    that share the pipe.
 
     Example::
 

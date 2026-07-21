@@ -66,4 +66,4 @@ If you already run a **Celery/RQ/async worker** inside the monorepo:
 - Use the GitHub App id + private key only in the worker (or in `registry-bot`) to open PRs; do not embed them in the public web app.
 - Point this service’s dependency at the same editable `asap-protocol` path as CI so `import asap.registry.auto_registration` succeeds in lockstep with `main`.
 
-**Import note:** Importing `asap.registry` pulls `asap.transport` (package `__init__` re-exports `create_app`), which builds the default `asap.transport.server:app` once. That is noisy in logs but harmless for a dedicated bot process; a future refactor could lazy-export `create_app` from `asap.transport`.
+**Import note:** Importing `asap.registry` pulls `asap.transport` (package `__init__` re-exports `create_app`), which builds the default `asap.transport.server:app` once. That is noisy in logs but harmless for a dedicated bot process.

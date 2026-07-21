@@ -6,7 +6,7 @@ import {
 } from "../src/capabilities.js";
 import { RecoverableError } from "../src/errors.js";
 
-describe("capabilities (TS-003)", () => {
+describe("capabilities", () => {
   const originalFetch = globalThis.fetch;
 
   beforeEach(() => {

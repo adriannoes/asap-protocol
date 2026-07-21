@@ -1,4 +1,4 @@
-"""OpenAPI 3.x → ASAP adapter (Sprint S1)."""
+"""OpenAPI 3.x to ASAP adapter."""
 
 from __future__ import annotations
 

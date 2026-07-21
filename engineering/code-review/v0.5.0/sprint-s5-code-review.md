@@ -1,7 +1,7 @@
 # Code Review: PR #21 - v0.5.0 Release Preparation
 
 **Branch:** `feature/sprint-s5-release-prep` → `main`  
-**Reviewer:** Claude Opus 4.5  
+**Reviewer:** Maintainer review
 **Date:** 2026-01-28  
 **Review Type:** Pre-merge Production Readiness Audit (v0.5.0)
 

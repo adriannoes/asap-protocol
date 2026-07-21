@@ -1,6 +1,6 @@
 # Task Template for Detailed Sprint Planning
 
-> **Purpose**: Template for creating detailed, AI-friendly task breakdowns
+> **Purpose**: Template for creating detailed, contributor-friendly task breakdowns
 > **Location**: Use this template when expanding sprint roadmaps into detailed task files
 
 ---
@@ -56,7 +56,7 @@ Each task should include:
 - [ ] 1.1.1 [Action verb] [specific item]
   - **File**: `path/to/file.py`
   - **What**: [Detailed description of what to create/modify]
-  - **Why**: [Rationale - helps model understand intent]
+  - **Why**: [Rationale so contributors understand intent]
   - **Reference**: [Link to docs, examples, or existing code to follow]
   - **Verify**: [How to confirm this works - command or manual check]
 
@@ -73,9 +73,6 @@ Each task should include:
   - **Coverage**: [List scenarios to test]
   - **Command**: `pytest tests/module/test_file.py -v`
 
-- [ ] 1.1.4 Commit
-  - **Command**: `git commit -m "feat(module): add [feature]"`
-  - **Scope**: [List files that should be in this commit]
 
 **Acceptance Criteria**:
 - [ ] [Specific, verifiable outcome 1]
@@ -102,14 +99,14 @@ Each task should include:
 
 ## Key Principles for Detailed Tasks
 
-### 1. Context is King
-A weaker model needs to understand WHY, not just WHAT. Always include:
+### 1. Context matters
+Contributors need to understand why a task exists, not just what to change. Always include:
 - **Goal**: What success looks like
 - **Context**: Why this matters
 - **Reference**: Where to look for patterns
 
-### 2. Be Explicit About Files
-Don't assume the model knows the codebase. Always specify:
+### 2. Be explicit about files
+Make file ownership and expected touch points clear. Always specify:
 - Exact file paths (not module names)
 - Whether to create new or modify existing
 - Related files (tests, types, exports)
@@ -125,17 +122,12 @@ Point to existing code as examples:
 - "Follow pattern from `src/asap/auth/middleware.py`"
 - "Use same structure as `OAuth2ClientCredentials`"
 
-### 5. Commit Boundaries
-Define clear commit boundaries:
-- One commit per logical unit
-- Include commit message format
-- List files that belong in each commit
 
 ---
 
 ## Example: Good vs Bad Sub-task
 
-### ❌ Bad (too vague for weak models)
+### ❌ Bad (too vague)
 
 ```markdown
 - [ ] 1.1.1 Add OAuth2 client
@@ -166,6 +158,5 @@ Define clear commit boundaries:
 - [ ] Every sub-task has a **Verify** step
 - [ ] Context explains WHY, not just WHAT
 - [ ] References to existing patterns included
-- [ ] Commit messages specified
 - [ ] Acceptance criteria are measurable
 - [ ] Total sub-task count is accurate

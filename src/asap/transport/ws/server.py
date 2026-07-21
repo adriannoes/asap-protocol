@@ -1,34 +1,11 @@
-"""WebSocket server handler for ASAP (JSON-RPC 2.0 over ``WS /asap/ws``).
+"""Server-side WebSocket handling for ASAP JSON-RPC 2.0 traffic.
 
-Owns the server-side connection lifecycle split out of the original
-``websocket.py``:
+This module accepts WebSocket connections, enforces optional OAuth2 bearer
+authentication, runs heartbeat and stale-connection checks, applies per-connection
+rate limiting, dispatches ASAP envelopes, and broadcasts SLA breach notifications.
 
-- :func:`handle_websocket_connection` — accept, auth, heartbeat, receive loop.
-- :func:`_heartbeat_loop` — server-initiated ping + stale-connection eviction.
-- :func:`broadcast_sla_breach` — SLA breach notification fan-out (v1.3).
-- :class:`_WSSubscriptionDispatch` — SLA subscribe/unsubscribe method table (3.5).
-- :func:`_process_ws_message` — per-message close decision (3.4).
-- :func:`_enforce_ws_oauth2` / :func:`_bearer_token_from_websocket` — WS auth (B4/BUG #4).
-
-The close-action enum lives in :mod:`asap.transport.ws._actions` and the
-envelope dispatch layer (3.2) in :mod:`asap.transport.ws._dispatch`; both are
-re-exported from :mod:`asap.transport.ws`. These splits keep each ``ws/`` module
-under the 400-LOC ceiling mandated by the v2.5.1 thermo-nuclear patch.
-
-v2.5.1 changes:
-- 3.2: the fake-request synthesis is deleted; envelopes are dispatched directly via
-  :meth:`ASAPRequestHandler._prepare_request` + ``registry.dispatch_async`` /
-  ``dispatch_stream_async`` (see :mod:`asap.transport.ws._dispatch`).
-- 3.4: the ``rate_limited`` boolean is replaced by :class:`WSCloseAction`.
-- 3.5: the inline ``if method == "sla.subscribe"`` chain moved behind
-  :class:`_WSSubscriptionDispatch`.
-
-Patchability note: tests patch ``asap.transport.websocket.HEARTBEAT_PING_INTERVAL``
-and call ``_heartbeat_loop`` imported from the shim. To keep that patch
-effective across the module boundary, :func:`_heartbeat_loop` reads
-``HEARTBEAT_PING_INTERVAL`` off the shim (``_shim.HEARTBEAT_PING_INTERVAL``) at
-call time rather than binding it locally (matches the ``_server.logger``
-pattern used by ``_request_handler``).
+``_heartbeat_loop`` reads ``HEARTBEAT_PING_INTERVAL`` from the compatibility shim
+at call time so tests can patch ``asap.transport.websocket.HEARTBEAT_PING_INTERVAL``.
 """
 
 from __future__ import annotations
@@ -63,9 +40,8 @@ from asap.transport.ws.codecs import (
     _is_heartbeat_pong,
 )
 
-# Shim alias for patch seams (see module docstring). Deferred-by-construction
-# circular import: the shim binds the patchable names read through ``_shim``
-# before importing ``asap.transport.ws``.
+# Shim alias used for test patching. The compatibility module binds the names
+# read through ``_shim`` before importing ``asap.transport.ws``.
 from asap.transport import websocket as _shim
 
 if TYPE_CHECKING:
@@ -93,19 +69,13 @@ async def _enforce_ws_oauth2(
     websocket: WebSocket,
     oauth2_middleware: "OAuth2Middleware",
 ) -> bool:
-    """Validate the WS Bearer JWT at acceptance; close 4401 on failure (B4/BUG #4).
+    """Validate the WS Bearer JWT at acceptance; close 4401 on failure.
 
     Returns ``True`` when the connection is admitted, ``False`` after closing it.
     Mirrors :class:`OAuth2Middleware` HTTP semantics so a WS-only deployment can
-    no longer bypass IdP JWT validation. Auth is decided here, at acceptance, so
-    it does NOT depend on the deleted fake-request middleware
-    pass-through.
-
-    Auth scope asymmetry (deliberate for S0): unlike the HTTP path, which
-    re-validates the JWT on every POST, the WS path validates the Bearer ONCE at
-    connection acceptance. A token that expires or loses scope mid-session stays
-    admitted on WS until the client disconnects. S3 hardening can re-validate on
-    token expiry.
+    no longer bypass IdP JWT validation. Unlike the HTTP path, the WS path
+    validates the Bearer token once at connection acceptance; token expiry or
+    scope loss takes effect on the next connection.
     """
     token = _bearer_token_from_websocket(websocket)
     path = websocket.scope.get("path", "/asap/ws")
@@ -157,11 +127,10 @@ async def _heartbeat_loop(
 
 
 class _WSSubscriptionDispatch:
-    """Method→handler table for SLA breach subscribe/unsubscribe (3.5).
+    """Method-to-handler table for SLA breach subscribe/unsubscribe.
 
-    Replaces the inline ``if method == "sla.subscribe"`` chain in the receive
-    loop. Each handler mutates the subscriber set and replies with a JSON-RPC
-    result; unknown methods fall through to normal envelope dispatch.
+    Each handler mutates the subscriber set and replies with a JSON-RPC result;
+    unknown methods fall through to normal envelope dispatch.
     """
 
     def __init__(self, subscribers: set[WebSocket]) -> None:
@@ -233,14 +202,13 @@ async def _process_ws_message(
     bucket: WebSocketTokenBucket | None,
     subscriptions: _WSSubscriptionDispatch | None,
 ) -> WSCloseAction:
-    """Handle one inbound WS text frame; return the close action for the loop (3.4).
+    """Handle one inbound WS text frame and return the close action for the loop.
 
     Parses the frame, routes SLA subscribe/unsubscribe through *subscriptions*
-    (3.5), enforces the per-connection rate limit, sends the ``received`` ack
-    when required, and dispatches the envelope directly via
-    :meth:`ASAPRequestHandler._prepare_request` + ``dispatch_async`` /
-    ``dispatch_stream_async`` (3.2). Returns ``CLOSE_RATE_LIMITED`` when the
-    bucket is empty, ``CLOSE_FATAL`` on a fatal send failure, else ``CONTINUE``.
+    enforces the per-connection rate limit, sends the ``received`` ack when
+    required, and dispatches the envelope. Returns ``CLOSE_RATE_LIMITED`` when
+    the bucket is empty, ``CLOSE_FATAL`` on a fatal send failure, else
+    ``CONTINUE``.
     """
     try:
         data = json.loads(raw)
@@ -275,9 +243,9 @@ async def handle_websocket_connection(
 
     OAuth2-only deployments must not admit an unauthenticated WS: the HTTP
     middleware stack never runs over WebSocket, so :func:`_enforce_ws_oauth2`
-    validates the IdP JWT explicitly at acceptance (B4/BUG #4). When
-    ``manifest.auth`` is the active auth path, ``oauth2_middleware`` is None and
-    the request-preparation pipeline handles auth via ``_prepare_request``.
+    validates the IdP JWT explicitly at acceptance. When ``manifest.auth`` is
+    the active auth path, ``oauth2_middleware`` is None and the
+    request-preparation pipeline handles auth via ``_prepare_request``.
     """
     await websocket.accept()
     if oauth2_middleware is not None and not await _enforce_ws_oauth2(websocket, oauth2_middleware):
@@ -346,7 +314,7 @@ async def _ws_receive_loop(
     bucket: WebSocketTokenBucket | None,
     subscriptions: _WSSubscriptionDispatch | None,
 ) -> WSCloseAction:
-    """Drive the receive loop until close; return the terminal close action (3.4)."""
+    """Drive the receive loop until close; return the terminal close action."""
     action = WSCloseAction.CONTINUE
     while not closed.is_set():
         try:

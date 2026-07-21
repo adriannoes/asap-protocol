@@ -1,5 +1,5 @@
 /**
- * Recoverable JSON-RPC retries (TS-011). Matches Python `ASAPClient.send` when `retry_after_ms`
+ * Recoverable JSON-RPC retries. Matches Python `ASAPClient.send` when `retry_after_ms`
  * is set; optional `fallbackBackoffMs` retries recoverable errors without that hint.
  */
 

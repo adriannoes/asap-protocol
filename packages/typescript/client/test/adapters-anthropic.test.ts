@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { asapToolsForAnthropic } from "../src/adapters/anthropic.js";
 
-describe("adapters / Anthropic Messages tools (TS-008)", () => {
+describe("adapters / Anthropic Messages tools", () => {
   it("produces tool definitions with name, description, and input_schema", () => {
     const tools = asapToolsForAnthropic(
       { capabilities: ["urn:asap:cap:weather"] },

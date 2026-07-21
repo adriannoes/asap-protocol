@@ -3,7 +3,7 @@
 **PR**: [feat(auth,transport): Sprint S1 — capabilities & lifecycle](https://github.com/adriannoes/asap-protocol/pull/105)
 **Branch**: `feat/capabilities-lifecycle` → `main`
 **Sprint**: S1 — Capabilities & Lifecycle (v2.2 Protocol Hardening)
-**Reviewer**: Senior Staff Engineer (AI-Assisted)
+**Reviewer**: Maintainer review
 **Date**: 2026-03-23
 **Fixes Applied**: 2026-03-23 — All 4 required fixes + deep dive items resolved
 

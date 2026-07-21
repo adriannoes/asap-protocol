@@ -22,7 +22,6 @@ from asap.examples import orchestration
 from asap.examples import rate_limiting
 from asap.examples import state_migration
 from asap.examples import streaming_response
-from asap.examples import websocket_concept
 
 
 class TestOrchestrationExample:
@@ -543,19 +542,6 @@ class TestRateLimitingExample:
         limits = rate_limiting.per_endpoint_limits_concept()
         assert "asap" in limits
         assert "metrics" in limits
-
-
-class TestWebsocketConceptExample:
-    """Tests for websocket_concept example."""
-
-    def test_run_demo_completes(self) -> None:
-        """run_demo runs without error."""
-        websocket_concept.run_demo()
-
-    def test_get_events_endpoint_concept_returns_wss_url(self) -> None:
-        """get_events_endpoint_concept returns example wss URL."""
-        url = websocket_concept.get_events_endpoint_concept()
-        assert url.startswith("wss://")
 
 
 class TestStreamingResponseExample:

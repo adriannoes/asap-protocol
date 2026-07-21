@@ -174,7 +174,7 @@ This is the final sprint before v2.0.0 launch. Focus on security of the IssueOps
     - Show code block: `WebSockets Connect` -> `.process` command validation mapping to `register.json` schemas.
     - Show `MemorySnapshot` event rendering.
   - **Done**: Added `/demos` with three visual UI blocks detailing WebSocket connections, Zod payload validation, and Memory event streaming using Tailwind syntax highlighting and `lucide-react` icons./demo page representing the active agent ecosystem.
-    - **Interactive Demo**: Upgrade from static GIFs. Leverage Gemini 3.1 Pro to create a real-time, interactive demo in the browser where users can enter a task and watch ASAP process it live (the ultimate "wow factor").
+    - **Interactive Demo**: Upgrade from static GIFs. Build a real-time interactive browser demo where users can enter a task and watch ASAP process it live.
     - **Code Snippets (Markdown)**: Side-by-side or below the visuals, show the minimal code required to achieve the demo.
     - **GitHub Hyperlink**: A clear CTA at the end of each demo: "View the full source code on GitHub" for deep dives.
 

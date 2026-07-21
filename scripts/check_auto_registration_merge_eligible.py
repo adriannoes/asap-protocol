@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Evaluate whether an auto-registration PR may enable squash auto-merge.
 
-Policy (Sprint S3 / AUTO-006):
+Policy:
 - ``registry.json`` must already validate as :class:`~asap.discovery.registry.LiteRegistry`
   (run ``scripts/validate_registry.py`` first in CI).
 - **Self-signed path** (registry terms): no new or escalated **verified** marketplace badge.

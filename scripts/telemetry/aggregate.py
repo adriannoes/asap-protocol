@@ -381,8 +381,8 @@ def sum_pypi_last_week(raw_hist: Mapping[str, Any]) -> int | None:
     """Sum ``downloads.last_week`` across PyPI packages in a snapshot row.
 
     Returns ``None`` when no integer ``last_week`` values are present (dashboard
-    renders an em dash). Provenance: thermo-nuclear Nice-to-Have — keep
-    ``render_dashboard`` free of inline sum loops.
+    renders an em dash). This helper keeps ``render_dashboard`` free of inline
+    package-sum loops.
 
     Example:
         >>> sum_pypi_last_week({"pypi": {"packages": {"asap-protocol": {"downloads": {"last_week": 7}}}}})

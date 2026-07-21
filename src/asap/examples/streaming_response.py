@@ -31,8 +31,8 @@ def stream_task_updates(
 ) -> Iterator[TaskUpdate]:
     """Yield TaskUpdate payloads to simulate streaming progress.
 
-    In a real implementation, each update would be sent over HTTP chunked
-    response, WebSocket, or Server-Sent Events. Here we just yield in-process.
+    The live transports send these updates over streaming HTTP, WebSocket, or
+    Server-Sent Events. This example yields them in-process for inspection.
 
     Args:
         task_id: Task identifier.

@@ -189,7 +189,7 @@ class TestRegistrySchemaValidation:
         assert entry.hardware_io == ["gpio", "i2c"]
 
     def test_registry_entry_with_category_tags(self) -> None:
-        """RegistryEntry parses category and tags from dict (Sprint E4)."""
+        """RegistryEntry parses category and tags from dict."""
         data = {
             "id": "urn:asap:agent:test:bot",
             "name": "Test",
@@ -204,7 +204,7 @@ class TestRegistrySchemaValidation:
         assert entry.tags == ["ai", "code_review"]
 
     def test_registry_entry_defaults_without_category_tags(self) -> None:
-        """RegistryEntry defaults category and tags when omitted (Sprint E4)."""
+        """RegistryEntry defaults category and tags when omitted."""
         data = {
             "id": "urn:asap:agent:test:bot",
             "name": "Test",
@@ -257,7 +257,7 @@ class TestRegistrySchemaValidation:
         assert entry.category is None
 
     def test_registry_entry_with_derived_hardware_fields(self) -> None:
-        """RegistryEntry accepts hardware_class, inference_modes, hardware_io (S1 Task 1.2)."""
+        """RegistryEntry accepts hardware_class, inference_modes, hardware_io."""
         data = {
             "id": "urn:asap:agent:edge:jetson",
             "name": "Jetson",
@@ -906,7 +906,7 @@ class TestGenerateRegistryEntry:
         assert entry.built_with is None
 
     def test_generates_entry_with_category_tags(self) -> None:
-        """generate_registry_entry with category/tags produces valid entry (Sprint E4)."""
+        """generate_registry_entry with category/tags produces valid entry."""
         manifest = Manifest(
             id="urn:asap:agent:my-agent",
             name="My Agent",
@@ -930,7 +930,7 @@ class TestGenerateRegistryEntry:
         entry.model_dump_json()
 
     def test_generates_entry_with_derived_hardware_from_manifest(self) -> None:
-        """generate_registry_entry mirrors manifest hardware/inference (S1 Task 1.2)."""
+        """generate_registry_entry mirrors manifest hardware/inference."""
         manifest = Manifest(
             id="urn:asap:agent:edge:jetson",
             name="Jetson",

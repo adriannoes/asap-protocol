@@ -10,11 +10,10 @@
 
 ---
 
-## Parallel Execution (Agent Workstreams)
+## Execution notes
 
 > **Status:** S1 ready — S0 merged on `release/2.5.0` (commit `8a9a1f2`).
 > **Branch:** `feat/v2.5.0-s1-middleware` → PR into `release/2.5.0`.
-> **Rule:** Interactive dev — one sub-task at a time; parallel agents only where noted below.
 
 ### Dependency phases
 
@@ -27,26 +26,16 @@ Phase 1 (gate)       Phase 2 (parallel tests)     Phase 3 (single owner)      Ph
                                                 └──► 3.1 observability (after 2.x green)
 ```
 
-### Agent boundaries
-
-| Agent | Owns | Tasks | Depends on | Can parallelize with |
-|-------|------|-------|------------|----------------------|
-| **A — Fixtures** | `tests/adapters/mcp/conftest.py` | 1.1 | S0 scaffold | — (starts first) |
-| **B — Failure tests** | Missing / expired / tampered JWT cases | 1.2 (partial) | 1.1 | C (after gate) |
-| **C — Success tests** | `public_tools` skip + valid JWT handler runs | 1.2 (partial) | 1.1 | B (after gate) |
-| **D — Middleware** | `protected_server.py` + `protect_server` factory | 2.1, 2.2, 2.3 | 1.2 red | — (single owner; avoid merge conflicts) |
-| **E — Observability** | `mcp.tool.authorized` structured log + caplog test | 3.1 | 2.x green | — |
-
 ### Sequential vs parallel summary
 
 | Must be sequential | Safe to parallelize (after 1.1) |
 |--------------------|----------------------------------|
 | **1.1 → 1.2** (fixtures before tests) | **1.2a** ∥ **1.2b** (split `test_auth_middleware.py`) |
 | **1.2 → 2.x** (TDD red before green) | — |
-| **2.1 + 2.2 + 2.3** (one `_handle_tools_call` override) | Agent D owns all three; do not split across agents |
+| **2.1 + 2.2 + 2.3** (one `_handle_tools_call` override) | Keep all three together to avoid conflicts in the same handler |
 | **2.x → 3.1** (log on successful auth path) | — |
 
-### Notes for sub-agents
+### Implementation notes
 
 - **Design lock is locked:** `ProtectedMCPServer` subclass in `protected_server.py`; `protect_server` copies `_tools`, `_server_info`, `_instructions` from input server (ADR §2).
 - **S1 scope:** JWT verify + `public_tools` only — **no** `check_grant` yet (S2). Set `enforce_grants=False` or skip grant gate in S1; tests must not require capability grants.
@@ -55,23 +44,6 @@ Phase 1 (gate)       Phase 2 (parallel tests)     Phase 3 (single owner)      Ph
 - **Error mapping:** Use `errors.tool_error_result(AUTH_REQUIRED|INVALID_TOKEN, …)` — codes already in S0.
 - **Extractor:** Always `resolve_jwt_extractor(config)` — never call `default_jwt_extractor` directly in middleware.
 - **Verify gate:** `uv run pytest tests/adapters/mcp/test_auth_middleware.py -v` green + `uv run mypy src/asap/adapters/mcp/` clean.
-
-### Sub-agent prompt templates
-
-**Agent A (1.1):**
-> Create `tests/adapters/mcp/conftest.py` with fixtures: `host_identity`, `agent_session`, `capability_registry`, `mint_agent_jwt()`, minimal `MCPServer` with `echo` tool. Pattern: `tests/auth/test_agent_jwt.py`. Verify: `pytest tests/adapters/mcp/ --collect-only`.
-
-**Agent B (1.2a):**
-> After 1.1, add failing tests in `test_auth_middleware.py`: missing JWT → `asap:auth_required`; expired → `asap:invalid_token`; tampered → `asap:invalid_token`. Use fixtures from conftest. Expect red.
-
-**Agent C (1.2b):**
-> After 1.1, add failing tests: `public_tools` tool succeeds without token; valid JWT on protected tool → handler runs. Expect red.
-
-**Agent D (2.x):**
-> Implement `src/asap/adapters/mcp/protected_server.py` (`ProtectedMCPServer`) and wire `protect_server` in `auth_middleware.py`. Override `_handle_tools_call` only. Integrate `verify_agent_jwt`, `resolve_jwt_extractor`, `public_tools` skip. No grant checks (S2). Green on 1.2.
-
-**Agent E (3.1):**
-> After 2.x green: log `mcp.tool.authorized` with `agent_id`, `tool_name` (never JWT). Caplog test asserts fields, token absent.
 
 ---
 

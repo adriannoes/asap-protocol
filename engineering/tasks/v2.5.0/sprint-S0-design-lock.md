@@ -10,10 +10,9 @@
 
 ---
 
-## Parallel Execution (Agent Workstreams)
+## Execution notes
 
 > **Status:** S0 complete — ready for S1.
-> **Rule:** One sub-task at a time during interactive development; parallel agents may run only after the design-lock gate (1.1) unless noted.
 
 ### Dependency phases
 
@@ -28,17 +27,6 @@ Phase 1 (gate)     Phase 2 (parallel)              Phase 3           Phase 4
                                         └──► 3.1 (__init__ exports)
 ```
 
-### Agent boundaries
-
-| Agent | Owns | Tasks | Depends on | Can parallelize with |
-|-------|------|-------|------------|----------------------|
-| **A — Design lock** | ADR + grant API decision | 1.1, 3.3 | — (starts first) | — |
-| **B — Protocol types** | `_meta` on `CallToolRequestParams` | 2.1 | None (code-only); **process:** after 1.1 approved | C, D (after gate) |
-| **C — Error constants** | MCP-facing `asap:*` codes + helper | 4.2 | None | B, D (after gate) |
-| **D — Config scaffold** | `MCPAuthConfig` dataclass | 3.2 | 1.1 (field list + hook context) | B, C (after gate) |
-| **E — Package assembly** | `protect_server` stub + public exports | 3.4, 3.1 | 3.2, 1.1 | — |
-| **F — JWT extractor** | `default_jwt_extractor` + unit tests | 4.1 | 2.1 (`CallToolRequestParams.meta`) | — (after B) |
-
 ### Sequential vs parallel summary
 
 | Must be sequential | Safe to parallelize (after 1.1) |
@@ -48,9 +36,9 @@ Phase 1 (gate)     Phase 2 (parallel)              Phase 3           Phase 4
 | **2.1 → 4.1** (extractor reads `_meta` field) | — |
 | Entire S0 before S1 merge | — |
 
-### Notes for sub-agents
+### Implementation notes
 
-- **1.1 and 3.3** are the same deliverable (`design-lock-mcp-auth-bridge.md`); Agent A owns both.
+- **1.1 and 3.3** are the same deliverable (`design-lock-mcp-auth-bridge.md`); keep them together.
 - **3.1** is last in the scaffold track — re-export only after 3.2, 3.4, 4.2 exist.
 - **No `MCPServer` behavior change** in S0; unprotected servers remain default (PRD MCP-AUTH-006).
 - S1 ([sprint-S1-core-middleware.md](./sprint-S1-core-middleware.md)) is blocked until S0 acceptance criteria pass.

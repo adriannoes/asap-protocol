@@ -1,6 +1,6 @@
 # NeMo Agent Toolkit ↔ ASAP (Path A) — experimental local demo
 
-**Status:** experimental / maintainer-reproducible spike (ASAP v2.5.3 S1c Path A).  
+**Status:** experimental local interoperability demo.
 **Not** a production integration and **not** published as an NVIDIA NAT plugin.
 
 ## What this proves
@@ -37,7 +37,7 @@ Optional (full NAT workflow only):
 uv pip install -r examples/nemo_agent_toolkit_asap/requirements.txt
 ```
 
-Pin: **`nvidia-nat[mcp]==1.8.0`** (optional path; **not** a required ASAP core dep). The `a2a` extra is not required for Path A.
+Pin: **`nvidia-nat[mcp]==1.8.0`** (optional path; **not** a required ASAP core dep). The `a2a` extra is not required for this demo.
 
 **NIM / `NVIDIA_API_KEY`:** only needed for `nat run` with the sample `react_agent` YAML. Prefer the **ASAP-side smoke** below (no LLM).
 
@@ -123,7 +123,7 @@ Smoke covers the auth_required case. Grant denial semantics: [docs/adapters/mcp-
 
 ## HTTP / streamable-http gap
 
-ASAP `protect_server` is **stdio Mode A**. NAT OAuth examples use **streamable-http**. Bridging those without inventing a protocol fork is deferred — pointer: [engineering/tasks/v2.5.0/backlog-mcp-auth-typescript.md](../../engineering/tasks/v2.5.0/backlog-mcp-auth-typescript.md).
+ASAP `protect_server` is **stdio Mode A**. NAT OAuth examples use **streamable-http**. Bridging those requires HTTP MCP auth support; see [engineering/tasks/v2.5.0/backlog-mcp-auth-typescript.md](../../engineering/tasks/v2.5.0/backlog-mcp-auth-typescript.md).
 
 ## Related
 
@@ -131,4 +131,3 @@ ASAP `protect_server` is **stdio Mode A**. NAT OAuth examples use **streamable-h
 - Reference server/client: [`examples/mcp_auth_bridge/`](../mcp_auth_bridge/)
 - Adapter guide (Mode A): [`docs/adapters/mcp-auth-bridge.md`](../../docs/adapters/mcp-auth-bridge.md)
 - Security (connectors + Mode A/B): [`docs/guides/automation-connector-security.md`](../../docs/guides/automation-connector-security.md)
-- Sprint: [`engineering/tasks/v2.5.3/sprint-S1c-nemo-agent-toolkit.md`](../../engineering/tasks/v2.5.3/sprint-S1c-nemo-agent-toolkit.md)

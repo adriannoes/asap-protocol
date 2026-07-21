@@ -1,5 +1,5 @@
 /**
- * Gateway capability list / describe / execute (TS-003).
+ * Gateway capability list / describe / execute helpers.
  *
  * @see `src/asap/transport/capability_routes.py`
  */

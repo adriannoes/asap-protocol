@@ -27,7 +27,8 @@ class ProtectedMCPServer(MCPServer):
     """``MCPServer`` with JWT verification on ``tools/call`` before tool handlers run.
 
     ``tools/list`` is unchanged unless ``hide_unauthorized_tools`` is implemented;
-    MCP-MAP-004 is deferred (design-lock §6 — no stdio JWT carriage on list).
+    MCP-MAP-004 remains deferred because stdio ``tools/list`` has no standard
+    JWT carriage.
     """
 
     def __init__(self, config: MCPAuthConfig) -> None:
@@ -37,7 +38,7 @@ class ProtectedMCPServer(MCPServer):
         if config.hide_unauthorized_tools:
             # MCP-MAP-004 is deferred: tools/list still returns all tools; only
             # tools/call is gated. State this explicitly so operators do not assume
-            # unauthorized tools are hidden from discovery (formal review M-3).
+            # unauthorized tools are hidden from discovery.
             logger.warning(
                 "mcp.auth.hide_unauthorized_tools_noop",
                 message=(
@@ -47,11 +48,10 @@ class ProtectedMCPServer(MCPServer):
             )
         if config.allow_env_jwt_fallback:
             # Loud operator signal at construction so a process-wide JWT bypass
-            # is not silently enabled in multi-tool production (formal review M-2).
+            # is not silently enabled in multi-tool production.
             # Emitted via warnings.warn (stderr) instead of the structlog logger
             # (stdout) so it does not corrupt the JSON-RPC stream when the server
-            # runs as a stdio subprocess — the same reason the Wave C attempt to
-            # log this at MCPAuthConfig construction broke the MCPClient handshake.
+            # runs as a stdio subprocess.
             warnings.warn(
                 "allow_env_jwt_fallback=True: tools/call with no in-band JWT "
                 "authenticates as the ASAP_AGENT_JWT env holder — dev-only, "

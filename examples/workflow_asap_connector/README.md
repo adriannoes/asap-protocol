@@ -6,7 +6,7 @@ API, runs **Compliance Harness v2** (expects score **1.0**), and invokes
 `listWorkflows` in-process. By default the upstream API is **mocked** (offline,
 no SaaS credentials).
 
-Spike notes: [DESIGN.md](./DESIGN.md).
+Design notes: [DESIGN.md](./DESIGN.md).
 
 ## Prerequisites
 
@@ -84,7 +84,7 @@ in `main.py` and must score **1.0** on the happy path.
 
 ## Notes
 
-- Reuses `asap.adapters.openapi` only (LAB2-001); no dedicated workflow adapter package.
+- Reuses `asap.adapters.openapi` only; no dedicated workflow adapter package.
 - Identity / approval: this example does not configure `FreshSessionConfig`; see
   `docs/adapters/openapi.md` and `src/asap/adapters/openapi/approval.py` for production wiring.
 - Security baseline (secrets, TLS, webhooks, rate limits, manifests):

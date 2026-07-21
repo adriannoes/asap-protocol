@@ -694,34 +694,7 @@ Fixtures ensure test isolation by:
 3. **Replacing global state**: Monkeypatch fixtures replace module-level state
 4. **Automatic cleanup**: Pytest automatically cleans up fixtures after tests
 
-## Running Tests
-
-### Basic Commands
-
-Run all tests:
-```bash
-uv run pytest
-```
-
-Run with coverage (no `-n auto`):
-```bash
-uv run pytest --tb=short --cov=asap --cov-report=term-missing --cov-fail-under=85
-```
-
-Run specific test file:
-```bash
-uv run pytest tests/transport/unit/test_bounded_executor.py
-```
-
-Run specific test class:
-```bash
-uv run pytest tests/transport/integration/test_rate_limiting.py::TestRateLimiting
-```
-
-Run specific test method:
-```bash
-uv run pytest tests/transport/unit/test_bounded_executor.py::TestBoundedExecutor::test_submit_task
-```
+## Additional test commands
 
 ### Parallel Execution
 
@@ -734,7 +707,7 @@ uv run pytest -n auto --tb=short
 uv run pytest -n 4 --tb=short
 ```
 
-Do **not** add `--cov` to parallel runs. For coverage, use a separate command (see [Running Tests](#running-tests) or [CI Integration](#ci-integration)).
+Do **not** add `--cov` to parallel runs. For coverage, use a separate command (see the canonical commands at the top of this guide or [CI Integration](#ci-integration)).
 
 **Benefits**:
 - Faster execution on multi-core systems

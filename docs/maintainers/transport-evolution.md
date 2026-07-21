@@ -7,7 +7,7 @@ CI enforces a frozen baseline of **public function and method names** on the tra
 ## What is measured
 
 - **`src/asap/transport/server.py`** — single file; its public callables are measured directly.
-- **`src/asap/transport/client/`** — **package** (decomposed from the original `client.py` monolith in the v2.5.1 thermo-nuclear patch, Sprint S2). The linter aggregates public symbols across **every** `*.py` module in the package directory. Methods are named by their **defining class** (e.g. `ASAPClient.batch` when defined on `ASAPClient`, `_SendMixin.send` when defined on a mixin) — this tracks the surface at its definition site without resolving inheritance, so a method moved into a mixin during decomposition is still guarded.
+- **`src/asap/transport/client/`** — **package** (decomposed from the original `client.py` monolith during the v2.5.1 transport decomposition, Sprint S2). The linter aggregates public symbols across **every** `*.py` module in the package directory. Methods are named by their **defining class** (e.g. `ASAPClient.batch` when defined on `ASAPClient`, `_SendMixin.send` when defined on a mixin) — this tracks the surface at its definition site without resolving inheritance, so a method moved into a mixin during decomposition is still guarded.
 
 ## Enforcement
 

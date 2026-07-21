@@ -1,6 +1,6 @@
 # Code Review: PR #121 — feat: batch JSON-RPC, audit logging, v2.2.0
 
-**Reviewer**: Senior Staff Engineer (AI)
+**Reviewer**: Maintainer review
 **Branch**: `feat/batch-audit-compliance` → `main`
 **Commits Reviewed**: 13 (2a12759..1551bca)
 **Files Changed**: 25

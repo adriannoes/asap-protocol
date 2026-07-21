@@ -1,10 +1,9 @@
 """Receive-loop frame dispatch for :class:`asap.transport.ws.client.WebSocketTransport`.
 
-Split out of ``ws/client.py`` so the transport module stays under the 400-LOC
-ceiling mandated by the v2.5.1 thermo-nuclear patch. Exposed as a mixin
-(:class:`_RecvDispatch`) that :class:`WebSocketTransport` inherits; it owns the
-inbound frame loop and per-frame routing (heartbeat, ``asap.ack``, error,
-result, on_message callback) with B6/BUG #6 correlation binding enforcement.
+The ``_RecvDispatch`` mixin owns inbound frame routing for heartbeats,
+``asap.ack`` notifications, JSON-RPC errors, response envelopes, and server-push
+callbacks. Response frames are correlation-checked before resolving pending
+requests.
 """
 
 from __future__ import annotations

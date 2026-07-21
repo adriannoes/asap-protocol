@@ -1,26 +1,23 @@
-"""Sprint S3 regression guards for security-critical behaviors introduced by the
-v2.5.1 thermo-nuclear patch.
+"""Regression guards for security-critical behaviors.
 
-Each test pins a behavior that a prior PR (S0 #237, S2 #240) flagged as a
-landmine or that the S3 refactor newly introduced, so a future refactor cannot
-silently regress it:
+Each test pins behavior that previously regressed or was identified during
+review, so a future refactor cannot silently regress it:
 
-* ``test_oauth2_http_and_ws_share_one_jwks_validator`` — the S0 #237 deferred
-  landmine: two ``OAuth2Middleware`` instances (HTTP stack + WS ``app.state``)
-  must share ONE ``JWKSValidator`` so their JWKS caches cannot diverge.
+* ``test_oauth2_http_and_ws_share_one_jwks_validator`` — the HTTP stack and WS
+  ``app.state`` middleware must share ONE ``JWKSValidator`` so their JWKS caches
+  cannot diverge.
 * ``test_jwt_verify_result_capabilities_accessor_edge_cases`` — the additive
-  ``JwtVerifyResult.capabilities`` accessor (S3 4.1) must return ``[]`` for
-  absent/non-list claims and a filtered ``list[str]`` otherwise.
-* ``test_adapters_mcp_shim_identity_with_mcp_auth`` — the S3 4.2 fold's
-  deprecation shim must re-export the SAME objects as ``asap.mcp.auth``
-  (``is`` identity), so the public surface did not fork.
-* ``test_identity_limiter_missing_returns_503_on_agent_register`` — S3 5.1
-  parity on a second identity route (``/asap/agent/register``): a missing
+  ``JwtVerifyResult.capabilities`` accessor must return ``[]`` for absent or
+  non-list claims and a filtered ``list[str]`` otherwise.
+* ``test_adapters_mcp_shim_identity_with_mcp_auth`` — the deprecation shim must
+  re-export the SAME objects as ``asap.mcp.auth`` (``is`` identity), so the
+  public surface did not fork.
+* ``test_identity_limiter_missing_returns_503_on_agent_register`` — parity on a
+  second identity route (``/asap/agent/register``): a missing
   ``identity_limiter`` must 503 cleanly (was ``AttributeError`` -> 500).
-* ``test_allow_env_jwt_fallback_emits_construction_warning`` — S3 M-2: the
-  process-wide JWT bypass flag warns at ``ProtectedMCPServer`` construction
-  (via stderr ``warnings.warn``, not the stdout logger, so stdio is not
-  corrupted).
+* ``test_allow_env_jwt_fallback_emits_construction_warning`` — the process-wide
+  JWT bypass flag warns at ``ProtectedMCPServer`` construction (via stderr
+  ``warnings.warn``, not the stdout logger, so stdio is not corrupted).
 """
 
 from __future__ import annotations
@@ -53,7 +50,7 @@ def _oauth2_only_manifest() -> Manifest:
 
 
 def test_oauth2_http_and_ws_share_one_jwks_validator() -> None:
-    """S0 #237 deferred landmine: HTTP stack + WS ``app.state`` share ONE validator.
+    """HTTP stack and WS ``app.state`` share ONE validator.
 
     ``_wire_middleware`` constructs a single ``shared_validator`` and passes it
     via ``validator=`` to BOTH the ``app.state.oauth2_middleware`` instance
@@ -113,7 +110,7 @@ def test_oauth2_http_and_ws_share_one_jwks_validator() -> None:
 def test_jwt_verify_result_capabilities_accessor_edge_cases(
     claims: dict[str, Any] | None, expected: list[str]
 ) -> None:
-    """``JwtVerifyResult.capabilities`` (S3 4.1) returns a typed ``list[str]``.
+    """``JwtVerifyResult.capabilities`` returns a typed ``list[str]``.
 
     Absent / non-list / mixed-type claims collapse to a filtered ``list[str]``
     so the MCP Auth Bridge grant gate reads one typed shape instead of
@@ -124,7 +121,7 @@ def test_jwt_verify_result_capabilities_accessor_edge_cases(
 
 
 def test_adapters_mcp_shim_identity_with_mcp_auth() -> None:
-    """S3 4.2 fold: ``asap.adapters.mcp`` re-exports the SAME objects as ``asap.mcp.auth``.
+    """``asap.adapters.mcp`` re-exports the SAME objects as ``asap.mcp.auth``.
 
     The deprecation shim must not fork the public surface — ``protect_server``,
     ``MCPAuthConfig``, ``ProtectedMCPServer``, and ``resolve_jwt_extractor``
@@ -142,7 +139,7 @@ def test_adapters_mcp_shim_identity_with_mcp_auth() -> None:
 
 
 def test_identity_limiter_missing_returns_503_on_agent_register() -> None:
-    """S3 5.1 parity: a second identity route also 503s cleanly when the limiter is missing.
+    """A second identity route also 503s cleanly when the limiter is missing.
 
     Mirrors ``TestIdentityLimiterMissingReturns503`` (capability/list) on the
     ``/asap/agent/register`` path so the ``Depends(require_identity_limiter)``
@@ -175,7 +172,7 @@ def test_identity_limiter_missing_returns_503_on_agent_register() -> None:
 
 
 def test_allow_env_jwt_fallback_emits_construction_warning() -> None:
-    """S3 M-2: ``allow_env_jwt_fallback=True`` warns at ``ProtectedMCPServer`` construction.
+    """``allow_env_jwt_fallback=True`` warns at ``ProtectedMCPServer`` construction.
 
     The warning goes to stderr via ``warnings.warn`` (not the stdout structlog
     logger) so it does not corrupt the JSON-RPC stream when the server runs as a

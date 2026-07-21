@@ -1,10 +1,8 @@
-"""Envelope dispatch layer for the WS server handler.
+"""Envelope dispatch layer for the WebSocket server handler.
 
-Split out of :mod:`asap.transport.ws.server` so the server module stays under
-the 400-LOC ceiling mandated by the v2.5.1 thermo-nuclear patch. Owns the 3.2
-change: envelopes are dispatched directly via
-:meth:`ASAPRequestHandler._prepare_request` + ``registry.dispatch_async`` /
-``dispatch_stream_async`` (no fake-request synthesis, no HTTP ``handle_message``).
+WebSocket frames are prepared through the shared request pipeline and then
+dispatched through the handler registry. The helpers in this module send
+JSON-RPC result, error, ack, and streaming frames back over the WebSocket.
 """
 
 from __future__ import annotations
@@ -64,10 +62,9 @@ def _registry_has_streaming_for_payload(registry: Any, payload_type: str) -> boo
 async def _synthesize_ws_request(body: str, websocket: WebSocket) -> Request:
     """Build a minimal Starlette ``Request`` carrying *body* for the shared pipeline.
 
-    Replaces the deleted fake-request synthesis. The shared
-    :meth:`ASAPRequestHandler._prepare_request` pipeline reads the JSON-RPC body
-    via ``request.stream()``, so the WS path must hand it a ``Request``. The
-    scope mirrors the WS handshake (headers, path, server) so auth and
+    The shared :meth:`ASAPRequestHandler._prepare_request` pipeline reads the
+    JSON-RPC body via ``request.stream()``, so the WS path provides a ``Request``.
+    The scope mirrors the WS handshake (headers, path, server) so auth and
     content-length checks behave like the HTTP path.
     """
     body_bytes = body.encode("utf-8")
@@ -158,15 +155,14 @@ async def _dispatch_ws_envelope(
     data: dict[str, Any],
     envelope_for_ack: Envelope | None,
 ) -> WSCloseAction:
-    """Prepare the request and dispatch its envelope directly (3.2).
+    """Prepare the request and dispatch its envelope.
 
     Uses :meth:`ASAPRequestHandler._prepare_request` to run the shared
-    parse→auth→envelope→timestamp→nonce gate, then hands the validated envelope
-    to ``registry.dispatch_async`` or ``dispatch_stream_async`` instead of the
-    HTTP ``handle_message``/``iter_websocket_stream``. Sends a ``rejected`` ack
-    and a JSON-RPC error frame on failure. Returns ``CLOSE_FATAL`` if the
-    internal-error frame itself cannot be sent (connection broken), else
-    ``CONTINUE``.
+    parse/auth/envelope/timestamp/nonce gate, then hands the validated envelope
+    to ``registry.dispatch_async`` or ``dispatch_stream_async``. Sends a
+    ``rejected`` ack and a JSON-RPC error frame on failure. Returns
+    ``CLOSE_FATAL`` if the internal-error frame itself cannot be sent
+    (connection broken), else ``CONTINUE``.
     """
     jsonrpc_id = data.get("id")
     response_id: str | int = jsonrpc_id if jsonrpc_id is not None else ""

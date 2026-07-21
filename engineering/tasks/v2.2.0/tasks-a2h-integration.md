@@ -412,7 +412,7 @@
 - [x] 5.5 Update `AGENTS.md`
   - **File**: `AGENTS.md` (modify existing)
   - **What**: In the `## Project Context` section, add `A2H` to the **Framework Integrations** list: `LangChain, CrewAI, PydanticAI, LlamaIndex, SmolAgents, Vercel AI SDK, MCP, OpenClaw, A2H.`
-  - **Why**: Keeps the agent context map accurate for AI agents reading the codebase.
+  - **Why**: Keeps the project context map accurate for contributors reading the codebase.
   - **Verify**: `grep "A2H" AGENTS.md` returns a match.
 
 - [x] 5.6 Run full CI check suite

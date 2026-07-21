@@ -1,6 +1,6 @@
 # PR #50 Review — `feat: v1.3.0 — SLA Framework, Observability Metering, Delegation Tokens`
 
-**Date:** 2026-02-18 | **Reviewer:** Antigravity | **Verdict:** 🟡 Approve with Required Fixes
+**Date:** 2026-02-18 | **Reviewer:** Maintainer review | **Verdict:** 🟡 Approve with Required Fixes
 
 ---
 

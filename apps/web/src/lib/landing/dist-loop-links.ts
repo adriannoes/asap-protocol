@@ -1,12 +1,11 @@
 /**
- * Canonical Dist Loop public URLs for homepage CTAs (S3).
+ * Canonical public URLs for homepage CTAs.
  *
- * Guide, starters, migration, and changelog land on `main` with this release
- * PR; `blob/main` / `tree/main` are the correct post-merge destinations
- * (preview CTAs 404 on GitHub until merge).
+ * `blob/main` / `tree/main` are the stable destinations for links that point
+ * at repository files and directories.
  */
 
-/** GitHub `blob/main` base — reuse for docs links across Dist Loop surfaces. */
+/** GitHub `blob/main` base for docs links. */
 export const GITHUB_BLOB_MAIN = 'https://github.com/asap-protocol/asap-protocol/blob/main';
 
 /** GitHub `tree/main` base — reuse for directory links (starters, examples). */
@@ -32,13 +31,13 @@ export function githubTreeMain(repoPath: string): string {
   return `${GITHUB_TREE_MAIN}/${normalized}`;
 }
 
-/** Build for agents guide (DIST-005 homepage primary). */
+/** Build for agents guide used by homepage CTAs. */
 export const BUILD_FOR_AGENTS_GUIDE_URL = githubBlobMain('docs/guides/build-for-agents.md');
 
-/** Thin starter pack index (DIST-003 destinations). */
+/** Thin starter pack index. */
 export const STARTERS_URL = githubTreeMain('examples/starters');
 
-/** v2.5.4 migration note (Dist Loop). */
+/** v2.5.4 migration note. */
 export const DOCS_MIGRATION_254_URL = githubBlobMain(
   'docs/migration.md#upgrading-from-v253-to-v254'
 );
@@ -46,5 +45,5 @@ export const DOCS_MIGRATION_254_URL = githubBlobMain(
 /** Changelog anchor for [2.5.4]. */
 export const CHANGELOG_254_URL = githubBlobMain('CHANGELOG.md#254---2026-07-18');
 
-/** GitHub Release for v2.5.4 Distribution Loop. */
+/** GitHub Release for v2.5.4. */
 export const RELEASE_254_URL = 'https://github.com/asap-protocol/asap-protocol/releases/tag/v2.5.4';

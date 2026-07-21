@@ -10,43 +10,31 @@
 
 ---
 
-## Parallel Execution (Agent Workstreams)
+## Execution notes
 
 > **Status:** S4 gate green on `feat/v2.5.0-s4-compliance` — acceptance criteria satisfied locally; PR into `release/2.5.0` pending merge.
 > **Branch:** `feat/v2.5.0-s4-compliance` → PR into `release/2.5.0`.
-> **Rule:** Interactive dev in this chat — one sub-task at a time; parallel agents only where noted below.
-> **Commits:** Hold until user approves a batch (no drive-by commits on this branch).
 
 ### Dependency phases
 
 ```text
 Phase 1 (parallel)                 Phase 2 (parallel)              Phase 3 (gate)
 ──────────────────                 ──────────────────              ──────────────
-A: 1.1 lock gate          ──────►  A: 1.2 + 1.3 + 2.1            Final verify + acceptance
-C: 3.2 stdio integration           B: 2.2 README (draft → final)
-D: 3.1 CI release/2.5.0            (B finalizes after 2.1 command)
-E: 4.1 TS spike doc
+1.1 lock gate            ──────►  1.2 + 1.3 + 2.1              Final verify + acceptance
+3.2 stdio integration             2.2 README (draft → final)
+3.1 CI release/2.5.0              (README finalizes after 2.1 command)
+4.1 TS spike doc
 ```
-
-### Agent boundaries
-
-| Agent | Owns | Tasks | Depends on | Can parallelize with |
-|-------|------|-------|------------|----------------------|
-| **A — Compliance validator** | `asap-compliance/asap_compliance/validators/mcp_auth.py`, `config.py`, `harness.py`, `validators/__init__.py`, `asap-compliance/tests/test_mcp_auth.py` | 1.1 → 1.2 → 1.3 → 2.1 | S3 example on `release/2.5.0`; `CheckResult` from `handshake.py` | C, D, E (Phase 1) |
-| **B — Example docs** | `examples/mcp_auth_bridge/README.md` | 2.2 | 2.1 CLI/profile command locked | E anytime; finalize after A Phase 2 |
-| **C — Stdio integration test** | `tests/adapters/mcp/test_stdio_integration.py` (or extend `test_auth_middleware.py`) | 3.2 | S1–S2 middleware; `tests/adapters/mcp/conftest.py` | A, D, E (Phase 1) |
-| **D — CI gate** | `.github/workflows/ci.yml` (and siblings if needed) | 3.1 | None | A, C, E (Phase 1) |
-| **E — TypeScript spike** | `engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md` | 4.1 | None | A, B (draft), C, D (all phases) |
 
 ### Sequential vs parallel summary
 
 | Must be sequential | Safe to parallelize |
 |--------------------|---------------------|
-| **1.1 → 1.2 → 1.3 → 2.1** (single validator module + harness wire-up) | **C ∥ D ∥ E** from day one |
-| **2.1 → 2.2 finalize** (README documents exact compliance command) | **A (1.1) ∥ C ∥ D ∥ E** on Phase 1 |
-| **All → acceptance** (profile green against example + pytest suite) | **B draft ∥ A Phase 2** (placeholder command OK until 2.1 lands) |
+| **1.1 → 1.2 → 1.3 → 2.1** (single validator module + harness wire-up) | Stdio integration, CI, and TS spike can proceed from day one |
+| **2.1 → 2.2 finalize** (README documents exact compliance command) | Compliance lock, stdio integration, CI, and TS spike can proceed in Phase 1 |
+| **All → acceptance** (profile green against example + pytest suite) | README draft can proceed before the 2.1 command is locked |
 
-### Notes for sub-agents
+### Implementation notes
 
 - **Release gate:** Profile name is **`mcp-auth-bridge`** (not `mcp_auth`). Implement in `asap-compliance`, not `src/asap/testing/compliance.py` (HTTP/ASGI harness v2 stays unchanged unless S4 explicitly adds shared support).
 - **Black-box checks (MCP-AUTH-007):** (a) unauthenticated `tools/call` on protected tool → error; (b) valid JWT → success; (c) wrong capability → denied; (d) constraint violation → `asap:constraint_violation`. Start with **mocked** MCP responses in unit tests; add subprocess driver against `examples/mcp_auth_bridge/server.py` in 2.1 verify.
@@ -57,23 +45,6 @@ E: 4.1 TS spike doc
 - **TS spike (SHOULD):** Survey `packages/typescript/` layout, `@modelcontextprotocol/sdk` version/compatibility, package name `@asap-protocol/mcp-auth`; record **ship vs defer** for S5 with minimum scope (Bearer extraction + error mapping).
 - **No secrets:** Generate keys at runtime in tests; never commit JWTs or private keys.
 - **Verify gate:** `uv run pytest asap-compliance/tests/test_mcp_auth.py -v`; `uv run pytest tests/adapters/mcp/ -v`; compliance profile against example documented in README.
-
-### Sub-agent prompt templates
-
-**Agent A (1.1 → 2.1):**
-> Create `asap-compliance/asap_compliance/validators/mcp_auth.py` with profile **`mcp-auth-bridge`**: reuse `CheckResult` from `validators/handshake.py`; add `McpAuthResult` summary if needed. Implement checks (a)–(d) and manifest alignment (MCP-DISC-003). Extend `ComplianceConfig` (or sibling config) for stdio subprocess command defaulting to `examples/mcp_auth_bridge/server.py`. Wire `validate_mcp_auth` / `validate_mcp_auth_async` into `validators/__init__.py` and `harness.py`. Add `asap-compliance/tests/test_mcp_auth.py` with mocked responses first, then subprocess integration. Do **not** modify `src/asap/testing/compliance.py` unless stdio needs explicit shared helper.
-
-**Agent B (2.2):**
-> Add § **Compliance** to `examples/mcp_auth_bridge/README.md`: document `uv run` command for `mcp-auth-bridge` profile, list expected pass/fail checks, link to `docs/adapters/mcp-auth-bridge.md`. Draft with placeholder until Agent A locks CLI; finalize command string after 2.1.
-
-**Agent C (3.2):**
-> Add `tests/adapters/mcp/test_stdio_integration.py`: subprocess or in-process stdio exercise of protected `MCPServer` with real Agent JWT in `_meta.asap_agent_jwt` — one success (`secure_action` + grant) and one denied (missing JWT or wrong capability). Headless, no network. Reuse `conftest.py` fixtures; follow `tests/examples/test_mcp_auth_bridge_example.py` subprocess patterns if present.
-
-**Agent D (3.1):**
-> Update `.github/workflows/ci.yml` `on.push` and `on.pull_request` `branches` to include `release/2.5.0`. Optionally add explicit `uv run pytest tests/adapters/mcp/ -v --tb=short` step in `test-python` job for visibility. Confirm PRs targeting `release/2.5.0` run adapter MCP tests.
-
-**Agent E (4.1):**
-> Create `engineering/tasks/v2.5.0/typescript-mcp-auth-spike.md`: inventory `packages/typescript/client` and SDK deps; assess `@modelcontextprotocol/sdk` for HTTP/SSE Bearer middleware; define minimum `@asap-protocol/mcp-auth` scope or document defer to v2.5.0.1 with rationale for S5 CHANGELOG/backlog.
 
 ---
 

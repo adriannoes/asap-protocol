@@ -18,7 +18,7 @@ The literal ShellClaw v1.0 entry is valid for `RegistryEntry` and `scripts/valid
 | `id` | `urn:asap:agent:shellclaw` — valid URN |
 | `category` | `Infrastructure` — canonical enum |
 | `tags` | Valid; do **not** submit `self-signed` manually (see below) |
-| `built_with` | `Other` — valid today (`ShellClaw` optional in Issue template; see sprint v2.4 S0) |
+| `built_with` | `Other` — valid today (`ShellClaw` optional in Issue template as of v2.4) |
 | `verification` | `null` — valid |
 | `online_check` | `false` — supported |
 | `endpoints.http` + `endpoints.manifest` | Valid map keys per ADR-15 |

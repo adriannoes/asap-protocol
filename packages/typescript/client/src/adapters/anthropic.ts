@@ -1,5 +1,5 @@
 /**
- * Anthropic Messages API tool definitions from ASAP capabilities (TS-008).
+ * Anthropic Messages API tool definitions from ASAP capabilities.
  */
 
 import type { AsapCapabilityList } from "./shared.js";

@@ -3,7 +3,7 @@
 **Pull Request**: [#3 - feat(transport): complete HTTP transport layer](https://github.com/adriannoes/asap-protocol/pull/3)  
 **Sprint Objective**: Implement complete HTTP transport layer with FastAPI server and async HTTP client  
 **Status**: ✅ **APPROVED** - Excelente implementação  
-**Reviewer**: Opus 4.5 (with Reasoning)
+**Reviewer**: Maintainer review
 **Data**: 2026-01-20
 
 ---

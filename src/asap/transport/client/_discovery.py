@@ -1,12 +1,8 @@
-"""Discovery/manifest/health/capability concern of :class:`asap.transport.client.ASAPClient`.
+"""Discovery, manifest, health, and capability helpers for ``ASAPClient``.
 
-Houses the manifest discovery, caching, signature verification, health-check,
-and capability-escalation methods extracted during the v2.5.1 thermo-nuclear
-decomposition (S2 Task 2.3). Mixed into ``ASAPClient`` (see ``client/_core.py``);
-not meant to be instantiated standalone.
-
-The shared ``_fetch_and_cache_manifest`` core deduplicates the ~90% identical
-``get_manifest`` and ``discover`` methods (S2 Task 2.2).
+This mixin owns manifest fetching and caching, signed manifest verification,
+well-known discovery, health checks, and capability escalation requests. It is
+mixed into ``ASAPClient`` and is not intended to be instantiated directly.
 """
 
 from __future__ import annotations

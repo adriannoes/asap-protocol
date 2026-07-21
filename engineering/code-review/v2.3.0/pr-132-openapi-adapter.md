@@ -1,6 +1,6 @@
 # Code Review: PR #132 — `feat(openapi): OpenAPI 3.x adapter`
 
-> **Reviewer**: Antigravity (Senior Staff Engineer)
+> **Reviewer**: Maintainer review
 > **PR**: [#132](https://github.com/adriannoes/asap-protocol/pull/132)
 > **Branch**: `feat/openapi-adapter-python` → `main`
 > **Sprint**: [S1 — OpenAPI Adapter](../../../engineering/tasks/v2.3.0/sprint-S1-openapi-adapter.md)

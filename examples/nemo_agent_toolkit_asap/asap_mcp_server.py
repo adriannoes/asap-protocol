@@ -1,4 +1,4 @@
-"""ASAP protected MCP stdio server for NeMo Agent Toolkit Path A (v2.5.3 S1c).
+"""ASAP protected MCP stdio server for the NeMo Agent Toolkit demo.
 
 Reuses ``examples/mcp_auth_bridge/server.py`` (echo + secure_action + protect_server)
 and injects the minted demo Agent JWT into ``ASAP_AGENT_JWT`` so NAT ``mcp_client``
@@ -38,8 +38,8 @@ _ENV_JWT_KEY = "ASAP_AGENT_JWT"
 def route_observability_logs_to_stderr() -> None:
     """Send ASAP structlog to stderr so MCP stdout stays JSON-RPC-only.
 
-    Provenance (S1c Path A): with ``ASAP_AGENT_JWT`` set, ``ProtectedMCPServer``
-    emits ``mcp.tool.public_jwt_ignored`` / ``mcp.tool.authorized`` via the default
+    With ``ASAP_AGENT_JWT`` set, ``ProtectedMCPServer`` emits
+    ``mcp.tool.public_jwt_ignored`` / ``mcp.tool.authorized`` via the default
     ``StreamHandler(sys.stdout)``. Those lines break NAT ``mcp_client`` and ASAP
     ``MCPClient`` parsers on the next ``tools/call``.
 
@@ -102,11 +102,11 @@ def inject_demo_jwt_env(demo_jwt: str) -> None:
 def _print_path_a_startup_banner(identity: Any, *, inject_env_jwt: bool) -> None:
     """Print Path A warnings on stderr without dumping the minted JWT.
 
-    Provenance (PR #289 review): the mcp_auth_bridge helper
-    ``_print_startup_instructions`` prints the live Agent JWT. Calling it from
-    ``build_and_prepare_server`` leaked tokens into pytest/smoke captured stderr
-    (and into CI logs when assertions concatenate stderr). Keep a local banner
-    for interactive stdio only — never print ``identity.demo_jwt``.
+    The mcp_auth_bridge helper ``_print_startup_instructions`` prints the live
+    Agent JWT. Calling it from ``build_and_prepare_server`` can leak tokens into
+    pytest/smoke captured stderr and CI logs when assertions concatenate stderr.
+    Keep a local banner for interactive stdio only and never print
+    ``identity.demo_jwt``.
 
     Args:
         identity: Demo identity from mcp_auth_bridge (agent_id for operators).

@@ -105,15 +105,18 @@ npm audit --audit-level=high
 - **Production graph** (`--omit=dev`): moderate and above must be clean.
 - **Full graph** (including devDependencies): high and above must be clean.
 - Prefer range-compatible updates via `npm install` / `npm audit fix` (never `npm audit fix --force`).
-- Do **not** downgrade `next` to satisfy transitive advisories. For Next **16.2.10**, pin a fixed PostCSS via npm overrides:
+- Do **not** downgrade `next` to satisfy transitive advisories. For Next **16.2.10**, pin fixed transitive deps via npm overrides:
 
 ```json
 "overrides": {
-  "next@16.2.10": { "postcss": "8.5.10" }
+  "next@16.2.10": { "postcss": "8.5.10" },
+  "sharp": "^0.35.3"
 }
 ```
 
-If a PostCSS (or similar) override breaks `next build`, stop and report — do not silently adopt a preview/canary Next.
+The `sharp` override forces Next's nested `sharp@0.34.x` up to `>=0.35.0` (GHSA-f88m-g3jw-g9cj / libvips). Keep the direct `sharp` dependency aligned.
+
+If a PostCSS or sharp override breaks `next build`, stop and report — do not silently adopt a preview/canary Next.
 
 **Prettier**: CI also runs `npm run format:check` only on changed TS/TSX under `apps/web/` (`fetch-depth: 0`). On pull requests the base is the PR base SHA; on pushes it is `github.event.before` (the tip before the push), not `merge-base(HEAD, origin/main)` — that merge-base equals `HEAD` on `main` and would skip the check. Full-tree Prettier is intentionally not gated (historical drift). Pass paths locally: `npm run format:check -- <files>`.
 

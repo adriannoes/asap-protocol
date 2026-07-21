@@ -285,7 +285,7 @@ Demonstrates:
 |---|----------|----------------|----------|
 | 1 | Logging | Add `credential`, `api_key`, `access_token`, `refresh_token` to sensitive patterns | Low |
 | 2 | Handlers | Replace `asyncio.get_event_loop()` with `asyncio.get_running_loop()` | Low |
-| 3 | Testing | Add edge case test for empty nonce string validation (from Sprint 3 follow-up) | Medium |
+| 3 | Testing | Add edge case test for empty nonce string validation | Medium |
 
 ---
 
