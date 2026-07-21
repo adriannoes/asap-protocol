@@ -228,4 +228,4 @@ This project is licensed under the Apache 2.0 License - see the [license](https:
 
 ---
 
-**Built with [Cursor](https://cursor.com/)**, with Composer, Opus, Gemini, Kimi and more.
+**Built with [Cursor](https://cursor.com/)**, with Composer, Grok, Opus, Gemini, Kimi and more.
