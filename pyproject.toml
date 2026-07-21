@@ -82,7 +82,7 @@ redis = [
 webauthn = [
     "webauthn>=2.6,<4",
 ]
-# Framework integrations (Sprint E3 — PKG-003).
+# Framework integration extras.
 mcp = [
     # Floor 1.28.1 for CVE-2026-52869 / CVE-2026-52870 / CVE-2026-59950.
     "mcp>=1.28.1",
@@ -105,7 +105,7 @@ pydanticai = [
 openclaw = [
     "openclaw-sdk>=2.0",
 ]
-# OpenAPI 3.x spec parsing for asap.adapters.openapi (Sprint S1).
+# OpenAPI 3.x spec parsing for asap.adapters.openapi.
 openapi = [
     "openapi-pydantic>=0.5",
 ]
@@ -124,7 +124,7 @@ Issues = "https://github.com/asap-protocol/asap-protocol/issues"
 # - pyjwt>=2.13.0 for PYSEC-2026-175/177/178/179 (CVE-2026-32597 baseline at 2.12.0)
 # - aiohttp>=3.14.0,<4 for CVE-2026-34993 / CVE-2026-47265 (transitive, e.g. openclaw/mcp stacks)
 # - zeroconf>=0.149.5 for CVE-2026-47180/47183/47184 ([dns-sd] extra)
-# - pyasn1>=0.6.3 for CVE-2026-30922 (DoS via unbounded recursion)
+# - pyasn1>=0.6.4 for CVE-2026-30922 / CVE-2026-59885 / CVE-2026-59886
 # - tinytag>=2.2.1 for CVE-2026-32889
 # - cryptography>=48.0.1 for GHSA-537c-gmf6-5ccf (CVE-2026-39892 / CVE-2026-34073 baseline at 46.0.7)
 # - requests>=2.33.0 for CVE-2026-25645 (extract_zipped_paths temp file)
@@ -152,7 +152,7 @@ Issues = "https://github.com/asap-protocol/asap-protocol/issues"
 override-dependencies = [
     "aiohttp>=3.14.0,<4",
     "pyjwt>=2.13.0,<3",
-    "pyasn1>=0.6.3",
+    "pyasn1>=0.6.4",
     "tinytag>=2.2.1",
     "cryptography>=48.0.1,<49",
     "requests>=2.33.0",
