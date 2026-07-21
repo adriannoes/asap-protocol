@@ -39,27 +39,73 @@ describe('submitVerificationRequest', () => {
   });
 
   it('returns success and correct GitHub Issue URL when authenticated', async () => {
-    const result = await submitVerificationRequest(validFormValues);
-    expect(result.success).toBe(true);
-    expect('issueUrl' in result && result.issueUrl).toBeTruthy();
-    const url = (result as { issueUrl: string }).issueUrl;
-    expect(url).toContain('/issues/new');
-    expect(url).toContain('template=request_verification.yml');
-    expect(url).toContain('title=Verify');
-    expect(url).toContain('agent_id=');
-    expect(url).toContain('why_verified=');
-    expect(url).toContain('running_since=');
+    const prevOwner = process.env.GITHUB_REGISTRY_OWNER;
+    const prevRepo = process.env.GITHUB_REGISTRY_REPO;
+    delete process.env.GITHUB_REGISTRY_OWNER;
+    delete process.env.GITHUB_REGISTRY_REPO;
+    try {
+      const result = await submitVerificationRequest(validFormValues);
+      expect(result.success).toBe(true);
+      expect('issueUrl' in result && result.issueUrl).toBeTruthy();
+      const url = (result as { issueUrl: string }).issueUrl;
+      expect(url).toMatch(/^https:\/\/github\.com\/asap-protocol\/asap-protocol\/issues\/new\?/);
+      expect(url).toContain('template=request_verification.yml');
+      expect(url).toContain('title=Verify');
+      expect(url).toContain('agent_id=');
+      expect(url).toContain('why_verified=');
+      expect(url).toContain('running_since=');
+    } finally {
+      if (prevOwner === undefined) delete process.env.GITHUB_REGISTRY_OWNER;
+      else process.env.GITHUB_REGISTRY_OWNER = prevOwner;
+      if (prevRepo === undefined) delete process.env.GITHUB_REGISTRY_REPO;
+      else process.env.GITHUB_REGISTRY_REPO = prevRepo;
+    }
   });
 
-  it('builds URL matching buildVerificationRequestIssueUrl output', async () => {
-    const result = await submitVerificationRequest(validFormValues);
-    expect(result.success).toBe(true);
-    const url = (result as { issueUrl: string }).issueUrl;
+  it('builds URL matching buildVerificationRequestIssueUrl for org defaults', async () => {
+    const prevOwner = process.env.GITHUB_REGISTRY_OWNER;
+    const prevRepo = process.env.GITHUB_REGISTRY_REPO;
+    delete process.env.GITHUB_REGISTRY_OWNER;
+    delete process.env.GITHUB_REGISTRY_REPO;
+    try {
+      const result = await submitVerificationRequest(validFormValues);
+      expect(result.success).toBe(true);
+      const url = (result as { issueUrl: string }).issueUrl;
+      const expectedUrl = buildVerificationRequestIssueUrl(validFormValues, {
+        owner: 'asap-protocol',
+        repo: 'asap-protocol',
+      });
+      expect(url).toBe(expectedUrl);
+    } finally {
+      if (prevOwner === undefined) delete process.env.GITHUB_REGISTRY_OWNER;
+      else process.env.GITHUB_REGISTRY_OWNER = prevOwner;
+      if (prevRepo === undefined) delete process.env.GITHUB_REGISTRY_REPO;
+      else process.env.GITHUB_REGISTRY_REPO = prevRepo;
+    }
+  });
 
-    const owner = process.env.GITHUB_REGISTRY_OWNER || 'asap-protocol';
-    const repo = process.env.GITHUB_REGISTRY_REPO || 'asap-protocol';
-    const expectedUrl = buildVerificationRequestIssueUrl(validFormValues, { owner, repo });
-    expect(url).toBe(expectedUrl);
+  it('honors GITHUB_REGISTRY_OWNER/REPO overrides on verification IssueOps URLs', async () => {
+    const prevOwner = process.env.GITHUB_REGISTRY_OWNER;
+    const prevRepo = process.env.GITHUB_REGISTRY_REPO;
+    process.env.GITHUB_REGISTRY_OWNER = 'cutover-org';
+    process.env.GITHUB_REGISTRY_REPO = 'cutover-registry';
+    try {
+      const result = await submitVerificationRequest(validFormValues);
+      expect(result.success).toBe(true);
+      const url = (result as { issueUrl: string }).issueUrl;
+      expect(url).toMatch(/^https:\/\/github\.com\/cutover-org\/cutover-registry\/issues\/new\?/);
+      expect(url).toBe(
+        buildVerificationRequestIssueUrl(validFormValues, {
+          owner: 'cutover-org',
+          repo: 'cutover-registry',
+        })
+      );
+    } finally {
+      if (prevOwner === undefined) delete process.env.GITHUB_REGISTRY_OWNER;
+      else process.env.GITHUB_REGISTRY_OWNER = prevOwner;
+      if (prevRepo === undefined) delete process.env.GITHUB_REGISTRY_REPO;
+      else process.env.GITHUB_REGISTRY_REPO = prevRepo;
+    }
   });
 
   it('includes optional evidence and contact in URL when provided', async () => {
