@@ -3,7 +3,7 @@
 **PR**: [feat(auth,transport): per-runtime agent identity, Host/Agent JWT, and /asap/agent endpoints (S0)](https://github.com/adriannoes/asap-protocol/pull/102)
 **Branch**: `feat/agent-identity` → `main`
 **Sprint**: S0 — Per-Runtime-Agent Identity (v2.2 Protocol Hardening)
-**Reviewer**: Senior Staff Engineer (AI-Assisted)
+**Reviewer**: Maintainer review
 **Date**: 2026-03-22
 
 ---

@@ -1,11 +1,10 @@
-"""MCP Auth Bridge — ASAP auth on native ``MCPServer`` ``tools/call`` (v2.5.0).
+"""MCP Auth Bridge: ASAP auth on native ``MCPServer`` ``tools/call``.
 
-Folded from ``asap.adapters.mcp`` in Sprint S3 Wave C Task 4.2. The adapter
-boundary was a layering inversion: MCP auth belongs inside the MCP package
-(``asap.mcp.auth``) next to :mod:`asap.mcp.protocol` and :mod:`asap.mcp.server`,
-not under the OpenAPI-centric ``asap.adapters`` namespace. The legacy
-``asap.adapters.mcp`` import path is preserved as a thin deprecation shim so
-existing callers keep working during the deprecation window.
+MCP auth belongs inside the MCP package (``asap.mcp.auth``), next to
+:mod:`asap.mcp.protocol` and :mod:`asap.mcp.server`, rather than under the
+OpenAPI-centric ``asap.adapters`` namespace. The legacy ``asap.adapters.mcp``
+import path is preserved as a thin deprecation shim so existing callers keep
+working during the deprecation window.
 
 Public surface (unchanged): ``protect_server``, ``MCPAuthConfig``,
 ``ProtectedMCPServer``, ``resolve_jwt_extractor``.

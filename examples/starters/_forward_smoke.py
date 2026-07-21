@@ -1,4 +1,4 @@
-"""Shared subprocess forwarder for thin starter smoke scripts (DIST-003)."""
+"""Shared subprocess forwarder for thin starter smoke scripts."""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ def forward_parent(
         # Log script path only — argv may carry secrets if callers forward flags.
         print(
             f"{label} starter smoke exceeded {timeout_sec}s limit "
-            f"(DIST-003 headless bound). Script: {parent.name} "
+            f"(headless bound). Script: {parent.name} "
             f"(arguments omitted)",
             file=sys.stderr,
         )

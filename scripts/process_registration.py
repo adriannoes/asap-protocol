@@ -21,7 +21,7 @@ from pathlib import Path
 import httpx
 from pydantic import ValidationError
 
-# Ensure src and scripts/lib are on path when run from repo root (e.g. in CI)
+# Add repo src and scripts/lib to sys.path when run from the repo root.
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT / "src"))

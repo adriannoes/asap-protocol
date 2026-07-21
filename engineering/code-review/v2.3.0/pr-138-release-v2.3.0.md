@@ -3,7 +3,7 @@
 **PR**: [release: v2.3.0 adoption multiplier (docs, web, checklist)](https://github.com/adriannoes/asap-protocol/pull/138)
 **Branch**: `release/2.3.0` → `main`
 **Sprint**: [S5 Release](../../../engineering/tasks/v2.3.0/sprint-S5-release.md)
-**Reviewer**: Antigravity (Senior Staff Engineer review)
+**Reviewer**: Maintainer review
 **Date**: 2026-05-04
 
 ---

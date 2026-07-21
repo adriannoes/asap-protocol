@@ -3,7 +3,7 @@
 > **PR**: [feat: HTTP version negotiation, async state stores, and dependency security bumps](https://github.com/adriannoes/asap-protocol/pull/115)
 > **Branch**: `feat/versioning-async`
 > **Sprint**: S4 — Versioning & Async Protocol
-> **Reviewer**: Staff Engineer (AI)
+> **Reviewer**: Maintainer review
 > **Date**: 2026-04-10
 >
 > **Remediation status**: Addressed (2026-04-10) — required items, optional improvements (§3 executor shutdown, §4 WAL/cache/typing/middleware/contract tests, §4.5 weak locks + LRU WAL metadata), and test gaps below are implemented in-tree.

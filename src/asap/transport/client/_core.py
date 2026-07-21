@@ -1,10 +1,9 @@
 """Facade and lifecycle for :class:`asap.transport.client.ASAPClient`.
 
-Defines the public ``ASAPClient`` class (constructor, async context manager,
-connection validation, backoff, version/challenge helpers, and batch
-operations) composing the send-path (``client/_send.py``) and discovery-path
-(``client/_discovery.py``) mixins. Extracted from the original monolithic
-``client.py`` during the v2.5.1 thermo-nuclear decomposition (S2 Task 2.3).
+Defines the public ``ASAPClient`` class, including construction, async context
+management, connection validation, retry configuration, version negotiation,
+challenge handling, and batch operations. Send and discovery behavior are mixed
+in from focused client modules.
 """
 
 from __future__ import annotations
@@ -302,9 +301,7 @@ class ASAPClient(_SendMixin, _DiscoveryMixin):
         # Thread-safe counter using itertools.count
         self._request_counter = itertools.count(1)
 
-        # Initialize circuit breaker if enabled
-        # Use registry to ensure state is shared across multiple client instances
-        # for the same base_url
+        # Circuit breaker state is shared across clients for the same base URL.
         if circuit_breaker_enabled_val:
             registry = get_registry()
             self._circuit_breaker = registry.get_or_create(

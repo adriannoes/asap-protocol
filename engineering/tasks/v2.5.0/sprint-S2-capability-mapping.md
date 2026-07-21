@@ -10,11 +10,10 @@
 
 ---
 
-## Parallel Execution (Agent Workstreams)
+## Execution notes
 
 > **Status:** S2 ready — S1 merged on `release/2.5.0` (commit `60e2e85`).
 > **Branch:** `feat/v2.5.0-s2-capability-map` → PR into `release/2.5.0`.
-> **Rule:** Interactive dev — one sub-task at a time in this chat; parallel agents only where noted below.
 
 ### Dependency phases
 
@@ -22,31 +21,21 @@
 Phase 1 (gate)          Phase 2 (parallel tests)           Phase 3 (single owner)              Phase 4
 ──────────────          ────────────────────────           ──────────────────────              ───────
 1.1 resolve_capability ─► 1.2/1.3 mapping tests (red)  ──┐
-       + unit tests       2.1/2.2 grant tests (red)   ──┼──► D: protected_server wiring
+       + unit tests       2.1/2.2 grant tests (red)   ──┼──► protected_server wiring
                                                           │    (1.2 + 1.3 + 2.1 + 2.2)
-                                                          └──► E: 3.1 hide_unauthorized (MAY/defer)
+                                                          └──► 3.1 hide_unauthorized (MAY/defer)
 ```
-
-### Agent boundaries
-
-| Agent | Owns | Tasks | Depends on | Can parallelize with |
-|-------|------|-------|------------|----------------------|
-| **A — Capability map** | `capability_map.py` + `test_capability_map.py` | 1.1 | S1 on `release/2.5.0` | — (starts first) |
-| **B — Mapping tests** | Startup validation + explicit map override tests | 1.2, 1.3 (tests only) | 1.1 API stable | C (after gate) |
-| **C — Grant tests** | Denied grant, JWT claim mismatch, constraint violation tests | 2.1, 2.2 (tests only) | 1.1 + conftest grant helpers | B (after gate) |
-| **D — Middleware** | `protected_server.py` grant gate + registry metadata + startup validation | 1.2, 1.3, 2.1, 2.2 (impl) | Phase 2 red tests | — (single owner; one `_handle_tools_call`) |
-| **E — List filter** | `hide_unauthorized_tools` or design-lock defer note | 3.1 | 2.x green | — |
 
 ### Sequential vs parallel summary
 
 | Must be sequential | Safe to parallelize (after 1.1) |
 |--------------------|----------------------------------|
-| **1.1 → Phase 2** (resolver before middleware/tests that import it) | **B ∥ C** (split `test_capability_map.py` vs `test_auth_middleware.py`) |
-| **Phase 2 → D** (TDD red before green) | — |
-| **1.2 + 1.3 + 2.1 + 2.2 impl** (one `_handle_tools_call` + `from_server`) | Agent D owns all; do not split across agents |
+| **1.1 → Phase 2** (resolver before middleware/tests that import it) | Mapping and grant tests can split across `test_capability_map.py` and `test_auth_middleware.py` |
+| **Phase 2 → implementation** (TDD red before green) | — |
+| **1.2 + 1.3 + 2.1 + 2.2 impl** (one `_handle_tools_call` + `from_server`) | Keep implementation in one pass to avoid conflicts in the same handler |
 | **2.x → 3.1** (list filter needs grant gate) | 3.1 may defer per design lock §6 |
 
-### Notes for sub-agents
+### Implementation notes
 
 - **Design lock is locked:** Grant gate uses `CapabilityRegistry.check_grant` only — do not call `validate_constraints` in middleware (only in unit tests for formatting helpers).
 - **JWT capabilities claim:** When `enforce_grants=True`, resolved capability MUST appear in JWT `capabilities` claim **and** pass `check_grant` (MCP-AUTH-003).
@@ -55,36 +44,6 @@ Phase 1 (gate)          Phase 2 (parallel tests)           Phase 3 (single owner
 - **Startup validation (1.3):** When `validate_tools_at_startup=True`, every registered tool must resolve to non-empty capability and `config.capability_registry.describe(capability)` must return non-`None`.
 - **3.1 defer path:** stdio `tools/list` has no standard JWT carriage — if not implementing, document in design lock §6 and mark 3.1 deferred with test skip + comment.
 - **Verify gate:** `uv run pytest tests/adapters/mcp/ -v` green + `uv run pytest --cov=asap.adapters.mcp --cov-fail-under=90` + `uv run mypy src/asap/adapters/mcp/` clean.
-
-### Sub-agent prompt templates
-
-**Agent A (1.1):**
-> Create `src/asap/adapters/mcp/capability_map.py` with `resolve_capability(tool_name, config) -> str`: check `config.tool_capability_map` first, default identity `tool_name`. Add `tests/adapters/mcp/test_capability_map.py` (explicit map, default identity, empty map). Export from `__init__.py` if public. Verify: `pytest tests/adapters/mcp/test_capability_map.py -v`.
-
-**Agent B (1.2/1.3 tests):**
-> After 1.1, add **failing** tests in `test_capability_map.py` or dedicated module: (1) explicit `tool_capability_map` overrides default; (2) `validate_tools_at_startup=True` raises when tool maps to unknown capability or empty string. Use `CapabilityRegistry.describe` mock/seed. Expect red until Agent D.
-
-**Agent C (2.1/2.2 tests):**
-> After 1.1, extend `tests/adapters/mcp/conftest.py` with grant-seeding helpers (`grant_capability(agent_id, capability, constraints=…)`). Add **failing** tests in `test_auth_middleware.py`: denied grant → `asap:capability_denied`; JWT missing capability in claim → `asap:capability_denied`; `max` constraint exceeded → `asap:constraint_violation`. Set `enforce_grants=True`. Expect red.
-
-**Agent D (1.2 + 1.3 + 2.x impl):**
-> Wire S2 in `protected_server.py`: import `resolve_capability`; after JWT verify, if `enforce_grants` resolve capability, check JWT `capabilities` claim subset, call `check_grant(agent_id, capability, parsed.arguments)`; map denials to `CAPABILITY_DENIED`, violations to `CONSTRAINT_VIOLATION`. Add bridge registry for per-tool capability metadata (1.2). Run startup validation in `from_server` when `validate_tools_at_startup` (1.3). Green on Phase 2 tests; S1 tests unchanged.
-
-**Agent E (3.1):**
-> After 2.x green: implement `hide_unauthorized_tools` on `_handle_tools_list` **or** add `@pytest.mark.skip` test + design-lock defer note if stdio list lacks JWT. Document limitation in test docstring.
-
-### Conftest extensions (Agent C prep)
-
-Add to `tests/adapters/mcp/conftest.py` (shared by B/C/D):
-
-```python
-@pytest.fixture
-def grant_capability(capability_registry: CapabilityRegistry) -> Callable[..., CapabilityGrant]:
-    """Seed an active grant for tests with enforce_grants=True."""
-    ...
-```
-
-Pattern: `tests/transport/test_capability_routes.py` for grant issuance + constraint shapes.
 
 ---
 

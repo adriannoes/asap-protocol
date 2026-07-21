@@ -32,11 +32,9 @@ _HTTP_METHODS: tuple[str, ...] = (
 class OpenAPIExecutionKind(StrEnum):
     """How upstream responses should be executed (OA-010).
 
-    ``async_polling`` (``202`` + ``Location``) was pruned in Sprint S3 Wave C
-    Task 4.3: it was detected and stored on :attr:`OpenAPICapability.execution_kind`
-    but never consumed by any production path (``factory`` only branches on
-    ``STREAMING``), so the variant was dead metadata. A ``202`` + ``Location``
-    operation now classifies as ``SYNC`` until a polling handler is wired.
+    Server-sent event responses classify as ``STREAMING``. Other responses,
+    including ``202`` + ``Location``, classify as ``SYNC`` until a polling
+    handler exists.
     """
 
     SYNC = "sync"
@@ -274,9 +272,8 @@ def detect_openapi_execution_kind(
     """Classify an operation for sync/streaming registration (OA-010).
 
     Returns ``STREAMING`` when any response advertises ``text/event-stream``,
-    otherwise ``SYNC``. The former ``async_polling`` branch (``202`` +
-    ``Location``) was pruned in Sprint S3 Wave C Task 4.3 — no production path
-    consumed it.
+    otherwise ``SYNC``. ``202`` + ``Location`` also remains ``SYNC`` because no
+    polling handler consumes a separate execution kind.
     """
     if _responses_include_event_stream(operation, components):
         return OpenAPIExecutionKind.STREAMING
@@ -412,8 +409,8 @@ def map_openapi_to_capabilities(
 
     Each :class:`OpenAPICapability` includes :attr:`OpenAPICapability.execution_kind`
     (OA-010): ``streaming`` if any response advertises ``text/event-stream``,
-    else ``sync``. (The former ``async_polling`` branch for ``202`` + ``Location``
-    was pruned in Sprint S3 Wave C Task 4.3 as dead metadata.)
+    else ``sync``. ``202`` + ``Location`` is also classified as ``sync`` until
+    OpenAPI polling support has a runtime handler.
 
     Args:
         doc: Parsed OpenAPI 3.0 / 3.1 root model.

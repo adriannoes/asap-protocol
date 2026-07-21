@@ -8,7 +8,7 @@ Examples cover:
 
 - **Core flow**: Echo agent, coordinator, and a full demo (run_demo).
 - **Advanced patterns**: Multi-agent orchestration, long-running tasks with checkpoints, error recovery, MCP integration, state migration, auth, rate limiting.
-- **Concepts**: WebSocket (`/asap/ws` on `create_app`), streaming responses (`streaming_agent`), multi-step workflows.
+- **Streaming and workflows**: WebSocket transport, streaming responses (`streaming_agent`), multi-step workflows.
 
 Run any example from the repository root with:
 
@@ -94,14 +94,8 @@ Run agents individually:
 | Module | Description | Usage |
 |--------|-------------|--------|
 | **secure_agent** | OAuth2 server (OAuth2Config) + client (OAuth2ClientCredentials); Custom Claims env vars (v1.1) | `uv run python -m asap.examples.secure_agent --server` / `--client` |
-| **auth_patterns** | Bearer auth, custom token validators, OAuth2 concept (manifest + create_app) | `uv run python -m asap.examples.auth_patterns` |
+| **auth_patterns** | Bearer auth, custom token validators, OAuth2 discovery metadata | `uv run python -m asap.examples.auth_patterns` |
 | **rate_limiting** | Per-sender and per-endpoint rate limit patterns (create_limiter, ASAP_RATE_LIMIT) | `uv run python -m asap.examples.rate_limiting` |
-
-### Concepts
-
-| Module | Description | Usage |
-|--------|-------------|--------|
-| **websocket_concept** | Educational notes; live transport is WebSocket `/asap/ws` (see `docs/transport.md`) | `uv run python -m asap.examples.websocket_concept` |
 
 ### Streaming and workflows
 

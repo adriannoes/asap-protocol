@@ -1,7 +1,7 @@
 """WebAuthn credential storage backends (optional ``asap-protocol[webauthn]`` extra).
 
-Split out of :mod:`asap.auth.webauthn` (Sprint S3) because the storage backend
-and the ceremony spec have different change drivers: stores evolve with
+Storage is separate from :mod:`asap.auth.webauthn` because the backend and the
+ceremony spec have different change drivers: stores evolve with
 persistence/operational needs (new backends, schema migrations) while the
 ceremony follows the WebAuthn spec. Keeping them apart lets a deployment swap
 the store without touching ceremony code.

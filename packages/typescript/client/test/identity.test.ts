@@ -11,7 +11,7 @@ import {
 } from "../src/identity.js";
 import { MemoryStorage } from "../src/storage-local.js";
 
-describe("identity (TS-001)", () => {
+describe("identity", () => {
   it("creates a host with persisted Ed25519 material", async () => {
     const storage = new MemoryStorage();
     const host = await createHost({ storage });

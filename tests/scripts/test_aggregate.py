@@ -189,7 +189,7 @@ def test_fetch_site_ctr_success_and_degraded_payloads() -> None:
 
 
 def test_sum_pypi_last_week_sums_packages_and_skips_empty() -> None:
-    """sum_pypi_last_week is the dashboard Σ helper (thermo-nuclear Nice-to-Have)."""
+    """sum_pypi_last_week totals valid package download counts."""
     assert (
         aggregate_mod.sum_pypi_last_week(
             {
@@ -269,7 +269,7 @@ def test_main_passes_expanded_package_defaults(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Aggregate must collect the full npm/PyPI default sets (DIST-004)."""
+    """Aggregate must collect the full npm/PyPI default sets."""
     captured: dict[str, tuple[str, ...]] = {}
 
     def _capture_npm(packages: tuple[str, ...], **_k: object) -> dict[str, Any]:

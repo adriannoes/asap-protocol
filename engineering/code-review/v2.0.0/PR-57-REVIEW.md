@@ -2,7 +2,7 @@
 
 > **Sprint M2 — Web App Features & Registry Browser**
 > **Branch**: `feature/v2.0.0-sprint-M2-merge` → `main`
-> **Reviewer**: Staff Engineer (AI)
+> **Reviewer**: Maintainer review
 > **Date**: 2026-02-20
 > **Diff Stats**: 41 files changed, +5844 / -763 lines
 

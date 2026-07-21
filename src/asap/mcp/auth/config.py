@@ -24,8 +24,8 @@ class MCPAuthConfig:
     :func:`default_jwt_extractor` with ``allow_env_fallback=config.allow_env_jwt_fallback``).
     Do not invoke a ``None`` extractor.
 
-    ``hide_unauthorized_tools`` is reserved for MCP-MAP-004 (deferred per design-lock §6);
-    stdio ``tools/list`` has no standard JWT carriage in v2.5.0.
+    ``hide_unauthorized_tools`` is reserved for MCP-MAP-004. Stdio
+    ``tools/list`` has no standard JWT carriage in v2.5.0.
 
     Example:
         >>> config = MCPAuthConfig(

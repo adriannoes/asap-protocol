@@ -89,7 +89,7 @@ class TestNonceValidationEdgeCases:
         assert "must be a non-empty string" in str(exc_info.value).lower()
 
     def test_nonce_empty_string_raises_error(self) -> None:
-        """Empty string nonce should raise InvalidNonceError (Sprint 3 follow-up)."""
+        """Empty string nonce should raise InvalidNonceError."""
         store = InMemoryNonceStore()
         envelope = Envelope(
             asap_version="0.1",

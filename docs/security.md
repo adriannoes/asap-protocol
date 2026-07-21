@@ -1,6 +1,6 @@
 # Security Guide
 
-> Comprehensive security guidance for implementing and operating ASAP protocol agents.
+> Security guidance for implementing and operating ASAP protocol agents.
 
 ---
 

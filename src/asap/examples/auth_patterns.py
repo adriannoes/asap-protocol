@@ -1,12 +1,13 @@
 """Authentication patterns example for ASAP protocol.
 
 This module shows how to configure Bearer token auth, custom token validators,
-and the OAuth2 concept (obtain Bearer tokens via OAuth2; ASAP validates Bearer).
+and OAuth2 discovery metadata. Clients obtain Bearer tokens through OAuth2;
+ASAP validates the Bearer token on requests.
 
 Patterns:
     1. Bearer: AuthScheme(schemes=["bearer"]) and token_validator for create_app.
     2. Custom validators: Static map, env-based, or callable(token) -> agent_id | None.
-    3. OAuth2 concept: oauth2 dict in AuthScheme for discovery; clients get Bearer via OAuth2.
+    3. OAuth2 discovery: oauth2 dict in AuthScheme; clients send the access token as Bearer.
 
 Run:
     uv run python -m asap.examples.auth_patterns
@@ -58,7 +59,7 @@ def build_manifest_bearer_only(asap_endpoint: str = DEFAULT_ASAP_ENDPOINT) -> Ma
 
 
 def build_manifest_oauth2_concept(asap_endpoint: str = DEFAULT_ASAP_ENDPOINT) -> Manifest:
-    """Build a manifest with Bearer + OAuth2 discovery (concept).
+    """Build a manifest with Bearer auth and OAuth2 discovery metadata.
 
     ASAP currently validates Bearer tokens only. The oauth2 dict describes
     where clients obtain tokens (authorization_url, token_url, scopes).
@@ -136,7 +137,7 @@ def env_based_validator(
 
 
 def run_demo() -> None:
-    """Demonstrate auth patterns: Bearer manifest, custom validators, OAuth2 concept."""
+    """Demonstrate auth patterns: Bearer manifest, custom validators, OAuth2 discovery."""
     # Bearer-only manifest
     manifest_bearer = build_manifest_bearer_only()
     logger.info(
@@ -168,7 +169,7 @@ def run_demo() -> None:
         message="Use ASAP_DEMO_TOKEN to test env-based validator",
     )
 
-    # OAuth2 concept manifest (Bearer + oauth2 discovery)
+    # OAuth2 discovery manifest (Bearer + oauth2 metadata)
     manifest_oauth2 = build_manifest_oauth2_concept()
     logger.info(
         "asap.auth_patterns.oauth2_concept",
@@ -197,7 +198,7 @@ def run_demo() -> None:
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     """Parse command-line arguments for the auth patterns demo."""
     parser = argparse.ArgumentParser(
-        description="Authentication patterns: Bearer, custom validators, OAuth2 concept."
+        description="Authentication patterns: Bearer, custom validators, OAuth2 discovery."
     )
     return parser.parse_args(argv)
 

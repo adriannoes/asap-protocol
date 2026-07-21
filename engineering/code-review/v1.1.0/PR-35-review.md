@@ -2,7 +2,7 @@
 
 **PR Link:** [GitHub PR #35](https://github.com/adriannoes/asap-protocol/pull/35)  
 **Branch:** `feat/oauth2-client` → `main`  
-**Reviewer:** Principal Software Engineer (Automated Review)  
+**Reviewer:** Maintainer review
 **Date:** 2026-02-07
 **Status:** ✅ **APPROVED** (All feedback addressed)
 

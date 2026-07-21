@@ -2,7 +2,7 @@
 
 > **PR**: [feat(E5): OpenClaw integration — Python bridge, Node skill, docs & Registry UX](https://github.com/adriannoes/asap-protocol/pull/76)
 > **Sprint**: E5 · OpenClaw Integration
-> **Reviewer**: AI Staff Engineer · 2026-02-28
+> **Reviewer**: Maintainer review · 2026-02-28
 
 ---
 

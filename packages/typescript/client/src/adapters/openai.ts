@@ -1,5 +1,5 @@
 /**
- * OpenAI Chat Completions `tools` array from ASAP capabilities (TS-007).
+ * OpenAI Chat Completions `tools` array from ASAP capabilities.
  */
 
 import type { AsapCapabilityList } from "./shared.js";

@@ -11,7 +11,7 @@ import {
   remoteRpcErrorFromJsonRpcError,
 } from "../src/errors.js";
 
-describe("errors RPC taxonomy (TS-011)", () => {
+describe("errors RPC taxonomy", () => {
   it("classifies ASAP JSON-RPC codes in the reserved band", () => {
     expect(isAsapJsonRpcCode(-32059)).toBe(true);
     expect(isAsapJsonRpcCode(-32000)).toBe(true);

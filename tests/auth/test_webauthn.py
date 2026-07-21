@@ -1,4 +1,4 @@
-"""TDD tests for real WebAuthn verification (Sprint S1, task 1.2).
+"""Tests for real WebAuthn verification.
 
 Vectors match duo-labs/py_webauthn test fixtures (NONE registration + EC2 assertion).
 """

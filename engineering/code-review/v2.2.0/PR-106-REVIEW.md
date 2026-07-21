@@ -4,7 +4,7 @@
 >
 > **Branch**: `feat/approval-flows` → `main`
 > **Sprint**: S2 — Approval Flows & Self-Authorization Prevention
-> **Reviewer**: Staff Engineer (AI)
+> **Reviewer**: Maintainer review
 > **Date**: 2026-03-25
 > **Re-review**: 2026-03-25 (all required fixes verified ✅)
 

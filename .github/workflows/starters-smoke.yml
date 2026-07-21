@@ -1,6 +1,6 @@
 name: Starters smoke (v2.5.4)
 
-# Headless DIST-003 smokes for examples/starters/. Path-filtered to keep CI cheap.
+# Headless smokes for examples/starters/. Path-filtered to keep CI cheap.
 on:
   push:
     branches: [main, release/2.5.4]

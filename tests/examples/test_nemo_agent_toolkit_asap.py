@@ -1,4 +1,4 @@
-"""Smoke tests for examples/nemo_agent_toolkit_asap/ (S1c Path A).
+"""Smoke tests for examples/nemo_agent_toolkit_asap/.
 
 ASAP-side checks always run (no nvidia-nat). Optional NAT import is skipped
 when the optional extra is absent so main CI stays green.
@@ -33,10 +33,10 @@ _COMPACT_JWT_RE = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+
 def _isolate_asap_agent_jwt_env() -> Iterator[None]:
     """Keep ``ASAP_AGENT_JWT`` from leaking across example tests.
 
-    Provenance (S1c C.7 / T3 / PR #289): ``inject_demo_jwt_env`` writes
-    ``os.environ`` directly. ``monkeypatch.delenv`` alone is insufficient when the
-    key was already absent — pytest records no undo, so a later ``os.environ``
-    set survives teardown and contaminates ``test_mcp_auth_bridge_example.py``.
+    ``inject_demo_jwt_env`` writes ``os.environ`` directly. ``monkeypatch.delenv``
+    alone is insufficient when the key was already absent; pytest records no undo,
+    so a later ``os.environ`` set survives teardown and contaminates sibling
+    example modules.
     """
     previous = os.environ.pop(_ENV_JWT_KEY, None)
     try:
@@ -180,8 +180,8 @@ class TestNemoAsapMcpServer:
     ) -> None:
         """``inject_env_jwt=True`` uses ``inject_demo_jwt_env``; no JWT on stderr.
 
-        Provenance (PR #289): covers the inject path in-process (smoke covers
-        subprocess). ``print_instructions`` defaults False so CI logs stay clean.
+        This covers the in-process injection path; smoke tests cover the subprocess
+        path. ``print_instructions`` defaults False so CI logs stay clean.
         """
         module = _load_asap_mcp_server()
         server, identity = await module.build_and_prepare_server(

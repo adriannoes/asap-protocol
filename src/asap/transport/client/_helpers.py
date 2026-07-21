@@ -1,16 +1,12 @@
 """Module-level helpers and constants for the ASAP async HTTP client.
 
-This module groups the pure helpers extracted from the original monolithic
-``client.py`` during the v2.5.1 thermo-nuclear decomposition (S2 Task 2.0):
-
 - ``_parse_max_age_from_cache_control`` — Cache-Control TTL parsing for manifest caching.
 - ``_record_send_error_metrics`` — send error metric emission.
 - ``_parse_retry_after`` — ``Retry-After`` header (delta-seconds or HTTP-date) parsing.
 - ``_log_circuit_event`` — deduplicated circuit-breaker OPEN/CLOSED transition logging.
 - ``_RetryableSend`` — internal sentinel signalling a retryable ``send`` attempt.
 
-Centralising these here keeps ``ASAPClient`` focused on orchestration and lets
-``client/__init__.py`` re-export the public surface unchanged.
+These helpers keep ``ASAPClient`` focused on orchestration.
 """
 
 from __future__ import annotations
@@ -24,8 +20,7 @@ import httpx
 from asap.observability import get_logger, get_metrics
 from asap.transport.circuit_breaker import CircuitBreaker, CircuitState
 
-# Module logger (re-exported by ``client/__init__.py`` so existing
-# ``patch("asap.transport.client.logger")`` targets keep resolving).
+# Re-exported by ``client/__init__.py`` for test patching.
 logger = get_logger(__name__)
 
 # Default timeout in seconds

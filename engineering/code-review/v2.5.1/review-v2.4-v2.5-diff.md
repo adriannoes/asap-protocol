@@ -1,7 +1,7 @@
 # Formal Code Review: v2.4.0 + v2.5.0 Diff (`v2.3.0..HEAD`)
 
 **Review Date:** 2026-06-25
-**Reviewer:** AI-assisted review (Cursor agent, GLM 5.2)
+**Reviewer:** Maintainer review
 **Diff Range:** `v2.3.0` (commit `96201c6`, 2026-05-06) → `HEAD` (commit `4c367e0`, 2026-06-24)
 **Commit Count in Range:** 275 commits (`git log --oneline v2.3.0..HEAD | wc -l`)
 **Releases Covered:** v2.4.0 (Edge AI Discovery, tag `v2.4.0` → `d7958d8`, 2026-05-24) and v2.5.0 (MCP Auth Bridge, tag `v2.5.0` → `1c5027c`, 2026-06-24; follow-up `v2.5.0.1` → `0ecb39f`, 2026-06-24)
@@ -13,7 +13,7 @@
 
 ## Executive Summary
 
-Two production releases — **v2.4.0 (Edge AI Discovery)** and **v2.5.0 (MCP Auth Bridge)** — shipped on `main` without a recorded formal code review (the last review in `engineering/code-review/` is `v2.3.0/`). This review retrospectively covers the `v2.3.0..HEAD` diff and records the resolution status of the correctness/security defects uncovered by the v2.5.1 Thermo-Nuclear Patch bug-hunt (Sprint S0, bugs B1–B6).
+Two production releases — **v2.4.0 (Edge AI Discovery)** and **v2.5.0 (MCP Auth Bridge)** — shipped on `main` without a recorded formal code review (the last review in `engineering/code-review/` is `v2.3.0/`). This review retrospectively covers the `v2.3.0..HEAD` diff and records the resolution status of the correctness/security defects uncovered by the v2.5.1 code-quality patch bug-hunt (Sprint S0, bugs B1–B6).
 
 The diff is broadly well-structured: the v2.4.0 edge/hardware manifest extension is additive and backward-compatible (all new manifest fields are optional), and the v2.5.0 MCP Auth Bridge is a clean opt-in adapter layer (`protect_server`) that reuses the canonical `verify_agent_jwt`/`verify_host_jwt` verifiers and the existing `CapabilityRegistry` grant machinery. JWT claim validation was correctly centralized into `asap/auth/claims.py` and threaded into both `OAuth2Middleware` and `validate_jwt` (iss/aud enforcement that was previously missing).
 

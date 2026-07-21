@@ -1,22 +1,19 @@
-"""ASAP WebSocket transport package (``asap.transport.ws``).
+"""ASAP WebSocket transport package.
 
-Decomposed from the original monolithic ``asap/transport/websocket.py`` in the
-v2.5.1 thermo-nuclear patch (Sprint S2 Task 3). Each concern lives in a focused
-module kept under the 400-LOC ceiling:
+The package provides JSON-RPC 2.0 over WebSocket support:
 
-- :mod:`asap.transport.ws.codecs` — frame codecs + constants (no binary/base64 path).
-- :mod:`asap.transport.ws.client` — :class:`WebSocketTransport` connection/send/receive.
-- :mod:`asap.transport.ws._recv` — inbound frame dispatch mixin for the transport.
-- :mod:`asap.transport.ws._ack` — ADR-16 pending-ack retransmit mixin + :class:`PendingAck`.
-- :mod:`asap.transport.ws._errors` — :class:`WebSocketRemoteError`.
-- :mod:`asap.transport.ws.pool` — :class:`WebSocketConnectionPool`.
-- :mod:`asap.transport.ws.server` — :func:`handle_websocket_connection`, heartbeat, SLA.
-- :mod:`asap.transport.ws._actions` — :class:`WSCloseAction` close-decision enum.
-- :mod:`asap.transport.ws._dispatch` — direct envelope dispatch (3.2) + message helpers.
+- :mod:`asap.transport.ws.codecs` defines frame codecs and constants.
+- :mod:`asap.transport.ws.client` provides :class:`WebSocketTransport`.
+- :mod:`asap.transport.ws._recv` routes inbound client frames.
+- :mod:`asap.transport.ws._ack` tracks pending ADR-16 acknowledgements.
+- :mod:`asap.transport.ws._errors` defines :class:`WebSocketRemoteError`.
+- :mod:`asap.transport.ws.pool` provides :class:`WebSocketConnectionPool`.
+- :mod:`asap.transport.ws.server` handles server connections and heartbeats.
+- :mod:`asap.transport.ws._actions` defines close decisions.
+- :mod:`asap.transport.ws._dispatch` dispatches WebSocket envelopes.
 
-The legacy ``asap.transport.websocket`` module remains as a thin re-export shim
-(deprecation window) so ``from asap.transport.websocket import ...`` and test
-patches on the ``asap.transport.websocket`` path keep working.
+The legacy :mod:`asap.transport.websocket` module re-exports this surface for
+existing import paths.
 """
 
 from __future__ import annotations

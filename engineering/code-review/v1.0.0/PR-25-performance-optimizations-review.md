@@ -1,6 +1,6 @@
 # Code Review: feat(transport): Sprint P3-P4 Performance Optimizations (PR #25)
 
-**Reviewer:** AI Code Review Assistant  
+**Reviewer:** Maintainer review
 **Date:** 2026-01-31  
 **PR Link:** https://github.com/adriannoes/asap-protocol/pull/25  
 **Status:** ✅ Approved with Minor Suggestions

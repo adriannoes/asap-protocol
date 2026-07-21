@@ -1,22 +1,16 @@
-"""Frame codecs and constants for ASAP over WebSocket (JSON-RPC 2.0 text frames).
+"""Frame codecs and constants for ASAP WebSocket JSON-RPC 2.0 text frames.
 
-One WebSocket text frame == one JSON-RPC 2.0 request/response. This module
-owns the framing primitives shared by the WS client and server:
+One WebSocket text frame carries one JSON-RPC 2.0 request, response, or
+notification. This module defines the framing primitives shared by the WS client
+and server:
 
 - :func:`encode_envelope_frame` / :func:`decode_frame_to_json` — JSON-RPC wire framing.
 - :func:`_build_ack_notification_frame` — server-side ``asap.ack`` push (ADR-16).
 - :func:`_is_heartbeat_pong` — application-level heartbeat discrimination.
-- The frame/heartbeat/close/SLA/ack constants used across the WS package.
+- The frame, heartbeat, close, SLA, and ack constants used across the WS package.
 
-The speculative binary (base64) framing path was removed in the v2.5.1
-thermo-nuclear patch (YAGNI): frames are JSON text only.
-
-Patchability note: tests patch ``asap.transport.websocket.encode_envelope_frame``
-and read ``asap.transport.websocket.HEARTBEAT_FRAME_TYPE_*`` /
-``ASAP_ACK_METHOD`` / ``PAYLOAD_TYPES_REQUIRING_ACK`` from the shim module. The
-shim re-exports these names so the patches resolve on the
-``asap.transport.websocket`` path; the WS package imports them back from the
-shim (see ``ws/__init__.py``) so call-sites observe patched values.
+The compatibility shim re-exports selected names for existing imports and test
+patching through ``asap.transport.websocket``.
 """
 
 from __future__ import annotations
@@ -34,7 +28,7 @@ if TYPE_CHECKING:
 # JSON-RPC method for server push of MessageAck (ADR-16).
 ASAP_ACK_METHOD: Literal["asap.ack"] = "asap.ack"
 
-# Frame encoding is JSON text only; the binary/base64 path was deleted (YAGNI).
+# Frame encoding is JSON text only.
 FRAME_ENCODING_JSON: Literal["json"] = "json"
 
 # Default timeout for WebSocket receive (seconds).

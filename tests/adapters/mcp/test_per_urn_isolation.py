@@ -1,11 +1,10 @@
-"""Per-tool capability URN isolation regression (S3 Wave C Task 4.1).
+"""Per-tool capability URN isolation regression.
 
-Mirrors the S2 #240 ``TestResolveAndCacheSkill`` guard: two tools with
-DIFFERENT capability URNs registered on one shared ``MCPServer`` /
-``ProtectedMCPServer`` must not inherit each other's capability grant on
-``tools/call``. The ``ToolRegistration`` dataclass keeps capability metadata
-per-tool-instance (attribute access, not a hoisted shared field) so a URN
-registered for tool A can never satisfy the grant check for tool B.
+Two tools with DIFFERENT capability URNs registered on one shared
+``MCPServer`` / ``ProtectedMCPServer`` must not inherit each other's capability
+grant on ``tools/call``. The ``ToolRegistration`` dataclass keeps capability
+metadata per-tool-instance (attribute access, not a hoisted shared field) so a
+URN registered for tool A can never satisfy the grant check for tool B.
 """
 
 from __future__ import annotations

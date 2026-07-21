@@ -35,7 +35,7 @@ def sign_with_ca(
 ) -> SignedManifest:
     """Sign manifest with ASAP CA key (simulation). JCS canonicalized.
 
-    Tech debt: Replace with real CA service integration. See issue #44.
+    Simulation helper only; production CA integration is tracked in issue #44.
     """
     _ = agent_key
     payload_bytes = canonicalize(manifest)

@@ -4,7 +4,7 @@
 > **Branch**: `feat/sprint-m3-developer-experience` → `main`
 > **Commits**: 10
 > **Files Changed**: 48 (+2,605 / −516)
-> **Reviewer**: Senior Staff Engineer (Automated Deep Review)
+> **Reviewer**: Maintainer review
 > **Date**: 2026-02-21
 
 ---

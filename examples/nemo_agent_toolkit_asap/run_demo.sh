@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launcher for NeMo Agent Toolkit ↔ ASAP Path A demo (v2.5.3 S1c).
+# Launcher for the NeMo Agent Toolkit ↔ ASAP local demo.
 # Usage (from anywhere):
 #   ./examples/nemo_agent_toolkit_asap/run_demo.sh smoke|smoke-stdio|nat|help
 set -euo pipefail

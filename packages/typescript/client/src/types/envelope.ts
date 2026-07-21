@@ -1,5 +1,5 @@
 /**
- * Type-safe ASAP envelopes and payloads (TS-010).
+ * Type-safe ASAP envelopes and payloads.
  *
  * Mirrors `src/asap/models/envelope.py` and `src/asap/models/payloads.py` wire shapes.
  */

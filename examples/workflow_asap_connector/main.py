@@ -1,7 +1,7 @@
 """Workflow OpenAPI → ASAP adapter demo (Compliance Harness v2 + listWorkflows).
 
 Maps a local mock n8n/Activepieces-style workflow HTTP API into ASAP skills via
-``asap.adapters.openapi.create_from_openapi`` (LAB2-001 reuse; no new adapter package).
+``asap.adapters.openapi.create_from_openapi`` without a dedicated workflow adapter package.
 """
 
 from __future__ import annotations

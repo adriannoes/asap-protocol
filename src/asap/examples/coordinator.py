@@ -1,7 +1,7 @@
 """Coordinator agent example for ASAP protocol.
 
 This module defines a coordinator agent with a manifest and FastAPI app.
-The coordinator will dispatch tasks to other agents in later steps.
+The coordinator builds ASAP task requests and sends them to an echo agent.
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""Tests for `asap audit export` CLI (Sprint S2 — TDD).
+"""Tests for `asap audit export` CLI.
 
 Contract for ``--format json`` (stdout): a JSON **array** of audit entry objects,
 each with ``id``, ``timestamp`` (ISO-8601), ``operation``, ``agent_urn``,

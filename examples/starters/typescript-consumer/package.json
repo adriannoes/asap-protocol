@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Thin Node CLI smoke for @asap-protocol/client (v2.5.4 DIST-003)",
+  "description": "Thin Node CLI smoke for @asap-protocol/client",
   "engines": {
     "node": ">=18"
   },

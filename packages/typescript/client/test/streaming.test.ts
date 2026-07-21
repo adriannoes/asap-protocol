@@ -42,7 +42,7 @@ function taskRequestEnvelope(): Envelope<unknown> {
   };
 }
 
-describe("streaming (TS-010, task 4.2)", () => {
+describe("streaming", () => {
   it("yields TaskStream envelopes from SSE until payload.final is true", async () => {
     const wire1 = JSON.stringify(taskStreamEnvelope({ id: "s1", final: false, chunk: "one " }));
     const wire2 = JSON.stringify(taskStreamEnvelope({ id: "s2", final: true, chunk: "two" }));

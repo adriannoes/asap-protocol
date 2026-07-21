@@ -151,7 +151,7 @@ def test_register_agent_success_returns_receipt(
 def test_register_agent_derives_hardware_fields_in_pr_entry(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Auto-registration PR entry mirrors manifest hardware/inference (S1 Task 1.2)."""
+    """Auto-registration PR entry mirrors manifest hardware/inference."""
     jetson_manifest = Manifest(
         id="urn:asap:agent:ci:jetson",
         name="Jetson Auto Reg",

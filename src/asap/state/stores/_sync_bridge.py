@@ -77,8 +77,7 @@ def _run_sync(coro: Any) -> Any:
     When a loop is running (e.g. a sync ``SQLiteSnapshotStore`` call from inside
     a FastAPI handler), ``future.result()`` blocks the calling thread until the
     pool worker finishes — stalling the loop. Callers on an async server should
-    prefer ``SQLiteAsyncSnapshotStore``. Kept as-is for behavior parity with the
-    pre-S1 implementation; a non-blocking rewrite is a follow-up.
+    prefer ``SQLiteAsyncSnapshotStore``.
     """
     try:
         asyncio.get_running_loop()

@@ -722,7 +722,7 @@ class TestManifest:
 
 
 class TestShellClawManifestFixtures:
-    """ShellClaw Jetson/RPi manifest fixtures (Sprint S1 Task 1.6)."""
+    """ShellClaw Jetson/RPi manifest fixtures."""
 
     def test_shellclaw_jetson_v1_fixture_loads(self) -> None:
         """shellclaw-jetson-v1.0.json parses as Manifest with hardware + inference."""

@@ -105,8 +105,7 @@ async def build_workflow_asap_app(fragment: Path) -> None:
             # upstream_base_url="https://your-workflow-host.example/api/v1",
         )
         app = create_app(bundle.manifest, bundle.registry)
-        # Serve / invoke `app` here while `http` remains open.
-        _ = app  # placeholder in docs; see examples/workflow_asap_connector/main.py
+        # Serve or invoke `app` here while `http` remains open.
 
 
 # asyncio.run(build_workflow_asap_app(Path("openapi-fragment.json")))

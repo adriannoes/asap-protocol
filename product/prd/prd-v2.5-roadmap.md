@@ -30,7 +30,7 @@ Between **v2.4.1** (security patch) and **v3.0** (economy), the project needs a 
 | `prd-v2.3.3` (Distribution Loop) | **v2.5.2** → **v2.5.4** | v2.5.2 reassigned to security patch |
 | Spec formal + introspection + privacy | **v2.5.3** → **v2.5.5** | Standards track após adoption loop |
 | v2.4.1 §8 security follow-ups | **v2.5.4** (optional) → **v2.5.2** | Absorbed into next ship after v2.5.1 (2026-07-08) |
-| Thermo-nuclear quality patch | **v2.5.1** | Behavior-preserving refactor + P0 fixes (2026-06-26) |
+| Code quality patch | **v2.5.1** | Behavior-preserving refactor + P0 fixes (2026-06-26) |
 
 ---
 
@@ -39,7 +39,7 @@ Between **v2.4.1** (security patch) and **v3.0** (economy), the project needs a 
 | Version | Codename | Primary outcome | PRD | Status |
 |---------|----------|-----------------|-----|--------|
 | **v2.5.0** | MCP Auth Bridge | ASAP Agent JWT + capabilities em MCP `tools/call` | [prd-v2.5.0-mcp-auth-bridge.md](./prd-v2.5.0-mcp-auth-bridge.md) | **✅ Shipped** 2026-06-24 — tag [`v2.5.0`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.0) |
-| **v2.5.1** | Code quality patch | Thermo-nuclear audit S0–S3 + P0 correctness/security fixes | *(execution: `engineering/tasks/private/v2.5.1/`)* | **✅ Shipped** 2026-06-26 — tag [`v2.5.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.1) |
+| **v2.5.1** | Code quality patch | Code-quality audit S0–S3 + P0 correctness/security fixes | *(execution: `engineering/tasks/private/v2.5.1/`)* | **✅ Shipped** 2026-06-26 — tag [`v2.5.1`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.1) |
 | **v2.5.2** | Security & correctness follow-up | #209 (operator auth, `extra="forbid"`, Redis JTI, web rate limits) + CR #245–#249 + registry fixes | [prd-v2.5.2-security-follow-up.md](./prd-v2.5.2-security-follow-up.md) | **✅ Shipped** 2026-07-08 — tag [`v2.5.2`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.2) |
 | **v2.5.3** | Adapter Lab II | Enterprise/workflow adapters (ex v2.3.2) | [prd-v2.5.3-adapter-lab-ii.md](./prd-v2.5.3-adapter-lab-ii.md) | **✅ Shipped** 2026-07-16 — tag [`v2.5.3`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.3) · [tasks](../../engineering/tasks/v2.5.3/tasks-v2.5.3-roadmap.md) |
 | **v2.5.4** | Distribution Loop | Homepage, starters, métricas (ex v2.3.3) | [prd-v2.5.4-distribution-loop.md](./prd-v2.5.4-distribution-loop.md) · [tasks](../../engineering/tasks/v2.5.4/tasks-v2.5.4-roadmap.md) | **✅ Shipped** 2026-07-18 — tag [`v2.5.4`](https://github.com/adriannoes/asap-protocol/releases/tag/v2.5.4) |

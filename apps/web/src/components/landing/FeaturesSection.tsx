@@ -31,7 +31,7 @@ type FeatureCard = {
   description: ReactNode;
   icon: typeof Database;
   className: string;
-  /** Concrete docs on `main` (DIST-002) — all feature cards are external. */
+  /** Concrete docs on `main`; all feature cards are external. */
   docsHref: string;
 };
 

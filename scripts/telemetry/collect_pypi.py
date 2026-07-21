@@ -21,7 +21,7 @@ from typing import Any
 
 import pypistats
 
-# DIST-004: cover the protocol package and the compliance validator on PyPI.
+# Cover the protocol package and the compliance validator on PyPI.
 DEFAULT_PYPI_PACKAGES: tuple[str, ...] = ("asap-protocol", "asap-compliance")
 # Backward-compatible alias for callers that still expect a single default name.
 DEFAULT_PYPI_PACKAGE = DEFAULT_PYPI_PACKAGES[0]

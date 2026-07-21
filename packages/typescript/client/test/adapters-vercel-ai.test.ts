@@ -5,7 +5,7 @@ import { MockLanguageModelV3 } from "ai/test";
 import { asapToolsForVercel } from "../src/adapters/vercel-ai.js";
 import { capabilityToolKey } from "../src/adapters/shared.js";
 
-describe("adapters / Vercel AI SDK (TS-006)", () => {
+describe("adapters / Vercel AI SDK", () => {
   it("exposes at least one tool name derived from the client capabilities", () => {
     const client = {
       provider: new URL("https://example.test/"),

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Thin TypeScript consumer smoke (DIST-003 / D2 / D3).
+ * Thin TypeScript consumer smoke.
  *
  * Offline by default: createHost + createAgent with MemoryStorage.
  * Optional live path: set ASAP_PROVIDER_URL to discover + list capabilities.
@@ -15,7 +15,7 @@ import {
   listCapabilities,
 } from "@asap-protocol/client";
 
-/** Live-path bound matching Python starter subprocess timeouts (DIST-003). */
+/** Live-path bound matching Python starter subprocess timeouts. */
 const LIVE_TIMEOUT_MS = 60_000;
 
 /**

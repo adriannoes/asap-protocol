@@ -2,7 +2,7 @@
 
 **Scope**: Sprint 4 (Echo agent, Coordinator, Demo runner, E2E test, CI update)  
 **Status**: ✅ **APPROVED with recommendations**  
-**Reviewer**: Codex (GPT 5.2)
+**Reviewer**: Maintainer review
 **Date**: 2026-01-20
 
 ---

@@ -2,7 +2,7 @@
 
 Verifies the reference MCP Auth Bridge example loads, exposes CLI help,
 rejects protected tool calls without a JWT (in-process), and that
-``client.py`` succeeds without an external JWT (v2.5.3 Phase 1.2).
+``client.py`` succeeds by capturing the child server's JWT without an external JWT.
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ _ENV_JWT_KEY = "ASAP_AGENT_JWT"
 
 @pytest.fixture(autouse=True)
 def _isolate_asap_agent_jwt_env() -> Iterator[None]:
-    """Keep ``ASAP_AGENT_JWT`` from leaking across example tests (C.7 / PR #291).
+    """Keep ``ASAP_AGENT_JWT`` from leaking across example tests.
 
     Mirrors ``test_nemo_agent_toolkit_asap.py`` so reversed collection order
     cannot contaminate sibling example modules.
@@ -217,8 +217,8 @@ class TestParseDemoJwtFromStderr:
     def test_redact_before_truncate_does_not_leak_jwt_prefix(self) -> None:
         """Truncating a long JWT before redact must not leave an ``eyJ`` prefix.
 
-        Provenance (PR #291 hardening): ``redact_jwt_from_text(text[:500])`` can
-        cut the compact token so the remainder no longer matches the regex.
+        ``redact_jwt_from_text(text[:500])`` can cut the compact token so the
+        remainder no longer matches the regex.
         """
         client = _load_client_module()
         # Compact JWT longer than the 500-char preview window.
@@ -241,8 +241,8 @@ class TestMcpAuthBridgeClientSubprocess:
     def test_client_subprocess_without_external_jwt_succeeds(self) -> None:
         """``client.py`` without JWT args captures child JWT and passes tools.
 
-        Provenance (v2.5.3 Phase 1.2): cross-process pasted JWTs fail signature
-        checks; the canonical path is auto-capture from the spawned child stderr.
+        Cross-process pasted JWTs fail signature checks; the supported path is
+        auto-capture from the spawned child stderr.
         """
         result = subprocess.run(
             [
@@ -265,7 +265,7 @@ class TestMcpAuthBridgeClientSubprocess:
         assert "eyJ" not in result.stderr
 
     def test_client_ignores_stale_asap_agent_jwt_env(self) -> None:
-        """Stale ``ASAP_AGENT_JWT`` must not skip stderr capture (PR #291 Should Fix)."""
+        """Stale ``ASAP_AGENT_JWT`` must not skip stderr capture."""
         env = os.environ.copy()
         env[_ENV_JWT_KEY] = "eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJzdGFsZSJ9.signature"
         result = subprocess.run(

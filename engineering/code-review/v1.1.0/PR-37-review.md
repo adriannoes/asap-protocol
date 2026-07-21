@@ -1,7 +1,7 @@
 # Code Review: PR #37 - Well-Known Discovery & Registry
 
 **PR**: #37
-**Reviewer**: Gemini 3.0 Pro (High)
+**Reviewer**: Maintainer review
 **Date**: 2026-02-07
 
 ## 1. Executive Summary

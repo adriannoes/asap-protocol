@@ -86,7 +86,7 @@ async function importEd25519PrivateFromJwk(jwk: JsonWebKey): Promise<CryptoKey> 
   ) as Promise<CryptoKey>;
 }
 
-/** Host runtime identity (TS-001). */
+/** Host runtime identity. */
 export interface HostContext {
   readonly hostId: string;
   readonly hostThumbprint: string;
@@ -112,7 +112,7 @@ export interface AgentContext {
 /**
  * Create a new host identity (Ed25519) and persist the private JWK in `storage`.
  *
- * @see task 2.1 — Web Crypto; task 2.2 — `@noble/ed25519` when `generateKey` is unavailable.
+ * Uses Web Crypto when available and falls back to `@noble/ed25519` when key generation is unavailable.
  */
 export async function createHost(opts: { storage: Storage }): Promise<HostContext> {
   const pair = await generateEd25519KeyPair();

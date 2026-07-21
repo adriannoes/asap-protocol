@@ -557,15 +557,6 @@ def _roundtrip_preserves_data(model_class: type[ASAPBaseModel], instance: ASAPBa
 # --- Property tests: serialization roundtrip per model ---
 
 
-class TestModelPropertiesScaffold:
-    """Placeholder property (kept for compatibility)."""
-
-    @given(st.text(min_size=0, max_size=100))
-    def test_text_roundtrip_identity(self, value: str) -> None:
-        """Any string roundtrips through itself."""
-        assert value == value
-
-
 class TestEntityRoundtrip:
     """Serialization roundtrip for entity models."""
 

@@ -1,5 +1,5 @@
 /**
- * Maps an ASAP client to Vercel AI SDK `tools` for `streamText` / `generateText` (TS-006).
+ * Maps an ASAP client to Vercel AI SDK `tools` for `streamText` / `generateText`.
  */
 
 import { tool, zodSchema, type Tool } from "ai";

@@ -13,16 +13,13 @@ export type DistLoopPrimaryCtasProps = {
   buildForAgentsCtaId: string;
   /** Stable `data-cta` for the starters tree link. */
   viewStartersCtaId: string;
-  /**
-   * How It Works uses outline for the secondary starters CTA; Hero keeps both primary.
-   * Provenance: thermo-nuclear Nice-to-Have — shared Dist Loop CTA markup.
-   */
+  /** How It Works uses outline for the secondary starters CTA; Hero keeps both primary. */
   startersVariant?: 'default' | 'outline';
   className?: string;
 };
 
 /**
- * Shared Dist Loop primary CTAs (guide + starters) for homepage sections.
+ * Shared primary CTAs (guide + starters) for homepage sections.
  *
  * @example
  * ```tsx

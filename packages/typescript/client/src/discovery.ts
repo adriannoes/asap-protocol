@@ -1,5 +1,5 @@
 /**
- * Lite Registry and well-known manifest discovery (TS-002).
+ * Lite Registry and well-known manifest discovery.
  *
  * @see `src/asap/discovery/registry.py`, `src/asap/discovery/wellknown.py`
  */

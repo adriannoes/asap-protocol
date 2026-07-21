@@ -171,7 +171,8 @@ snapshot: StateSnapshot = store.get(task_id)
 if snapshot:
     export_dict = snapshot.model_dump()
     # Persist export_dict to file, blob store, or send over the wire
-    # Later: snapshot = StateSnapshot.model_validate(export_dict); store.save(snapshot)
+    snapshot = StateSnapshot.model_validate(export_dict)
+    store.save(snapshot)
 ```
 
 ---

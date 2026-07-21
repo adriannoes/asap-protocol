@@ -436,7 +436,7 @@ async def test_execution_kind_streaming_when_text_event_stream_response(tmp_path
 async def test_execution_kind_sync_when_202_and_location_header_after_polling_prune(
     tmp_path: Path,
 ) -> None:
-    """202 + Location classifies as SYNC after the ASYNC_POLLING prune (S3 4.3).
+    """202 + Location classifies as SYNC after the ASYNC_POLLING prune.
 
     The ``async_polling`` variant was dead metadata (no production consumer); a
     ``202`` + ``Location`` operation now falls through to ``SYNC`` until a

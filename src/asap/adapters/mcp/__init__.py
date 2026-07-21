@@ -1,16 +1,9 @@
-"""MCP Auth Bridge adapter — DEPRECATED re-export shim (kept for the deprecation window).
+"""Deprecated MCP Auth Bridge re-export shim.
 
-The MCP Auth Bridge was folded into :mod:`asap.mcp.auth` in Sprint S3 Wave C
-Task 4.2. The ``asap.adapters.mcp`` boundary was a layering inversion (MCP auth
-belongs inside the MCP package, not under the OpenAPI-centric ``adapters``
-namespace). This module re-exports the public surface so existing
-``from asap.adapters.mcp import protect_server, MCPAuthConfig,
-ProtectedMCPServer, resolve_jwt_extractor`` callers keep working. New code
-should import from :mod:`asap.mcp.auth` directly.
-
-No ``patch("asap.adapters.mcp...")`` test seams exist (verified via grep
-during the fold), so a plain re-export suffices — there are no patchable names
-to bind before the real-package import.
+MCP auth now lives in :mod:`asap.mcp.auth`, inside the MCP package rather than
+the OpenAPI-centric ``adapters`` namespace. This module keeps the old import
+path working during the deprecation window. New code should import from
+:mod:`asap.mcp.auth` directly.
 
 Example:
     >>> from asap.adapters.mcp import protect_server, MCPAuthConfig  # still works

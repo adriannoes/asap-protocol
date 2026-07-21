@@ -356,7 +356,6 @@ def test_verify_sender_matches_auth_skipped_when_not_authenticated(
     """Test that sender verification is skipped when auth is disabled."""
     middleware = AuthenticationMiddleware(manifest_without_auth)
 
-    # Should not raise exception
     middleware.verify_sender_matches_auth(
         authenticated_agent_id=None,
         envelope_sender="urn:asap:agent:anyone",
@@ -423,14 +422,11 @@ async def test_full_authentication_flow(
 
     request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
 
-    # Step 1: Authenticate
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="valid-token-123")
     agent_id = await middleware.verify_authentication(request, credentials)
     assert agent_id == "urn:asap:agent:client-1"
 
-    # Step 2: Verify sender
     middleware.verify_sender_matches_auth(agent_id, "urn:asap:agent:client-1")
-    # Should not raise
 
 
 @pytest.mark.asyncio
@@ -443,12 +439,10 @@ async def test_authentication_flow_with_invalid_sender(
 
     request = Request(scope={"type": "http", "method": "POST", "path": "/asap"})
 
-    # Step 1: Authenticate successfully
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="valid-token-123")
     agent_id = await middleware.verify_authentication(request, credentials)
     assert agent_id == "urn:asap:agent:client-1"
 
-    # Step 2: Try to spoof sender
     with pytest.raises(HTTPException) as exc_info:
         middleware.verify_sender_matches_auth(agent_id, "urn:asap:agent:spoofed")
 
@@ -742,8 +736,6 @@ class TestSizeLimitMiddleware:
         async def mock_call_next(request: Request) -> JSONResponse:
             return JSONResponse(content={"status": "ok"})
 
-        # Should not raise ValueError, should continue to handler
-        # The ValueError is caught and handled internally
         response = await middleware.dispatch(mock_request, mock_call_next)
         assert response.status_code == 200
 

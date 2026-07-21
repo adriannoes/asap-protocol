@@ -1,5 +1,5 @@
 /**
- * ASAP transport / JSON-RPC error taxonomy (TS-011).
+ * ASAP transport / JSON-RPC error taxonomy.
  *
  * Mirrors `src/asap/errors.py`: reserved JSON-RPC band -32059..-32000, remote RPC
  * helpers, and recoverability hints (`recoverable`, `retry_after_ms` in error data).

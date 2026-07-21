@@ -1,18 +1,12 @@
-"""ASAP request handler — parse/auth/dispatch pipeline for the server.
+"""Shared ASAP request parsing, authentication, validation, and dispatch pipeline.
 
-This module hosts :class:`ASAPRequestHandler` (extracted from ``server.py``
-as part of the v2.5.1 thermo-nuclear decomposition) plus its two
-request-path helpers. The handler owns the parse → auth → envelope →
-timestamp → nonce → dispatch pipeline shared by the HTTP and WebSocket
-paths.
+:class:`ASAPRequestHandler` prepares JSON-RPC requests, validates envelopes,
+enforces auth, records metrics, and dispatches payloads for HTTP, SSE, and
+WebSocket request paths.
 
-Patchability note: tests patch ``asap.transport.server.logger`` and
-``asap.transport.server.is_debug_log_mode``. To keep those patches
-effective across module boundaries, this module references them as
-``_server.logger`` / ``_server.is_debug_log_mode`` (attribute lookup on the
-``server`` module at call time) rather than copying the bindings at import.
-``is_debug_mode``, ``sanitize_for_logging`` and ``get_metrics`` are not
-patched and are imported directly.
+Tests patch ``asap.transport.server.logger`` and
+``asap.transport.server.is_debug_log_mode``. This module reads those attributes
+from ``_server`` at call time; other observability helpers are imported directly.
 """
 
 from __future__ import annotations

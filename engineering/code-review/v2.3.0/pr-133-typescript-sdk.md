@@ -3,7 +3,7 @@
 > **PR**: [feat(typescript): SDK workspace, CI, docs, and Next.js example](https://github.com/adriannoes/asap-protocol/pull/133)
 > **Branch**: `feat/typescript-sdk` → `main`
 > **Sprint**: S2 — TypeScript Client SDK
-> **Reviewer**: Antigravity (AI Staff Engineer Review)
+> **Reviewer**: Maintainer review
 > **Date**: 2026-05-02
 > **Re-verification**: 2026-05-02 — All issues resolved ✅
 

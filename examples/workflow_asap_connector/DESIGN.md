@@ -1,4 +1,4 @@
-# Workflow → ASAP connector spike notes (S1 / LAB2-001)
+# Workflow → ASAP connector design notes
 
 ## Target
 
@@ -21,7 +21,7 @@ the example (placeholders only in `.env.example`).
 The OpenAPI adapter maps each `operationId` to a manifest skill id unchanged
 (see `map_openapi_to_capabilities` in `asap.adapters.openapi`).
 
-## Why OpenAPI reuse satisfies LAB2-001
+## Why OpenAPI reuse fits
 
 - **No new adapter package** under `src/asap/adapters/`.
 - Compose existing `create_from_openapi` + `create_app` + Compliance Harness v2,

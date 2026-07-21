@@ -1,4 +1,4 @@
-"""Unit tests for registration-specific rate limit helpers (AUTO-003)."""
+"""Unit tests for registration-specific rate limit helpers."""
 
 from __future__ import annotations
 

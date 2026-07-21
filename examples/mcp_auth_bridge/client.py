@@ -167,9 +167,10 @@ async def _connect_and_resolve_jwt(
 ) -> tuple[str, asyncio.Task[None]]:
     """Connect, drain stderr, and capture the demo Agent JWT for ``secure_action``.
 
-    Provenance (v2.5.3 Phase 1.2 / PR #291 review): auto-capture from the child
-    this client spawned — cross-process paste fails ``bad_signature``. Stale
-    ``ASAP_AGENT_JWT`` exports are ignored; real JWTs must not be passed via argv.
+    Auto-capture from the child server keeps the token bound to the keys minted
+    for this run; cross-process paste fails ``bad_signature``. Stale
+    ``ASAP_AGENT_JWT`` exports are ignored, and real JWTs must not be passed via
+    argv.
     """
     chunks, drain_task = await _spawn_client_with_stderr_drain(client)
     jwt = await _await_demo_jwt(chunks, timeout_seconds=jwt_wait_seconds)

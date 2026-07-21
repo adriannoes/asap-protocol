@@ -1,8 +1,8 @@
 """WebAuthn registration/assertion ceremony and verifier (optional ``asap-protocol[webauthn]`` extra).
 
-Storage backends live in :mod:`asap.auth.webauthn_store` (split out in Sprint S3
-because store backend and ceremony spec have different change drivers). This
-module re-exports the store names so existing ``from asap.auth.webauthn import
+Storage backends live in :mod:`asap.auth.webauthn_store` because store backend
+and ceremony code have different change drivers. This module re-exports the
+store names so existing ``from asap.auth.webauthn import
 InMemoryWebAuthnCredentialStore`` callers keep resolving.
 
 This module owns:
@@ -288,8 +288,7 @@ class WebAuthnVerifierImpl:
         )
 
 
-# Re-exported so legacy ``from asap.auth.webauthn import <store>`` keeps working
-# after the Sprint S3 store/ceremony split.
+# Re-exported so legacy ``from asap.auth.webauthn import <store>`` keeps working.
 __all__ = [
     "InMemoryWebAuthnCredentialStore",
     "SQLiteWebAuthnCredentialStore",

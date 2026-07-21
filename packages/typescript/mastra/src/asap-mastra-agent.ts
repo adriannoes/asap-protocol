@@ -38,7 +38,6 @@ function defaultInstructions(capabilities: readonly string[]): string {
 /**
  * Convenience wrapper that mounts ASAP-derived tools on a Mastra {@link Agent}.
  *
- * @see sprint task 3.1 for wiring {@link asapToolsForMastra}.
  */
 export async function createAsapMastraAgent(params: CreateAsapMastraAgentParams): Promise<Agent> {
   const asapTools = await asapToolsForMastra(

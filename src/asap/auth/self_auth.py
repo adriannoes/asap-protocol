@@ -105,7 +105,7 @@ class WebAuthnVerifier(Protocol):
 
 
 class PlaceholderWebAuthnVerifier:
-    """Stub verifier that always succeeds; replace with a real WebAuthn stack in production."""
+    """Development/test WebAuthn verifier that always succeeds; not for production."""
 
     _warned: bool = False
 
@@ -149,7 +149,7 @@ def reset_default_webauthn_verifier_cache() -> None:
 
 
 def default_webauthn_verifier() -> WebAuthnVerifier:
-    """Return a cached verifier (real when extra + RP env are set, else placeholder)."""
+    """Return a cached verifier, using real WebAuthn when the extra and RP env are set."""
     global _default_verifier_cache
     has_extra = _webauthn_extra_installed()
     rp_id = os.environ.get(_ASAP_WEBAUTHN_RP_ID_ENV, "").strip()
@@ -177,7 +177,7 @@ def default_webauthn_verifier() -> WebAuthnVerifier:
 
 
 def uses_real_webauthn_verifier(verifier: object) -> bool:
-    """True when ``verifier`` performs cryptographic WebAuthn checks (not the placeholder)."""
+    """True when ``verifier`` performs cryptographic WebAuthn checks."""
     return getattr(verifier, "__asap_performs_real_webauthn__", False) is True
 
 

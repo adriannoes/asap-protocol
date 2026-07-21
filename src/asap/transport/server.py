@@ -248,10 +248,10 @@ class PreparedRequest:
 
 
 # Deferred import: _request_handler needs RequestContext/PreparedRequest/RegistryHolder
-# defined above, and references ``server.logger``/``server.is_debug_log_mode`` via
-# ``_server`` for test patchability. Importing it here (after the dataclasses) breaks
-# the cycle without copying bindings. Re-exported explicitly (``as`` alias) so mypy
-# ``no_implicit_reexport`` exposes it and ``routes`` can type-hint against it.
+# defined above. It also reads ``server.logger`` and ``server.is_debug_log_mode``
+# through ``_server`` so tests can patch those module attributes. Importing it here
+# breaks the cycle without copying bindings. Re-exported explicitly (``as`` alias)
+# so mypy ``no_implicit_reexport`` exposes it and ``routes`` can type-hint against it.
 from asap.transport._request_handler import (  # noqa: E402
     ASAPRequestHandler as ASAPRequestHandler,
 )

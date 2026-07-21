@@ -60,7 +60,7 @@ const sampleManifest = {
   ttl_seconds: 300,
 };
 
-describe("discovery (TS-002)", () => {
+describe("discovery", () => {
   it("listProviders parses optional hardware_class, inference_modes, hardware_io", async () => {
     const registryWithHardware: LiteRegistry = {
       version: "1.0",

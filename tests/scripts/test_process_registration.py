@@ -155,7 +155,7 @@ class TestParseIssueBody:
         assert "Unknown section" not in out
 
     def test_parse_body_with_category_and_tags(self) -> None:
-        """parse_issue_body extracts Category and Tags (Sprint E4)."""
+        """parse_issue_body extracts Category and Tags."""
         body = "### Category\n\nCoding\n\n### Tags\n\nai, code_review, testing"
         parsed = parse_issue_body(body)
         assert parsed["category"] == "Coding"
@@ -347,7 +347,7 @@ class TestProcessRegistrationRun:
         self,
         tmp_path: Path,
     ) -> None:
-        """Body with Category and Tags produces registry entry with category and tags (Sprint E4)."""
+        """Body with Category and Tags produces registry entry with category and tags."""
         body_with_category_tags = (
             VALID_BODY_MINIMAL + "\n\n### Category\n\nCoding\n\n### Tags\n\nai, code_review"
         )
@@ -376,7 +376,7 @@ class TestProcessRegistrationRun:
         self,
         tmp_path: Path,
     ) -> None:
-        """Manifest with hardware/inference writes derived registry fields (S1 Task 1.2)."""
+        """Manifest with hardware/inference writes derived registry fields."""
         manifest = dict(VALID_MANIFEST_JSON)
         manifest["capabilities"] = dict(manifest["capabilities"])
         manifest["capabilities"]["hardware"] = {

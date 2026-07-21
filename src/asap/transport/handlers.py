@@ -617,14 +617,12 @@ def create_echo_handler() -> SyncHandler:
         """Echo handler implementation."""
         task_request = TaskRequest.model_validate(envelope.payload_dict)
 
-        # Create response with echoed input
         response_payload = TaskResponse(
             task_id=f"task_{generate_id()}",
             status=TaskStatus.COMPLETED,
             result={"echoed": task_request.input},
         )
 
-        # Create response envelope
         return Envelope(
             asap_version=envelope.asap_version,
             sender=manifest.id,

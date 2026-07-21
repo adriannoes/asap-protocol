@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Enforce D4: forbid growing public surface on transport server/client modules.
+"""Forbid growing public surface on transport server/client modules.
 
 Compares the set of public function/method names in the transport server module
 (``server.py``) and the transport client package (``client/``) against the frozen
 baseline in ``scripts/_transport_baseline_v2.5.1.json``. New public symbols fail
 CI; removed symbols are allowed.
 
-The client was a single ``client.py`` monolith through v2.5.0; the v2.5.1
-thermo-nuclear patch (Sprint S2) decomposed it into the ``client/`` package
-(``_core`` / ``_send`` / ``_discovery`` / ``_helpers``). To keep D4 effective on
-a decomposed package, the linter aggregates public symbols across **every**
+The client was a single ``client.py`` module through v2.5.0 and later
+decomposed into the ``client/`` package (``_core`` / ``_send`` /
+``_discovery`` / ``_helpers``). To keep frozen-surface enforcement effective
+on a package, the linter aggregates public symbols across **every**
 ``*.py`` module in the package directory (methods are named by their defining
 class, e.g. ``ASAPClient.batch`` or ``_SendMixin.send``). ``server.py`` is still
 a single file and is measured directly.
@@ -41,7 +41,7 @@ _TRANSPORT_REL_PATHS: Final[tuple[str, ...]] = (
 
 
 def _is_public_symbol(name: str) -> bool:
-    """Return True if this AST-defined callable should count toward D4 surface."""
+    """Return True if this AST-defined callable should count toward the frozen surface."""
     return not name.startswith("_")
 
 
@@ -89,7 +89,7 @@ def extract_package_symbols(pkg_dir: Path) -> list[str]:
 
 
 def extract_surface_symbols(rel_path: Path) -> list[str]:
-    """Extract D4 surface symbols for a file module or a package directory."""
+    """Extract frozen surface symbols for a file module or a package directory."""
     if rel_path.is_dir():
         return extract_package_symbols(rel_path)
     return extract_public_symbols(rel_path)
@@ -108,7 +108,7 @@ def emit_baseline(repo_root: Path) -> dict[str, object]:
     return {
         "_meta": {
             "description": (
-                "Frozen public callable surface for D4 transport surface lint "
+                "Frozen public callable surface for transport surface lint "
                 "(see docs/maintainers/transport-evolution.md)."
             ),
             "frozen_at_release": "v2.5.1",

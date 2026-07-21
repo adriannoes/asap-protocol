@@ -199,7 +199,6 @@ def rate_limit_handler(request: Request, exc: Exception) -> JSONResponse:
         limit=limit_str,
     )
 
-    # Return JSON-RPC 2.0 formatted error response
     return JSONResponse(
         status_code=HTTP_TOO_MANY_REQUESTS,
         content={
@@ -596,7 +595,6 @@ class SizeLimitMiddleware(BaseHTTPMiddleware):
                         content_length=size,
                         max_size=self.max_size,
                     )
-                    # Return JSON response directly (middleware runs before route handlers)
                     return JSONResponse(
                         status_code=413,
                         content={

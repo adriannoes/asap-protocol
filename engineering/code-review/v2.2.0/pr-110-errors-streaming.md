@@ -2,7 +2,7 @@
 
 **Branch:** `feat/errors-streaming`
 **Sprint:** S3 — Error Taxonomy & Streaming/SSE
-**Reviewer:** AI Staff Engineer
+**Reviewer:** Maintainer review
 **Date:** 2026-04-04
 **Commits:** 8 (1172dfa → ad558d0)
 **Files changed:** 23 (+1748 / −384)

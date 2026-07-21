@@ -14,7 +14,7 @@ import { MemoryStorage } from "../src/storage-local.js";
 
 const AUD = "https://provider.example/gateway";
 
-describe("connection (TS-004 / TS-005) — unit", () => {
+describe("connection lifecycle unit", () => {
   it("connectAgent POSTs register with Host JWT and agent public key claim path", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(

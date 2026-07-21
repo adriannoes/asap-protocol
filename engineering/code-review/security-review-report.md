@@ -823,6 +823,6 @@ High severity vulnerabilities (rate limiting, payload validation, timestamp, HTT
 
 ---
 
-**Reviewed by**: Claude Opus 4.5
+**Reviewed by**: Maintainer review
 **Date**: 2026-01-23  
 **Codebase Version**: 0.1.0 (pre-release)

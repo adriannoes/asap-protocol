@@ -24,17 +24,11 @@ class TestBackoffEdgeCases:
         assert delay == 1.0
 
     def test_backoff_with_negative_base_delay_clamps_to_zero(self) -> None:
-        """Test that negative base_delay is handled (should clamp to 0 or raise)."""
-        # Negative base_delay should result in 0 delay
+        """Negative base_delay preserves the current raw backoff behavior."""
         client = ASAPClient("http://localhost:8000", base_delay=-1.0, jitter=False)
 
-        # With negative base, calculation should still work but result in 0 or very small value
         delay = client._calculate_backoff(0)
-        # The calculation is: base_delay * (2 ** attempt)
-        # With base_delay = -1.0, attempt 0: -1.0 * 1 = -1.0
-        # But we expect it to be clamped or handled gracefully
-        # Current implementation doesn't clamp, so we test actual behavior
-        assert delay == -1.0  # Current behavior - could be improved to clamp to 0
+        assert delay == -1.0
 
     def test_backoff_with_zero_base_delay(self) -> None:
         """Test backoff calculation with zero base_delay."""

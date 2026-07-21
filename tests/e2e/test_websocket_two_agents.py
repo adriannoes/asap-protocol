@@ -1,4 +1,4 @@
-"""End-to-end WebSocket round-trip regression gate (v2.5.1 Thermo-Nuclear Patch, S0 Task 7.1).
+"""End-to-end WebSocket round-trip regression gate.
 
 Spins up a real uvicorn server exposing ``/asap/ws`` and drives a true
 client↔server WebSocket round-trip: a client opens the WS handshake carrying a
@@ -7,9 +7,8 @@ Bearer token (``manifest.auth`` + ``token_validator``), sends a JSON-RPC
 returns a ``task.response`` frame whose ``correlation_id`` matches the request
 ``id`` and whose payload echoes the input back.
 
-This is the regression gate for S2 Task 3 (decompose ``websocket.py``): without
-an E2E WS test, the decomposition can silently break the WS request/response
-flow. ``tests/transport/test_websocket.py`` covers framing/unit concerns;
+This regression gate protects the WS request/response flow during transport
+refactors. ``tests/transport/test_websocket.py`` covers framing/unit concerns;
 ``tests/e2e/test_two_agents.py`` is HTTP-only. This test pins the full
 client↔server WS path with auth + correlation exercised end-to-end.
 

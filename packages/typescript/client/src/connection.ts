@@ -1,5 +1,5 @@
 /**
- * Agent connection lifecycle: register, status, revoke, reactivate, request-capability (TS-004, TS-005, ESC-004).
+ * Agent connection lifecycle: register, status, revoke, reactivate, and request capabilities.
  *
  * @see `src/asap/transport/agent_routes.py`, `src/asap/transport/capability_routes.py`
  */
@@ -343,7 +343,7 @@ export async function reactivateAgent(
 /**
  * Request additional capabilities for an existing agent (`POST /asap/agent/request-capability`) — Agent JWT.
  *
- * @remarks Aligns with ESC-001 / ESC-004; requires a provider that exposes this route.
+ * @remarks Requires a provider that exposes this route.
  */
 export async function requestCapability(
   provider: URL,

@@ -4,7 +4,7 @@ import { generateEd25519KeyPair, resetEd25519KeygenProbeForTests } from "../src/
 import { createAgent, createHost } from "../src/identity.js";
 import { MemoryStorage } from "../src/storage-local.js";
 
-describe("Ed25519 keygen (task 2.2)", () => {
+describe("Ed25519 key generation fallback", () => {
   beforeEach(() => {
     resetEd25519KeygenProbeForTests();
   });

@@ -1,10 +1,8 @@
-"""Ack-retransmit layer for :class:`asap.transport.ws.client.WebSocketTransport`.
+"""Acknowledgement retransmit layer for the ASAP WebSocket client.
 
-Split out of ``ws/client.py`` so the transport module stays under the 400-LOC
-ceiling mandated by the v2.5.1 thermo-nuclear patch. Exposed as a mixin
-(:class:`_AckRetransmit`) that :class:`WebSocketTransport` inherits; it owns the
-ADR-16 pending-ack tracker, the periodic ack-check loop, and the
-retransmit/expire policy with circuit-breaker integration.
+The ``_AckRetransmit`` mixin owns the ADR-16 pending-ack tracker, periodic
+timeout checks, retransmission budget, expiration handling, and circuit-breaker
+integration.
 """
 
 from __future__ import annotations

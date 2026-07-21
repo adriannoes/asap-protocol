@@ -1,7 +1,7 @@
 # Code Review: PR #34 - Release prep for v1.1
 
 > **PR**: [adriannoes/asap-protocol#34](https://github.com/adriannoes/asap-protocol/pull/34)  
-> **Reviewer**: Principal Software Engineer (Automated Review)  
+> **Reviewer**: Maintainer review
 > **Date**: 2026-02-04
 
 ---

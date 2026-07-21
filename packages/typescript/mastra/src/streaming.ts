@@ -4,7 +4,6 @@
  * Async generator iteration propagates consumer backpressure: the upstream `source` iterator
  * only advances after each `yield`, so a slow consumer naturally throttles reads.
  *
- * @see sprint task 4.1 for SSE parsing and backpressure.
  */
 
 function isRecord(x: unknown): x is Record<string, unknown> {
